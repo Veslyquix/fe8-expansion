@@ -1,0 +1,15 @@
+# The explicit user is the repository owner shown by origin and current
+# history. CODEOWNERS only requests a reviewer; it does not by itself
+# require or enforce review (see docs/issue-resolution-policy.md).
+
+# Protected baseline/fingerprint paths.
+/reports/baseline/ @laqieer
+/tools/gba-playtest/fingerprints/ @laqieer
+/scripts/shiftcheck/tas/fingerprint.lua @laqieer
+
+# Minimal artifact-governance surface.
+/.github/workflows/build.yml @laqieer
+/.github/CODEOWNERS @laqieer
+/scripts/artifact_guard.py @laqieer
+/scripts/artifact_guard_tests/ @laqieer
+/docs/issue-resolution-policy.md @laqieer

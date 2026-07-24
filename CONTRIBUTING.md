@@ -5,6 +5,23 @@
 1. Check the build status badge in `README.md` or [commit list](https://github.com/laqieer/fireemblem8u/commits/master).
 1. Edit until the build status is green, and pull request. 
 
+## Wave 0 governance
+
+Before opening a pull request, run from the repository root:
+
+```sh
+python3 scripts/artifact_guard.py --revision HEAD
+```
+
+This checker reads immutable Git objects and rejects ROM/GBA and ELF files,
+saves/SRAM, savestates, patches, generated `.lz`/`.4bpp`/`.8bpp`/`.gbapal`
+files, prohibited path segments such as `build/`, and the exact root outputs
+`fireemblem8.map`, `fireemblem8_relocs.map`, and `objects.lst`. It does not
+reject arbitrary `.map`, `.a`, `.d`, or `.hex` files, does not scan the
+worktree, and is not a legal/copyright clearance. See
+[`docs/issue-resolution-policy.md`](docs/issue-resolution-policy.md) for the
+full issue-closure, baseline/fingerprint review, and legal-boundary policy.
+
 **Working on your first Pull Request?** You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
 
 
