@@ -227,7 +227,8 @@ class WorkflowDriftReplayTests(unittest.TestCase):
         # fork has NOT fetched it yet.
         h.commit(self.fixture.upstream_dir, {"new.c": "int y;\n"}, "code: y", seconds_offset=10)
 
-        before_state = open(self.state_path).read()
+        with open(self.state_path, encoding="utf-8") as state_file:
+            before_state = state_file.read()
         before_status = _git_status(self.fixture.fork_dir)
         before_head = h.rev_parse(self.fixture.fork_dir, "HEAD")
         before_master = h.rev_parse(self.fixture.fork_dir, "master")
@@ -276,7 +277,8 @@ class WorkflowDriftReplayTests(unittest.TestCase):
         # fork's working tree/status, or HEAD/master -- only the dedicated
         # `decomp/*` remote-tracking ref (already exercised/asserted by
         # test_fetch_succeeds_when_url_matches_pinned_canonical) moves.
-        self.assertEqual(open(self.state_path).read(), before_state)
+        with open(self.state_path, encoding="utf-8") as state_file:
+            self.assertEqual(state_file.read(), before_state)
         self.assertEqual(_git_status(self.fixture.fork_dir), before_status)
         self.assertEqual(h.rev_parse(self.fixture.fork_dir, "HEAD"), before_head)
         self.assertEqual(h.rev_parse(self.fixture.fork_dir, "master"), before_master)
