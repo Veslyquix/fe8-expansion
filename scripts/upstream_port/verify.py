@@ -36,6 +36,43 @@ def gates(jobs: int = 2) -> List[Gate]:
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
         ),
         Gate(
+            name="default-lane-check",
+            command=[
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "scripts/modernize/tests",
+                "-p",
+                "test_build_default_lane.py",
+                "-v",
+            ],
+            applicable_note=(
+                "issue #15 closure: asserts a bare `make`/`make all` always "
+                "resolves to the modern release AAPCS lane"
+            ),
+        ),
+        Gate(
+            name="quickstart-legacy-check",
+            command=[
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "scripts/modernize/tests",
+                "-p",
+                "test_quickstart.py",
+                "-v",
+            ],
+            applicable_note=(
+                "issue #15 closure: asserts quickstart.sh only reaches the "
+                "archival agbcc lane via explicit `make legacy`/`make "
+                "fireemblem8.gba`, never via env/CLI variable overrides"
+            ),
+        ),
+        Gate(
             name="generated-data-check",
             command=["make", "generated-data-check"],
             applicable_note="applicable when generated_data.mk-tracked tables exist",
