@@ -4,11 +4,25 @@ Subcommand safety summary (see docs/upstream-porting.md for the full
 workflow):
 
   init-state     writes the state file once, seeded from a real local SHA.
-  scan           READ-ONLY. Never fetches, never writes state.
-  drift          READ-ONLY. Never fetches, never writes state.
-  report         READ-ONLY w.r.t. Git refs/history. Writes report+patch files
-                 only into a confirmed-gitignored output directory, only for
-                 explicitly selected commit SHAs.
+  scan           READ-ONLY. Never fetches, never writes state. Prints to
+                 stdout by default; `--output PATH` is only ever honored if
+                 PATH is repo-contained, symlink-free, and confirmed
+                 gitignored (see output_safety.validate_output_target) --
+                 a tracked file, a path outside the repo, or a symlink is
+                 rejected before anything is opened. Merge commits in range
+                 are listed with the UNION of changed paths across all
+                 their parents (deterministic, sorted) -- never silently
+                 empty.
+  drift          READ-ONLY. Never fetches, never writes state. Same
+                 `--output` safety contract as `scan` above.
+  report         READ-ONLY w.r.t. Git refs/history. Writes report+patch
+                 files only into a directory passing the same repo-
+                 contained/no-symlink/gitignored safety contract, only for
+                 explicitly selected commit SHAs. A selected merge commit
+                 is rejected outright (no file is written for it, and no
+                 output directory is created) -- see
+                 report.validate_selection for why a merge commit cannot
+                 be honestly represented as a single patch file.
   update-state   The only subcommand that mutates the committed state file.
                  Requires explicit, individually-justified arguments.
   fetch          The only subcommand that touches the network. Refuses to
@@ -27,7 +41,7 @@ import os
 import sys
 from typing import List, Optional, Sequence
 
-from . import constants, drift as drift_mod, git_utils, report as report_mod
+from . import constants, drift as drift_mod, git_utils, output_safety, report as report_mod
 from . import scan as scan_mod
 from . import state as state_mod
 from . import verify as verify_mod
@@ -77,13 +91,25 @@ def verify_remote_or_raise(repo_root: str, remote_name: str) -> str:
     return url
 
 
-def _print(obj_or_text, as_json: bool, out_path: Optional[str]) -> None:
+def _print(obj_or_text, as_json: bool, out_path: Optional[str], repo_root: Optional[str] = None) -> None:
     if as_json:
         text = json.dumps(obj_or_text, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     else:
         text = obj_or_text if isinstance(obj_or_text, str) else str(obj_or_text)
     if out_path:
-        with open(out_path, "w", encoding="utf-8") as fh:
+        # Every write path in this package shares one safety contract (see
+        # output_safety.validate_output_target): repo-contained, no symlink
+        # anywhere on the path, and confirmed gitignored. This is what
+        # closes the `scan`/`drift --output` gap where an arbitrary caller
+        # path (a tracked file, a path outside the repo, or a symlink) used
+        # to be opened for writing with no checks at all. Nothing is opened
+        # before this check passes.
+        assert repo_root is not None, "internal error: repo_root required to validate --output"
+        target = output_safety.validate_output_target(repo_root, out_path, is_dir=False)
+        parent = os.path.dirname(target)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(target, "w", encoding="utf-8") as fh:
             fh.write(text)
     else:
         sys.stdout.write(text)
@@ -106,20 +132,40 @@ def build_parser() -> argparse.ArgumentParser:
     p_scan = sub.add_parser("scan", help="READ-ONLY: list unreviewed commits up to --ref.")
     p_scan.add_argument("--ref", required=True)
     p_scan.add_argument("--format", choices=("json", "text"), default="text")
-    p_scan.add_argument("--output", default=None)
+    p_scan.add_argument(
+        "--output", default=None,
+        help="Write to this path instead of stdout. Must be repo-contained, "
+        "symlink-free, and gitignored (e.g. under build/upstream-port/); "
+        "a tracked or outside-the-repo path is rejected before anything "
+        "is opened.",
+    )
 
     p_drift = sub.add_parser("drift", help="READ-ONLY: detect stale state / drift for --ref.")
     p_drift.add_argument("--ref", required=True)
     p_drift.add_argument("--format", choices=("json", "text"), default="text")
-    p_drift.add_argument("--output", default=None)
+    p_drift.add_argument(
+        "--output", default=None,
+        help="Write to this path instead of stdout. Same repo-contained/"
+        "symlink-free/gitignored safety contract as `scan --output`.",
+    )
 
     p_report = sub.add_parser(
         "report", help="Generate a review report + patches for EXPLICITLY selected SHAs."
     )
     p_report.add_argument("--ref", required=True)
     p_report.add_argument("--remote", default=None)
-    p_report.add_argument("--sha", action="append", required=True, dest="shas")
-    p_report.add_argument("--out-dir", default=None)
+    p_report.add_argument(
+        "--sha", action="append", required=True, dest="shas",
+        help="Full 40-hex commit SHA to include (repeatable). A merge "
+        "commit SHA is always rejected -- select its non-merge constituent "
+        "commits instead, or review it manually.",
+    )
+    p_report.add_argument(
+        "--out-dir", default=None,
+        help="Directory to write report.json/report.md/*.patch into. Must "
+        "be repo-contained, symlink-free, and gitignored (defaults under "
+        "build/upstream-port/).",
+    )
 
     p_update = sub.add_parser("update-state", help="The only state-mutating subcommand.")
     update_sub = p_update.add_subparsers(dest="update_command", required=True)
@@ -180,19 +226,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 print(f"error: {exc}", file=sys.stderr)
                 return 3
             if args.format == "json":
-                _print(result.to_dict(), True, args.output)
+                _print(result.to_dict(), True, args.output, repo_root)
             else:
-                _print(scan_mod.render_text(result), False, args.output)
+                _print(scan_mod.render_text(result), False, args.output, repo_root)
             return 0
 
         if args.command == "drift":
             state = state_mod.load_state(state_path)
             result = drift_mod.compute_drift(repo_root, args.ref, state)
             if args.format == "json":
-                _print(result.to_dict(), True, args.output)
+                _print(result.to_dict(), True, args.output, repo_root)
             else:
                 text = json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n"
-                _print(text, False, args.output)
+                _print(text, False, args.output, repo_root)
             return result.exit_code()
 
         if args.command == "report":
@@ -237,7 +283,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     ok = False
             return 0 if ok else 1
 
-    except (state_mod.StateError, git_utils.GitError) as exc:
+    except (state_mod.StateError, git_utils.GitError, output_safety.OutputSafetyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

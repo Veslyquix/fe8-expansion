@@ -108,6 +108,36 @@ def checkout(repo_dir: str, ref: str) -> None:
     run_git(["checkout", "-q", ref], repo_dir)
 
 
+def merge_no_ff(
+    repo_dir: str,
+    other_ref: str,
+    message: str,
+    *,
+    author_name: str = FIXED_AUTHOR_NAME,
+    author_email: str = FIXED_AUTHOR_EMAIL,
+    seconds_offset: int = 0,
+) -> str:
+    """Create a real, deterministic merge commit on the current branch of
+    `repo_dir`, merging in `other_ref` with a fixed author/committer
+    identity and date (never wall-clock `now()`), always `--no-ff` so a
+    genuine 2-parent merge commit object is produced (never a fast-forward,
+    which would leave no merge commit to test against at all)."""
+    date = _iso(seconds_offset)
+    env = os.environ.copy()
+    env.update(
+        {
+            "GIT_AUTHOR_NAME": author_name,
+            "GIT_AUTHOR_EMAIL": author_email,
+            "GIT_AUTHOR_DATE": date,
+            "GIT_COMMITTER_NAME": author_name,
+            "GIT_COMMITTER_EMAIL": author_email,
+            "GIT_COMMITTER_DATE": date,
+        }
+    )
+    run_git(["merge", "-q", "--no-ff", "-m", message, other_ref], repo_dir, env=env)
+    return rev_parse(repo_dir, "HEAD")
+
+
 @dataclass
 class SyntheticFixture:
     tmp_dir: str

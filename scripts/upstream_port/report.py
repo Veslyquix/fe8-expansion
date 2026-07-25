@@ -14,15 +14,19 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Sequence
 
-from . import classify, constants, git_utils
+from . import classify, constants, git_utils, output_safety
 
 
 class SelectionError(RuntimeError):
     """Raised when a requested SHA is invalid or outside the allowed range."""
 
 
-class OutputSafetyError(RuntimeError):
-    """Raised when the output directory is not confirmed gitignored."""
+# Re-exported for backwards compatibility: callers/tests that catch
+# `report.OutputSafetyError` keep working even though the check itself now
+# lives in the shared `output_safety` module (see `ensure_output_dir_ignored`
+# below), used by every write path in this package (report *and*
+# scan/drift `--output`).
+OutputSafetyError = output_safety.OutputSafetyError
 
 
 @dataclass
@@ -66,9 +70,20 @@ def _allowed_range_tips(cwd: str, remote_name: str, ref: str) -> List[str]:
 
 def validate_selection(cwd: str, remote_name: str, ref: str, shas: Sequence[str]) -> List[str]:
     """Validate each requested SHA: must be a full 40-hex commit SHA that
-    exists locally and is reachable from the allowed upstream ref set.
-    Returns the validated list (order preserved) or raises SelectionError
-    describing every problem found."""
+    exists locally, is reachable from the allowed upstream ref set, and is
+    NOT a merge commit. Returns the validated list (order preserved) or
+    raises SelectionError describing every problem found -- always before
+    any output directory is created or any file is written.
+
+    Merge commits are rejected outright rather than represented: `git
+    format-patch` silently drops or retargets merge commits (see
+    `git_utils.format_patch_text`), so there is no deterministic,
+    honestly-labelled, safely hand-appliable single-file patch this tool
+    can produce for one. Reviewing a merge commit's actual effect requires
+    selecting its non-merge constituent commits individually, or manual
+    inspection (`git show <merge-sha>`, `git log --graph`) outside this
+    tool.
+    """
     if not shas:
         raise SelectionError("no commit SHAs were explicitly selected; refusing to generate anything")
 
@@ -89,6 +104,16 @@ def validate_selection(cwd: str, remote_name: str, ref: str, shas: Sequence[str]
                 f"({', '.join(tips) or 'none configured'})"
             )
             continue
+        if git_utils.is_merge_commit(sha, cwd):
+            parents = ", ".join(git_utils.commit_parents(sha, cwd))
+            problems.append(
+                f"{sha} is a merge commit (parents: {parents}); refusing to "
+                "generate a patch for it because no single deterministic, "
+                "safely hand-appliable patch that preserves provenance can "
+                "be produced for a merge. Select its individual non-merge "
+                f"commits instead, or review it manually (`git show {sha}`)."
+            )
+            continue
         validated.append(sha)
 
     if problems:
@@ -96,15 +121,17 @@ def validate_selection(cwd: str, remote_name: str, ref: str, shas: Sequence[str]
     return validated
 
 
-def ensure_output_dir_ignored(cwd: str, out_dir: str) -> None:
-    rel = os.path.relpath(os.path.abspath(out_dir), os.path.abspath(cwd))
-    probe = os.path.join(rel, ".upstream-port-ignore-probe")
-    if not git_utils.check_ignore(probe, cwd):
-        raise OutputSafetyError(
-            f"refusing to write to {out_dir!r}: it is not covered by "
-            ".gitignore. Use the default output root or add an ignore rule "
-            "before generating reports/patches."
-        )
+def ensure_output_dir_ignored(cwd: str, out_dir: str) -> str:
+    """Validate `out_dir` via the shared `output_safety` write-safety
+    contract (containment in the repo root, no symlink anywhere on the
+    path, confirmed gitignored) and return the resolved path to use.
+
+    Kept as a thin, named wrapper (rather than inlining the call at each
+    call site) so the historical name/signature callers may already depend
+    on keeps working, while the actual check lives in exactly one shared
+    place.
+    """
+    return output_safety.validate_output_target(cwd, out_dir, is_dir=True)
 
 
 def generate(
@@ -116,7 +143,7 @@ def generate(
     canonical_upstream_url: str = constants.CANONICAL_UPSTREAM_URL,
 ) -> Dict[str, Any]:
     validated = validate_selection(cwd, remote_name, ref, shas)
-    ensure_output_dir_ignored(cwd, out_dir)
+    out_dir = ensure_output_dir_ignored(cwd, out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     entries: List[PatchEntry] = []

@@ -124,21 +124,95 @@ def commit_meta(sha: str, cwd: str) -> CommitMeta:
     )
 
 
+def commit_parents(sha: str, cwd: str) -> List[str]:
+    """Full 40-hex parent SHAs of `sha`, in `git`'s own parent order.
+
+    Empty list for a root commit (no parents). A single-element list is the
+    overwhelmingly common case (an ordinary, non-merge commit). Two or more
+    elements means `sha` is a merge commit -- callers must not treat it like
+    an ordinary commit for diff/patch purposes (see `changed_paths` and
+    `format_patch_text` below).
+    """
+    proc = _run(["show", "-s", "--format=%P", sha], cwd)
+    line = proc.stdout.strip("\n")
+    return line.split() if line else []
+
+
+def is_merge_commit(sha: str, cwd: str) -> bool:
+    return len(commit_parents(sha, cwd)) > 1
+
+
 def changed_paths(sha: str, cwd: str) -> List[str]:
-    proc = _run(
-        ["diff-tree", "--no-commit-id", "--name-only", "-r", sha],
-        cwd,
-    )
-    return sorted(line for line in proc.stdout.splitlines() if line)
+    """Deterministic, sorted, de-duplicated list of paths changed by `sha`.
+
+    Plain `git diff-tree --name-only` has two sharp edges this function
+    exists to close:
+
+    - Root commit (no parents): without `--root`, `diff-tree` silently
+      returns nothing at all for a root commit (there is no parent to diff
+      against by default). Diffed against the empty tree via `--root`
+      instead, so a root commit's real files are never silently dropped.
+    - Merge commit (2+ parents): without `-m`/`-c`, `diff-tree` also
+      silently returns nothing for a merge commit (its default "combined
+      diff" is empty whenever the merge introduced no conflict hunks
+      against either parent, which is the common case). That silent-empty
+      result is exactly the kind of ambiguous, easy-to-miss gap this tool
+      must never produce. Instead, this computes the diff against *each*
+      parent individually and returns the UNION of every changed path,
+      de-duplicated and sorted -- i.e. every path the merge commit's tree
+      actually differs on from at least one parent -- so scan/classify
+      output for a merge commit is honest and deterministic.
+
+    An ordinary (single-parent) commit is diffed against that one parent,
+    exactly as before.
+    """
+    parents = commit_parents(sha, cwd)
+    if not parents:
+        proc = _run(
+            ["diff-tree", "--no-commit-id", "--name-only", "-r", "--root", sha],
+            cwd,
+        )
+        return sorted({line for line in proc.stdout.splitlines() if line})
+    if len(parents) == 1:
+        proc = _run(
+            ["diff-tree", "--no-commit-id", "--name-only", "-r", sha],
+            cwd,
+        )
+        return sorted({line for line in proc.stdout.splitlines() if line})
+    paths = set()
+    for parent in parents:
+        proc = _run(
+            ["diff-tree", "--no-commit-id", "--name-only", "-r", parent, sha],
+            cwd,
+        )
+        paths.update(line for line in proc.stdout.splitlines() if line)
+    return sorted(paths)
 
 
 def format_patch_text(sha: str, cwd: str) -> str:
-    """Render a single commit as a patch, reading local git objects only.
+    """Render a single, non-merge commit as a patch, reading local git
+    objects only.
 
     This never applies, cherry-picks, or merges anything -- it is a pure
     read (`git format-patch --stdout`) that preserves the original author
     identity, date, and subject in standard mbox patch headers.
+
+    Refuses (raises `GitError`) for a merge commit: `git format-patch -1
+    --stdout <merge-sha>` does not honestly patch the merge commit at all
+    -- by default it silently walks past merges and emits a patch for a
+    different, non-merge ancestor commit instead (or nothing), which would
+    be a dangerously misleading result to write to a review output file.
+    Callers must reject merge commits before calling this (see
+    `report.validate_selection`); this is a defense-in-depth guard for any
+    other caller.
     """
+    if is_merge_commit(sha, cwd):
+        raise GitError(
+            f"refusing to format-patch merge commit {sha}: `git format-patch` "
+            "does not produce a single deterministic, honest diff for a "
+            "merge commit (it silently skips or retargets it). Select its "
+            "individual non-merge commits instead, or review it manually."
+        )
     proc = _run(
         ["format-patch", "-1", "--stdout", "--no-signature", sha],
         cwd,

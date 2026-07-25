@@ -53,7 +53,8 @@ and go straight to `scan`.
 
 ```sh
 python3 -m scripts.upstream_port scan --ref decomp/master --format text
-python3 -m scripts.upstream_port scan --ref decomp/master --format json --output /tmp/scan.json
+python3 -m scripts.upstream_port scan --ref decomp/master --format json \
+  --output build/upstream-port/scan.json
 ```
 
 Lists every commit strictly after `last_ported.sha` up to the caller-selected
@@ -65,7 +66,17 @@ classification (`code`/`data`/`symbol`/`docs`/`tools`/`build`/`linker`/
 `known-fork-divergence-hotspot`) for commits touching known fork/build
 hotspots (`Makefile`, `modern.mk`, `ldscript.txt`, `scripts/shiftcheck/*`,
 etc.). Output is deterministically ordered (oldest-first, topological) —
-never dependent on wall-clock time.
+never dependent on wall-clock time. A merge commit in range is classified
+using the deterministic, sorted **union** of changed paths across all of
+its parents (never a silently empty path list, which is what plain `git
+diff-tree` would give you for a merge commit by default).
+
+`scan`/`drift` print to **stdout by default**. `--output PATH` is only ever
+honored if `PATH` passes the same write-safety contract described in
+Step 3 below (repo-contained, no symlink anywhere on the path, confirmed
+gitignored) — a tracked file (e.g. `README.md`), a path outside the repo
+(e.g. `/tmp/scan.json`), or a symlinked path is rejected with a clear error
+*before anything is opened*, and nothing is mutated.
 
 If `last_ported` is not an ancestor of the selected ref (histories
 diverged — e.g. you selected a side-topic branch that was never rebased
@@ -83,7 +94,8 @@ the state's recorded SHAs are still reachable/consistent in this clone, and
 how many commits remain unreviewed. Exit codes: `0` clean, `2` drift found
 (ref moved and/or unreviewed commits exist), `3` integrity problem (a
 recorded SHA is unreachable, or histories have diverged) — always read-only,
-suitable for CI (see the drift-scan workflow below).
+suitable for CI (see the drift-scan workflow below). Same `--output`
+write-safety contract as `scan` above.
 
 ### 3. Select commits and generate a review report + patches
 
@@ -99,10 +111,27 @@ python3 -m scripts.upstream_port report \
 - Each SHA must be a full 40-hex commit SHA that already exists locally and
   is reachable from the selected ref or from any `refs/remotes/<remote>/*`
   ref; anything else is rejected with a clear error.
+- **A merge commit SHA is always rejected outright** — before any output
+  directory is created or any file is written. Plain `git format-patch -1
+  --stdout <merge-sha>` does not honestly patch a merge commit at all: it
+  silently walks past it and formats a *different*, non-merge ancestor
+  commit instead (or produces nothing), which would be a dangerously
+  misleading result to hand a reviewer. There is no single deterministic,
+  safely hand-appliable patch this tool can produce for a merge that also
+  preserves provenance, so it refuses rather than fabricate one. Select the
+  merge's individual non-merge constituent commits instead, or review it
+  manually (`git show <merge-sha>`, `git log --graph`) outside this tool.
+  A mixed selection containing even one merge SHA is rejected wholesale —
+  no partial output is ever written for the valid SHAs in the same batch.
 - Output (`report.json`, `report.md`, and one `NNNN-<shortsha>.patch` per
   commit) is written only under the gitignored `build/upstream-port/` root
-  (or another directory you point at, provided it is also confirmed
-  gitignored via `git check-ignore` before anything is written).
+  (or another directory you point at), and only after that directory passes
+  the full write-safety contract: it must resolve inside the repository
+  root, contain no symlink anywhere on its path (an ignored directory that
+  is itself a symlink — whether pointing outside the repo or to another
+  location inside it — is rejected, not silently followed), and be
+  confirmed ignored via `git check-ignore`. All checks run, and must pass,
+  before anything is created or written.
 - Patches are produced by `git format-patch --stdout` reading local objects
   only — never applied, cherry-picked, or merged — and preserve the original
   author name/email/date/subject and commit SHA in standard patch headers.
@@ -182,9 +211,20 @@ git calls).
   and it validates the remote URL first.
 - Never applies, cherry-picks, merges, commits, branches, or pushes.
 - Never executes, imports, builds, or tests upstream source.
-- Never writes `report`/`patch` output anywhere except a confirmed-gitignored
-  directory.
-- Never generates a patch for a SHA that wasn't explicitly selected.
+- Never writes `report`/`patch` output, or a `scan`/`drift --output` file,
+  anywhere that fails the shared write-safety contract
+  (`output_safety.validate_output_target`, used by every write path in this
+  package): the resolved target must be contained inside the repository
+  root, must not pass through a symlink anywhere on its path (regardless of
+  whether that symlink points inside or outside the repo), and must be
+  confirmed ignored via `git check-ignore`. A tracked file (e.g.
+  `README.md`) is always rejected, unchanged, before anything is opened.
+- Never generates a patch for a SHA that wasn't explicitly selected, and
+  never generates one for a merge commit SHA even if explicitly selected —
+  see Step 3 above for why.
+- For a merge commit, `scan`/classification always report the
+  deterministic, sorted **union** of changed paths across all of its
+  parents — never a silently empty path list.
 - Never mutates `config/upstream-port-state.json` except via `update-state`.
 - `verify` never builds the upstream ref/tree — only the current worktree.
 
