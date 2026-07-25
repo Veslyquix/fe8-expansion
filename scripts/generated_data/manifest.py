@@ -1,0 +1,184 @@
+"""Aggregate public registry/counts/dependency surface for the whole platform.
+
+Per-table inventories (``reports/generated_data_<table>_inventory.md``)
+each describe one table in isolation -- but a downstream tool that wants
+to *discover* which tables exist, how many records each holds, how they
+depend on one another, and whether any has outgrown its fixed-array
+capacity has no single place to look. This module builds exactly that
+surface, driven entirely through the :class:`~.schema.TableSchema`
+interface (no per-table ``if table == ...`` branches), in two forms:
+
+* a **committed, reviewable** Markdown report
+  (``reports/generated_data_manifest.md``) -- the human/tooling-facing
+  public inventory + aggregate dependency digest;
+* a **generated, ephemeral** C89 header
+  (``build/generated/data/generated_data_manifest.h``) -- ``#define``
+  symbolic record-count/version macros plus a table count, so C-side
+  downstream tooling can discover the registered tables and their record
+  counts at compile time without re-parsing any JSON.
+
+It also computes the **record-budget diagnostics**: any table whose schema
+declares a ``record_budget`` (a fixed C-array capacity, e.g.
+``gCharacterData[]``'s 256 slots) is checked -- authoring more records
+than the array can hold is a hard, actionable error, not silent overflow.
+"""
+
+from __future__ import annotations
+
+import hashlib
+
+from . import registry  # noqa: F401  (import registers table schemas)
+from .diagnostics import GeneratedDataError
+from .schema import REGISTRY, DependencyGraph
+
+
+class ManifestEntry:
+    """One registered table's manifest row (record count + metadata)."""
+
+    __slots__ = (
+        "name", "version", "record_count", "output_name",
+        "dependency_tables", "dependencies", "record_budget",
+        "record_budget_reason",
+    )
+
+    def __init__(self, schema, record_count):
+        self.name = schema.name
+        self.version = schema.version
+        self.record_count = record_count
+        self.output_name = schema.default_output_name
+        self.dependency_tables = tuple(schema.dependency_tables())
+        self.dependencies = tuple(schema.dependencies())
+        self.record_budget = schema.record_budget
+        self.record_budget_reason = schema.record_budget_reason
+
+    @property
+    def budget_ok(self):
+        if self.record_budget is None:
+            return True
+        return self.record_count <= self.record_budget
+
+
+def collect_entries(source_overrides=None):
+    """Load every registered table and return a name-sorted list of
+    :class:`ManifestEntry`. ``source_overrides`` maps ``table -> path`` to
+    override a table's ``default_source`` (used by tests/fixtures).
+    """
+    source_overrides = source_overrides or {}
+    entries = []
+    for name in REGISTRY.all_names():
+        schema = REGISTRY.resolve(name)
+        source_path = source_overrides.get(name) or schema.default_source
+        if not source_path:
+            raise GeneratedDataError(
+                "table '{}' has no default_source; cannot build manifest".format(name)
+            )
+        records = schema.load_records(source_path)
+        entries.append(ManifestEntry(schema, len(records)))
+    return entries
+
+
+def aggregate_dependency_graph(entries):
+    """Build the platform-wide dependency graph from every table's
+    ``dependency_tables()`` (registered-table -> registered-table edges).
+
+    Returns a :class:`DependencyGraph`; every table is a node even when it
+    has no cross-table edges, so ``topo_order()`` covers the full set.
+    """
+    graph = DependencyGraph()
+    for entry in entries:
+        graph.add_node(entry.name)
+        for dep in entry.dependency_tables:
+            graph.add_dependency(entry.name, dep)
+    return graph
+
+
+def budget_diagnostics(entries):
+    """Return a list of :class:`GeneratedDataError` for every table that
+    has authored more records than its declared fixed-array capacity."""
+    errors = []
+    for entry in entries:
+        if entry.budget_ok:
+            continue
+        errors.append(
+            GeneratedDataError(
+                "table '{}' authors {} record(s) but its fixed capacity is {} "
+                "({}); shrink the source or raise the array bound".format(
+                    entry.name, entry.record_count, entry.record_budget,
+                    entry.record_budget_reason or "declared record_budget",
+                ),
+                reference_path="manifest.{}".format(entry.name),
+            )
+        )
+    return errors
+
+
+def _c_macro_name(table):
+    return table.upper().replace("-", "_")
+
+
+def build_manifest_report(entries):
+    """Return the committed Markdown public-manifest text (deterministic)."""
+    graph = aggregate_dependency_graph(entries)
+    total_records = sum(e.record_count for e in entries)
+    lines = []
+    lines.append("# Generated-data platform manifest\n")
+    lines.append("\n")
+    lines.append("_Auto-generated by `python3 -m scripts.generated_data manifest`. "
+                 "Do not edit by hand -- see docs/generated_data.md._\n")
+    lines.append("\n")
+    lines.append("Aggregate, discoverable registry of every table the platform "
+                 "registers: record counts, capacities, and cross-table "
+                 "dependency ordering. Downstream tools should read this file "
+                 "(or the generated `generated_data_manifest.h`) instead of "
+                 "hardcoding table names.\n")
+    lines.append("\n")
+    lines.append("- Registered tables: {}\n".format(len(entries)))
+    lines.append("- Total records: {}\n".format(total_records))
+    lines.append("- Dependency topological order: {}\n".format(", ".join(graph.topo_order())))
+    lines.append("- Aggregate dependency graph digest (sha256): `{}`\n".format(graph.digest()))
+    lines.append("\n")
+    lines.append("| Table | Version | Records | Budget | Output symbol | Table dependencies |\n")
+    lines.append("|---|---|---|---|---|---|\n")
+    for entry in entries:
+        if entry.record_budget is None:
+            budget = "-"
+        else:
+            budget = "{}/{}".format(entry.record_count, entry.record_budget)
+        output = entry.output_name or "(metadata-only)"
+        deps = ", ".join(entry.dependency_tables) or "-"
+        lines.append("| {} | {} | {} | {} | {} | {} |\n".format(
+            entry.name, entry.version, entry.record_count, budget, output, deps))
+    return "".join(lines)
+
+
+def build_manifest_header(entries):
+    """Return the generated C89 symbolic-count header text.
+
+    C89/agbcc-safe: include guard, ``/* */`` comments only (never ``//``),
+    plain ``#define`` integer macros.
+    """
+    lines = []
+    lines.append("/* AUTO-GENERATED by scripts/generated_data -- DO NOT EDIT BY HAND.\n")
+    lines.append(" * Public symbolic record-count/registry surface for downstream tools.\n")
+    lines.append(" * Regenerate with: python3 -m scripts.generated_data manifest\n")
+    lines.append(" */\n")
+    lines.append("#ifndef GENERATED_DATA_MANIFEST_H\n")
+    lines.append("#define GENERATED_DATA_MANIFEST_H\n")
+    lines.append("\n")
+    lines.append("#define GENERATED_DATA_TABLE_COUNT {}\n".format(len(entries)))
+    lines.append("\n")
+    for entry in entries:
+        macro = _c_macro_name(entry.name)
+        lines.append("#define GENERATED_DATA_{}_RECORD_COUNT {}\n".format(macro, entry.record_count))
+        lines.append("#define GENERATED_DATA_{}_VERSION {}\n".format(macro, entry.version))
+        if entry.record_budget is not None:
+            lines.append("#define GENERATED_DATA_{}_CAPACITY {}\n".format(macro, entry.record_budget))
+    lines.append("\n")
+    lines.append("#endif /* GENERATED_DATA_MANIFEST_H */\n")
+    return "".join(lines)
+
+
+def manifest_digest(entries):
+    """Stable sha256 over the whole manifest report (drift fingerprint)."""
+    blob = build_manifest_report(entries).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()

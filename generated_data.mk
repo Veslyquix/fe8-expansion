@@ -31,7 +31,8 @@ GENERATED_DATA_TABLES   := supports units shops traps items classes characters e
 GENERATED_DATA_CH2_TABLES := units shops traps eventscripts eventlists chapterbundle
 
 .PHONY: generated-data-validate generated-data-generate generated-data-check generated-data-test \
-        generated-data-ch2-check generated-data-bundle-validate generated-data-bundle-check
+        generated-data-ch2-check generated-data-bundle-validate generated-data-bundle-check \
+        generated-data-manifest generated-data-manifest-check
 
 generated-data-validate:
 	@for table in $(GENERATED_DATA_TABLES); do \
@@ -42,14 +43,28 @@ generated-data-generate:
 	@for table in $(GENERATED_DATA_TABLES); do \
 		$(GENERATED_DATA_PY) generate --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
+	@$(GENERATED_DATA_PY) manifest --out-dir $(GENERATED_DATA_OUT_DIR)
 
 generated-data-check:
 	@for table in $(GENERATED_DATA_TABLES); do \
 		$(GENERATED_DATA_PY) check --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
+	@$(GENERATED_DATA_PY) manifest --check --out-dir $(GENERATED_DATA_OUT_DIR)
 
 generated-data-test:
 	$(PYTHON) -m unittest discover -s scripts/generated_data/tests -v
+
+# Aggregate public registry/counts/dependency surface across every
+# registered table (record counts, capacities, cross-table dependency
+# ordering + digest). Writes the committed reports/generated_data_manifest.md
+# and the ephemeral build/ symbolic C header; fails on any record-budget
+# overflow. `generated-data-manifest-check` is the drift/budget gate folded
+# into generated-data-check above for CI.
+generated-data-manifest:
+	$(GENERATED_DATA_PY) manifest --out-dir $(GENERATED_DATA_OUT_DIR)
+
+generated-data-manifest-check:
+	$(GENERATED_DATA_PY) manifest --check --out-dir $(GENERATED_DATA_OUT_DIR)
 
 # Batch C: validate/check just the chapterbundle table on its own (fast
 # path for iterating on src/data/ch2_bundle.json without re-running the

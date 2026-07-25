@@ -281,6 +281,13 @@ def validate(records, diagnostics, characters_header=CHARACTERS_HEADER, capacity
                 continue
 
             back_index = partner_record.characters.index(record.owner)
+            # The partner's own parallel-array length mismatch (if any) is
+            # already reported above via validate_parallel_arrays; guard the
+            # reciprocal value cross-check so a short partner base/growth
+            # array degrades to that clean diagnostic instead of crashing.
+            if (back_index >= len(partner_record.support_exp_base)
+                    or back_index >= len(partner_record.support_exp_growth)):
+                continue
             back_base = partner_record.support_exp_base[back_index]
             back_growth = partner_record.support_exp_growth[back_index]
             if back_base != base or back_growth != growth:

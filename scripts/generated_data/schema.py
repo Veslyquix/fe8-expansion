@@ -83,6 +83,17 @@ class TableSchema:
     default_output_name = None
     default_inventory_path = None
 
+    # Optional record-budget diagnostic input. When a table maps onto a
+    # fixed-size C array (a hard slot/memory bound), set ``record_budget``
+    # to that capacity and ``record_budget_reason`` to a one-line human
+    # explanation. The aggregate manifest surface (``manifest.py``) then
+    # reports usage (``count/budget``) and raises an actionable
+    # ``GeneratedDataError`` if a source ever authors more records than the
+    # array can physically hold. Leave ``None`` for partial-file/open-ended
+    # tables that have no single platform-wide capacity to honestly report.
+    record_budget = None
+    record_budget_reason = None
+
     def dependencies(self):
         """Return an iterable of dependency names (headers/other tables).
 

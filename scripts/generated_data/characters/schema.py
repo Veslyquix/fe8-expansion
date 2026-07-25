@@ -857,6 +857,13 @@ class CharactersTableSchema(TableSchema):
     default_output_name = "data_characters.c"
     default_inventory_path = "reports/generated_data_characters_inventory.md"
 
+    # gCharacterData[] is a hard 256-element array (1-based designators
+    # 1..256, see DESIGNATOR_MAX and the module docstring): the u8 unit
+    # .number selector can never exceed 256, so authoring more than 256
+    # records would overflow the array. Reported/gated by manifest.py.
+    record_budget = DESIGNATOR_MAX
+    record_budget_reason = "gCharacterData[] fixed 256-slot array (1-based designators 1..256)"
+
     def dependencies(self):
         return (
             "constants.characters.CHARACTER", "constants.classes.CLASS",
