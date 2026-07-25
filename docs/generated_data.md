@@ -80,7 +80,7 @@ selects Chapter 2 at runtime:
   release linker checks -- see "Make targets" below.
 
 See "## chapterbundle schema (Batch C whole-bundle manifest)" below for
-the full write-up, and "Remaining Issue #5 scope" at the end of this
+the full write-up, and "Issue #5 completion boundary and status" at the end of this
 document for what's still open.
 
 **Issue #5 Batch 1** (this update) adds the first **global, non-chapter-
@@ -141,7 +141,7 @@ of `src/data_characters.c`
 its hand-written counterpart" below). See "## `characters` schema
 (Issue #5 Batch 2a + 2b: full global character table)" below for the
 full write-up. Issue #5's other remaining mechanics scope
-stays open -- see "Remaining Issue #5 scope" at the end of this
+stays open -- see "Issue #5 completion boundary and status" at the end of this
 document.
 
 As of Issue #5 **Batch 3a**, `units` -- the first Chapter-2-*owned*
@@ -209,7 +209,7 @@ Issue #5 overall -- see "## `terrainstats` schema (Issue #5 Batch 1
 mechanics: terrain combat/heal stat arrays)" and "Linking two
 non-adjacent groups of terrain combat/heal stat arrays in one
 partial-file table (Batch 1 mechanics: `terrainstats`)" below for the
-full write-up, and "Remaining Issue #5 scope" at the end of this
+full write-up, and "Issue #5 completion boundary and status" at the end of this
 document for the explicit list of what remains open.
 
 As of Issue #5 **mechanics Batch 2**, `movecost` completes the other
@@ -235,7 +235,7 @@ overall -- see "## `movecost` schema (Issue #5 mechanics Batch 2:
 weather-triplet movement-cost + DemonKing/Ballista tables)" and "Linking
 a weather-triplet movement-cost table split around one non-adjacent
 escape hatch (Issue #5 mechanics Batch 2: `movecost`)" below for the
-full write-up, and "Remaining Issue #5 scope" at the end of this
+full write-up, and "Issue #5 completion boundary and status" at the end of this
 document for the explicit list of what remains open.
 
 As of Issue #5 **mechanics Batch 3**, `weapontriangle` closes out the
@@ -1271,8 +1271,7 @@ vanilla arrays -- `TerrainTable_Avo_Common`/`Def_Common`/`Res_Common`,
 `TerrainTable_HealsStatus` -- deliberately excluding the 5 unrelated
 `Unk_TerrainTable_3`..`Unk_TerrainTable_7` escape-hatch arrays and every
 movement-cost/graphics table that also lives in `src/data_terrains.c`;
-none of those are part of this batch's scope (see "Remaining Issue #5
-scope" at the end of this document).
+none of those are part of this batch's scope (see "Issue #5 completion boundary and status" at the end of this document).
 
 Validations enforced (`terrainstats/schema.py: validate()`): unique
 array symbols; **full contiguous `TERRAIN_*` coverage** for every array
@@ -1397,7 +1396,7 @@ profiles' single `normal` arrays (2 more) -- **47 arrays total** --
 deliberately excluding the 2 unrelated `Unk_TerrainTable_1`/
 `Unk_TerrainTable_2` escape-hatch arrays and every graphics/non-movement
 table that also lives in `src/data_terrains.c`; none of those are part
-of this batch's scope (see "Remaining Issue #5 scope" at the end of this
+of this batch's scope (see "Issue #5 completion boundary and status" at the end of this
 document).
 
 Validations enforced (`movecost/schema.py: validate()`): unique profile
@@ -1806,7 +1805,7 @@ through the real `cpp | iconv | agbcc` pipeline and assembled with
 own `$(C_OBJECTS)` recipe, same flags), confirming it is valid,
 compilable C89 -- at this point (Batch 2a + 2b) it was not yet linked in
 place of `src/data_characters.c` (no `ldscript.txt` change; linking was
-explicit Batch 2c scope, see "Remaining Issue #5 scope" below). **It has
+explicit Batch 2c scope, see "Issue #5 completion boundary and status" below). **It has
 since been linked** (Issue #5 **Batch 2c-4**; see "Linking a generated
 table in place of its hand-written counterpart" below) -- `gCharacterData`
 is the single generated top-level symbol now canonically compiled/linked
@@ -3604,7 +3603,30 @@ check, not a three-in-a-row cluster like `movecost`'s).
   build the full modern object cohort, link, produce a valid ROM header,
   and pass `expansion-modern-boot-check`.
 
-## Remaining Issue #5 scope (explicitly not done here)
+## Issue #5 completion boundary and status
+
+GitHub issue #5 is still **OPEN** (this repository does not close it),
+but every clause of the issue's own scope checklist and acceptance
+criteria now has code + tests + docs evidence -- mapped claim-by-claim
+in `reports/generated_data_issue5_closure.md`. Contributors add or
+modify any supported input type via the walkthrough in
+`docs/generated_data_tutorial.md`; the discoverable registry of every
+registered table + record count + capacity + dependency order lives in
+`reports/generated_data_manifest.md` (and, for C tooling, the generated
+`build/generated/data/generated_data_manifest.h`). The rest of this
+section is the honest boundary: what is **done** vs. the **legitimate
+non-goals** deliberately left out of this vertical-slice sprint.
+
+**Done (evidence in the closure report):** deterministic schema/
+generation/round-trip pipeline; the 13 registered tables (global +
+Chapter 2 slice + clean mechanics); typed C output; the aggregate
+symbolic count/registry/dependency surfaces; duplicate-ID/missing-
+reference/range/capacity/asset-text/record-budget diagnostics with
+`file:line:column` locations; typed C escape hatches; the contributor
+tutorial; and CI drift/test gates (`make generated-data-check`,
+`make generated-data-test`).
+
+**Legitimate non-goals (explicitly out of scope, not silently dropped):**
 
 Batch A + Batch B + Batch C together are scoped to the Chapter 2
 vertical slice's pure-data tables, its event-list/manifest composition
@@ -3618,8 +3640,8 @@ table, this doc's `## chapterbundle schema` section) now proves the
 support-owner existence/reciprocity, and the referenced character/class/
 item dependency sets are all internally consistent as a single bundle,
 CI-gated via `generated-data-check` (now wired into
-`.github/workflows/build.yml`). Still open, and **explicitly out of
-scope** for this Batch C update:
+`.github/workflows/build.yml`). The following remain **out of scope**
+as deliberate non-goals of this sprint:
 
 * **Global character authoring/generation/linking.** `items` and
   `classes` (Issue #5 Batch 1) are global tables with their own schema/

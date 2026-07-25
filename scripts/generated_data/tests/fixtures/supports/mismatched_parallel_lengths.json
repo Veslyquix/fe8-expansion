@@ -1,0 +1,29 @@
+{
+  "$schema": "fe8.supports.v1",
+  "records": [
+    {
+      "owner": "CHARACTER_EIRIKA",
+      "symbol": "SupportData_Eirika",
+      "characters": ["CHARACTER_SETH", "CHARACTER_FRANZ"],
+      "supportExpBase": [10, 5],
+      "supportExpGrowth": [2],
+      "supportCount": 2
+    },
+    {
+      "owner": "CHARACTER_SETH",
+      "symbol": "SupportData_Seth",
+      "characters": ["CHARACTER_EIRIKA"],
+      "supportExpBase": [10],
+      "supportExpGrowth": [2],
+      "supportCount": 1
+    },
+    {
+      "owner": "CHARACTER_FRANZ",
+      "symbol": "SupportData_Franz",
+      "characters": ["CHARACTER_EIRIKA"],
+      "supportExpBase": [5],
+      "supportExpGrowth": [1],
+      "supportCount": 1
+    }
+  ]
+}

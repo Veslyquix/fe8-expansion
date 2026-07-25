@@ -110,6 +110,19 @@ class SupportsSchemaCountTests(unittest.TestCase):
         )
 
 
+class SupportsSchemaParallelLengthTests(unittest.TestCase):
+    def test_mismatched_parallel_lengths_report_cleanly_without_crashing(self):
+        """A short supportExpBase/Growth array must yield an actionable
+        parallel-array diagnostic, never an uncaught IndexError in the
+        reciprocal cross-check (regression: crash-to-diagnostic)."""
+        _, diagnostics = _validate("mismatched_parallel_lengths.json")
+        self.assertFalse(diagnostics.ok)
+        messages = [str(e) for e in diagnostics.errors]
+        self.assertTrue(
+            any("parallel arrays have mismatched lengths" in m for m in messages), messages
+        )
+
+
 class SupportsSchemaReciprocalTests(unittest.TestCase):
     def test_reciprocal_mismatch_detected(self):
         _, diagnostics = _validate("reciprocal_mismatch.json")

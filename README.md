@@ -67,6 +67,27 @@ To clean all build artifacts **except** the extremely slow battle animation comp
 make clean_fast
 ```
 
+### Authoring generated data
+
+Structured JSON under `src/data/` is the supported way to author FE8
+content (characters, classes, items, supports, and the Chapter 2 unit/
+shop/trap/event/bundle slice, plus terrain/movement/weapon-triangle
+mechanics). The deterministic pipeline validates, generates typed C89
+into `build/generated/data/`, and drift-checks committed public outputs:
+
+```bash
+make generated-data-validate   # actionable file:line:column diagnostics
+make generated-data-generate   # write build/generated/data/*.c + inventories + manifest
+make generated-data-check      # CI drift + record-budget gate
+make generated-data-test       # unit tests
+```
+
+Start from the walkthrough in
+[`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md); the
+discoverable registry of every table and its record count lives in
+[`reports/generated_data_manifest.md`](reports/generated_data_manifest.md).
+Full design/reference: [`docs/generated_data.md`](docs/generated_data.md).
+
 ### Archival/decomp agbcc build
 
 The original agbcc-based `fireemblem8.gba` target remains available,

@@ -30,11 +30,14 @@ import os
 import sys
 
 from . import registry  # noqa: F401  (import registers table schemas)
+from . import manifest as manifest_mod
 from .cgen import write_if_changed
 from .diagnostics import GeneratedDataError, DiagnosticCollector
 from .schema import REGISTRY
 
 DEFAULT_OUT_DIR = os.path.join("build", "generated", "data")
+DEFAULT_MANIFEST_REPORT = os.path.join("reports", "generated_data_manifest.md")
+MANIFEST_HEADER_NAME = "generated_data_manifest.h"
 
 
 def _resolve_schema(table):
@@ -243,6 +246,60 @@ def cmd_check(args):
     return 0
 
 
+def cmd_manifest(args):
+    """Aggregate public registry/counts/dependency surface across every
+    registered table. Writes the committed Markdown manifest + the
+    generated symbolic C header, and fails on any record-budget overflow.
+
+    ``--check`` compares the committed manifest against a freshly built one
+    (drift gate, writes nothing committed) but still self-heals the
+    ephemeral build/ header, exactly like ``check`` does for per-table C.
+    """
+    out_dir = args.out_dir or DEFAULT_OUT_DIR
+    report_path = args.report or DEFAULT_MANIFEST_REPORT
+
+    try:
+        entries = manifest_mod.collect_entries()
+    except GeneratedDataError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    budget_errors = manifest_mod.budget_diagnostics(entries)
+    if budget_errors:
+        for error in budget_errors:
+            print(str(error), file=sys.stderr)
+        print("FAILED: {} record-budget diagnostic(s)".format(len(budget_errors)), file=sys.stderr)
+        return 1
+
+    report_content = manifest_mod.build_manifest_report(entries)
+    header_content = manifest_mod.build_manifest_header(entries)
+    header_path = os.path.join(out_dir, MANIFEST_HEADER_NAME)
+
+    # The bulky/ephemeral C header always lives under build/ and is never
+    # committed, so self-heal it write-if-changed under both modes.
+    write_if_changed(header_path, header_content)
+
+    if args.check:
+        existing = None
+        if os.path.exists(report_path):
+            with open(report_path, "r", encoding="utf-8") as handle:
+                existing = handle.read()
+        if existing != report_content:
+            print(
+                "DRIFT: committed manifest {} is stale (regenerate with `manifest`)".format(report_path),
+                file=sys.stderr,
+            )
+            return 1
+        print("OK: no manifest drift ({} table(s), {} record(s))".format(
+            len(entries), sum(e.record_count for e in entries)))
+        return 0
+
+    report_changed = write_if_changed(report_path, report_content)
+    print("{} {}".format("wrote" if report_changed else "up to date:", report_path))
+    print("wrote (build) {}".format(header_path))
+    return 0
+
+
 def build_arg_parser():
     parser = argparse.ArgumentParser(prog="python3 -m scripts.generated_data")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -273,6 +330,17 @@ def build_arg_parser():
     check_parser.add_argument("--out-dir", help="output directory to compare against (default: build/generated/data)")
     check_parser.add_argument("--inventory", help="path to the committed inventory/summary file to compare against")
     check_parser.set_defaults(func=cmd_check)
+
+    manifest_parser = subparsers.add_parser(
+        "manifest", help="build the aggregate public registry/counts/dependency surface")
+    manifest_parser.add_argument(
+        "--out-dir", help="output directory for the generated C header (default: build/generated/data)")
+    manifest_parser.add_argument(
+        "--report", help="path to the committed Markdown manifest (default: reports/generated_data_manifest.md)")
+    manifest_parser.add_argument(
+        "--check", action="store_true",
+        help="fail on manifest drift or record-budget overflow; write nothing committed")
+    manifest_parser.set_defaults(func=cmd_manifest)
 
     return parser
 

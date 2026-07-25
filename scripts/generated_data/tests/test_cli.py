@@ -198,5 +198,38 @@ class CliCheckDriftTests(unittest.TestCase):
         self.assertEqual(code, 0, msg=out + err)
 
 
+class CliManifestTests(unittest.TestCase):
+    def test_manifest_writes_report_and_header(self):
+        with scratch_dir() as out_dir:
+            report_path = os.path.join(out_dir, "manifest.md")
+            code, out, err = run_cli([
+                "manifest", "--out-dir", out_dir, "--report", report_path,
+            ])
+            self.assertEqual(code, 0, msg=out + err)
+            self.assertTrue(os.path.exists(report_path))
+            header_path = os.path.join(out_dir, "generated_data_manifest.h")
+            self.assertTrue(os.path.exists(header_path))
+            with open(header_path, "r", encoding="utf-8") as handle:
+                header = handle.read()
+            self.assertIn("#define GENERATED_DATA_TABLE_COUNT", header)
+            self.assertNotIn("//", header)
+
+    def test_manifest_check_detects_drift(self):
+        with scratch_dir() as out_dir:
+            report_path = os.path.join(out_dir, "manifest.md")
+            with open(report_path, "w", encoding="utf-8") as handle:
+                handle.write("stale manifest\n")
+            code, out, err = run_cli([
+                "manifest", "--check", "--out-dir", out_dir, "--report", report_path,
+            ])
+            self.assertEqual(code, 1)
+            self.assertIn("DRIFT", err)
+
+    def test_committed_manifest_has_no_drift(self):
+        code, out, err = run_cli(["manifest", "--check"])
+        self.assertEqual(code, 0, msg=out + err)
+
+
+
 if __name__ == "__main__":
     unittest.main()
