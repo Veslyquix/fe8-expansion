@@ -13,6 +13,7 @@ MODERN_GOALS := \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
+	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -162,7 +163,9 @@ MODERN_COHORT_SOURCES ?= \
 	src/hardware.c \
 	src/debugtools_registry.c \
 	src/debugtools_launcher.c \
-	src/debugtools_actions.c
+	src/debugtools_actions.c \
+	src/debugtools_diag.c \
+	src/debugtools_tools.c
 
 # Handwritten assembly that must not be decompiled (see CONTRIBUTING.md).
 # libagbsyscall.s is a self-contained set of BIOS SWI trampolines; arm.s and
@@ -444,6 +447,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
+	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -976,6 +980,7 @@ MODERN_LINKED_GOALS := \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
+	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -1666,6 +1671,68 @@ expansion-modern-debugtools-map-check: expansion-modern-boot-preflight expansion
 	@printf 'Modern ROM debugtools-map-check passed: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 
+# Issue #11 closure: the "Fast Boot: Ch4 Prep" launcher's own pending-
+# request/boot-commit lifecycle -- a second, independent launcher target
+# alongside Chapter 2's, added specifically because Chapter 2's own event
+# script never reaches the PREP event opcode. This scenario proves the
+# hub action arms its own request and GameControl_PostIntro consumes it
+# and commits gPlaySt.chapterIndex to CHAPTER_L_4 -- the same verified
+# pending-request handoff mechanism as Chapter 2's own
+# expansion-modern-debugtools-check, live-executed end to end. It does
+# NOT capture the further live-prep-screen arrival (the world-map
+# navigation through Chapter 4's own longer beginning script/battle
+# sequence) -- see docs/debugtools.md "Remaining #11 scope" and
+# reports/debugtools_issue11_closure.md for that explicit, honest
+# residual boundary.
+MODERN_DEBUGTOOLS_CH4PREP_SCENARIO := tools/gba-playtest/scenarios/debugtools-ch4-prep-launch-modern-$(MODERN_CONFIG).json
+MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT := tools/gba-playtest/fingerprints/debugtools-ch4-prep-launch-modern-$(MODERN_CONFIG).json
+
+ifeq ($(MODERN_CONFIG),debug)
+# Debug only: shares the title-screen prefix with
+# expansion-modern-debugtools-check, so it needs the same deterministic
+# pre-seeded SRAM fixture -- booting from genuinely blank SRAM takes a
+# different (WipeSram-driven) boot path with different frame timing,
+# which would shift this scenario's own frame-tied checkpoints (see
+# docs/debugtools.md "Deterministic pre-launch SRAM fixture"). The
+# release mirror has no such dependency (release builds never seed this
+# fixture either, see expansion-modern-debugtools-map-check above).
+expansion-modern-debugtools-ch4prep-check: expansion-modern-boot-preflight expansion-modern-rom \
+		$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)
+	@if [ ! -f "$(MODERN_DEBUGTOOLS_CH4PREP_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT)" ]; then \
+		printf '%s\n' \
+			"error: missing debugtools Ch4-Prep-launch scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_DEBUGTOOLS_CH4PREP_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_DEBUGTOOLS_CH4PREP_SCENARIO)" \
+		--sram-image "$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)" \
+		--expected "$(MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM debugtools-ch4prep-check passed: %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+else
+expansion-modern-debugtools-ch4prep-check: expansion-modern-boot-preflight expansion-modern-rom
+	@if [ ! -f "$(MODERN_DEBUGTOOLS_CH4PREP_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT)" ]; then \
+		printf '%s\n' \
+			"error: missing debugtools Ch4-Prep-launch scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_DEBUGTOOLS_CH4PREP_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_DEBUGTOOLS_CH4PREP_SCENARIO)" \
+		--expected "$(MODERN_DEBUGTOOLS_CH4PREP_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM debugtools-ch4prep-check passed: %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endif
+
 # Issue #11 slice 2: the prep-phase SELECT+B hotkey has no equivalent live
 # scenario yet -- this repository's chapter data has hasPrepScreen=FALSE
 # for every chapter (a vestigial FE7 field, see include/chapterdata.h) and
@@ -1699,7 +1766,7 @@ expansion-modern-debugtools-prep-check: expansion-modern-boot-preflight expansio
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 else
 expansion-modern-debugtools-prep-check:
-	@printf 'Modern ROM debugtools-prep-check skipped: no debug scenario yet for config=%s -- reaching a real prep screen deterministically needs a chapter/skirmish selector, explicitly out of scope for issue #11 slice 2 (see docs/debugtools.md "Remaining #11 scope"); host C tests cover mask/call-site/registration correctness instead\n' \
+	@printf 'Modern ROM debugtools-prep-check skipped: no live prep-screen-arrival scenario yet for config=%s -- the Ch4 Prep launchers boot-commit is proven live (see expansion-modern-debugtools-ch4prep-check), but reaching the actual live prep screen still needs undiscovered world-map input timing, an explicit issue #11 closure residual (see docs/debugtools.md "Remaining #11 scope" and reports/debugtools_issue11_closure.md); host C tests cover mask/call-site/registration correctness instead\n' \
 		'$(MODERN_CONFIG)'
 endif
 
@@ -1854,6 +1921,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-debugtools-timer-check \
 		expansion-modern-debugtools-map-check \
 		expansion-modern-debugtools-prep-check \
+		expansion-modern-debugtools-ch4prep-check \
 		expansion-modern-savefmt-check \
 		expansion-modern-shifted-check
 	"$(PYTHON)" scripts/shiftcheck/scan_build_addrs.py \
@@ -1870,6 +1938,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
+	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \

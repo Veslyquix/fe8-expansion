@@ -132,6 +132,32 @@ int DebugTools_RegisterAction(const struct DebugToolsAction* action)
         return DEBUGTOOLS_ERR_INVALID_ACTION;
     }
 
+    /* Issue #11 closure: id==0 is treated as a reserved/uninitialized-
+     * looking sentinel, not a legitimate contributor id -- every action
+     * in this file (including the five extended tools,
+     * src/debugtools_tools.c) uses ids 1-9. */
+    if (action->id == 0)
+    {
+        sLastResult = DEBUGTOOLS_ERR_ID_INVALID;
+        gDebugToolsProbe.lastRegisterResult = DEBUGTOOLS_ERR_ID_INVALID;
+        return DEBUGTOOLS_ERR_ID_INVALID;
+    }
+
+    /* Issue #11 closure: label must be non-empty and within the
+     * documented DEBUGTOOLS_LABEL_MAX_LENGTH policy bound. This does not
+     * copy or retain any bytes beyond the pointer itself (see
+     * sActions[sActionCount] = *action below) -- contributors are
+     * responsible for passing a label with static/persistent storage
+     * duration (every action in this file uses a plain string literal,
+     * which always satisfies this); this length check is a rendering/
+     * policy bound, not a lifetime check C89 can perform at runtime. */
+    if (action->label[0] == '\0' || strlen(action->label) > DEBUGTOOLS_LABEL_MAX_LENGTH)
+    {
+        sLastResult = DEBUGTOOLS_ERR_LABEL_INVALID;
+        gDebugToolsProbe.lastRegisterResult = DEBUGTOOLS_ERR_LABEL_INVALID;
+        return DEBUGTOOLS_ERR_LABEL_INVALID;
+    }
+
     for (i = 0; i < sActionCount; ++i)
     {
         if (sActions[i].id == action->id || strcmp(sActions[i].label, action->label) == 0)
@@ -190,8 +216,15 @@ enum DebugToolsResult DebugTools_OpenHub(void)
     if (sHubActive)
         return DEBUGTOOLS_ERR_ALREADY_ACTIVE;
 
+    /* Order matters here: Weather/Fog must register immediately after
+     * the Chapter 2 launcher (preserving their pre-existing hub-menu row
+     * indices 1/2, which every debugtools-map-hub-modern-*.json
+     * scenario's own cursor-navigation input script already depends on),
+     * before either of issue #11 closure's own additions. */
     DebugTools_RegisterBuiltinActions();
     DebugTools_RegisterWeatherFogActions();
+    DebugTools_RegisterChapter4PrepAction();
+    DebugTools_RegisterExtendedToolActions();
 
     DebugToolsHub_BuildMenuItems();
     DebugToolsHub_ShowDiagnostics();
@@ -241,7 +274,21 @@ void DebugTools_PrepHotkeyCheck(void)
     u16 mask = FE8_EXPANSION_DEBUGTOOLS_PREP_HOTKEY_MASK;
 
     if ((gKeyStatusPtr->heldKeys & mask) == mask && (gKeyStatusPtr->newKeys & mask) != 0)
+    {
+        /* Issue #11 closure: gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN
+         * (include/types.h) is set by the real engine prep-screen
+         * lifecycle (InitPrepScreenUnitsAndCamera, src/prep_sallycursor.c)
+         * for as long as a genuine PrepScreenProc (gProcScr_SALLYCURSOR)
+         * is active. Observing it set at the exact moment this hotkey
+         * fires is concrete, host/runtime-provable evidence that the
+         * debug hub was opened while a real, live prep screen was
+         * running -- not merely that this call site exists and is
+         * reachable. See gDebugToolsProbe.prepScreenObservedCount. */
+        if (gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN)
+            gDebugToolsProbe.prepScreenObservedCount++;
+
         DebugTools_OpenHub();
+    }
 }
 
 void DebugTools_RecordTitleIdleTimer(u32 timerIdle)

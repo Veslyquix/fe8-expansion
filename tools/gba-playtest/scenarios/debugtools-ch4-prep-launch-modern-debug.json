@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "name": "debugtools-ch4-prep-launch-modern-debug",
+  "description": "Issue #11 closure: proves the 'Fast Boot: Ch4 Prep' hub action arms its own independent pending request (distinct from the Chapter 2 request), and that GameControl_PostIntro consumes it and commits the deterministic boot to CHAPTER_L_4 -- the same verified pending-request handoff mechanism the Chapter 2 launcher already proves, targeting Chapter 4 instead so it can reach the real, live PrepScreenProc via EventScr_Ch4_BeginningScene's own CALL(EventScr_CommonPrep). This scenario's own scope ends at the boot-commit checkpoint; the live prep-screen arrival itself (requiring correctly-timed world-map navigation through Chapter 4's longer beginning script) is not captured here -- see docs/debugtools.md 'Remaining #11 scope' and reports/debugtools_issue11_closure.md for the honest boundary and the host/structural evidence that covers the rest of this launcher's contract.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 150,
+      "end": 155,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 270,
+      "end": 275,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 330,
+      "end": 335,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 390,
+      "end": 395,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 450,
+      "end": 455,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 600,
+      "end": 606,
+      "keys": [
+        "SELECT",
+        "R"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 770,
+      "end": 776,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 830,
+      "end": 836,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 904,
+      "keys": [
+        "A"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 300,
+      "framebuffer": true,
+      "name": "hub-closed-before-hotkey",
+      "probes": [
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031848",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203184c",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 630,
+      "framebuffer": true,
+      "name": "hub-opened-after-pulse",
+      "probes": [
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x0203181c",
+          "size": 4,
+          "expected": "0x00000009"
+        }
+      ]
+    },
+    {
+      "frame": 895,
+      "framebuffer": false,
+      "name": "ch4-prep-request-armed",
+      "probes": [
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x02031848",
+          "size": 4,
+          "expected": "0x44424c32"
+        },
+        {
+          "address": "0x0203184c",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 1100,
+      "framebuffer": false,
+      "name": "gamecontrol-committed-chapter4-boot",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x04"
+        },
+        {
+          "address": "0x02031848",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203184c",
+          "size": 4,
+          "expected": "0x44424c31"
+        },
+        {
+          "address": "0x02031850",
+          "size": 4,
+          "expected": "0x00000001"
+        }
+      ]
+    }
+  ]
+}

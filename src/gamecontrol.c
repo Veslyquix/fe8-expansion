@@ -474,6 +474,49 @@ void GameControl_PostIntro(struct GameCtrlProc * proc)
             break;
         }
 
+        /* Debug hub "Fast Boot: Ch4 Prep" handoff (issue #11 closure --
+         * see src/debugtools_launcher.c, include/expansion_debugtools.h).
+         * Same exact contract as the Chapter 2 branch above -- consumed
+         * at most once per armed request, before the ordinary
+         * StartSaveMenu branch, no proc torn down or recreated -- just a
+         * different target chapter/node so the resulting boot reaches a
+         * chapter whose own beginning event script
+         * (EventScr_Ch4_BeginningScene, src/events/ch4-eventscript.h)
+         * calls CALL(EventScr_CommonPrep) partway through, unlike
+         * Chapter 2's. */
+        if (DebugTools_ConsumePendingChapter4PrepLaunch())
+        {
+            SetLCGRNValue(DEBUGTOOLS_FASTBOOT_RNG_SEED);
+            InitRN(AdvanceGetLCGRNValue());
+
+            InitPlayConfig(0, 0);
+            gPlaySt.chapterModeIndex = CHAPTER_MODE_COMMON;
+            ResetPermanentFlags();
+            ResetChapterFlags();
+            InitUnits();
+            gPlaySt.chapterIndex = CHAPTER_L_4;
+            proc->nextChapter = CHAPTER_L_4;
+
+            GmDataInit();
+
+            /* Same node-placement idiom as the Chapter 2 branch above,
+             * one node earlier in the same linear node chain:
+             * NODE_BORGO_RIDGE's own WMLoc_GetNextLocId resolves to
+             * NODE_ZAHA_WOODS / CHAPTER_L_4 (src/worldmap_node_data.c),
+             * exactly as NODE_CASTLE_FRELIA resolves to NODE_IDE /
+             * CHAPTER_L_2 -- so the ordinary world-map traversal (an L
+             * cursor-jump + A node-confirm) reaches Chapter 4 without
+             * skipping any chapter-specific event/battle logic. */
+            gGMData.units[0].location = NODE_BORGO_RIDGE;
+
+            DebugTools_ArmBootstrapSuppression();
+
+            gDebugToolsProbe.ch4PrepLauncherArmed = DEBUGTOOLS_LAUNCHER_ARMED_MAGIC;
+
+            Proc_Goto(proc, LGAMECTRL_EXEC_BM);
+            break;
+        }
+
         Proc_Goto(proc, LGAMECTRL_EXEC_SAVEMENU);
         GameControl_FadeBgmVolume(proc);
         break;

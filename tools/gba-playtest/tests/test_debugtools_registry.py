@@ -25,6 +25,8 @@ C_FIXTURES_DIR = Path(__file__).resolve().parent / "c"
 REGISTRY_SRC = REPO_ROOT / "src" / "debugtools_registry.c"
 LAUNCHER_SRC = REPO_ROOT / "src" / "debugtools_launcher.c"
 ACTIONS_SRC = REPO_ROOT / "src" / "debugtools_actions.c"
+DIAG_SRC = REPO_ROOT / "src" / "debugtools_diag.c"
+TOOLS_SRC = REPO_ROOT / "src" / "debugtools_tools.c"
 GAMECONTROL_SRC = REPO_ROOT / "src" / "gamecontrol.c"
 HEADER = REPO_ROOT / "include" / "expansion_debugtools.h"
 TITLESCREEN_SRC = REPO_ROOT / "src" / "titlescreen.c"
@@ -139,6 +141,26 @@ class DebugToolsRegistryHostTests(unittest.TestCase):
             self.assertIn("DEBUGTOOLS_HOST_TEST: PASS", out)
             self.assertIn("DEBUGTOOLS_ACTION_MAX=9", out)
             self.assertIn("DEBUGTOOLS_HUB_MENU_SLOTS=11", out)
+
+    def test_registry_id_and_label_validation(self):
+        """Issue #11 closure: DebugTools_RegisterAction must explicitly
+        reject id==0 (a reserved/uninitialized-looking sentinel) and an
+        empty or over-long label, each with its own distinct, diagnosable
+        DebugToolsResult code (DEBUGTOOLS_ERR_ID_INVALID/
+        DEBUGTOOLS_ERR_LABEL_INVALID) -- never silently accepted, never
+        conflated with the generic DEBUGTOOLS_ERR_INVALID_ACTION used for
+        NULL action/label/callback pointers. Uses a dedicated, fresh-
+        registry driver (rather than debugtools_registry_driver.c above,
+        whose own registry is already at capacity by the time it reaches
+        its rejection-path checks) so the boundary-accepted case
+        (exactly DEBUGTOOLS_LABEL_MAX_LENGTH) can also be proven."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            rc, out = self._build_and_run(
+                tmp, C_FIXTURES_DIR / "debugtools_registry_label_validation_driver.c"
+            )
+            self.assertEqual(rc, 0, f"host label-validation test failed:\n{out}")
+            self.assertIn("DEBUGTOOLS_LABEL_VALIDATION_HOST_TEST: PASS", out)
 
     def test_registry_disabled_path_behavior_and_symbol_omission(self):
         import tempfile
@@ -332,10 +354,10 @@ class DebugToolsScenarioSchemaTests(unittest.TestCase):
             self.fail(f"checkpoint {checkpoint['name']} does not probe {address}")
 
         stable = by_name["chapter2-interactive-stable"]
-        self.assertEqual(probe(stable, "0x02031634")["expected"], "0x44424c31")  # launcherArmed magic
+        self.assertEqual(probe(stable, "0x02031824")["expected"], "0x44424c31")  # launcherArmed magic
         self.assertEqual(probe(stable, "0x020210b2")["expected"], "0x02")  # CHAPTER_L_2
-        self.assertEqual(probe(stable, "0x02031644")["expected"], "0x00000000")  # suppression cleared
-        self.assertEqual(probe(stable, "0x02031648")["expected"], "0x00000001")  # playerPhaseObservedCount
+        self.assertEqual(probe(stable, "0x02031834")["expected"], "0x00000000")  # suppression cleared
+        self.assertEqual(probe(stable, "0x02031838")["expected"], "0x00000001")  # playerPhaseObservedCount
 
     def test_release_scenario_is_schema_valid(self):
         scenario, data = self._load("debugtools-hub-modern-release.json")
@@ -498,13 +520,13 @@ class DebugToolsTimerFreezeTests(unittest.TestCase):
 
         def timer_value(checkpoint):
             for probe in checkpoint["probes"]:
-                if probe["address"] == "0x02031638":
+                if probe["address"] == "0x02031828":
                     return int(probe["expected"], 16)
             self.fail(f"checkpoint {checkpoint['name']} does not probe titleIdleTimerSample")
 
         def hub_open_count(checkpoint):
             for probe in checkpoint["probes"]:
-                if probe["address"] == "0x02031628":
+                if probe["address"] == "0x02031818":
                     return int(probe["expected"], 16)
             self.fail(f"checkpoint {checkpoint['name']} does not probe hubOpenCount")
 
@@ -629,6 +651,11 @@ class DebugToolsChapter2LaunchLifecycleHostTests(unittest.TestCase):
                 "DebugToolsObserver_WaitForStablePlayerPhase",
                 "DebugToolsObserver_OnEnd",
                 "sDebugToolsBootstrapObserverScript",
+                # Issue #11 closure: the second (Chapter 4 Prep) launcher's
+                # own internals must be physically omitted too.
+                "sChapter4PrepLaunchPending",
+                "DebugToolsLauncher_FastBootChapter4Prep",
+                "sFastBootChapter4PrepAction",
             }
             leaked = forbidden & defined
             self.assertFalse(
@@ -939,7 +966,15 @@ class DebugToolsChapter2LaunchLifecycleHostTests(unittest.TestCase):
         branch which Proc_Goto's to the ordinary LGAMECTRL_EXEC_BM state
         (not a bespoke bypass state) and which appears, textually within
         GameControl_PostIntro, before the ordinary
-        Proc_Goto(proc, LGAMECTRL_EXEC_SAVEMENU) ("StartSaveMenu") branch."""
+        Proc_Goto(proc, LGAMECTRL_EXEC_SAVEMENU) ("StartSaveMenu") branch.
+        (Issue #11 closure added a second, independent
+        DebugTools_ConsumePendingChapter4PrepLaunch branch between this one
+        and the SaveMenu fallback -- see
+        test_gamecontrol_consumes_pending_ch4_prep_launch_exactly_once_before_savemenu
+        below for its own, identically-shaped proof. This test's own slice
+        is bounded at that second branch's own consume call so it keeps
+        proving only the Chapter 2 branch's own property, not both
+        combined.)"""
         text = GAMECONTROL_SRC.read_text(encoding="utf-8", errors="replace")
         consume_calls = [
             m.start() for m in re.finditer(r"DebugTools_ConsumePendingChapter2Launch\s*\(", text)
@@ -954,22 +989,65 @@ class DebugToolsChapter2LaunchLifecycleHostTests(unittest.TestCase):
         body = match.group(1)
 
         consume_pos = body.find("DebugTools_ConsumePendingChapter2Launch")
+        ch4_consume_pos = body.find("DebugTools_ConsumePendingChapter4PrepLaunch")
         savemenu_pos = body.find("LGAMECTRL_EXEC_SAVEMENU")
         self.assertNotEqual(consume_pos, -1)
+        self.assertNotEqual(ch4_consume_pos, -1)
         self.assertNotEqual(savemenu_pos, -1)
         self.assertLess(
-            consume_pos, savemenu_pos,
-            "the pending-launch consume must appear before the ordinary SaveMenu branch",
+            consume_pos, ch4_consume_pos,
+            "the Chapter 2 pending-launch consume must appear before the Chapter 4 Prep one",
+        )
+        self.assertLess(
+            ch4_consume_pos, savemenu_pos,
+            "the Chapter 4 Prep pending-launch consume must appear before the ordinary SaveMenu branch",
         )
 
-        # The consuming branch itself (from the consume call to its own
-        # Proc_Goto) must target the ordinary LGAMECTRL_EXEC_BM state, not
-        # a bespoke/extended bypass variant such as LGAMECTRL_EXEC_BM_EXT.
-        branch_text = body[consume_pos:savemenu_pos]
+        # The Chapter 2 branch itself (from its own consume call to the
+        # Chapter 4 Prep branch's own consume call) must target the
+        # ordinary LGAMECTRL_EXEC_BM state, not a bespoke/extended bypass
+        # variant such as LGAMECTRL_EXEC_BM_EXT.
+        branch_text = body[consume_pos:ch4_consume_pos]
         goto_targets = re.findall(r"Proc_Goto\(\s*proc\s*,\s*(\w+)\s*\)", branch_text)
         self.assertEqual(
             goto_targets, ["LGAMECTRL_EXEC_BM"],
             f"the Chapter 2 boot branch must Proc_Goto exactly LGAMECTRL_EXEC_BM once, found: {goto_targets}",
+        )
+
+    def test_gamecontrol_consumes_pending_ch4_prep_launch_exactly_once_before_savemenu(self):
+        """Mirrors test_gamecontrol_consumes_pending_launch_exactly_once_before_savemenu
+        above for the issue #11 closure's second launcher
+        (DebugTools_ConsumePendingChapter4PrepLaunch): exactly one call
+        site, gating a branch that Proc_Goto's to the ordinary
+        LGAMECTRL_EXEC_BM state, appearing after the Chapter 2 branch's own
+        consume call and before the ordinary SaveMenu branch."""
+        text = GAMECONTROL_SRC.read_text(encoding="utf-8", errors="replace")
+        consume_calls = [
+            m.start() for m in re.finditer(r"DebugTools_ConsumePendingChapter4PrepLaunch\s*\(", text)
+        ]
+        self.assertEqual(
+            len(consume_calls), 1,
+            f"expected exactly one call to DebugTools_ConsumePendingChapter4PrepLaunch, found {len(consume_calls)}",
+        )
+
+        match = re.search(r"void GameControl_PostIntro\([^)]*\)\s*\{(.*?)\n\}", text, flags=re.DOTALL)
+        self.assertIsNotNone(match, "could not locate GameControl_PostIntro's function body")
+        body = match.group(1)
+
+        ch4_consume_pos = body.find("DebugTools_ConsumePendingChapter4PrepLaunch")
+        savemenu_pos = body.find("LGAMECTRL_EXEC_SAVEMENU")
+        self.assertNotEqual(ch4_consume_pos, -1)
+        self.assertNotEqual(savemenu_pos, -1)
+        self.assertLess(
+            ch4_consume_pos, savemenu_pos,
+            "the Chapter 4 Prep pending-launch consume must appear before the ordinary SaveMenu branch",
+        )
+
+        branch_text = body[ch4_consume_pos:savemenu_pos]
+        goto_targets = re.findall(r"Proc_Goto\(\s*proc\s*,\s*(\w+)\s*\)", branch_text)
+        self.assertEqual(
+            goto_targets, ["LGAMECTRL_EXEC_BM"],
+            f"the Chapter 4 Prep boot branch must Proc_Goto exactly LGAMECTRL_EXEC_BM once, found: {goto_targets}",
         )
 
     def test_gamecontrol_chapter2_boot_never_bypasses_events_or_manually_loads_units(self):
@@ -980,15 +1058,19 @@ class DebugToolsChapter2LaunchLifecycleHostTests(unittest.TestCase):
         NODE_CASTLE_FRELIA world-map placement -- the real
         EventScr_Ch2_BeginningScene / world-map / battle-map flow must run
         completely unmodified via the ordinary LGAMECTRL_EXEC_BM proc
-        script."""
+        script. (See
+        test_gamecontrol_ch4_prep_boot_never_bypasses_events_or_manually_loads_units
+        below for the identically-shaped Chapter 4 Prep branch proof; this
+        test's own slice ends at that branch's own consume call so the two
+        branches are checked independently.)"""
         text = _strip_c_comments(GAMECONTROL_SRC.read_text(encoding="utf-8", errors="replace"))
         match = re.search(r"void GameControl_PostIntro\([^)]*\)\s*\{(.*?)\n\}", text, flags=re.DOTALL)
         self.assertIsNotNone(match)
         body = match.group(1)
 
         consume_pos = body.find("DebugTools_ConsumePendingChapter2Launch")
-        savemenu_pos = body.find("LGAMECTRL_EXEC_SAVEMENU")
-        branch_text = body[consume_pos:savemenu_pos]
+        ch4_consume_pos = body.find("DebugTools_ConsumePendingChapter4PrepLaunch")
+        branch_text = body[consume_pos:ch4_consume_pos]
 
         for banned in ("StartBattleMap", "CallEvent", "StartEvent", "EventScr_"):
             self.assertNotIn(
@@ -1001,6 +1083,36 @@ class DebugToolsChapter2LaunchLifecycleHostTests(unittest.TestCase):
         # documented world-map location placement, never a direct
         # per-unit field write (position/state/items) that would amount
         # to manually placing battle-map units.
+        unit_array_writes = re.findall(r"gUnitArray\w+\[[^\]]*\]\s*\.\s*(\w+)", branch_text)
+        self.assertEqual(unit_array_writes, [], f"unexpected direct unit-array writes: {unit_array_writes}")
+        gmdata_unit_writes = re.findall(r"gGMData\.units\[[^\]]*\]\s*\.\s*(\w+)", branch_text)
+        self.assertEqual(
+            gmdata_unit_writes, ["location"],
+            f"the only gGMData.units[] field write in this branch must be 'location', found: {gmdata_unit_writes}",
+        )
+
+    def test_gamecontrol_ch4_prep_boot_never_bypasses_events_or_manually_loads_units(self):
+        """Mirrors test_gamecontrol_chapter2_boot_never_bypasses_events_or_manually_loads_units
+        above for the issue #11 closure's second launcher: the Chapter 4
+        Prep boot branch must never directly start/skip an event or battle
+        map itself, and its only gGMData.units[] field write must be the
+        single documented NODE_BORGO_RIDGE world-map location placement."""
+        text = _strip_c_comments(GAMECONTROL_SRC.read_text(encoding="utf-8", errors="replace"))
+        match = re.search(r"void GameControl_PostIntro\([^)]*\)\s*\{(.*?)\n\}", text, flags=re.DOTALL)
+        self.assertIsNotNone(match)
+        body = match.group(1)
+
+        ch4_consume_pos = body.find("DebugTools_ConsumePendingChapter4PrepLaunch")
+        savemenu_pos = body.find("LGAMECTRL_EXEC_SAVEMENU")
+        branch_text = body[ch4_consume_pos:savemenu_pos]
+
+        for banned in ("StartBattleMap", "CallEvent", "StartEvent", "EventScr_"):
+            self.assertNotIn(
+                banned, branch_text,
+                f"the Chapter 4 Prep boot branch must never reference {banned} -- the real event/"
+                "battle flow must run unmodified via the ordinary proc script",
+            )
+
         unit_array_writes = re.findall(r"gUnitArray\w+\[[^\]]*\]\s*\.\s*(\w+)", branch_text)
         self.assertEqual(unit_array_writes, [], f"unexpected direct unit-array writes: {unit_array_writes}")
         gmdata_unit_writes = re.findall(r"gGMData\.units\[[^\]]*\]\s*\.\s*(\w+)", branch_text)
@@ -1391,6 +1503,241 @@ class DebugToolsWeatherFogActionsHostTests(unittest.TestCase):
         )
 
 
+class DebugToolsDiagHostTests(unittest.TestCase):
+    """Compiles and executes the real, unmodified src/debugtools_diag.c
+    (enabled path) against tools/gba-playtest/tests/c/debugtools_diag_driver.c,
+    proving the bounded log ring (capacity, most-recent-first ordering,
+    wraparound eviction, unbounded probe-mirrored running total) and the
+    non-fatal assert record (never fires on a true condition, records
+    exactly once per false condition, itself logs a ring entry) -- all
+    through the exact public API (include/expansion_debugtools.h) any
+    tool uses. A second test compiles the disabled path and proves both
+    behavior (every entry point degrades to its disabled stub,
+    DebugTools_GetLastAssertCode reads DEBUGTOOLS_ASSERT_NONE) and
+    physical symbol omission -- the disabled object defines exactly the
+    six no-op public entry points and no ring/assert-record storage at
+    all."""
+
+    @classmethod
+    def setUpClass(cls):
+        _skip_if_no_host_compiler()
+
+    def test_diag_ring_and_assert_record_host_executed(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            rc, out, diag_obj = _compile(
+                work, DIAG_SRC, "diag_enabled.o",
+                defines=["FE8_EXPANSION_DEBUGTOOLS_ENABLED=1"],
+            )
+            self.assertEqual(rc, 0, f"compiling src/debugtools_diag.c (enabled) failed:\n{out}")
+
+            rc, out, driver_obj = _compile(
+                work, C_FIXTURES_DIR / "debugtools_diag_driver.c", "diag_driver.o"
+            )
+            self.assertEqual(rc, 0, f"compiling debugtools_diag_driver.c failed:\n{out}")
+
+            rc, out, exe = _link(work, [diag_obj, driver_obj], "diag_test_exe")
+            self.assertEqual(rc, 0, f"linking host diag test failed:\n{out}")
+
+            rc, out = _run(exe)
+            self.assertEqual(rc, 0, f"host diag test failed:\n{out}")
+            self.assertIn("DEBUGTOOLS_DIAG_HOST_TEST: PASS", out)
+
+    def test_diag_disabled_path_is_noop_and_omits_every_symbol(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            rc, out, diag_obj = _compile(
+                work, DIAG_SRC, "diag_disabled.o",
+                defines=["FE8_EXPANSION_DEBUGTOOLS_ENABLED=0"],
+            )
+            self.assertEqual(rc, 0, f"compiling src/debugtools_diag.c (disabled) failed:\n{out}")
+
+            defined = _defined_symbol_names(diag_obj)
+            forbidden = {"sLogRing", "sLogRingTotalWrites"}
+            leaked = forbidden & defined
+            self.assertFalse(leaked, f"disabled build must physically omit diag internals; found: {leaked}")
+            self.assertEqual(
+                defined,
+                {
+                    "DebugTools_LogEvent",
+                    "DebugTools_GetLogCount",
+                    "DebugTools_GetLogEntry",
+                    "DebugTools_RecordAssertFailure",
+                    "DebugTools_GetAssertFailureCount",
+                    "DebugTools_GetLastAssertCode",
+                },
+                f"disabled build must define exactly the six no-op public entry points, found: {defined}",
+            )
+
+            rc, out, driver_obj = _compile(
+                work, C_FIXTURES_DIR / "debugtools_diag_disabled_driver.c", "diag_disabled_driver.o"
+            )
+            self.assertEqual(rc, 0, f"compiling debugtools_diag_disabled_driver.c failed:\n{out}")
+
+            rc, out, exe = _link(work, [diag_obj, driver_obj], "diag_disabled_test_exe")
+            self.assertEqual(
+                rc, 0,
+                "linking disabled host diag test failed -- an undefined reference here would mean "
+                f"the disabled path grew a real dependency:\n{out}",
+            )
+
+            rc, out = _run(exe)
+            self.assertEqual(rc, 0, f"disabled-path host diag test failed:\n{out}")
+            self.assertIn("DEBUGTOOLS_DIAG_DISABLED_HOST_TEST: PASS", out)
+
+    def test_diag_source_is_wired_into_both_builds(self):
+        ldscript_text = (REPO_ROOT / "ldscript.txt").read_text(encoding="utf-8", errors="replace")
+        self.assertIn(
+            "src/debugtools_diag.o", ldscript_text,
+            "ldscript.txt must link src/debugtools_diag.o into the legacy build",
+        )
+
+        modern_mk_text = (REPO_ROOT / "modern.mk").read_text(encoding="utf-8", errors="replace")
+        self.assertIn(
+            "src/debugtools_diag.c", modern_mk_text,
+            "modern.mk must compile src/debugtools_diag.c into the modern build",
+        )
+
+    def test_diag_never_touches_dormant_files_or_persistent_apis(self):
+        """Structural double-check: the diagnostics foundation must never
+        reference src/bmdebug.c/src/uidebug.c/src/menu_def.c internals or
+        perform any persistent SRAM write -- it is a pure EWRAM
+        ring/counter, matching the explicit "no mgba_printf, no
+        interactive debugger, no arbitrary memory editor" non-goals."""
+        text = _strip_c_comments(DIAG_SRC.read_text(encoding="utf-8", errors="replace"))
+        for banned in ("DebugMenu_", "WriteSaveBlock", "WriteSuspendSave", "WriteGameSave", "mgba_printf", "Sram"):
+            self.assertNotIn(banned, text, f"src/debugtools_diag.c must never reference {banned}")
+
+
+class DebugToolsExtendedToolsHostTests(unittest.TestCase):
+    """Compiles and executes the real, unmodified src/debugtools_tools.c
+    (enabled path) together with the real src/debugtools_registry.c
+    against tools/gba-playtest/tests/c/debugtools_tools_driver.c, proving:
+    registration (ids 5-9, deterministic order, idempotent); each of the
+    five tools' inspect semantics (state correctly sampled into
+    gDebugToolsProbe); the four mutating tools' bounded confirm-submenu
+    transactions (Unit heal, Convoy add, Flag toggle, RNG reseed) actually
+    applying via the real engine helper functions (SetUnitHp/SetUnitStatus/
+    AddItemToConvoy/SetFlag/ClearFlag/SetLCGRNValue/InitRN semantics,
+    exercised through host-controllable fakes -- see
+    debugtools_tools_host_stubs.c); and the invalid/edge-case input paths
+    (missing unit target, full convoy) resulting in a safe, logged,
+    assert-recorded no-op rather than any mutation or crash. The fifth
+    tool (save-state) is proven read-only: no Confirm item exists at all.
+    A second test compiles the disabled path and proves both behavior and
+    physical symbol omission -- the disabled object defines exactly the
+    one no-op DebugTools_RegisterExtendedToolActions() entry point and
+    links clean with no engine/menu/hardware stub at all."""
+
+    @classmethod
+    def setUpClass(cls):
+        _skip_if_no_host_compiler()
+
+    def test_extended_tools_lifecycle_host_executed(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            rc, out, registry_obj = _compile(
+                work, REGISTRY_SRC, "registry_enabled.o",
+                defines=["FE8_EXPANSION_DEBUGTOOLS_ENABLED=1"],
+            )
+            self.assertEqual(rc, 0, f"compiling src/debugtools_registry.c (enabled) failed:\n{out}")
+
+            rc, out, tools_obj = _compile(
+                work, TOOLS_SRC, "tools_enabled.o",
+                defines=["FE8_EXPANSION_DEBUGTOOLS_ENABLED=1"],
+            )
+            self.assertEqual(rc, 0, f"compiling src/debugtools_tools.c (enabled) failed:\n{out}")
+
+            # src/debugtools_tools.c calls into the real diagnostics
+            # foundation (DebugTools_LogEvent/DebugTools_RecordAssertFailure) --
+            # link the real, unmodified src/debugtools_diag.c alongside it,
+            # not a stub, so this test proves genuine log-ring/assert-record
+            # behavior for every tool's mutation, not just call wiring.
+            rc, out, diag_obj = _compile(
+                work, DIAG_SRC, "diag_enabled_for_tools.o",
+                defines=["FE8_EXPANSION_DEBUGTOOLS_ENABLED=1"],
+            )
+            self.assertEqual(rc, 0, f"compiling src/debugtools_diag.c (enabled) failed:\n{out}")
+
+            rc, out, stubs_obj = _compile(
+                work, C_FIXTURES_DIR / "debugtools_tools_host_stubs.c", "tools_stubs.o"
+            )
+            self.assertEqual(rc, 0, f"compiling debugtools_tools_host_stubs.c failed:\n{out}")
+
+            rc, out, driver_obj = _compile(
+                work, C_FIXTURES_DIR / "debugtools_tools_driver.c", "tools_driver.o"
+            )
+            self.assertEqual(rc, 0, f"compiling debugtools_tools_driver.c failed:\n{out}")
+
+            rc, out, exe = _link(
+                work, [registry_obj, tools_obj, diag_obj, stubs_obj, driver_obj], "tools_test_exe"
+            )
+            self.assertEqual(rc, 0, f"linking host extended-tools test failed:\n{out}")
+
+            rc, out = _run(exe)
+            self.assertEqual(rc, 0, f"host extended-tools test failed:\n{out}")
+            self.assertIn("DEBUGTOOLS_TOOLS_HOST_TEST: PASS", out)
+
+    def test_extended_tools_disabled_path_is_noop_and_omits_every_symbol(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            rc, out, tools_obj = _compile(
+                work, TOOLS_SRC, "tools_disabled.o",
+                defines=["FE8_EXPANSION_DEBUGTOOLS_ENABLED=0"],
+            )
+            self.assertEqual(rc, 0, f"compiling src/debugtools_tools.c (disabled) failed:\n{out}")
+
+            defined = _defined_symbol_names(tools_obj)
+            self.assertEqual(
+                defined, {"DebugTools_RegisterExtendedToolActions"},
+                f"disabled build must define exactly the one no-op public entry point, found: {defined}",
+            )
+
+            rc, out, driver_obj = _compile(
+                work, C_FIXTURES_DIR / "debugtools_tools_disabled_driver.c", "tools_disabled_driver.o"
+            )
+            self.assertEqual(rc, 0, f"compiling debugtools_tools_disabled_driver.c failed:\n{out}")
+
+            rc, out, exe = _link(work, [tools_obj, driver_obj], "tools_disabled_test_exe")
+            self.assertEqual(
+                rc, 0,
+                "linking disabled host extended-tools test failed -- an undefined reference here "
+                f"would mean the disabled path grew a real engine/menu/hardware dependency:\n{out}",
+            )
+
+            rc, out = _run(exe)
+            self.assertEqual(rc, 0, f"disabled-path host extended-tools test failed:\n{out}")
+            self.assertIn("DEBUGTOOLS_TOOLS_DISABLED_HOST_TEST: PASS", out)
+
+    def test_extended_tools_never_touch_dormant_files_or_persistent_apis(self):
+        """Structural double-check: src/debugtools_tools.c must never
+        reference src/bmdebug.c/src/uidebug.c/src/menu_def.c internals,
+        and must never perform a raw SRAM/save write -- every mutation
+        goes through an ordinary EWRAM runtime engine helper
+        (SetUnitHp/AddItemToConvoy/SetFlag/SetLCGRNValue etc.), never a
+        save-block/SRAM API."""
+        text = _strip_c_comments(TOOLS_SRC.read_text(encoding="utf-8", errors="replace"))
+        for banned in ("DebugMenu_", "WriteSaveBlock", "WriteSuspendSave", "WriteGameSave", "BuildCurrentExpansionSaveMeta"):
+            self.assertNotIn(banned, text, f"src/debugtools_tools.c must never reference {banned}")
+
+    def test_extended_tools_source_is_wired_into_both_builds(self):
+        ldscript_text = (REPO_ROOT / "ldscript.txt").read_text(encoding="utf-8", errors="replace")
+        self.assertIn(
+            "src/debugtools_tools.o", ldscript_text,
+            "ldscript.txt must link src/debugtools_tools.o into the legacy build",
+        )
+
+        modern_mk_text = (REPO_ROOT / "modern.mk").read_text(encoding="utf-8", errors="replace")
+        self.assertIn(
+            "src/debugtools_tools.c", modern_mk_text,
+            "modern.mk must compile src/debugtools_tools.c into the modern build",
+        )
+
+
 class DebugToolsMapPrepScenarioSchemaTests(unittest.TestCase):
     """Validates the slice 2 map/prep playtest scenarios (map-phase debug
     hub entry proved live against a real interactive Chapter 2, plus
@@ -1458,8 +1805,8 @@ class DebugToolsMapPrepScenarioSchemaTests(unittest.TestCase):
         # hubOpenCount must read 2 both times (1 from the title-hub launch
         # sequence already replayed in the shared prefix, +1 from this
         # scenario's own first map-hotkey pulse) -- never 3.
-        self.assertEqual(probe(first, "0x02031628")["expected"], "0x00000002")
-        self.assertEqual(probe(second, "0x02031628")["expected"], "0x00000002")
+        self.assertEqual(probe(first, "0x02031818")["expected"], "0x00000002")
+        self.assertEqual(probe(second, "0x02031818")["expected"], "0x00000002")
 
     def test_map_debug_scenario_proves_map_remains_interactive_after_hub_closes(self):
         """Central DONE criterion: after the hub fully closes, the player
@@ -1478,9 +1825,9 @@ class DebugToolsMapPrepScenarioSchemaTests(unittest.TestCase):
                     return p
             self.fail(f"checkpoint {checkpoint['name']} does not probe {address}")
 
-        self.assertEqual(probe(closed, "0x020315b0")["expected"], "0x00000000")  # sHubActive
-        self.assertEqual(probe(interactive, "0x020315b0")["expected"], "0x00000000")
-        self.assertEqual(probe(closed, "0x02031628")["expected"], probe(interactive, "0x02031628")["expected"])
+        self.assertEqual(probe(closed, "0x02031614")["expected"], "0x00000000")  # sHubActive
+        self.assertEqual(probe(interactive, "0x02031614")["expected"], "0x00000000")
+        self.assertEqual(probe(closed, "0x02031818")["expected"], probe(interactive, "0x02031818")["expected"])
         self.assertEqual(probe(closed, "0x02021104")["expected"], "0x06")  # cursor x, before final RIGHT
         self.assertEqual(probe(interactive, "0x02021104")["expected"], "0x07")  # cursor x, after final RIGHT
 
@@ -1559,6 +1906,122 @@ class DebugToolsMapPrepScenarioSchemaTests(unittest.TestCase):
                 self.assertEqual(
                     checkpoint.get("expected_framebuffer_hash"), frozen_hash,
                     f"{name} checkpoint {checkpoint['name']!r} must match the frozen release frame hash",
+                )
+
+
+class DebugToolsCh4PrepLaunchScenarioSchemaTests(unittest.TestCase):
+    """Validates the issue #11 closure Ch4-Prep-launch playtest scenarios
+    (the second, independent "Fast Boot: Ch4 Prep" launcher's own
+    pending-request/boot-commit lifecycle, live-executed against a real
+    debug build, plus its release compiled-out mirror) against
+    gba_playtest's own schema parser, mirroring
+    DebugToolsScenarioSchemaTests'/DebugToolsMapPrepScenarioSchemaTests'
+    pattern for the earlier Chapter 2 launcher scenarios."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(REPO_ROOT / "tools" / "gba-playtest"))
+        global gba_playtest
+        import gba_playtest  # noqa: F401
+
+    def _load(self, name):
+        import json
+        path = REPO_ROOT / "tools" / "gba-playtest" / "scenarios" / name
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return gba_playtest.parse_scenario_data(data), data
+
+    def test_debug_scenario_is_schema_valid_and_has_expected_checkpoints(self):
+        scenario, data = self._load("debugtools-ch4-prep-launch-modern-debug.json")
+        self.assertEqual(scenario.name, "debugtools-ch4-prep-launch-modern-debug")
+        by_name = {c["name"]: c for c in data["checkpoints"]}
+        for expected_name in (
+            "hub-closed-before-hotkey",
+            "hub-opened-after-pulse",
+            "ch4-prep-request-armed",
+            "gamecontrol-committed-chapter4-boot",
+        ):
+            self.assertIn(expected_name, by_name, f"missing checkpoint {expected_name!r}")
+
+    def test_debug_scenario_reuses_the_hub_scenarios_frame_prefix(self):
+        """Must build on top of the already-verified title-progression
+        intro sequence (debugtools-hub-modern-debug.json's own prefix
+        before its first hotkey pulse), not a fresh/independent boot
+        script."""
+        _, ch4_data = self._load("debugtools-ch4-prep-launch-modern-debug.json")
+        _, hub_data = self._load("debugtools-hub-modern-debug.json")
+
+        hub_prefix = [f for f in hub_data["frames"] if f["start"] < 600]
+        ch4_prefix = [f for f in ch4_data["frames"] if f["start"] < 600]
+        self.assertEqual(
+            ch4_prefix, hub_prefix,
+            "the Ch4-Prep-launch scenario's pre-hotkey frame prefix must exactly match "
+            "the title-hub scenario's own (same proven intro-advance sequence)",
+        )
+
+    def test_debug_scenario_navigates_past_weather_fog_to_reach_ch4_prep(self):
+        """The hub menu order is Chapter2(0)/Weather(1)/Fog(2)/Ch4Prep(3)/
+        five tools(4-8) -- reaching "Fast Boot: Ch4 Prep" from a freshly
+        opened hub therefore requires exactly three DOWN presses before
+        the confirming A, proving this scenario's own input script
+        actually targets the fourth hub row, not accidentally Weather/Fog
+        or the Chapter 2 launcher itself."""
+        _, data = self._load("debugtools-ch4-prep-launch-modern-debug.json")
+        post_hotkey = [f for f in data["frames"] if f["start"] >= 600]
+        key_sequence = [tuple(f["keys"]) for f in sorted(post_hotkey, key=lambda f: f["start"])]
+        self.assertEqual(
+            key_sequence,
+            [
+                ("SELECT", "R"),
+                ("DOWN",),
+                ("DOWN",),
+                ("DOWN",),
+                ("A",),
+                ("A",),
+            ],
+            f"expected exactly one hotkey pulse, three DOWN presses, then two A presses, found: {key_sequence}",
+        )
+
+    def test_debug_scenario_probe_addresses_match_documented_struct_offsets(self):
+        """gDebugToolsProbe's pendingCh4PrepLaunchRequest/ch4PrepLauncherArmed/
+        ch4PrepLaunchRequestConsumedCount fields sit at offsets 0x30/0x34/0x38
+        from the struct base (include/expansion_debugtools.h) -- confirms
+        this scenario's own hardcoded addresses were derived from the same
+        base nm-verified elsewhere (docs/debugtools.md), not independently
+        (and possibly incorrectly) guessed.
+        """
+        _, data = self._load("debugtools-ch4-prep-launch-modern-debug.json")
+        by_name = {c["name"]: c for c in data["checkpoints"]}
+        base = int(by_name["hub-closed-before-hotkey"]["probes"][0]["address"], 16)
+
+        armed_checkpoint = by_name["gamecontrol-committed-chapter4-boot"]
+        addresses = {p["address"] for p in armed_checkpoint["probes"]}
+        self.assertIn("0x%08x" % (base + 0x34), addresses, "ch4PrepLauncherArmed must be at offset 0x34")
+
+        armed_probe_checkpoint = by_name["ch4-prep-request-armed"]
+        pending_addresses = {p["address"]: p["expected"] for p in armed_probe_checkpoint["probes"]}
+        self.assertEqual(
+            pending_addresses.get("0x%08x" % (base + 0x30)), "0x44424c32",
+            "pendingCh4PrepLaunchRequest (offset 0x30) must read the DEBUGTOOLS_LAUNCH_REQUEST_MAGIC "
+            "('DBL2') while armed",
+        )
+
+    def test_release_scenario_reuses_debug_scenarios_frames_and_stays_all_zero(self):
+        """The release mirror must replay the identical frame-for-frame
+        input script (not a hand-authored approximation) and assert every
+        probe stays 0x00000000 throughout -- proving the Ch4 Prep launcher
+        is compiled out entirely in a release build, exactly like the
+        Chapter 2 launcher's own release mirror."""
+        _, debug_data = self._load("debugtools-ch4-prep-launch-modern-debug.json")
+        _, release_data = self._load("debugtools-ch4-prep-launch-modern-release.json")
+
+        self.assertEqual(release_data["frames"], debug_data["frames"])
+
+        for checkpoint in release_data["checkpoints"]:
+            for probe in checkpoint["probes"]:
+                self.assertEqual(
+                    probe["expected"], "0x00000000",
+                    f"release checkpoint {checkpoint['name']!r} probe {probe['address']} "
+                    "must expect 0x00000000",
                 )
 
 

@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "name": "debugtools-ch4-prep-launch-modern-release",
+  "description": "Release mirror of debugtools-ch4-prep-launch-modern-debug.json: replays the identical frame-for-frame input script (title hotkey pulse, navigate to 'Fast Boot: Ch4 Prep', select, and the immediate follow-up tap) against a release build, asserting every probe stays 0x00000000 throughout -- proving the Ch4 Prep launcher (like the Chapter 2 one) is compiled out entirely, not merely unreached.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 150,
+      "end": 155,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 270,
+      "end": 275,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 330,
+      "end": 335,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 390,
+      "end": 395,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 450,
+      "end": 455,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 600,
+      "end": 606,
+      "keys": [
+        "SELECT",
+        "R"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 770,
+      "end": 776,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 830,
+      "end": 836,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 904,
+      "keys": [
+        "A"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 300,
+      "framebuffer": true,
+      "name": "hub-closed-before-hotkey",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203150c",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 630,
+      "framebuffer": true,
+      "name": "hub-opened-after-pulse",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 895,
+      "framebuffer": false,
+      "name": "ch4-prep-request-armed",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203150c",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 1100,
+      "framebuffer": false,
+      "name": "gamecontrol-committed-chapter4-boot",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203150c",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031510",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    }
+  ]
+}

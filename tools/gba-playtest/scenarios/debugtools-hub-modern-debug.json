@@ -1826,22 +1826,22 @@
       "name": "hub-closed-before-hotkey",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x0203162c",
+          "address": "0x0203181c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -1853,22 +1853,22 @@
       "name": "hub-opened-after-first-pulse",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x0203162c",
+          "address": "0x0203181c",
           "size": 4,
-          "expected": "0x00000003"
+          "expected": "0x00000009"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -1880,22 +1880,22 @@
       "name": "hub-still-single-after-repeated-pulse",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x0203162c",
+          "address": "0x0203181c",
           "size": 4,
-          "expected": "0x00000003"
+          "expected": "0x00000009"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -1937,37 +1937,37 @@
           "expected": "0x0000"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x44424c32"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000000"
         },
@@ -2120,37 +2120,37 @@
           "expected": "0x0000"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x44424c31"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000000"
         },
@@ -2302,44 +2302,44 @@
           "expected": "0x2809"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x44424c31"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000001"
         },
         {
           "address": "0x0202f9a4",
           "size": 4,
-          "expected": "0x088fb8c4"
+          "expected": "0x088fc0b4"
         },
         {
           "address": "0x0202f9b0",
@@ -2349,7 +2349,7 @@
         {
           "address": "0x0202f9ec",
           "size": 4,
-          "expected": "0x088fb7c0"
+          "expected": "0x088fbfb0"
         },
         {
           "address": "0x0202f9f8",
@@ -2359,7 +2359,7 @@
         {
           "address": "0x0202fa34",
           "size": 4,
-          "expected": "0x088fb7f4"
+          "expected": "0x088fbfe4"
         },
         {
           "address": "0x0202fa40",
@@ -2369,7 +2369,7 @@
         {
           "address": "0x0202fa7c",
           "size": 4,
-          "expected": "0x088fb85c"
+          "expected": "0x088fc04c"
         },
         {
           "address": "0x0202fa88",
@@ -2379,7 +2379,7 @@
         {
           "address": "0x0202fac4",
           "size": 4,
-          "expected": "0x088fb828"
+          "expected": "0x088fc018"
         },
         {
           "address": "0x0202fad0",
@@ -2389,7 +2389,7 @@
         {
           "address": "0x0202fb0c",
           "size": 4,
-          "expected": "0x088fb890"
+          "expected": "0x088fc080"
         },
         {
           "address": "0x0202fb18",
@@ -2399,7 +2399,7 @@
         {
           "address": "0x0202eb94",
           "size": 4,
-          "expected": "0x088fd464"
+          "expected": "0x088fdc54"
         },
         {
           "address": "0x0202eba0",
@@ -2409,7 +2409,7 @@
         {
           "address": "0x0202ebdc",
           "size": 4,
-          "expected": "0x088fd464"
+          "expected": "0x088fdc54"
         },
         {
           "address": "0x0202ebe8",
@@ -2419,7 +2419,7 @@
         {
           "address": "0x0202ec24",
           "size": 4,
-          "expected": "0x088fc5f8"
+          "expected": "0x088fcde8"
         },
         {
           "address": "0x0202ec30",
@@ -2429,7 +2429,7 @@
         {
           "address": "0x0202ec6c",
           "size": 4,
-          "expected": "0x088fd464"
+          "expected": "0x088fdc54"
         },
         {
           "address": "0x0202ec78",
@@ -2439,7 +2439,7 @@
         {
           "address": "0x0202e5f4",
           "size": 4,
-          "expected": "0x088fb8f8"
+          "expected": "0x088fc0e8"
         },
         {
           "address": "0x0202e600",
@@ -2485,44 +2485,44 @@
           "expected": "0x2809"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x44424c31"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000001"
         },
         {
           "address": "0x0202f9a4",
           "size": 4,
-          "expected": "0x088fb8c4"
+          "expected": "0x088fc0b4"
         },
         {
           "address": "0x0202f9b0",
@@ -2532,7 +2532,7 @@
         {
           "address": "0x0202f9ec",
           "size": 4,
-          "expected": "0x088fb7c0"
+          "expected": "0x088fbfb0"
         },
         {
           "address": "0x0202f9f8",
@@ -2542,7 +2542,7 @@
         {
           "address": "0x0202fa34",
           "size": 4,
-          "expected": "0x088fb7f4"
+          "expected": "0x088fbfe4"
         },
         {
           "address": "0x0202fa40",
@@ -2552,7 +2552,7 @@
         {
           "address": "0x0202fa7c",
           "size": 4,
-          "expected": "0x088fb85c"
+          "expected": "0x088fc04c"
         },
         {
           "address": "0x0202fa88",
@@ -2562,7 +2562,7 @@
         {
           "address": "0x0202fac4",
           "size": 4,
-          "expected": "0x088fb828"
+          "expected": "0x088fc018"
         },
         {
           "address": "0x0202fad0",
@@ -2572,7 +2572,7 @@
         {
           "address": "0x0202fb0c",
           "size": 4,
-          "expected": "0x088fb890"
+          "expected": "0x088fc080"
         },
         {
           "address": "0x0202fb18",
@@ -2582,7 +2582,7 @@
         {
           "address": "0x0202eb94",
           "size": 4,
-          "expected": "0x088fd464"
+          "expected": "0x088fdc54"
         },
         {
           "address": "0x0202eba0",
@@ -2592,7 +2592,7 @@
         {
           "address": "0x0202ebdc",
           "size": 4,
-          "expected": "0x088fd464"
+          "expected": "0x088fdc54"
         },
         {
           "address": "0x0202ebe8",
@@ -2602,7 +2602,7 @@
         {
           "address": "0x0202ec24",
           "size": 4,
-          "expected": "0x088fc5f8"
+          "expected": "0x088fcde8"
         },
         {
           "address": "0x0202ec30",
@@ -2612,7 +2612,7 @@
         {
           "address": "0x0202ec6c",
           "size": 4,
-          "expected": "0x088fd464"
+          "expected": "0x088fdc54"
         },
         {
           "address": "0x0202ec78",
@@ -2622,7 +2622,7 @@
         {
           "address": "0x0202e5f4",
           "size": 4,
-          "expected": "0x088fb8f8"
+          "expected": "0x088fc0e8"
         },
         {
           "address": "0x0202e600",

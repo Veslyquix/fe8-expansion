@@ -5,12 +5,12 @@
       "name": "hub-open-early-sample",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "value": "0x00000001"
         },
         {
-          "address": "0x02031638",
+          "address": "0x02031828",
           "size": 4,
           "value": "0x0000007b"
         }
@@ -21,12 +21,12 @@
       "name": "hub-open-late-frozen",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "value": "0x00000001"
         },
         {
-          "address": "0x02031638",
+          "address": "0x02031828",
           "size": 4,
           "value": "0x0000007b"
         }
@@ -37,12 +37,12 @@
       "name": "hub-closed-resumed",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "value": "0x00000001"
         },
         {
-          "address": "0x02031638",
+          "address": "0x02031828",
           "size": 4,
           "value": "0x00000111"
         }
@@ -52,7 +52,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "6dc5277caf86858ee3110740fc3e0d20fef1cd90",
+    "sha1": "8e333ae5b270f8a486aa27f196e577a0595f5005",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

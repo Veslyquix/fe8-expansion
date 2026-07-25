@@ -386,6 +386,42 @@ int main(void)
     CHECK(gDebugToolsProbe.launchRequestConsumedCount == 2,
           "launchRequestConsumedCount must read exactly 2 after the second consume");
 
+    /*
+     * ---- Issue #11 closure: the second, independent Chapter 4 Prep
+     * pending-request pair -------------------------------------------
+     *
+     * Mirrors the Chapter 2 request's own one-shot arm/pending/consume
+     * contract exactly (DebugTools_RequestChapter4PrepLaunch/
+     * IsChapter4PrepLaunchPending/ConsumePendingChapter4PrepLaunch), and
+     * additionally proves the two requests are entirely independent
+     * state: arming/consuming one never observably affects the other.
+     */
+    CHECK(!DebugTools_IsChapter4PrepLaunchPending(), "Chapter 4 Prep request must start not pending");
+    CHECK(gDebugToolsProbe.pendingCh4PrepLaunchRequest == 0, "probe pendingCh4PrepLaunchRequest must start at 0");
+
+    DebugTools_RequestChapter4PrepLaunch();
+    CHECK(DebugTools_IsChapter4PrepLaunchPending(), "arming the Chapter 4 Prep request must make it pending");
+    CHECK(gDebugToolsProbe.pendingCh4PrepLaunchRequest == (u32)DEBUGTOOLS_LAUNCH_REQUEST_MAGIC,
+          "probe pendingCh4PrepLaunchRequest must mirror the armed magic value");
+    CHECK(!DebugTools_IsChapter2LaunchPending(), "arming the Chapter 4 Prep request must never affect the Chapter 2 request's own pending state");
+
+    /* Idempotent: a duplicate arm changes nothing observable. */
+    DebugTools_RequestChapter4PrepLaunch();
+    CHECK(DebugTools_IsChapter4PrepLaunchPending(), "a duplicate arm must leave the request pending (no queued second launch)");
+
+    CHECK(gDebugToolsProbe.ch4PrepLaunchRequestConsumedCount == 0, "probe ch4PrepLaunchRequestConsumedCount must start at 0");
+    CHECK(DebugTools_ConsumePendingChapter4PrepLaunch() != 0, "a pending Chapter 4 Prep request must be consumable exactly once");
+    CHECK(!DebugTools_IsChapter4PrepLaunchPending(), "consuming the Chapter 4 Prep request must clear its pending state");
+    CHECK(gDebugToolsProbe.pendingCh4PrepLaunchRequest == 0, "probe pendingCh4PrepLaunchRequest must clear to 0 once consumed");
+    CHECK(gDebugToolsProbe.ch4PrepLaunchRequestConsumedCount == 1, "ch4PrepLaunchRequestConsumedCount must increment exactly once per consume");
+
+    /* One-shot: consuming an already-empty request is a no-op, and must
+     * never affect the Chapter 2 request's own (already-consumed-twice)
+     * counters. */
+    CHECK(DebugTools_ConsumePendingChapter4PrepLaunch() == 0, "consuming an empty Chapter 4 Prep request must be a no-op");
+    CHECK(gDebugToolsProbe.ch4PrepLaunchRequestConsumedCount == 1, "a no-op consume must never increment ch4PrepLaunchRequestConsumedCount");
+    CHECK(gDebugToolsProbe.launchRequestConsumedCount == 2, "Chapter 4 Prep consume activity must never affect the Chapter 2 request's own counters");
+
     printf("DEBUGTOOLS_LAUNCHER_HOST_TEST: PASS\n");
     return 0;
 }
