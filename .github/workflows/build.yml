@@ -32,6 +32,21 @@ jobs:
     - name: Build tools
       run: ./build_tools.sh
 
+    # Issue #15 closure: a bare `make`/`make all` must unconditionally
+    # resolve to the modern release AAPCS boot-check chain, with the
+    # archival agbcc lane reachable only by explicitly naming `make
+    # legacy`/`make fireemblem8.gba` -- never via any environment variable
+    # or `make` command-line variable override. These targeted tests are
+    # stdlib `unittest` only (no pytest/network installs) and are dry-run/
+    # database-probe based against the real Makefile/quickstart.sh (never a
+    # real multi-minute compile/link/boot-check), so they run early and
+    # fail fast on any structural regression before the slower linker gate
+    # below.
+    - name: Check default build lane and quickstart legacy glue (issue #15)
+      run: |
+        python3 -m unittest discover -s scripts/modernize/tests -p "test_build_default_lane.py" -v
+        python3 -m unittest discover -s scripts/modernize/tests -p "test_quickstart.py" -v
+
     # Generated-data platform (Issue #5 Chapter 2 slice, Batch C): validates
     # every registered table's JSON source, cross-table references, the
     # whole-bundle chapter manifest, and committed inventory drift. Pure

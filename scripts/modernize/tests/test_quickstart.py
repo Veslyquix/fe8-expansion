@@ -196,7 +196,15 @@ class QuickstartTests(unittest.TestCase):
         # The default path must never fall back to the bare legacy build.
         self.assertNotIn("make -j4\n", log)
 
-    def test_build_project_legacy_runs_bare_make_only(self):
+    def test_build_project_legacy_calls_make_legacy_target_by_name(self):
+        # Issue #15: the archival lane is reached by naming the `legacy`
+        # target directly (`make legacy -j<jobs>`), never via a bare
+        # `make -j<jobs>` plus an environment-variable lane switch, so this
+        # mocked-`make` log line is unambiguous evidence on its own (unlike
+        # a bare "make -j4\n", which a silently broken/removed
+        # lane-selection mechanism could still have produced identically);
+        # see scripts/modernize/tests/test_build_default_lane.py for the
+        # real-make coverage of the actual Makefile/quickstart.sh glue.
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         temporary = Path(self.temporary.name)
@@ -231,7 +239,7 @@ class QuickstartTests(unittest.TestCase):
         log = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
 
         self.assertIn("build_tools\n", log)
-        self.assertIn("make -j4\n", log)
+        self.assertIn("make legacy -j4\n", log)
         self.assertNotIn("expansion-modern", log)
 
     def test_install_deps_apt_default_adds_libmgba_dev_legacy_omits_it(self):

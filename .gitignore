@@ -985,3 +985,16 @@ scripts/shiftcheck/mgba_oracle
 
 # scripts/generated_data unittest scratch space (repo-local, never /tmp)
 scripts/generated_data/tests/.scratch/
+
+# Upstream porting review output (Issue #12): generated reports/patches for
+# explicitly selected commit SHAs are never tracked artifacts. This is a
+# dedicated rule (not relying solely on the generic build/ ignore above) so
+# it stays correct even if that rule's scope changes.
+/build/upstream-port/
+
+# Upstream port drift-scan CI textual output (Issue #12 drift automation):
+# .github/workflows/upstream-port-drift.yml writes these at the repo root
+# (also reproducible locally with the same commands); never committed source.
+/drift-report.json
+/scan-report.json
+/scan-report.err

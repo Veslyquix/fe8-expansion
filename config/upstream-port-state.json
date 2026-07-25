@@ -1,0 +1,14 @@
+{
+  "canonical_upstream_url": "https://github.com/laqieer/fireemblem8u.git",
+  "commits": {},
+  "last_ported": {
+    "ref": "decomp/master",
+    "sha": "7b47dec8da6ff7c2ff9aad2bfa9bf40cc8b07b90"
+  },
+  "last_scanned": {
+    "ref": "decomp/master",
+    "sha": "7b47dec8da6ff7c2ff9aad2bfa9bf40cc8b07b90"
+  },
+  "remote_name": "decomp",
+  "schema_version": 1
+}
