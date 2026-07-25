@@ -74,6 +74,249 @@ class LoadSaveRoundTripTests(unittest.TestCase):
                 load = state_mod.load_state(path)
 
 
+class CommitRecordSchemaTests(unittest.TestCase):
+    """Adversarial coverage for the strict commit-record schema fix: every
+    `commits[sha]` record must have the EXACT allowed field set, correct
+    types, a legal `status`, non-empty commit-provenance fields, and
+    non-empty rationale/validation_evidence for every non-pending status.
+    A malformed record must fail at `load_state` time -- before any
+    dependent command produces output, scans git, or writes a file -- and
+    a legitimate pending/terminal record must load cleanly."""
+
+    def setUp(self):
+        self.sha = "1" * 40
+        self.base_state = state_mod.default_state(
+            constants.CANONICAL_UPSTREAM_URL, "decomp", "decomp/master", "2" * 40
+        )
+
+    def _valid_terminal_record(self):
+        return {
+            "status": "ported",
+            "author_name": "Real Author",
+            "author_email": "real@example.invalid",
+            "subject": "a real subject",
+            "rationale": "reviewed by hand",
+            "validation_evidence": "ran the test suite",
+            "updated_at": "2024-01-01T00:00:00Z",
+        }
+
+    def _valid_pending_record(self):
+        return {
+            "status": "pending",
+            "author_name": "Real Author",
+            "author_email": "real@example.invalid",
+            "subject": "a real subject",
+            "rationale": "",
+            "validation_evidence": "",
+            "updated_at": "2024-01-01T00:00:00Z",
+        }
+
+    def _load_with_record(self, record, tmpdir):
+        state = json.loads(json.dumps(self.base_state))
+        state["commits"][self.sha] = record
+        path = os.path.join(tmpdir, "state.json")
+        with open(path, "w") as fh:
+            json.dump(state, fh)
+        return path
+
+    def test_valid_terminal_record_loads_cleanly(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(self._valid_terminal_record(), td)
+            loaded = state_mod.load_state(path)
+            self.assertEqual(loaded["commits"][self.sha]["status"], "ported")
+
+    def test_valid_pending_record_with_empty_rationale_evidence_loads_cleanly(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(self._valid_pending_record(), td)
+            loaded = state_mod.load_state(path)
+            self.assertEqual(loaded["commits"][self.sha]["status"], "pending")
+
+    def test_all_four_non_pending_statuses_require_evidence_and_load_ok_with_it(self):
+        for status in ("ported", "skipped", "superseded", "conflict"):
+            with self.subTest(status=status):
+                record = self._valid_terminal_record()
+                record["status"] = status
+                with tempfile.TemporaryDirectory() as td:
+                    path = self._load_with_record(record, td)
+                    loaded = state_mod.load_state(path)
+                    self.assertEqual(loaded["commits"][self.sha]["status"], status)
+
+    def test_missing_author_name_rejected(self):
+        record = self._valid_terminal_record()
+        del record["author_name"]
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("author_name", str(ctx.exception))
+
+    def test_missing_field_on_pending_record_rejected(self):
+        record = self._valid_pending_record()
+        del record["updated_at"]
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("updated_at", str(ctx.exception))
+
+    def test_extra_field_rejected(self):
+        record = self._valid_terminal_record()
+        record["extra_bogus_field"] = "should not be here"
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("extra_bogus_field", str(ctx.exception))
+
+    def test_redundant_sha_field_rejected_as_extra(self):
+        """A record must not carry its own redundant `sha` field (the dict
+        key IS the SHA) -- if present, it's rejected as an unexpected extra
+        field rather than silently tolerated or trusted over the key."""
+        record = self._valid_terminal_record()
+        record["sha"] = self.sha
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("sha", str(ctx.exception))
+
+    def test_wrong_type_status_rejected(self):
+        record = self._valid_terminal_record()
+        record["status"] = 123
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError):
+                state_mod.load_state(path)
+
+    def test_wrong_type_updated_at_rejected(self):
+        record = self._valid_terminal_record()
+        record["updated_at"] = 20240101
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError):
+                state_mod.load_state(path)
+
+    def test_wrong_type_rationale_rejected(self):
+        record = self._valid_terminal_record()
+        record["rationale"] = None
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError):
+                state_mod.load_state(path)
+
+    def test_unknown_status_rejected(self):
+        record = self._valid_terminal_record()
+        record["status"] = "definitely-not-a-real-status"
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("illegal status", str(ctx.exception))
+
+    def test_terminal_status_with_empty_rationale_rejected(self):
+        record = self._valid_terminal_record()
+        record["rationale"] = ""
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("rationale", str(ctx.exception))
+
+    def test_terminal_status_with_empty_validation_evidence_rejected(self):
+        record = self._valid_terminal_record()
+        record["validation_evidence"] = "   "
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("validation_evidence", str(ctx.exception))
+
+    def test_empty_author_name_rejected_even_for_pending(self):
+        record = self._valid_pending_record()
+        record["author_name"] = "   "
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("author_name", str(ctx.exception))
+
+    def test_empty_subject_rejected(self):
+        record = self._valid_terminal_record()
+        record["subject"] = ""
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError):
+                state_mod.load_state(path)
+
+    def test_implausible_author_email_rejected(self):
+        record = self._valid_terminal_record()
+        record["author_email"] = "not-an-email"
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("author_email", str(ctx.exception))
+
+    def test_malformed_updated_at_format_rejected(self):
+        record = self._valid_terminal_record()
+        record["updated_at"] = "01/01/2024"
+        with tempfile.TemporaryDirectory() as td:
+            path = self._load_with_record(record, td)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("updated_at", str(ctx.exception))
+
+    def test_non_full_sha_key_rejected(self):
+        state = json.loads(json.dumps(self.base_state))
+        state["commits"]["shortsha"] = self._valid_terminal_record()
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "state.json")
+            with open(path, "w") as fh:
+                json.dump(state, fh)
+            with self.assertRaises(state_mod.StateError) as ctx:
+                state_mod.load_state(path)
+            self.assertIn("shortsha", str(ctx.exception))
+
+    def test_record_not_an_object_rejected(self):
+        state = json.loads(json.dumps(self.base_state))
+        state["commits"][self.sha] = "not-a-dict"
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "state.json")
+            with open(path, "w") as fh:
+                json.dump(state, fh)
+            with self.assertRaises(state_mod.StateError):
+                state_mod.load_state(path)
+
+    def test_malformed_state_never_produces_side_effects_via_cli(self):
+        """A malformed loaded state must fail before any dependent CLI
+        command (here: `scan`) produces output, touches git beyond a
+        trivial resolve, or writes a file -- and the malformed state file
+        itself must remain byte-for-byte unchanged."""
+        import contextlib
+        import io
+
+        from scripts.upstream_port import cli
+
+        with tempfile.TemporaryDirectory() as td:
+            record = self._valid_terminal_record()
+            record["rationale"] = ""  # invalid: terminal status needs rationale
+            path = self._load_with_record(record, td)
+            with open(path) as fh:
+                before = fh.read()
+
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = cli.main(
+                    ["--repo", os.getcwd(), "--state", path, "scan", "--ref", "HEAD"]
+                )
+            self.assertEqual(code, 1)
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn("rationale", err.getvalue())
+            with open(path) as fh:
+                after = fh.read()
+            self.assertEqual(before, after)
+
+
 class UpsertCommitStatusTests(unittest.TestCase):
     def setUp(self):
         self.sha = "e" * 40

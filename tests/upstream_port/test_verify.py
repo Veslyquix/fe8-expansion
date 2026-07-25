@@ -1,9 +1,12 @@
+import contextlib
+import inspect
+import io
 import os
 import re
 import shlex
 import unittest
 
-from scripts.upstream_port import verify as verify_mod
+from scripts.upstream_port import cli, verify as verify_mod
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 BUILD_WORKFLOW_PATH = os.path.join(REPO_ROOT, ".github", "workflows", "build.yml")
@@ -151,12 +154,74 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
-    def test_selected_filters_gate_subset(self):
-        results = verify_mod.run_gates(
-            "/nonexistent/path", dry_run=True, selected=["artifact-guard"]
-        )
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].gate.name, "artifact-guard")
+    def test_dry_run_lists_full_ordered_gate_set_never_a_subset(self):
+        """`--dry-run` (verify_mod.run_gates(dry_run=True)) must always list
+        every gate the (non-dry-run) real run would perform, in the exact
+        same order -- never a partial/filtered preview."""
+        dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
+        real_names = [g.name for g in verify_mod.gates()]
+        self.assertEqual(dry, real_names)
+        self.assertEqual(len(dry), 6)
+
+
+class VerifyGateSelectionRemovedTests(unittest.TestCase):
+    """Adversarial coverage for the closure-integrity fix: `verify` (both the
+    internal `run_gates` API and the public CLI) must have NO gate
+    subset/selection capability at all -- an unknown gate name, a real gate
+    name used to select a subset, an empty selection, or a duplicated one
+    must all be impossible to express, not merely rejected at runtime. A
+    partial/unknown/zero-gate "success" must never be produced."""
+
+    def test_run_gates_has_no_selected_or_gates_parameter(self):
+        sig = inspect.signature(verify_mod.run_gates)
+        self.assertNotIn("selected", sig.parameters)
+        self.assertNotIn("gates", sig.parameters)
+        self.assertEqual(set(sig.parameters), {"cwd", "jobs", "dry_run"})
+
+    def test_run_gates_rejects_unexpected_selection_kwarg(self):
+        with self.assertRaises(TypeError):
+            verify_mod.run_gates(  # type: ignore[call-arg]
+                "/nonexistent/path", dry_run=True, selected=["artifact-guard"]
+            )
+
+    def test_cli_verify_has_no_gate_flag_at_all(self):
+        parser = cli.build_parser()
+        # argparse doesn't expose a clean "does this option exist" query,
+        # so introspect the verify subparser's registered actions directly.
+        verify_subparser = parser._subparsers._group_actions[0].choices["verify"]
+        option_strings = set()
+        for action in verify_subparser._actions:
+            option_strings.update(action.option_strings)
+        self.assertNotIn("--gate", option_strings)
+        self.assertNotIn("--gates", option_strings)
+
+    def test_cli_verify_gate_flag_is_a_parser_error_not_silently_ignored(self):
+        for bad_argv in (
+            ["verify", "--gate", "artifact-guard"],
+            ["verify", "--gate", "unknown-gate-name"],
+            ["verify", "--gate", "artifact-guard", "--gate", "artifact-guard"],
+            ["verify", "--gate", ""],
+        ):
+            with self.subTest(argv=bad_argv):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err):
+                    with self.assertRaises(SystemExit) as ctx:
+                        cli.main(bad_argv)
+                # argparse convention: exit code 2 for a CLI usage error.
+                self.assertEqual(ctx.exception.code, 2)
+                self.assertIn("unrecognized arguments", err.getvalue())
+
+    def test_cli_verify_dry_run_lists_full_ordered_gate_set(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = cli.main(["verify", "--dry-run"])
+        self.assertEqual(code, 0)
+        printed = out.getvalue()
+        for name in [g.name for g in verify_mod.gates()]:
+            self.assertIn(name, printed)
+        # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
+        # -- never silently omitted, never marked PASS/FAIL without running.
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 6)
 
 
 if __name__ == "__main__":

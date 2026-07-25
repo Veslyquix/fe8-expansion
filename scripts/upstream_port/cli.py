@@ -25,11 +25,21 @@ workflow):
                  be honestly represented as a single patch file.
   update-state   The only subcommand that mutates the committed state file.
                  Requires explicit, individually-justified arguments.
+                 `record-scan`/`advance-ported` bind their `--sha` (or the
+                 implicit resolved default) to the *selected upstream ref's*
+                 own resolved local tip -- an expansion-side, unrelated,
+                 diverged, or stale-but-related SHA is rejected before the
+                 state file is ever written (see state.record_scan /
+                 state.advance_last_ported).
   fetch          The only subcommand that touches the network. Refuses to
                  run unless the target remote's URL matches the pinned
                  canonical upstream URL exactly.
-  verify         Builds/checks the CURRENT TRUSTED WORKTREE using existing
-                 gates. Never builds the upstream ref/tree.
+  verify         Builds/checks the CURRENT TRUSTED WORKTREE using the FULL,
+                 fixed, ordered gate set -- never the upstream ref/tree, and
+                 never a caller-selected subset. There is no `--gate` flag:
+                 an unknown/partial/zero-gate result would be a forged
+                 closure signal, so gate selection is not offered at all
+                 (not even as an internal escape hatch -- see verify.py).
 """
 
 from __future__ import annotations
@@ -180,21 +190,40 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_scanrec = update_sub.add_parser("record-scan", help="Advance last_scanned after a reviewed scan.")
     p_scanrec.add_argument("--ref", required=True)
-    p_scanrec.add_argument("--sha", default=None, help="Defaults to resolving --ref locally")
+    p_scanrec.add_argument(
+        "--sha", default=None,
+        help="Must equal --ref's own resolved local tip EXACTLY (an "
+        "expansion-side, unrelated/diverged, or stale-but-related SHA is "
+        "rejected). Defaults to that same resolved tip if omitted.",
+    )
 
     p_advance = update_sub.add_parser("advance-ported", help="Advance last_ported after manual apply+verify.")
     p_advance.add_argument("--ref", required=True)
-    p_advance.add_argument("--sha", default=None, help="Defaults to resolving --ref locally")
+    p_advance.add_argument(
+        "--sha", default=None,
+        help="Must lie within the current last_ported .. --ref's resolved "
+        "tip ancestry corridor (descendant of the former, ancestor of the "
+        "latter); an expansion-side, unrelated, diverged, or past-the-tip "
+        "SHA is rejected. Defaults to --ref's resolved tip if omitted.",
+    )
 
     p_fetch = sub.add_parser("fetch", help="EXPLICIT, network-touching: git fetch the canonical remote.")
     p_fetch.add_argument("--remote", default=constants.DEFAULT_REMOTE_NAME)
 
     p_verify = sub.add_parser(
-        "verify", help="Build/check the CURRENT TRUSTED WORKTREE with existing gates (never the upstream tree)."
+        "verify",
+        help=(
+            "Build/check the CURRENT TRUSTED WORKTREE with the FULL, fixed, "
+            "ordered gate set (never the upstream tree). There is no gate "
+            "subset/selection flag: closure evidence for this tool is only "
+            "ever a full-gate result -- see docs/upstream-porting.md."
+        ),
     )
     p_verify.add_argument("--jobs", type=int, default=2)
-    p_verify.add_argument("--dry-run", action="store_true")
-    p_verify.add_argument("--gate", action="append", default=[], dest="gates")
+    p_verify.add_argument(
+        "--dry-run", action="store_true",
+        help="List the full ordered gate set (commands only) without running them.",
+    )
 
     return parser
 
@@ -270,9 +299,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 0
 
         if args.command == "verify":
-            results = verify_mod.run_gates(
-                repo_root, jobs=args.jobs, dry_run=args.dry_run, selected=args.gates
-            )
+            results = verify_mod.run_gates(repo_root, jobs=args.jobs, dry_run=args.dry_run)
             ok = True
             for r in results:
                 status = "SKIPPED(dry-run)" if not r.ran else ("PASS" if r.passed else "FAIL")
@@ -327,25 +354,35 @@ def _handle_update_state(args, repo_root: str, state_path: str) -> int:
         return 0
 
     if args.update_command == "record-scan":
-        sha = args.sha or git_utils.resolve_commit_sha(args.ref, repo_root)
+        # Pass args.sha through as-is (None means "implicit": bind to
+        # ref's own resolved tip). Resolution AND the exact-tip-match
+        # validation both happen inside state.record_scan, before
+        # state["last_scanned"] is mutated -- there is no earlier
+        # resolution here that could let an explicit --sha slip past
+        # the binding check.
         try:
-            state_mod.record_scan(state, args.ref, sha, repo_root)
+            state_mod.record_scan(state, args.ref, args.sha, repo_root)
         except state_mod.StateError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         state_mod.save_state(state_path, state)
-        print(f"recorded last_scanned = {args.ref} @ {sha}")
+        recorded_sha = state["last_scanned"]["sha"]
+        print(f"recorded last_scanned = {args.ref} @ {recorded_sha}")
         return 0
 
     if args.update_command == "advance-ported":
-        sha = args.sha or git_utils.resolve_commit_sha(args.ref, repo_root)
+        # Same principle as record-scan above: args.sha (possibly None)
+        # is passed straight through so state.advance_last_ported performs
+        # the full current-boundary..ref-tip ancestry-corridor validation
+        # itself, for both the explicit and implicit path.
         try:
-            state_mod.advance_last_ported(state, args.ref, sha, repo_root)
+            state_mod.advance_last_ported(state, args.ref, args.sha, repo_root)
         except state_mod.StateError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         state_mod.save_state(state_path, state)
-        print(f"advanced last_ported = {args.ref} @ {sha}")
+        recorded_sha = state["last_ported"]["sha"]
+        print(f"advanced last_ported = {args.ref} @ {recorded_sha}")
         return 0
 
     print("error: unknown update-state subcommand", file=sys.stderr)

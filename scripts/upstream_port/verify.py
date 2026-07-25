@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import subprocess
 from dataclasses import dataclass
-from typing import List, Sequence
+from typing import List
 
 
 @dataclass
@@ -119,18 +119,22 @@ class GateResult:
         return self.ran and self.returncode == 0
 
 
-def run_gates(cwd: str, jobs: int = 2, dry_run: bool = False, selected: Sequence[str] = ()) -> List[GateResult]:
-    """Execute (or, if dry_run, just describe) each applicable gate in order.
+def run_gates(cwd: str, jobs: int = 2, dry_run: bool = False) -> List[GateResult]:
+    """Execute (or, if dry_run, just describe) every gate, in the fixed
+    order returned by `gates()`.
 
-    Stops at the first failing gate (fail-fast, matching CI). Never weakens,
-    reorders, or skips a gate silently -- `selected` (if non-empty) restricts
-    to those gate names, and any resulting skip is reported explicitly by the
-    caller via the gate names actually returned.
+    Stops at the first failing gate (fail-fast, matching CI). Never
+    weakens, reorders, or skips a gate. There is intentionally no gate
+    *selection* capability here (no `selected`/subset parameter): closure
+    evidence for this tool is only ever the full, ordered gate set --
+    partial/unknown/zero-gate "success" is a forged closure signal, not a
+    real one. (See docs/upstream-porting.md and cli.py -- the public
+    `verify` subcommand has no `--gate` flag for the same reason; this
+    function has no internal escape hatch a caller could use to bypass
+    that either.)
     """
     results: List[GateResult] = []
     for gate in gates(jobs=jobs):
-        if selected and gate.name not in selected:
-            continue
         if dry_run:
             results.append(GateResult(gate=gate, ran=False, returncode=0, stdout="", stderr=""))
             continue

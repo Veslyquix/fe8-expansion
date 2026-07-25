@@ -32,6 +32,22 @@ reviewable). It records:
 
 Status values: `pending`, `ported`, `skipped`, `superseded`, `conflict`.
 
+**Strict commit-record schema (enforced at `load_state` time, before any
+dependent command produces output, scans git, or writes a file):** every
+`commits[sha]` record must have *exactly* the seven fields above — no
+missing, no extra (a record must not, for instance, carry its own redundant
+`sha` field; the map key already is the SHA) — all seven typed as strings,
+`status` one of the five legal values, and `author_name`/`author_email`/
+`subject`/`updated_at` non-empty (author_email must look like an email;
+`updated_at` must match `YYYY-MM-DDTHH:MM:SSZ`). `ported`/`skipped`/
+`superseded`/`conflict` additionally require non-empty `rationale` and
+`validation_evidence`; `pending` still requires every field to be present
+and correctly typed, but `rationale`/`validation_evidence` may be empty
+strings. A malformed record anywhere in `commits` fails the whole
+`load_state` call — see `state._validate_commit_record` — so a forged or
+hand-edited "evidence" gap is caught before it can be mistaken for a real
+review decision.
+
 Only the explicit `update-state` subcommand ever writes this file. `scan`,
 `drift`, and `report` are read-only and never touch it.
 
@@ -183,6 +199,17 @@ or executes the upstream ref/tree.** It orchestrates the same gates
 
 None of these existing gates are weakened, reordered, or skipped.
 
+**There is no gate subset/selection flag, on the CLI or in the internal
+`verify.run_gates` API.** `verify` (with or without `--dry-run`) always
+runs/lists the *full*, fixed, ordered gate set above — never an
+unknown-gate, partial, or zero-gate result. This is intentional: closure
+evidence for a manually-applied port batch is only ever meaningful as a
+full-gate outcome, so the ability to select a subset was removed rather
+than merely restricted (an `--gate` flag would let a caller manufacture a
+"verified" result that skipped some gates entirely). `verify --dry-run`
+lists every gate command in the exact order above without running any of
+them — never a filtered preview.
+
 ### 7. Advance the ported boundary
 
 ```sh
@@ -194,9 +221,37 @@ new one is already `ported`, `skipped`, or `superseded` — it refuses to
 silently skip review of any commit in the batch. Also only moves forward
 (new SHA must be a descendant of, or equal to, the current one).
 
+**Ref-tip binding (both the explicit `--sha` and the implicit no-`--sha`
+path are validated identically):**
+
+- `record-scan --ref X [--sha Y]` — `Y` (if given) must be a full 40-hex
+  SHA and must be **exactly equal** to `X`'s own resolved local tip, i.e.
+  `resolve_commit_sha(X)` right now. An expansion-side commit, an
+  unrelated/diverged commit, or a real-but-stale SHA that used to be `X`'s
+  tip but no longer is are all rejected — `record-scan` only ever records a
+  ref's *current* tip, never an arbitrary point on or off its history.
+  Omitting `--sha` uses that same resolved tip directly (there is no
+  looser implicit path).
+- `advance-ported --ref X [--sha Y]` — the candidate (`Y`, or the resolved
+  tip of `X` if omitted) must lie inside the ancestry corridor bounded by
+  the **current** `last_ported.sha` on one end and `X`'s resolved tip on
+  the other: a descendant-of-or-equal-to the current boundary, **and** an
+  ancestor-of-or-equal-to the resolved ref tip. Both ends are checked —
+  not just old-boundary ancestry, which is what let an expansion-side
+  commit (itself a genuine descendant of the old boundary, since it shares
+  that ancestor) slip through before this fix. A commit only reachable via
+  a diverged/forked branch, or one that comes *after* the resolved ref tip,
+  is rejected the same way. A legitimate **intermediate** upstream commit
+  (not necessarily `X`'s exact tip) is still accepted as a valid partial
+  batch boundary, provided every commit up to it is already accounted for.
+
+All of the above validation happens — including missing/unreachable local
+objects being reported as an actionable error — **before** `state.json` is
+ever written, so a rejected call leaves the file byte-for-byte unchanged.
+
 Separately, `update-state record-scan --ref decomp/master` lets you
 explicitly advance `last_scanned` once you've reviewed a scan's output (also
-forward-only).
+forward-only, and ref-tip-bound as described above).
 
 ## Path classification categories
 
