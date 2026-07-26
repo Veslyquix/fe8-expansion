@@ -772,6 +772,115 @@ class RealMakeDryRunABIContractProbeTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Issue #17 checker-escape regression: reports/issue17_documentation_audit.md
+# kept hardcoded MODERN_COHORT_*/MODERN_ALL_* object-count numbers (some
+# inside fenced ```bash/```text blocks) even after the equivalent prose
+# claims in docs/quickstart.md and docs/framework-support.md had already
+# been fixed, because check_stale_phrases() strips fenced code blocks
+# before scanning and only matches a fixed literal-phrase denylist.
+# check_object_count_claims() closes that escape with context-based (not
+# literal-phrase) patterns applied to raw text (fenced code included).
+# These fixtures use the *actual* phrases the verifier found still present
+# in that report, prove they are flagged regardless of fencing, prove the
+# same content is flagged regardless of its registered
+# docs/documentation-inventory.md status, and prove a bare dynamic
+# `make print-<VAR>` command still passes.
+# ---------------------------------------------------------------------------
+
+class ObjectCountClaimEscapeRegressionTests(unittest.TestCase):
+    # Verbatim phrases the verifier found still present in
+    # reports/issue17_documentation_audit.md before this round's fix.
+    REAL_REPORT_PHRASES = [
+        "make print-MODERN_COHORT_OBJECTS      # -> 24 objects total",
+        "make print-MODERN_ALL_OBJECTS         # -> 450 objects as of this audit (wildcard-derived, drifts)",
+        "MODERN_COHORT_C_OBJECTS=21, MODERN_COHORT_ASM_OBJECTS=3, MODERN_COHORT_OBJECTS=24 total",
+        "(375+72=447)",
+        "(363 + 72 = 435, not accounting for the 3 asm files claimed separately;",
+        "its own counts (21 cohort C + 3 asm = 24; 450 all-objects) match",
+        "cohort C sources = 21",
+        "make print-MODERN_ALL_OBJECTS         # -> 450",
+    ]
+
+    def test_each_real_report_phrase_is_flagged(self):
+        for phrase in self.REAL_REPORT_PHRASES:
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_object_count_claims(["doc.md"], root)
+                self.assertTrue(findings, "expected a finding for: %r" % phrase)
+
+    def test_flagged_even_inside_fenced_code_block(self):
+        # This is the exact escape hatch: check_stale_phrases() strips
+        # fenced blocks, so a hardcoded count hidden inside one previously
+        # produced zero findings. check_object_count_claims() must not.
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md",
+                  "```bash\n"
+                  "make print-MODERN_ALL_OBJECTS         # -> 450 objects as of this audit\n"
+                  "```\n")
+            stale_findings = check_docs.check_stale_phrases(["doc.md"], root)
+            self.assertEqual(stale_findings, [], "expected the fenced-block escape to reproduce")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertTrue(findings, "check_object_count_claims must still catch it")
+
+    def test_dynamic_print_command_alone_passes(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md",
+                  "```bash\n"
+                  "make print-MODERN_COHORT_OBJECTS\n"
+                  "make print-MODERN_ALL_OBJECTS\n"
+                  "```\n")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertEqual(findings, [])
+
+    def test_unrelated_object_word_and_hex_arithmetic_do_not_false_positive(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md",
+                  "[A] HIGH-CONFIDENCE ... : 0 in 0 object(s)\n"
+                  "End offset `0x080DFA2C + 5944 = 0x080E1164` lands exactly on the block.\n"
+                  "`UnitDef_Ch2Enemy_1`, `UnitDef_Ch2Enemy_2` (5/6/2/1/2/2/1 units respectively).\n")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertEqual(findings, [])
+
+    def test_current_report_has_no_object_count_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "issue17_documentation_audit.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "reports", "issue17_documentation_audit.md")
+            ))
+            findings = check_docs.check_object_count_claims(
+                ["issue17_documentation_audit.md"], root
+            )
+            self.assertEqual(findings, [])
+
+    def _run_full_checks_with_status(self, status):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md", "make print-MODERN_ALL_OBJECTS         # -> 450 objects\n")
+            write(root, check_docs.INVENTORY_PATH,
+                  "# Inventory\n\n" + check_docs.INVENTORY_BEGIN + "\n"
+                  + "- doc.md | alice | %s | test doc\n" % status
+                  + "- " + check_docs.INVENTORY_PATH + " | alice | current | inventory\n"
+                  + check_docs.INVENTORY_END + "\n")
+            write(root, check_docs.REGISTRY_PATH,
+                  "# Registry\n\n" + check_docs.REGISTRY_BEGIN + "\n"
+                  + check_docs.REGISTRY_END + "\n")
+            findings, _, _ = check_docs.run_checks(root)
+            return findings
+
+    def test_object_count_claim_fails_regardless_of_evidence_status(self):
+        findings = self._run_full_checks_with_status("evidence")
+        self.assertTrue(any("object-count" in f.message for f in findings))
+
+    def test_object_count_claim_fails_regardless_of_historical_status(self):
+        findings = self._run_full_checks_with_status("historical")
+        self.assertTrue(any("object-count" in f.message for f in findings))
+
+
+# ---------------------------------------------------------------------------
 # Static Makefile-target database fixtures (never executes `make`)
 # ---------------------------------------------------------------------------
 

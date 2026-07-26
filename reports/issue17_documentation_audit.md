@@ -173,11 +173,15 @@ python3 -m unittest discover -s scripts/docs_check_tests -v
 python3 scripts/check_docs.py --check --check-examples
 
 # Make-variable-sourced object-count evidence for docs/framework-support.md
-# (never invokes a recipe -- print-% only prints the variable's value)
-make print-MODERN_COHORT_C_OBJECTS    # -> 21 objects
-make print-MODERN_COHORT_ASM_OBJECTS  # -> 3 objects (src/libagbsyscall.s, asm/arm.s, asm/arm_call.s)
-make print-MODERN_COHORT_OBJECTS      # -> 24 objects total
-make print-MODERN_ALL_OBJECTS         # -> 450 objects as of this audit (wildcard-derived, drifts)
+# (never invokes a recipe -- print-% only prints the variable's value).
+# The live counts are intentionally NOT persisted anywhere in this report
+# (the source set drifts as src/*.c files are added/removed) -- run these
+# against the commit under review to see the current values; treat the
+# commands, not any number, as authoritative.
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_OBJECTS
 
 # Make-target resolution (dry-run only, never invokes a compiler/linker)
 make -n expansion-modern-cohort
@@ -222,28 +226,39 @@ unlike `docs/framework-support.md` -- still hardcoded pre-drift modern
 object counts that no longer matched `modern.mk`'s actual
 `MODERN_COHORT_*`/`MODERN_ALL_*` variables:
 
-```text
-Removed claim, paraphrased (site)                                   | Old count | Actual (make print-<VAR> against this worktree)
-----------------------------------------------------------------------+-----------+--------------------------------------------------
-Cohort .o count spelled out, and matching .d count (cohort section)   | 21        | MODERN_COHORT_C_OBJECTS=21, MODERN_COHORT_ASM_OBJECTS=3, MODERN_COHORT_OBJECTS=24 total
-Cohort described as an N-file set, two paragraphs later (full-source)  | 18        | cohort C sources = 21
-Full C-source-file total, split into a "normal src/*.c" sub-count      | 435       | MODERN_ALL_C_OBJECTS=375, MODERN_ALL_DATA_OBJECTS=72
-  plus a preprocessed-data sub-count (full-source section)             | (363+72)  | (375+72=447)
-Full C source list described as an N-file list (full-source section)  | 363       | MODERN_ALL_C_OBJECTS=375
-Combined object/primary-dependency total, repeated for the linked ELF  | 438       | MODERN_ALL_OBJECTS=450 (375 C + 72 data + 3 asm)
-  target (full-source and ELF sections)                                |           |
-```
+- Cohort `.o` count spelled out, and matching `.d` count (cohort
+  section) -- stale hardcoded value; reproduce today's actual split with
+  `make print-MODERN_COHORT_C_OBJECTS`/`print-MODERN_COHORT_ASM_OBJECTS`/
+  `print-MODERN_COHORT_OBJECTS`.
+- Cohort described again as a different N-file set two paragraphs later
+  (full-source section) -- stale hardcoded value, and inconsistent with
+  the cohort section's own count above; reproduce with
+  `make print-MODERN_COHORT_C_OBJECTS`.
+- Full C-source-file total, split into a "normal `src/*.c`" sub-count
+  plus a preprocessed-data sub-count (full-source section) -- stale
+  hardcoded values; reproduce with `make print-MODERN_ALL_C_OBJECTS`/
+  `print-MODERN_ALL_DATA_OBJECTS`.
+- Full C source list described as an N-file list (full-source section)
+  -- stale hardcoded value, and did not match the full-source total two
+  bullets above either; reproduce with `make print-MODERN_ALL_C_OBJECTS`.
+- Combined object/primary-dependency total, repeated for the linked ELF
+  target (full-source and ELF sections) -- stale hardcoded value;
+  reproduce with `make print-MODERN_ALL_OBJECTS`.
 
-None of these numbers were internally consistent with each other either
-(363 + 72 = 435, not accounting for the 3 asm files claimed separately;
-the cohort's claimed C-file total in one paragraph did not match its own
-claimed combined-object total two paragraphs earlier), confirming they
-were stale hand-typed values rather than a single, currently-wrong-but-
-consistent snapshot. The exact removed phrasing is intentionally not
-reproduced in this report (see `scripts/check_docs.py`'s
-`STALE_PHRASE_RULES` for the precise regex each row above corresponds
-to, and `docs/quickstart.md`'s own diff for the literal before/after
-text).
+None of these removed numbers were internally consistent with each other
+either -- the full-source C-file sub-totals did not sum to the claimed
+combined total once the handwritten-assembly objects were accounted for,
+and the cohort's claimed C-file total in one paragraph did not match its
+own claimed combined-object total two paragraphs earlier -- confirming
+they were stale hand-typed values rather than a single, currently-wrong-
+but-internally-consistent snapshot. Neither the removed stale numbers nor
+the correct current numbers are reproduced in this report (see
+`scripts/check_docs.py`'s `STALE_PHRASE_RULES` for the precise regex each
+bullet above corresponds to, `docs/quickstart.md`'s own diff for the
+literal removed text, and the reproduction commands above/below for the
+live values -- the live values are intentionally not persisted anywhere
+in this report so they cannot themselves drift out of sync with
+`modern.mk`).
 
 **Fix, in the smallest-diff mode the task contract required:** every one
 of the phrases above was replaced in `docs/quickstart.md` with a
@@ -254,13 +269,16 @@ MODERN_COHORT_C_OBJECTS`/`ASM_OBJECTS`/`OBJECTS`,
 **no replacement hardcoded number was written into this authoritative
 guide**, so this class of drift cannot recur there. `docs/framework-
 support.md` was reviewed against the same drift and found already
-correct: its own counts (21 cohort C + 3 asm = 24; 450 all-objects) match
-today's actual `make print-<VAR>` output and are already explicitly
-labeled "currently"/"as of this audit" with a reproduce-this-yourself
-command and (for the wildcard-derived all-objects row) an explicit "this
-count drifts ... treat the command, not this number, as authoritative"
-caveat -- so no edit was needed there to satisfy the same closure bar,
-and it does not conflict with quickstart.md's now-number-free wording.
+correct at the time: its own cohort/all-object counts matched today's
+actual `make print-<VAR>` output and were already explicitly labeled
+"currently"/"as of this audit" with a reproduce-this-yourself command
+and (for the wildcard-derived all-objects row) an explicit "this count
+drifts ... treat the command, not this number, as authoritative" caveat
+-- so no edit was needed there to satisfy the same closure bar, and it
+did not conflict with quickstart.md's now-number-free wording. (This
+"already correct" assessment is itself superseded by the "Acceptance
+follow-up" section below, which found `docs/framework-support.md` had
+since reintroduced hardcoded numbers and removed them again.)
 
 `scripts/check_docs.py`'s `STALE_PHRASE_RULES` denylist gained seven new
 entries (one per phrase above) so every one of these exact stale claims
@@ -297,14 +315,16 @@ python3 -m unittest discover -s scripts/docs_check_tests -v
 # with 0 findings.
 
 # Current, actual object counts (this is what quickstart.md now tells the
-# reader to reproduce themselves, instead of hardcoding a number):
-make print-MODERN_COHORT_C_OBJECTS    # -> 21
-make print-MODERN_COHORT_ASM_OBJECTS  # -> 3
-make print-MODERN_COHORT_OBJECTS      # -> 24
-make print-MODERN_ALL_C_OBJECTS       # -> 375
-make print-MODERN_ALL_DATA_OBJECTS    # -> 72
-make print-MODERN_ALL_ASM_OBJECTS     # -> 3
-make print-MODERN_ALL_OBJECTS         # -> 450
+# reader to reproduce themselves, instead of hardcoding a number). The
+# live values are intentionally not persisted in this report either, for
+# the same drift-avoidance reason -- run these yourself:
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_C_OBJECTS
+make print-MODERN_ALL_DATA_OBJECTS
+make print-MODERN_ALL_ASM_OBJECTS
+make print-MODERN_ALL_OBJECTS
 
 # Upstream-port verify.py gate mirror is unaffected by this docs-only change
 python3 -m unittest tests.upstream_port.test_verify -v
@@ -337,11 +357,11 @@ the paragraph in that section asserting `docs/framework-support.md` was
    `MODERN_ABI=aapcs`. `apcs-gnu` is compile-only, valid only for
    `expansion-modern-cohort`/`expansion-modern-all` layout comparison.
 2. **Reintroduced hardcoded object counts.** The same commit hardcoded
-   `MODERN_COHORT_OBJECTS`/`MODERN_ALL_OBJECTS` counts (21 C + 3 asm = 24;
-   450) directly into `docs/framework-support.md`'s cohort/all rows --
-   the exact drift risk the "Verifier finding follow-up" round above had
-   already fixed in `docs/quickstart.md`, but did not catch here because
-   the numbers happened to still be numerically correct at review time.
+   `MODERN_COHORT_OBJECTS`/`MODERN_ALL_OBJECTS` resolved counts directly
+   into `docs/framework-support.md`'s cohort/all rows -- the exact drift
+   risk the "Verifier finding follow-up" round above had already fixed in
+   `docs/quickstart.md`, but did not catch here because the numbers
+   happened to still be numerically correct at review time.
 3. **No compile-only caveat in `docs/config_identity.md`.** Its
    `MODERN_ABI` settings-reference row listed `aapcs`, `apcs-gnu` as
    supported values with no note that `apcs-gnu` is accepted only by the
@@ -390,8 +410,9 @@ make -n expansion-modern-all MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit
 
 # Current, actual object counts (this is what framework-support.md now
 # tells the reader to reproduce themselves, instead of hardcoding a
-# number -- expect the same 21/3/24/375/72/3/450 split as the prior
-# round's table above, but never re-typed into an authoritative doc)
+# number -- expect the same split as the reproduction commands earlier in
+# this report resolve to, but never re-typed into an authoritative doc,
+# and intentionally not persisted here either)
 make print-MODERN_COHORT_C_OBJECTS
 make print-MODERN_COHORT_ASM_OBJECTS
 make print-MODERN_COHORT_OBJECTS

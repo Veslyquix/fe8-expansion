@@ -33,6 +33,15 @@ untracked-but-not-ignored) Markdown file in this repository:
      invocation found in fenced/inline code across all Markdown resolves
      against a *statically parsed* (never executed) Makefile target
      database, so a renamed/removed target fails fast.
+  5. Hardcoded ``MODERN_COHORT_*``/``MODERN_ALL_*`` object-count claims
+     (a bare "N objects" tally, a resolved ``VAR=N``/``VAR # -> N``
+     annotation, or an arithmetic composition like "21 + 3 = 24") do not
+     appear anywhere in any Markdown file -- including inside fenced code
+     blocks, and regardless of the file's ``docs/documentation-inventory.md``
+     status (report/historical/evidence included; there is no status-based
+     exemption). Only a live ``make print-<VARIABLE>`` reproduction command
+     is allowed to stand in for these counts, since they drift as source
+     files are added/removed.
 
 Exit codes: 0 clean, 1 findings, 2 invocation/environment error.
 
@@ -187,6 +196,74 @@ STALE_PHRASE_RULES = [
         "(expansion-modern-cohort/-all layout comparison only)",
     ),
 ]
+
+# ---------------------------------------------------------------------------
+# Object-count numeric-claim context patterns (Issue #17 checker-escape fix)
+# ---------------------------------------------------------------------------
+#
+# check_stale_phrases() above only matches literal, previously-real phrases
+# and strips fenced code blocks before scanning (by design -- so pseudo-
+# links/text samples inside code fences are never treated as prose). That
+# combination left a real escape hatch: a hardcoded MODERN_COHORT_*/
+# MODERN_ALL_* object-count number written *inside* a fenced ```bash/
+# ```text block (e.g. a `# -> 24 objects total` comment on an evidence
+# command, or a fenced table cell) was never scanned by any check --
+# exactly how reports/issue17_documentation_audit.md kept carrying such
+# numbers even after the equivalent prose claims in docs/quickstart.md and
+# docs/framework-support.md had been fixed. check_object_count_claims()
+# below therefore scans *raw* Markdown text (fenced code included) and is
+# applied uniformly to every Markdown file regardless of its
+# docs/documentation-inventory.md status -- report/historical/evidence
+# included, no status-based exemption for this class of finding.
+#
+# Deliberately excluded so legitimate reproduction commands still pass:
+#   - A bare `make print-MODERN_COHORT_OBJECTS`/`print-MODERN_ALL_OBJECTS`
+#     invocation (no digit attached) never matches any pattern below.
+#   - `MODERN_ABI=...`/other non-OBJECTS variable overrides never match.
+#   - Unrelated digits (issue/line numbers, hex addresses, commit counts)
+#     never match: every pattern below requires either an explicit
+#     "object(s)" word directly bound to the number, a
+#     `MODERN_(COHORT|ALL)_..._OBJECTS` macro token, or a word-bounded
+#     arithmetic/assignment shape scoped to the "cohort" vocabulary.
+
+# "<number> objects" / "<number> all-objects" / "<number> full-objects":
+# a raw digit count directly describing an object tally.
+OBJECT_COUNT_HYPHEN_RE = re.compile(r"\b\d+\s*(?:all|full)-objects?\b", re.IGNORECASE)
+OBJECT_COUNT_BARE_RE = re.compile(r"\b\d+\s*objects?\b", re.IGNORECASE)
+
+# The bare form ("N objects"/"N object(s)") is common enough in unrelated
+# contexts (e.g. scripts/shiftcheck/README.md's own report literally
+# saying "0 in 0 object(s)") that it is only treated as an issue-#17-domain
+# object-count claim when the *same line* also names the modern
+# cohort/all-object domain explicitly.
+OBJECT_COUNT_DOMAIN_MARKER_RE = re.compile(
+    r"\bcohort\b|MODERN_(?:COHORT|ALL)_|expansion-modern-(?:cohort|all)",
+    re.IGNORECASE,
+)
+
+# A resolved MODERN_COHORT_*/MODERN_ALL_* value written directly instead of
+# left as a live `make print-<VAR>` command: `VAR=21`, `VAR # -> 21`, or
+# `VAR -> 21`.
+OBJECT_COUNT_VARNUM_RE = re.compile(
+    r"MODERN_(?:COHORT|ALL)_[A-Z_]*OBJECTS\b\s*(?:=|#\s*->|->)\s*\d+"
+)
+
+# A hardcoded composition/arithmetic claim, e.g. "21 + 3 = 24" or
+# "375 + 72 + 3 = 450" (word-bounded on every number so ARM hex address
+# arithmetic like `0x080DFA2C + 5944 = 0x080E1164` in
+# docs/lz_suffix_diagnostic.md is never matched -- each number must be a
+# standalone token, not a digit run embedded inside a longer hex/
+# identifier token).
+OBJECT_COUNT_ARITH_RE = re.compile(
+    r"\b\d{1,4}\b\s*(?:[A-Za-z][A-Za-z .'\-]{0,15})?\+\s*\b\d{1,4}\b\s*"
+    r"(?:[A-Za-z][A-Za-z .'\-]{0,15})?(?:\+\s*\b\d{1,4}\b\s*"
+    r"(?:[A-Za-z][A-Za-z .'\-]{0,15})?)?=\s*\b\d{1,4}\b"
+)
+
+# "cohort ... = <number>" (e.g. "cohort C sources = 21") -- a hand-typed
+# cohort-scoped count that is not even phrased as a MODERN_*_OBJECTS
+# variable assignment.
+OBJECT_COUNT_COHORT_EQ_RE = re.compile(r"\bcohort\b(?:(?!\n).){0,40}?=\s*\d{1,4}\b", re.IGNORECASE)
 
 FENCE_RE = re.compile(r"^(```+|~~~+)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
@@ -1019,6 +1096,58 @@ def check_stale_phrases(markdown_files, root):
 # Internal-link orchestration
 # ---------------------------------------------------------------------------
 
+
+def check_object_count_claims(markdown_files, root):
+    """Find hardcoded MODERN_COHORT_*/MODERN_ALL_* object-count claims.
+
+    Unlike check_stale_phrases() above, this scans the *raw* file text --
+    fenced code blocks are NOT stripped -- because the escape this closes
+    was a hardcoded count hiding inside a ```bash/```text fence. Applied
+    uniformly to every Markdown file; there is no
+    docs/documentation-inventory.md status (report/historical/evidence)
+    exemption for this class of finding.
+    """
+    findings = []
+    for path in markdown_files:
+        text = read_text(os.path.join(root, path))
+        for lineno, line in enumerate(text.split("\n"), start=1):
+            if OBJECT_COUNT_HYPHEN_RE.search(line):
+                findings.append(Finding(
+                    path, lineno,
+                    "hardcoded object-count claim (\"N all-objects\"/\"N full-objects\") -- "
+                    "describe qualitatively and point at the relevant `make print-MODERN_*_OBJECTS` "
+                    "command instead of writing the resolved number"))
+                continue
+            if OBJECT_COUNT_BARE_RE.search(line) and OBJECT_COUNT_DOMAIN_MARKER_RE.search(line):
+                findings.append(Finding(
+                    path, lineno,
+                    "hardcoded object-count claim (\"N object(s)\" in a modern cohort/all-object "
+                    "context) -- describe qualitatively and point at the relevant "
+                    "`make print-MODERN_*_OBJECTS` command instead"))
+                continue
+            if OBJECT_COUNT_VARNUM_RE.search(line):
+                findings.append(Finding(
+                    path, lineno,
+                    "hardcoded MODERN_COHORT_*/MODERN_ALL_* resolved value -- point at the live "
+                    "`make print-<VARIABLE>` command instead of writing the resolved number"))
+                continue
+            if OBJECT_COUNT_ARITH_RE.search(line):
+                findings.append(Finding(
+                    path, lineno,
+                    "hardcoded object-count composition/arithmetic claim (e.g. \"21 + 3 = 24\") -- "
+                    "describe qualitatively and point at the relevant `make print-MODERN_*_OBJECTS` "
+                    "command instead"))
+                continue
+            if OBJECT_COUNT_COHORT_EQ_RE.search(line):
+                findings.append(Finding(
+                    path, lineno,
+                    "hardcoded cohort object/source count assignment -- point at the live "
+                    "`make print-MODERN_COHORT_*_OBJECTS` command instead of writing the resolved "
+                    "number"))
+                continue
+    return findings
+
+
 def check_internal_links(markdown_files, root):
     findings = []
     heading_slug_cache = {}
@@ -1123,6 +1252,7 @@ def run_checks(root, check_examples=False):
     findings.extend(check_internal_links(markdown_files, root))
     findings.extend(check_reference_style_links(markdown_files, root))
     findings.extend(check_stale_phrases(markdown_files, root))
+    findings.extend(check_object_count_claims(markdown_files, root))
 
     literal_targets, pattern_targets = parse_make_targets(root)
     findings.extend(check_make_targets(markdown_files, root, literal_targets, pattern_targets))
