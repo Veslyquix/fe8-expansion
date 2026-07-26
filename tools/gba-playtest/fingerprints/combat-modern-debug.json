@@ -5,11 +5,6 @@
       "name": "enemy-alive-before-fight",
       "probes": [
         {
-          "address": "0x0202eb94",
-          "size": 4,
-          "value": "0x088fe4a8"
-        },
-        {
           "address": "0x0202eba6",
           "size": 1,
           "value": "0x0f"
@@ -25,11 +20,6 @@
       "frame": 3296,
       "name": "artur-scripted-fight-lethal-hit",
       "probes": [
-        {
-          "address": "0x0202eb94",
-          "size": 4,
-          "value": "0x088fe4a8"
-        },
         {
           "address": "0x0202eba6",
           "size": 1,
@@ -62,7 +52,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "dba8a2c81c39a447078d35d400523d3ec903537b",
+    "sha1": "5b28bd4839c01a072941eb6c9b11932a6dddd73c",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "debugtools-ch4-prep-positive-modern-debug",
-  "description": "Issue #11 closure POSITIVE runtime proof: boots the debug ROM to the real, live Chapter 4 prep screen (gPlaySt.chapterStateBits PLAY_FLAG_PREPSCREEN=0x10 set by the genuine PrepScreenProc/gProcScr_SALLYCURSOR lifecycle), navigates the on-map prep command menu to 'View Map' so gProcScr_SALLYCURSOR rests in PrepScreenProc_MapIdle (its per-frame proc_idleCb == PrepScreenProc_MapIdle @0x080905d1, proc_scrCur == 0x08953f40 == the command slot immediately after the cmd54 PROC_REPEAT(PrepScreenProc_MapIdle) -- the FE8 proc engine advances proc_scrCur past a REPEAT and re-runs the routine via proc_idleCb every frame), then fires the SELECT+B prep hotkey. DebugTools_PrepHotkeyCheck (called ONLY from PrepScreenProc_MapIdle) increments gDebugToolsProbe.prepScreenObservedCount to 1 because PLAY_FLAG_PREPSCREEN is set, and opens the debug hub (gDebugToolsProbe.hubOpenCount 1->2, sHubActive 0->1). A second SELECT+B proves DebugTools_OpenHub reentrancy/idempotency (hubOpenCount stays 2 -- the sHubActive guard blocks a second StartOrphanMenu) while the same B cleanly cancels the hub menu (sHubActive 1->0), returning to the still-live prep MapIdle (chapterStateBits still 0x10, no crash). All evidence is semantic EWRAM/proc RAM probes at fixed addresses from this build's own ELF symbol table.",
+  "description": "Issue #11 closure POSITIVE runtime proof: boots the debug ROM to the real, live Chapter 4 prep screen (gPlaySt.chapterStateBits PLAY_FLAG_PREPSCREEN=0x10 set by the genuine PrepScreenProc/gProcScr_SALLYCURSOR lifecycle), navigates the on-map prep command menu to 'View Map' so gProcScr_SALLYCURSOR rests in PrepScreenProc_MapIdle, then fires the SELECT+B prep hotkey. DebugTools_PrepHotkeyCheck (called ONLY from PrepScreenProc_MapIdle) increments gDebugToolsProbe.prepScreenObservedCount to 1 because PLAY_FLAG_PREPSCREEN is set, and opens the debug hub (gDebugToolsProbe.hubOpenCount 1->2, sHubActive 0->1). A second SELECT+B proves DebugTools_OpenHub reentrancy/idempotency (hubOpenCount stays 2 -- the sHubActive guard blocks a second StartOrphanMenu) while the same B cleanly cancels the hub menu (sHubActive 1->0), returning to the still-live prep MapIdle (chapterStateBits still 0x10, no crash), and a long-run checkpoint at frame 6000 re-confirms PLAY_FLAG_PREPSCREEN is still set with the hub closed (sHubActive==0). All evidence is relocation-independent semantic EWRAM probes -- PLAY_FLAG_PREPSCREEN, the prep-screen state byte at 0x020210b2, prepScreenObservedCount, hubOpenCount, and sHubActive -- at fixed addresses from this build's own ELF symbol table. The observedCount 0->1 increment (which only DebugTools_PrepHotkeyCheck, itself reachable only from PrepScreenProc_MapIdle, can produce) is itself the proof the hotkey fired from a live MapIdle, so no proc_idleCb/proc_scrCur ROM-pointer oracle is needed or asserted.",
   "frames": [
     {
       "start": 90,
@@ -262,16 +262,6 @@
           "expected": "0x10"
         },
         {
-          "address": "0x02038534",
-          "size": 4,
-          "expected": "0x080905d1"
-        },
-        {
-          "address": "0x0203852c",
-          "size": 4,
-          "expected": "0x08953f40"
-        },
-        {
           "address": "0x02031854",
           "size": 4,
           "expected": "0x00000000"
@@ -312,11 +302,6 @@
           "address": "0x02031614",
           "size": 1,
           "expected": "0x01"
-        },
-        {
-          "address": "0x02038534",
-          "size": 4,
-          "expected": "0x080905d1"
         }
       ]
     },
@@ -344,16 +329,6 @@
           "address": "0x02031854",
           "size": 4,
           "expected": "0x00000002"
-        },
-        {
-          "address": "0x02038534",
-          "size": 4,
-          "expected": "0x080905d1"
-        },
-        {
-          "address": "0x0203852c",
-          "size": 4,
-          "expected": "0x08953f40"
         }
       ]
     },
@@ -373,19 +348,14 @@
           "expected": "0x10"
         },
         {
-          "address": "0x02038534",
-          "size": 4,
-          "expected": "0x080905d1"
-        },
-        {
-          "address": "0x0203852c",
-          "size": 4,
-          "expected": "0x08953f40"
-        },
-        {
           "address": "0x02031818",
           "size": 4,
           "expected": "0x00000002"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "expected": "0x00"
         }
       ]
     }

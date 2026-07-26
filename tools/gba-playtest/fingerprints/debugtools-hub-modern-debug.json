@@ -472,19 +472,9 @@
           "value": "0x02"
         },
         {
-          "address": "0x0202e5f4",
-          "size": 4,
-          "value": "0x088fc0e8"
-        },
-        {
           "address": "0x0202e600",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202eb94",
-          "size": 4,
-          "value": "0x088fdc54"
         },
         {
           "address": "0x0202eba0",
@@ -492,19 +482,9 @@
           "value": "0x00000000"
         },
         {
-          "address": "0x0202ebdc",
-          "size": 4,
-          "value": "0x088fdc54"
-        },
-        {
           "address": "0x0202ebe8",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202ec24",
-          "size": 4,
-          "value": "0x088fcde8"
         },
         {
           "address": "0x0202ec30",
@@ -512,29 +492,14 @@
           "value": "0x00000000"
         },
         {
-          "address": "0x0202ec6c",
-          "size": 4,
-          "value": "0x088fdc54"
-        },
-        {
           "address": "0x0202ec78",
           "size": 4,
           "value": "0x00001000"
         },
         {
-          "address": "0x0202f9a4",
-          "size": 4,
-          "value": "0x088fc0b4"
-        },
-        {
           "address": "0x0202f9b0",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202f9ec",
-          "size": 4,
-          "value": "0x088fbfb0"
         },
         {
           "address": "0x0202f9f8",
@@ -547,19 +512,9 @@
           "value": "0x2809"
         },
         {
-          "address": "0x0202fa34",
-          "size": 4,
-          "value": "0x088fbfe4"
-        },
-        {
           "address": "0x0202fa40",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202fa7c",
-          "size": 4,
-          "value": "0x088fc04c"
         },
         {
           "address": "0x0202fa88",
@@ -567,19 +522,9 @@
           "value": "0x00000000"
         },
         {
-          "address": "0x0202fac4",
-          "size": 4,
-          "value": "0x088fc018"
-        },
-        {
           "address": "0x0202fad0",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202fb0c",
-          "size": 4,
-          "value": "0x088fc080"
         },
         {
           "address": "0x0202fb18",
@@ -655,19 +600,9 @@
           "value": "0x05"
         },
         {
-          "address": "0x0202e5f4",
-          "size": 4,
-          "value": "0x088fc0e8"
-        },
-        {
           "address": "0x0202e600",
           "size": 4,
           "value": "0x00000021"
-        },
-        {
-          "address": "0x0202eb94",
-          "size": 4,
-          "value": "0x088fdc54"
         },
         {
           "address": "0x0202eba0",
@@ -675,19 +610,9 @@
           "value": "0x00000000"
         },
         {
-          "address": "0x0202ebdc",
-          "size": 4,
-          "value": "0x088fdc54"
-        },
-        {
           "address": "0x0202ebe8",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202ec24",
-          "size": 4,
-          "value": "0x088fcde8"
         },
         {
           "address": "0x0202ec30",
@@ -695,29 +620,14 @@
           "value": "0x00000000"
         },
         {
-          "address": "0x0202ec6c",
-          "size": 4,
-          "value": "0x088fdc54"
-        },
-        {
           "address": "0x0202ec78",
           "size": 4,
           "value": "0x00001000"
         },
         {
-          "address": "0x0202f9a4",
-          "size": 4,
-          "value": "0x088fc0b4"
-        },
-        {
           "address": "0x0202f9b0",
           "size": 4,
           "value": "0x00000051"
-        },
-        {
-          "address": "0x0202f9ec",
-          "size": 4,
-          "value": "0x088fbfb0"
         },
         {
           "address": "0x0202f9f8",
@@ -730,19 +640,9 @@
           "value": "0x2809"
         },
         {
-          "address": "0x0202fa34",
-          "size": 4,
-          "value": "0x088fbfe4"
-        },
-        {
           "address": "0x0202fa40",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202fa7c",
-          "size": 4,
-          "value": "0x088fc04c"
         },
         {
           "address": "0x0202fa88",
@@ -750,19 +650,9 @@
           "value": "0x00000000"
         },
         {
-          "address": "0x0202fac4",
-          "size": 4,
-          "value": "0x088fc018"
-        },
-        {
           "address": "0x0202fad0",
           "size": 4,
           "value": "0x00000000"
-        },
-        {
-          "address": "0x0202fb0c",
-          "size": 4,
-          "value": "0x088fc080"
         },
         {
           "address": "0x0202fb18",
