@@ -1,0 +1,549 @@
+{
+  "consumers": [
+    {
+      "budget": "0 runtime bytes; capped at the signed 8-bit chapter field.",
+      "category": "external-interface",
+      "configured_cap": 127,
+      "default_behavior": "0x00..0x7F positive; negative values reserved as sentinels.",
+      "domain": "chapter",
+      "path": "include/eventscript.h",
+      "runtime_evidence": null,
+      "sentinel": -1,
+      "signed": 1,
+      "status": "frozen",
+      "storage_bits": 7,
+      "symbol": "EvtGetChapterIndex",
+      "technical_max": 127
+    },
+    {
+      "budget": "0 runtime bytes; capped at the signed 8-bit chapter field.",
+      "category": "runtime-struct",
+      "configured_cap": 127,
+      "default_behavior": "0x00..0x7F positive; negative values reserved as sentinels.",
+      "domain": "chapter",
+      "path": "include/types.h",
+      "runtime_evidence": null,
+      "sentinel": -1,
+      "signed": 1,
+      "status": "frozen",
+      "storage_bits": 7,
+      "symbol": "PlaySt.chapterIndex (s8)",
+      "technical_max": 127
+    },
+    {
+      "budget": "0 runtime bytes; capped at the signed 8-bit chapter field.",
+      "category": "save-field",
+      "configured_cap": 127,
+      "default_behavior": "0x00..0x7F positive; negative values reserved as sentinels.",
+      "domain": "chapter",
+      "path": "include/savemenu.h",
+      "runtime_evidence": null,
+      "sentinel": -1,
+      "signed": 1,
+      "status": "frozen",
+      "storage_bits": 7,
+      "symbol": "chapter_idx[3]",
+      "technical_max": 127
+    },
+    {
+      "budget": "0 runtime bytes: already at the 8-bit storage ceiling.",
+      "category": "lookup-table",
+      "configured_cap": 255,
+      "default_behavior": "256 records; index 0xFF is unreachable padding.",
+      "domain": "character",
+      "path": "scripts/generated_data/characters/schema.py",
+      "runtime_evidence": null,
+      "sentinel": 0,
+      "signed": 0,
+      "status": "at-storage-max",
+      "storage_bits": 8,
+      "symbol": "gCharacterData[] record_budget=256",
+      "technical_max": 255
+    },
+    {
+      "budget": "0 runtime bytes: already at the 8-bit storage ceiling.",
+      "category": "save-field",
+      "configured_cap": 255,
+      "default_behavior": "256 records; index 0xFF is unreachable padding.",
+      "domain": "character",
+      "path": "include/bmsave.h",
+      "runtime_evidence": null,
+      "sentinel": 0,
+      "signed": 0,
+      "status": "at-storage-max",
+      "storage_bits": 8,
+      "symbol": "GameSavePackedUnit.pid (u8)",
+      "technical_max": 255
+    },
+    {
+      "budget": "0 runtime bytes; capped at the 7-bit jid save field.",
+      "category": "lookup-table",
+      "configured_cap": 127,
+      "default_behavior": "0x00..0x7F; class 0x80 truncates on save.",
+      "domain": "class",
+      "path": "src/data/classes.json",
+      "runtime_evidence": null,
+      "sentinel": 0,
+      "signed": 0,
+      "status": "frozen",
+      "storage_bits": 7,
+      "symbol": "gClassData[]",
+      "technical_max": 127
+    },
+    {
+      "budget": "0 runtime bytes; capped at the 7-bit jid save field.",
+      "category": "save-field",
+      "configured_cap": 127,
+      "default_behavior": "0x00..0x7F; class 0x80 truncates on save.",
+      "domain": "class",
+      "path": "include/bmsave.h",
+      "runtime_evidence": null,
+      "sentinel": 0,
+      "signed": 0,
+      "status": "frozen",
+      "storage_bits": 7,
+      "symbol": "GameSavePackedUnit.jid (7-bit)",
+      "technical_max": 127
+    },
+    {
+      "budget": "0 bytes: operand lanes are already 16-bit; item IDs fit trivially.",
+      "category": "event-operand",
+      "configured_cap": 255,
+      "default_behavior": "16-bit lanes; carries any 8-bit ID domain with headroom.",
+      "domain": "event",
+      "path": "include/eventscript.h",
+      "runtime_evidence": null,
+      "sentinel": null,
+      "signed": 0,
+      "status": "adequate",
+      "storage_bits": 16,
+      "symbol": "_EvtParams2 / _EvtArg0",
+      "technical_max": 65535
+    },
+    {
+      "budget": "0 bytes: operand lanes are already 16-bit; item IDs fit trivially.",
+      "category": "external-interface",
+      "configured_cap": 255,
+      "default_behavior": "16-bit lanes; carries any 8-bit ID domain with headroom.",
+      "domain": "event",
+      "path": "include/EAstdlib.h",
+      "runtime_evidence": "modern debug ROM: a real GIVEITEMTO script ran through the production event engine with operand 0xCE",
+      "sentinel": null,
+      "signed": 0,
+      "status": "adequate",
+      "storage_bits": 16,
+      "symbol": "GIVEITEMTO / EvtGiveItemAtSlot3",
+      "technical_max": 65535
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "event-operand",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/eventscript.h",
+      "runtime_evidence": "modern debug ROM: EV_CMD_GIVEITEM decoded 0xCE into a live unit inventory",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "_EvtParams2 (16-bit lanes)",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "link-network",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/bmsave.h",
+      "runtime_evidence": "modern debug ROM: MultiArena team write+read through SRAM keeps 0x01CE",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "MultiArenaSaveTeam.units[] (GameSavePackedUnit)",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "lookup-table",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "src/data/items.json",
+      "runtime_evidence": "modern debug+release ROM: GetItemData(0xCE)->number == 0xCE (207-record linked table)",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "gItemData[] index-designated",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "runtime-macro",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/bmitem.h",
+      "runtime_evidence": "modern debug+release ROM: GetItemIndex(MakeNewItem(0xCE)) == 0xCE",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "ITEM_INDEX(x) = x & 0xFF",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "runtime-struct",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/bmunit.h",
+      "runtime_evidence": "modern debug ROM: Chapter 2 unit inventory slot holds 0x01CE",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "struct Unit.items[UNIT_ITEM_COUNT] (u16)",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "save-field",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/bmsave.h",
+      "runtime_evidence": "modern debug ROM: game-save pack/unpack roundtrip keeps 0x01CE, 14-bit field reads back 0x01CE",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "GameSavePackedUnit.item1..item5 (14-bit)",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "save-field",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/bmsave.h",
+      "runtime_evidence": "modern debug ROM: suspend encode/decode roundtrip keeps 0x01CE",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "SuspendSavePackedUnit.item1..item5",
+      "technical_max": 255
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "category": "ui-buffer",
+      "configured_cap": 205,
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "domain": "item",
+      "path": "include/bmitem.h",
+      "runtime_evidence": "modern debug ROM: DrawItemMenuLine/DrawItemStatScreenLine drew 0xCE into the live BG0 tilemap",
+      "sentinel": 0,
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "symbol": "ItemData.nameTextId (u16) + iconId (u8)",
+      "technical_max": 255
+    },
+    {
+      "budget": "0 runtime bytes; capped by the 0x40 faction partition stride.",
+      "category": "runtime-struct",
+      "configured_cap": 63,
+      "default_behavior": "0x00..0x3F per faction; 0x40 is the next faction base.",
+      "domain": "unit",
+      "path": "include/bmunit.h",
+      "runtime_evidence": null,
+      "sentinel": 64,
+      "signed": 0,
+      "status": "frozen",
+      "storage_bits": 8,
+      "symbol": "FACTION_BLUE/GREEN/RED/PURPLE (0x40 stride)",
+      "technical_max": 63
+    },
+    {
+      "budget": "0 runtime bytes; capped by the 0x40 faction partition stride.",
+      "category": "save-field",
+      "configured_cap": 63,
+      "default_behavior": "0x00..0x3F per faction; 0x40 is the next faction base.",
+      "domain": "unit",
+      "path": "include/sram-layout.h",
+      "runtime_evidence": null,
+      "sentinel": 64,
+      "signed": 0,
+      "status": "frozen",
+      "storage_bits": 8,
+      "symbol": "UNIT_SAVE_AMOUNT_* * sizeof(packed unit)",
+      "technical_max": 63
+    }
+  ],
+  "digest": "3258d77179b708aa8cbe0bb84e7ae1ebfcde2ce3c079e8a5aa652686ad05f6b4",
+  "domains": [
+    {
+      "budget": "0 runtime bytes: already at the 8-bit storage ceiling.",
+      "configured_cap": 255,
+      "count_bits": 16,
+      "count_ctype": "u16",
+      "default_behavior": "256 records; index 0xFF is unreachable padding.",
+      "evidence": [
+        {
+          "category": "save-field",
+          "path": "include/bmsave.h",
+          "runtime_evidence": null,
+          "symbol": "GameSavePackedUnit.pid (u8)"
+        },
+        {
+          "category": "lookup-table",
+          "path": "scripts/generated_data/characters/schema.py",
+          "runtime_evidence": null,
+          "symbol": "gCharacterData[] record_budget=256"
+        }
+      ],
+      "freeze_reason": "Logical ID storage is a full 8-bit byte (GameSavePackedUnit.pid); 0x100+ needs a wider ID field across runtime and save, out of pilot scope.",
+      "id_ctype": "u8",
+      "key": "character",
+      "opt_in_first": null,
+      "partition_stride": null,
+      "record_capacity": 256,
+      "sentinel": 0,
+      "sentinel_name": "CHARACTER_NONE",
+      "signed": 0,
+      "status": "at-storage-max",
+      "storage_bits": 8,
+      "technical_max": 255,
+      "title": "Character (unit logical ID)"
+    },
+    {
+      "budget": "0 runtime bytes; capped at the 7-bit jid save field.",
+      "configured_cap": 127,
+      "count_bits": 8,
+      "count_ctype": "u8",
+      "default_behavior": "0x00..0x7F; class 0x80 truncates on save.",
+      "evidence": [
+        {
+          "category": "save-field",
+          "path": "include/bmsave.h",
+          "runtime_evidence": null,
+          "symbol": "GameSavePackedUnit.jid (7-bit)"
+        },
+        {
+          "category": "lookup-table",
+          "path": "src/data/classes.json",
+          "runtime_evidence": null,
+          "symbol": "gClassData[]"
+        }
+      ],
+      "freeze_reason": "GameSavePackedUnit.jid is a 7-bit save bitfield; 0x80 silently truncates to 0x00 on save. Widening needs a save layout/epoch change, out of pilot scope.",
+      "id_ctype": "u8",
+      "key": "class",
+      "opt_in_first": null,
+      "partition_stride": null,
+      "record_capacity": null,
+      "sentinel": 0,
+      "sentinel_name": "CLASS_NONE",
+      "signed": 0,
+      "status": "frozen",
+      "storage_bits": 7,
+      "technical_max": 127,
+      "title": "Class (job) ID"
+    },
+    {
+      "budget": "0xCD->0xCE costs +1 struct ItemData record in ROM and 0 RAM/save-layout bytes: item save fields are already 14-bit (0x3FFF) and the runtime index is masked to 8 bits.",
+      "configured_cap": 205,
+      "count_bits": 16,
+      "count_ctype": "u16",
+      "default_behavior": "Default cap 0xCD (206 vanilla records). Opt-in FE8_ITEM_ID_CAP raises the cap up to 0xFF.",
+      "evidence": [
+        {
+          "category": "runtime-macro",
+          "path": "include/bmitem.h",
+          "runtime_evidence": "modern debug+release ROM: GetItemIndex(MakeNewItem(0xCE)) == 0xCE",
+          "symbol": "ITEM_INDEX(x) = x & 0xFF"
+        },
+        {
+          "category": "runtime-struct",
+          "path": "include/bmunit.h",
+          "runtime_evidence": "modern debug ROM: Chapter 2 unit inventory slot holds 0x01CE",
+          "symbol": "struct Unit.items[UNIT_ITEM_COUNT] (u16)"
+        },
+        {
+          "category": "save-field",
+          "path": "include/bmsave.h",
+          "runtime_evidence": "modern debug ROM: game-save pack/unpack roundtrip keeps 0x01CE, 14-bit field reads back 0x01CE",
+          "symbol": "GameSavePackedUnit.item1..item5 (14-bit)"
+        },
+        {
+          "category": "save-field",
+          "path": "include/bmsave.h",
+          "runtime_evidence": "modern debug ROM: suspend encode/decode roundtrip keeps 0x01CE",
+          "symbol": "SuspendSavePackedUnit.item1..item5"
+        },
+        {
+          "category": "event-operand",
+          "path": "include/eventscript.h",
+          "runtime_evidence": "modern debug ROM: EV_CMD_GIVEITEM decoded 0xCE into a live unit inventory",
+          "symbol": "_EvtParams2 (16-bit lanes)"
+        },
+        {
+          "category": "lookup-table",
+          "path": "src/data/items.json",
+          "runtime_evidence": "modern debug+release ROM: GetItemData(0xCE)->number == 0xCE (207-record linked table)",
+          "symbol": "gItemData[] index-designated"
+        },
+        {
+          "category": "ui-buffer",
+          "path": "include/bmitem.h",
+          "runtime_evidence": "modern debug ROM: DrawItemMenuLine/DrawItemStatScreenLine drew 0xCE into the live BG0 tilemap",
+          "symbol": "ItemData.nameTextId (u16) + iconId (u8)"
+        },
+        {
+          "category": "link-network",
+          "path": "include/bmsave.h",
+          "runtime_evidence": "modern debug ROM: MultiArena team write+read through SRAM keeps 0x01CE",
+          "symbol": "MultiArenaSaveTeam.units[] (GameSavePackedUnit)"
+        }
+      ],
+      "freeze_reason": null,
+      "id_ctype": "u8",
+      "key": "item",
+      "opt_in_first": 206,
+      "partition_stride": null,
+      "record_capacity": null,
+      "sentinel": 0,
+      "sentinel_name": "ITEM_NONE",
+      "signed": 0,
+      "status": "expandable",
+      "storage_bits": 8,
+      "technical_max": 255,
+      "title": "Item ID"
+    },
+    {
+      "budget": "0 runtime bytes; capped at the signed 8-bit chapter field.",
+      "configured_cap": 127,
+      "count_bits": 8,
+      "count_ctype": "u8",
+      "default_behavior": "0x00..0x7F positive; negative values reserved as sentinels.",
+      "evidence": [
+        {
+          "category": "runtime-struct",
+          "path": "include/types.h",
+          "runtime_evidence": null,
+          "symbol": "PlaySt.chapterIndex (s8)"
+        },
+        {
+          "category": "save-field",
+          "path": "include/savemenu.h",
+          "runtime_evidence": null,
+          "symbol": "chapter_idx[3]"
+        },
+        {
+          "category": "external-interface",
+          "path": "include/eventscript.h",
+          "runtime_evidence": null,
+          "symbol": "EvtGetChapterIndex"
+        }
+      ],
+      "freeze_reason": "PlaySt.chapterIndex is s8; negatives are reserved sentinels, so the positive range caps at 0x7F. Widening needs a signed->wider save/runtime change.",
+      "id_ctype": "s8",
+      "key": "chapter",
+      "opt_in_first": null,
+      "partition_stride": null,
+      "record_capacity": null,
+      "sentinel": -1,
+      "sentinel_name": "CHAPTER_NONE",
+      "signed": 1,
+      "status": "frozen",
+      "storage_bits": 7,
+      "technical_max": 127,
+      "title": "Chapter ID"
+    },
+    {
+      "budget": "0 runtime bytes; capped by the 0x40 faction partition stride.",
+      "configured_cap": 63,
+      "count_bits": 8,
+      "count_ctype": "u8",
+      "default_behavior": "0x00..0x3F per faction; 0x40 is the next faction base.",
+      "evidence": [
+        {
+          "category": "runtime-struct",
+          "path": "include/bmunit.h",
+          "runtime_evidence": null,
+          "symbol": "FACTION_BLUE/GREEN/RED/PURPLE (0x40 stride)"
+        },
+        {
+          "category": "save-field",
+          "path": "include/sram-layout.h",
+          "runtime_evidence": null,
+          "symbol": "UNIT_SAVE_AMOUNT_* * sizeof(packed unit)"
+        }
+      ],
+      "freeze_reason": "Unit IDs are partitioned into 0x40-wide faction blocks (FACTION_BLUE/GREEN/RED/PURPLE); a per-faction id at 0x40 collides with the next faction base.",
+      "id_ctype": "u8",
+      "key": "unit",
+      "opt_in_first": null,
+      "partition_stride": 64,
+      "record_capacity": null,
+      "sentinel": 64,
+      "sentinel_name": "FACTION_STRIDE",
+      "signed": 0,
+      "status": "frozen",
+      "storage_bits": 8,
+      "technical_max": 63,
+      "title": "Unit (deployment) ID slot"
+    },
+    {
+      "budget": "0 bytes: operand lanes are already 16-bit; item IDs fit trivially.",
+      "configured_cap": 255,
+      "count_bits": 16,
+      "count_ctype": "u16",
+      "default_behavior": "16-bit lanes; carries any 8-bit ID domain with headroom.",
+      "evidence": [
+        {
+          "category": "event-operand",
+          "path": "include/eventscript.h",
+          "runtime_evidence": null,
+          "symbol": "_EvtParams2 / _EvtArg0"
+        },
+        {
+          "category": "external-interface",
+          "path": "include/EAstdlib.h",
+          "runtime_evidence": "modern debug ROM: a real GIVEITEMTO script ran through the production event engine with operand 0xCE",
+          "symbol": "GIVEITEMTO / EvtGiveItemAtSlot3"
+        }
+      ],
+      "freeze_reason": null,
+      "id_ctype": "u16",
+      "key": "event",
+      "opt_in_first": null,
+      "partition_stride": null,
+      "record_capacity": null,
+      "sentinel": null,
+      "sentinel_name": null,
+      "signed": 0,
+      "status": "adequate",
+      "storage_bits": 16,
+      "technical_max": 65535,
+      "title": "Event operand lane"
+    }
+  ],
+  "required_categories": [
+    "runtime-macro",
+    "runtime-struct",
+    "save-field",
+    "event-operand",
+    "lookup-table",
+    "ui-buffer",
+    "link-network",
+    "external-interface"
+  ],
+  "schema_version": 1
+}

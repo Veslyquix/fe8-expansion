@@ -13,6 +13,16 @@ def build_inventory(records):
     items_enum = extract_enum_constants(ITEMS_HEADER, name_prefix="ITEM_")
     attribute_flags = read_item_attributes(BMITEM_HEADER)
 
+    # The committed inventory tracks the archival/default table (the vanilla
+    # src/data/items.json records, ITEM_* <= default cap). Opt-in expansion
+    # overlay records (ITEM_EXPANSION_*, only present when FE8_ITEM_ID_CAP is
+    # raised) are not in include/constants/items.h, are generated into the
+    # ROM table under build/, and are audited separately in
+    # reports/id_space_audit.md -- so they never drift this archival file and
+    # the default (0xCD) and opt-in (>=0xCE) builds share one committed
+    # inventory.
+    records = [r for r in records if r.item in items_enum]
+
     values = sorted(items_enum[r.item][0] for r in records if r.item in items_enum)
     weapon_type_counts = Counter(r.weapon_type for r in records)
     stat_bonus_counts = Counter(r.stat_bonuses for r in records if r.stat_bonuses is not None)

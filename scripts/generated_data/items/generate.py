@@ -1,34 +1,45 @@
-"""C89 generation for the ``gItemData[]`` (index-designated ``struct
-ItemData[]``) table."""
+"""C89 generation for the gItemData[] (index-designated struct ItemData[]) table."""
 
 from __future__ import annotations
 
+import os
+
 from ..cgen import render_banner
 from ..validators import extract_enum_constants
-from .schema import BMITEM_HEADER, ITEMS_HEADER, read_item_attributes
+from .schema import BMITEM_HEADER, ITEMS_HEADER, ITEMS_EXPANSION_HEADER, read_item_attributes
 
 
 def _sorted_attributes(attributes, attribute_flags):
-    """Emit flags in ascending bit-value order -- matches the vanilla
-    hand file's own convention field-for-field (every ``.attributes``
-    combo in ``src/data_items.c`` lists its ``IA_*`` flags in ascending
-    bit-position order)."""
+    """Emit flags in ascending bit-value order -- matches the vanilla hand
+    file convention field-for-field (every .attributes combo in
+    src/data_items.c lists its IA_* flags in ascending bit-position order)."""
     return sorted(attributes, key=lambda name: attribute_flags.get(name, 0))
 
 
 def generate_c_source(records, source_path):
     items_enum = extract_enum_constants(ITEMS_HEADER, name_prefix="ITEM_")
+    if os.path.exists(ITEMS_EXPANSION_HEADER):
+        expansion_enum = extract_enum_constants(ITEMS_EXPANSION_HEADER, name_prefix="ITEM_")
+    else:
+        expansion_enum = {}
+    order_enum = dict(items_enum)
+    order_enum.update(expansion_enum)
     attribute_flags = read_item_attributes(BMITEM_HEADER)
 
     ordered = sorted(
         records,
-        key=lambda r: items_enum[r.item][0] if r.item in items_enum else 1 << 30,
+        key=lambda r: order_enum[r.item][0] if r.item in order_enum else 1 << 30,
     )
 
+    uses_expansion = any(r.item in expansion_enum for r in records)
+
     parts = [render_banner(source=source_path, table="items")]
-    parts.append('#include "global.h"\n')
-    parts.append('#include "bmitem.h"\n')
-    parts.append('#include "constants/items.h"\n\n')
+    parts.append("#include \"global.h\"\n")
+    parts.append("#include \"bmitem.h\"\n")
+    parts.append("#include \"constants/items.h\"\n")
+    if uses_expansion:
+        parts.append("#include \"constants/items_expansion.h\"\n")
+    parts.append("\n")
     parts.append("CONST_DATA struct ItemData gItemData[] = {\n")
 
     for record in ordered:

@@ -73,7 +73,7 @@ def collect_entries(source_overrides=None):
                 "table '{}' has no default_source; cannot build manifest".format(name)
             )
         records = schema.load_records(source_path)
-        entries.append(ManifestEntry(schema, len(records)))
+        entries.append(ManifestEntry(schema, schema.manifest_record_count(records)))
     return entries
 
 

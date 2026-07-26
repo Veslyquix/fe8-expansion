@@ -6,6 +6,7 @@
 #include "soundwrapper.h"
 #include "gamecontrol.h"
 #include "expansion_debugtools.h"
+#include "expansion_itemtest.h"
 #include "bmlib.h"
 #include "bm.h"
 #include "opanim.h"
@@ -916,6 +917,21 @@ void Title_IDLE(struct TitleScreenProc * proc)
         Proc_Break(proc);
         return;
     }
+
+#if FE8_EXPANSION_ITEMTEST_ENABLED
+    /* Issue #10 opt-in runtime item-expansion probe (compiled out, and
+     * this whole block absent, in every ordinary build -- see
+     * include/expansion_itemtest.h). Takes the exact same
+     * next-action/Proc_Break pair the A/START branch below takes, so the
+     * probe ROM starts the game with no keypress at all and behaves
+     * identically in a debug and a release build. */
+    if (ItemExpansionTest_RequestsTitleStart())
+    {
+        SetNextGameActionId(GAME_ACTION_EVENT_RETURN);
+        Proc_Break(proc);
+        return;
+    }
+#endif
 
     if (gKeyStatusPtr->newKeys & (A_BUTTON | START_BUTTON))
     {

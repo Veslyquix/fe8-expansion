@@ -44,12 +44,14 @@ generated-data-generate:
 		$(GENERATED_DATA_PY) generate --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --out-dir $(GENERATED_DATA_OUT_DIR)
+	@$(GENERATED_DATA_PY).idspace generate
 
 generated-data-check:
 	@for table in $(GENERATED_DATA_TABLES); do \
 		$(GENERATED_DATA_PY) check --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --check --out-dir $(GENERATED_DATA_OUT_DIR)
+	@$(GENERATED_DATA_PY).idspace check
 
 generated-data-test:
 	$(PYTHON) -m unittest discover -s scripts/generated_data/tests -v
@@ -163,6 +165,39 @@ GENERATED_DATA_CONFIG_INPUTS_items := \
 	include/variables.h \
 	include/constants/msg.h \
 	src/data/data_item_icon.c
+
+# --- Issue #10 item ID cap: environment/config build input, not a file -----
+# FE8_ITEM_ID_CAP selects the item ID cap (default 0xCD; >=0xCE opts the
+# src/data/items_expansion.json overlay + include/constants/items_expansion.h
+# enum into gItemData[]). Two staleness gaps this closes:
+#   1. The overlay JSON + expansion header are real generator inputs, so a
+#      change to either must regenerate the table -- added below.
+#   2. FE8_ITEM_ID_CAP is an env/config value: flipping it changes no source
+#      mtime, so a plain input-driven rule would hand back a stale table. The
+#      cap stamp records the *resolved* cap using the same FORCE +
+#      write-if-changed idiom as modern.mk's compile-settings stamp: its mtime
+#      only advances on a genuine cap change, so opting into 0xCE..0xFF (or
+#      back to 0xCD) regenerates the table with no clean, while a repeat build
+#      at the same cap stays a no-op. An invalid cap (non-integer, negative,
+#      >0xFF, ...) fails here, early, before any generation.
+GENERATED_DATA_ITEM_CAP := $(shell $(PYTHON) -c "import scripts.generated_data.idspace as i; print('0x%02X' % i.resolve_item_id_cap())" 2>/dev/null)
+ifeq ($(GENERATED_DATA_ITEM_CAP),)
+$(error FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' is not a valid item ID cap (want an integer 0x00..0xFF within the u8 ItemId storage); see scripts/generated_data/idspace.py resolve_item_id_cap)
+endif
+GENERATED_DATA_ITEM_CAP_STAMP := $(GENERATED_DATA_OUT_DIR)/.item_id_cap.stamp
+
+.PHONY: FORCE_GENERATED_DATA_ITEM_CAP
+FORCE_GENERATED_DATA_ITEM_CAP:
+
+$(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
+	@mkdir -p "$(@D)"
+	@printf 'item_id_cap=%s\n' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+
+GENERATED_DATA_CONFIG_INPUTS_items += \
+	include/constants/items_expansion.h \
+	src/data/items_expansion.json \
+	$(GENERATED_DATA_ITEM_CAP_STAMP)
 
 # `supports`' own generator "config" inputs: headers
 # scripts/generated_data/supports/schema.py reads live constants from --
@@ -2287,3 +2322,19 @@ generated-data-weapontriangle-link-check: $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT
 	@test -e $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT) || { echo "FAIL: parallel build did not produce the generated object for weapontriangle" >&2; exit 1; }
 	@echo 'OK: from-scratch parallel (-j4) build of weapontriangle'"'"'s generated .c/.o succeeds, no race/duplicate generation'
 	@echo 'PASS: generated-data-weapontriangle-link-check'
+
+# ---------------------------------------------------------------------------
+# Extensible ID / count / cap contract (Issue #10)
+# ---------------------------------------------------------------------------
+# Single source: scripts/generated_data/idspace.py. Renders the committed
+# include/id_space.h typed contract + reports/id_space_audit.{json,md} and,
+# in check mode, fails on any configured-cap violation or committed-output
+# drift. Folded into generated-data-check/-generate above so the umbrella CI
+# gate covers it with no extra workflow edits.
+.PHONY: generated-data-idspace generated-data-idspace-check
+
+generated-data-idspace:
+	$(GENERATED_DATA_PY).idspace generate
+
+generated-data-idspace-check:
+	$(GENERATED_DATA_PY).idspace check

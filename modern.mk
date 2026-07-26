@@ -8,6 +8,7 @@ MODERN_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -105,6 +106,27 @@ MODERN_LAYOUT_FLAGS := \
 	-fno-function-sections -fno-data-sections \
 	-fno-merge-constants -fno-merge-all-constants
 MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1
+
+# Issue #10: the item ID cap is a single build input shared by the data
+# generator (scripts/generated_data/idspace.py resolve_item_id_cap, via the
+# FE8_ITEM_ID_CAP env var) and the compiled item consumer
+# (include/id_space.h -> ITEM_ID_CONFIGURED_CAP, consumed by src/bmitem.c).
+# Flow the same value into the compile so the generated (up to 207-record)
+# gItemData[] table and bmitem.c's compile-time cap contract resolve one
+# identical cap. Unset leaves id_space.h's built-in 0xCD default in force.
+ifneq ($(FE8_ITEM_ID_CAP),)
+MODERN_DEFINE_FLAGS += -DFE8_ITEM_ID_CAP=$(FE8_ITEM_ID_CAP)
+endif
+
+# Issue #10: opt-in runtime item-expansion probe (src/expansion_itemtest.c,
+# include/expansion_itemtest.h). Explicitly separate from the debug/release
+# preset and from FE8_EXPANSION_DEBUG, so the identical probe runs in a real
+# debug ROM and a real release ROM; unset (the default) compiles that
+# translation unit to an empty object and reaches no hook at all. The header
+# itself #errors when it is enabled without an expanded FE8_ITEM_ID_CAP.
+ifeq ($(FE8_EXPANSION_ITEMTEST),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXPANSION_ITEMTEST_ENABLED=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 MODERN_WARNING_FLAGS := \
 	-Wall -Wextra \
@@ -1254,6 +1276,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rom_revision=$(EXPANSION_ROM_REVISION)'; \
 		printf '%s\n' 'rom_size_bytes=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'save_compat_epoch=$(MODERN_SAVE_COMPAT_EPOCH)'; \
+		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
+		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"
@@ -1846,6 +1870,47 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	SHIFTCHECK_TITLE_EXPECTED="$(MODERN_TITLE_FINGERPRINT)" \
 	"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
 
+# ---------------------------------------------------------------------------
+# Issue #10: opt-in runtime item-ID-expansion probe
+# ---------------------------------------------------------------------------
+# Runs the real, booted expansion ROM and asserts what its own production
+# paths recorded for the expanded item ID: the runtime GetItemData() record,
+# the event engine's EV_CMD_GIVEITEM decoder placing it in a real unit
+# inventory, the item menu/stat-screen draw, and the MultiArena/link, game
+# save and suspend/resume roundtrips -- with the legacy 0xCD and empty
+# (0x0000) item values unchanged next to it.
+#
+# Requires a probe build: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1.
+# The probe's EWRAM address is resolved from the linked ELF at check time,
+# so this gate pins no ROM layout and needs no committed frame oracle.
+#
+# MODERN_CONFIG=release runs the boot-reachable stage set: a modern release
+# ROM does not reach a battle map in this headless harness at all (a plain
+# release ROM with no probe code, driven through the ordinary New Game route
+# with full navigation input, stalls on the world map exactly the same way),
+# so the map-dependent stages are proven against the debug configuration.
+# See docs/id_space.md, "Runtime probe".
+MODERN_ITEMEXPANSION_SCRIPT := tools/gba-playtest/run_item_expansion_checks.py
+MODERN_ITEMEXPANSION_DIR := $(MODERN_OUTPUT_DIR)/itemexpansion
+MODERN_ITEMEXPANSION_STAGES := $(if $(filter release,$(MODERN_CONFIG)),boot,all)
+
+expansion-modern-itemexpansion-check: expansion-modern-rom
+	@if [ "$(FE8_EXPANSION_ITEMTEST)" != "1" ] || [ -z "$(FE8_ITEM_ID_CAP)" ]; then \
+		printf 'error: %s needs a probe build\n' 'expansion-modern-itemexpansion-check' >&2; \
+		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s\n' \
+			'expansion-modern-itemexpansion-check' '$(MODERN_CONFIG)' '$(MODERN_ABI)' >&2; \
+		exit 1; \
+	fi
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_ITEMEXPANSION_SCRIPT)" \
+		--rom "$(MODERN_ROM)" \
+		--elf "$(MODERN_ELF)" \
+		--config "$(MODERN_CONFIG)" \
+		--cap "$(FE8_ITEM_ID_CAP)" \
+		--require-stages "$(MODERN_ITEMEXPANSION_STAGES)" \
+		--out-dir "$(MODERN_ITEMEXPANSION_DIR)"
+	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)'
+
 expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-overlay-audit \
 		expansion-modern-boot-check \
@@ -1871,6 +1936,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \

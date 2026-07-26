@@ -50,3 +50,27 @@ jobs:
       run: |
         make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs -j2
         make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs -j2
+
+    # Issue #10 acceptance ("Boundary, serialization, and migration tests
+    # gate CI"): runs the real, booted expansion ROM's item-ID-expansion
+    # runtime probe (expansion-modern-itemexpansion-check, modern.mk) at an
+    # expanded item cap (0xCE) for both configurations, immediately after
+    # the default-cap linker-check step above and against the exact same
+    # MODERN_OUTPUT_DIR it just populated. This is additive only: it does
+    # not modify, reorder, or relax the linker-check step above, and it does
+    # not touch any committed fingerprint/baseline.
+    #
+    # Why this is not stale: every modern C/data object depends on
+    # modern.mk's content-addressed MODERN_COMPILE_SETTINGS stamp (which
+    # embeds FE8_ITEM_ID_CAP/FE8_EXPANSION_ITEMTEST), so flipping those
+    # variables here invalidates and rebuilds exactly the objects the new
+    # cap affects instead of silently reusing the previous, default-cap
+    # linker-check step's ELF/ROM. Running this bare (no env, plain
+    # expansion-modern-linker-check) is deliberately kept a hard failure --
+    # this step supplies the required FE8_ITEM_ID_CAP=0xCE
+    # FE8_EXPANSION_ITEMTEST=1 pair itself, matching the actionable error
+    # expansion-modern-itemexpansion-check prints when they are missing.
+    - name: Boundary/serialization item-ID-expansion runtime gate (cap 0xCE)
+      run: |
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs -j2
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs -j2

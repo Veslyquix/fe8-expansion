@@ -10,6 +10,24 @@
 #include "bmcontainer.h"
 
 #include "bmitem.h"
+#include "id_space.h"
+
+/* Issue #10: bind the runtime item-data lookup to the single-sourced,
+ * build-time item ID cap (include/id_space.h, generated from
+ * scripts/generated_data/idspace.py). Live compile-time contract, not dead
+ * code: -DFE8_ITEM_ID_CAP flows the same cap the data generator resolved
+ * into this translation unit, and the assert rejects any cap that would not
+ * fit the u8 ItemId storage (e.g. a stray -DFE8_ITEM_ID_CAP=0x100). No ABI
+ * or table-layout change. */
+ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP <= ITEM_ID_TECHNICAL_MAX,
+                       bmitem_configured_cap_fits_storage);
+
+/* The runtime lookup index below is an ItemId-wide value: assert that
+ * storage width here, at compile time, so a future ItemId widening cannot
+ * silently outgrow gItemData[]'s u8-indexed lookup without this translation
+ * unit failing to build. Emits no code. */
+ID_SPACE_STATIC_ASSERT(sizeof(ItemId) == 1, bmitem_item_id_storage_is_u8);
+ID_SPACE_STATIC_ASSERT(ITEM_ID_TECHNICAL_MAX <= 0xFF, bmitem_item_id_max_fits_u8);
 
 // TODO: figure out those two inline functions and where they belong
 
@@ -77,6 +95,12 @@ char* GetItemNameWithArticle(int item, s8 capitalize) {
 }
 
 inline const struct ItemData* GetItemData(int itemIndex) {
+    /* itemIndex is an ITEM_INDEX-masked (0..ITEM_ID_TECHNICAL_MAX) item ID.
+     * The width contract is asserted at compile time above (ItemId storage
+     * plus the configured cap) rather than by re-masking here: every caller
+     * already goes through ITEM_INDEX, and adding a redundant mask would
+     * change this inline function's emitted code -- and therefore the whole
+     * default ROM's data layout -- for no runtime gain. */
     return gItemData + itemIndex;
 }
 
