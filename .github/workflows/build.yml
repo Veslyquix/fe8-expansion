@@ -26,6 +26,21 @@ jobs:
     - name: Check tracked artifacts
       run: python3 scripts/artifact_guard.py --revision HEAD
 
+    # Issues #7/#17 closure: a fast, stdlib-only, zero-network,
+    # zero-ROM documentation governance gate. Runs the checker's own
+    # unittest suite, then the checker itself (100% Markdown-inventory
+    # exact-coverage, internal link/anchor resolution, external-link
+    # registry coverage, stale-command/path denylist, and statically
+    # parsed -- never executed -- Makefile-target existence), plus a
+    # small hardcoded allowlist of --help-only example commands. Placed
+    # immediately after the artifact guard and before dependency
+    # install/tool build/ROM linker gates below, so a documentation
+    # regression fails in seconds instead of after a multi-minute build.
+    - name: Check documentation (issues #7/#17)
+      run: |
+        python3 -m unittest discover -s scripts/docs_check_tests -v
+        python3 scripts/check_docs.py --check --check-examples
+
     - name: Install dependencies
       run: sudo apt-get update && sudo apt-get install -y build-essential binutils-arm-none-eabi libpng-dev gcc-arm-none-eabi libnewlib-arm-none-eabi libmgba-dev && python -m pip install ttp numpy pillow
 

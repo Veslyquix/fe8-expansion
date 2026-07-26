@@ -88,6 +88,50 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 f"build.yml step {step_name!r} command {workflow_argv!r}",
             )
 
+    def test_issue_7_17_docs_governance_gates_present(self):
+        """Issues #7/#17 -> #12 closure mirror: the docs-check-tests and
+        docs-check gates must exist, sit immediately after artifact-guard
+        and before the #15 default-lane gates (same position as build.yml's
+        "Check documentation" step), and have argv-identical commands to
+        what build.yml runs -- so a manually-applied port batch cannot
+        skip the same documentation governance CI enforces."""
+        names = [g.name for g in verify_mod.gates()]
+        self.assertIn("docs-check-tests", names)
+        self.assertIn("docs-check", names)
+        self.assertEqual(
+            names.index("docs-check-tests"),
+            names.index("artifact-guard") + 1,
+            "docs-check-tests must immediately follow artifact-guard",
+        )
+        self.assertEqual(
+            names.index("docs-check"),
+            names.index("docs-check-tests") + 1,
+            "docs-check must immediately follow docs-check-tests",
+        )
+        self.assertLess(
+            names.index("docs-check"),
+            names.index("default-lane-check"),
+            "docs gates must run before the #15 default-lane gate",
+        )
+
+        by_name = {g.name: g for g in verify_mod.gates()}
+        self.assertEqual(
+            by_name["docs-check-tests"].command,
+            [
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "scripts/docs_check_tests",
+                "-v",
+            ],
+        )
+        self.assertEqual(
+            by_name["docs-check"].command,
+            ["python3", "scripts/check_docs.py", "--check", "--check-examples"],
+        )
+
     def test_issue_15_default_lane_and_quickstart_gates_present(self):
         names = [g.name for g in verify_mod.gates()]
         self.assertIn("default-lane-check", names)
@@ -129,6 +173,8 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
             names,
             [
                 "artifact-guard",
+                "docs-check-tests",
+                "docs-check",
                 "default-lane-check",
                 "quickstart-legacy-check",
                 "generated-data-check",
@@ -150,7 +196,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
 
     def test_dry_run_never_executes_subprocess(self):
         results = verify_mod.run_gates("/nonexistent/path/should/not/matter", dry_run=True)
-        self.assertEqual(len(results), 6)
+        self.assertEqual(len(results), 8)
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
@@ -161,7 +207,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
         real_names = [g.name for g in verify_mod.gates()]
         self.assertEqual(dry, real_names)
-        self.assertEqual(len(dry), 6)
+        self.assertEqual(len(dry), 8)
 
 
 class VerifyGateSelectionRemovedTests(unittest.TestCase):
@@ -221,7 +267,7 @@ class VerifyGateSelectionRemovedTests(unittest.TestCase):
             self.assertIn(name, printed)
         # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
         # -- never silently omitted, never marked PASS/FAIL without running.
-        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 6)
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 8)
 
 
 if __name__ == "__main__":

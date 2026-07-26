@@ -185,17 +185,26 @@ or executes the upstream ref/tree.** It orchestrates the same gates
 `.github/workflows/build.yml` runs, in the same order, fail-fast:
 
 1. `python3 scripts/artifact_guard.py --revision HEAD`
-2. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
+2. `python3 -m unittest discover -s scripts/docs_check_tests -v`
+   (issues #7/#17: the documentation checker's own stdlib unittest suite,
+   run before the checker itself)
+3. `python3 scripts/check_docs.py --check --check-examples`
+   (issues #7/#17: fast, stdlib-only, zero-network, zero-ROM
+   Markdown-inventory/link/anchor/stale-reference/Makefile-target
+   documentation governance gate — mirrored here per issue #12 so a
+   manually-applied port batch cannot skip the same documentation
+   governance CI enforces)
+4. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
    (issue #15: bare `make`/`make all` always resolves to the modern
    release AAPCS lane)
-3. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
+5. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
    (issue #15: quickstart.sh only reaches the archival agbcc lane via
    explicit `make legacy`/`make fireemblem8.gba`)
-4. `make generated-data-check`
-5. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+6. `make generated-data-check`
+7. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
    (covers modern debug linker + boot + relocation/shift checks — see
    `modern.mk`'s `expansion-modern-linker-check` dependency chain)
-6. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+8. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
 
 None of these existing gates are weakened, reordered, or skipped.
 

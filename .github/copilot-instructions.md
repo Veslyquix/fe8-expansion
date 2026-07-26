@@ -6,13 +6,27 @@ to the original ROM.
 
 ## Build
 
-First-time setup (installs agbcc + builds the `tools/`):
-`./scripts/quickstart.sh` (see `docs/quickstart.md`). A legally obtained
-`baserom.gba` is optional and only needed for `asmdiff.sh`.
+This repository's default, supported path is the **modern
+`arm-none-eabi` GCC/AAPCS release framework** (see `docs/quickstart.md`
+and `docs/framework-support.md`). A bare `make`/`make all` always builds
+and boot-verifies the modern release ROM and never requires, builds, or
+resolves to a `tools/agbcc` executable or library. The original agbcc-
+based decompilation build is preserved as an explicit, separate
+**archival** lane (`make legacy` / `make fireemblem8.gba`) for byte-for-
+byte decomp-matching work only — see `docs/archival-decomp.md`.
+
+First-time setup: `./scripts/quickstart.sh` installs/probes the modern
+toolchain (and libmGBA) by default, **no agbcc of any kind**; pass
+`--legacy` (or `--refresh-agbcc`) only when you need the archival lane,
+which installs agbcc instead. A legally obtained `baserom.gba` is
+optional and only needed by `asmdiff.sh`.
 
 ```bash
-# Build the ROM (uses agbcc, a GCC 2.95-based GBA C compiler)
-make fireemblem8.gba -j$(nproc)
+# Default, supported path: modern release ROM (no agbcc involved)
+make
+
+# Archival lane: agbcc-based fireemblem8.gba, explicit target required
+make fireemblem8.gba -j$(nproc)   # equivalently: make legacy
 
 # Clean all build artifacts (slow — recompresses battle animations)
 make clean
@@ -21,10 +35,11 @@ make clean
 make clean_fast
 ```
 
-A successful build exits cleanly and produces `fireemblem8.gba`. Modern ROM
-correctness is judged by successful link, boot, and runtime behavior, not by
-equality with the vanilla ROM. `./asmdiff.sh <hex_addr> <byte_len>` remains
-available for legacy matching investigations when `baserom.gba` is present.
+A successful build exits cleanly. Modern ROM correctness is judged by
+successful link, boot, and runtime behavior, not by equality with the
+vanilla ROM; the archival lane remains judged by byte-identical matching.
+`./asmdiff.sh <hex_addr> <byte_len>` remains available for legacy matching
+investigations when `baserom.gba` is present.
 
 ## Architecture
 
@@ -35,7 +50,7 @@ available for legacy matching investigations when `baserom.gba` is present.
 - Some files use the older compiler (`old_agbcc`) or different flags — see per-file overrides in `Makefile`.
 
 ### Decompilation workflow
-Assembly lives in `asm/` (only `arm.s` and `arm_call.s` remain, plus data files in `data/`). Decompiled C goes in `src/`. The linking order in `ldscript.txt` determines ROM layout — when decompiling a function, you add `src/x.o(.text)` **before** `asm/x.o(.text)` and remove the function from the `.s` file. Keep **both** the `src/` and `asm/` linker entries until `asm/x.s` is fully empty; leaving a function in both places causes a `multiple definition` link error. For undeclared symbols, locate the type with `git grep "<symbol>" include/` and add the owning header (functions still living in `asm/` get a bare forward declaration, not `extern`). The decomp tutorial in `CONTRIBUTING.md` walks a full function end-to-end.
+Assembly lives in `asm/` (only `arm.s` and `arm_call.s` remain, plus data files in `data/`). Decompiled C goes in `src/`. The linking order in `ldscript.txt` determines ROM layout — when decompiling a function, you add `src/x.o(.text)` **before** `asm/x.o(.text)` and remove the function from the `.s` file. Keep **both** the `src/` and `asm/` linker entries until `asm/x.s` is fully empty; leaving a function in both places causes a `multiple definition` link error. For undeclared symbols, locate the type with `git grep "<symbol>" include/` and add the owning header (functions still living in `asm/` get a bare forward declaration, not `extern`). The decomp tutorial that walks a full function end-to-end now lives in `docs/archival-decomp.md` (this is archival-lane-only guidance, not the default modern framework path).
 
 ### Files that must NOT be decompiled
 These are handwritten assembly, already commented, and stay in `asm/`: `crt0.s`, `libagbsyscall.s`, `libgcnmultiboot.s`, `m4a_1.s`, `m4a_3.s`, `arm.s`, `arm_call.s`.

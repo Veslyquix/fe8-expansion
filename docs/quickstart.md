@@ -1,8 +1,17 @@
 # Fire Emblem 8U Quick Start
 
+> Part of the [documentation index](README.md). This is the setup guide for
+> both the supported modern framework (default) and the archival agbcc
+> lane (`--legacy`) — see [`framework-support.md`](framework-support.md)
+> for the full supported-host/toolchain/target matrix and
+> [`archival-decomp.md`](archival-decomp.md) for manual archival setup
+> steps and the decompiling workflow itself.
+
 Get a working build of this ROM-hack base with a single command using the
-bundled `scripts/quickstart.sh` helper. If you prefer manual setup or run on
-another distro/package manager, see the README.
+bundled `scripts/quickstart.sh` helper. If you run on an unsupported
+package manager, see "Unsupported distro" under Troubleshooting below, or
+[`framework-support.md`](framework-support.md) for exactly which hosts are
+auto-installed vs. CI-verified.
 
 ## Prerequisites
 
@@ -154,8 +163,11 @@ make expansion-modern-cohort
 Outputs are isolated under
 `build/expansion-modern/<config>/<abi>/` (C objects under `src/`, the three
 handwritten assembly objects under `src/` and `asm/`, matching each source's
-own directory) as twenty-one `.o` and twenty-one `.d` files. Select
-`MODERN_CONFIG=debug` (`-Og -g3`, the default) or `MODERN_CONFIG=release`
+own directory) as one `.o`/`.d` pair per cohort source file; reproduce the
+current C, assembly, and combined object counts against this worktree with
+`make print-MODERN_COHORT_C_OBJECTS`, `make print-MODERN_COHORT_ASM_OBJECTS`,
+and `make print-MODERN_COHORT_OBJECTS` rather than trusting a number written
+here. Select `MODERN_CONFIG=debug` (`-Og -g3`, the default) or `MODERN_CONFIG=release`
 (`-O2 -g0 -DNDEBUG`). Select `MODERN_ABI=aapcs` (GCC's default ABI, the
 supported choice for linked outputs) or `MODERN_ABI=apcs-gnu` (compile-only
 layout comparison, incompatible with EABI5 runtime libraries).
@@ -183,9 +195,11 @@ targets share the same isolated output tree).
 ### Full-source modern compilation target
 
 `expansion-modern-all` compiles every currently supported translation unit —
-all 435 authoritative C files (363 normal `src/*.c`, including the generated
-`src/msg_data.c`, plus the 72 preprocessed data files under `src/data/**`) and
-the same 3 handwritten assembly files as the fast cohort — to relocatable
+every authoritative C file (normal `src/*.c` sources, including the generated
+`src/msg_data.c`, plus the preprocessed data files under `src/data/**`; reproduce
+the current split with `make print-MODERN_ALL_C_OBJECTS` and
+`make print-MODERN_ALL_DATA_OBJECTS`) and the same handwritten assembly files as
+the fast cohort (`make print-MODERN_ALL_ASM_OBJECTS`) — to relocatable
 objects only. Like `expansion-modern-cohort`, it does not link an ELF or a
 modern ROM. `expansion-modern-cohort` remains the fast, default,
 dependency-closure-focused migration target; `expansion-modern-all` is the
@@ -199,10 +213,12 @@ make expansion-modern-all
 
 Outputs land in the same isolated `build/expansion-modern/<config>/<abi>/`
 tree as the fast cohort (objects already built by `expansion-modern-cohort`
-are not recompiled, since the 18-file cohort is a strict subset of the
-363-file full C list) as 438 `.o` and 438 primary `.d` files. `MODERN_CONFIG`,
-`MODERN_ABI`, and the toolchain override variables above all apply the same
-way.
+are not recompiled, since the cohort's C sources are a strict subset of the
+full `MODERN_ALL_C_SOURCES` list) as one `.o`/primary `.d` pair per source;
+reproduce the current combined object/dependency count against this worktree
+with `make print-MODERN_ALL_OBJECTS` rather than trusting a number written
+here. `MODERN_CONFIG`, `MODERN_ABI`, and the toolchain override variables
+above all apply the same way.
 
 Data files under `src/data/**` embed `INCBIN_U8`/`INCBIN_U16` binary and
 graphics assets that modern GCC cannot consume directly. Each one is compiled
@@ -241,8 +257,10 @@ source set and can be overridden the same way as the cohort variables.
 
 ### Modern expansion ELF target
 
-`expansion-modern-elf` links a full modern ELF using all 438 modern objects,
-modern runtime libraries (`-lc -lnosys -lgcc`), and no agbcc libraries.
+`expansion-modern-elf` links a full modern ELF using every modern object
+(reproduce the current count against this worktree with
+`make print-MODERN_ALL_OBJECTS`), modern runtime libraries
+(`-lc -lnosys -lgcc`), and no agbcc libraries.
 The clean section-oriented `linker/expansion.ld` owns ROM, IWRAM, persistent
 EWRAM, and mutually exclusive EWRAM overlays. Persistent EWRAM begins after
 the largest overlay, and linker assertions reject orphan sections, overlap,

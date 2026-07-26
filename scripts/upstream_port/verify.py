@@ -36,6 +36,33 @@ def gates(jobs: int = 2) -> List[Gate]:
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
         ),
         Gate(
+            name="docs-check-tests",
+            command=[
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "scripts/docs_check_tests",
+                "-v",
+            ],
+            applicable_note=(
+                "issues #7/#17 closure: the documentation checker's own "
+                "stdlib unittest suite, run before the checker itself"
+            ),
+        ),
+        Gate(
+            name="docs-check",
+            command=["python3", "scripts/check_docs.py", "--check", "--check-examples"],
+            applicable_note=(
+                "issues #7/#17 closure: fast, stdlib-only, zero-network, "
+                "zero-ROM Markdown-inventory/link/anchor/stale-reference/"
+                "Makefile-target documentation governance gate, mirrored "
+                "here per issue #12 so a manually-applied port batch cannot "
+                "skip the same governance CI enforces"
+            ),
+        ),
+        Gate(
             name="default-lane-check",
             command=[
                 "python3",

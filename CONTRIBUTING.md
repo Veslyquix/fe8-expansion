@@ -1,396 +1,108 @@
-# Contribution Guide
+# Contributing to Fire Emblem 8 Expansion
 
-1. Register account on [GitHub](https://github.com/)
-1. [Here](https://github.com/laqieer/fireemblem8u/tree/master/asm) are files to decompile. Select a file and click the pencil button to edit it.
-1. Check the build status badge in `README.md` or [commit list](https://github.com/laqieer/fireemblem8u/commits/master).
-1. Edit until the build status is green, and pull request. 
+This project's default, supported contribution path is the **modern
+`arm-none-eabi` GCC/AAPCS framework**. The original agbcc-based
+decompilation workflow is preserved as an explicit **archival** lane — see
+the "Archival/decomp contributions" section at the end of this document
+and [`docs/archival-decomp.md`](docs/archival-decomp.md) for its full
+guide.
 
-## Wave 0 governance
+For architecture context before you dive in, see
+[`docs/architecture.md`](docs/architecture.md) and the
+[full documentation index](docs/README.md).
 
-Before opening a pull request, run from the repository root:
+## 1. Preparation
 
-```sh
+1. Register an account on [GitHub](https://github.com/) if you don't have one.
+2. Fork and clone the repository, then fetch submodules:
+   ```bash
+   git submodule update --init --recursive
+   ```
+3. Run the quickstart to get a working modern build:
+   ```bash
+   ./scripts/quickstart.sh
+   ```
+   See [`docs/quickstart.md`](docs/quickstart.md) for flags and
+   troubleshooting, and [`docs/framework-support.md`](docs/framework-support.md)
+   for supported hosts/toolchains.
+
+## 2. Choose your change type
+
+| Change type | Where | Primary commands |
+| --- | --- | --- |
+| **Content authoring** (characters, classes, items, supports, Chapter 2 slice) | `src/data/*.json` | `make generated-data-validate`, `make generated-data-generate`, `make generated-data-test` — see [`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md) |
+| **C/runtime code** (modern framework) | `src/`, `include/` | `make expansion-modern-toolchain-check`, `make expansion-modern-cohort` (or `-all`), `make expansion-modern-elf`, `make expansion-modern-rom`, `make expansion-modern-boot-check` — see [`docs/quickstart.md`](docs/quickstart.md) |
+| **Docs** | `README.md`, `CONTRIBUTING.md`, `docs/*.md` | Verify every relative link resolves and every referenced command actually exists |
+| **Upstream-port tracking** | `config/upstream-port-state.json` (via CLI only) | `python3 -m scripts.upstream_port scan/drift/report/update-state/verify` — see [`docs/upstream-porting.md`](docs/upstream-porting.md) |
+| **Archival/decomp matching** | `asm/`, `src/` (agbcc-matched) | `make legacy` — see [`docs/archival-decomp.md`](docs/archival-decomp.md) |
+
+## 3. Fast checks (no ROM, run these first)
+
+```bash
 python3 scripts/artifact_guard.py --revision HEAD
+make generated-data-validate
+python3 -m unittest discover -s scripts/artifact_guard_tests -p 'test_*.py'
+python3 -m unittest discover -s scripts/modernize/tests -v          # modern build/config/save-format host tests
+python3 -m unittest discover -s tools/gba-playtest/tests -v         # only if your change touches runtime/playtest behavior
+python3 -m scripts.upstream_port scan                               # only if your change touches upstream-port tracking
 ```
 
-This checker reads immutable Git objects and rejects ROM/GBA and ELF files,
-saves/SRAM, savestates, patches, generated `.lz`/`.4bpp`/`.8bpp`/`.gbapal`
-files, prohibited path segments such as `build/`, and the exact root outputs
-`fireemblem8.map`, `fireemblem8_relocs.map`, and `objects.lst`. It does not
-reject arbitrary `.map`, `.a`, `.d`, or `.hex` files, does not scan the
-worktree, and is not a legal/copyright clearance. See
-[`docs/issue-resolution-policy.md`](docs/issue-resolution-policy.md) for the
-full issue-closure, baseline/fingerprint review, and legal-boundary policy.
+`scripts/modernize/tests` and `tools/gba-playtest/tests` assume
+`./build_tools.sh` and `git submodule update --init --recursive` have
+already been run (quickstart does both); a small number of their host
+tests are environment-dependent (missing built tool binaries, or a
+libmGBA backend without `pkg-config` metadata) and fail actionably rather
+than silently in an incomplete environment — see each test's own
+diagnostic.
 
-**Working on your first Pull Request?** You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
+## 4. Full gates (ROM/libmGBA build, run before opening a PR)
 
-
-# Decompiling Guide
-
-> **Closure note (issue #15):** this decompilation workflow is matched
-> against the **archival agbcc lane**, not the project's default/supported
-> modern GCC AAPCS release lane. A bare `make`/`make all` builds the modern
-> release ROM instead; every `make` invocation in this guide below means
-> `make legacy` (identical to the pre-existing `make fireemblem8.gba`) --
-> the explicit, unsupported side door kept specifically for this
-> byte-for-byte matching work. See `docs/quickstart.md` and the README's
-> "Archival/decomp agbcc build" section for the full default-vs-archival
-> rationale.
-
-Code starts out in `asm/`. When decompiled to C, it goes into `src/`. The goal is to decompile all the code.
-
-Some of the code in `asm/` is handwritten assembly. It can't and shouldn't be decompiled. It's already commented, so there's no further work to do on these files.
-* `asm/crt0.s`
-* `asm/libagbsyscall.s`
-* `asm/libgcnmultiboot.s`
-* `asm/m4a_1.s`
-* `asm/m4a_3.s`
-
-The rest of the `.s` files in `asm/` are fair game.
-
-The basic decompilation process is:
-* Choose a file in `asm/`, i.e. `asm/x.s`. Create a C file called `src/x.c`.
-* Translate the first function in `asm/x.s` to C in `src/x.c`.
-* `make legacy`, and tweak the function until it matches.
-* Clean up the code and comment.
-* Repeat for each function until `asm/x.s` is empty.
-
-
-# For example, let's decompile `asm/cable_car.s`.
-
-
-## 1. Create `src/cable_car.c`
-
-```c
-#include "global.h"
+```bash
+make generated-data-check
+make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs
+make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs
 ```
 
-`global.h` contains typedefs for GBA programming and more.
-It must be the first include in the file. Other includes will assume you have included it.
+Run the relevant subset for your change type; run all of them for anything
+that touches shared runtime, linker, or generated-data code. If your change
+can affect boot, save, or gameplay behavior, also capture
+`tools/gba-playtest` scenario evidence (scenario, environment, command,
+result) — see [`docs/issue-resolution-policy.md`](docs/issue-resolution-policy.md#issue-closure-evidence).
 
+## 5. PR provenance and review
 
-## 2. Include it in the rom
+This repository's Wave 0 governance baseline is the single authoritative
+source for what a PR/issue must record before closure:
+[`docs/issue-resolution-policy.md`](docs/issue-resolution-policy.md). In
+short:
 
-Include `src/cable_car.c` in the rom by adding `src/cable_car.o` to `ld_script.txt`:
-```diff
-         asm/battle_message.o(.text);
-         asm/choose_party.o(.text);
-+        src/cable_car.o(.text);
-         asm/cable_car.o(.text);
-         asm/roulette_util.o(.text);
-```
-Do not remove `asm/cable_car.o(.text)`. We want both `src/cable_car.c` and `asm/cable_car.s` in the rom.
+- Issue closure is a human decision backed by plain-prose evidence in the
+  PR/issue thread (frozen scope, every command run and its result,
+  runtime/playtest evidence when relevant) — not a machine-readable schema.
+- Use [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)'s
+  checklist shape.
+- `reports/baseline/`, `tools/gba-playtest/fingerprints/`, and
+  `scripts/shiftcheck/tas/fingerprint.lua` are reviewed oracles — explain
+  *why* in your PR description if you touch them.
+- `python3 scripts/artifact_guard.py --revision HEAD` rejects tracked
+  ROM/ELF/save/savestate/patch/generated-compressed-asset files; it is a
+  structural check, **not** a legal/copyright clearance — see
+  [`docs/project-governance.md`](docs/project-governance.md#copyright-and-provenance).
 
+**Working on your first Pull Request?** Learn how from this *free* series:
+[How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github).
 
-## 3. Translate the function to C
+## Archival/decomp contributions
 
-Take the first function in `asm/cable_car.s`. Either comment it out or remove it, whichever is easier.
+If your change is byte-for-byte decomp-matching work against the original
+ROM (not the supported modern framework), use the archival agbcc lane:
 
-```asm
-	thumb_func_start sub_81231EC
-sub_81231EC: @ 81231EC
-	push {r4,lr}
-	lsls r0, 24
-	lsrs r4, r0, 24
-	ldr r0, _08123210 @ =gPaletteFade
-	ldrb r1, [r0, 0x7]
-	movs r0, 0x80
-	ands r0, r1
-	cmp r0, 0
-	bne _0812320A
-	ldr r0, _08123214 @ =sub_8123244
-	bl SetMainCallback2
-	adds r0, r4, 0
-	bl DestroyTask
-_0812320A:
-	pop {r4}
-	pop {r0}
-	bx r0
-	.align 2, 0
-_08123210: .4byte gPaletteFade
-_08123214: .4byte sub_8123244
-	thumb_func_end sub_81231EC
-```
----
-
-Then, start translating the code to `src/cable_car.c`, bit by bit:
-
-```asm
-	lsls r0, 24
-	lsrs r4, r0, 24
-```
-```c
-void sub_81231EC(u8 r4) {
-```
----
-```asm
-	ldr r0, _08123210 @ =gPaletteFade
-	ldrb r1, [r0, 0x7]
-	movs r0, 0x80
-	ands r0, r1
-```
-```c
-	r0 = (u8 *)(&gPaletteFade + 7) & 0x80;
-```
----
-
----
-```asm
-	cmp r0, 0
-	bne _0812320A
-```
-```c
-	if (!r0) {
-```
----
-```asm
-	ldr r0, _08123214 @ =sub_8123244
-	bl SetMainCallback2
-```
-```c
-		SetMainCallback2(&sub_8123244);
-```
----
-```asm
-	adds r0, r4, 0
-	bl DestroyTask
-```
-```c
-		DestroyTask(r4);
-```
----
-```asm
-_0812320A:
-```
-```c
-	}
-```
----
-```asm
-	pop {r4}
-	pop {r0}
-	bx r0
-```
-```c
-	return;
-```
-The type signature of the function depends on the return type.
-* `bx r0`: `void`
-* `bx r1`: `*`
-* `bx lr`: `void`, `*`
-
-You will need to look at the caller and the function prologue to determine the exact type if not void.
-
-Since it used `bx r0`, it's `void` for sure.
-
----
-
-Putting it all together, we get:
-```c
-void sub_81231EC(u8 r4) {
-	r0 = (u8 *)(&gPaletteFade + 7) & 0x80;
-	if (!r0) {
-		SetMainCallback2(&sub_8123244);
-		DestroyTask(r4);
-	}
-	return;
-}
+```bash
+make legacy -j$(nproc)
 ```
 
-
-## 4. Simplify and document
-
-This line doesn't look quite right.
-
-```c
-	r0 = (u8 *)(&gPaletteFade + 7) & 0x80;
-```
-
-What is `gPaletteFade`? You can find out where stuff is with `git grep`:
-
-```sh
-git grep "gPaletteFade" include/
-```
-```grep
-include/palette.h:extern struct PaletteFadeControl gPaletteFade;
-```
-
-So it's a struct called `PaletteFadeControl`. Let's look in `palette.h`:
-
-```c
-struct PaletteFadeControl
-{
-    u32 multipurpose1;
-    u8 delayCounter:6;
-    u16 y:5; // blend coefficient
-    u16 targetY:5; // target blend coefficient
-    u16 blendColor:15;
-    u16 active:1;
-    u16 multipurpose2:6;
-    u16 yDec:1; // whether blend coefficient is decreasing
-    u16 bufferTransferDisabled:1;
-    u16 mode:2;
-    u16 shouldResetBlendRegisters:1;
-    u16 hardwareFadeFinishing:1;
-    u16 softwareFadeFinishingCounter:5;
-    u16 softwareFadeFinishing:1;
-    u16 objPaletteToggle:1;
-    u8 deltaY:4; // rate of change of blend coefficient
-};
-```
----
-
-What's the 7th byte in this struct?
-```c
-    u32 multipurpose1; // 0-3
-    u8 delayCounter:6; // 4
-    u16 y:5;           // 5
-    u16 targetY:5;     // 5-6
-    u16 blendColor:15; // 7
-    u16 active:1;      // 7
-```
-
-Byte 7 has both `.blendColor` and `.active`.
-
----
-
-Okay, what's 0x80 mean? It's `0b10000000`, which is the highest bit in a byte.
-
-`.active` comes after, which means it's higher, but it's also only one bit, so it's a safe bet.
-
-```c
-	r0 = gPaletteFade.active;
-```
-
-Much better.
-
----
-
-```c
-void sub_81231EC(u8 r4) {
-	r0 = gPaletteFade.active;
-	if (!r0) {
-		SetMainCallback2(&sub_8123244);
-		DestroyTask(r4);
-	}
-	return;
-}
-```
-
-Now the temp variable `r0` is a little pointless. We can simplify this to:
-
-```c
-void sub_81231EC(u8 taskId) {
-	if (!gPaletteFade.active) {
-		SetMainCallback2(&sub_8123244);
-		DestroyTask(taskId);
-	}
-}
-```
-
-Looks done, right?
-This function is pretty simple, so it doesn't need any comments right now.
-
-But what about `sub_8123244`? It's still not obvious what that function does. We can find out by decompiling it later.
-
-
-## 5. Build
-
-```sh
-make legacy
-```
-```gcc
-src/cable_car.c: In function `sub_81231EC':
-src/cable_car.c:4: `gPaletteFade' undeclared (first use in this function)
-src/cable_car.c:4: (Each undeclared identifier is reported only once for each function it appears in.)
-src/cable_car.c:5: warning: implicit declaration of function `SetMainCallback2'
-src/cable_car.c:5: `sub_8123244' undeclared (first use in this function)
-src/cable_car.c:6: warning: implicit declaration of function `DestroyTask'
-```
-
-We got some errors. We need to tell the compiler what `gPaletteFade`, `SetMainCallback2`, `sub_8123244`, and `DestroyTask` are.
-
-We know `gPaletteFade` is from `palette.h`. We can do the same with the others. Declare them above the function:
-```c
-#include "palette.h"
-#include "main.h"
-#include "task.h"
-```
-The odd one out is `sub_8123244`, which is in `asm/cable_car.s`! What then?
-```c
-void sub_8123244();
-```
-Normally, we would do `extern void sub_8123244();`, but it won't be `extern` when we're done this file.
-
----
-
-Now our file looks like this:
-```c
-#include "global.h"
-#include "palette.h"
-#include "main.h"
-#include "task.h"
-
-void sub_8123244();
-
-void sub_81231EC(u8 taskId) {
-	if (!gPaletteFade.active) {
-		SetMainCallback2(&sub_8123244);
-		DestroyTask(taskId);
-	}
-}
-```
-
----
-
-Build again, and we get:
-```sh
-make legacy
-```
-
-This confirms that the source compiles and links. Use the project's disassembly
-comparison tools when you need to investigate instruction-level matching.
-
----
-
-If the build fails, `make legacy` reports the compiler or linker error to fix.
-
----
-
-If you forgot to remove the function from `asm/cable_car.s`, you will get this error:
-```gcc
-asm/cable_car.o: In function `sub_81231EC':
-(.text+0x0): multiple definition of `sub_81231EC'
-src/cable_car.o:(.text+0x0): first defined here
-```
-
-
-## 6. Repeat until `asm/cable_car.s` is empty
-
-Once you're done, you can delete `asm/cable_car.s`, and remove it from `ld_script.txt`.
-
-
-
-# Decompiling Rule
-
-* rule 1: when in doubt, scrub C
-* rule 2: never assume it won't get optimized out.
-* rule 3: when the answer is elusive, never rule out a typo.
-* rule 4: always be prepared to cram a square peg into a circle hole.
-* rule 5: if you still cant get it to match, its a combination that you think you tried before but you havent
-* rule 6: volatile is a dangerous magic sauce that may explode
-* rule 7: if you're afraid you need to use math, be
-* rule 8: if you think you understand the compiler, the compiler will tell you you don't
-* rule 10: rule 9 was optimized out
-
-
-# Resources Collection
-
-- [GitHub Help](https://help.github.com/en)
-- [Compiler Explorer](https://cexplore.karathan.at/z/KhyRi3) [Source Code](https://github.com/SBird1337/cexplore)
-- [Online Decompiler](https://feuniverse.us/t/use-free-online-service-to-assist-the-routine-analysis/3219) (Down now. Try [IDA](https://www.hex-rays.com/products/ida/) / [Ghidra](https://ghidra-sre.org/) / [RetDec](https://retdec.com/) instead.)
-- [Decomp Permuter](https://github.com/laqieer/decomp-permuter-arm)
-- [datadump & funchash](https://github.com/TwitchPlaysPokemon/pret3)
-- [Pokemon Projects](https://github.com/pret/pokeemerald)
-- [GCC online documentation](https://gcc.gnu.org/onlinedocs/)
-- [GCC 2.95 Features](https://gcc.gnu.org/gcc-2.95/features.html)
+The full decompiling tutorial, rules, setup steps, and related
+asset-extraction references live in
+[`docs/archival-decomp.md`](docs/archival-decomp.md) — that document is
+explicitly marked unsupported for expansion releases; do not treat it as
+guidance for the default framework path.
