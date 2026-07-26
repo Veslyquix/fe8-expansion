@@ -322,3 +322,91 @@ fingerprint was touched.
    both adds a real migration (e.g. widening a save-serialized field beyond
    its current width) and a test for it. Recorded here so it cannot be
    mistaken for closed.
+
+## Post-merge verifier fixes (RCA + two-layer defenses)
+
+After the upstream-master merge (`4405c653`) an independent verifier flagged
+two deterministic failures. Both are fixed here at the production layer, not
+only in the tests, and each has a regression that reproduces the original
+failure chain.
+
+### A. Item-cap CLI check leaked a wrong-cap object into the shared build tree
+
+Root cause: `scripts/generated_data/tests/test_items_roundtrip_regression.py`
+`CliCheckRegressionTests` ran `python -m scripts.generated_data check --table
+items` at `FE8_ITEM_ID_CAP=0xCE` with **no** `--out-dir`. `check` self-heals
+the ephemeral generated C write-if-changed, so that run wrote a 207-record
+`build/generated/data/data_items.c` into the real shared tree. The Make cap
+stamp (`build/generated/data/.item_id_cap.stamp`) still recorded the default
+`0xCD`, and the poisoned `.c` mtime outranked every tracked input -- so a
+subsequent plain/default `make` treated the 207-record file as up to date by
+ordinary mtime staleness, silently compiled and linked it, and exited 0. Only
+a `clean` rebuild restored 206.
+
+Two-layer fix:
+
+1. **Test/CLI isolation.** `CliCheckRegressionTests._run_check` now runs every
+   invocation inside a `tempfile.TemporaryDirectory()` passed as `--out-dir`,
+   so the item-cap CLI checks never touch the shared `build/generated/data`
+   tree. The committed-inventory drift comparison is unaffected (it always
+   reads the real `reports/` copy).
+2. **Content-addressed build self-heal.** The `$(GENERATED_DATA_ITEM_CAP_STAMP)`
+   recipe (`generated_data.mk`) now re-runs the items generator through
+   `check --table items --out-dir build/generated/data` (write-if-changed,
+   never writes any committed file). Because `FE8_ITEM_ID_CAP` is an
+   env/config input, an out-of-band wrong-cap `.c` -- even one whose mtime
+   outranks every tracked input -- is content-healed back to the resolved
+   cap: a mtime-preserving no-op when already correct (no downstream
+   recompile, no tracked drift), a single rewrite recompiling exactly the
+   affected object when it was stale. `generated-data-check` stays the
+   authoritative validation/drift gate.
+
+Regression: `make generated-data-cap-heal-check` (generated_data.mk,
+local/manual like `generated-data-link-check` because the object half needs
+the archival agbcc pipeline CI does not install) reproduces the exact chain --
+stamp at default cap + a poisoned 207-record `.c` with a newer mtime -> a
+plain default object build restores the 206-record `.c` **and** recompiles
+the object to byte-match the clean baseline -- then proves the already-correct
+no-op, a 206 -> 207 -> 206 cap flip, and that running the item-cap CLI check
+tests leaves the shared default-cap build `.c` untouched. `make
+generated-data-link-check` still passes unchanged (its touched-JSON no-op and
+up-to-date assertions are not perturbed by the silent heal).
+
+Verified fresh: legacy object `md5` and modern
+`build/expansion-modern/release/aapcs/src/data_items.o` `md5` both return to
+the 206 baseline after a poison + default rebuild; `make generated-data-check`
+reports items `206 record(s)` and manifest `722 record(s)`; the full
+`scripts/generated_data/tests` suite (544 passed) leaves
+`build/generated/data/data_items.c` at 206 records.
+
+### B. upstream_port `verify` mirrored only 6 of the workflow gates
+
+Root cause: `tests/upstream_port/test_verify.py`
+`VerifyGatesMirrorWorkflowTests` re-derives the expected gate list from the
+live `.github/workflows/build.yml` on every run (issue #15 literal-mirror
+contract). After the merge added the item-expansion runtime gate,
+`scripts/upstream_port/verify.py` `gates()` still returned 6 gates while the
+workflow had 8 command gates -- the two `expansion-modern-itemexpansion-check`
+(`debug`/`release`) steps were missing.
+
+Fix: `gates()` now returns all 8 in workflow order, adding
+`modern-itemexpansion-check-debug` and `modern-itemexpansion-check-release`
+with the argv-identical command
+`FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make
+expansion-modern-itemexpansion-check MODERN_CONFIG=<debug|release>
+MODERN_ABI=aapcs -j{jobs}`. The leading `NAME=VALUE` tokens are kept verbatim
+in `command` (so the literal mirror stays argv-identical to the workflow) and
+`run_gates` gained `_split_env_prefix`, which peels a leading run of
+`NAME=VALUE` env-assignments off the front and applies them to the child
+environment instead of exec-ing them -- make-variable overrides such as
+`MODERN_CONFIG=debug`, which appear after `make`, stay in argv. No YAML is
+parsed to synthesize the gates (that would defeat the #15 literal contract),
+and the closure-integrity tests forbidding any gate-selection/subset
+capability are untouched. The `test_verify.py` counts that pinned the old
+6-gate set were updated to the correct 8 (and the two new gate names added to
+the full ordered-name assertion) -- a faithful mirror update, not a weakening.
+
+Verified: `tests/upstream_port` 139 passed / 8 subtests;
+`python3 -m scripts.upstream_port verify --dry-run` lists all 8 gates in
+order, the item-expansion gates rendering their `FE8_ITEM_ID_CAP=0xCE
+FE8_EXPANSION_ITEMTEST=1 make ...` prefix exactly as in `build.yml`.

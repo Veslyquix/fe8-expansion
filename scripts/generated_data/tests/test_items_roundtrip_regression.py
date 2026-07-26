@@ -16,6 +16,7 @@ separately (they are never in the vanilla hand table), while every one of the
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 from scripts.generated_data import idspace
@@ -78,12 +79,22 @@ class CliCheckRegressionTests(unittest.TestCase):
         env.pop("FE8_ITEM_ID_CAP", None)
         if cap is not None:
             env["FE8_ITEM_ID_CAP"] = cap
-        return subprocess.run(
-            [sys.executable, "-m", "scripts.generated_data",
-             "check", "--table", "items"],
-            cwd=REPO_ROOT, env=env,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-        )
+        # Isolate the ephemeral C output in a TemporaryDirectory: check
+        # self-heals build/generated/data/data_items.c (write-if-changed),
+        # so running it here at a non-default cap (0xCE) MUST NOT write the
+        # real shared build/ tree -- doing so leaves a 207-record
+        # data_items.c behind whose mtime outranks every tracked input, and
+        # a later default (0xCD) make would silently link it (the cap stamp
+        # still reads 0xCD, so ordinary mtime staleness treats the poisoned
+        # file as up to date). The committed-inventory drift check is
+        # unaffected by --out-dir (it always reads the real reports/ copy).
+        with tempfile.TemporaryDirectory() as out_dir:
+            return subprocess.run(
+                [sys.executable, "-m", "scripts.generated_data",
+                 "check", "--table", "items", "--out-dir", out_dir],
+                cwd=REPO_ROOT, env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            )
 
     def test_default_cap_check_passes(self):
         res = self._run_check()

@@ -11,9 +11,32 @@ commands so `verify` stays runnable locally without a CI runner).
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 from dataclasses import dataclass
 from typing import List
+
+# A leading NAME=VALUE token in a gate command is an inline environment
+# assignment (POSIX shell semantics), mirrored verbatim from build.yml so
+# the gate list stays an argv-identical copy of the workflow. It is applied
+# to the child environment, never exec-ed as a program.
+_ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
+def _split_env_prefix(command):
+    """Split any leading ``NAME=VALUE`` env-assignment tokens off the front of
+    a gate command, returning ``(env_overrides, argv)``. Only a *leading*
+    run is treated as env (matching the shell), so a NAME=VALUE that appears
+    after the program (e.g. make variable overrides like ``MODERN_CONFIG=debug``)
+    stays part of argv."""
+    env_overrides = {}
+    argv = list(command)
+    while argv and _ENV_ASSIGN_RE.match(argv[0]):
+        name, _, value = argv[0].partition("=")
+        env_overrides[name] = value
+        argv = argv[1:]
+    return env_overrides, argv
 
 
 @dataclass
@@ -103,6 +126,36 @@ def gates(jobs: int = 2) -> List[Gate]:
             ],
             applicable_note="release-config counterpart of the debug gate above",
         ),
+        Gate(
+            name="modern-itemexpansion-check-debug",
+            command=[
+                "FE8_ITEM_ID_CAP=0xCE",
+                "FE8_EXPANSION_ITEMTEST=1",
+                "make",
+                "expansion-modern-itemexpansion-check",
+                "MODERN_CONFIG=debug",
+                "MODERN_ABI=aapcs",
+                f"-j{jobs}",
+            ],
+            applicable_note=(
+                "issue #10 acceptance: boots the real modern debug ROM at an "
+                "expanded item cap (0xCE, FE8_EXPANSION_ITEMTEST=1) and runs the "
+                "item-ID-expansion runtime probe (expansion-modern-itemexpansion-check)"
+            ),
+        ),
+        Gate(
+            name="modern-itemexpansion-check-release",
+            command=[
+                "FE8_ITEM_ID_CAP=0xCE",
+                "FE8_EXPANSION_ITEMTEST=1",
+                "make",
+                "expansion-modern-itemexpansion-check",
+                "MODERN_CONFIG=release",
+                "MODERN_ABI=aapcs",
+                f"-j{jobs}",
+            ],
+            applicable_note="release-config counterpart of the item-expansion debug gate above",
+        ),
     ]
 
 
@@ -138,9 +191,15 @@ def run_gates(cwd: str, jobs: int = 2, dry_run: bool = False) -> List[GateResult
         if dry_run:
             results.append(GateResult(gate=gate, ran=False, returncode=0, stdout="", stderr=""))
             continue
+        env_overrides, argv = _split_env_prefix(gate.command)
+        child_env = None
+        if env_overrides:
+            child_env = dict(os.environ)
+            child_env.update(env_overrides)
         proc = subprocess.run(
-            gate.command,
+            argv,
             cwd=cwd,
+            env=child_env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

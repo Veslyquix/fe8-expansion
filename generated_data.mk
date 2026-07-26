@@ -193,6 +193,16 @@ $(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
 	@mkdir -p "$(@D)"
 	@printf 'item_id_cap=%s\n' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
 	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+	@# issue #10 self-heal: FE8_ITEM_ID_CAP is an env/config input, so an
+	@# out-of-band write of build/generated/data/data_items.c at a different
+	@# cap (newer mtime than every tracked input) would otherwise be treated
+	@# as up to date and silently linked at the wrong cap. Re-run the items
+	@# generator through check (self-heals build/ write-if-changed; never
+	@# writes any committed file): a mtime-preserving no-op when the .c is
+	@# already correct, a single rewrite (recompiling exactly the affected
+	@# object) when it was stale. generated-data-check stays the authoritative
+	@# validation/drift gate, so real drift is reported there, not here.
+	@$(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null || true
 
 GENERATED_DATA_CONFIG_INPUTS_items += \
 	include/constants/items_expansion.h \
@@ -2355,3 +2365,54 @@ generated-data-idspace:
 
 generated-data-idspace-check:
 	$(GENERATED_DATA_PY).idspace check
+
+# ---------------------------------------------------------------------------
+# Issue #10 post-merge regression: item-cap self-heal (Batch fix)
+# ---------------------------------------------------------------------------
+# Proves the FE8_ITEM_ID_CAP self-heal (see the $(GENERATED_DATA_ITEM_CAP_STAMP)
+# recipe above) defends against an out-of-band, wrong-cap write to the
+# ephemeral generated items .c even when (a) the cap stamp still records the
+# default cap and (b) the poisoned .c mtime outranks every tracked input --
+# the exact state the item-cap CLI check test used to leave behind in the
+# shared build/ tree, which a later plain default build would then silently
+# link at 207 records. Local/manual (not CI wired): the object half needs
+# the archival agbcc pipeline CI deliberately does not install, exactly like
+# generated-data-link-check above.
+.PHONY: generated-data-cap-heal-check
+generated-data-cap-heal-check:
+	@C=$(GENERATED_DATA_OUT_DIR)/data_items.c; O=$(GENERATED_DATA_OUT_DIR)/data_items.o; \
+	echo --- baseline: default cap builds the 206 record item object ---; \
+	$(MAKE) --no-print-directory $$O >/dev/null; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: baseline default-cap .c already carries an expansion record >&2; exit 1; fi; \
+	base_md5=$$(md5sum $$O | cut -c1-32); \
+	echo --- poison: write a 207 record cap-0xCE .c out of band, keep the stamp at the default cap, push the .c mtime ahead ---; \
+	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
+	touch $$C; \
+	if ! grep -q EXPANSION_CE $$C; then echo FAIL: test setup did not poison the .c with an expansion record >&2; exit 1; fi; \
+	grep -q item_id_cap=$(GENERATED_DATA_ITEM_CAP) $(GENERATED_DATA_ITEM_CAP_STAMP) || { echo FAIL: cap stamp is not at the default cap for this regression >&2; exit 1; }; \
+	echo --- heal: a plain default-cap object build must restore the 206 record .c and recompile the object ---; \
+	$(MAKE) --no-print-directory $$O >/dev/null; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: default build did not self-heal the poisoned .c back to 206 records >&2; exit 1; fi; \
+	heal_md5=$$(md5sum $$O | cut -c1-32); \
+	if [ x$$heal_md5 != x$$base_md5 ]; then echo FAIL: healed object does not match the clean 206 baseline >&2; exit 1; fi; \
+	echo OK: stamp=default plus poisoned 207 .c, plain default build restored the 206 .c and object with no clean and no manual ordering; \
+	echo --- no-op: an already-correct rebuild must be a mtime-preserving no-op ---; \
+	m1=$$(stat -c %Y $$O); $(MAKE) --no-print-directory $$O >/dev/null; m2=$$(stat -c %Y $$O); \
+	if [ x$$m1 != x$$m2 ]; then echo FAIL: an already-correct object rebuilt unnecessarily >&2; exit 1; fi; \
+	echo OK: already-correct object build is a mtime-preserving no-op with no needless recompile and no tracked drift; \
+	echo --- cap flip 206 to 207 to 206 ---; \
+	FE8_ITEM_ID_CAP=0xCE $(MAKE) --no-print-directory $$O >/dev/null; \
+	grep -q EXPANSION_CE $$C || { echo FAIL: 0xCE build did not add the expansion record >&2; exit 1; }; \
+	$(MAKE) --no-print-directory $$O >/dev/null; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: default build did not drop the expansion record >&2; exit 1; fi; \
+	flip_md5=$$(md5sum $$O | cut -c1-32); \
+	if [ x$$flip_md5 != x$$base_md5 ]; then echo FAIL: 206 to 207 to 206 object does not match the clean 206 baseline >&2; exit 1; fi; \
+	echo OK: 206 to 207 cap 0xCE to 206 default round-trips the .c and object with no clean; \
+	echo --- test-suite isolation: the item-cap CLI check tests must not pollute the shared build tree ---; \
+	pre_md5=$$(md5sum $$C | cut -c1-32); \
+	$(PYTHON) -m unittest scripts.generated_data.tests.test_items_roundtrip_regression >/dev/null 2>&1; \
+	post_md5=$$(md5sum $$C | cut -c1-32); \
+	if [ x$$pre_md5 != x$$post_md5 ]; then echo FAIL: the item-cap CLI check tests mutated the shared build data_items.c >&2; exit 1; fi; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: shared build data_items.c left poisoned after the test suite >&2; exit 1; fi; \
+	echo OK: the item-cap CLI check tests run entirely in a TemporaryDirectory and leave the shared default-cap build .c untouched; \
+	echo PASS: generated-data-cap-heal-check

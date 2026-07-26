@@ -134,6 +134,8 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 "generated-data-check",
                 "modern-linker-check-debug",
                 "modern-linker-check-release",
+                "modern-itemexpansion-check-debug",
+                "modern-itemexpansion-check-release",
             ],
         )
 
@@ -150,7 +152,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
 
     def test_dry_run_never_executes_subprocess(self):
         results = verify_mod.run_gates("/nonexistent/path/should/not/matter", dry_run=True)
-        self.assertEqual(len(results), 6)
+        self.assertEqual(len(results), 8)
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
@@ -161,7 +163,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
         real_names = [g.name for g in verify_mod.gates()]
         self.assertEqual(dry, real_names)
-        self.assertEqual(len(dry), 6)
+        self.assertEqual(len(dry), 8)
 
 
 class VerifyGateSelectionRemovedTests(unittest.TestCase):
@@ -221,7 +223,7 @@ class VerifyGateSelectionRemovedTests(unittest.TestCase):
             self.assertIn(name, printed)
         # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
         # -- never silently omitted, never marked PASS/FAIL without running.
-        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 6)
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 8)
 
 
 if __name__ == "__main__":
