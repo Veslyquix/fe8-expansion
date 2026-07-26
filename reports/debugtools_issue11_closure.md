@@ -165,9 +165,11 @@ python3 tools/gba-playtest/gba_playtest.py verify \
   event/scripted battle to the real `CALL(EventScr_CommonPrep)` `PREP`
   opcode, navigates the prep at-menu (`B` = "check map" ends the at-menu,
   then `A` on the on-map menu) to rest `gProcScr_SALLYCURSOR` in
-  `PrepScreenProc_MapIdle` (`proc_idleCb` reads
-  `PrepScreenProc_MapIdle|Thumb = 0x080905d1`), and fires the SELECT+B
-  prep hotkey. Proven by exact EWRAM probes (semantic only,
+  `PrepScreenProc_MapIdle`, and fires the SELECT+B prep hotkey. The scenario
+  no longer probes the `proc_idleCb`/`proc_scrCur` ROM pointers (they were
+  relocated-pointer oracles); the `prepScreenObservedCount 0 -> 1` increment
+  below -- reachable only from `PrepScreenProc_MapIdle` -- is the
+  relocation-independent proof the hotkey fired from a live MapIdle. Proven by exact EWRAM probes (semantic only,
   `framebuffer:false`): `gPlaySt.chapterStateBits` (`0x020210b8`) `== 0x10`
   (`PLAY_FLAG_PREPSCREEN`) throughout the prep; `prepScreenObservedCount`
   (`0x02031854`) `0 -> 1` on SELECT+B; the hub opens (`hubOpenCount`
@@ -222,10 +224,51 @@ python3 tools/gba-playtest/gba_playtest.py verify \
   contract (no Confirm item). A second test proves the disabled path is
   the one no-op entry point with no engine/menu/hardware dependency at
   all.
-- Residual (explicit): a *live* mGBA scenario driving all five through the
-  real map hub is not included this closure -- the host-executed evidence
-  above already exercises the real, unmodified source end to end; see
-  "Explicit non-goals / residual risks".
+- **Live runtime through the real map hub -- ACHIEVED (was the residual
+  here).** `tools/gba-playtest/scenarios/debugtools-tools-modern-debug.json`
+  (gate `expansion-modern-debugtools-tools-check`, host test
+  `tools/gba-playtest/tests/test_tools_scenario.py`) boots the debug ROM to
+  the interactive Chapter 2 map, opens the real map hub (`registeredActionCount
+  == 9`), and drives every one of the five tools from its real hub row, each
+  with an asserted semantic state effect AND a safe return to the hub, proven
+  by relocation-independent `gDebugToolsProbe`/`gPlaySt`/`gBmSt` scalars. The
+  host-executed evidence above stays the byte-exact mutation proof (e.g. a
+  wounded unit healed to full); the live scenario proves each confirm fires
+  from the live hub and returns safely. Per-tool host (mutation) + live
+  (runtime + safe-return) mapping:
+  - **Unit Inspect/Edit** -- host: `SetUnitHp(max)`/`SetUnitStatus(0)` heals a
+    wounded 5/20 unit to 20/20 and `unitHealTransactionCount` increments once.
+    Live: `unit-inspected` resolves Eirika (`unitInspectTargetFound == 1`,
+    16/16 HP) and, after a separate confirm, `unit-heal-confirmed` shows
+    `unitHealTransactionCount 0 -> 1` (Eirika is already full HP here, so the
+    HP delta is the host proof, not a faked runtime delta), then a safe hub
+    return (`hubOpenCount 2 -> 3`).
+  - **Convoy Inspect/Edit** -- host: `AddItemToConvoy` adds and increments
+    `convoyAddTransactionCount`; a full convoy is a logged no-op. Live:
+    `convoy-inspected` count 0 -> `convoy-add-confirmed`
+    (`convoyAddTransactionCount 0 -> 1`) -> `convoy-reinspected-count-rose`
+    (`convoyLastItemCount 0 -> 1`), safe hub return.
+  - **Flag/Chapter** -- host: `SetFlag`/`ClearFlag` toggles the range-validated
+    flag and increments `debugFlagToggleCount`. Live: `flag-inspected`
+    (`chapterIndex == 2`, flag 0) -> `flag-toggle-confirmed`
+    (`debugFlagToggleCount 0 -> 1`, flag value `0 -> 1`), safe hub return.
+  - **RNG Inspect/Control** -- host: `SetLCGRNValue`+`InitRN` reseeds and
+    increments `rngReseedTransactionCount`. Live: `rng-inspected` samples seed
+    `0x0000ee77` -> `rng-reseed-confirmed` (`rngReseedTransactionCount 0 -> 1`)
+    -> `rng-reinspected-seed-changed` (seed `0x0000ee77 -> 0x0000690b`), safe
+    hub return.
+  - **Save Compatibility/State Inspect (read-only)** -- host: `Classify`-only,
+    no writer, `test_extended_tools_never_touch_dormant_files_or_persistent_apis`.
+    Live: `save-inspected` (`SAVE_COMPAT_CURRENT`, `saveCompatInspectCount
+    0 -> 1`) and `save-back-readonly-unchanged` (count stays 1 on Back -- no
+    Confirm, no mutation), safe hub return.
+  - **Safe return to game (all five)** -- after the last tool a final B closes
+    the hub (`sHubActive 1 -> 0`) and the real map is still interactive:
+    `hub-closed-map-interactive` shows the player cursor moving
+    (`gBmSt.playerCursor.x 0x06 -> 0x07`) with the phase byte stable. The
+    config-parametrized release sibling
+    (`debugtools-tools-modern-release.json`) replays the same input and proves
+    every `gDebugToolsProbe` field stays `0x00000000` (hub/tools compiled out).
 
 ### 6. Emulator logging/assertion/crash-diagnostic/memory-inspection foundations
 - Code: `src/debugtools_diag.c` -- bounded log ring
@@ -340,6 +383,14 @@ Previously-disclosed residual from this closure's own scope, now
   `expansion-modern-debugtools-prep-check`; the RELEASE branch still
   verifies the compiled-out mirror. See "Live prep-screen arrival --
   ACHIEVED" (item 3) for the full probe list.
+
+- **Live five-tools runtime -- ACHIEVED.** All five shipped bounded tools are
+  now driven live through the real Chapter 2 map hub with per-tool asserted
+  semantic effects and safe-return probes, gated by
+  `expansion-modern-debugtools-tools-check`
+  (`debugtools-tools-modern-debug.json`; release sibling proves all-zero). See
+  item 5's per-tool host+live mapping above. The earlier "host-executed only"
+  framing is superseded.
 
 ## Fingerprint regeneration (explicit, reviewed)
 

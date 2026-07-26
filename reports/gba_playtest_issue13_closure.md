@@ -37,12 +37,12 @@ python3 tools/gba-playtest/gba_playtest.py backend-check
 make expansion-modern-rom PREFIX=arm-none-eabi- MODERN_CONFIG=debug
 make expansion-modern-rom PREFIX=arm-none-eabi- MODERN_CONFIG=release
 
-# Full linker/boot/runtime gate (issue #13 adds expansion-modern-newgame-check
-# into this same chain; -k keeps going past the pre-existing, unrelated
-# budget-check drift documented below so every other check's own result is
-# still visible in one run)
-make expansion-modern-linker-check MODERN_CONFIG=debug   MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)" -k
-make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)" -k
+# Full linker/boot/runtime gate. Issue #13 adds expansion-modern-newgame-check;
+# issue #11 closure adds the five-tools runtime gate
+# expansion-modern-debugtools-tools-check. Both configs pass clean end to end,
+# expansion-modern-budget-check included -- no -k needed.
+make expansion-modern-linker-check MODERN_CONFIG=debug   MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)"
+make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)"
 
 # Artifact guard (no tracked ROM/save/savestate/build output)
 python3 scripts/artifact_guard.py --revision HEAD
@@ -212,7 +212,7 @@ identities, and (skipping explicitly, never silently, when a config's ROM
 is not locally built) a live libmGBA run matching the committed fingerprint
 for both `debug` and `release`. Every pre-existing scenario/config/save/
 migration/timeout/error-path/deterministic-sorted-output host test file is
-unmodified and still green (229 total tests, 1 documented skip -- see DONE
+unmodified and still green (265 total tests, 1 documented archival skip -- see DONE
 evidence).
 
 ### 6. CI integration
@@ -295,13 +295,17 @@ engine `Event3F_ScriptBattle` (`EV_CMD_SCRIPT_BATTLE`, opcode at ROM
 `EventScr_Ch4_BeginningScene+0x158`), not by a harness shortcut.
 
 Exact pre/post evidence (fixed EWRAM probes, never framebuffer/timing): the
-target enemy `gUnitArrayRed[0].curHP` (`0x0202eba7`) transitions `15 -> 0`
-AT the SCRIPT_BATTLE opcode. This is verified at frame 3296, where the event
-proc's `pEventCurrent` is `BeginningScene+0x160` -- one opcode PAST the
-`FIGHT` and BEFORE the following `KILL` -- and `curHP` is already `0`. Then
-`gUnitArrayRed[0].pCharacterData` (`0x0202eb94`) is cleared as the unit is
-removed (death). So the lethal HP change is the battle engine's scripted
-hit, not the `KILL` opcode.
+target enemy `gUnitArrayRed[0]` is alive at full HP before the FIGHT
+(`maxHP` `0x0202eba6` and `curHP` `0x0202eba7` both `15`); `curHP` transitions
+`15 -> 0` at the resolving SCRIPT_BATTLE frame while `maxHP` stays `15` (a
+genuine 15-damage lethal battle hit, captured one resolving frame before the
+following `KILL`); then `gUnitArrayRed[0].pCharacterData` (`0x0202eb94`) is
+cleared to a null `0x00000000` as the unit is removed (death). So the lethal HP
+change is the battle engine's scripted hit, not the `KILL` opcode. All three
+oracles are relocation-independent semantic values -- HP scalars and a
+null-field marker -- and the scenario asserts NO nonzero `pCharacterData`/
+`pEventCurrent` relocated pointer value (see "Pointer-oracle remediation"
+below; guarded by `tools/gba-playtest/tests/test_pointer_oracle_audit.py`).
 
 This supersedes the earlier disabled `combat.stub.json` (now deleted). The
 stub's prior blocker -- a debug-launcher-plus-ordinary-input route stalling
@@ -340,28 +344,49 @@ now proven a different, legitimate way via the SaveMenu RESTART ->
 `ReadGameSave` path. Decompiling `StartSaveMenuPostChapter` remains a
 separate, optional path, not a blocker for this coverage.
 
-## Pre-existing, out-of-scope finding: linker-budget drift
+## Linker-budget status
 
-`expansion-modern-budget-check` (issue #4's own memory-budget gate, `modern.mk`)
-fails for **both** `debug` and `release` on a clean checkout of this task's
-own start commit `418a9f39`, **before any change in this commit**: EWRAM
-`.bss` occupancy is 688 bytes larger than `reports/linker-budget/modern-{debug,release}.json`
-records (confirmed by `git stash`-ing every change in this commit and
-re-running `expansion-modern-budget-check` in isolation -- the drift
-reproduces identically with zero files from this commit applied). This is
-therefore a pre-existing condition in the base commit this task started
-from, not something introduced by this change, and is issue #4's own
-report/gate to refresh -- this task's file domain and mandate explicitly
-exclude touching `reports/linker-budget/*.json` (a reviewed oracle, not
-something to silently regenerate to make an unrelated gate pass) or
-otherwise weakening/bypassing it. It is called out here, prominently, as an
-actionable finding for whoever owns issue #4 or the next linker-budget
-refresh, rather than silently worked around. Every *other* check in
-`expansion-modern-linker-check` (boot/title/debugtools-*/new-game/savefmt/
-overlay-audit/shifted-check, plus the standalone raw-pointer/build-address
-audits) passes for both configs -- see DONE evidence below, captured with
-`-k` specifically so this one pre-existing failure does not hide the result
-of every other check in the same run.
+`expansion-modern-budget-check` (issue #4's memory-budget gate, `modern.mk`)
+**passes for both `debug` and `release`** at HEAD. The reviewed EWRAM budget
+baselines in `reports/linker-budget/modern-{debug,release}.json` already
+account for the debug tooling's `.bss` cost -- a reviewed `+688` bytes on
+`debug` and `+84` bytes on `release` -- so the committed baseline matches the
+built ELF and the gate is green. This round changed nothing that moves the
+EWRAM budget (the five-tools runtime work is scenarios/fingerprints/tests and
+a Make gate only, plus probe-list edits and doc updates; no new EWRAM state was
+added -- the existing `gDebugToolsProbe` struct already exposes every field the
+live scenario reads), so no baseline refresh was needed or performed. The whole
+`expansion-modern-linker-check` chain (budget/overlay-audit/boot/title/
+debugtools-*/debugtools-tools/new-game/combat/save-load/savefmt/shifted, plus
+the standalone raw-pointer/build-address audits) passes for both configs in a
+single run with no `-k` -- see DONE evidence below.
+
+## Pointer-oracle remediation (independent-review follow-up)
+
+Independent code review flagged behavior scenarios that asserted raw *relocated
+pointer values* as their runtime oracle -- a layout-dependent assertion that
+re-encodes where code/data landed after linking, not what the game semantically
+did. All 31 such 4-byte pointer-range oracles (mirrored across scenarios and
+fingerprints) were removed and replaced with relocation-independent semantic
+evidence:
+- `combat.json`: dropped `gUnitArrayRed[0].pCharacterData` (`0x088fe4a8`) at the
+  two pre-death checkpoints; the proof is now the semantic HP transition plus
+  the post-KILL null-field marker (`pCharacterData == 0x00000000`).
+- `debugtools-ch4-prep-positive-modern-debug.json`: dropped the
+  `gProcScr_SALLYCURSOR` `proc_idleCb` (`0x080905d1`) / `proc_scrCur`
+  (`0x08953f40`) pointers; the `prepScreenObservedCount` `0 -> 1` increment
+  (reachable only from `PrepScreenProc_MapIdle`) is the relocation-independent
+  proof the hotkey fired live in prep.
+- `debugtools-hub-modern-debug.json`: dropped 22 `gUnitArray[N].pCharacterData`
+  ROM pointers at the two interactive-map checkpoints; interactivity is already
+  proven by cursor/phase/map-state/proc-state/hub-count scalars and per-slot
+  `struct Unit.state` fields. The fixture-seeded framebuffer/SRAM baselines are
+  unchanged (only probe entries removed).
+A standing host audit, `tools/gba-playtest/tests/test_pointer_oracle_audit.py`,
+scans every checked-in scenario and fingerprint and fails on any 4-byte
+value inside a ROM/EWRAM/IWRAM/SRAM range (default reject; the reviewed
+allowlist is empty). Fingerprints were regenerated with `capture` (libmGBA
+0.10.2) and reviewed diffs, never a `verify` auto-refresh.
 
 ## DONE evidence
 
@@ -371,20 +396,20 @@ All commands below were actually run this session; exact results follow.
 
 ```
 $ python3 -m unittest discover -s tools/gba-playtest/tests -v
-... (229 tests)
+... (265 tests)
 ----------------------------------------------------------------------
-Ran 229 tests in 102.452s
+Ran 265 tests in 150.492s
 
 OK (skipped=1)
 ```
 
-The one skip is `test_debugtools_sram_fixture`/`test_backend_integration`'s
-own pre-existing, documented libmGBA-availability skip precedent (not
-triggered in this environment -- libmGBA is installed here -- but confirmed
-present as the *only* allowed skip path per `tools/gba-playtest/README.md`).
-229 = 196 pre-existing (unmodified, still green) + 33 new
-(13 retry-policy + 3 baseline-no-autorefresh + 10 new-game-scenario + 7
-stub-inventory/quality).
+The one skip is the archival legacy (agbcc) save-compat ROM's documented
+dependency (`ROM not built for 'legacy'`) -- the only allowed skip path per
+`tools/gba-playtest/README.md`. libmGBA is installed here, so every libmGBA
+runtime test runs (not skipped), including the new five-tools debug/release
+runtime captures. 265 = 246 pre-existing/unmodified (still green) + 19 new
+this task (4 test_pointer_oracle_audit + 1 added test_prep_positive_scenario
+semantic/no-pointer assertion + 14 test_tools_scenario).
 
 ### 2. `backend-check`
 
@@ -402,12 +427,14 @@ $ make expansion-modern-rom PREFIX=arm-none-eabi- MODERN_CONFIG=debug
 $ make expansion-modern-rom PREFIX=arm-none-eabi- MODERN_CONFIG=release
 ... Modern ROM ready: build/expansion-modern/release/aapcs/fireemblem8.gba (config=release abi=aapcs)
 
-$ make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)" -k
+$ make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)"
+check passed: reports/linker-budget/modern-debug.json
 Modern ROM boot-check passed: ... (config=debug abi=aapcs)
 Modern ROM title-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-timer-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-map-check passed: ... (config=debug abi=aapcs)
+Modern ROM debugtools-tools-check passed (five bounded tools live+confirmed in debug, compiled-out all-zero in release): ... (config=debug abi=aapcs)
 Modern ROM debugtools-ch4prep-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-prep-check passed (live prep MapIdle SELECT+B hotkey): ... (config=debug abi=aapcs)
 Modern ROM combat-check passed (Ch4 scripted FIGHT enemy HP 15->0 + death): ... (config=debug abi=aapcs)
@@ -417,15 +444,16 @@ expansion-modern-savefmt-check passed (config=debug): all 8 SaveCompatState valu
 Modern ROM savefmt-check passed: ... (config=debug abi=aapcs)
 Modern overlay audit passed: build/expansion-modern/debug/aapcs/shiftcheck/overlay-audit.json
 SHIFTED BOOT: PASS (shift=0x40000)
-check failed: report drift detected in reports/linker-budget/modern-debug.json   <-- PRE-EXISTING, see below
-make: *** [modern.mk:1897: expansion-modern-budget-check] Error 1
+Modern expansion linker checks passed (config=debug abi=aapcs)
 
-$ make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)" -k
+$ make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs PREFIX=arm-none-eabi- -j"$(nproc)"
+check passed: reports/linker-budget/modern-release.json
 Modern ROM boot-check passed: ... (config=release abi=aapcs)
 Modern ROM title-check passed: ... (config=release abi=aapcs)
 Modern ROM debugtools-check passed: ... (config=release abi=aapcs)
 Modern ROM debugtools-timer-check skipped: no release scenario needed (dead code, documented #11 behavior)
 Modern ROM debugtools-map-check passed: ... (config=release abi=aapcs)
+Modern ROM debugtools-tools-check passed (release negative: hub/tools compiled out, gDebugToolsProbe all-zero): ... (config=release abi=aapcs)
 Modern ROM debugtools-ch4prep-check passed: ... (config=release abi=aapcs)
 Modern ROM debugtools-prep-check passed: ... (config=release abi=aapcs)
 Modern ROM combat-check skipped: debug-only launcher (release runtime matrix has no separate combat scenario) -- see reports/gba_playtest_issue13_closure.md
@@ -436,17 +464,15 @@ Modern ROM savefmt-check passed: ... (config=release abi=aapcs)
 Modern overlay audit passed: build/expansion-modern/release/aapcs/shiftcheck/overlay-audit.json
 SHIFTED BOOT: PASS (shift=0x40000)
 SHIFTED TITLE: PASS (shift=0x40000)
-check failed: report drift detected in reports/linker-budget/modern-release.json   <-- PRE-EXISTING, see below
-make: *** [modern.mk:1897: expansion-modern-budget-check] Error 1
+Modern expansion linker checks passed (config=release abi=aapcs)
 ```
 
-**Every check passed for both configs except `expansion-modern-budget-check`**,
-which was confirmed (via `git stash` of every change in this commit,
-rebuild, and re-run in isolation) to fail **identically on the unmodified
-base commit `418a9f39`** -- see "Pre-existing, out-of-scope finding" above.
-This is not a pass being claimed away: it is flagged, reproduced, and
-attributed precisely so it is not confused with a regression from this
-change.
+**Every check passed for both configs**, `expansion-modern-budget-check`
+included (the reviewed EWRAM baseline already accounts for the debug tooling's
+`.bss`; see "Linker-budget status" above), and the new
+`expansion-modern-debugtools-tools-check` gate ran and passed in both (live
+five-tools proof in debug, compiled-out all-zero negative in release). No `-k`
+is needed and no failure is being attributed away.
 
 ### 4. Individual scenario `verify` runs (boot/title/new-game/chapter/suspend-resume/debugtools, enabled + release-negative)
 

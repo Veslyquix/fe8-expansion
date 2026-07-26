@@ -992,11 +992,14 @@ disabled object defines exactly the one no-op
 **no** engine/menu/hardware stub of any kind (an undefined reference there
 would mean the disabled path grew a real runtime dependency). A live
 runtime scenario driving all five tools through the map hub (mirroring
-`debugtools-map-hub-modern-debug.json`'s own live Weather/Fog proof) is not
-included in this closure -- see "Remaining #11 scope" below for why this is
-an explicit, bounded residual rather than a silent gap: the host-executed
-evidence above already exercises the real, unmodified source for every
-tool's inspect/confirm/invalid-input path.
+`debugtools-map-hub-modern-debug.json`'s own live Weather/Fog proof) is now
+included: `debugtools-tools-modern-debug.json` (gate
+`expansion-modern-debugtools-tools-check`, host test
+`tools/gba-playtest/tests/test_tools_scenario.py`) drives all five tools live
+from the real Chapter 2 map hub, each with an asserted semantic state effect
+and a safe return to the hub -- see "Remaining #11 scope" below for the
+per-tool mapping. The host-executed evidence above remains the byte-exact
+mutation proof (e.g. a wounded unit healed to full) that complements it.
 
 
 ## Host tests
@@ -1270,8 +1273,8 @@ explicitly, honestly open is narrow:
   `tools/gba-playtest/tests/test_prep_positive_scenario.py`). The positive
   scenario does the world-map `L` cursor-jump + `A` node-confirm, skips the
   beginning event/scripted `FIGHT()` battle to `CALL(EventScr_CommonPrep)`,
-  rests `gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` (`0x080905d1`),
-  and fires SELECT+B there: `DebugTools_PrepHotkeyCheck()`'s
+  rests `gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` and fires SELECT+B
+  there: `DebugTools_PrepHotkeyCheck()`'s
   `PLAY_FLAG_PREPSCREEN` observation
   (`gDebugToolsProbe.prepScreenObservedCount`, `0x02031854`) is observed
   `0 -> 1` at runtime while `gPlaySt.chapterStateBits` (`0x020210b8`) holds
@@ -1281,16 +1284,26 @@ explicitly, honestly open is narrow:
   compiled-out mirror). Debug-only because the launcher + hotkey are
   compiled out of a release build.
 - **A live runtime scenario driving all five bounded tools through the map
-  hub** (mirroring `debugtools-map-hub-modern-debug.json`'s own live
-  Weather/Fog proof) is not included. Every tool's inspect/confirm/
-  invalid-input semantics are instead proven via host-executed tests that
-  compile+link+execute the real, unmodified `src/debugtools_tools.c`
-  against controllable fakes for the engine subsystems each tool calls
-  into (see "Five bounded validated tools" above) -- real source, real
-  execution, just not inside the GBA/mGBA runtime itself. This is the
-  explicit "if the runtime baseline cannot honestly capture it, keep a
-  host test that really executes the source and mark it residual" path,
-  not a silently skipped requirement.
+  hub -- ACHIEVED.** `debugtools-tools-modern-debug.json` (gate
+  `expansion-modern-debugtools-tools-check`, host test
+  `tools/gba-playtest/tests/test_tools_scenario.py`) reuses the proven Fast
+  Boot: Chapter 2 map-hub prefix, opens the real map hub
+  (`registeredActionCount == 9`), and drives every tool from its real hub row,
+  each with an asserted semantic effect AND a safe hub return (all
+  relocation-independent `gDebugToolsProbe`/`gPlaySt`/`gBmSt` scalars):
+  Unit inspect resolves Eirika (16/16) then a separate confirm applies
+  Heal-to-Full (`unitHealTransactionCount 0 -> 1`; the byte-exact wounded->full
+  HP delta stays the host proof since Eirika starts full); Convoy count
+  `0 -> 1` across inspect/confirm-add/re-inspect; Flag `0 -> 1` on
+  inspect/confirm-toggle (`chapterIndex == 2`); RNG seed `0x0000ee77 ->
+  0x0000690b` across inspect/confirm-reseed/re-inspect; Save State classifies
+  `SAVE_COMPAT_CURRENT` read-only (inspect count `0 -> 1`, unchanged on Back).
+  After the last tool a final `B` closes the hub and the map is still
+  interactive (player cursor `0x06 -> 0x07`). The host-executed tests remain
+  the byte-exact mutation/invalid-input proof (real, unmodified
+  `src/debugtools_tools.c`) that complements the live runtime; the
+  config-parametrized release sibling proves the identical input is a
+  compiled-out all-zero no-op.
 - **A complete `mgba_printf`/AGB debug print-protocol implementation, an
   interactive debugger, and an arbitrary memory editor** remain explicit,
   deliberate non-goals (never attempted) -- see
