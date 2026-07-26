@@ -12,6 +12,7 @@ MODERN_GOALS := \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
+	expansion-modern-debugtools-tools-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
@@ -449,6 +450,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
+	expansion-modern-debugtools-tools-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
@@ -985,6 +987,7 @@ MODERN_LINKED_GOALS := \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
+	expansion-modern-debugtools-tools-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
@@ -1680,6 +1683,39 @@ expansion-modern-debugtools-map-check: expansion-modern-boot-preflight expansion
 	@printf 'Modern ROM debugtools-map-check passed: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 
+# Issue #11 closure: proves all five shipped bounded tools (Unit Inspect/Edit,
+# Convoy Inspect/Edit, Flag/Chapter, RNG Inspect/Control, Save Compatibility/
+# State Inspect) are driven LIVE from the real Chapter 2 map debug hub in a
+# debug build -- each inspect samples semantic state, each mutating tool only
+# mutates after its own explicit confirm submenu item (asserted via
+# gDebugToolsProbe transaction counters and genuine convoy/flag/RNG pre/post
+# deltas), the read-only Save inspector never writes, every submenu returns
+# safely to the hub, and the map is still interactive after the hub closes
+# (player cursor moves). The config-parametrized release scenario instead
+# proves the identical input has zero effect (hub/tools compiled out,
+# gDebugToolsProbe stays all-zero). Probe-only, so -- like
+# expansion-modern-debugtools-map-check above -- it is not seeded with
+# MODERN_DEBUGTOOLS_SRAM_FIXTURE. See docs/debugtools.md and
+# reports/debugtools_issue11_closure.md.
+MODERN_DEBUGTOOLS_TOOLS_SCENARIO := tools/gba-playtest/scenarios/debugtools-tools-modern-$(MODERN_CONFIG).json
+MODERN_DEBUGTOOLS_TOOLS_FINGERPRINT := tools/gba-playtest/fingerprints/debugtools-tools-modern-$(MODERN_CONFIG).json
+
+expansion-modern-debugtools-tools-check: expansion-modern-boot-preflight expansion-modern-rom
+	@if [ ! -f "$(MODERN_DEBUGTOOLS_TOOLS_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_DEBUGTOOLS_TOOLS_FINGERPRINT)" ]; then \
+		printf '%s\n' "error: missing debugtools tools scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_DEBUGTOOLS_TOOLS_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_DEBUGTOOLS_TOOLS_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_DEBUGTOOLS_TOOLS_SCENARIO)" \
+		--expected "$(MODERN_DEBUGTOOLS_TOOLS_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM debugtools-tools-check passed (five bounded tools live+confirmed in debug, compiled-out all-zero in release): %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
 # Issue #11 closure: the "Fast Boot: Ch4 Prep" launcher's own pending-
 # request/boot-commit lifecycle -- a second, independent launcher target
 # alongside Chapter 2's, added specifically because Chapter 2's own event
@@ -2066,6 +2102,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-debugtools-check \
 		expansion-modern-debugtools-timer-check \
 		expansion-modern-debugtools-map-check \
+		expansion-modern-debugtools-tools-check \
 		expansion-modern-debugtools-prep-check \
 		expansion-modern-debugtools-ch4prep-check \
 		expansion-modern-newgame-check \
@@ -2086,6 +2123,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
 	expansion-modern-debugtools-map-check \
+	expansion-modern-debugtools-tools-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
