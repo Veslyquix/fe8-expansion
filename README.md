@@ -52,6 +52,12 @@ Output lands at `build/expansion-modern/release/aapcs/fireemblem8.gba`. See
 [`docs/quickstart.md`](docs/quickstart.md) for debug builds, the compile-only
 object cohort, and other `expansion-modern-*` targets.
 
+A bare `make` (or `make all`) from the repository root does exactly this
+(deterministically pinning `MODERN_CONFIG=release MODERN_ABI=aapcs`
+regardless of any ambient override) and never requires, builds, or resolves
+to a `tools/agbcc` executable or library -- this is the project's single
+supported release lane.
+
 To clean all build artifacts:
 ```bash
 make clean
@@ -84,11 +90,20 @@ Full design/reference: [`docs/generated_data.md`](docs/generated_data.md).
 
 ### Archival/decomp agbcc build
 
-The original agbcc-based `fireemblem8.gba` target remains available for
-decomp-matching work (see [`CONTRIBUTING.md`](CONTRIBUTING.md)) and is not the
-default/supported quickstart path. `./scripts/quickstart.sh --legacy` sets it
-up automatically; to build it manually:
+The original agbcc-based `fireemblem8.gba` target remains available,
+unbroken and unchanged, for decomp-matching work (see
+[`CONTRIBUTING.md`](CONTRIBUTING.md)); it is not the default/supported
+release lane -- a bare `make`/`make all` never builds it and never touches
+`tools/agbcc`. This project ships two tracks by design (not one, with the
+archival compiler literally removed): a single supported modern GCC AAPCS
+release lane by default, plus this explicit, unsupported archival side door
+for matching work that inherently depends on the original compiler's
+codegen. `./scripts/quickstart.sh --legacy` sets it up automatically; to
+build it manually, use the clearly-named alias or the pre-existing target
+(both produce the identical `fireemblem8.gba`):
 ```bash
+make legacy -j$(nproc)
+# equivalently:
 make fireemblem8.gba -j$(nproc)
 ```
 
@@ -107,7 +122,7 @@ cd /path/to/agbcc
 ```
 3. Fetch submodules. The FE6 SIO link payload is built from source via the
    [mgfembp](https://github.com/StanHash/mgfembp) submodule (not a committed blob);
-   the first `make` also fetches/builds its own agbcc variant for it.
+   the first `make legacy` also fetches/builds its own agbcc variant for it.
 ```
 cd /path/to/fireemblem8u
 git submodule update --init --recursive
@@ -116,9 +131,11 @@ git submodule update --init --recursive
 ```
 ./build_tools.sh
 ```
-5. Build the project.
+5. Build the project (a bare `make`/`make all` instead builds the supported
+   modern release ROM -- see "Building" above -- so the archival lane must be
+   named explicitly here).
 ```
-make
+make legacy
 ```
 6. A successful command produces `fireemblem8.gba`.
 

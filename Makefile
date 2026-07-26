@@ -187,7 +187,39 @@ src/menu_def.o: CC1FLAGS += -Wno-error
 
 #### Main Targets ####
 
-all: $(ROM)
+# Issue #15: this expansion ships ONE supported release lane -- modern GCC
+# with the AAPCS ABI. A bare `make`/`make all` therefore unconditionally
+# builds and real-emulator boot-verifies the modern release ROM end-to-end
+# (`expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs`),
+# and never requires, builds, or resolves to a tools/agbcc executable or
+# library. This is a structural guarantee, not a configurable convention:
+# `all:` takes no lane-selection variable of any kind, so no environment
+# variable and no `make VAR=value` command-line override (regardless of
+# name) can redirect it to the archival lane -- see
+# scripts/modernize/tests/test_build_default_lane.py's negative-regression
+# coverage for both of those ambient-pollution shapes. The recursive
+# $(MAKE) call below hardcodes MODERN_CONFIG/MODERN_ABI as command-line
+# assignments (highest make precedence), so the default lane is also
+# deterministic against any ambient override of *those* two variables.
+#
+# The archival agbcc/decomp-matching lane is a deliberate, explicit,
+# unsupported side door -- not deleted -- reachable *only* by naming it:
+# `make legacy` (below) or the pre-existing `make fireemblem8.gba`; see
+# CONTRIBUTING.md and docs/quickstart.md for when to use it.
+#
+# scripts/quickstart.sh --legacy invokes `make legacy` by name directly
+# (never a bare `make`/`make all` plus a lane-selection variable), so
+# there is nothing for quickstart -- or anyone else -- to set to reach the
+# archival lane except this target's name.
+all:
+	+$(MAKE) expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs
+
+# Explicit, clearly-named archival alias (issue #15): builds the exact same
+# agbcc-based $(ROM) as `make fireemblem8.gba`. Kept as its own target so
+# scripts/docs can name the archival lane directly.
+legacy: $(ROM)
+	@echo "Archival legacy build complete (agbcc, unsupported release lane): $(ROM)" >&2
+	@echo "See CONTRIBUTING.md for the decomp-matching workflow this lane exists for." >&2
 
 # Prevent the catch-all %.s rule from turning the removed comparison command
 # into an unrelated native executable through make's built-in implicit rules.
@@ -195,7 +227,7 @@ compare:
 	@echo "The legacy comparison target has been removed; build fireemblem8.gba instead." >&2
 	@false
 
-.PHONY: all compare
+.PHONY: all legacy compare
 
 #### Shiftability harness (scripts/shiftcheck/) ####
 # Detects hardcoded pointers (raw absolute addresses that bypass the symbol system)
