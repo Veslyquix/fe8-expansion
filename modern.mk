@@ -14,6 +14,7 @@ MODERN_GOALS := \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
+	expansion-modern-newgame-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -448,6 +449,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
+	expansion-modern-newgame-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -981,6 +983,7 @@ MODERN_LINKED_GOALS := \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
+	expansion-modern-newgame-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -1818,6 +1821,41 @@ expansion-modern-debugtools-timer-check:
 		'$(MODERN_CONFIG)'
 endif
 
+# Issue #13 closure: deterministic clean-boot "New Game" creation. Shares
+# savecompat-current.json's own title/save-menu cadence (frames 0..900,
+# reaching the ordinary top-level Save Menu with no dialog) and then
+# replays three ordinary A confirmations -- New Game, Easy, first empty
+# save slot -- never a raw memory write or scripted cursor move (each
+# confirmed item is already the menu's own default highlight). Requires
+# the same deterministic pre-seeded CURRENT-format SRAM fixture as
+# expansion-modern-debugtools-check above (a genuinely blank chip takes
+# the WipeSram-driven boot path instead, with different frame timing) --
+# reused as-is, not regenerated, since it is exactly "a deterministic
+# CURRENT-format SRAM image", with no debug-tools-specific content. See
+# tools/gba-playtest/scenarios/new-game.json and
+# reports/gba_playtest_issue13_closure.md.
+MODERN_NEWGAME_SCENARIO := tools/gba-playtest/scenarios/new-game.json
+MODERN_NEWGAME_FINGERPRINT := tools/gba-playtest/fingerprints/new-game-modern-$(MODERN_CONFIG).json
+
+expansion-modern-newgame-check: expansion-modern-boot-preflight expansion-modern-rom \
+		$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)
+	@if [ ! -f "$(MODERN_NEWGAME_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_NEWGAME_FINGERPRINT)" ]; then \
+		printf '%s\n' \
+			"error: missing new-game scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_NEWGAME_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_NEWGAME_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_NEWGAME_SCENARIO)" \
+		--sram-image "$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)" \
+		--expected "$(MODERN_NEWGAME_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM newgame-check passed: %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
 # Global save-compatibility gate check (issue #2 slice 2, requirement 9).
 # Generates synthetic SRAM fixtures at check time (never committed
 # binaries), runs the host-side save-format migration checks
@@ -1922,6 +1960,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-debugtools-map-check \
 		expansion-modern-debugtools-prep-check \
 		expansion-modern-debugtools-ch4prep-check \
+		expansion-modern-newgame-check \
 		expansion-modern-savefmt-check \
 		expansion-modern-shifted-check
 	"$(PYTHON)" scripts/shiftcheck/scan_build_addrs.py \
@@ -1939,6 +1978,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-debugtools-map-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
+	expansion-modern-newgame-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \

@@ -10,6 +10,47 @@ permissions:
   contents: read
 
 jobs:
+  # Fast, host-only lane (issue #13): exercises every tools/gba-playtest
+  # host test -- scenario/schema parsing, generators, config, save/migration
+  # fixtures, timeouts, retry policy, deterministic sorted-JSON output, and
+  # provenance/diagnostics -- without the arm-none-eabi cross-toolchain or a
+  # 16 MB ROM build. Only a native C compiler (build-essential) and
+  # libmgba-dev are installed, since the one integration test that actually
+  # drives libmGBA (test_backend_integration.py) compiles its tiny backend
+  # for the *host*, never the GBA target. This is intentionally a separate
+  # job from `build` below so a scenario/generator/host-tooling regression
+  # is reported in well under a minute, before paying for a full ROM/linker
+  # build. It is a genuine gate (required status), not merely advisory.
+  host-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install host-only dependencies (no arm-none-eabi toolchain)
+      run: sudo apt-get update && sudo apt-get install -y build-essential libmgba-dev
+
+    - name: Run gba-playtest host test suite
+      run: python3 -m unittest discover -s tools/gba-playtest/tests -v
+
+  # Ubuntu libmGBA ROM/runtime gate: builds the full modern object/ELF/ROM
+  # chain for both supported configs (debug, release; AAPCS only -- see
+  # docs/config_identity.md), checks deterministic memory budgets, rejects
+  # orphan/overflow/cross-overlay errors, and verifies boot/title/debugtools/
+  # new-game/save-format/suspend-resume/shifted-link runtime behavior via
+  # the same tools/gba-playtest harness the host-tests job unit-tests in
+  # isolation. This is the exact (and only) supported CI host matrix today:
+  # ubuntu-latest with arm-none-eabi GCC. macOS (Homebrew) is documented in
+  # tools/gba-playtest/README.md for local development but is not exercised
+  # by CI. The archival/decomp agbcc `fireemblem8.gba` path (see
+  # docs/issue-resolution-policy.md "Supported modern path vs. archival
+  # decomp path") continues to build locally and is unaffected by this
+  # workflow, but it is not part of this or any CI gate and must never be
+  # read as one. Per repository policy, CI ends after these target-ROM
+  # checks.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -44,8 +85,12 @@ jobs:
 
     # The linker gate builds the full modern object/ELF/ROM chain, checks
     # deterministic memory budgets, rejects orphan/overflow/cross-overlay
-    # errors, and verifies normal plus shifted boot/title behavior.
-    # Per repository policy, CI ends after these target-ROM checks.
+    # errors, and verifies normal plus shifted boot/title behavior, plus
+    # (issue #13) debugtools/new-game/save-format/suspend-resume runtime
+    # scenarios and the relocation/raw-pointer/offset audits -- all reusing
+    # this same modern object/ELF build for both configs rather than
+    # rebuilding per check. Per repository policy, CI ends after these
+    # target-ROM checks.
     - name: Build and verify modern target ROMs and linker
       run: |
         make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs -j2

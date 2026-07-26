@@ -1,9 +1,0 @@
-{
-  "blocker": "The generic A/START smoke input does not select a new-game route reliably; a reviewed per-frame route must be authored before enabling this scenario.",
-  "checkpoints": [],
-  "description": "Schema-ready placeholder for deterministic new-game entry.",
-  "disabled": true,
-  "frames": [],
-  "name": "new-game",
-  "schema_version": 1
-}

@@ -1,9 +1,0 @@
-{
-  "blocker": "No reviewed input route currently proves arrival in a chapter from a clean boot; committing a savestate is prohibited and the external full-game TAS movie is not part of this repository.",
-  "checkpoints": [],
-  "description": "Schema-ready placeholder for deterministic chapter capture.",
-  "disabled": true,
-  "frames": [],
-  "name": "chapter",
-  "schema_version": 1
-}

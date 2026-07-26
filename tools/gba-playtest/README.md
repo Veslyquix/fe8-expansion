@@ -12,7 +12,16 @@ are FNV-1a-64 over canonical 24-bit RGB bytes (alpha/padding and host endianness
 are excluded). The small C backend is compiled into a temporary directory for
 each command, so no emulator-generated binary is left in the tree.
 Compiler, pkg-config, and emulator processes all have bounded timeouts with
-actionable diagnostics.
+actionable diagnostics. `--retries N` (default 0, i.e. a single attempt) adds
+up to `N` additional attempts, capped at `MAX_RETRIES_CAP` (5) regardless of
+the requested value, and applies only to a process **time-out** -- the one
+condition here that can plausibly be transient host scheduling/load. A
+non-zero exit code, a malformed backend/compiler diagnostic, or a fingerprint
+mismatch are deterministic outcomes and are never retried by any code path in
+this tool; retrying those would silently launder a real, reproducible failure
+into intermittent-looking flake. Every retried attempt (not just the final
+one) is printed to stderr with its attempt number, so a flaky time-out is
+always visible even when a later attempt succeeds.
 
 ## Dependencies
 
@@ -48,7 +57,7 @@ python3 -m unittest discover -s tools/gba-playtest/tests -v
 python3 tools/gba-playtest/gba_playtest.py capture \
   --rom fireemblem8.gba \
   --scenario tools/gba-playtest/scenarios/boot.json \
-  --output /tmp/boot.json
+  --output build/boot-capture.json
 
 # Replay and compare every checkpoint/hash/probe
 python3 tools/gba-playtest/gba_playtest.py verify \
@@ -67,6 +76,22 @@ python3 tools/gba-playtest/gba_playtest.py verify \
 Exit statuses are 0 for success, 1 for a valid-but-different fingerprint, and 2
 for malformed input, missing dependencies, or backend/setup failure. Verify
 diagnostics identify the exact JSON path, expected value, and captured value.
+
+### Baseline refresh policy
+
+A checked-in fingerprint (`--expected`) is a reviewed oracle, never output
+`verify` can write, rewrite, or otherwise refresh itself -- there is no
+`verify --write-baseline`-style flag anywhere in this tool, on either a
+passing or a failing comparison (see
+`tools/gba-playtest/tests/test_baseline_no_autorefresh.py`). Refreshing a
+baseline is exclusively a human-run, explicit `capture -o <path>` invocation
+followed by the ordinary reviewed-commit process for that changed file --
+matching `docs/issue-resolution-policy.md`'s "Baseline and fingerprint
+review": a mismatch is a signal to investigate the behavior change, not to
+silently regenerate the fingerprint. Before committing a refreshed
+fingerprint, record in the commit/PR: which checkpoints changed, the old vs.
+new hash/probe values, and the semantic reason (the "fingerprint capture 必须
+显式" contract for this harness).
 
 ### Verification policy
 
@@ -136,25 +161,64 @@ Disabled schema-ready stubs additionally use `"disabled": true` and a non-empty
 `boot.json` is a no-input early boot capture. `title-progression.json` uses the
 same deterministic six-frame A/START tap concept as
 `scripts/shiftcheck/mgba_oracle.c`, with attribution retained in `backend.c`.
-These scenarios cover boot and title/intro/menu progression only. Modern GCC
-uses configuration-specific `title-progression-modern-{debug,release}.json`
-fingerprints because optimization changes later title-animation timing.
-Shifted links must match the baseline for their own configuration.
-The legacy fingerprints were captured with libmGBA 0.10.2 from the baseline
-ROM whose project checksum is `c25b145e37456171ada4b0d440bf88a19f4d509f`;
-the modern title fingerprints record the debug/release ROM provenance directly.
-An emulator-version change that alters rendered pixels is intentionally reported
-as a fingerprint difference and should be reviewed rather than normalized away.
-`tests/homebrew_fixture.py` generates a tiny original homebrew ROM in a temporary
-directory and drives released/A-held/released frames, pixels, and a semantic RAM
-value through capture and both verification policies. Only generator source is
-committed.
+Modern GCC uses configuration-specific
+`title-progression-modern-{debug,release}.json` fingerprints because
+optimization changes later title-animation timing. Shifted links must match
+the baseline for their own configuration. The legacy fingerprints were
+captured with libmGBA 0.10.2 from the baseline ROM whose project checksum is
+`c25b145e37456171ada4b0d440bf88a19f4d509f`; the modern title fingerprints
+record the debug/release ROM provenance directly. An emulator-version change
+that alters rendered pixels is intentionally reported as a fingerprint
+difference and should be reviewed rather than normalized away.
+`tests/homebrew_fixture.py` generates a tiny original homebrew ROM in a
+temporary directory and drives released/A-held/released frames, pixels, and a
+semantic RAM value through capture and both verification policies. Only
+generator source is committed.
 
-The checked-in new-game, chapter, combat, and save stubs are intentionally
-disabled. The generic shiftcheck input does not prove arrival in those states.
-The deeper shiftcheck material is a GBAHawk full-game movie that is external,
-requires a different emulator/BIOS, and is not distributed here. A savestate or
-save binary would violate this harness's clean-boot evidence and repository
-constraints. Enabling a stub therefore requires a reviewed per-frame clean-boot
-route and a checkpoint that independently proves the intended state; no deeper
-coverage is claimed today.
+### Deterministic runtime scenario coverage (issue #13)
+
+Every scenario below is reached from a clean boot with no committed
+savestate/save file; every non-framebuffer claim of "arrival" is proven by a
+semantic probe (an EWRAM/SRAM field, or a whole-SRAM hash) derived from this
+build's own symbol table or a documented struct offset, never framebuffer
+similarity alone.
+
+| Scenario | Proves | Config(s) |
+| --- | --- | --- |
+| `boot.json` | Early boot progress | debug + release (behavior policy) |
+| `title-progression.json` | Title/intro/menu progression | debug + release |
+| `new-game.json` | Ordinary Save-Menu New Game creation: New Game -> Easy -> first empty slot, with a before/after whole-SRAM hash proving the real `SaveMenuWriteNewGame`/`WriteGameSave`-class write happened, and `gPlaySt.chapterIndex`/`faction` probes confirming the created game begins at the Prologue (`CHAPTER_L_PROLOGUE`, player phase) | debug + release |
+| `debugtools-hub-modern-{debug,release}.json` (issue #11) | The debug-only "Fast Boot: Chapter 2" launcher's deterministic clean-boot chapter/map **arrival**: real Chapter 2 roster (Eirika/Seth/Gilliam/Franz/Moulder/Vanessa in Blue, Ross in Green, Bone+bandits in Red) placed and interactive at first stable Player Phase, proven via unit-array probes and a stable whole-SRAM hash; release mirror proves the hub/launcher are compiled out and inert | debug (live) / release (negative) |
+| `debugtools-map-hub-modern-{debug,release}.json` (issue #11) | The map-phase debug hub stays reachable and leaves the real, interactive Chapter 2 map genuinely interactive afterward | debug (live) / release (negative) |
+| `debugtools-{prep,timer,ch4-prep-launch}-*` (issue #11) | Additional debug-tool launcher/hotkey/diagnostics behavior and their release-inert negatives -- see `docs/debugtools.md` | debug + release, per file |
+| `savecompat-current.json` / `savecompat-dialog-back.json` / `savecompat-erase.json` | Save-compatibility classification, non-destructive Back, and confirmed Erase across all `SaveCompatState` values | debug + release |
+| `savesuspend-resume-modern-debug.json` | Full write -> soft-reset -> reload round trip: an ordinary Map Menu **Suspend**, a real soft-reset key combo, and **Resume** through `ReadSuspendSave()`, with `gPlaySt.chapterIndex`/`faction`/cursor and a unit-item probe proving the exact manually-saved state (not the earlier auto-save) was restored | debug only (depends on the debug-only Chapter 2 launcher) |
+
+New-game and chapter/map arrival are no longer stubs -- see the coverage
+table above (`new-game.json` and the reused `debugtools-hub-modern-*.json`
+evidence). Only `combat.stub.json` and `save.stub.json` remain disabled,
+each with a specific, evidenced blocker recorded in the stub file itself (not
+a generic "not attempted yet" placeholder) -- see
+`reports/gba_playtest_issue13_closure.md` for the full investigation trace,
+including exactly how far a debug-launcher-plus-ordinary-input route was
+pushed before it stalled. The deeper shiftcheck material referenced by that
+investigation is a GBAHawk full-game movie that is external, requires a
+different emulator/BIOS, and is not distributed here. A savestate or save
+binary remains prohibited as a shortcut past either blocker. Enabling a stub
+therefore requires either resolving its documented blocker or discovering a
+different reviewed, deterministic clean-boot route, plus a checkpoint that
+independently proves the intended state -- framebuffer/timing similarity
+alone is never sufficient.
+
+### Supported CI host matrix
+
+CI (`.github/workflows/build.yml`) runs on `ubuntu-latest` only, in two
+separate jobs: a fast `host-tests` lane (this test suite only, no
+`arm-none-eabi` toolchain) and a `build` lane (the full modern ROM/linker
+gate, both `debug` and `release`, `MODERN_ABI=aapcs` only -- see
+`docs/config_identity.md`). macOS (Homebrew) is documented above for local
+development but is not exercised by CI. The archival/decomp `agbcc`
+`fireemblem8.gba` path (see `docs/issue-resolution-policy.md` "Supported
+modern path vs. archival decomp path") continues to build locally, unrelated
+to and unaffected by this harness, but it is not part of any CI gate here and
+must never be read as a substitute runtime gate for the modern path.
