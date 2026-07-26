@@ -45,6 +45,17 @@ override).
 | `MODERN_ROM_SIZE` | `16M`, `32M`, or an exact byte count equal to one of those | `16M` | output ROM size / padding (fingerprint) |
 | `MODERN_TEXT_SHIFT` | non-negative integer, 4-byte aligned | `0` | link-time padding before `.text` (fingerprint) |
 
+`MODERN_ABI=apcs-gnu` is accepted only by the compile-only
+`expansion-modern-cohort`/`expansion-modern-all` object targets, for
+cross-ABI struct-layout comparison (see
+[`docs/save_format.md`](save_format.md#cross-compiler-persisted-struct-layout-compatibility)).
+Every target that actually links or produces a ROM --
+`expansion-modern-elf`, `-rom`, `-boot-check`, `-linker-check`, and the
+targets that depend on them -- requires `MODERN_ABI=aapcs` and fails fast
+in `modern.mk` otherwise (see
+[`docs/framework-support.md`](framework-support.md#build-targets-and-outputs)'s
+"ABI contract" note).
+
 `MODERN_CONFIG=debug` compiles with `-Og -g3` and no `-DNDEBUG`, enabling
 `FE8_EXPANSION_DEBUG`/`FE8_EXPANSION_ASSERTIONS_ENABLED`/
 `FE8_EXPANSION_LOGGING_ENABLED` (see "C configuration header" below).

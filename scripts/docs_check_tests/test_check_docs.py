@@ -605,6 +605,173 @@ class StaleQuickstartObjectCountRegressionTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Acceptance-review finding (issues #7/#17 docs contract fixup): the same
+# 3-defect pattern found earlier in quickstart.md was later reintroduced in
+# docs/framework-support.md by a subsequent governance-establishing commit:
+#
+#   1. docs/framework-support.md hardcoded MODERN_COHORT_OBJECTS/
+#      MODERN_ALL_OBJECTS counts (21 C + 3 asm = 24; 450) instead of
+#      pointing solely at `make print-<VAR>`.
+#   2. Its expansion-modern-elf row listed `MODERN_ABI=<aapcs|apcs-gnu>` as
+#      if both ABIs were valid for a *linked* target, when modern.mk's
+#      MODERN_LINKED_GOALS guard fails fast on anything but aapcs.
+#   3. docs/config_identity.md's MODERN_ABI settings-reference row carried
+#      no caveat that apcs-gnu is compile-only.
+#
+# The tests below prove (a) the old phrasing is flagged stale if it ever
+# reappears, (b) the current, live doc text is both stale-clean and states
+# the AAPCS-only/apcs-gnu-compile-only contract explicitly, and (c) that
+# contract is real -- proven against the actual `modern.mk` via a real
+# `make -n` dry-run probe, never a simulated/equivalent stand-in.
+# ---------------------------------------------------------------------------
+
+class StaleFrameworkSupportABIRegressionTests(unittest.TestCase):
+    OLD_STALE_PHRASES = [
+        "21 `src/*.c` objects + 3 handwritten-assembly objects, 24 total",
+        "handwritten asm: 450 objects as of this audit",
+        r"expansion-modern-elf MODERN_CONFIG=<debug\|release> MODERN_ABI=<aapcs\|apcs-gnu>",
+    ]
+
+    def test_each_old_phrase_is_flagged_stale(self):
+        for phrase in self.OLD_STALE_PHRASES:
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_stale_phrases(["doc.md"], root)
+                self.assertTrue(findings, "expected a finding for: %r" % phrase)
+
+    def test_current_framework_support_wording_has_no_stale_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "framework-support.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "docs", "framework-support.md")
+            ))
+            findings = check_docs.check_stale_phrases(["framework-support.md"], root)
+            self.assertEqual(findings, [])
+
+    def test_current_config_identity_wording_has_no_stale_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "config_identity.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "docs", "config_identity.md")
+            ))
+            findings = check_docs.check_stale_phrases(["config_identity.md"], root)
+            self.assertEqual(findings, [])
+
+
+class ABIFactualDocContractTests(unittest.TestCase):
+    """Focused ABI factual tests: read the real, live doc files off disk
+    (never a copy/paraphrase) and assert the linked-output-vs-compile-only
+    ABI contract is stated correctly."""
+
+    def _framework_support_text(self):
+        return check_docs.read_text(os.path.join(REAL_REPO_ROOT, "docs", "framework-support.md"))
+
+    def _config_identity_text(self):
+        return check_docs.read_text(os.path.join(REAL_REPO_ROOT, "docs", "config_identity.md"))
+
+    def test_linked_elf_row_states_aapcs_only(self):
+        text = self._framework_support_text()
+        self.assertIn(
+            r"make expansion-modern-elf MODERN_CONFIG=<debug\|release> MODERN_ABI=aapcs`",
+            text,
+        )
+        # The old ambiguous dual-ABI notation must not be present.
+        self.assertNotIn(r"MODERN_ABI=<aapcs\|apcs-gnu>", text)
+
+    def test_rom_boot_check_linker_check_rows_state_aapcs_only(self):
+        text = self._framework_support_text()
+        for target in (
+            "expansion-modern-rom",
+            "expansion-modern-boot-check",
+            "expansion-modern-linker-check",
+        ):
+            with self.subTest(target=target):
+                self.assertIn("make %s MODERN_CONFIG=... MODERN_ABI=aapcs`" % target, text)
+
+    def test_abi_contract_note_present_and_explicit(self):
+        text = self._framework_support_text()
+        self.assertIn("**ABI contract:**", text)
+        self.assertIn("is the only supported choice for every", text)
+        self.assertIn("fails fast in `modern.mk`", text)
+
+    def test_cohort_and_all_rows_document_compile_only_apcs_gnu(self):
+        text = self._framework_support_text()
+        self.assertIn(
+            "Accepts `MODERN_ABI=aapcs` (default) or `MODERN_ABI=apcs-gnu`; "
+            "neither ABI choice links here, so both are safe compile-only comparisons",
+            text,
+        )
+        self.assertIn(
+            "Accepts `MODERN_ABI=apcs-gnu` for the same compile-only comparison "
+            "use as `expansion-modern-cohort` above.",
+            text,
+        )
+
+    def test_config_identity_carries_apcs_gnu_compile_only_caveat(self):
+        text = self._config_identity_text()
+        self.assertIn("accepted only by the compile-only", text)
+        self.assertIn("requires `MODERN_ABI=aapcs` and fails fast", text)
+
+    def test_no_hardcoded_cohort_or_all_object_counts_remain(self):
+        text = self._framework_support_text()
+        for stale_number_phrase in ("24 total", "450 objects"):
+            with self.subTest(phrase=stale_number_phrase):
+                self.assertNotIn(stale_number_phrase, text)
+
+
+class RealMakeDryRunABIContractProbeTests(unittest.TestCase):
+    """Real, executed `make -n` (dry-run, never invokes a recipe) probes
+    against this repository's actual modern.mk -- not a simulated or
+    equivalent source-level stand-in -- proving the documented ABI
+    contract is what the build system actually enforces today. `-n`
+    guarantees no compiler/assembler/linker command is ever run; the
+    linked-goal guard in modern.mk is evaluated during Makefile parsing,
+    before any recipe would even be dry-run-printed."""
+
+    def _run(self, *args, timeout=60):
+        return subprocess.run(
+            ["make", "-n", *args],
+            cwd=REAL_REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
+    def test_linked_elf_apcs_gnu_fails_fast_without_linking(self):
+        result = self._run(
+            "expansion-modern-elf", "MODERN_CONFIG=debug", "MODERN_ABI=apcs-gnu",
+        )
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        combined = result.stdout + result.stderr
+        self.assertIn("requires MODERN_ABI=aapcs", combined)
+        self.assertIn("apcs-gnu objects are", combined)
+        # The guard must fire before any compiler/linker command line is
+        # ever dry-run-printed for this goal.
+        self.assertNotIn("arm-none-eabi-gcc", combined)
+        self.assertNotIn("arm-none-eabi-ld", combined)
+
+    def test_linked_elf_aapcs_dry_run_does_not_fail_fast(self):
+        result = self._run(
+            "expansion-modern-elf", "MODERN_CONFIG=debug", "MODERN_ABI=aapcs",
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("requires MODERN_ABI=aapcs", result.stdout + result.stderr)
+
+    def test_cohort_apcs_gnu_compile_only_dry_run_succeeds(self):
+        result = self._run(
+            "expansion-modern-cohort", "MODERN_CONFIG=debug", "MODERN_ABI=apcs-gnu",
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_all_apcs_gnu_compile_only_dry_run_succeeds(self):
+        result = self._run(
+            "expansion-modern-all", "MODERN_CONFIG=debug", "MODERN_ABI=apcs-gnu",
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+# ---------------------------------------------------------------------------
 # Static Makefile-target database fixtures (never executes `make`)
 # ---------------------------------------------------------------------------
 

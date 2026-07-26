@@ -147,6 +147,45 @@ STALE_PHRASE_RULES = [
         "stale claim: hardcoded modern-ELF object count -- describe "
         "qualitatively and point at `make print-MODERN_ALL_OBJECTS` instead",
     ),
+    # Acceptance-review finding (issues #7/#17 docs contract fixup):
+    # docs/framework-support.md hardcoded MODERN_COHORT_OBJECTS/
+    # MODERN_ALL_OBJECTS counts (21 C + 3 asm = 24; 450) that, unlike
+    # quickstart.md's already-fixed wording above, still risked drifting
+    # out of sync with modern.mk. Replaced with the same
+    # `make print-<VAR>`-only pattern used for the phrases above; these
+    # exact phrases must never reappear verbatim.
+    (
+        re.compile(re.escape(
+            "21 `src/*.c` objects + 3 handwritten-assembly objects, 24 total"
+        )),
+        "stale claim: hardcoded cohort object count (21 C + 3 asm = 24 total) -- "
+        "describe qualitatively and point at `make print-MODERN_COHORT_C_OBJECTS`/"
+        "`print-MODERN_COHORT_ASM_OBJECTS`/`print-MODERN_COHORT_OBJECTS` instead",
+    ),
+    (
+        re.compile(re.escape("handwritten asm: 450 objects as of this audit")),
+        "stale claim: hardcoded full-source object count (450) -- describe "
+        "qualitatively and point at `make print-MODERN_ALL_C_OBJECTS`/"
+        "`print-MODERN_ALL_DATA_OBJECTS`/`print-MODERN_ALL_ASM_OBJECTS`/"
+        "`print-MODERN_ALL_OBJECTS` instead",
+    ),
+    # Acceptance-review finding: docs/framework-support.md's
+    # expansion-modern-elf row previously listed `MODERN_ABI=<aapcs|apcs-gnu>`
+    # as if both ABIs were valid for a *linked* target. modern.mk's
+    # MODERN_LINKED_GOALS guard fails fast on anything but aapcs for every
+    # linked/ROM/runtime-gate target (expansion-modern-elf/-rom/
+    # -boot-check/-linker-check/...); apcs-gnu is compile-only
+    # (expansion-modern-cohort/-all layout comparison). This exact
+    # ambiguous phrasing must never reappear.
+    (
+        re.compile(re.escape(
+            r"expansion-modern-elf MODERN_CONFIG=<debug\|release> MODERN_ABI=<aapcs\|apcs-gnu>"
+        )),
+        "stale/incorrect claim: expansion-modern-elf (and every other linked modern "
+        "output) does not accept MODERN_ABI=apcs-gnu -- modern.mk's linked-goal guard "
+        "requires MODERN_ABI=aapcs and fails fast otherwise; apcs-gnu is compile-only "
+        "(expansion-modern-cohort/-all layout comparison only)",
+    ),
 ]
 
 FENCE_RE = re.compile(r"^(```+|~~~+)")

@@ -318,6 +318,97 @@ not assert GitHub issue #17's final state, does not claim a full ROM
 build was run, and does not supersede the "Remaining follow-ups" below,
 which are unchanged by this round.
 
+## Acceptance follow-up: framework-support.md ABI/object-count corrections
+
+**Status: candidate fix for a subsequent acceptance-review finding, not a
+re-closure claim.** An acceptance pass over this branch found three
+factual defects introduced by the governance-establishing commit that
+followed the "Verifier finding follow-up" round directly above -- notably,
+the paragraph in that section asserting `docs/framework-support.md` was
+"already correct" and needed "no edit" is **superseded** by this section:
+
+1. **Linked-output ABI misstatement.** `docs/framework-support.md`'s
+   `expansion-modern-elf` row listed
+   `` MODERN_ABI=<aapcs\|apcs-gnu> `` as if both ABIs were valid for a
+   *linked* target. They are not: `modern.mk`'s `MODERN_LINKED_GOALS`
+   guard (the block enforcing AAPCS for `expansion-modern-elf`,
+   `-rom`, `-boot-check`, `-linker-check`, and every target that
+   transitively depends on them) fails fast on anything but
+   `MODERN_ABI=aapcs`. `apcs-gnu` is compile-only, valid only for
+   `expansion-modern-cohort`/`expansion-modern-all` layout comparison.
+2. **Reintroduced hardcoded object counts.** The same commit hardcoded
+   `MODERN_COHORT_OBJECTS`/`MODERN_ALL_OBJECTS` counts (21 C + 3 asm = 24;
+   450) directly into `docs/framework-support.md`'s cohort/all rows --
+   the exact drift risk the "Verifier finding follow-up" round above had
+   already fixed in `docs/quickstart.md`, but did not catch here because
+   the numbers happened to still be numerically correct at review time.
+3. **No compile-only caveat in `docs/config_identity.md`.** Its
+   `MODERN_ABI` settings-reference row listed `aapcs`, `apcs-gnu` as
+   supported values with no note that `apcs-gnu` is accepted only by the
+   compile-only cohort/all targets.
+
+**Fix:** `docs/framework-support.md`'s `expansion-modern-elf`/`-rom`/
+`-boot-check`/`-linker-check` rows now state `MODERN_ABI=aapcs` only, and
+an explicit "ABI contract" paragraph was added directly below the targets
+table spelling out the fail-fast behavior and pointing at a reproducible
+`make -n` dry-run. The cohort/all rows now point exclusively at
+`make print-MODERN_COHORT_C_OBJECTS`/`ASM_OBJECTS`/`OBJECTS` and
+`print-MODERN_ALL_C_OBJECTS`/`DATA_OBJECTS`/`ASM_OBJECTS`/`OBJECTS` --
+no replacement hardcoded number was written back in. `docs/
+config_identity.md` gained a matching caveat cross-linking to the same
+contract. `scripts/check_docs.py`'s `STALE_PHRASE_RULES` gained three
+more entries (the two removed count phrases plus the ambiguous
+dual-ABI `expansion-modern-elf` row text) so none of this can reappear
+silently, and `scripts/docs_check_tests/test_check_docs.py` gained
+`StaleFrameworkSupportABIRegressionTests` (stale-phrase regression),
+`ABIFactualDocContractTests` (reads the live doc files off disk and
+asserts the AAPCS-only/apcs-gnu-compile-only wording is actually present),
+and `RealMakeDryRunABIContractProbeTests` (real, executed `make -n`
+dry-run probes -- never a simulated/equivalent stand-in -- proving
+`modern.mk` itself rejects `MODERN_ABI=apcs-gnu` for
+`expansion-modern-elf` before any recipe would be dry-run-printed, and
+accepts it for `expansion-modern-cohort`/`-all`).
+
+Reproduce the fix and its evidence directly against this worktree:
+
+```bash
+# Full doc checker: 0 findings (60 Markdown files, including the three
+# new STALE_PHRASE_RULES entries from this round)
+python3 scripts/check_docs.py
+
+# Full doc unit test suite for this round (97 tests as of this round,
+# includes the 13 new ABI-contract/stale-phrase/real-make-probe tests)
+python3 -m unittest discover -s scripts/docs_check_tests -v
+
+# The same real make -n dry-run probe the new unittest exercises,
+# reproduced directly: fails fast, never reaches a compiler/linker
+make -n expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit=$?"
+
+# The compile-only counterpart: apcs-gnu is accepted here (dry run only)
+make -n expansion-modern-cohort MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit=$?"
+make -n expansion-modern-all MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit=$?"
+
+# Current, actual object counts (this is what framework-support.md now
+# tells the reader to reproduce themselves, instead of hardcoding a
+# number -- expect the same 21/3/24/375/72/3/450 split as the prior
+# round's table above, but never re-typed into an authoritative doc)
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_C_OBJECTS
+make print-MODERN_ALL_DATA_OBJECTS
+make print-MODERN_ALL_ASM_OBJECTS
+make print-MODERN_ALL_OBJECTS
+
+# No trailing-whitespace/conflict-marker regressions in this change
+git diff --check
+```
+
+This section documents the fix of a follow-on acceptance finding. It
+does not assert GitHub issue #17's final state, does not claim a full
+ROM build was run, and does not supersede the "Remaining follow-ups"
+below, which are unchanged by this round.
+
 ## Remaining follow-ups (explicitly not closed by this work)
 
 - **Issue #10** -- typed content-ID contracts, engine limits, and

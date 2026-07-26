@@ -49,16 +49,34 @@ name.
 | --- | --- | --- | --- |
 | `make` / `make all` | Modern release AAPCS ROM, boot-verified: `build/expansion-modern/release/aapcs/fireemblem8.gba` | Yes | Yes |
 | `make expansion-modern-toolchain-check` | Verifies the modern compiler/assembler/flags resolve; no build output | No | No |
-| `make expansion-modern-cohort` | Compile-only modern objects for the fast dependency-closure subset (`MODERN_COHORT_OBJECTS` in `modern.mk`: currently 21 `src/*.c` objects + 3 handwritten-assembly objects, 24 total -- reproduce with `make print-MODERN_COHORT_OBJECTS`) | No | No |
-| `make expansion-modern-all` | Compile-only modern objects for the full currently-supported source set (`MODERN_ALL_OBJECTS` in `modern.mk`, `wildcard`-derived from `src/*.c`/`src/data/**/*.c` + handwritten asm: 450 objects as of this audit -- reproduce with `make print-MODERN_ALL_OBJECTS`); this count drifts as source files are added/removed and is not re-verified on every unrelated edit -- treat the command, not this number, as authoritative | No | No |
-| `make expansion-modern-elf MODERN_CONFIG=<debug\|release> MODERN_ABI=<aapcs\|apcs-gnu>` | Linked modern ELF + map | No | No |
-| `make expansion-modern-rom MODERN_CONFIG=... MODERN_ABI=...` | Header-verified modern ROM | Yes | No |
-| `make expansion-modern-boot-check MODERN_CONFIG=... MODERN_ABI=...` | Modern ROM + deterministic boot-fingerprint verification (frames 0/60/120) | Yes | Yes |
-| `make expansion-modern-linker-check MODERN_CONFIG=... MODERN_ABI=...` | Boot-check plus budget/shift/overlay/title-fingerprint gates | Yes | Yes |
+| `make expansion-modern-cohort` | Compile-only modern objects for the fast dependency-closure subset (`MODERN_COHORT_OBJECTS` in `modern.mk`, a `src/*.c` subset plus a small set of handwritten-assembly objects; reproduce the current split with `make print-MODERN_COHORT_C_OBJECTS`/`print-MODERN_COHORT_ASM_OBJECTS`/`print-MODERN_COHORT_OBJECTS` -- treat those commands, not any number written here, as authoritative). Accepts `MODERN_ABI=aapcs` (default) or `MODERN_ABI=apcs-gnu`; neither ABI choice links here, so both are safe compile-only comparisons -- see the ABI contract note below the table. | No | No |
+| `make expansion-modern-all` | Compile-only modern objects for the full currently-supported source set (`MODERN_ALL_OBJECTS` in `modern.mk`, `wildcard`-derived from `src/*.c`/`src/data/**/*.c` + handwritten asm; reproduce the current split with `make print-MODERN_ALL_C_OBJECTS`/`print-MODERN_ALL_DATA_OBJECTS`/`print-MODERN_ALL_ASM_OBJECTS`/`print-MODERN_ALL_OBJECTS`); this drifts as source files are added/removed and is not re-verified on every unrelated edit -- treat the command, not any number, as authoritative. Accepts `MODERN_ABI=apcs-gnu` for the same compile-only comparison use as `expansion-modern-cohort` above. | No | No |
+| `make expansion-modern-elf MODERN_CONFIG=<debug\|release> MODERN_ABI=aapcs` | Linked modern ELF + map. `aapcs` is the only ABI this (or any other linked/ROM/runtime target below) accepts -- `MODERN_ABI=apcs-gnu` fails fast in `modern.mk`'s linked-goal guard instead of producing an EABI5-incompatible link; see the ABI contract note below the table. | No | No |
+| `make expansion-modern-rom MODERN_CONFIG=... MODERN_ABI=aapcs` | Header-verified modern ROM | Yes | No |
+| `make expansion-modern-boot-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Modern ROM + deterministic boot-fingerprint verification (frames 0/60/120) | Yes | Yes |
+| `make expansion-modern-linker-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Boot-check plus budget/shift/overlay/title-fingerprint gates | Yes | Yes |
 | `make legacy` / `make fireemblem8.gba` | Archival agbcc `fireemblem8.gba` | Yes | No (agbcc, fetched on first use) |
 | `make clean` / `make clean_fast` | Removes build artifacts (see [`README.md`](../README.md)) | — | — |
 | `make generated-data-validate` / `-generate` / `-check` / `-test` | Structured content authoring (see [`docs/generated_data_tutorial.md`](generated_data_tutorial.md)) | No | No |
 | `python3 -m scripts.upstream_port {scan,drift,report,verify,...}` | Upstream-drift tracking (see [`docs/upstream-porting.md`](upstream-porting.md)) | No for `scan`/`drift`/`report`; `verify` builds the full gate set | No for `scan`/`drift`/`report`; depends on the gate set for `verify` |
+
+**ABI contract:** `MODERN_ABI=aapcs` is the only supported choice for every
+linked, ROM-producing, or runtime-gate target above (`expansion-modern-elf`,
+`-rom`, `-boot-check`, `-linker-check`, and every target that transitively
+depends on them, e.g. `-savefmt-check`/`-title-check`/`-debugtools-*-check`/
+`-budget`/`-budget-check`/`-relocs`/`-overlay-audit`/`-shifted-check`).
+Requesting `MODERN_ABI=apcs-gnu` for any of them fails fast in `modern.mk`
+(`... requires MODERN_ABI=aapcs; ... apcs-gnu objects are incompatible with
+EABI5 newlib/libgcc`) rather than silently producing a broken link --
+reproduce this yourself with
+`make -n expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=apcs-gnu`
+(dry-run; the error still fires before any recipe would run). The **only**
+targets that accept `MODERN_ABI=apcs-gnu` are the compile-only
+`expansion-modern-cohort`/`expansion-modern-all` object targets above, for
+cross-ABI struct-layout comparison (see
+[`docs/save_format.md`](save_format.md#cross-compiler-persisted-struct-layout-compatibility));
+neither of those targets links, so apcs-gnu objects never reach a linker
+there.
 
 Every `make TARGET` invocation on this page is checked by
 [`scripts/check_docs.py`](../scripts/check_docs.py) (`parse_make_targets`/
