@@ -193,22 +193,22 @@ similarity alone.
 | `debugtools-{prep,timer,ch4-prep-launch}-*` (issue #11) | Additional debug-tool launcher/hotkey/diagnostics behavior and their release-inert negatives -- see `docs/debugtools.md` | debug + release, per file |
 | `savecompat-current.json` / `savecompat-dialog-back.json` / `savecompat-erase.json` | Save-compatibility classification, non-destructive Back, and confirmed Erase across all `SaveCompatState` values | debug + release |
 | `savesuspend-resume-modern-debug.json` | Full write -> soft-reset -> reload round trip: an ordinary Map Menu **Suspend**, a real soft-reset key combo, and **Resume** through `ReadSuspendSave()`, with `gPlaySt.chapterIndex`/`faction`/cursor and a unit-item probe proving the exact manually-saved state (not the earlier auto-save) was restored | debug only (depends on the debug-only Chapter 2 launcher) |
+| `combat.json` (issue #13) | The chapter's own scripted `FIGHT` in Chapter 4 resolved by the REAL battle engine (`Event3F_ScriptBattle`, `EV_CMD_SCRIPT_BATTLE`): the target enemy `gUnitArrayRed[0].curHP` (`0x0202eba7`) transitions `15 -> 0` AT the SCRIPT_BATTLE opcode, then `pCharacterData` (`0x0202eb94`) is cleared (death) -- fixed EWRAM probes, never framebuffer/timing | debug only (debug-only Fast Boot launcher) |
+| `save-load.json` (issue #13) | Normal (non-Suspend) game-save write + load: SaveMenu New Game -> slot 0 write, a real A+B+SELECT+START soft reset, then SaveMenu RESTART -> `PostSaveMenuHandler` -> `ReadGameSave(0)`; `playthroughIdentifier` (`0x020210bc`)/`chapterModeIndex` (`0x020210bf`) go `1 -> 0 -> 1`, `gameSaveSlot` (`0x020210b0`) `== 0`, and before/after whole-SRAM hashes differ | debug only (debug-calibrated soft-reset) |
+| `debugtools-ch4-prep-positive-modern-debug.json` (issue #11) | Live prep-screen arrival + SELECT+B prep hotkey: rests `gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` (`0x080905d1`), fires the hotkey; `prepScreenObservedCount` (`0x02031854`) `0 -> 1`, `PLAY_FLAG_PREPSCREEN` held throughout, idempotent 2nd press, safe return to prep | debug only (debug-only launcher + hotkey) |
 
-New-game and chapter/map arrival are no longer stubs -- see the coverage
-table above (`new-game.json` and the reused `debugtools-hub-modern-*.json`
-evidence). Only `combat.stub.json` and `save.stub.json` remain disabled,
-each with a specific, evidenced blocker recorded in the stub file itself (not
-a generic "not attempted yet" placeholder) -- see
-`reports/gba_playtest_issue13_closure.md` for the full investigation trace,
-including exactly how far a debug-launcher-plus-ordinary-input route was
-pushed before it stalled. The deeper shiftcheck material referenced by that
-investigation is a GBAHawk full-game movie that is external, requires a
-different emulator/BIOS, and is not distributed here. A savestate or save
-binary remains prohibited as a shortcut past either blocker. Enabling a stub
-therefore requires either resolving its documented blocker or discovering a
-different reviewed, deterministic clean-boot route, plus a checkpoint that
-independently proves the intended state -- framebuffer/timing similarity
-alone is never sufficient.
+New-game, chapter/map arrival, combat, and normal save/load are all enabled,
+verified scenarios -- see the coverage table above. **No `*.stub.json` files
+remain in the repository** (the `scenarios/stubs/` directory is gone):
+`combat.json` and `save-load.json` replaced the former combat/save stubs, and
+`debugtools-ch4-prep-positive-modern-debug.json` proves the live prep-screen
+arrival. `tools/gba-playtest/tests/test_stub_scenarios.py` now asserts that no
+stub scenarios remain and that `combat.json`/`save-load.json` are enabled with
+semantic (non-framebuffer) checkpoints; no test treats a stub as success. A
+savestate or save binary remains prohibited as a shortcut: every scenario is
+reached from a clean boot and proves the intended state via a semantic probe
+(an EWRAM/SRAM field or a whole-SRAM hash), never framebuffer/timing
+similarity alone.
 
 ### Supported CI host matrix
 

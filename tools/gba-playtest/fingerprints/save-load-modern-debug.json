@@ -1,0 +1,127 @@
+{
+  "checkpoints": [
+    {
+      "frame": 1140,
+      "name": "pre-write-empty-slots",
+      "probes": [],
+      "sram_hash": "fnv1a64-sram-normalized:1c4a111733183e54"
+    },
+    {
+      "frame": 1400,
+      "name": "new-game-created",
+      "probes": [
+        {
+          "address": "0x020210b0",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bc",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210bf",
+          "size": 1,
+          "value": "0x01"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:678951424638f3e1"
+    },
+    {
+      "frame": 2550,
+      "name": "post-soft-reset-reinit",
+      "probes": [
+        {
+          "address": "0x020210b0",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bc",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bf",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3300,
+      "name": "restart-load-complete",
+      "probes": [
+        {
+          "address": "0x020210b0",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bc",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210bf",
+          "size": 1,
+          "value": "0x01"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "dba8a2c81c39a447078d35d400523d3ec903537b",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "save-load"
+}

@@ -15,6 +15,8 @@ MODERN_GOALS := \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
+	expansion-modern-combat-check \
+	expansion-modern-saveload-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -450,6 +452,8 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
+	expansion-modern-combat-check \
+	expansion-modern-saveload-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -984,6 +988,8 @@ MODERN_LINKED_GOALS := \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
+	expansion-modern-combat-check \
+	expansion-modern-saveload-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
@@ -1749,6 +1755,21 @@ endif
 # in-scope deterministic path to a live prep screen.
 MODERN_DEBUGTOOLS_PREP_RELEASE_SCENARIO := tools/gba-playtest/scenarios/debugtools-prep-hub-modern-release.json
 MODERN_DEBUGTOOLS_PREP_RELEASE_FINGERPRINT := tools/gba-playtest/fingerprints/debugtools-prep-hub-modern-release.json
+# Issue #11 closure: the live prep-screen-arrival scenario the debug branch
+# below now actually runs (it was an explicit residual before). Boots the
+# debug-only "Fast Boot: Ch4 Prep" launcher, traverses the Chapter 4 world
+# map (L cursor-jump + A node-confirm), skips the beginning event/scripted
+# battle to the real CALL(EventScr_CommonPrep) PREP opcode, rests
+# gProcScr_SALLYCURSOR in PrepScreenProc_MapIdle, and fires the SELECT+B
+# prep hotkey -- proving gDebugToolsProbe.prepScreenObservedCount 0->1, the
+# hub opening, its idempotent reentrancy, and a safe return to the still-live
+# prep. Debug-only: depends on the debug-only launcher (compiled out of a
+# release build), which is why the release branch keeps the compiled-out
+# mirror instead. Boots from blank SRAM (its own deterministic WipeSram path,
+# verified reproducible), so unlike the ch4prep launcher check it needs no
+# pre-seeded fixture. See reports/debugtools_issue11_closure.md.
+MODERN_DEBUGTOOLS_PREP_POSITIVE_SCENARIO := tools/gba-playtest/scenarios/debugtools-ch4-prep-positive-modern-debug.json
+MODERN_DEBUGTOOLS_PREP_POSITIVE_FINGERPRINT := tools/gba-playtest/fingerprints/debugtools-ch4-prep-positive-modern-debug.json
 
 ifeq ($(MODERN_CONFIG),release)
 expansion-modern-debugtools-prep-check: expansion-modern-boot-preflight expansion-modern-rom
@@ -1768,9 +1789,22 @@ expansion-modern-debugtools-prep-check: expansion-modern-boot-preflight expansio
 	@printf 'Modern ROM debugtools-prep-check passed: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 else
-expansion-modern-debugtools-prep-check:
-	@printf 'Modern ROM debugtools-prep-check skipped: no live prep-screen-arrival scenario yet for config=%s -- the Ch4 Prep launchers boot-commit is proven live (see expansion-modern-debugtools-ch4prep-check), but reaching the actual live prep screen still needs undiscovered world-map input timing, an explicit issue #11 closure residual (see docs/debugtools.md "Remaining #11 scope" and reports/debugtools_issue11_closure.md); host C tests cover mask/call-site/registration correctness instead\n' \
-		'$(MODERN_CONFIG)'
+expansion-modern-debugtools-prep-check: expansion-modern-boot-preflight expansion-modern-rom
+	@if [ ! -f "$(MODERN_DEBUGTOOLS_PREP_POSITIVE_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_DEBUGTOOLS_PREP_POSITIVE_FINGERPRINT)" ]; then \
+		printf '%s\n' \
+			"error: missing debugtools prep-positive scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_DEBUGTOOLS_PREP_POSITIVE_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_DEBUGTOOLS_PREP_POSITIVE_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_DEBUGTOOLS_PREP_POSITIVE_SCENARIO)" \
+		--expected "$(MODERN_DEBUGTOOLS_PREP_POSITIVE_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM debugtools-prep-check passed (live prep MapIdle SELECT+B hotkey): %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 endif
 
 # Issue #11 slice 1 review-fix regression check: proves proc->timer_idle
@@ -1883,6 +1917,80 @@ expansion-modern-savefmt-check: expansion-modern-boot-preflight expansion-modern
 	@printf 'Modern ROM savefmt-check passed: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 
+# Combat runtime scenario (issue #13 closure). Boots the debug-only "Fast
+# Boot: Ch4 Prep" launcher, traverses the Chapter 4 world map, and captures
+# the chapter's own scripted FIGHT(CHARACTER_ARTUR, ...) (EventScr_Ch4_
+# BeginningScene, src/events/ch4-eventscript.h) resolved by the real battle
+# engine (Event3F_ScriptBattle): the target enemy gUnitArrayRed[0]'s curHP
+# transitions 15->0 at the SCRIPT_BATTLE opcode (before the following KILL),
+# then the unit is removed -- exact pre/post HP plus death, proven by fixed
+# EWRAM unit probes, never framebuffer/timing. Debug-only: depends on the
+# debug-only launcher (compiled out of release). Blank-SRAM boot, no fixture.
+# See reports/gba_playtest_issue13_closure.md "Combat".
+MODERN_COMBAT_SCENARIO := tools/gba-playtest/scenarios/combat.json
+MODERN_COMBAT_FINGERPRINT := tools/gba-playtest/fingerprints/combat-modern-debug.json
+
+ifeq ($(MODERN_CONFIG),debug)
+expansion-modern-combat-check: expansion-modern-boot-preflight expansion-modern-rom
+	@if [ ! -f "$(MODERN_COMBAT_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_COMBAT_FINGERPRINT)" ]; then \
+		printf '%s\n' "error: missing combat scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_COMBAT_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_COMBAT_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_COMBAT_SCENARIO)" \
+		--expected "$(MODERN_COMBAT_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM combat-check passed (Ch4 scripted FIGHT enemy HP 15->0 + death): %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+else
+expansion-modern-combat-check:
+	@printf 'Modern ROM combat-check skipped: the Ch4 scripted-FIGHT combat scenario boots via the debug-only Fast Boot launcher (compiled out for config=%s); a debug-launcher scenario is legitimately debug-only, and the release runtime matrix does not include a separate combat scenario -- see reports/gba_playtest_issue13_closure.md\n' \
+		'$(MODERN_CONFIG)'
+endif
+
+# Normal save/load runtime scenario (issue #13 closure). Reuses new-game.json's
+# clean-boot SaveMenu New Game -> slot 0 write, then a real A+B+SELECT+START
+# soft reset (RAM reinitialized), then the top-level SaveMenu RESTART item ->
+# PostSaveMenuHandler -> ReadGameSave(0) (src/savemenu.c) -- a genuine normal
+# game-save LOAD distinct from Suspend/ReadSuspendSave. Proven by the
+# playthroughIdentifier/chapterModeIndex discriminants going 1 (created) -> 0
+# (soft-reset cleared) -> 1 (loaded) plus before/after whole-SRAM hashes.
+# Debug-only: its soft-reset input timing is debug-calibrated, exactly as
+# savesuspend-resume-modern-debug.json is; release normal-save coverage is
+# provided by expansion-modern-newgame-check (the WriteGameSave write path)
+# and expansion-modern-savefmt-check (load classification). Needs the same
+# deterministic pre-seeded CURRENT-format SRAM fixture as new-game.json.
+MODERN_SAVELOAD_SCENARIO := tools/gba-playtest/scenarios/save-load.json
+MODERN_SAVELOAD_FINGERPRINT := tools/gba-playtest/fingerprints/save-load-modern-debug.json
+
+ifeq ($(MODERN_CONFIG),debug)
+expansion-modern-saveload-check: expansion-modern-boot-preflight expansion-modern-rom \
+		$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)
+	@if [ ! -f "$(MODERN_SAVELOAD_SCENARIO)" ] || \
+		[ ! -f "$(MODERN_SAVELOAD_FINGERPRINT)" ]; then \
+		printf '%s\n' "error: missing save-load scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(MODERN_SAVELOAD_SCENARIO)" >&2; \
+		printf '  fingerprint: %s\n' "$(MODERN_SAVELOAD_FINGERPRINT)" >&2; \
+		exit 1; \
+	fi
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_SAVELOAD_SCENARIO)" \
+		--sram-image "$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)" \
+		--expected "$(MODERN_SAVELOAD_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM saveload-check passed (SaveMenu RESTART -> ReadGameSave(0)): %s (config=%s abi=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+else
+expansion-modern-saveload-check:
+	@printf 'Modern ROM saveload-check skipped: the SaveMenu RESTART -> ReadGameSave(0) normal-load scenario uses a debug-calibrated soft-reset input sequence (as savesuspend-resume-modern-debug.json does) for config=%s; release normal-save coverage is provided by expansion-modern-newgame-check (write) and expansion-modern-savefmt-check (load classification) -- see reports/gba_playtest_issue13_closure.md\n' \
+		'$(MODERN_CONFIG)'
+endif
+
 MODERN_BUDGET_REPORT ?= reports/linker-budget/modern-$(MODERN_CONFIG).json
 MODERN_BUDGET_SCRIPT := scripts/linker_report/budget.py
 
@@ -1961,6 +2069,8 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-debugtools-prep-check \
 		expansion-modern-debugtools-ch4prep-check \
 		expansion-modern-newgame-check \
+		expansion-modern-combat-check \
+		expansion-modern-saveload-check \
 		expansion-modern-savefmt-check \
 		expansion-modern-shifted-check
 	"$(PYTHON)" scripts/shiftcheck/scan_build_addrs.py \
@@ -1979,6 +2089,8 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-debugtools-prep-check \
 	expansion-modern-debugtools-ch4prep-check \
 	expansion-modern-newgame-check \
+	expansion-modern-combat-check \
+	expansion-modern-saveload-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \

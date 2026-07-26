@@ -1,0 +1,70 @@
+{
+  "checkpoints": [
+    {
+      "frame": 3285,
+      "name": "enemy-alive-before-fight",
+      "probes": [
+        {
+          "address": "0x0202eb94",
+          "size": 4,
+          "value": "0x088fe4a8"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x0f"
+        }
+      ]
+    },
+    {
+      "frame": 3296,
+      "name": "artur-scripted-fight-lethal-hit",
+      "probes": [
+        {
+          "address": "0x0202eb94",
+          "size": 4,
+          "value": "0x088fe4a8"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3305,
+      "name": "enemy-dead-removed-by-kill",
+      "probes": [
+        {
+          "address": "0x0202eb94",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "dba8a2c81c39a447078d35d400523d3ec903537b",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "combat"
+}

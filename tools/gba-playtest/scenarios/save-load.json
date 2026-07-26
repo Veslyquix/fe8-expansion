@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "name": "save-load",
+  "description": "Deterministic clean-boot NORMAL game-save LOAD proof (issue #13 Part C). Phase A replays new-game.json's exact input verbatim (title A/START cadence at 90..550, then three ordinary A confirmations at 950/1050/1150: New Game -> Easy -> first empty slot) to CREATE a Prologue game save in slot 0 via SaveMenuWriteNewGame()/WriteGameSave(); 'pre-write-empty-slots' (frame 1140) captures the pre-write whole-SRAM hash and 'new-game-created' (frame 1400) captures the post-write hash -- they differ, proving the slot-0 write actually happened -- while its probes read gPlaySt.gameSaveSlot=0x00, chapterIndex=0x00 (CHAPTER_L_PROLOGUE), faction=0x00 (FACTION_BLUE), and the non-zero playthrough discriminants playthroughIdentifier=0x01 and chapterModeIndex=0x01 (CHAPTER_MODE_COMMON, set because the game was created on Easy/tutorial). Phase B holds the A+B+SELECT+START GBA soft-reset combo for a wide window (frames 1600..1680); 'post-soft-reset-reinit' (frame 2550) proves RAM was reinitialised -- gPlaySt.playthroughIdentifier and chapterModeIndex are BOTH back to 0x00, i.e. NOT the loaded values yet, separating a genuine load from mere RAM retention. Phase C skips the re-boot logos/title with START presses only (START is inert on the Save Menu main loop, so no START can select a menu item); Phase D then presses A once to select RESTART -- which InitSaveMenuChoice() lists at cursor index 0 when a game save is present and no suspend save exists -- and A again to confirm slot 0. Per src/savemenu.c PostSaveMenuHandler, RESTART (bit 0x02) matches the `main_sel_bitfile & 0x82` branch that calls ReadGameSave(proc->sus_slot) + SetNextGameActionId(sus_slot+1) -- a NORMAL game-save load, DISTINCT from the RESUME branch (`main_sel_bitfile & 1` -> ReadSuspendSave). 'restart-load-complete' (frame 3300) proves ReadGameSave(0) repopulated gPlaySt from slot 0: gameSaveSlot=0x00, chapterIndex=0x00, faction=0x00, and the discriminants playthroughIdentifier=0x01 / chapterModeIndex=0x01 are back exactly as saved -- semantic state, not a framebuffer. Uses only the check-time-generated CURRENT-format SRAM fixture (write-deterministic-current) as starting SRAM; no savestate, save file, or raw SRAM write is used and no binary is committed.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 350,
+      "end": 355,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 415,
+      "end": 420,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 480,
+      "end": 485,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 545,
+      "end": 550,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 950,
+      "end": 956,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1050,
+      "end": 1056,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1150,
+      "end": 1156,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1600,
+      "end": 1680,
+      "keys": [
+        "A",
+        "B",
+        "SELECT",
+        "START"
+      ]
+    },
+    {
+      "start": 1780,
+      "end": 1785,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1845,
+      "end": 1850,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1910,
+      "end": 1915,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1975,
+      "end": 1980,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2040,
+      "end": 2045,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2105,
+      "end": 2110,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2170,
+      "end": 2175,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2235,
+      "end": 2240,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2600,
+      "end": 2606,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2900,
+      "end": 2906,
+      "keys": [
+        "A"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 1140,
+      "framebuffer": false,
+      "name": "pre-write-empty-slots",
+      "probes": [],
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "length": 9,
+          "offset": 29640
+        },
+        {
+          "length": 2,
+          "offset": 29650
+        }
+      ]
+    },
+    {
+      "frame": 1400,
+      "framebuffer": false,
+      "name": "new-game-created",
+      "probes": [
+        {
+          "address": "0x020210b0",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210bc",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210bf",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ],
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "length": 9,
+          "offset": 29640
+        },
+        {
+          "length": 2,
+          "offset": 29650
+        }
+      ]
+    },
+    {
+      "frame": 2550,
+      "framebuffer": false,
+      "name": "post-soft-reset-reinit",
+      "probes": [
+        {
+          "address": "0x020210b0",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210bc",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210bf",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3300,
+      "framebuffer": false,
+      "name": "restart-load-complete",
+      "probes": [
+        {
+          "address": "0x020210b0",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210bc",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210bf",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    }
+  ]
+}

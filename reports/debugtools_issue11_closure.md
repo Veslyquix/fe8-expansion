@@ -28,10 +28,20 @@ make expansion-modern-debugtools-map-check       PREFIX=arm-none-eabi- MODERN_CO
 make expansion-modern-debugtools-map-check       PREFIX=arm-none-eabi- MODERN_CONFIG=release
 make expansion-modern-debugtools-timer-check     PREFIX=arm-none-eabi- MODERN_CONFIG=debug
 make expansion-modern-debugtools-timer-check     PREFIX=arm-none-eabi- MODERN_CONFIG=release
+# prep-check DEBUG branch now runs the live prep-positive scenario
+# (debugtools-ch4-prep-positive-modern-debug.json): live prep + SELECT+B
+# hotkey. RELEASE branch verifies the compiled-out prep-hub negative.
 make expansion-modern-debugtools-prep-check      PREFIX=arm-none-eabi- MODERN_CONFIG=debug
 make expansion-modern-debugtools-prep-check      PREFIX=arm-none-eabi- MODERN_CONFIG=release
 make expansion-modern-debugtools-ch4prep-check   PREFIX=arm-none-eabi- MODERN_CONFIG=debug
 make expansion-modern-debugtools-ch4prep-check   PREFIX=arm-none-eabi- MODERN_CONFIG=release
+
+# Direct verify of the live prep-positive scenario (debug branch of prep-check)
+python3 tools/gba-playtest/gba_playtest.py verify \
+  --rom build/expansion-modern/debug/aapcs/fireemblem8.gba \
+  --scenario tools/gba-playtest/scenarios/debugtools-ch4-prep-positive-modern-debug.json \
+  --expected tools/gba-playtest/fingerprints/debugtools-ch4-prep-positive-modern-debug.json \
+  --policy behavior
 ```
 
 ## WHAT checklist
@@ -85,7 +95,12 @@ make expansion-modern-debugtools-ch4prep-check   PREFIX=arm-none-eabi- MODERN_CO
   `gDebugToolsProbe.prepScreenObservedCount` only when a genuine, live
   `PrepScreenProc` is active. This directly targets the "特别是当前缺失的
   prep debug 行为证明" (prep debug behavior proof) gap named in this
-  sprint's brief.
+  sprint's brief -- and that gap is now **ACHIEVED**: the live scenario
+  `debugtools-ch4-prep-positive-modern-debug.json` drives a genuine,
+  engine-active Chapter 4 prep screen and fires SELECT+B there, so
+  `prepScreenObservedCount` (`0x02031854`) is observed transitioning
+  `0 -> 1` at runtime (see item 3 and "Live prep-screen arrival --
+  ACHIEVED" below).
 - Release symbol negative: `arm-none-eabi-nm` on the linked release ELF
   shows every `DebugTools_*` symbol as a trivial disabled stub (see
   "DONE evidence" for the exact command/output); `nm` on
@@ -97,12 +112,19 @@ make expansion-modern-debugtools-ch4prep-check   PREFIX=arm-none-eabi- MODERN_CO
   `debugtools-ch4-prep-launch-modern-release.json` all replay real input
   scripts against a release build and assert every probe stays
   `0x00000000` and the framebuffer is unaffected.
-- Residual (explicit, honest): a *live* runtime scenario reaching an
-  actually-active prep screen (so `prepScreenObservedCount` can read
-  nonzero) is not included -- see item 3 and "Explicit non-goals /
-  residual risks" below. The call site itself, its compile-time guards,
-  its disabled-path behavior, and its release-negative behavior are all
-  proven; only the live-runtime *positive* trigger is open.
+- **Live positive trigger -- ACHIEVED (was the residual here).** The live
+  runtime scenario `debugtools-ch4-prep-positive-modern-debug.json`
+  (enabled; host test
+  `tools/gba-playtest/tests/test_prep_positive_scenario.py`) reaches an
+  actually-active prep screen and fires SELECT+B there, so
+  `gDebugToolsProbe.prepScreenObservedCount` (`0x02031854`) is observed
+  going `0 -> 1` on the hotkey while `gPlaySt.chapterStateBits`
+  (`0x020210b8`) holds `PLAY_FLAG_PREPSCREEN` (`0x10`) throughout. The
+  call site's compile-time guards, disabled-path behavior, and
+  release-negative behavior remain proven as before; the live positive
+  trigger is now proven too. This is the DEBUG branch of
+  `expansion-modern-debugtools-prep-check` (see item 3 and "Live
+  prep-screen arrival -- ACHIEVED" below).
 
 ### 3. Fast boot/scenario launcher: safe lifecycle handoff + exactly-once probe/state evidence
 - Pre-existing: "Fast Boot: Chapter 2" (`src/debugtools_launcher.c`,
@@ -134,9 +156,29 @@ make expansion-modern-debugtools-ch4prep-check   PREFIX=arm-none-eabi- MODERN_CO
   `Proc_Goto(proc, LGAMECTRL_EXEC_BM)` in that branch, no
   `StartBattleMap`/`CallEvent`/`StartEvent`/`EventScr_*` reference, and the
   only `gGMData.units[]` write is the documented `location` field.
-- Residual: map arrival (the actual interactive Chapter 4 battle map/prep
-  screen) is not reached by this scenario -- see item 2's residual and
-  "Explicit non-goals / residual risks".
+- **Live prep-screen arrival -- ACHIEVED (was the residual here).** A
+  second, live scenario `debugtools-ch4-prep-positive-modern-debug.json`
+  (enabled; host test
+  `tools/gba-playtest/tests/test_prep_positive_scenario.py`) continues
+  past this launcher's boot-commit: it does the Chapter 4 world-map
+  traversal (an `L` cursor-jump + `A` node-confirm), skips the beginning
+  event/scripted battle to the real `CALL(EventScr_CommonPrep)` `PREP`
+  opcode, navigates the prep at-menu (`B` = "check map" ends the at-menu,
+  then `A` on the on-map menu) to rest `gProcScr_SALLYCURSOR` in
+  `PrepScreenProc_MapIdle` (`proc_idleCb` reads
+  `PrepScreenProc_MapIdle|Thumb = 0x080905d1`), and fires the SELECT+B
+  prep hotkey. Proven by exact EWRAM probes (semantic only,
+  `framebuffer:false`): `gPlaySt.chapterStateBits` (`0x020210b8`) `== 0x10`
+  (`PLAY_FLAG_PREPSCREEN`) throughout the prep; `prepScreenObservedCount`
+  (`0x02031854`) `0 -> 1` on SELECT+B; the hub opens (`hubOpenCount`
+  `0x02031818` `1 -> 2`, `sHubActive` `0x02031614` `0 -> 1`); a 2nd
+  SELECT+B is idempotent (`hubOpenCount` stays `2`, NOT `3`); the hub then
+  closes (`sHubActive -> 0`) with prep still live (`chapterStateBits`
+  still `0x10`) -- a safe return to prep. Gate: the DEBUG branch of
+  `expansion-modern-debugtools-prep-check`; the RELEASE branch is
+  unchanged (still verifies the compiled-out mirror
+  `debugtools-prep-hub-modern-release.json`). Debug-only because the
+  launcher + hotkey are compiled out of a release build.
 
 ### 4. Honest treatment of shipped actions (Weather/Fog)
 - Unchanged this closure: Weather/Fog (`src/debugtools_actions.c`) already
@@ -242,13 +284,15 @@ make expansion-modern-debugtools-ch4prep-check   PREFIX=arm-none-eabi- MODERN_CO
 ### 8. Documentation
 - `docs/debugtools.md`: title/intro reframed from "slices 1-2" to "issue
   #11 closure"; new sections "Fast Boot: Chapter 4 (Prep)" (mechanism +
-  hub-ordering rationale + playtest evidence + **explicit residual
-  boundary**), "Diagnostics: structured probe/log ring + non-fatal assert
-  record", "Five bounded validated tools" (+ host-executed evidence);
-  Result-codes table extended with the two new codes and their
-  renumbering-safety rationale; "Remaining #11 scope" rewritten to
-  describe *this closure's* honest residual (no longer a stale slice-1/2
-  deferred list) referencing this report.
+  hub-ordering rationale + playtest evidence, with the live prep-screen
+  arrival now **ACHIEVED** via
+  `debugtools-ch4-prep-positive-modern-debug.json`), "Diagnostics:
+  structured probe/log ring + non-fatal assert record", "Five bounded
+  validated tools" (+ host-executed evidence); Result-codes table
+  extended with the two new codes and their renumbering-safety rationale;
+  "Remaining #11 scope" updated so the live prep-screen arrival is
+  recorded as achieved (only the true non-goals -- `mgba_printf`/full
+  debugger/arbitrary editor -- remain) referencing this report.
 - `reports/debugtools_issue11_closure.md` (this file).
 
 ### 9. DONE verification + fix-before-commit
@@ -278,21 +322,24 @@ record (never attempted, by design, not because of a shortcut):
   design, matching the pre-existing slice-1 precedent) -- re-verified via
   `nm` (see below) for every symbol this closure added.
 
-Genuinely new residual risk from this closure's own scope (not carried
-over, disclosed honestly):
+Previously-disclosed residual from this closure's own scope, now
+**ACHIEVED** (recorded here for continuity, not as an open risk):
 
-- **Live prep-screen arrival is not captured by any runtime scenario.**
-  The boot-commit half of the Ch4-Prep launcher *is* proven live; the
-  world-map-navigation-to-prep-screen half is not, after a systematic (but
-  time-boxed) empirical search. This is the single largest residual this
-  report discloses. Risk if left unresolved: the prep hotkey's live
-  positive-trigger path stays proven only by its call site/compile-time/
-  release-negative evidence, not a live positive; `prepScreenObservedCount`
-  stays untested at runtime (though host/structurally sound). Suggested
-  next step for a future contributor: capture a short, isolated scenario
-  that starts *after* `gamecontrol-committed-chapter4-boot` and iterates
-  purely on world-map input timing (the boot-commit half no longer needs
-  re-discovery).
+- **Live prep-screen arrival -- ACHIEVED.** Both halves are now proven
+  live: the Ch4-Prep launcher's boot-commit
+  (`debugtools-ch4-prep-launch-modern-debug.json`) and the
+  world-map-navigation-to-prep-screen half plus the SELECT+B hotkey
+  (`debugtools-ch4-prep-positive-modern-debug.json`, host test
+  `tools/gba-playtest/tests/test_prep_positive_scenario.py`). The prep
+  hotkey's live positive-trigger path is proven by a live positive at
+  runtime: `gDebugToolsProbe.prepScreenObservedCount` (`0x02031854`) is
+  observed `0 -> 1` on SELECT+B while `gPlaySt.chapterStateBits`
+  (`0x020210b8`) holds `PLAY_FLAG_PREPSCREEN` (`0x10`); the hub open is
+  idempotent (a 2nd SELECT+B leaves `hubOpenCount` at `2`, not `3`) and
+  returns safely to a still-live prep. This is the DEBUG branch of
+  `expansion-modern-debugtools-prep-check`; the RELEASE branch still
+  verifies the compiled-out mirror. See "Live prep-screen arrival --
+  ACHIEVED" (item 3) for the full probe list.
 
 ## Fingerprint regeneration (explicit, reviewed)
 
@@ -395,16 +442,17 @@ $ make expansion-modern-debugtools-map-check     MODERN_CONFIG=debug   -> passed
 $ make expansion-modern-debugtools-map-check     MODERN_CONFIG=release -> passed, checkpoints=4
 $ make expansion-modern-debugtools-timer-check   MODERN_CONFIG=debug   -> passed, checkpoints=3
 $ make expansion-modern-debugtools-timer-check   MODERN_CONFIG=release -> skipped (documented no-op: dead code in release)
-$ make expansion-modern-debugtools-prep-check    MODERN_CONFIG=debug   -> skipped (actionable message: points at expansion-modern-debugtools-ch4prep-check + this report)
-$ make expansion-modern-debugtools-prep-check    MODERN_CONFIG=release -> passed, checkpoints=4
+$ make expansion-modern-debugtools-prep-check    MODERN_CONFIG=debug   -> passed (live prep MapIdle SELECT+B hotkey; prepScreenObservedCount 0->1)
+$ make expansion-modern-debugtools-prep-check    MODERN_CONFIG=release -> passed, checkpoints=4 (compiled-out prep-hub negative)
 $ make expansion-modern-debugtools-ch4prep-check MODERN_CONFIG=debug   -> passed, checkpoints=4 (NEW, live boot-commit proof)
 $ make expansion-modern-debugtools-ch4prep-check MODERN_CONFIG=release -> passed, checkpoints=4 (NEW)
 ```
 
-No dependency was silently skipped: the one intentional skip
-(`debugtools-prep-check` debug) prints an explicit, actionable diagnostic
-naming the exact residual (matches this report's own disclosure), not a
-silent pass.
+No dependency was silently skipped: the previously-skipped
+`debugtools-prep-check` debug branch now runs the live prep-positive
+scenario and passes; the one remaining intentional skip
+(`debugtools-timer-check` release) is documented dead-code-in-release, not
+a silent pass.
 
 ### Artifact guard / copyright
 

@@ -1,9 +1,0 @@
-{
-  "blocker": "See reports/gba_playtest_issue13_closure.md \"Save residual\" for the full investigation trace. Normal save/load round trips are already covered by two independent, enabled scenarios and are NOT what this stub blocks on: savesuspend-resume-modern-debug.json proves a full write->soft-reset->reload round trip through the ordinary Map Menu Suspend command and savemenu.c's own Resume path (see docs/save_format.md); new-game.json (this closure) proves an independent WriteGameSave/SaveMenuWriteNewGame-class SRAM write (a distinct code path from Suspend) via the ordinary top-level Save Menu, with its own before/after sram_hash proof. What remains specifically out of reach is a mid-game, non-Suspend \"regular\" Save distinct from both of those: FE7/8's own post-chapter-clear \"Would you like to save?\" flow is driven by StartSaveMenuPostChapter, which is still asm/-only in this codebase (include/functions.h's own \"// ??? StartSaveMenuPostChapter(???);\" placeholder) -- decompiling it is out of scope for this harness closure. The in-map Map Menu itself (Unit/Status/Guide/Options/Suspend, confirmed via live UI navigation for this closure) has no separate \"Save\" entry distinct from Suspend, so no ordinary-UI, clean-boot route to that specific call site exists today. A savestate, save file, or other generated binary remains prohibited as a shortcut. Enabling this stub requires either decompiling StartSaveMenuPostChapter and its call site, or discovering another ordinary-UI route to a genuinely distinct regular-Save write.",
-  "checkpoints": [],
-  "description": "Schema-ready placeholder for a distinct mid-chapter, non-Suspend regular Save.",
-  "disabled": true,
-  "frames": [],
-  "name": "save",
-  "schema_version": 1
-}

@@ -10,7 +10,8 @@ ring + non-fatal assert record); five bounded validated tools (unit,
 convoy, flag/chapter, RNG, save-state); and the playtest/host-test evidence
 that proves all of it. See `reports/debugtools_issue11_closure.md` for the
 frozen-checklist-to-code-to-test closure mapping, and "Remaining #11 scope"
-at the end of this document for the honest, narrow residual left open.
+at the end of this document for what otherwise remains (only the true
+non-goals -- `mgba_printf`/full debugger/arbitrary memory editor).
 
 ## Files
 
@@ -32,7 +33,8 @@ at the end of this document for the honest, narrow residual left open.
 | `src/debugtools_diag.c` (closure) | Diagnostics foundation: bounded log ring (`DebugTools_LogEvent`/`GetLogEntry`/`GetLogCount`) and non-fatal assert record (`DEBUGTOOLS_ASSERT`/`DebugTools_RecordAssertFailure`) |
 | `src/debugtools_tools.c` (closure) | The five bounded validated tools: Unit Inspect (heal-to-full), Convoy Inspect (bounded add), Flag/Chapter (bounded flag toggle), RNG Inspect (bounded reseed), Save State (read-only) |
 | `src/gamecontrol.c` (closure) | `GameControl_PostIntro` also consumes the second, independent Ch4-Prep pending request and commits the deterministic Chapter 4 boot |
-| `tools/gba-playtest/scenarios/debugtools-ch4-prep-launch-modern-{debug,release}.json` (closure) | The Ch4-Prep launcher's own boot-commit lifecycle scenario + release mirror (see "Fast Boot: Chapter 4 (Prep)" below for its explicit, honest scope boundary) |
+| `tools/gba-playtest/scenarios/debugtools-ch4-prep-launch-modern-{debug,release}.json` (closure) | The Ch4-Prep launcher's own boot-commit lifecycle scenario + release mirror (see "Fast Boot: Chapter 4 (Prep)" below; the live prep-screen arrival itself is proven by the prep-positive scenario in the next row) |
+| `tools/gba-playtest/scenarios/debugtools-ch4-prep-positive-modern-debug.json` (closure) | Live prep-screen arrival (debug-only): drives the Chapter 4 world-map traversal + the real `PREP` opcode to a live `PrepScreenProc_MapIdle`, then fires the SELECT+B prep hotkey; proves `prepScreenObservedCount` 0->1 and `PLAY_FLAG_PREPSCREEN` held throughout. Gate: DEBUG branch of `expansion-modern-debugtools-prep-check` |
 | `tools/gba-playtest/tests/test_debugtools_registry.py` + `tools/gba-playtest/tests/c/*.c` | Host tests (see "Host tests" below) |
 
 This feature deliberately does **not** touch `src/bmdebug.c`, `src/uidebug.c`,
@@ -686,24 +688,24 @@ own last two checkpoints) -- so these scenarios demonstrate the tail input
 changes nothing further, consistent with that already-accepted release
 baseline.
 
-A live prep-screen scenario mirroring the map scenario's depth is currently
-out of scope. `hasPrepScreen` is `FALSE` for all 79 chapters in
+A live prep-screen scenario reaching a real, engine-active prep screen is
+now **achieved** in this closure via Chapter 4 (see "Fast Boot: Chapter 4
+(Prep)" below). `hasPrepScreen` is `FALSE` for all 79 chapters in
 `src/data/chapter_settings.h` (a vestigial FE7-only field), but the `PREP`
 event-script command (`src/eventscr.c`'s `EventScr_CommonPrep`) is **not**
 dead code -- it is genuinely `CALL`ed from many linked, compiled-in chapter
 scripts (e.g. `ch4`/`ch5`/`ch6`/`ch7`/`tower`/`ruin`-eventscript.h and
-others), so a real prep screen is reachable through ordinary gameplay. The
-gap is deterministic *reach*, not existence: this slice's launcher and
-in-scope evidence are Chapter 2 only, and Chapter 2's own event script
-(`src/events/ch2-eventscript.h`) never calls `EventScr_CommonPrep`.
-Reaching one of the chapters that does call it deterministically, without
-playing through several preceding chapters, would require a chapter-data
-edit or a skirmish/chapter selector, both explicitly out of this slice's
-"HOW MUCH"/"DON'T" scope. `PrepScreenProc_MapIdle`'s hotkey entry point is
-still added and unit-tested (call-site ordering, mask collision checks,
-disabled/release stubs), and its release-mirror scenario proves the hotkey
-is inert on a release build -- only the live, in-ROM debug playtest proof
-against a real prep screen is deferred.
+others), so a real prep screen is reachable through ordinary gameplay. This
+slice's own launcher was Chapter 2 only, and Chapter 2's own event script
+(`src/events/ch2-eventscript.h`) never calls `EventScr_CommonPrep`; the
+closure's second launcher targets Chapter 4, whose
+`EventScr_Ch4_BeginningScene` does call it, so the live prep screen is
+reached deterministically without a chapter-data edit or skirmish selector.
+`PrepScreenProc_MapIdle`'s hotkey entry point is added and unit-tested
+(call-site ordering, mask collision checks, disabled/release stubs), its
+release-mirror scenario proves the hotkey is inert on a release build, and
+the live, in-ROM debug playtest proof against a real prep screen is now
+provided by `debugtools-ch4-prep-positive-modern-debug.json`.
 
 ## Fast Boot: Chapter 4 (Prep) (issue #11 closure)
 
@@ -711,7 +713,8 @@ Chapter 2's own event script (`EventScr_Ch2_BeginningScene`) never calls the
 `PREP` event opcode, so the Chapter 2 launcher above cannot exercise
 `DebugTools_PrepHotkeyCheck()`/`PrepScreenProc_MapIdle` against a real, live
 prep screen -- the gap this repository's docs previously described as
-deferred. `EventScr_Ch4_BeginningScene` (`src/events/ch4-eventscript.h`) is
+deferred, now closed by the Chapter 4 launcher and the prep-positive
+scenario below. `EventScr_Ch4_BeginningScene` (`src/events/ch4-eventscript.h`) is
 self-contained (its own `LOAD1`/`LOAD2` ally+enemy unit definitions, no
 `CALL` into another chapter's own sub-script) and calls
 `CALL(EventScr_CommonPrep)` partway through -- so a second, independent
@@ -787,25 +790,25 @@ frame-for-frame input and asserts every probe stays `0x00000000`,
 confirming the second launcher is compiled out too (mirroring the Chapter 2
 release proof).
 
-**What this scenario does not claim**: reaching Chapter 4's actual live
-`PrepScreenProc` requires further world-map cursor navigation (an `L`
-jump + `A` confirm at the correct frame once the world map becomes
-interactive) followed by advancing through `EventScr_Ch4_BeginningScene`'s
-own longer dialogue and one scripted `FIGHT()` battle sequence before it
-reaches its own `CALL(EventScr_CommonPrep)`. Systematic empirical
-exploration during this closure (dozens of candidate `L`-jump frame
-offsets across input scripts spanning up to 25,000 frames) reliably
-reproduced the boot-commit above but did not converge on a single, exact,
-reproducible tap sequence for the remaining world-map-to-prep-screen
-segment within this session's time budget. This scenario's scope
-deliberately ends at the boot-commit checkpoint captured above -- it does
-**not** assert `gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN` or
-`gDebugToolsProbe.prepScreenObservedCount`, and no fingerprint in this
-repository claims otherwise. See `reports/debugtools_issue11_closure.md`
-for the full honest accounting of this residual, and "Remaining #11 scope"
-below.
+**Scope of this launch scenario, and the separate positive scenario that
+completes it**: `debugtools-ch4-prep-launch-modern-debug.json` deliberately
+ends at the boot-commit checkpoint captured above -- it asserts the
+pending-request handoff and `gPlaySt.chapterIndex == CHAPTER_L_4`, and does
+**not** itself assert `gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN` or
+`gDebugToolsProbe.prepScreenObservedCount`. Reaching Chapter 4's actual
+live `PrepScreenProc` requires further world-map navigation (an `L`
+cursor-jump + `A` node-confirm once the world map becomes interactive)
+followed by skipping `EventScr_Ch4_BeginningScene`'s beginning
+event/scripted `FIGHT()` battle to its own `CALL(EventScr_CommonPrep)`,
+then navigating the prep at-menu. That remaining segment is now proven by a
+**separate, enabled** live scenario,
+`debugtools-ch4-prep-positive-modern-debug.json` (see "Live prep-screen
+arrival" below and `reports/debugtools_issue11_closure.md`), which rests
+`gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` and fires the SELECT+B
+hotkey there -- so the live prep-screen arrival is achieved, split cleanly
+across two focused scenarios.
 
-### `DebugTools_PrepHotkeyCheck`'s own live-prep-screen observation
+### Live prep-screen arrival: `DebugTools_PrepHotkeyCheck`'s observation (achieved)
 
 Independently of the launcher above, `DebugTools_PrepHotkeyCheck()`
 (`src/debugtools_registry.c`) now observes `gPlaySt.chapterStateBits &
@@ -817,12 +820,17 @@ prep-screen lifecycle (`InitPrepScreenUnitsAndCamera`,
 (`gProcScr_SALLYCURSOR`) is active -- so this counter is concrete,
 host/runtime-provable evidence *of the hotkey call site itself*: it can
 never read nonzero unless the hub was opened while a real, live prep
-screen was running. No committed scenario in this repository currently
-drives a live prep screen far enough to exercise this path (see the
-residual above); the field exists, is always-linked, mirrors every other
-probe's zero-by-default contract in a release build, and is ready for a
-future live prep-screen scenario to assert against without any further
-code change.
+screen was running. The committed live scenario
+`debugtools-ch4-prep-positive-modern-debug.json` now drives a real prep
+screen far enough to exercise this path: it observes
+`gDebugToolsProbe.prepScreenObservedCount` (`0x02031854`) transition
+`0 -> 1` on the SELECT+B hotkey while `gPlaySt.chapterStateBits`
+(`0x020210b8`) holds `PLAY_FLAG_PREPSCREEN` (`0x10`), the hub opens
+(`hubOpenCount` `0x02031818` `1 -> 2`, `sHubActive` `0x02031614`
+`0 -> 1`), a 2nd SELECT+B is idempotent (`hubOpenCount` stays `2`), and the
+hub then closes (`sHubActive -> 0`) with prep still live -- a safe return
+to prep. The field is always-linked and mirrors every other probe's
+zero-by-default contract in a release build.
 
 ## Diagnostics: structured probe/log ring + non-fatal assert record (issue #11 closure)
 
@@ -1248,26 +1256,30 @@ for `MODERN_CONFIG=release`.
 
 Issue #11's frozen closure checklist is addressed end to end -- see
 `reports/debugtools_issue11_closure.md` for the full item-by-item mapping
-to code and test/command evidence. What remains explicitly, honestly open:
+to code and test/command evidence. The previously-open live prep-screen
+arrival is now **achieved** (first bullet). What otherwise remains
+explicitly, honestly open is narrow:
 
-- **Live prep-screen arrival.** The "Fast Boot: Ch4 Prep" launcher's own
-  pending-request/boot-commit lifecycle is proven live (real mGBA
-  execution: the request arms independently, `GameControl_PostIntro`
-  consumes it and commits `gPlaySt.chapterIndex` to `CHAPTER_L_4` -- see
-  "Fast Boot: Chapter 4 (Prep)" above). Reaching Chapter 4's actual live
-  `PrepScreenProc` additionally requires a correctly-timed world-map `L`
-  cursor-jump + `A` node-confirm once the world map becomes interactive,
-  followed by advancing through `EventScr_Ch4_BeginningScene`'s own longer
-  dialogue and one scripted `FIGHT()` battle before it reaches its own
-  `CALL(EventScr_CommonPrep)`. Systematic exploration (dozens of candidate
-  `L`-jump frame offsets, input scripts spanning up to 25,000 frames) did
-  not converge on an exact, reproducible tap sequence for this remaining
-  segment within this closure's time budget.
-  `DebugTools_PrepHotkeyCheck()`'s own `PLAY_FLAG_PREPSCREEN` observation
-  (`gDebugToolsProbe.prepScreenObservedCount`) is implemented, always
-  linked, and ready for a future scenario to assert against the moment such
-  a tap sequence is found -- no further code change is needed, only the
-  scenario's own input script.
+- **Live prep-screen arrival -- ACHIEVED.** Both halves are proven live:
+  the "Fast Boot: Ch4 Prep" launcher's pending-request/boot-commit
+  lifecycle (`debugtools-ch4-prep-launch-modern-debug.json`: the request
+  arms independently, `GameControl_PostIntro` consumes it and commits
+  `gPlaySt.chapterIndex` to `CHAPTER_L_4`), and the
+  world-map-to-prep-screen arrival plus the SELECT+B hotkey
+  (`debugtools-ch4-prep-positive-modern-debug.json`, host test
+  `tools/gba-playtest/tests/test_prep_positive_scenario.py`). The positive
+  scenario does the world-map `L` cursor-jump + `A` node-confirm, skips the
+  beginning event/scripted `FIGHT()` battle to `CALL(EventScr_CommonPrep)`,
+  rests `gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` (`0x080905d1`),
+  and fires SELECT+B there: `DebugTools_PrepHotkeyCheck()`'s
+  `PLAY_FLAG_PREPSCREEN` observation
+  (`gDebugToolsProbe.prepScreenObservedCount`, `0x02031854`) is observed
+  `0 -> 1` at runtime while `gPlaySt.chapterStateBits` (`0x020210b8`) holds
+  `PLAY_FLAG_PREPSCREEN` (`0x10`), with an idempotent second SELECT+B and a
+  safe return to the still-live prep. Gate: the DEBUG branch of
+  `expansion-modern-debugtools-prep-check` (RELEASE verifies the
+  compiled-out mirror). Debug-only because the launcher + hotkey are
+  compiled out of a release build.
 - **A live runtime scenario driving all five bounded tools through the map
   hub** (mirroring `debugtools-map-hub-modern-debug.json`'s own live
   Weather/Fog proof) is not included. Every tool's inspect/confirm/

@@ -143,17 +143,26 @@ frozen list:
   `gUnitArrayBlue/Red/Green` probes, first stable Player Phase, a
   byte-identical whole-SRAM hash proving zero incidental persistent writes
   during boot) with a release-negative mirror. This closure's own
-  exploration (see "Combat residual" below) independently re-derived and
+  exploration (see "Combat -- achieved" below) independently re-derived and
   cross-checked this same roster/placement live via this build's own symbol
   table, confirming the #11 evidence still holds against this exact commit.
-- **combat**: investigated in depth; **not achieved** -- see "Combat
-  residual" below. Remains a disabled stub with a specific, evidenced
-  blocker (not a generic placeholder).
-- **normal save/load**: `new-game.json` (this closure) plus the pre-existing
-  `savecompat-*`/`savesuspend-resume-modern-debug.json` scenarios already
-  cover every ordinary-UI save/load path this codebase's *decompiled* source
-  can reach today. A distinct mid-game, non-Suspend "regular" Save remains
-  a disabled stub -- see "Save residual" below.
+- **combat**: **achieved** (`tools/gba-playtest/scenarios/combat.json`,
+  enabled; fingerprint `combat-modern-debug.json`; host test
+  `tools/gba-playtest/tests/test_combat_scenario.py`; gate
+  `expansion-modern-combat-check`). The chapter's own scripted `FIGHT` is
+  resolved by the real battle engine, enemy HP `15 -> 0` at the
+  SCRIPT_BATTLE opcode; see "Combat -- achieved" below.
+- **normal save/load**: **achieved**
+  (`tools/gba-playtest/scenarios/save-load.json`, enabled; fingerprint
+  `save-load-modern-debug.json`; host test
+  `tools/gba-playtest/tests/test_save_load_scenario.py`; gate
+  `expansion-modern-saveload-check`) -- a real SaveMenu New Game -> slot 0
+  write, an A+B+SELECT+START soft reset, then the top-level SaveMenu
+  RESTART item -> `PostSaveMenuHandler` -> `ReadGameSave` of slot 0 (a
+  NORMAL game-save LOAD, distinct from Suspend/`ReadSuspendSave`). This is
+  in addition to `new-game.json` and the pre-existing
+  `savecompat-*`/`savesuspend-resume-modern-debug.json` coverage. See
+  "Normal save/load -- achieved" below.
 - **suspend/reset/resume**: pre-existing, unchanged
   (`savesuspend-resume-modern-debug.json`) -- a full write -> soft-reset ->
   reload round trip through the ordinary Map Menu Suspend command and the
@@ -174,19 +183,19 @@ verified against a build produced ROM that exists only in `build/`
 
 ### 4. Stub disposition
 
-- **Deleted** (superseded by real, enabled coverage):
-  `tools/gba-playtest/scenarios/stubs/new-game.stub.json` and
-  `chapter.stub.json`. `tools/gba-playtest/tests/test_stub_scenarios.py`
-  pins that only `combat.stub.json`/`save.stub.json` remain and that the two
-  deleted files stay gone.
-- **Kept disabled, blocker rewritten with concrete evidence** (not
-  generic placeholders): `combat.stub.json` and `save.stub.json` -- see
-  their own `"blocker"` field and "Combat residual"/"Save residual" below.
-  `capture()` still rejects both explicitly (`test_stub_scenarios.py`'s
-  `test_capture_rejects_every_remaining_disabled_stub_explicitly`).
-- `tools/gba-playtest/README.md` no longer frames "new-game, chapter,
-  combat, and save" as a single undifferentiated disabled group; it states
-  precisely which two are covered and which two remain blocked and why.
+- **All stubs deleted.** The `tools/gba-playtest/scenarios/stubs/`
+  directory is gone: `new-game.stub.json`/`chapter.stub.json` (superseded
+  earlier) and now `combat.stub.json`/`save.stub.json` (superseded by the
+  real, enabled `combat.json`/`save-load.json`) are all deleted. No
+  disabled stub scenario remains in the repository.
+- `tools/gba-playtest/tests/test_stub_scenarios.py` was rewritten to assert
+  that **no** `*.stub.json` files remain and that `combat.json`/
+  `save-load.json` are enabled with semantic (non-framebuffer) checkpoints.
+  No test treats a stub as success anymore.
+- `tools/gba-playtest/README.md` now lists `combat.json` and
+  `save-load.json` (plus `debugtools-ch4-prep-positive-modern-debug.json`)
+  as enabled, verified scenarios -- no undifferentiated disabled group and
+  no stub rows remain.
 
 ### 5. Host test coverage
 
@@ -254,12 +263,15 @@ and the trailing `.PHONY` block, in the same four places every sibling
 
 - `tools/gba-playtest/README.md`: retry policy, baseline refresh policy,
   full runtime-scenario coverage table (with per-scenario proof
-  description), corrected stub framing, supported CI host matrix.
+  description) -- now including `combat.json`, `save-load.json`, and
+  `debugtools-ch4-prep-positive-modern-debug.json` (each debug-only, with
+  its own proof), supported CI host matrix, and no stub rows.
 - This report.
-- `docs/save_format.md` and `docs/debugtools.md` are unmodified (out of this
-  task's file domain per the WHERE boundary); this report and
-  `save.stub.json`/`combat.stub.json` cross-reference them instead of
-  editing them.
+- `docs/save_format.md` and `docs/debugtools.md` are updated in this
+  documentation-closure pass to record that normal save/load (SaveMenu
+  RESTART -> `ReadGameSave`) and the live prep-screen arrival are now
+  achieved; the deleted `combat.stub.json`/`save.stub.json` are no longer
+  referenced anywhere.
 
 ### 9. Commit and push
 
@@ -267,105 +279,66 @@ See the final "DONE evidence" section below for the exact commands/results;
 the commit trailer and push/verification steps follow this report in the
 same session.
 
-## Combat residual (full investigation trace)
+## Combat -- achieved
 
-**Not achieved. `combat.stub.json` remains disabled.** This section is the
-detailed trace backing that stub's own `"blocker"` field, so a future
-attempt does not have to re-derive any of it from scratch.
+**Achieved.** `tools/gba-playtest/scenarios/combat.json` (enabled;
+fingerprint `combat-modern-debug.json`; host test
+`tools/gba-playtest/tests/test_combat_scenario.py`; gate
+`expansion-modern-combat-check`, which the debug config verifies and the
+release config skips honestly -- the launcher is debug-only).
 
-Starting point: issue #11's debug-only "Fast Boot: Chapter 2" launcher
-(`tools/gba-playtest/scenarios/debugtools-hub-modern-debug.json`'s own
-proven prefix through its `chapter2-interactive-stable` checkpoint),
-extended with the ordinary UI input `savesuspend-resume-modern-debug.json`
-already uses through its own dialogue-exhaustion window (frame 16986).
+It reuses the same Chapter 4 clean-boot path as the prep scenario and
+captures the chapter's own scripted `FIGHT(CHARACTER_ARTUR,
+CHAR_EVT_ACTIVE_UNIT, 63, 0)` in `EventScr_Ch4_BeginningScene`
+(`src/events/ch4-eventscript.h`). That FIGHT is resolved by the REAL battle
+engine `Event3F_ScriptBattle` (`EV_CMD_SCRIPT_BATTLE`, opcode at ROM
+`EventScr_Ch4_BeginningScene+0x158`), not by a harness shortcut.
 
-1. **Roster/placement, confirmed live against this build.** Using this
-   build's own `arm-none-eabi-nm` symbol table (`gUnitArrayBlue =
-   0x0202f9a4`, `gUnitArrayRed = 0x0202eb94`, `gUnitArrayGreen =
-   0x0202e5f4`, each a `struct Unit[N]` of size `0x48`; `gPlaySt =
-   0x020210a4`; `gBmSt = 0x020210f0`), a wide probe scan at the
-   `chapter2-interactive-stable`-equivalent point confirmed the exact
-   roster #11's own description already claims: Eirika (Rapier-holding,
-   confirming unit index 1), Seth, Gilliam, Franz, Moulder, and Vanessa in
-   Blue; Ross in Green; Bone plus five generic bandits in Red. **Every**
-   Blue unit's position is 6-14 tiles (Manhattan distance) from the
-   *nearest* Red unit at this point -- geometrically too far for any unit's
-   move-plus-attack-range to reach in a single turn, regardless of which
-   unit is chosen. Single-turn combat is therefore not merely unattempted;
-   it is unreachable from this launcher's own start-of-turn placement.
-2. **The live map cursor is `gBmSt.playerCursor` (`Vec2` at `gBmSt+0x14`),
-   not `gPlaySt.xCursor`/`yCursor`.** The latter (used by every existing
-   probe in `savesuspend-resume-modern-debug.json`) is only a
-   last-committed snapshot, synced at specific commit points (confirmed:
-   Suspend-save) -- **not** a live per-frame value. A 48-byte wide scan of
-   `gPlaySt` around an ordinary directional key-press showed zero byte
-   changed, while the same key-press visibly moved the on-screen cursor and
-   changed `gBmSt.playerCursor.x`/`.y` (and the paired pixel-scale
-   `cursorTarget`/`playerCursorDisplay` fields) exactly as expected. Any
-   future combat (or other live-map-navigation) scenario must probe
-   `gBmSt.playerCursor` for the live map tile, not `gPlaySt.xCursor`/
-   `yCursor`.
-3. **The chapter enforces a mandatory, tutorial-flagged "Guide" hint chain**
-   before free unit commands are available: selecting the newly-arrived
-   Moulder unit is redirected into "move close to Vanessa" (a real,
-   in-engine suggested-destination overlay, not a harness artifact);
-   selecting Eirika is redirected into a village-visit conversation and an
-   escort move. Both were driven to completion with ordinary `A`/
-   directional input only (no menu item was ever force-selected outside
-   what the game itself already highlighted by default).
-4. **A genuine "End" System-Menu item appears** (`Unit`/`Status`/`Guide`/
-   `Options`/`Suspend`/`End`, six items, up from five) only once every
-   Blue unit has acted through the hint chain above. Selecting it flips
-   `gPlaySt.faction` from `FACTION_BLUE` (`0x00`) to `FACTION_ENEMY`
-   (`0x80`), and three Red units' `xPos`/`yPos` probes changed value
-   turn-over-turn (`(10,12)->(9,13)`, `(7,14)->(7,13)`, `(12,3)->(11,4)`)
-   -- real, deterministic, reproducible enemy-AI repositioning driven by
-   ordinary UI input alone, with no savestate/save-file shortcut.
-5. **The stall.** After that repositioning, both the framebuffer and every
-   unit-array probe stay byte-identical for several thousand further
-   frames -- tried both with zero further input and with additional `A`
-   presses (in case a camera-pan or dialogue confirmation was pending).
-   Enemy Phase does not appear to advance to any attack or back to Player
-   Phase within the frame budget tried. The cause was not isolated further
-   within this closure's time-box: candidates include (a) a much longer
-   camera-pan/AI-decision window than tried, (b) a proc/event interaction
-   specific to reaching this exact state via the debug launcher plus this
-   input sequence (as opposed to the vanilla title/new-game boot this
-   launcher intentionally bypasses), or (c) an actual engine idle/wait
-   state this investigation has not yet identified the trigger for.
+Exact pre/post evidence (fixed EWRAM probes, never framebuffer/timing): the
+target enemy `gUnitArrayRed[0].curHP` (`0x0202eba7`) transitions `15 -> 0`
+AT the SCRIPT_BATTLE opcode. This is verified at frame 3296, where the event
+proc's `pEventCurrent` is `BeginningScene+0x160` -- one opcode PAST the
+`FIGHT` and BEFORE the following `KILL` -- and `curHP` is already `0`. Then
+`gUnitArrayRed[0].pCharacterData` (`0x0202eb94`) is cleared as the unit is
+removed (death). So the lethal HP change is the battle engine's scripted
+hit, not the `KILL` opcode.
 
-**Why this is reported as a residual, not worked around:** a savestate,
-save file, or other generated binary would trivially "solve" reaching
-combat, but is prohibited by this harness's own constraints and this
-task's explicit DON'Ts. No committed scenario file was produced for this
-partial "reach Enemy Phase" state either -- it depends on a long (~300+
-input event), still only manually-verified tap sequence that has not been
-hardened into a reviewed, host-tested scenario file within this closure's
-time-box, and committing an under-verified, complex scenario would risk
-exactly the kind of unreviewed-fingerprint-drift risk this task's baseline-
-review requirements exist to prevent. The full tap sequence, probe
-addresses, and frame numbers above are sufficient for a future attempt to
-resume from step 5 without repeating steps 1-4.
+This supersedes the earlier disabled `combat.stub.json` (now deleted). The
+stub's prior blocker -- a debug-launcher-plus-ordinary-input route stalling
+before reaching interactive single-turn combat -- was resolved by capturing
+the chapter's own scripted battle through the real event/battle engine
+instead: a legitimate, deterministic, semantic proof that the battle engine
+inflicts lethal damage, with no savestate/save-file shortcut.
 
-## Save residual
+## Normal save/load -- achieved
 
-**Not achieved for a distinct mid-game "regular" Save. `save.stub.json`
-remains disabled.** Normal save/load is otherwise fully covered (see WHAT
-item 3): `savesuspend-resume-modern-debug.json` proves a complete write ->
-soft-reset -> reload round trip via Suspend, and this closure's
-`new-game.json` independently proves a `SaveMenuWriteNewGame`/
-`WriteGameSave`-class SRAM write via the ordinary top-level Save Menu -- a
-different code path than Suspend, with its own before/after `sram_hash`
-proof. What remains specifically out of reach is a **mid-game, non-Suspend**
-"regular" Save distinct from both of those. FE7/8's own post-chapter-clear
-"Would you like to save?" flow is driven by `StartSaveMenuPostChapter`,
-which is still `asm/`-only in this codebase
-(`include/functions.h`'s own `// ??? StartSaveMenuPostChapter(???);`
-placeholder) -- decompiling it is out of scope for a harness-only closure.
-The in-map Map Menu itself (`Unit`/`Status`/`Guide`/`Options`/`Suspend`,
-confirmed via live UI navigation for this closure -- see the combat residual
-above) has no separate "Save" entry distinct from Suspend, so no
-ordinary-UI, clean-boot route to that specific call site exists today.
+**Achieved.** `tools/gba-playtest/scenarios/save-load.json` (enabled;
+fingerprint `save-load-modern-debug.json`; host test
+`tools/gba-playtest/tests/test_save_load_scenario.py`; gate
+`expansion-modern-saveload-check`, which the debug config verifies with the
+deterministic CURRENT-format SRAM fixture and the release config skips
+honestly -- the soft-reset timing is debug-calibrated).
+
+It reuses `new-game.json`'s clean-boot SaveMenu New Game -> slot 0 write,
+then a real A+B+SELECT+START soft reset (RAM reinitialized), then the
+top-level SaveMenu RESTART item -> `PostSaveMenuHandler` -> `ReadGameSave`
+of slot 0 (`src/savemenu.c`; RESTART is `main_sel_bitfile & 0x82`). This is
+a NORMAL game-save LOAD, distinct from Suspend/`ReadSuspendSave`.
+
+Proven by fixed EWRAM probes (never framebuffer/timing): the
+`playthroughIdentifier` (`0x020210bc`) and `chapterModeIndex` (`0x020210bf`)
+discriminants go `1` (created) -> `0` (soft-reset cleared) -> `1` (loaded);
+`gameSaveSlot` (`0x020210b0`) `== 0`; and the before/after whole-SRAM hashes
+differ (write proof).
+
+This is a distinct, legitimate proof of a normal (non-Suspend) game-save
+write-and-load, so the earlier disabled `save.stub.json` (now deleted) is
+superseded. FE7/8's own post-chapter-clear "Would you like to save?" flow
+(`StartSaveMenuPostChapter`) is still `asm/`-only in this codebase and was
+the stub's original target, but it is **not required**: normal save/load is
+now proven a different, legitimate way via the SaveMenu RESTART ->
+`ReadGameSave` path. Decompiling `StartSaveMenuPostChapter` remains a
+separate, optional path, not a blocker for this coverage.
 
 ## Pre-existing, out-of-scope finding: linker-budget drift
 
@@ -436,7 +409,9 @@ Modern ROM debugtools-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-timer-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-map-check passed: ... (config=debug abi=aapcs)
 Modern ROM debugtools-ch4prep-check passed: ... (config=debug abi=aapcs)
-Modern ROM debugtools-prep-check skipped: no live prep-screen-arrival scenario yet (pre-existing #11 documented residual, unrelated to this closure)
+Modern ROM debugtools-prep-check passed (live prep MapIdle SELECT+B hotkey): ... (config=debug abi=aapcs)
+Modern ROM combat-check passed (Ch4 scripted FIGHT enemy HP 15->0 + death): ... (config=debug abi=aapcs)
+Modern ROM saveload-check passed (SaveMenu RESTART -> ReadGameSave(0)): ... (config=debug abi=aapcs)
 Modern ROM newgame-check passed: ... (config=debug abi=aapcs)
 expansion-modern-savefmt-check passed (config=debug): all 8 SaveCompatState values, Back-preservation, confirmed erase, host-migrated v1 load, and Suspend/soft-reset/Resume
 Modern ROM savefmt-check passed: ... (config=debug abi=aapcs)
@@ -453,6 +428,8 @@ Modern ROM debugtools-timer-check skipped: no release scenario needed (dead code
 Modern ROM debugtools-map-check passed: ... (config=release abi=aapcs)
 Modern ROM debugtools-ch4prep-check passed: ... (config=release abi=aapcs)
 Modern ROM debugtools-prep-check passed: ... (config=release abi=aapcs)
+Modern ROM combat-check skipped: debug-only launcher (release runtime matrix has no separate combat scenario) -- see reports/gba_playtest_issue13_closure.md
+Modern ROM saveload-check skipped: debug-calibrated soft-reset; release normal-save coverage = newgame-check (write) + savefmt-check (load classification) -- see reports/gba_playtest_issue13_closure.md
 Modern ROM newgame-check passed: ... (config=release abi=aapcs)
 expansion-modern-savefmt-check passed (config=release): all 8 SaveCompatState values, Back-preservation, confirmed erase, host-migrated v1 load
 Modern ROM savefmt-check passed: ... (config=release abi=aapcs)
@@ -489,11 +466,15 @@ printing `fingerprint verified: policy=behavior ...` and exiting 0:
 | `savesuspend-resume-modern-debug.json` | debug | verified, 3 checkpoints |
 | `debugtools-map-hub-modern-debug.json` (enabled, live) | debug | verified, 13 checkpoints |
 | `debugtools-map-hub-modern-release.json` (release negative) | release | verified, 4 checkpoints |
+| `combat.json` (Ch4 scripted FIGHT, live) | debug | verified, enemy `curHP` 15->0 at SCRIPT_BATTLE + death |
+| `save-load.json` (SaveMenu RESTART -> ReadGameSave, live) | debug | verified, `playthroughIdentifier` 1->0->1 + SRAM write |
+| `debugtools-ch4-prep-positive-modern-debug.json` (live prep + SELECT+B) | debug | verified, `prepScreenObservedCount` 0->1 |
 
-Combat and a distinct mid-game regular Save have no `verify` command to run
--- both remain disabled stubs; `capture`/`verify` reject them explicitly
-with exit status 2 (`test_stub_scenarios.py`'s
-`test_capture_rejects_every_remaining_disabled_stub_explicitly` pins this).
+Combat and normal save/load are now enabled, verified scenarios (rows
+above), not stubs. No `*.stub.json` remains in the repository;
+`test_stub_scenarios.py` was rewritten to assert none remain and that
+`combat.json`/`save-load.json` are enabled with semantic (non-framebuffer)
+checkpoints.
 
 ### 5. Shiftcheck static/offset/diff/runtime and raw-pointer/relocation audits
 
