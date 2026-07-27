@@ -1,0 +1,99 @@
+{
+  "$schema": "expansion-localization-registry-v1",
+  "messages": [
+    {
+      "id": 0,
+      "key": "framework.title",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 32,
+      "max_decoded_bytes": 48
+    },
+    {
+      "id": 1,
+      "key": "framework.version_label",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 16,
+      "max_decoded_bytes": 24
+    },
+    {
+      "id": 2,
+      "key": "framework.build_label",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 16,
+      "max_decoded_bytes": 24
+    },
+    {
+      "id": 3,
+      "key": "framework.locale_label",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 16,
+      "max_decoded_bytes": 24
+    },
+    {
+      "id": 4,
+      "key": "framework.missing_text",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 24,
+      "max_decoded_bytes": 32
+    },
+    {
+      "id": 5,
+      "key": "framework.locale_name.en",
+      "status": "active",
+      "surface": "locale_name",
+      "max_width": 16,
+      "max_decoded_bytes": 24
+    },
+    {
+      "id": 6,
+      "key": "__reserved_sprint1_placeholder__",
+      "status": "tombstone",
+      "notes": "Retired sprint-1 draft placeholder label; ID permanently reserved, never reused."
+    },
+    {
+      "id": 7,
+      "key": "framework.locale_name.qps_ploc",
+      "status": "active",
+      "surface": "locale_name",
+      "max_width": 24,
+      "max_decoded_bytes": 32
+    },
+    {
+      "id": 8,
+      "key": "debug.diagnostics_header",
+      "status": "active",
+      "surface": "debug_overlay",
+      "max_width": 24,
+      "max_decoded_bytes": 32
+    },
+    {
+      "id": 9,
+      "key": "debug.catalog_stats_label",
+      "status": "active",
+      "surface": "debug_overlay",
+      "max_width": 24,
+      "max_decoded_bytes": 32
+    },
+    {
+      "id": 10,
+      "key": "debug.sample_placeholder_pair",
+      "status": "active",
+      "surface": "debug_overlay",
+      "max_width": 32,
+      "max_decoded_bytes": 40
+    },
+    {
+      "id": 11,
+      "key": "debug.sample_two_line",
+      "status": "active",
+      "surface": "debug_overlay",
+      "max_width": 24,
+      "max_decoded_bytes": 40
+    }
+  ]
+}

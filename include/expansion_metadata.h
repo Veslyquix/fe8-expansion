@@ -50,7 +50,19 @@ struct ExpansionMetadata
     /* 7C */ char romMakerCode[EXPANSION_METADATA_ROM_MAKER_CODE_SIZE];
     /* 7F */ u8 romRevision;
     /* 80 */ u32 romSizeBytes;
-}; /* size: 0x84 */
+    /* Locale identity (issue #18 sprint 1) -- see
+     * include/expansion_config.h's FE8_EXPANSION_ENABLED_LOCALE_MASK/
+     * FE8_EXPANSION_DEFAULT_LOCALE_ID/FE8_EXPANSION_PSEUDO_LOCALE_ENABLED
+     * and include/expansion_locale.h's ExpansionLocaleId. Appended after
+     * every issue #8 field (append-only, version-safe: this addition
+     * neither moves nor resizes any existing field, so it cannot break
+     * scripts/modernize/verify_rom_header.py's MAGIC-based scanner or any
+     * already-built ROM's existing metadata layout expectations). */
+    /* 84 */ u32 enabledLocaleMask;
+    /* 88 */ u8 defaultLocale;
+    /* 89 */ u8 pseudoLocaleEnabled;
+    /* 8A */ u8 reserved1[2];
+}; /* size: 0x8C */
 
 extern const struct ExpansionMetadata gExpansionMetadata;
 

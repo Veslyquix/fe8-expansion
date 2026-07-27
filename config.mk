@@ -66,3 +66,27 @@ EXPANSION_BUILD_ID ?=
 # list and docs/config_identity.md for how this fits the rest of the
 # identity surface.
 EXPANSION_SAVE_COMPAT_EPOCH ?= 1
+
+# --- Localization (issue #18 sprint 1) --------------------------------------
+# EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
+#   scripts/localization/schema.py's LOCALE_IDS) enabled for this build; must
+#   include "en", must not repeat an id, and sprint 1 supports only "en" and
+#   "qps-ploc" (an ASCII pseudo-locale test harness, never a real
+#   translation -- see scripts/localization/pseudo.py). Every other stable
+#   locale id is a reserved slot for a future sprint and is rejected today.
+#   Normalized into the fixed stable-id order regardless of the order given
+#   here (see scripts/modernize/expansion_config.py's validate_enabled_locales).
+EXPANSION_ENABLED_LOCALES ?= en
+
+# EXPANSION_DEFAULT_LOCALE -- the locale the runtime resolver
+# (src/expansion_locale.c) starts in; must be one of EXPANSION_ENABLED_LOCALES.
+EXPANSION_DEFAULT_LOCALE ?= en
+
+# EXPANSION_PSEUDO_LOCALE -- exactly "0" or "1"; must be "1" if and only if
+# "qps-ploc" is present in EXPANSION_ENABLED_LOCALES above (this is checked,
+# not just documented -- an inconsistent combination fails the build before
+# any compilation). This setting (like EXPANSION_ENABLED_LOCALES/
+# EXPANSION_DEFAULT_LOCALE above) folds into the config identity fingerprint
+# but never changes EXPANSION_SAVE_COMPAT_EPOCH: locale configuration is
+# diagnostic/UI-facing, never a save-format compatibility concern.
+EXPANSION_PSEUDO_LOCALE ?= 0

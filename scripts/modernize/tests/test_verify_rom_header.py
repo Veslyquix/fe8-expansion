@@ -67,6 +67,9 @@ def make_metadata_dict(**overrides) -> dict:
         "rom_maker_code": "01",
         "rom_revision": 0,
         "rom_size_bytes": 16 * 1024 * 1024,
+        "enabled_locale_mask": 1,
+        "default_locale_id": 0,
+        "pseudo_locale_enabled": 0,
     }
     base.update(overrides)
     return base
@@ -93,6 +96,10 @@ def pack_metadata(metadata: dict) -> bytes:
         metadata["rom_maker_code"].encode("ascii"),
         metadata["rom_revision"],
         metadata["rom_size_bytes"],
+        metadata["enabled_locale_mask"],
+        metadata["default_locale_id"],
+        metadata["pseudo_locale_enabled"],
+        b"\x00\x00",  # reserved1
     )
 
 
@@ -430,6 +437,9 @@ class ExpansionMetadataTests(unittest.TestCase):
             "rom_maker_code": "9X",
             "rom_revision": 5,
             "rom_size_bytes": 32 * 1024 * 1024,
+            "enabled_locale_mask": 0x81,
+            "default_locale_id": 7,
+            "pseudo_locale_enabled": 1,
         }
         for field, bad_value in mismatches.items():
             with self.subTest(field=field):

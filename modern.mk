@@ -250,6 +250,39 @@ MODERN_SCANINC ?= tools/scaninc/scaninc$(EXE)
 tools/scaninc/scaninc$(EXE): $(wildcard tools/scaninc/*.cpp tools/scaninc/*.h tools/scaninc/Makefile)
 	$(MAKE) -C tools/scaninc
 
+# --- Localization catalog availability/paths (issue #18 sprint 1) ----------
+# Computed here (early, before MODERN_ALL_C_OBJECTS/MODERN_ALL_OBJECTS are
+# finalized just below) purely from file existence -- never from a
+# resolved config identity -- exactly like MODERN_EXPANSION_CONFIG_AVAILABLE
+# further down, so a real checkout (which always has both files committed)
+# always registers the generated catalog object, while a minimal synthetic
+# modern.mk-only fixture tree (neither file present) safely no-ops instead
+# of failing to find a rule for a target nothing added to
+# MODERN_ALL_C_OBJECTS. The generated catalog/header/budget files
+# themselves live under a single config/ABI-independent build directory
+# (their content never depends on MODERN_CONFIG/MODERN_ABI/MODERN_ROM_SIZE
+# -- only on texts/expansion/registry.json + catalog.en.json), so every
+# MODERN_CONFIG/MODERN_ABI combination shares one generated copy instead of
+# needlessly regenerating an identical copy per $(MODERN_OUTPUT_DIR).
+MODERN_LOCALIZATION_CLI := scripts/localization/cli.py
+MODERN_LOCALIZATION_REGISTRY := texts/expansion/registry.json
+MODERN_LOCALIZATION_AVAILABLE := $(and $(wildcard $(MODERN_LOCALIZATION_CLI)),$(wildcard $(MODERN_LOCALIZATION_REGISTRY)))
+MODERN_LOCALIZATION_ROOT := build/expansion-localization
+MODERN_LOCALIZATION_GENERATED_DIR := $(MODERN_LOCALIZATION_ROOT)/generated
+MODERN_LOCALIZATION_CATALOG_C := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_locale_catalog.c
+MODERN_LOCALIZATION_MSG_IDS_H := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_msg_ids.h
+MODERN_LOCALIZATION_BUDGET_JSON := $(MODERN_LOCALIZATION_GENERATED_DIR)/budget.json
+
+# Lets a future sprint's C source #include "expansion_msg_ids.h" (the
+# generated EXP_MSG_* numeric-id header) without a further modern.mk change;
+# sprint 1 itself has no such consumer yet (src/expansion_locale.c only
+# uses the `extern` data declarations already reachable via -Iinclude, see
+# include/expansion_locale.h's own file comment for why). A safe no-op
+# when MODERN_LOCALIZATION_AVAILABLE is empty.
+ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
+MODERN_CFLAGS += -I$(MODERN_LOCALIZATION_GENERATED_DIR)
+endif
+
 MODERN_ALL_C_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_C_SOURCES:.c=.o))
 
 # Reinstate a linked table's object at exactly its *original* (hand
@@ -409,6 +442,31 @@ endif
 ifneq ($(strip $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT)),)
 MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/bmb-weapontriangle.o
 endif
+
+# Issue #18 sprint 1: the generated locale catalog .c
+# ($(MODERN_LOCALIZATION_CATALOG_C), under build/expansion-localization/
+# generated/ -- never a committed source directory) has no "original hand
+# path" to reuse (there is no hand-written predecessor; it is brand new
+# this sprint, defining the `extern const` data
+# include/expansion_locale.h declares). A synthetic path is registered
+# instead, chosen to sort immediately before src/expansion_locale.o (the
+# hand-written resolver, itself already picked up by the ordinary
+# MODERN_ALL_C_SOURCES wildcard above -- "-" < "." so
+# "expansion_locale-catalog.o" sorts ahead of "expansion_locale.o") purely
+# for readability; unlike the Issue #5 slots above, there is no
+# pre-existing legacy layout this needs to avoid shifting; since this
+# object is entirely new content, some shift in later objects' addresses
+# relative to a build that predates issue #18 is expected and harmless
+# (this sprint does not yet link into any address-sensitive checkpoint
+# fixture -- see this sprint's own DONE criteria). A safe no-op when
+# MODERN_LOCALIZATION_AVAILABLE is empty (modern.mk included standalone,
+# or a fixture tree missing scripts/localization or texts/expansion). An
+# explicit (non-pattern) compile rule for this literal target path is
+# defined further below, alongside the generation stamp.
+ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
+MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o
+endif
+
 MODERN_ALL_DATA_PRE := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.pre.c))
 MODERN_ALL_DATA_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.o))
 MODERN_ALL_ASM_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_ASM_SOURCES:.s=.o))
@@ -1128,6 +1186,9 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 		--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 		--revision "$(EXPANSION_ROM_REVISION)" \
+		--enabled-locales "$(EXPANSION_ENABLED_LOCALES)" \
+		--default-locale "$(EXPANSION_DEFAULT_LOCALE)" \
+		--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
@@ -1180,7 +1241,10 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 	--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 	--revision "$(EXPANSION_ROM_REVISION)" \
-	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
+	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" \
+	--enabled-locales "$(EXPANSION_ENABLED_LOCALES)" \
+	--default-locale "$(EXPANSION_DEFAULT_LOCALE)" \
+	--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
     $(error $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
@@ -1195,11 +1259,25 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
   # override) so `make ... EXPANSION_SAVE_COMPAT_EPOCH=2` changes the
   # embedded ROM metadata without requiring `make clean` first.
   MODERN_SAVE_COMPAT_EPOCH := $(patsubst MODERN_SAVE_COMPAT_EPOCH=%,%,$(filter MODERN_SAVE_COMPAT_EPOCH=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
+  # Issue #18 sprint 1: locale identity tokens, resolved and validated the
+  # exact same way (config.mk default, or a command-line/environment
+  # MODERN_CONFIG_RESOLVE_GOALS override) as every other identity field
+  # above -- see scripts/modernize/expansion_config.py's
+  # validate_enabled_locales/validate_default_locale/validate_pseudo_locale
+  # (an invalid or inconsistent combination already made
+  # MODERN_EXPANSION_CONFIG_RESOLVE start with "error:" above, which the
+  # $(error ...) a few lines up already caught).
+  MODERN_EXPANSION_ENABLED_LOCALE_MASK := $(patsubst MODERN_EXPANSION_ENABLED_LOCALE_MASK=%,%,$(filter MODERN_EXPANSION_ENABLED_LOCALE_MASK=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
+  MODERN_EXPANSION_DEFAULT_LOCALE_ID := $(patsubst MODERN_EXPANSION_DEFAULT_LOCALE_ID=%,%,$(filter MODERN_EXPANSION_DEFAULT_LOCALE_ID=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
+  MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED := $(patsubst MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED=%,%,$(filter MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
   ifeq ($(strip $(MODERN_BUILD_COMMIT)),)
     $(error modern.mk: failed to resolve MODERN_BUILD_COMMIT from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
   ifeq ($(strip $(MODERN_SAVE_COMPAT_EPOCH)),)
     $(error modern.mk: failed to resolve MODERN_SAVE_COMPAT_EPOCH from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
+  endif
+  ifeq ($(strip $(MODERN_EXPANSION_ENABLED_LOCALE_MASK)),)
+    $(error modern.mk: failed to resolve MODERN_EXPANSION_ENABLED_LOCALE_MASK from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
 
   # Modern-only compiler defines feeding include/expansion_config.h. These
@@ -1220,7 +1298,10 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_ROM_MAKER_CODE='"$(EXPANSION_ROM_MAKER_CODE)"' \
 	-DFE8_EXPANSION_ROM_REVISION=$(EXPANSION_ROM_REVISION) \
 	-DFE8_EXPANSION_ROM_SIZE_BYTES=$(MODERN_ROM_SIZE_BYTES) \
-	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH)
+	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
+	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)u \
+	-DFE8_EXPANSION_DEFAULT_LOCALE_ID=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID) \
+	-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)
  endif
 endif
 
@@ -1271,6 +1352,9 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rom_revision=$(EXPANSION_ROM_REVISION)'; \
 		printf '%s\n' 'rom_size_bytes=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'save_compat_epoch=$(MODERN_SAVE_COMPAT_EPOCH)'; \
+		printf '%s\n' 'enabled_locale_mask=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)'; \
+		printf '%s\n' 'default_locale_id=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID)'; \
+		printf '%s\n' 'pseudo_locale_enabled=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"
@@ -1288,6 +1372,51 @@ endif
 # and the self-contained mgfembp sources are intentionally excluded: neither
 # includes global.h, so neither can observe expansion_config.h.
 $(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_COMPILE_SETTINGS)
+
+# --- Localization catalog generation (issue #18 sprint 1) -------------------
+# Regenerates build/expansion-localization/generated/{expansion_locale_catalog.c,
+# expansion_msg_ids.h,budget.json} from texts/expansion/registry.json +
+# catalog.en.json via scripts/localization/generate.py (invoked through its
+# CLI, scripts/localization/cli.py -- see also localization.mk's own
+# standalone, toolchain-independent localization-* targets for the same
+# generator run outside of any modern build). Uses the same FORCE +
+# write-if-unchanged idiom as MODERN_BUILD_METADATA_JSON above (the
+# generator itself only rewrites a file whose content actually changed),
+# so an unrelated rebuild does not touch these files' mtimes and therefore
+# does not spuriously invalidate $(MODERN_OUTPUT_DIR)/src/
+# expansion_locale-catalog.o. This recipe is reachable only when something
+# depends on $(MODERN_LOCALIZATION_CATALOG_C) -- which only happens when
+# MODERN_LOCALIZATION_AVAILABLE gated that object into MODERN_ALL_C_OBJECTS
+# above -- so no separate availability branch is needed here, unlike
+# MODERN_BUILD_METADATA_JSON (which is unconditionally a $(MODERN_ROM)
+# prerequisite and so needs its own placeholder fallback). Running
+# scripts/localization/cli.py performs the full validation contract
+# (duplicate/sparse/out-of-order/invalid/reused-tombstone ids, ASCII/
+# width/byte-budget, placeholder/control-token parity, ...) before writing
+# anything, so an invalid registry/catalog fails this recipe -- and
+# therefore the modern build -- with an actionable message, exactly like
+# an invalid config.mk value fails MODERN_BUILD_METADATA_JSON's own
+# recipe.
+.PHONY: FORCE_MODERN_LOCALIZATION
+FORCE_MODERN_LOCALIZATION:
+
+$(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCALIZATION_BUDGET_JSON): FORCE_MODERN_LOCALIZATION
+	@mkdir -p "$(MODERN_LOCALIZATION_GENERATED_DIR)"
+	@python3 -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
+
+# Explicit (non-pattern) compile rule for the generated catalog's synthetic
+# slot object (see the MODERN_ALL_C_OBJECTS += comment above for why this
+# path is synthetic, not a reinstated "original" one). GNU Make always
+# prefers this explicit rule over the generic `$(MODERN_OUTPUT_DIR)/%.o: %.c`
+# pattern rule for the same target, so it always compiles the real
+# generated .c -- there is no on-disk src/expansion_locale-catalog.c for it
+# to ever fall back to. A safe no-op target when MODERN_LOCALIZATION_AVAILABLE
+# is empty (modern.mk included standalone): the rule is simply never
+# reachable, since nothing adds this path to MODERN_ALL_C_OBJECTS in that
+# case.
+$(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o: $(MODERN_LOCALIZATION_CATALOG_C)
+	@mkdir -p $(@D)
+	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
 
 # Resolve modern LD consistently with the toolchain root.

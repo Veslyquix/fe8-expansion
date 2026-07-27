@@ -1,0 +1,17 @@
+{
+  "$schema": "expansion-localization-catalog-v1",
+  "locale": "en",
+  "strings": {
+    "framework.title": "Expansion Framework",
+    "framework.version_label": "Version:",
+    "framework.build_label": "Build:",
+    "framework.locale_label": "Locale:",
+    "framework.missing_text": "[MISSING TEXT]",
+    "framework.locale_name.en": "English",
+    "framework.locale_name.qps_ploc": "Pseudo (Test)",
+    "debug.diagnostics_header": "Diagnostics",
+    "debug.catalog_stats_label": "Catalog Stats:",
+    "debug.sample_placeholder_pair": "Sample {0} of {1}",
+    "debug.sample_two_line": "Line one\nLine two"
+  }
+}

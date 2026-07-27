@@ -141,4 +141,40 @@
 #define FE8_EXPANSION_SAVE_COMPAT_EPOCH 1
 #endif
 
+
+/* --- Locale identity (see config.mk EXPANSION_ENABLED_LOCALES/
+ * EXPANSION_DEFAULT_LOCALE/EXPANSION_PSEUDO_LOCALE, issue #18 sprint 1) --- */
+/*
+ * FE8_EXPANSION_ENABLED_LOCALE_MASK is a bitmask over ExpansionLocaleId
+ * values (include/expansion_locale.h): bit N set means locale id N
+ * (EXPANSION_LOCALE_EN, EXPANSION_LOCALE_QPS_PLOC, ...) is enabled for
+ * this build. FE8_EXPANSION_DEFAULT_LOCALE_ID is the ExpansionLocaleId
+ * ExpansionLocale_GetDefault() returns; it is always one of the bits set
+ * in the mask (scripts/modernize/expansion_config.py validates this
+ * before any modern C/assembly compilation). FE8_EXPANSION_PSEUDO_LOCALE_
+ * ENABLED mirrors whether EXPANSION_LOCALE_QPS_PLOC is enabled (bit 7 of
+ * the mask) as a plain 0/1 flag, purely for callers that want to branch
+ * on "is the ASCII pseudo-locale test harness active" without decoding
+ * the mask themselves.
+ *
+ * The hardcoded fallback below (bit 0 only, i.e. English-only, default
+ * English, pseudo disabled) matches config.mk's own EXPANSION_ENABLED_
+ * LOCALES/EXPANSION_DEFAULT_LOCALE/EXPANSION_PSEUDO_LOCALE defaults
+ * exactly, so the legacy agbcc build (which never receives the modern
+ * -D locale flags -- and never links src/expansion_locale.c at all, see
+ * that file's own header comment) still compiles consistently with
+ * today's implicit English-only behavior.
+ */
+#ifndef FE8_EXPANSION_ENABLED_LOCALE_MASK
+#define FE8_EXPANSION_ENABLED_LOCALE_MASK 0x1u
+#endif
+
+#ifndef FE8_EXPANSION_DEFAULT_LOCALE_ID
+#define FE8_EXPANSION_DEFAULT_LOCALE_ID 0
+#endif
+
+#ifndef FE8_EXPANSION_PSEUDO_LOCALE_ENABLED
+#define FE8_EXPANSION_PSEUDO_LOCALE_ENABLED 0
+#endif
+
 #endif /* GUARD_EXPANSION_CONFIG_H */

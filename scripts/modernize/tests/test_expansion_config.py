@@ -36,6 +36,9 @@ def write_config_mk(
     rom_revision="0",
     build_id="",
     save_compat_epoch="1",
+    enabled_locales="en",
+    default_locale="en",
+    pseudo_locale="0",
 ) -> Path:
     path = directory / "config.mk"
     path.write_text(
@@ -50,6 +53,9 @@ def write_config_mk(
                 f"EXPANSION_ROM_REVISION := {rom_revision}",
                 f"EXPANSION_BUILD_ID := {build_id}",
                 f"EXPANSION_SAVE_COMPAT_EPOCH := {save_compat_epoch}",
+                f"EXPANSION_ENABLED_LOCALES := {enabled_locales}",
+                f"EXPANSION_DEFAULT_LOCALE := {default_locale}",
+                f"EXPANSION_PSEUDO_LOCALE := {pseudo_locale}",
                 "",
             ]
         ),
@@ -246,6 +252,9 @@ class ParseConfigMkTests(unittest.TestCase):
                         "EXPANSION_ROM_REVISION := 0",
                         "EXPANSION_BUILD_ID :=",
                         "EXPANSION_SAVE_COMPAT_EPOCH := 1",
+                        "EXPANSION_ENABLED_LOCALES := en",
+                        "EXPANSION_DEFAULT_LOCALE := en",
+                        "EXPANSION_PSEUDO_LOCALE := 0",
                         "",
                     ]
                 ),
@@ -421,6 +430,177 @@ class LoadIdentityTests(unittest.TestCase):
         self.assertEqual(identity.build_commit, "cafef00d")
 
 
+class ValidateEnabledLocalesTests(unittest.TestCase):
+    def test_single_en_ok(self):
+        self.assertEqual(ec.validate_enabled_locales("en"), ("en",))
+
+    def test_en_and_qps_ok_and_normalized_to_stable_order(self):
+        # Input order is reversed from the stable id order; the validator
+        # must normalize to the fixed stable-id order regardless.
+        self.assertEqual(
+            ec.validate_enabled_locales("qps-ploc,en"), ("en", "qps-ploc")
+        )
+
+    def test_list_input_accepted(self):
+        self.assertEqual(ec.validate_enabled_locales(["en", "qps-ploc"]), ("en", "qps-ploc"))
+
+    def test_empty_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_enabled_locales("")
+
+    def test_missing_en_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_enabled_locales("qps-ploc")
+
+    def test_unknown_locale_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_enabled_locales("en,klingon")
+
+    def test_duplicate_locale_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_enabled_locales("en,en")
+
+    def test_reserved_but_unsupported_locale_rejected(self):
+        """ja/zh-Hans/fr/de/es/it are stable, known locale ids -- but not
+        yet supported in sprint 1 -- and must still be rejected."""
+        for locale in ("ja", "zh-Hans", "fr", "de", "es", "it"):
+            with self.assertRaises(ec.ConfigError):
+                ec.validate_enabled_locales(f"en,{locale}")
+
+
+class ValidateDefaultLocaleTests(unittest.TestCase):
+    def test_default_within_enabled_set_ok(self):
+        self.assertEqual(ec.validate_default_locale("en", ("en", "qps-ploc")), "en")
+
+    def test_default_not_in_enabled_set_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_default_locale("qps-ploc", ("en",))
+
+    def test_unknown_default_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_default_locale("klingon", ("en",))
+
+
+class ValidatePseudoLocaleTests(unittest.TestCase):
+    def test_zero_without_qps_ok(self):
+        self.assertEqual(ec.validate_pseudo_locale("0", ("en",)), 0)
+
+    def test_one_with_qps_ok(self):
+        self.assertEqual(ec.validate_pseudo_locale("1", ("en", "qps-ploc")), 1)
+
+    def test_one_without_qps_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_pseudo_locale("1", ("en",))
+
+    def test_zero_with_qps_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            ec.validate_pseudo_locale("0", ("en", "qps-ploc"))
+
+    def test_non_zero_one_value_rejected(self):
+        for bogus in ("2", "true", "yes", "-1", ""):
+            with self.assertRaises(ec.ConfigError):
+                ec.validate_pseudo_locale(bogus, ("en",))
+
+
+class ComputeLocaleMaskTests(unittest.TestCase):
+    def test_en_only_mask_is_bit_zero(self):
+        self.assertEqual(ec.compute_locale_mask(("en",)), 0x1)
+
+    def test_en_and_qps_mask_matches_bit_positions(self):
+        # en=0, qps-ploc=7 -- see scripts/localization/schema.py LOCALE_IDS.
+        self.assertEqual(ec.compute_locale_mask(("en", "qps-ploc")), 0x81)
+
+
+class LoadIdentityLocaleTests(unittest.TestCase):
+    """load_identity() end-to-end locale config resolution -- defaults,
+    overrides, invalid combinations, and the fingerprint/save-epoch
+    independence guarantee (issue #18 sprint 1 WHAT item 5)."""
+
+    def test_defaults_are_en_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            identity = ec.load_identity(
+                config_mk_path=config_mk, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp),
+            )
+        self.assertEqual(identity.enabled_locales, ("en",))
+        self.assertEqual(identity.default_locale, "en")
+        self.assertEqual(identity.pseudo_locale_enabled, 0)
+        self.assertEqual(identity.enabled_locale_mask, 0x1)
+        self.assertEqual(identity.default_locale_id, 0)
+
+    def test_config_mk_qps_enabled_is_honored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(
+                Path(tmp), enabled_locales="en,qps-ploc", pseudo_locale="1"
+            )
+            identity = ec.load_identity(
+                config_mk_path=config_mk, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp),
+            )
+        self.assertEqual(identity.enabled_locales, ("en", "qps-ploc"))
+        self.assertEqual(identity.pseudo_locale_enabled, 1)
+        self.assertEqual(identity.enabled_locale_mask, 0x81)
+
+    def test_override_wins_over_config_mk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            identity = ec.load_identity(
+                config_mk_path=config_mk, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp),
+                enabled_locales="en,qps-ploc", default_locale="qps-ploc", pseudo_locale="1",
+            )
+        self.assertEqual(identity.enabled_locales, ("en", "qps-ploc"))
+        self.assertEqual(identity.default_locale, "qps-ploc")
+        self.assertEqual(identity.pseudo_locale_enabled, 1)
+
+    def test_invalid_locale_combination_from_config_mk_fails_early(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp), pseudo_locale="1")  # qps not enabled
+            with self.assertRaises(ec.ConfigError):
+                ec.load_identity(
+                    config_mk_path=config_mk, config_preset="debug", abi="aapcs",
+                    rom_size="16M", repo_root=Path(tmp),
+                )
+
+    def test_locale_config_changes_fingerprint(self):
+        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+            config_a = write_config_mk(Path(tmp_a))
+            config_b = write_config_mk(
+                Path(tmp_b), enabled_locales="en,qps-ploc", pseudo_locale="1"
+            )
+            identity_a = ec.load_identity(
+                config_mk_path=config_a, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp_a),
+            )
+            identity_b = ec.load_identity(
+                config_mk_path=config_b, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp_b),
+            )
+        self.assertNotEqual(identity_a.config_fingerprint, identity_b.config_fingerprint)
+
+    def test_locale_config_change_does_not_move_save_compat_epoch(self):
+        """The exact property WHAT item 5 requires: changing the locale
+        config changes the fingerprint but never the save-compat epoch."""
+        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+            config_a = write_config_mk(Path(tmp_a), save_compat_epoch="42")
+            config_b = write_config_mk(
+                Path(tmp_b), save_compat_epoch="42",
+                enabled_locales="en,qps-ploc", pseudo_locale="1",
+            )
+            identity_a = ec.load_identity(
+                config_mk_path=config_a, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp_a),
+            )
+            identity_b = ec.load_identity(
+                config_mk_path=config_b, config_preset="debug", abi="aapcs",
+                rom_size="16M", repo_root=Path(tmp_b),
+            )
+        self.assertNotEqual(identity_a.config_fingerprint, identity_b.config_fingerprint)
+        self.assertEqual(identity_a.save_compat_epoch, identity_b.save_compat_epoch)
+        self.assertEqual(identity_a.save_compat_epoch, 42)
+
+
 class GenerateMetadataFilesTests(unittest.TestCase):
     def _identity(self, tmp):
         config_mk = write_config_mk(Path(tmp))
@@ -553,6 +733,72 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             fingerprint_of(baseline.stdout), fingerprint_of(overridden.stdout)
         )
+
+    def test_resolve_prints_locale_tokens(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            result = self.run_cli(
+                "resolve",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "16M",
+                "--repo-root", tmp,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("MODERN_EXPANSION_ENABLED_LOCALE_MASK=1", result.stdout)
+        self.assertIn("MODERN_EXPANSION_DEFAULT_LOCALE_ID=0", result.stdout)
+        self.assertIn("MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED=0", result.stdout)
+
+    def test_resolve_locale_overrides_change_tokens_and_fingerprint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            baseline = self.run_cli(
+                "resolve",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "16M",
+                "--repo-root", tmp,
+            )
+            overridden = self.run_cli(
+                "resolve",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "16M",
+                "--repo-root", tmp,
+                "--enabled-locales", "en,qps-ploc",
+                "--pseudo-locale", "1",
+            )
+        self.assertEqual(baseline.returncode, 0, baseline.stderr)
+        self.assertEqual(overridden.returncode, 0, overridden.stderr)
+        self.assertIn("MODERN_EXPANSION_ENABLED_LOCALE_MASK=1 ", baseline.stdout)
+        self.assertIn("MODERN_EXPANSION_ENABLED_LOCALE_MASK=129", overridden.stdout)
+
+        def fingerprint_of(stdout: str) -> str:
+            for token in stdout.split():
+                if token.startswith("MODERN_CONFIG_FINGERPRINT="):
+                    return token
+            raise AssertionError(f"no fingerprint token in: {stdout}")
+
+        self.assertNotEqual(fingerprint_of(baseline.stdout), fingerprint_of(overridden.stdout))
+
+    def test_resolve_fails_early_on_inconsistent_locale_combination(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            result = self.run_cli(
+                "resolve",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "16M",
+                "--repo-root", tmp,
+                "--pseudo-locale", "1",  # qps-ploc not enabled -- must fail
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("error:", result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_generate_writes_metadata_files(self):
         with tempfile.TemporaryDirectory() as tmp:
