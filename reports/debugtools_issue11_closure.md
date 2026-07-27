@@ -517,7 +517,7 @@ $ git status --porcelain --ignored | grep -Ei '\.(gba|sav|savestate|state)$'
 ```
 $ git diff --check
 (no output -- no whitespace errors)
-$ git diff --name-only -- '*.c' '*.h' | xargs -I{} git diff -- {} | grep -n '^\+.*//' 
+$ git diff --name-only -- '*.c' '*.h' | xargs -I{} git diff -- {} | grep -n '^\+.*//'
 (no output -- no added C++-style comments in any changed C source/header)
 ```
 
