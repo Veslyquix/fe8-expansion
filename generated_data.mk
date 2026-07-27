@@ -180,10 +180,92 @@ GENERATED_DATA_CONFIG_INPUTS_items := \
 #      back to 0xCD) regenerates the table with no clean, while a repeat build
 #      at the same cap stays a no-op. An invalid cap (non-integer, negative,
 #      >0xFF, ...) fails here, early, before any generation.
-GENERATED_DATA_ITEM_CAP := $(shell $(PYTHON) -c "import scripts.generated_data.idspace as i; print('0x%02X' % i.resolve_item_id_cap())" 2>/dev/null)
+# Forward the FE8_ITEM_ID_CAP *make* variable (which already reflects a
+# `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment overriding any
+# ambient environment value -- GNU Make's highest-precedence origin) into
+# the resolver's environment. Two facts force the escaping below:
+#   1. GNU Make (4.3) does NOT export makefile/command-line variables into a
+#      $(shell) subprocess (the `export` directive only reaches recipe and
+#      sub-make environments), and a `make FE8_ITEM_ID_CAP=...` command-line
+#      assignment is not in make's own process environment. So the resolver
+#      cannot merely inherit the value -- it must be passed on the command.
+#   2. Interpolating the *raw* value straight into the shell command is a
+#      shell-injection vector: a crafted FE8_ITEM_ID_CAP with a single-quote
+#      breakout (e.g. `'; touch pwned; echo '`) would otherwise execute during
+#      parse. So POSIX-single-quote-escape it first -- wrap in single quotes
+#      and rewrite every embedded ' as '\'' -- yielding one literal shell word
+#      that can never be executed. (A value containing make-function syntax
+#      like $(...) is still expanded by make itself when it evaluates the
+#      user's own command line; that is inherent GNU Make behaviour, upstream
+#      of this file, and is not a shell escape out of the resolver.)
+# Empty (unset) forwards FE8_ITEM_ID_CAP='' -> default 0xCD.
+GENERATED_DATA__SQ := '
+GENERATED_DATA_ITEM_CAP_SHELL_ARG := $(GENERATED_DATA__SQ)$(subst $(GENERATED_DATA__SQ),$(GENERATED_DATA__SQ)\$(GENERATED_DATA__SQ)$(GENERATED_DATA__SQ),$(FE8_ITEM_ID_CAP))$(GENERATED_DATA__SQ)
+GENERATED_DATA_ITEM_CAP := $(shell FE8_ITEM_ID_CAP=$(GENERATED_DATA_ITEM_CAP_SHELL_ARG) $(PYTHON) -c "import scripts.generated_data.idspace as i; print('0x%02X' % i.resolve_item_id_cap())" 2>/dev/null)
 ifeq ($(GENERATED_DATA_ITEM_CAP),)
 $(error FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' is not a valid item ID cap (want an integer 0x00..0xFF within the u8 ItemId storage); see scripts/generated_data/idspace.py resolve_item_id_cap)
 endif
+
+# --- Issue #10 archival lane guard: item expansion is modern-only ----------
+# Strategic binding decision: the archival agbcc lane is unsupported for item
+# ID expansion. Its agbcc compile commands deliberately do NOT thread
+# -DFE8_ITEM_ID_CAP (only modern.mk's MODERN_DEFINE_FLAGS does), so at a
+# non-vanilla cap the generator would plan a 0xCE..0xFF (up to 207-record)
+# gItemData[] table while every archival object still compiles
+# include/id_space.h's built-in ITEM_ID_CONFIGURED_CAP at the vanilla 0xCD --
+# a silent generated-vs-compiled contract divergence.
+#
+# This guard is deliberately NOT a fragile literal MAKECMDGOALS whitelist (the
+# prior approach only caught four hand-listed goal spellings and silently let
+# every indirect archival entry -- fireemblem8_relocs.elf, the whole
+# shiftcheck{,-static,-offsets,-diff,-run} family, objects.lst, direct object
+# builds, and any future target that reaches the archival objects -- through at
+# an expanded cap under `make -n`). Instead the cap assertion is bound to the
+# real archival dependency-graph boundary: generated_data.mk defines a single
+# .PHONY guard target here, and the Makefile attaches it (order-only) to the
+# archival objects/link products (see "archival item-cap guard" there). So
+# *any* target that reaches the agbcc archival objects/link -- named, indirect,
+# or added later -- automatically inherits the guard through the graph, with no
+# list to keep in sync.
+#
+# Mechanism: the guard's cap assertion lives in its *recipe* as a make $(error)
+# function, which make expands (and thus fires) whenever the guard target is
+# pulled into the active build graph -- including under `make -n` (a dry run
+# still expands recipe text) and even when the archival products are already up
+# to date (the guard is .PHONY, so it is always reconsidered). It is lazy: the
+# recipe is only expanded when an archival target is actually requested, so the
+# bare/default modern lane, the modern targets, and the standalone
+# generated-data checks (which never depend on the archival objects/link) stay
+# allowed at an expanded cap. The order-only attachment means the guard never
+# forces an archival relink at the vanilla cap. The comparison uses the
+# normalized, validated resolved caps (resolve_item_id_cap / ITEM_DEFAULT_CAP,
+# both formatted 0x%02X), so any legal equivalent spelling of the vanilla cap
+# (e.g. 205, 0xcd, 0o315) is accepted and any expanded value rejected -- no
+# fragile raw-string compare. FE8_ITEM_ID_CAP is read from the environment and
+# from a `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment (command
+# line wins, GNU Make's highest-precedence origin).
+GENERATED_DATA_ITEM_DEFAULT_CAP := $(shell $(PYTHON) -c "import scripts.generated_data.idspace as i; print('0x%02X' % i.ITEM_DEFAULT_CAP)" 2>/dev/null)
+# Non-empty exactly when the resolved cap is expanded past the vanilla default
+# (normalized compare, so 0xCD == 205 == 0o315 all read as vanilla / empty).
+GENERATED_DATA_ITEM_CAP_EXPANDED := $(filter-out $(GENERATED_DATA_ITEM_DEFAULT_CAP),$(GENERATED_DATA_ITEM_CAP))
+# The dependency-graph guard target. Empty recipe (`:`) at the vanilla cap;
+# a fatal, actionable $(error) at an expanded cap. Because the assertion is a
+# make function in the recipe body, it fires at plan/expansion time -- so
+# `make -n <any archival goal>` exits non-zero -- before any archival compile
+# or link (and before mgfembp's $(MAKE) sub-build) runs.
+# --- Issue #10 archival item-cap guard: single actionable diagnostic ------
+# One source of truth for the cap-divergence message, reused by BOTH gates:
+#   1. the parse-time known-goal fast-fail (Makefile, fires before any recipe
+#      / $(MAKE) -C mgfembp sub-build / agbcc compile), and
+#   2. the dependency-graph backstop recipe below (catches unknown / indirect
+#      / future archival entries).
+# := so it captures the already-resolved, normalized caps once as static
+# text; the embedded '(' / ')' / ',' only appear post-expansion, so wrapping
+# it in $(error $(...)) is paren/comma-safe.
+GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG := Archival lane (the agbcc fireemblem8.gba/.elf/.map ROM/ELF/MAP, the `legacy` alias, fireemblem8_relocs.elf, the shiftcheck family, and objects.lst) only supports the vanilla item cap FE8_ITEM_ID_CAP=$(GENERATED_DATA_ITEM_DEFAULT_CAP), but FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' resolved to $(GENERATED_DATA_ITEM_CAP). The agbcc archival lane does not thread -DFE8_ITEM_ID_CAP, so an expanded cap would generate a table that diverges from the compiled ITEM_ID_CONFIGURED_CAP. Item ID expansion is modern-only: build the modern lane instead, e.g. `FE8_ITEM_ID_CAP=$(GENERATED_DATA_ITEM_CAP) make expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs`; or unset FE8_ITEM_ID_CAP (or set it to $(GENERATED_DATA_ITEM_DEFAULT_CAP)) to build this archival target
+.PHONY: generated-data-archival-item-cap-guard
+generated-data-archival-item-cap-guard:
+	@$(if $(GENERATED_DATA_ITEM_CAP_EXPANDED),$(error $(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG)),:)
 GENERATED_DATA_ITEM_CAP_STAMP := $(GENERATED_DATA_OUT_DIR)/.item_id_cap.stamp
 
 .PHONY: FORCE_GENERATED_DATA_ITEM_CAP

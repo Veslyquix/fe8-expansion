@@ -81,6 +81,78 @@ bit-exactly through save, suspend, and multi-arena/link representations with
 no serialized layout, meaning, packing, checksum, or epoch change. The only
 cost of 0xCD -> 0xCE is one extra `struct ItemData` record in ROM.
 
+### Item expansion is modern-only; the archival lane is vanilla-cap-only
+
+Item ID expansion is a **modern-lane-only** capability. Only the modern GCC
+build threads the cap into the compile (`modern.mk` appends
+`-DFE8_ITEM_ID_CAP=<n>` to `MODERN_DEFINE_FLAGS`), so the generated (up to
+207-record) `gItemData[]` table and the compiled `ITEM_ID_CONFIGURED_CAP`
+consumer resolve one identical cap.
+
+The archival agbcc lane is **unsupported for expansion** and does not thread
+`-DFE8_ITEM_ID_CAP`. At a non-vanilla cap it would silently plan an expanded
+table while every archival object still compiles the built-in vanilla `0xCD`
+cap: a generated-vs-compiled contract divergence.
+
+The guard is enforced by **two complementary gates** that share one
+actionable diagnostic (`GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG`, defined once in
+`generated_data.mk` so they cannot drift):
+
+* **Gate 1 -- parse-time known-goal fast-fail.** For an explicitly-named public
+  archival goal, the `Makefile` filters `$(MAKECMDGOALS)` against
+  `ARCHIVAL_KNOWN_GOALS` (the `legacy` alias, the direct ROM/ELF/MAP products,
+  `fireemblem8_relocs.elf`, `objects.lst`, and the whole
+  `shiftcheck{,-static,-offsets,-diff,-run}` family) and, at an expanded cap,
+  fires a `$(error)` during **parse** -- before any recipe, sub-make
+  (`$(MAKE) -C mgfembp ...`), or agbcc compile is even planned. This is what
+  makes a real `make legacy` / `make fireemblem8.gba` fail *early*: it must not
+  first churn mgfembp's sub-build and hundreds of agbcc objects (all regular
+  prerequisites of `$(ROM)`, updated before an order-only prerequisite) only to
+  abort at the final link.
+* **Gate 2 -- dependency-graph backstop.** `generated_data.mk` defines a single
+  `.PHONY` guard target whose *recipe* body is a make `$(error)`, and the
+  `Makefile` attaches it as an order-only prerequisite of the archival
+  link/list/artifact products -- `objects.lst`, `fireemblem8.elf`,
+  `fireemblem8.gba`, `fireemblem8.map`, and `fireemblem8_relocs.elf`. Every
+  archival artifact funnels through at least one of these, so **any** target
+  not on the Gate-1 list -- an indirect entry, or a target added later that
+  merely depends on an archival product -- still inherits the guard through the
+  graph, with no goal list to maintain. Because the assertion is a make
+  function in the recipe body, it fires at plan/expansion time, so even a dry
+  run exits non-zero (a plain recipe-level check would never run under
+  `make -n`).
+
+```console
+$ FE8_ITEM_ID_CAP=0xCE make -n legacy      # Gate 1 (any known goal): parse-time
+Makefile:NNN: *** Archival lane (the agbcc fireemblem8.gba/.elf/.map ROM/ELF/MAP,
+the `legacy` alias, fireemblem8_relocs.elf, the shiftcheck family, and
+objects.lst) only supports the vanilla item cap FE8_ITEM_ID_CAP=0xCD, but
+FE8_ITEM_ID_CAP='0xCE' resolved to 0xCE. The agbcc archival lane does not thread
+-DFE8_ITEM_ID_CAP, so an expanded cap would generate a table that diverges from
+the compiled ITEM_ID_CONFIGURED_CAP. Item ID expansion is modern-only: build the
+modern lane instead, e.g. `FE8_ITEM_ID_CAP=0xCE make expansion-modern-boot-check
+MODERN_CONFIG=release MODERN_ABI=aapcs`; or unset FE8_ITEM_ID_CAP (or set it to
+0xCD) to build this archival target.  Stop.
+
+# An ad-hoc/indirect target that merely depends on an archival product, named
+# nowhere in ARCHIVAL_KNOWN_GOALS, is still blocked by Gate 2 (generated_data.mk).
+```
+
+The guard compares the *normalized, validated* resolved cap
+(`scripts/generated_data/idspace.py resolve_item_id_cap` vs `ITEM_DEFAULT_CAP`),
+honors both environment and `make FE8_ITEM_ID_CAP=... <goal>` command-line
+overrides (command line wins), and accepts any legal spelling of the vanilla
+cap (`0xCD`, `205`, `0xcd`, `0o315`). The attachment is deliberately at the
+link/list/artifact boundary rather than on the individual objects: several
+`src/data/*.o` data objects are *shared* -- the modern lane's
+`expansion-modern-boot-check` builds them through its own `make NODEP=0
+<objects>` sub-make -- so guarding objects would wrongly block the modern lane,
+whereas the archival products are produced only by the agbcc lane. Migration
+impact: to build an expanded item ROM, use the modern lane; the archival lane
+is vanilla-`0xCD`-only. A bare `make` (modern), the modern targets, and
+`FE8_ITEM_ID_CAP=0xCE make generated-data-check` (which build only their own /
+generated objects) are unaffected.
+
 ## Adding a supported item record
 
 1. Add the enum constant to `include/constants/items_expansion.h`.

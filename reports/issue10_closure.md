@@ -410,3 +410,200 @@ Verified: `tests/upstream_port` 139 passed / 8 subtests;
 `python3 -m scripts.upstream_port verify --dry-run` lists all 8 gates in
 order, the item-expansion gates rendering their `FE8_ITEM_ID_CAP=0xCE
 FE8_EXPANSION_ITEMTEST=1 make ...` prefix exactly as in `build.yml`.
+
+### C. Archival lane silently accepted an expanded item cap (parse-time guard)
+
+Root cause: `FE8_ITEM_ID_CAP` is threaded into the compile only by the modern
+lane (`modern.mk` -> `MODERN_DEFINE_FLAGS += -DFE8_ITEM_ID_CAP=<n>`). The
+archival agbcc lane -- the `legacy` alias and the direct `fireemblem8.gba` /
+`fireemblem8.elf` / `fireemblem8.map` targets -- deliberately does **not**
+thread the define. So `FE8_ITEM_ID_CAP=0xCE make fireemblem8.gba` (and `make
+legacy`) planned a 207-record `gItemData[]` table (the cap stamp resolves
+`item_id_cap=0xCE`) while every archival object still compiled
+`include/id_space.h`'s built-in `ITEM_ID_CONFIGURED_CAP` at the vanilla
+`0xCD`: a silent generated-vs-compiled contract divergence. The pre-existing
+per-recipe cap stamp/self-heal (finding A) cannot catch this because it lives
+in a recipe, and `make -n` (and Make goal resolution generally) never runs a
+recipe -- confirmed reproduced: `FE8_ITEM_ID_CAP=0xCE make -n fireemblem8.gba`
+exited 0 with **zero** agbcc compile lines carrying `-DFE8_ITEM_ID_CAP` yet a
+planned `item_id_cap=0xCE` stamp write.
+
+Strategic decision (frozen): the archival lane is **unsupported for item
+expansion**; it must fail early and actionably rather than be threaded the
+define. Item ID expansion is modern-only.
+
+Initial fix (superseded by finding C-follow-up below): a parse-time
+`$(error)` gated on a literal `MAKECMDGOALS` whitelist
+(`legacy fireemblem8.gba fireemblem8.elf fireemblem8.map`) plus a `$(shell)`
+resolver forwarding `FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)'` for command-line
+precedence. A fresh review flagged **two** defects in this first cut, both
+fixed in C-follow-up: (P2) the literal whitelist caught only those four goal
+spellings and silently let every *indirect* archival entry
+(`fireemblem8_relocs.elf`, the whole `shiftcheck` family, `objects.lst`, and
+any future target reaching the archival objects) through at an expanded cap
+under `make -n`; and (P1) interpolating the raw `FE8_ITEM_ID_CAP` value into the
+`$(shell)` command was a **shell-injection** vector.
+
+Evidence mapping:
+
+| Scenario | Command | Result |
+|---|---|---|
+| Repro (silent divergence) | `FE8_ITEM_ID_CAP=0xCE make -n fireemblem8.gba` (pre-fix) | exit 0; 0 agbcc lines with `-DFE8_ITEM_ID_CAP`; stamp plans `item_id_cap=0xCE` |
+| Env expanded, direct ROM | `FE8_ITEM_ID_CAP=0xCE make -n fireemblem8.gba` | exit 2, actionable `*** Archival lane target(s) 'fireemblem8.gba' only support ... FE8_ITEM_ID_CAP=0xCD ... modern-only ...` |
+| Env expanded, alias | `FE8_ITEM_ID_CAP=0xCE make -n legacy` | exit 2, same diagnostic naming `legacy` |
+| Command-line expanded | `make -n legacy FE8_ITEM_ID_CAP=0xCE` | exit 2 |
+| Precedence (CLI beats env) | `FE8_ITEM_ID_CAP=0xCD make -n legacy FE8_ITEM_ID_CAP=0xCE` | exit 2 |
+| Precedence (CLI beats env, permissive) | `FE8_ITEM_ID_CAP=0xCE make -n legacy FE8_ITEM_ID_CAP=0xCD` | exit 0 |
+| Default cap | `make -n legacy` / `make -n fireemblem8.gba` | exit 0 (archival lane reachable) |
+| Explicit vanilla / legal equivalent | `FE8_ITEM_ID_CAP=0xCD make -n legacy` / `FE8_ITEM_ID_CAP=205 make -n fireemblem8.gba` | exit 0 |
+| Modern unaffected | `FE8_ITEM_ID_CAP=0xCE make -n` (bare) | exit 0, modern release AAPCS boot-check, no agbcc |
+| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE make -n generated-data-check` / `... make generated-data-check` | exit 0 |
+| Modern define consistency | `FE8_ITEM_ID_CAP=0xCE make -rR -p` | `MODERN_DEFINE_FLAGS := ... -DFE8_ITEM_ID_CAP=0xCE` |
+
+Regression tests: see finding C-follow-up (the test module was rewritten to
+pin the dependency-graph guard).
+
+### C-follow-up. Guard was a fragile goal whitelist + shell-injection-prone (dependency-graph refactor)
+
+Fresh-reviewer reproduction (P2): with the initial fix in place,
+`FE8_ITEM_ID_CAP=0xCE make -n shiftcheck{,-static,-offsets,-diff,-run}` and
+`FE8_ITEM_ID_CAP=0xCE make -n fireemblem8_relocs.elf` still **exited 0** -- the
+literal `MAKECMDGOALS` whitelist only matched four hand-listed goal spellings,
+so every indirect archival entry (the shiftability harness, the reloc ELF,
+`objects.lst`, and any future target that reaches the archival objects) bypassed
+the same silent generated-vs-compiled divergence.
+
+Root cause: the strategy is that the *entire archival lane* is unsupported for
+expansion, but the guard was pinned to four goal names instead of to the
+archival dependency graph.
+
+Fix -- dependency-graph-level guard (`generated_data.mk` + one Makefile
+attachment):
+
+* `generated_data.mk` defines a single `.PHONY` target
+  `generated-data-archival-item-cap-guard` whose *recipe* body is a make
+  `$(error ...)` that fires only at an expanded resolved cap
+  (`GENERATED_DATA_ITEM_CAP_EXPANDED := $(filter-out $(default),$(resolved))`).
+  Because the assertion is a make function in the recipe, make expands (and
+  fires) it whenever the guard target is pulled into the active build graph --
+  under `make -n` (a dry run still expands recipe text) and even when the
+  archival products are already up to date (the target is `.PHONY`, always
+  reconsidered). It is *lazy*: expanded only when an archival target is actually
+  requested.
+* The `Makefile` attaches that guard as an **order-only prerequisite** of the
+  archival link/list/artifact boundary --
+  `objects.lst / fireemblem8.elf / fireemblem8.gba / fireemblem8.map /
+  fireemblem8_relocs.elf`. Every archival artifact (incl. the whole shiftcheck
+  family) funnels through at least one of these, and none is built by the
+  modern or standalone generated-data lanes, so the guard is inherited through
+  the graph by any archival target -- named, indirect, or added later -- with
+  no goal list to maintain. Order-only means the always-out-of-date `.PHONY`
+  guard never forces an archival relink at the vanilla cap (a no-op `:` there).
+
+The attachment is deliberately at the link/list/artifact boundary, **not** on
+the individual `$(ALL_OBJECTS)`: several `src/data/*.o` data objects are
+*shared* -- `expansion-modern-boot-check` builds them via its own `make NODEP=0
+<objects>` sub-make -- so guarding objects would wrongly block the modern lane
+at an expanded cap (caught by `test_bare_make_stays_modern_even_at_expanded_cap`
+before this report was written).
+
+Injection sub-fix (P1): GNU Make (4.3) does not export makefile/command-line
+variables into a `$(shell)` subprocess, and a `make FE8_ITEM_ID_CAP=...`
+assignment is not in make's own environment, so the resolver must pass the
+value on the command. Interpolating the *raw* value was a shell-injection
+vector -- reproduced: `FE8_ITEM_ID_CAP="'; touch /tmp/pwned; echo '" make -n
+legacy` created `/tmp/pwned`. The `$(shell)` now POSIX-single-quote-escapes the
+value (`'` -> `'\''`) so it is always one literal shell word; the same payload
+now yields the invalid-cap error and no side effect. (A value containing make
+`$(...)` syntax is still expanded by make when it evaluates the user's own
+command line -- inherent GNU Make behaviour, upstream of this file, and not a
+shell escape out of the resolver.) CLI-over-env precedence and the normalized
+resolver are preserved.
+
+Evidence mapping (post-follow-up):
+
+| Scenario | Command | Result |
+|---|---|---|
+| P2 repro (indirect entries) | `FE8_ITEM_ID_CAP=0xCE make -n shiftcheck` / `... shiftcheck-static/-offsets/-diff/-run` / `... fireemblem8_relocs.elf` / `... objects.lst` | pre-follow-up exit 0; now **exit 2**, actionable guard diagnostic |
+| Direct products + alias | `FE8_ITEM_ID_CAP=0xCE make -n legacy / fireemblem8.gba / fireemblem8.elf / fireemblem8.map` | exit 2 |
+| Command-line cap | `make -n shiftcheck FE8_ITEM_ID_CAP=0xCE` | exit 2 |
+| Precedence (CLI beats env) | `FE8_ITEM_ID_CAP=0xCD make -n legacy FE8_ITEM_ID_CAP=0xCE` | exit 2 |
+| Precedence (permissive) | `FE8_ITEM_ID_CAP=0xCE make -n legacy FE8_ITEM_ID_CAP=0xCD` | exit 0 |
+| Future/indirect target inheritance | `make -f Makefile -f <frag> -n <ad-hoc>: $(ELF)` at `0xCE` | exit 2 (graph-inherited, named nowhere) |
+| Real build, before any link | `FE8_ITEM_ID_CAP=0xCE make fireemblem8.map` (non `-n`) | exit 2 in ~1.5s; no `arm-none-eabi-ld`/`objcopy` |
+| Vanilla / legal equivalents | `make -n legacy` / `FE8_ITEM_ID_CAP=205` / `0xcd` / `0o315` | exit 0 (archival reachable) |
+| Modern unaffected | `FE8_ITEM_ID_CAP=0xCE make -n` (bare) / `... expansion-modern-boot-check ...` | exit 0 |
+| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE make -n generated-data-check` / `... make generated-data-check` | exit 0 |
+| Modern define consistency | `FE8_ITEM_ID_CAP=0xCE make -rR -p` | `MODERN_DEFINE_FLAGS := ... -DFE8_ITEM_ID_CAP=0xCE` |
+| Shell injection (env + CLI) | `FE8_ITEM_ID_CAP="'; touch M; echo '" make -n generated-data-check` | no `M` created; exit 2 invalid-cap error |
+
+Regression tests (rewritten):
+`scripts/modernize/tests/test_archival_lane_item_cap_guard.py` (21 tests, 42
+subtests, all green) pins: every archival entry (direct/alias/relocs/shiftcheck
+aggregate+each sub-target/objects.lst) blocked under `make -n` via env and CLI;
+CLI-over-env precedence both directions; normalized vanilla/expanded spellings
+(`205`/`0xcd`/`0o315` vs `206`/`0xce`/`0o316`); the modern + generated lanes and
+bare/default modern staying green at `0xCE`; the modern lane threading a
+consistent `-DFE8_ITEM_ID_CAP`; **dependency-graph inheritance** by ad-hoc
+future targets depending on `$(ELF)`/`$(OBJECTS_LST)`/`$(RELOCS_ELF)`; a real
+(non `-n`) `fireemblem8.map` blocking before any link; and shell-injection
+safety for env + command-line metacharacter payloads. No archival compiler flags
+were changed to support expansion; no test/CI gate was weakened.
+
+### C-final. "Fail early" gap: known archival goals churned the object graph before failing (parse-time gate added)
+
+Fresh-reviewer finding: the dependency-graph guard (C-follow-up) was **safe**
+(it always blocked the archival *link*) but not **early**. Its attachment is an
+*order-only* prerequisite, and GNU Make updates order-only prerequisites *after*
+a target's regular prerequisites. So a real `make legacy` / `make
+fireemblem8.gba` at an expanded cap first ran mgfembp's `$(MAKE)` sub-build and
+assembled hundreds of agbcc objects (the regular prerequisites of `$(ROM)`) and
+only then hit the order-only guard -- violating the user's explicit "the
+legacy/direct target must fail early" requirement. The prior regression suite
+masked this by only ever exercising a *real* build of `fireemblem8.map`, whose
+sole prerequisite is the order-only guard (no object graph), so it could never
+prove the "don't churn the graph first" property.
+
+Fix -- add **Gate 1**, a parse-time known-goal fast-fail, and keep the graph
+guard as **Gate 2** (backstop for unknown/indirect/future entries). Both gates
+share one diagnostic, factored into `GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG` in
+`generated_data.mk`, so they cannot drift:
+
+* `Makefile` builds `ARCHIVAL_KNOWN_GOALS` from the Make variables (verified
+  against the Makefile / `make -p`, not guessed): `legacy $(ROM) $(ELF) $(MAP)
+  $(RELOCS_ELF) $(OBJECTS_LST)` + the `shiftcheck` aggregate and each
+  `shiftcheck-{static,offsets,diff,run}` sub-target. `shiftcheck-build` is
+  intentionally excluded -- it only scans build-system addresses and reaches no
+  archival product.
+* At an expanded resolved cap, `$(if $(filter $(ARCHIVAL_KNOWN_GOALS),
+  $(MAKECMDGOALS)), ...)` fires `$(error ...)` during parse, before any recipe,
+  sub-make, or agbcc/arm-none-eabi command is planned or run.
+
+Evidence mapping (finding C-final):
+
+| Scenario | Command | Result |
+|---|---|---|
+| Repro (fail-late) | `FE8_ITEM_ID_CAP=0xCE make legacy` (non `-n`, pre-C-final) | ran mgfembp sub-build + agbcc objects, then aborted at link |
+| **Parse-time, zero recipe** | `FE8_ITEM_ID_CAP=0xCE make -n legacy` (and `fireemblem8.gba/.elf/.map`, `fireemblem8_relocs.elf`, `objects.lst`, `shiftcheck{,-static,-offsets,-diff,-run}`) | exit 2; output is **only** the `Makefile:NNN: *** ...` diagnostic + `Stop.` -- no `mgfembp` / `arm-none-eabi-*` / assemble / link line planned |
+| **Real high-prereq build, no work done** | `FE8_ITEM_ID_CAP=0xCE make legacy` / `fireemblem8.gba` / `objects.lst` / `shiftcheck` (non `-n`) | exit 2 at parse; **no** `Entering directory` / `mgfembp` / `arm-none-eabi-as` / `arm-none-eabi-ld` / `arm-none-eabi-objcopy` |
+| Command-line cap | `make -n legacy FE8_ITEM_ID_CAP=0xCE` | exit 2 (Gate 1) |
+| Precedence (CLI beats env) | `FE8_ITEM_ID_CAP=0xCD make -n legacy FE8_ITEM_ID_CAP=0xCE` | exit 2 |
+| Precedence (permissive) | `FE8_ITEM_ID_CAP=0xCE make -n legacy FE8_ITEM_ID_CAP=0xCD` | exit 0 |
+| **Unknown/indirect still blocked (Gate 2)** | `make -f Makefile -f <frag> -n <ad-hoc>: $(ELF)/$(OBJECTS_LST)/$(RELOCS_ELF)` at `0xCE` (named nowhere in `ARCHIVAL_KNOWN_GOALS`) | exit 2 via graph backstop (`generated_data.mk:NNN`) |
+| Vanilla / legal equivalents | `make -n legacy` / `FE8_ITEM_ID_CAP=205` / `0xcd` / `0o315` | exit 0 |
+| Modern unaffected | `FE8_ITEM_ID_CAP=0xCE make -n` (bare) / `... expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs` | exit 0 |
+| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE make -n generated-data-check` | exit 0 |
+| Modern define consistency | `FE8_ITEM_ID_CAP=0xCE make -rR -p` | `MODERN_DEFINE_FLAGS := ... -DFE8_ITEM_ID_CAP=0xCE` |
+| Shell injection (env + CLI) | `FE8_ITEM_ID_CAP="'; touch M; echo '" make -n generated-data-check` | no `M` created; exit 2 invalid-cap error |
+
+Regression tests: `scripts/modernize/tests/test_archival_lane_item_cap_guard.py`
+now **26 tests / 53 subtests, all green**. New coverage over C-follow-up:
+`KnownGoalParseTimeFastFailTests` (every known goal fails under `make -n` with
+**zero** recipe/sub-make/compile marker), and
+`RealArchivalBuildPreemptedBeforeAnyWorkTests` (real, non `-n` `legacy` /
+`fireemblem8.gba` / `objects.lst` / `shiftcheck` -- each depending on all of
+`$(ALL_OBJECTS)` -- abort at parse before any object assemble, mgfembp
+sub-build, or link). The `DependencyGraphInheritanceTests` continue to pin the
+Gate-2 backstop for ad-hoc targets named nowhere in the goal list. No archival
+compiler flags were changed to support expansion; no test/CI gate was weakened;
+the graph backstop was **not** removed.
