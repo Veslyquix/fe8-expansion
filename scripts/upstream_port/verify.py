@@ -56,6 +56,7 @@ def gates(jobs: int = 2) -> List[Gate]:
         Gate(
             name="gba-playtest-host-suite",
             command=[
+                "GBA_PLAYTEST_HOST_ONLY=1",
                 "python3",
                 "-m",
                 "unittest",
@@ -71,7 +72,14 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "timeouts, retry policy, deterministic sorted-JSON output, "
                 "provenance/diagnostics. Host-only (build-essential + "
                 "libmgba-dev, no arm-none-eabi toolchain); never builds/links "
-                "the ROM, so it does not overlap the modern-linker gates below"
+                "the ROM, so it does not overlap the modern-linker gates below. "
+                "GBA_PLAYTEST_HOST_ONLY=1 (mirrored verbatim from build.yml, "
+                "and applied to THIS child process only) makes that host-only "
+                "scope explicit: the ROM-dependent live-integration tests skip "
+                "by mode instead of by whether a git-ignored build artifact "
+                "happens to exist, so this gate cannot be perturbed by the "
+                "modern-linker/item-expansion gates below rewriting those "
+                "artifacts. Live coverage stays with those ROM gates"
             ),
         ),
         Gate(
@@ -86,7 +94,7 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "-v",
             ],
             applicable_note=(
-                "issue #12/#15 host lane (same `host-tests` job): the 139 "
+                "issue #12/#15 host lane (same `host-tests` job): the 144 "
                 "pure-stdlib upstream-port review tooling tests "
                 "(classify/scan/drift/state/ref-binding/output-safety/"
                 "merge-commit determinism and this verify.gates() <-> build.yml "

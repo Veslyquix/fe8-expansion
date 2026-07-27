@@ -253,9 +253,13 @@ release-configuration limitation documented above).
   stays vanilla).
 - `make generated-data-test` -> `Ran 544 tests ... OK`.
 - `python3 -m unittest discover -s tools/gba-playtest/tests` -> `Ran 184
-  tests ... OK` (against default-cap ROMs; this suite reads the ROMs in
-  `build/expansion-modern/`, so it must be run with default-cap builds
-  present).
+  tests ... OK` (against default-cap ROMs; in **normal mode** this suite
+  reads the ROMs in `build/expansion-modern/`, so it must be run with
+  default-cap builds present). Since fix D below, the CI host lane instead
+  runs `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s
+  tools/gba-playtest/tests -v`, which is artifact-independent by
+  construction; the ROM-backed coverage is unchanged and stays with the
+  runtime/build gates.
 - `python3 -m unittest discover -s scripts/modernize/tests` -> `Ran 358 tests
   ... OK`.
 
@@ -621,3 +625,95 @@ sub-build, or link). The `DependencyGraphInheritanceTests` continue to pin the
 Gate-2 backstop for ad-hoc targets named nowhere in the goal list. No archival
 compiler flags were changed to support expansion; no test/CI gate was weakened;
 the graph backstop was **not** removed.
+
+
+### D. Host lane ran live ROM integration opportunistically (artifact-timing-controlled gate)
+
+**Symptom.** In an artifact-rich local worktree at this branch head, the host
+gate `python3 -m unittest discover -s tools/gba-playtest/tests` failed with
+exactly six failures, all in
+`SaveCompatScenarioTests_modern_release.test_each_non_current_state_shows_distinct_dialog_and_preserves_sram`
+(subtests `valid-legacy`, `header-corrupt`, `metadata-corrupt`, `older`,
+`newer`, `config-incompatible`), each a `checkpoints[2].framebuffer_hash`
+mismatch. A clean CI checkout passed the same command. Reproduced verbatim
+before the fix: `Ran 270 tests ... FAILED (failures=6)`.
+
+**RCA.** The failures are not about the commit under test at all:
+
+1. Why did the host gate fail? The release save-compat scenarios were captured
+   live against `build/expansion-modern/release/aapcs/fireemblem8.gba` and
+   compared to the committed release fingerprints.
+2. Why did a *host* gate boot a ROM? Each live TestCase decided
+   live-run-vs-skip from `rom.exists()`.
+3. Why is that unreliable? `build/` is git-ignored and user-owned. It can hold
+   a stale ROM, a mid-rebuild ROM, or (after `verify` gates 9-10) an
+   expanded-cap `FE8_ITEM_ID_CAP=0xCE` ROM, none of which the committed
+   default-cap fingerprints describe.
+4. Why is that a design defect and not just bad luck? It made host-gate
+   coverage a function of local artifact timing instead of an explicit
+   contract: CI (clean) skipped, a local worktree ran, and
+   `python3 -m scripts.upstream_port verify --jobs 2` is the worst case,
+   because its own later gates rewrite exactly those artifacts.
+5. Root fix. The host lane must be decided by an explicit mode, and live
+   coverage must be owned by the gates that build the ROM they boot.
+
+**Fix (no fingerprint, baseline or budget touched, nothing cleaned/deleted).**
+
+- New single public contract `GBA_PLAYTEST_HOST_ONLY` in
+  `tools/gba-playtest/tests/host_mode.py`: strict boolean (default off,
+  unrecognized value refused, never guessed), the single source of truth for
+  repository ROM/ELF paths, one `require_built_rom()` existence check, one
+  `capture_live_or_skip()` live entry point, and a
+  `live_artifact_testcase()` class decorator that skips at *run* time, before
+  any `setUpClass`/`setUp` body can probe an artifact.
+- All nine live TestCase classes across the seven ROM-dependent modules are
+  registered in `host_mode.LIVE_TEST_CLASSES` and guarded; the six duplicated
+  copies of the backend-unavailable marker list and the ad-hoc
+  `_capture_or_skip` helpers were deleted in favor of the central ones.
+- Every test module is explicitly classified Category A (host-only safe,
+  always runs) or Category B (live, skipped in host-only mode) in
+  `host_mode.py`; `tools/gba-playtest/tests/test_host_only_mode.py` (22 tests)
+  enforces the classification, the strict env parsing, the
+  skip-before-probe/mid-run-appearance behavior and normal-mode preservation.
+- `.github/workflows/build.yml` `host-tests` runs
+  `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`;
+  the ROM `build` job never sees the variable.
+  `scripts/upstream_port/verify.py` mirrors that argv literally as a leading
+  inline env assignment, so `_split_env_prefix` applies it to that one child
+  process only.
+
+**Evidence (all run this session, same worktree).**
+
+| Check | Command | Result |
+|---|---|---|
+| Defect reproduced (before fix) | `python3 -m unittest discover -s tools/gba-playtest/tests` | `Ran 270 tests ... FAILED (failures=6)` (stale release ROM) |
+| Host-only, artifact-rich worktree (all ROMs/ELFs present, release ROM stale) | `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v` | `Ran 271 tests in 52.576s ... OK (skipped=9)` |
+| Artifacts untouched by that run | sha256 + size + `st_mtime_ns` of both modern ROMs, both modern ELFs, the legacy ROM and the debugtools SRAM fixture | all six byte-, size- and mtime-identical; none deleted |
+| Normal mode unchanged (stale ROM present) | `python3 -m unittest discover -s tools/gba-playtest/tests` | `Ran 292 tests ... FAILED (failures=6)` -- the *same* six pre-existing failures, i.e. live behavior preserved |
+| Normal mode against fresh, current default-cap ROMs | same command, after the two `expansion-modern-linker-check` gates rebuilt both configs | `Ran 292 tests in 158.663s ... OK` (zero skips: all 21 live tests really ran) |
+| Clean-checkout equivalence (hermetic copy, no artifacts) | live classes, both modes | host-only `OK (skipped=9)` with the host-only reason; normal `OK (skipped=11)` with `ROM not built` -- CI outcome unchanged |
+| Stale/mismatched artifacts staged at the expected paths (hermetic tree) | `test_host_only_mode.HostOnlyStagedWorktreeSubprocessTests` | host-only: `Ran 0 tests ... OK (skipped=9)`, all six staged files unchanged; the same tree in normal mode really opens the stale ROM and fails loudly |
+| Host-only contract regression suite | `python3 -m unittest test_host_only_mode -v` | `Ran 22 tests ... OK` |
+| Mutation check (guard removed from one live class in a throwaway copy) | same suite | 4 independent regression tests fail, including the staged-tree run |
+| Workflow <-> verify mirror + env isolation | `python3 -m unittest discover -s tests/upstream_port -v` | `Ran 144 tests ... OK` (5 new: literal gate argv, prefix split, no other gate carries it, workflow host-job-only, run_gates injects it into that child only and never mutates `os.environ`) |
+| Gate list | `python3 -m scripts.upstream_port verify --dry-run --jobs 2` | 10 gates, order unchanged; gate 1 is `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v` |
+| Full local CI | `python3 -m scripts.upstream_port verify --jobs 2` | all 10 gates `[PASS]` in `10m25.811s` -- host gate deterministic while gates 7-10 rebuilt the very ROMs it used to read |
+
+**Why coverage is not reduced.** Every live scenario the host lane used to run
+opportunistically is already a hard prerequisite of the ROM gates that build
+the ROM they boot: `expansion-modern-linker-check` (boot/title/debugtools/
+timer/map/tools/prep/ch4prep/newgame/combat/saveload/savefmt/shifted plus the
+budget, overlay, shift-offset and raw-pointer audits) for `debug` and
+`release`, then `expansion-modern-itemexpansion-check` at cap `0xCE` for both
+configs. Those four gates are unchanged and were re-run green above. A
+concrete illustration of the hazard being removed: immediately after
+`verify --jobs 2`, `build/expansion-modern/*` holds the expanded-cap ROMs, so
+a *normal-mode* host suite run fails (`combat` probe `0x0f` vs `0x00`) --
+while the host-only lane stays green, because it never reads those files.
+
+**Out of scope by construction.** No fingerprint, baseline, budget or scoring
+artifact was refreshed or edited; no git-ignored user output was cleaned or
+deleted; no gate was removed, reordered or weakened (gate count stays 10, and
+the mirror test still parses the live workflow); the ROM `build` job does not
+inherit host-only mode; local runtime debugging keeps the previous
+artifact-driven behavior in normal mode.

@@ -42,33 +42,25 @@ SCENARIOS_DIR = PLAYTEST_DIR / "scenarios"
 FINGERPRINTS_DIR = PLAYTEST_DIR / "fingerprints"
 SCENARIO_PATH = SCENARIOS_DIR / "savesuspend-resume-modern-debug.json"
 FINGERPRINT_PATH = FINGERPRINTS_DIR / "savesuspend-resume-modern-debug.json"
-MODERN_DEBUG_ROM = REPO_ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.gba"
 
 sys.path.insert(0, str(PLAYTEST_DIR))
 sys.path.insert(0, str(PLAYTEST_DIR / "tests"))
 
 import gba_playtest  # noqa: E402
+import host_mode  # noqa: E402
 import sram_fixture as sf  # noqa: E402
 import sram_hash_mirror  # noqa: E402
 
-_UNAVAILABLE_MARKERS = (
-    "C compiler ",
-    "mgba/core/core.h: No such file",
-    "'mgba/core/core.h' file not found",
-    "cannot find -lmgba",
-    "library not found for -lmgba",
-)
+MODERN_DEBUG_ROM = host_mode.modern_rom("debug")
 
 
 def _capture_or_skip(rom: Path, scenario, sram_image: Path):
-    try:
-        return gba_playtest.capture(rom, scenario, sram_image)
-    except gba_playtest.PlaytestError as exc:
-        if any(marker in str(exc) for marker in _UNAVAILABLE_MARKERS):
-            raise unittest.SkipTest(
-                f"libmGBA integration skipped explicitly: {exc}"
-            ) from exc
-        raise
+    """Live capture against a repository ROM. Host-only mode
+    (GBA_PLAYTEST_HOST_ONLY=1) skips before the ROM is touched; normal mode
+    keeps the previous explicit backend-unavailable skip."""
+    return host_mode.capture_live_or_skip(
+        rom, scenario, sram_image, label="savesuspend-resume runtime coverage"
+    )
 
 
 class SavesuspendResumeScenarioFilesTests(unittest.TestCase):
@@ -198,18 +190,19 @@ class SavesuspendResumeScenarioFilesTests(unittest.TestCase):
         )
 
 
+@host_mode.live_artifact_testcase("savesuspend-resume runtime coverage")
 class SavesuspendResumeRuntimeTests(unittest.TestCase):
     """Executes the scenario end-to-end against the built modern debug
-    ROM and compares against the committed fingerprint -- skipped
-    (never a false pass) if that ROM has not been built yet or the
-    libmGBA backend is unavailable in this environment."""
+    ROM and compares against the committed fingerprint.
+
+    Category B (tests/host_mode.py): in host-only mode this class is skipped
+    before the ROM is touched. In normal mode it is skipped (never a false
+    pass) if that ROM has not been built yet or the libmGBA backend is
+    unavailable in this environment."""
 
     @classmethod
     def setUpClass(cls):
-        if not MODERN_DEBUG_ROM.exists():
-            raise unittest.SkipTest(
-                f"modern debug ROM not built: {MODERN_DEBUG_ROM}"
-            )
+        host_mode.require_built_rom(MODERN_DEBUG_ROM, "modern debug ROM")
 
     def setUp(self):
         self._tmpdir = tempfile.TemporaryDirectory(prefix="gba-playtest-savesuspend-resume-")

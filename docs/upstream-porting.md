@@ -188,11 +188,17 @@ workflow splits them across two jobs — a fast, host-only `host-tests` job
 `build` job (full modern ROM/ELF/linker) — and `verify` mirrors that exact
 argv-and-order sequence across both jobs:
 
-1. `python3 -m unittest discover -s tools/gba-playtest/tests -v`
-   (issue #13: the full host-only tools/gba-playtest suite — host job,
-   never rebuilds the ROM)
+1. `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`
+   (issue #13: the full tools/gba-playtest suite in explicit host-only mode
+   — host job, never rebuilds the ROM. `GBA_PLAYTEST_HOST_ONLY=1` is a
+   leading inline environment assignment, mirrored verbatim from `build.yml`
+   and applied to that one child process only, so the ROM/runtime gates
+   below never inherit it and keep owning live coverage. It makes this gate
+   independent of whether a git-ignored ROM happens to exist in the worktree
+   while gates 7-10 rebuild it — see `tools/gba-playtest/README.md`,
+   “Host-only test mode”.)
 2. `python3 -m unittest discover -s tests/upstream_port -v`
-   (issue #12/#15: the 139 pure-stdlib upstream-port review tooling tests,
+   (issue #12/#15: the 144 pure-stdlib upstream-port review tooling tests,
    including this `verify.gates()` <-> `build.yml` mirror — host job, links
    no C and never rebuilds the ROM)
 3. `python3 scripts/artifact_guard.py --revision HEAD`
