@@ -94,9 +94,9 @@ path or start modifying the source.
 
 The modern bootstrap compiles a verified set of C files (reproduce the
 current count against this worktree with `make print-MODERN_COHORT_C_OBJECTS`,
-rather than trusting a number written here) and three handwritten assembly
-files to ARM relocatable objects only. This cohort target itself
-does **not** link an ELF or a ROM — the fuller modern chain
+rather than trusting a number written here) and a small, fixed set of
+handwritten assembly files (named below) to ARM relocatable objects only.
+This cohort target itself does **not** link an ELF or a ROM — the fuller modern chain
 (`expansion-modern-elf` → `expansion-modern-rom` → `expansion-modern-boot-check`,
 documented below) is what the default quickstart path now builds and
 boot-verifies as the supported release ROM, superseding the legacy ROM as the
@@ -106,7 +106,7 @@ modern release ROM directly, with no quickstart script required and no
 `tools/agbcc` executable or library ever needed or resolved; `make legacy`
 (equivalent to the pre-existing `make fireemblem8.gba`) is the named,
 explicit way to reach the archival lane instead. The modern
-`ap.o`, the five save objects (`bmsave-misc.o`, `bmsave-gmap.o`,
+`ap.o`, the save objects (`bmsave-misc.o`, `bmsave-gmap.o`,
 `bmsave-lib.o`, `bmsave.o`, and `bmsave-xmap.o`), the convoy/container object
 (`bmcontainer.o`, which defines `ClearSupplyItems` and `GetConvoyItemArray` for
 save dependency closure but is not itself one of the save objects), the Proc
@@ -132,16 +132,16 @@ readiness on their own. Cross-ABI layout probes cover the world-map save structu
 this does not claim callback, ABI, SRAM, EWRAM-overlay, or save-persistence
 readiness.
 
-The cohort also assembles three handwritten files that must not be
+The cohort also assembles the handwritten files that must not be
 decompiled (see `CONTRIBUTING.md`): `libagbsyscall.o` is a self-contained set
 of BIOS SWI trampolines (`SoftReset`, `SoundBiasReset`, `SoundBiasSet`, and
 others), while `arm.o` and `arm_call.o` are a coupled ARM/Thumb interwork
 pair — `arm_call.o`'s Thumb trampolines branch directly into `arm.o`'s
-ARM-mode functions, so they are promoted together. Adding all three closes 17
+ARM-mode functions, so they are promoted together. Adding these closes 17
 prior cohort-unsatisfied symbols (the debug/aapcs unsatisfied set moves from
 139 to 131), including `ClearOAMBuffer`, `SoftReset`, `SoundBiasReset`, and
-`SoundBiasSet`, while exposing nine new IWRAM/ROM data globals that `arm.o`
-references but does not define: `gBmMapTerrain`, `gBmMapUnit`,
+`SoundBiasSet`, while exposing nine new IWRAM/ROM data
+globals that `arm.o` references but does not define: `gBmMapTerrain`, `gBmMapUnit`,
 `gMovMapFillStPool1`, `gMovMapFillStPool2`, `gMovMapFillState`,
 `gMsgHuffmanTable`, `gMsgHuffmanTableRoot`, `gWorkingBmMap`, and
 `gWorkingTerrainMoveCosts`. `arm.s`'s 13 exported functions are not yet typed
@@ -175,7 +175,7 @@ make expansion-modern-cohort
 ```
 
 Outputs are isolated under
-`build/expansion-modern/<config>/<abi>/` (C objects under `src/`, the three
+`build/expansion-modern/<config>/<abi>/` (C objects under `src/`, the
 handwritten assembly objects under `src/` and `asm/`, matching each source's
 own directory) as one `.o`/`.d` pair per cohort source file; reproduce the
 current C, assembly, and combined object counts against this worktree with

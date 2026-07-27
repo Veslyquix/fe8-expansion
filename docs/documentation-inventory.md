@@ -1,16 +1,26 @@
 # Documentation inventory
 
-This is the machine-checked, exact-coverage registry of **every** Markdown
-file tracked in this repository (see [`docs/README.md`](README.md) for the
-human-oriented narrative index/learning-paths view of the same set).
-[`scripts/check_docs.py`](../scripts/check_docs.py) parses the delimited
-block below and fails closed if:
+This is the machine-checked, exact-coverage registry of **every** file
+with a recognized Markdown extension, tracked (or untracked-but-not-
+ignored, in a dev worktree) in this repository (see
+[`docs/README.md`](README.md) for the human-oriented narrative
+index/learning-paths view of the same set). The recognized extension set
+is small, explicit, and documented: `.md`, `.markdown`, `.mdown`, `.mkd`
+(matched case-insensitively -- see
+[`scripts/check_docs.py`](../scripts/check_docs.py)'s
+`RECOGNIZED_MARKDOWN_EXTENSIONS`); an unrecognized extension (`.txt`,
+`.mdx`, ...) is never swept in just because it looks Markdown-adjacent.
+`scripts/check_docs.py` parses the delimited block below and fails closed
+if:
 
-- any Markdown file in the repository (as enumerated by
-  `git ls-files --cached --others --exclude-standard -- '*.md'`) is missing
-  an entry here, or
-- any entry here references a Markdown path that doesn't exist/isn't
-  tracked, or
+- any Git-tracked or untracked-but-not-ignored file whose extension is one
+  of the recognized Markdown extensions above (discovered from the full
+  `git ls-files --cached --others --exclude-standard` listing filtered by
+  extension in Python -- not a `*.md`-only pathspec glob, which would
+  silently miss any other recognized extension) is missing an entry here,
+  or
+- any entry here references a recognized-Markdown-extension path that
+  doesn't exist/isn't tracked, or
 - any entry has an empty owner/scope, or a `status` outside the controlled
   enum below.
 

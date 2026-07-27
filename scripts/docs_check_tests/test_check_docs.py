@@ -160,6 +160,145 @@ class InternalLinkExtractionTests(unittest.TestCase):
         self.assertEqual(targets, ["HTTP://EXAMPLE.COM/page"])
         self.assertTrue(check_docs._is_external(targets[0]))
 
+    # -----------------------------------------------------------------
+    # Second final-verifier residual finding #3: the previous inline
+    # link destination extraction used a regex that always stopped at
+    # the *first* literal `)`, so any destination containing balanced
+    # parentheses was silently truncated (never even reported as a
+    # finding) instead of being read in full or flagged as malformed.
+    # These fixtures exercise the bounded stateful scanner that replaced
+    # it: balanced/nested/escaped parens, matching image syntax, and a
+    # deterministic (fail-closed, not silent) outcome for genuinely
+    # malformed input.
+    # -----------------------------------------------------------------
+
+    def test_balanced_parens_in_destination_not_truncated(self):
+        stripped = check_docs.strip_fenced_blocks("[x](docs/a(b).md)")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a(b).md"])
+
+    def test_nested_balanced_parens_in_destination_not_truncated(self):
+        stripped = check_docs.strip_fenced_blocks("[x](docs/a(b(c)).md)")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a(b(c)).md"])
+
+    def test_escaped_parens_in_destination_unescaped_for_lookup(self):
+        stripped = check_docs.strip_fenced_blocks(r"[x](docs/a\(b\).md)")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a(b).md"])
+
+    def test_balanced_parens_in_image_destination_not_truncated(self):
+        stripped = check_docs.strip_fenced_blocks("![alt](docs/a(b).png)")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a(b).png"])
+
+    def test_balanced_parens_with_title_after(self):
+        stripped = check_docs.strip_fenced_blocks('[x](docs/a(b).md "title")')
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a(b).md"])
+
+    def test_missing_closing_paren_reports_error_not_silent(self):
+        stripped = check_docs.strip_fenced_blocks("[x](docs/a.md")
+        errors = []
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped, errors=errors)]
+        self.assertEqual(targets, [])
+        self.assertEqual(len(errors), 1)
+        lineno, message = errors[0]
+        self.assertEqual(lineno, 1)
+        self.assertIn("no closing", message)
+
+    def test_unbalanced_open_paren_in_destination_reports_error(self):
+        # Two literal "(" opened but only one literal ")" closed before
+        # end-of-line -- the destination itself never balances (unlike
+        # test_missing_closing_paren_reports_error_not_silent, where the
+        # single "(" *does* get matched by the sole ")" present, just
+        # leaving no separate ")" left over to close the link itself).
+        stripped = check_docs.strip_fenced_blocks("[x](docs/a(b(c.md)")
+        errors = []
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped, errors=errors)]
+        self.assertEqual(targets, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("unbalanced", errors[0][1])
+
+    def test_excess_nesting_depth_reports_error(self):
+        destination = "docs/" + "(" * (check_docs.MAX_LINK_DESTINATION_PAREN_DEPTH + 1) + "a.md"
+        stripped = check_docs.strip_fenced_blocks("[x](%s)" % destination)
+        errors = []
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped, errors=errors)]
+        self.assertEqual(targets, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("nesting depth", errors[0][1])
+
+    def test_unterminated_title_reports_error(self):
+        stripped = check_docs.strip_fenced_blocks('[x](docs/a.md "unterminated)')
+        errors = []
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped, errors=errors)]
+        self.assertEqual(targets, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("unterminated link title", errors[0][1])
+
+    def test_errors_default_none_still_silently_skips_malformed(self):
+        # Preserves the pre-existing "no errors= given" contract used by
+        # every test above this section: a malformed destination is
+        # simply absent from the yielded targets, no exception raised.
+        stripped = check_docs.strip_fenced_blocks("[x](docs/a.md")
+        targets = list(check_docs.extract_internal_link_targets(stripped))
+        self.assertEqual(targets, [])
+
+    def test_multiple_links_multiple_lines_deterministic_line_numbers(self):
+        text = (
+            "line one [a](docs/a.md)\n"
+            "line two, no link here\n"
+            "line three [b](docs/b(c).md) and [c](docs/c.md)\n"
+        )
+        stripped = check_docs.strip_fenced_blocks(text)
+        results = list(check_docs.extract_internal_link_targets(stripped))
+        self.assertEqual(
+            results,
+            [
+                (1, "docs/a.md"),
+                (3, "docs/b(c).md"),
+                (3, "docs/c.md"),
+            ],
+        )
+
+    def test_fenced_code_with_parens_still_ignored(self):
+        text = "```\n[fake](does(not)-exist.md)\n```\n"
+        stripped = check_docs.strip_fenced_blocks(text)
+        targets = list(check_docs.extract_internal_link_targets(stripped))
+        self.assertEqual(targets, [])
+
+
+class MalformedLinkSyntaxFindingIntegrationTests(unittest.TestCase):
+    """check_internal_links() (the real production caller) must fail
+    closed on malformed inline link/image syntax by emitting an actual
+    Finding -- not by silently treating it as "no link here", and not by
+    truncating a balanced-parenthesis destination into a bogus broken-
+    link finding for the wrong (truncated) path."""
+
+    def test_malformed_missing_close_paren_surfaces_as_finding(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "docs/a.md", "# A\n\nSee [x](docs/missing-close.md\n")
+            files = ["docs/a.md"]
+            findings = check_docs.check_internal_links(files, root)
+            messages = [f.message for f in findings]
+            self.assertTrue(any("malformed inline link/image syntax" in m for m in messages))
+
+    def test_balanced_paren_destination_resolves_to_real_file_not_truncated(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "docs/a(b).md", "# A\n")
+            write(root, "docs/c.md", "# C\n\nSee [x](a(b).md) for more.\n")
+            files = ["docs/a(b).md", "docs/c.md"]
+            findings = check_docs.check_internal_links(files, root)
+            # The balanced-paren target must resolve to the real file that
+            # actually exists at that exact path -- a naive first-`)`
+            # truncation would instead look up "a(b" (missing ".md)" and
+            # the trailing ")"), which does not exist, producing a false
+            # broken-link finding here.
+            self.assertEqual(findings, [])
+
 
 class ExternalUrlExtractionTests(unittest.TestCase):
     def test_bare_url_in_inline_code_is_found(self):
@@ -1019,6 +1158,105 @@ class ObjectCountClaimEscapeRegressionTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Second final-verifier residual finding #1: check_object_count_claims()
+# only matched a *digit* count -- docs/quickstart.md carried the exact same
+# drift-prone claim spelled out in English words instead ("three
+# handwritten assembly files", "the five save objects"), which slipped
+# through untouched. OBJECT_COUNT_SPELLED_RE closes that escape with a
+# closed, deterministic number-word token set (zero..twenty plus the
+# hyphenated twenty-one..twenty-nine tens) paired with this codebase's own
+# object/source noun vocabulary, scanned across the *whole* raw file text
+# (not per line) so a phrase this project's own soft-wrapped prose style
+# splits across a line break is still caught. These fixtures use the
+# *actual* old phrasing (including its real line-wrapped shape) that was
+# present in docs/quickstart.md before this round's fix, plus synthetic
+# positive/negative fixtures proving the noise-avoidance contract.
+# ---------------------------------------------------------------------------
+
+class SpelledObjectCountClaimRegressionTests(unittest.TestCase):
+    # Verbatim (including the real line-wrap point) phrases the verifier
+    # found still present in docs/quickstart.md before this round's fix.
+    REAL_OLD_QUICKSTART_PHRASES = [
+        "rather than trusting a number written here) and three handwritten assembly\n"
+        "files to ARM relocatable objects only.",
+        "The cohort also assembles three handwritten files that must not be\n"
+        "decompiled",
+        "build/expansion-modern/<config>/<abi>/` (C objects under `src/`, the three\n"
+        "handwritten assembly objects under `src/` and `asm/`",
+        "The modern\n"
+        "`ap.o`, the five save objects (`bmsave-misc.o`, `bmsave-gmap.o`,",
+    ]
+
+    def test_each_real_old_quickstart_phrase_is_flagged(self):
+        for phrase in self.REAL_OLD_QUICKSTART_PHRASES:
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_object_count_claims(["doc.md"], root)
+                self.assertTrue(findings, "expected a finding for: %r" % phrase)
+
+    def test_synthetic_positive_fixtures_are_flagged(self):
+        for phrase in (
+            "eighteen C files were compiled for the cohort.",
+            "twenty-one asm sources are promoted together.",
+            "the seven data objects are compile-only.",
+            "This links four assembly files into the cohort.",
+        ):
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_object_count_claims(["doc.md"], root)
+                self.assertTrue(findings, "expected a finding for: %r" % phrase)
+
+    def test_ordinary_prose_and_unrelated_counts_do_not_false_positive(self):
+        for phrase in (
+            "This is one source of truth for the build.",
+            "5. Runs `make expansion-modern-toolchain-check` then boot-checks.",
+            "runs `gba_playtest.py verify --policy behavior` against all three\n"
+            "checkpoints (frames 0/60/120).",
+            "Three source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`) receive\n"
+            "`-fdata-sections`.",
+            "eight performance-critical symbols are pinned to legacy IWRAM offsets.",
+            "Adding these closes 17 prior cohort-unsatisfied symbols (the debug/aapcs\n"
+            "unsatisfied set moves from 139 to 131).",
+            "step three of the process installs the toolchain.",
+        ):
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_object_count_claims(["doc.md"], root)
+                self.assertEqual(findings, [], "unexpected finding for: %r" % phrase)
+
+    def test_flagged_even_when_wrapped_across_a_line_break(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md", "compiles three handwritten\nassembly files to objects.\n")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertTrue(findings)
+            # The reported line number is the line the number word itself
+            # starts on (line 1), not the line the noun phrase concludes on.
+            self.assertEqual(findings[0].line, 1)
+
+    def test_flagged_even_inside_fenced_code_block(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md", "```text\nthe five save objects are compile-only\n```\n")
+            stale_findings = check_docs.check_stale_phrases(["doc.md"], root)
+            self.assertEqual(stale_findings, [])
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertTrue(findings)
+
+    def test_current_quickstart_has_no_spelled_object_count_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "quickstart.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "docs", "quickstart.md")
+            ))
+            findings = check_docs.check_object_count_claims(["quickstart.md"], root)
+            self.assertEqual(findings, [])
+
+
+# ---------------------------------------------------------------------------
 # Static Makefile-target database fixtures (never executes `make`)
 # ---------------------------------------------------------------------------
 
@@ -1414,6 +1652,146 @@ class DiscoveryTests(unittest.TestCase):
             self.assertIn("tracked.md", files)
             self.assertIn("untracked.md", files)
             self.assertNotIn("ignored.md", files)
+
+    # -----------------------------------------------------------------
+    # Second final-verifier residual finding #2: discover_markdown_files()
+    # previously used a `git ls-files -- '*.md'` pathspec, so a real
+    # Markdown file using any other recognized extension (`.markdown`,
+    # `.mdown`, `.mkd`) -- or an uppercase variant of any recognized
+    # extension -- was silently invisible to every check keyed off "the
+    # set of Markdown files" (inventory coverage, link/anchor resolution,
+    # external-URL registry coverage, stale-phrase/object-count scanning).
+    # These fixtures prove the fixed, full-listing-plus-Python-filter
+    # implementation actually recognizes the full documented set, still
+    # respects tracked/untracked/ignored semantics for each one, still
+    # excludes a genuinely unrecognized extension, and returns a stable
+    # sorted order even with a space in a path.
+    # -----------------------------------------------------------------
+
+    def test_tracked_alternate_extensions_all_discovered(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "a.markdown", "# A\n")
+            write(root, "b.mdown", "# B\n")
+            write(root, "c.mkd", "# C\n")
+            git(root, "add", "-A")
+            git(root, "commit", "-q", "-m", "init")
+            files = check_docs.discover_markdown_files(root)
+            self.assertIn("a.markdown", files)
+            self.assertIn("b.mdown", files)
+            self.assertIn("c.mkd", files)
+
+    def test_untracked_alternate_extensions_discovered(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "tracked.md", "# T\n")
+            git(root, "add", "tracked.md")
+            git(root, "commit", "-q", "-m", "init")
+            write(root, "untracked.markdown", "# U\n")
+            files = check_docs.discover_markdown_files(root)
+            self.assertIn("untracked.markdown", files)
+
+    def test_uppercase_recognized_extension_discovered(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "UPPER.MD", "# U\n")
+            write(root, "Mixed.Markdown", "# M\n")
+            git(root, "add", "-A")
+            git(root, "commit", "-q", "-m", "init")
+            files = check_docs.discover_markdown_files(root)
+            self.assertIn("UPPER.MD", files)
+            self.assertIn("Mixed.Markdown", files)
+
+    def test_ignored_alternate_extension_excluded(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "tracked.md", "# T\n")
+            git(root, "add", "tracked.md")
+            git(root, "commit", "-q", "-m", "init")
+            write(root, ".gitignore", "ignored.mkd\n")
+            write(root, "ignored.mkd", "# I\n")
+            files = check_docs.discover_markdown_files(root)
+            self.assertNotIn("ignored.mkd", files)
+
+    def test_unrecognized_extension_not_discovered(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "tracked.md", "# T\n")
+            write(root, "notes.txt", "plain text\n")
+            write(root, "weird.mdx", "# not recognized\n")
+            git(root, "add", "-A")
+            git(root, "commit", "-q", "-m", "init")
+            files = check_docs.discover_markdown_files(root)
+            self.assertIn("tracked.md", files)
+            self.assertNotIn("notes.txt", files)
+            self.assertNotIn("weird.mdx", files)
+
+    def test_stable_sorted_order_including_space_path(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "z.md", "# Z\n")
+            write(root, "docs/a doc.markdown", "# A doc\n")
+            write(root, "a.mkd", "# A\n")
+            git(root, "add", "-A")
+            git(root, "commit", "-q", "-m", "init")
+            files = check_docs.discover_markdown_files(root)
+            self.assertEqual(files, sorted(files))
+            self.assertIn("docs/a doc.markdown", files)
+
+
+class RecognizedExtensionInventoryTests(unittest.TestCase):
+    """Inventory exact-coverage (missing/extra) applied to alternate
+    recognized Markdown extensions, not just `.md` -- proving
+    check_inventory_coverage() is keyed off discover_markdown_files()'s
+    full recognized set, not a `.md`-only assumption baked into the
+    coverage check itself."""
+
+    def _write_inventory(self, root, entries_block):
+        content = (
+            "# Inventory\n\n"
+            + check_docs.INVENTORY_BEGIN + "\n"
+            + entries_block + "\n"
+            + check_docs.INVENTORY_END + "\n"
+        )
+        write(root, check_docs.INVENTORY_PATH, content)
+
+    def test_missing_entry_detected_for_alternate_extension(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "a.md", "# A\n")
+            write(root, "b.markdown", "# B\n")
+            self._write_inventory(root, "- a.md | alice | current | test doc\n"
+                                         "- " + check_docs.INVENTORY_PATH + " | alice | current | inventory")
+            entries, _ = check_docs.parse_inventory(root)
+            files = check_docs.discover_markdown_files(root)
+            findings = check_docs.check_inventory_coverage(root, files, entries)
+            messages = [f.message for f in findings]
+            self.assertTrue(any("b.markdown" in m and "missing" in m for m in messages))
+
+    def test_extra_entry_detected_for_nonexistent_alternate_extension(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "a.md", "# A\n")
+            self._write_inventory(root, "- a.md | alice | current | test doc\n"
+                                         "- ghost.mkd | alice | current | does not exist\n"
+                                         "- " + check_docs.INVENTORY_PATH + " | alice | current | inventory")
+            entries, _ = check_docs.parse_inventory(root)
+            files = check_docs.discover_markdown_files(root)
+            findings = check_docs.check_inventory_coverage(root, files, entries)
+            messages = [f.message for f in findings]
+            self.assertTrue(any("ghost.mkd" in m for m in messages))
+
+    def test_alternate_extension_with_inventory_entry_passes(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "a.mdown", "# A\n")
+            self._write_inventory(root, "- a.mdown | alice | current | test doc\n"
+                                         "- " + check_docs.INVENTORY_PATH + " | alice | current | inventory")
+            entries, errors = check_docs.parse_inventory(root)
+            self.assertEqual(errors, [])
+            files = check_docs.discover_markdown_files(root)
+            findings = check_docs.check_inventory_coverage(root, files, entries)
+            self.assertEqual(findings, [])
 
 
 class CliSmokeTests(unittest.TestCase):

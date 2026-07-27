@@ -3,7 +3,10 @@
 
 Single authoritative entry point for Issues #7/#17's documentation
 governance closure. Verifies, over every tracked (and, in a dev worktree,
-untracked-but-not-ignored) Markdown file in this repository:
+untracked-but-not-ignored) file whose extension is one of a small,
+explicit, documented set of recognized Markdown extensions
+(``RECOGNIZED_MARKDOWN_EXTENSIONS`` -- ``.md``, ``.markdown``, ``.mdown``,
+``.mkd``, matched case-insensitively) in this repository:
 
   1. Internal relative links/images resolve to a real in-repo path, and
      ``file.md#anchor`` anchors resolve against a deterministic,
@@ -67,6 +70,20 @@ from collections import namedtuple
 
 INVENTORY_PATH = "docs/documentation-inventory.md"
 REGISTRY_PATH = "docs/external-link-registry.md"
+
+# Recognized Markdown file extensions -- a small, explicit, documented set,
+# matched case-insensitively via ``str.casefold()`` on each candidate
+# path's ``os.path.splitext()`` suffix (Git permits case-sensitive paths on
+# a case-sensitive filesystem, so an uppercase ``README.MD`` must still be
+# recognized the same as ``readme.md``). Every check keyed off "the set of
+# Markdown files" (inventory exact-coverage, internal-link/anchor
+# resolution, external-URL registry coverage, stale-phrase/object-count
+# scanning) uses this same set via ``discover_markdown_files()`` below --
+# never a bare ``*.md`` glob, which would silently miss a real Markdown
+# file using one of the other three recognized extensions. This is
+# deliberately a fixed, closed set: an unrecognized extension (``.txt``,
+# ``.mdx``, ...) is never swept in just because it looks Markdown-adjacent.
+RECOGNIZED_MARKDOWN_EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd")
 
 INVENTORY_BEGIN = "<!-- DOCS-INVENTORY:BEGIN -->"
 INVENTORY_END = "<!-- DOCS-INVENTORY:END -->"
@@ -265,6 +282,56 @@ OBJECT_COUNT_ARITH_RE = re.compile(
 # variable assignment.
 OBJECT_COUNT_COHORT_EQ_RE = re.compile(r"\bcohort\b(?:(?!\n).){0,40}?=\s*\d{1,4}\b", re.IGNORECASE)
 
+# ---------------------------------------------------------------------------
+# Spelled-out (English word) object/source-file count claims (second
+# verifier residual finding)
+# ---------------------------------------------------------------------------
+#
+# Every pattern above requires an actual digit. That left the exact same
+# class of drift-prone claim free to hide behind English number words --
+# docs/quickstart.md carried "three handwritten assembly files" and "the
+# five save objects" for real, and neither was a digit anywhere the
+# checker looked. This section builds a deterministic, closed token set
+# for the number words themselves (zero through twenty, plus the
+# hyphenated twenty-one .. twenty-nine tens -- this checker does not
+# attempt to parse arbitrary English numerals/magnitudes such as
+# "hundred"/"thousand") and pairs it with a closed set of object/source
+# noun phrases actually used in this codebase's own modern-cohort/all
+# vocabulary (handwritten/assembly/save/C/asm/data/cohort/modern
+# files-objects-sources). Deliberately excludes a bare "source"/"file"
+# noun with no such qualifier, so ordinary prose like "one source of
+# truth", a numbered step ("5. Runs ..."), or "all three boot
+# checkpoints" never matches.
+_SPELLED_NUMBER_UNITS = (
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+    "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+    "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+)
+_SPELLED_NUMBER_HYPHENATED_TENS = tuple(
+    "twenty-%s" % unit for unit in _SPELLED_NUMBER_UNITS[1:10]  # twenty-one .. twenty-nine
+)
+SPELLED_NUMBER_WORDS = _SPELLED_NUMBER_UNITS + _SPELLED_NUMBER_HYPHENATED_TENS
+
+_OBJECT_COUNT_NOUN_PHRASES = (
+    r"handwritten(?:[-\s]+assembly)?\s+(?:files?|objects?|sources?)",
+    r"assembly\s+(?:files?|objects?|sources?)",
+    r"save\s+objects?",
+    r"(?:C|asm)\s+(?:files?|objects?|sources?)",
+    r"(?:authoritative|normal|full)\s+(?:C\s+)?(?:files?|sources?)",
+    r"data\s+(?:files?|objects?)",
+    r"cohort\s+(?:files?|objects?|sources?)",
+    r"modern\s+objects?",
+)
+
+OBJECT_COUNT_SPELLED_RE = re.compile(
+    r"\b(?:%s)\b\s+(?:%s)\b"
+    % (
+        "|".join(sorted(SPELLED_NUMBER_WORDS, key=len, reverse=True)),
+        "|".join(_OBJECT_COUNT_NOUN_PHRASES),
+    ),
+    re.IGNORECASE,
+)
+
 FENCE_RE = re.compile(r"^(```+|~~~+)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 LINK_START_RE = re.compile(r'!?\[(?:[^\[\]]|\[[^\[\]]*\])*\]\(')
@@ -323,19 +390,34 @@ def get_repo_root(start=None):
 
 
 def discover_markdown_files(root):
-    """Tracked + untracked-but-not-ignored Markdown paths, repo-relative.
+    """Tracked + untracked-but-not-ignored recognized-Markdown-extension
+    paths, repo-relative.
 
     In CI (a fresh checkout of a commit) everything present is tracked, so
     this is exactly the tracked set. In a dev worktree it also picks up
     new, not-yet-committed Markdown files, without picking up anything
     .gitignore excludes (build/, tool submodule content, etc.).
+
+    Deliberately lists the *entire* tracked+untracked file set (no ``--
+    '*.md'`` pathspec glob) and filters by ``RECOGNIZED_MARKDOWN_EXTENSIONS``
+    in Python: a pathspec glob only ever matches a literal ``.md`` suffix,
+    so it would silently miss a real ``.markdown``/``.mdown``/``.mkd`` file
+    (or an uppercase ``.MD``) entirely -- never even reaching inventory
+    coverage, link/anchor resolution, external-URL registry coverage, or
+    stale-phrase/object-count scanning. An ignored file with a recognized
+    extension is still correctly excluded, since it is never listed by
+    ``--exclude-standard`` in the first place.
     """
     out = subprocess.run(
-        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md"],
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
         cwd=root, capture_output=True, check=True,
     )
     names = [n for n in out.stdout.decode("utf-8").split("\0") if n]
-    return sorted(set(names))
+    matched = [
+        n for n in names
+        if os.path.splitext(n)[1].casefold() in RECOGNIZED_MARKDOWN_EXTENSIONS
+    ]
+    return sorted(set(matched))
 
 
 def read_text(path):
@@ -468,29 +550,51 @@ def compute_heading_slugs(stripped_text):
     return slugs
 
 
+MAX_LINK_DESTINATION_CHARS = 4000
+MAX_LINK_DESTINATION_PAREN_DEPTH = 32
+
+
 def _parse_link_destination(text, pos):
     """Parse a Markdown inline link/image *destination*, and optional
     title, starting at ``text[pos]`` -- the character immediately after
-    the link's opening ``(``. Returns ``(target, end)`` where ``end`` is
-    the index of the matching ``)``, or ``(None, None)`` if this is not a
-    recognized/well-formed destination (callers treat that exactly like
-    "no link found here", the same fail-closed behavior the previous
-    single-regex implementation had for anything it didn't match).
+    the link's opening ``(``. Returns ``(target, end, error)``:
+
+    - success: ``(target, end, None)`` where ``end`` is the index of the
+      matching ``)``;
+    - malformed: ``(None, None, error_message)`` -- a human-readable
+      description of what was wrong. Since every call site only reaches
+      this function immediately after ``LINK_START_RE`` has already
+      matched a real ``[...](``/``![...](`` opening, a malformed
+      destination is a genuine authoring defect, not "no link found
+      here" -- callers are expected to surface ``error`` as an explicit
+      finding rather than silently skipping it (see
+      ``extract_internal_link_targets``'s optional ``errors`` list).
 
     Two destination forms are supported, each optionally followed by a
     double- *or* single-quoted title:
 
     - a bare, unwrapped destination (``[x](docs/a.md)``,
-      ``[x](docs/a.md "title")``, ``[x](docs/a.md 'title')``) -- read up
-      to the next whitespace or ``)``;
+      ``[x](docs/a.md "title")``, ``[x](docs/a.md 'title')``). Unlike a
+      naive "read up to the next whitespace or `)`" scan, this tracks
+      balanced parentheses so a destination containing literal `(`/`)`
+      is read in full instead of being truncated at the first `)`
+      (``[x](docs/a(b).md)``, arbitrarily nested:
+      ``[x](docs/a(b(c)).md)``). A backslash-escaped ``\\(``/``\\)``
+      (``[x](docs/a\\(b\\).md)``) does not affect paren-depth tracking and
+      is unescaped in the returned ``target`` (so it round-trips
+      correctly through ``resolve_internal_link``'s path lookup);
     - an angle-bracket destination (``[x](<docs/a b.md>)``), which may
       contain literal spaces (percent-encoded spaces in the bare form,
       e.g. ``docs/a%20b.md``, already round-trip correctly via
       ``resolve_internal_link``'s existing ``urllib.parse.unquote``).
 
-    Any other shape (unterminated ``<...>``, unterminated quoted title, or
-    no closing ``)`` at all) is unsupported and yields no target -- never
-    silently guessed at.
+    A bare destination that never reaches a closing `)` at the correct
+    paren-depth (unbalanced/missing), one whose nesting depth exceeds
+    ``MAX_LINK_DESTINATION_PAREN_DEPTH``, or one whose raw length exceeds
+    ``MAX_LINK_DESTINATION_CHARS`` before terminating (pathological-input
+    guards, not real-world Markdown shapes), an unterminated ``<...>``,
+    or an unterminated quoted title, are each a distinct malformed-link
+    error -- never a silent truncation to whatever was read so far.
     """
     n = len(text)
     i = pos
@@ -499,39 +603,91 @@ def _parse_link_destination(text, pos):
     if i < n and text[i] == "<":
         end = text.find(">", i + 1)
         if end == -1:
-            return None, None
+            return None, None, "unterminated `<...>` link destination (no closing `>`)"
         target = text[i + 1:end]
         i = end + 1
     else:
-        j = i
-        while j < n and text[j] not in " \t)":
-            j += 1
-        target = text[i:j]
-        i = j
+        start = i
+        depth = 0
+        chars = []
+        while True:
+            if i >= n:
+                return None, None, (
+                    "unbalanced link destination: reached end of line with %d "
+                    "unclosed `(` still open" % depth
+                    if depth
+                    else "no closing `)` found for link destination"
+                )
+            ch = text[i]
+            if ch == "\\" and i + 1 < n and text[i + 1] in "()":
+                chars.append(text[i + 1])
+                i += 2
+            elif ch in " \t":
+                break
+            elif ch == "(":
+                depth += 1
+                if depth > MAX_LINK_DESTINATION_PAREN_DEPTH:
+                    return None, None, (
+                        "link destination exceeds max balanced-parenthesis nesting "
+                        "depth (%d)" % MAX_LINK_DESTINATION_PAREN_DEPTH
+                    )
+                chars.append(ch)
+                i += 1
+            elif ch == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+                chars.append(ch)
+                i += 1
+            else:
+                chars.append(ch)
+                i += 1
+            if i - start > MAX_LINK_DESTINATION_CHARS:
+                return None, None, (
+                    "link destination exceeds max length (%d chars) without "
+                    "terminating" % MAX_LINK_DESTINATION_CHARS
+                )
+        target = "".join(chars)
     while i < n and text[i] in " \t":
         i += 1
     if i < n and text[i] in ("\"", "'"):
         quote = text[i]
         end = text.find(quote, i + 1)
         if end == -1:
-            return None, None
+            return None, None, "unterminated link title (missing closing %s)" % quote
         i = end + 1
         while i < n and text[i] in " \t":
             i += 1
     if i >= n or text[i] != ")":
-        return None, None
-    return target, i
+        return None, None, "malformed link: no closing `)` found for destination/title"
+    return target, i, None
 
 
-def extract_internal_link_targets(stripped_text):
+def extract_internal_link_targets(stripped_text, errors=None):
     """Yield (line_no, target) for every markdown link/image target in a
     fence-stripped document (1-indexed line numbers). Supports a bare
-    destination, an angle-bracket ``<...>`` destination (which may contain
-    literal spaces), and an optional double- or single-quoted title after
-    either form -- see ``_parse_link_destination``."""
+    destination with balanced/escaped parentheses, an angle-bracket
+    ``<...>`` destination (which may contain literal spaces), and an
+    optional double- or single-quoted title after either form -- see
+    ``_parse_link_destination``.
+
+    If ``errors`` is given (a list), every malformed-destination finding
+    ``_parse_link_destination`` reports is appended to it as
+    ``(line_no, message)`` instead of being silently skipped -- so a
+    production caller (``check_internal_links``) can fail closed on
+    malformed inline link syntax rather than treating it as "no link
+    found here". When ``errors`` is left as ``None`` (the default), a
+    malformed destination is skipped exactly as before, preserving this
+    generator's existing plain ``(line_no, target)`` contract for callers
+    that only care about well-formed targets.
+    """
     for lineno, line in enumerate(stripped_text.split("\n"), start=1):
         for m in LINK_START_RE.finditer(line):
-            target, _end = _parse_link_destination(line, m.end())
+            target, _end, error = _parse_link_destination(line, m.end())
+            if error is not None:
+                if errors is not None:
+                    errors.append((lineno, error))
+                continue
             if target is None:
                 continue
             yield lineno, target
@@ -1355,6 +1511,27 @@ def check_object_count_claims(markdown_files, root):
     findings = []
     for path in markdown_files:
         text = read_text(os.path.join(root, path))
+
+        # Spelled-out number + object/source noun phrase: matched against
+        # the *whole* raw file text (not per line) via `finditer`, because
+        # this checker's own soft-wrapped prose style routinely splits a
+        # phrase like "three handwritten assembly\nfiles" or "the three\n"
+        # "handwritten assembly objects" across a line break -- a per-line
+        # regex would silently miss exactly the real wrapped instances this
+        # check exists to catch. `\s+` in OBJECT_COUNT_SPELLED_RE already
+        # matches a newline, so this single scan catches both an unwrapped
+        # and a wrapped occurrence identically; the line number reported is
+        # the line the number word itself starts on.
+        for m in OBJECT_COUNT_SPELLED_RE.finditer(text):
+            lineno = text.count("\n", 0, m.start()) + 1
+            findings.append(Finding(
+                path, lineno,
+                "hardcoded spelled-out object/source-file count claim (e.g. \"three "
+                "handwritten assembly files\"/\"the five save objects\"/\"eighteen C "
+                "files\") -- describe qualitatively (drop the number word entirely, or "
+                "enumerate the items by name without counting them) and point at the "
+                "relevant `make print-MODERN_*_OBJECTS` command instead"))
+
         for lineno, line in enumerate(text.split("\n"), start=1):
             if OBJECT_COUNT_HYPHEN_RE.search(line):
                 findings.append(Finding(
@@ -1399,12 +1576,15 @@ def check_internal_links(markdown_files, root):
     for path in markdown_files:
         text = read_text(os.path.join(root, path))
         stripped = strip_fenced_blocks(text)
-        for lineno, target in extract_internal_link_targets(stripped):
+        malformed = []
+        for lineno, target in extract_internal_link_targets(stripped, errors=malformed):
             if _is_external(target):
                 continue
             ok, message = resolve_internal_link(root, path, target, heading_slug_cache)
             if not ok:
                 findings.append(Finding(path, lineno, message))
+        for lineno, message in malformed:
+            findings.append(Finding(path, lineno, "malformed inline link/image syntax: %s" % message))
     return findings
 
 

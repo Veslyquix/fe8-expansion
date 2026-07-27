@@ -10,8 +10,13 @@ follow-up work.
 
 ## 100% Markdown count
 
-`git ls-files --cached --others --exclude-standard -- '*.md'` enumerates
-every Markdown file in this repository; `docs/documentation-inventory.md`
+`scripts/check_docs.py`'s `discover_markdown_files()` enumerates every
+Git-tracked or untracked-but-not-ignored file whose extension is one of
+the recognized Markdown extensions (`.md`, `.markdown`, `.mdown`, `.mkd`,
+matched case-insensitively -- `RECOGNIZED_MARKDOWN_EXTENSIONS`) by
+filtering the full `git ls-files --cached --others --exclude-standard`
+listing in Python, not a `*.md`-only pathspec glob (which would silently
+miss any other recognized extension); `docs/documentation-inventory.md`
 is required (by `scripts/check_docs.py --check`) to have **exactly** one
 entry per path in that set -- no more, no fewer. At the time of this
 audit that is **60 files**: the pre-existing 49 tracked files, the 7
@@ -26,8 +31,11 @@ this file, and `reports/issue7_documentation_foundation.md`).
 This count is deliberately **not restated as a hardcoded number inside
 the checker** (only the *set equality* is enforced) so it cannot silently
 drift out of sync with the checker's actual behavior; re-run
-`git ls-files --cached --others --exclude-standard -- '*.md' | wc -l`
-against the commit under review to reproduce it.
+`git ls-files --cached --others --exclude-standard -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l`
+against the commit under review to reproduce it (today's repository has
+no `.markdown`/`.mdown`/`.mkd` files, so this is currently equivalent to
+the `*.md`-only form, but the recognized-extension set -- not the `*.md`
+pathspec -- is what the checker itself actually enforces).
 
 ## Status/category accounting
 
@@ -76,7 +84,8 @@ breakdown; in summary:
   code samples are never checked; single-backtick inline code spans are
   still scanned.
 - **External URLs**: every `http(s)://` occurrence across all 60
-  Markdown files (fenced code excluded) must match a `host:`/`prefix:`
+  recognized-Markdown-extension files (fenced code excluded) must match a
+  `host:`/`prefix:`
   rule in `docs/external-link-registry.md`. This is registry/syntax
   coverage only -- **no network request is ever made**; nothing here
   claims the upstream wiki, decomp.dev tracker, or any third-party site
@@ -190,7 +199,10 @@ make -n expansion-modern-cohort
 make -n expansion-modern-all
 
 # Markdown-inventory exact-coverage count backing docs/documentation-inventory.md
-git ls-files --cached --others --exclude-standard -- '*.md' | wc -l   # -> 60
+# (recognized-extension set: .md/.markdown/.mdown/.mkd; no alternate-extension
+# files exist in this repository today, so this is currently equivalent to a
+# *.md-only count -- see RECOGNIZED_MARKDOWN_EXTENSIONS)
+git ls-files --cached --others --exclude-standard -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l   # -> 60
 ```
 
 This round's findings-driven fixes:
@@ -441,6 +453,139 @@ This section documents the fix of a follow-on acceptance finding. It
 does not assert GitHub issue #17's final state, does not claim a full
 ROM build was run, and does not supersede the "Remaining follow-ups"
 below, which are unchanged by this round.
+
+## Second final-verifier follow-up: spelled-out counts, extension
+## discovery, bounded link parser
+
+**Status: candidate fix for a second, later verifier pass's residual
+findings, not a re-closure claim.** A subsequent review of this
+checker found three ways the checker itself (not just the documents it
+checks) could still produce a false pass or a false fail:
+
+1. **Spelled-out object/source counts escaped detection.** The digit-
+   based `check_object_count_claims()` rules added by the "Verifier
+   finding follow-up" round above only matched Arabic numerals (`3`,
+   `139`, ...). `docs/quickstart.md` still spelled a small modern-cohort
+   handwritten-object count out in English words, and separately named
+   an exact count of save objects in words too -- each exactly as
+   stale-prone as a hardcoded numeral, but invisible to every existing
+   rule (see `SpelledObjectCountClaimRegressionTests` in
+   `scripts/docs_check_tests/test_check_docs.py` for the precise old
+   phrasing this closes, without repeating it verbatim here -- doing so
+   would make this very report line self-match the rule it describes).
+2. **`discover_markdown_files()` only recognized `.md`.** Every check
+   keyed off "the set of Markdown files" (inventory coverage, link/
+   anchor resolution, external-URL registry coverage, stale-phrase and
+   object-count scanning) was silently blind to any real documentation
+   file using `.markdown`/`.mdown`/`.mkd`, or an uppercase variant of
+   any of those extensions -- the discovery step used a `git ls-files
+   -- '*.md'` pathspec, not the full recognized set this repository's
+   own docs already claimed to cover.
+3. **Inline link destination truncated at the first literal `)`.** The
+   destination-extraction regex used by `extract_internal_link_targets`
+   read up to the first `)`, so a real, well-formed destination whose
+   path itself contains a literal parenthesis character was silently
+   truncated to the wrong (nonexistent) path -- either producing a
+   false "broken link" finding for a link that was actually fine, or
+   (worse) resolving to some other, wrong, coincidentally-existing file.
+   Malformed input (an unbalanced or unterminated destination) was also
+   silently dropped rather than reported.
+
+**Fix:**
+
+- `check_object_count_claims()` gained a second, full-text scan (in
+  addition to its pre-existing per-line digit scan) using a closed
+  spelled-number-word set (`zero`-`twenty`, plus hyphenated
+  `twenty-one`-`twenty-nine`) combined with a closed, codebase-scoped
+  noun-phrase alternation (`handwritten assembly files/objects`,
+  `save objects`, `C files`, `asm sources`, `cohort objects`, and
+  similarly scoped phrases) -- deliberately excluding bare "source"/
+  "file" so ordinary prose ("one source of truth", numbered steps)
+  is not flagged. `docs/quickstart.md`'s spelled-out modern-cohort/
+  save-object counts were rewritten to qualitative wording pointing at
+  `make print-MODERN_COHORT_*_OBJECTS`/`print-MODERN_ALL_*_OBJECTS`,
+  matching the numeral-count fix already applied to this same file by
+  the earlier round. Historical, non-modern-cohort symbol-resolution
+  facts elsewhere in that file (unrelated prior-commit numbers) were
+  deliberately left untouched -- they are not `MODERN_COHORT_*`/
+  `MODERN_ALL_*`-derived counts and are outside this finding's scope.
+- A `RECOGNIZED_MARKDOWN_EXTENSIONS` constant (`.md`, `.markdown`,
+  `.mdown`, `.mkd`) now documents the full recognized set.
+  `discover_markdown_files()` lists the full
+  `git ls-files -z --cached --others --exclude-standard` output (still
+  respecting `.gitignore`/tracked/untracked semantics exactly as
+  before) and filters by `os.path.splitext(...)[1].casefold()`
+  membership in that set in Python, instead of a `.md`-only pathspec.
+  `docs/documentation-inventory.md` and this report's own wording were
+  updated from "every Markdown file"/`*.md`-only phrasing to describe
+  the full recognized, case-insensitive set. This repository currently
+  has no tracked or untracked file using an alternate recognized
+  extension, so the reproduction count below is unaffected in practice
+  by this change -- only the mechanism and its documented contract
+  changed.
+- `_parse_link_destination` was rewritten as a bounded, stateful scanner
+  that tracks balanced-parenthesis depth (so a destination path
+  containing one, or several nested, literal parenthesis characters is
+  read in full, not truncated), unescapes backslash-escaped `\(`/`\)`
+  for correct path lookup, still
+  supports angle-bracket (`<...>`) destinations and double/single-quoted
+  titles exactly as before, and now returns an explicit error for
+  malformed input (missing/unbalanced closing parenthesis, excess
+  nesting depth, or an unterminated title) instead of silently
+  truncating or dropping it. `extract_internal_link_targets` gained an
+  optional `errors` list parameter (default `None` preserves its
+  original silent-skip behavior for existing callers/tests);
+  `check_internal_links` -- the only production caller -- now passes a
+  real list and reports every malformed destination as an explicit
+  `Finding` instead of ignoring it.
+
+Reproduce the fix and its evidence directly against this worktree:
+
+```bash
+# Full doc checker: 0 findings against the current recognized-extension
+# file set (the checker itself reports how many files it checked each
+# run -- do not trust a file count written in this report, it drifts
+# every time a Markdown file is added, removed, or given an alternate
+# recognized extension; reproduce it yourself)
+python3 scripts/check_docs.py --check --check-examples
+
+# Full doc unit test suite for this round, including the new
+# spelled-out-count, recognized-extension-discovery, and bounded-link-
+# parser regression tests added this round -- the suite must pass in
+# full; do not trust a test count written in this report, it drifts
+# every time a test is added or removed; reproduce it yourself
+python3 -m unittest discover -s scripts/docs_check_tests -v
+
+# Current, actual object/source counts (this is what quickstart.md now
+# tells the reader to reproduce themselves, instead of a spelled-out or
+# numeral count). The live values are intentionally not persisted in
+# this report, for the same drift-avoidance reason -- run these
+# yourself:
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_C_OBJECTS
+make print-MODERN_ALL_DATA_OBJECTS
+make print-MODERN_ALL_ASM_OBJECTS
+make print-MODERN_ALL_OBJECTS
+
+# Confirm the recognized-extension pathspec currently resolves to the
+# same file count as a `.md`-only pathspec (no alternate-extension
+# files exist in this repository today; this only proves the mechanism
+# change introduced no numeric drift, not that any alternate-extension
+# file exists)
+git ls-files --cached --others --exclude-standard -- '*.md' | wc -l
+git ls-files --cached --others --exclude-standard \
+  -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l
+
+# No trailing-whitespace/conflict-marker regressions in this change
+git diff --check
+```
+
+This section documents the fix of a second verifier pass's residual
+findings. It does not assert GitHub issue #17's final state, does not
+claim a full ROM build was run, and does not supersede the "Remaining
+follow-ups" below, which are unchanged by this round.
 
 ## Remaining follow-ups (explicitly not closed by this work)
 
