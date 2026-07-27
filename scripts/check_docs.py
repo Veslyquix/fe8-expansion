@@ -267,9 +267,9 @@ OBJECT_COUNT_COHORT_EQ_RE = re.compile(r"\bcohort\b(?:(?!\n).){0,40}?=\s*\d{1,4}
 
 FENCE_RE = re.compile(r"^(```+|~~~+)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
-LINK_RE = re.compile(r'!?\[(?:[^\[\]]|\[[^\[\]]*\])*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
+LINK_START_RE = re.compile(r'!?\[(?:[^\[\]]|\[[^\[\]]*\])*\]\(')
 INLINE_CODE_RE = re.compile(r"(?<!`)`([^`]+)`(?!`)")
-URL_RE = re.compile(r"https?://[^\s)>\]\"'`]+")
+URL_RE = re.compile(r"https?://[^\s)>\]\"'`]+", re.IGNORECASE)
 MAKE_CMD_RE = re.compile(r"^\s*make(?=[\s;&|#]|$)([^\n;&|#]*)")
 
 # Reference-style link/image support (CommonMark "reference link" family):
@@ -434,29 +434,106 @@ def github_heading_slug(text):
 
 def compute_heading_slugs(stripped_text):
     """Return the ordered list of anchor slugs for every heading in a
-    fence-stripped document, applying GitHub's duplicate-heading suffix
-    rule (-1, -2, ... in order of appearance)."""
-    seen = {}
+    fence-stripped document, applying GitHub's *actual* duplicate-heading
+    suffix rule.
+
+    GitHub tracks a global set of slugs already handed out, not merely a
+    per-base occurrence counter: given headings literally titled ``foo``,
+    ``foo-1``, ``foo`` (in that order), a naive per-base counter would
+    hand the *third* heading the same ``foo-1`` slug the *second* (literal)
+    heading already claimed, producing a duplicate. GitHub instead keeps
+    incrementing the suffix past any candidate that is already in use, so
+    the correct output for that exact sequence is ``foo``, ``foo-1``,
+    ``foo-2`` -- never a repeated ``foo-1``.
+    """
+    used = set()
+    next_suffix = {}
     slugs = []
     for line in stripped_text.split("\n"):
         m = HEADING_RE.match(line)
         if not m:
             continue
         base = github_heading_slug(m.group(2))
-        if base in seen:
-            seen[base] += 1
-            slugs.append("%s-%d" % (base, seen[base]))
+        if base not in used:
+            slug = base
         else:
-            seen[base] = 0
-            slugs.append(base)
+            n = next_suffix.get(base, 0) + 1
+            slug = "%s-%d" % (base, n)
+            while slug in used:
+                n += 1
+                slug = "%s-%d" % (base, n)
+            next_suffix[base] = n
+        used.add(slug)
+        slugs.append(slug)
     return slugs
+
+
+def _parse_link_destination(text, pos):
+    """Parse a Markdown inline link/image *destination*, and optional
+    title, starting at ``text[pos]`` -- the character immediately after
+    the link's opening ``(``. Returns ``(target, end)`` where ``end`` is
+    the index of the matching ``)``, or ``(None, None)`` if this is not a
+    recognized/well-formed destination (callers treat that exactly like
+    "no link found here", the same fail-closed behavior the previous
+    single-regex implementation had for anything it didn't match).
+
+    Two destination forms are supported, each optionally followed by a
+    double- *or* single-quoted title:
+
+    - a bare, unwrapped destination (``[x](docs/a.md)``,
+      ``[x](docs/a.md "title")``, ``[x](docs/a.md 'title')``) -- read up
+      to the next whitespace or ``)``;
+    - an angle-bracket destination (``[x](<docs/a b.md>)``), which may
+      contain literal spaces (percent-encoded spaces in the bare form,
+      e.g. ``docs/a%20b.md``, already round-trip correctly via
+      ``resolve_internal_link``'s existing ``urllib.parse.unquote``).
+
+    Any other shape (unterminated ``<...>``, unterminated quoted title, or
+    no closing ``)`` at all) is unsupported and yields no target -- never
+    silently guessed at.
+    """
+    n = len(text)
+    i = pos
+    while i < n and text[i] in " \t":
+        i += 1
+    if i < n and text[i] == "<":
+        end = text.find(">", i + 1)
+        if end == -1:
+            return None, None
+        target = text[i + 1:end]
+        i = end + 1
+    else:
+        j = i
+        while j < n and text[j] not in " \t)":
+            j += 1
+        target = text[i:j]
+        i = j
+    while i < n and text[i] in " \t":
+        i += 1
+    if i < n and text[i] in ("\"", "'"):
+        quote = text[i]
+        end = text.find(quote, i + 1)
+        if end == -1:
+            return None, None
+        i = end + 1
+        while i < n and text[i] in " \t":
+            i += 1
+    if i >= n or text[i] != ")":
+        return None, None
+    return target, i
 
 
 def extract_internal_link_targets(stripped_text):
     """Yield (line_no, target) for every markdown link/image target in a
-    fence-stripped document (1-indexed line numbers)."""
+    fence-stripped document (1-indexed line numbers). Supports a bare
+    destination, an angle-bracket ``<...>`` destination (which may contain
+    literal spaces), and an optional double- or single-quoted title after
+    either form -- see ``_parse_link_destination``."""
     for lineno, line in enumerate(stripped_text.split("\n"), start=1):
-        for target in LINK_RE.findall(line):
+        for m in LINK_START_RE.finditer(line):
+            target, _end = _parse_link_destination(line, m.end())
+            if target is None:
+                continue
             yield lineno, target
 
 
@@ -856,18 +933,129 @@ def parse_registry(root):
     return rules, errors
 
 
+def normalize_external_url(url):
+    """Lowercase only the scheme and host (authority) portion of ``url``
+    for case-insensitive registry matching -- RFC 3986 makes both of
+    those case-insensitive, but the path/query/fragment are not (GitHub
+    repo paths in particular are case-sensitive), so they are left
+    untouched. Returns ``url`` unchanged if it cannot be split at all
+    (the separate malformed-URL check in ``check_external_urls`` handles
+    that case)."""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return url
+    return urllib.parse.urlunsplit((
+        parsed.scheme.lower(), parsed.netloc.lower(), parsed.path,
+        parsed.query, parsed.fragment,
+    ))
+
+
+# A prefix match's trailing continuation is accepted as a genuine path
+# boundary -- never a bare, unbounded ``str.startswith`` -- when it is
+# empty (exact match), starts with a URL/path boundary character, or is
+# the standard Git-clone-URL ``.git`` suffix (with an optional further
+# boundary after that, e.g. ``.git/tree/main``) -- a real, common way to
+# write this exact upstream repository's clone URL, not a lookalike.
+_GIT_SUFFIX = ".git"
+
+
+def _has_path_boundary(remainder):
+    if remainder == "":
+        return True
+    if remainder[0] in ("/", "?", "#"):
+        return True
+    if remainder == _GIT_SUFFIX or remainder.startswith(_GIT_SUFFIX + "/"):
+        return True
+    if remainder.startswith(_GIT_SUFFIX) and remainder[len(_GIT_SUFFIX):len(_GIT_SUFFIX) + 1] in ("?", "#"):
+        return True
+    return False
+
+
+def _registry_prefix_matches(url, prefix):
+    """True if ``url`` is exactly ``prefix`` or ``prefix`` immediately
+    followed by a genuine path boundary (see ``_has_path_boundary``).
+
+    Never a bare ``str.startswith`` -- that would let a lookalike that
+    merely shares the literal prefix string slip through, e.g.
+    ``https://github.com/laqieer/fireemblem8u-evil`` or
+    ``https://github.com/laqieer/fireemblem8u.evil.example`` both
+    ``startswith`` the registered
+    ``prefix:https://github.com/laqieer/fireemblem8u`` rule's pattern
+    without actually being inside that path -- while a real
+    ``https://github.com/laqieer/fireemblem8u.git`` clone URL still
+    matches, since ``.git`` is this function's one recognized suffix
+    exception, not an open-ended continuation.
+    """
+    if not url.startswith(prefix):
+        return False
+    if prefix.endswith("/"):
+        return True
+    return _has_path_boundary(url[len(prefix):])
+
+
 def match_registry(url, rules):
-    """Return the first registry rule that covers ``url``, or None."""
-    parsed = urllib.parse.urlsplit(url)
+    """Return the first registry rule that covers ``url``, or None.
+
+    Matching is case-insensitive on ``url``'s scheme/host (per RFC 3986)
+    but case-sensitive on its path/query/fragment. ``prefix:`` rules
+    require an exact match or a URL/path boundary character immediately
+    after the prefix (see ``_registry_prefix_matches``) -- never a bare
+    ``str.startswith`` (see that function's docstring for why).
+    """
+    normalized = normalize_external_url(url)
+    parsed = urllib.parse.urlsplit(normalized)
     for rule in rules:
-        if rule.match_type == "host" and parsed.netloc == rule.pattern:
+        if rule.match_type == "host" and parsed.netloc == rule.pattern.lower():
             return rule
-        if rule.match_type == "prefix" and url.startswith(rule.pattern):
+        if rule.match_type == "prefix" and _registry_prefix_matches(
+            normalized, normalize_external_url(rule.pattern)
+        ):
             return rule
     return None
 
 
-FIREEMBLEM8U_URL_RE = re.compile(r"^https?://(github\.com/laqieer/fireemblem8u|decomp\.dev/laqieer/fireemblem8u)")
+# Hosts that carry this repository's fireemblem8u upstream-provenance
+# links, and the exact path prefix within each that is the *real* upstream
+# namespace. Used to explicitly detect a same-host lookalike path (e.g.
+# ``fireemblem8u-evil``, ``fireemblem8u.evil.example``) that shares the
+# literal namespace string but is not actually inside it -- such a URL
+# must never silently fall through to a broader, less specific registry
+# rule (e.g. a generic ``host:github.com`` catch-all) that would
+# otherwise "cover" it with a different, non-``historical-upstream``
+# status. This repository's own docs are authoritative; this upstream
+# project is provenance/reference context only (see
+# docs/project-governance.md#credits-and-downstream-context).
+PROTECTED_UPSTREAM_NAMESPACES = {
+    "github.com": "/laqieer/fireemblem8u",
+    "decomp.dev": "/laqieer/fireemblem8u",
+}
+
+
+def classify_protected_upstream(parsed_url):
+    """Classify a scheme/host-normalized, already-``urlsplit`` URL against
+    ``PROTECTED_UPSTREAM_NAMESPACES``.
+
+    Returns ``"strict"`` if the URL's path is exactly the protected
+    namespace, a real subpath of it, or the standard ``.git`` clone-URL
+    suffix (see ``_has_path_boundary``); ``"lookalike"`` if the URL's host
+    is one of the protected hosts and its path shares the literal
+    namespace prefix but *without* a recognized boundary right after it
+    (the path continues the same segment, e.g. with
+    ``-evil``/``.evil.example``); or ``None`` if the host isn't one of the
+    protected hosts at all, in which case ordinary registry matching
+    applies with no special namespace handling.
+    """
+    host = parsed_url.netloc
+    namespace = PROTECTED_UPSTREAM_NAMESPACES.get(host)
+    if namespace is None:
+        return None
+    path = parsed_url.path
+    if not path.startswith(namespace):
+        return None
+    if _has_path_boundary(path[len(namespace):]):
+        return "strict"
+    return "lookalike"
 
 
 def check_external_urls(markdown_files, root, rules):
@@ -876,15 +1064,27 @@ def check_external_urls(markdown_files, root, rules):
         text = read_text(os.path.join(root, path))
         stripped = strip_fenced_blocks(text)
         for lineno, url in extract_external_urls(stripped):
-            if not re.match(r"^https?://[^\s/]+", url):
+            if not re.match(r"^https?://[^\s/]+", url, re.IGNORECASE):
                 findings.append(Finding(path, lineno, "malformed external URL: %r" % url))
+                continue
+            normalized = normalize_external_url(url)
+            parsed = urllib.parse.urlsplit(normalized)
+            classification = classify_protected_upstream(parsed)
+            if classification == "lookalike":
+                findings.append(Finding(
+                    path, lineno,
+                    "upstream-lookalike URL rejected: %s shares the protected %s%s "
+                    "namespace prefix without a path boundary immediately after it -- "
+                    "not accepted as the real historical-upstream namespace, and this "
+                    "never falls through to a broader registry rule"
+                    % (url, parsed.netloc, PROTECTED_UPSTREAM_NAMESPACES[parsed.netloc])))
                 continue
             rule = match_registry(url, rules)
             if rule is None:
                 findings.append(Finding(path, lineno,
                                          "external URL not covered by any %s rule: %s" % (REGISTRY_PATH, url)))
                 continue
-            if FIREEMBLEM8U_URL_RE.match(url) and rule.status != "historical-upstream":
+            if classification == "strict" and rule.status != "historical-upstream":
                 findings.append(Finding(path, lineno,
                                          "fireemblem8u upstream URL matched a registry rule with status %r, "
                                          "must be 'historical-upstream': %s" % (rule.status, url)))
@@ -996,7 +1196,22 @@ def make_target_exists(name, literal_targets, pattern_targets):
 
 
 PLACEHOLDER_CHARS = set("<>*{}")
-DIR_REDIRECT_FLAGS = {"-C", "--directory"}
+
+# Flags that redirect make to a different Makefile and/or working
+# directory entirely -- this checker only has a target database for this
+# repository's own root Makefile (see parse_make_targets), so any
+# invocation naming one of these is skipped outright (never validated,
+# never flagged) rather than guessed at against the wrong graph.
+MAKEFILE_REDIRECT_FLAGS = {"-C", "--directory", "-f", "--file", "--makefile"}
+MAKEFILE_REDIRECT_ATTACHED_RE = re.compile(r"^--(?:directory|file|makefile)=")
+
+# Flags that consume the *next* token as a separate value (as opposed to
+# an attached ``--flag=value`` form, which ``MAKEFILE_REDIRECT_ATTACHED_RE``
+# handles separately, or a self-contained flag like ``-n``) but do NOT
+# redirect make to a different Makefile/directory -- e.g. ``-j 4``/
+# ``--jobs 4``. Both the flag and its value token are skipped so the
+# value is never mistaken for a literal target name.
+VALUE_CONSUMING_FLAGS = {"-j", "--jobs", "-l", "--load-average"}
 
 
 def _make_invocation_lines(markdown_text):
@@ -1018,10 +1233,19 @@ def extract_make_invocations(markdown_text):
     span (never matched mid-sentence in prose, e.g. "to make target X" in
     a quoted error message). ``is_bare`` is True for a target-less
     ``make``/``make -jN`` invocation (the documented default-build case).
-    A candidate whose only token is a placeholder (``<target>``, ``%``,
-    etc.) or that redirects to a different Makefile via ``-C``/
-    ``--directory`` is intentionally not yielded at all (nothing to
-    validate against this repository's own Makefile database).
+
+    Every literal target token in the invocation is yielded, not just the
+    first -- ``make all nonexistent-target`` must be able to flag
+    ``nonexistent-target`` even though ``all`` (the first token) is a
+    real target. Make options and their values (``-C``/``-f``/``-j``,
+    etc.), ``VAR=value`` overrides, and a leading/trailing mix of these
+    are all correctly skipped while still finding every real target
+    token that follows them. A candidate containing a placeholder
+    (``<target>``, ``%``, etc.) or that redirects to a different Makefile
+    via ``-C``/``-f``/``--directory``/``--file``/``--makefile`` is
+    intentionally not yielded at all (nothing to validate against this
+    repository's own Makefile database) -- this checker never parses,
+    let alone executes, a recipe line either way.
     """
     seen = set()
     for line in _make_invocation_lines(markdown_text):
@@ -1029,14 +1253,17 @@ def extract_make_invocations(markdown_text):
         if not m:
             continue
         tokens = m.group(1).strip().split()
-        target = None
+        targets = []
         skip_invocation = False
         i = 0
         while i < len(tokens):
             tok = tokens[i]
-            if tok in DIR_REDIRECT_FLAGS or re.match(r"^--directory=", tok):
-                skip_invocation = True  # targets a different Makefile entirely
+            if tok in MAKEFILE_REDIRECT_FLAGS or MAKEFILE_REDIRECT_ATTACHED_RE.match(tok):
+                skip_invocation = True  # targets a different Makefile/directory entirely
                 break
+            if tok in VALUE_CONSUMING_FLAGS:
+                i += 2  # the flag and its separate value token; neither is a target
+                continue
             if tok.startswith("-"):
                 i += 1
                 continue
@@ -1052,15 +1279,22 @@ def extract_make_invocations(markdown_text):
             if tok.isalpha() and tok.isupper() and len(tok) > 1:
                 skip_invocation = True  # e.g. generic ALL-CAPS "TARGET"/"N" placeholder prose
                 break
-            target = tok
-            break
+            targets.append(tok)
+            i += 1
         if skip_invocation:
             continue
-        key = (True, None) if target is None else (False, target)
-        if key in seen:
+        if not targets:
+            key = (True, None)
+            if key not in seen:
+                seen.add(key)
+                yield key
             continue
-        seen.add(key)
-        yield key
+        for target in targets:
+            key = (False, target)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield key
 
 
 def check_make_targets(markdown_files, root, literal_targets, pattern_targets):
@@ -1179,7 +1413,18 @@ def is_command_safe(argv):
     touch the network, mutate source, or build/link a ROM. Used both to
     sanity-check this script's own hardcoded example allowlist and as the
     general-purpose rejection logic exercised by tests -- this script
-    never executes an arbitrary command discovered inside a doc file."""
+    never executes an arbitrary command discovered inside a doc file.
+
+    ``scripts/quickstart.sh`` is safe *only* as an exact, argument-free
+    help request (``--help`` or ``-h`` -- both confirmed supported by
+    that script's own ``-h|--help`` case, and nothing else): any other
+    flag (``--rom``/``--legacy``/``--refresh-agbcc``/anything else) or
+    any extra positional argument makes it a real installer/network/build
+    invocation. There is no safe ``make`` invocation for this allowlist at
+    all -- unlike quickstart.sh, plain ``make`` has no argument-free
+    "print help and do nothing" mode, so every ``make`` invocation is
+    rejected outright, regardless of arguments.
+    """
     if not argv:
         return False
     tokens = [os.path.basename(str(t)) for t in argv]
@@ -1190,15 +1435,13 @@ def is_command_safe(argv):
     for bad in UNSAFE_SUBCOMMANDS:
         if re.search(r"(?<![\w-])%s(?![\w-])" % re.escape(bad), joined):
             return False
-    if tokens and (tokens[0] == "make" or tokens[0].endswith(("quickstart.sh",))):
-        if "--help" not in argv and "-h" not in argv:
-            # A quickstart/make invocation without --help would actually
-            # attempt a real build -- only --help forms are ever "safe".
-            if tokens[0] == "make":
-                return False
     for tok in argv:
         if tok in ROM_BUILD_TOKENS:
             return False
+    if tokens[0].endswith("quickstart.sh"):
+        return len(argv) == 2 and argv[1] in ("--help", "-h")
+    if tokens[0] == "make":
+        return False
     return True
 
 

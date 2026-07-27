@@ -92,8 +92,10 @@ path or start modifying the source.
 
 ## Modern GCC compile-only object cohort
 
-The modern bootstrap compiles eighteen verified C files and three handwritten
-assembly files to ARM relocatable objects only. This cohort target itself
+The modern bootstrap compiles a verified set of C files (reproduce the
+current count against this worktree with `make print-MODERN_COHORT_C_OBJECTS`,
+rather than trusting a number written here) and three handwritten assembly
+files to ARM relocatable objects only. This cohort target itself
 does **not** link an ELF or a ROM — the fuller modern chain
 (`expansion-modern-elf` → `expansion-modern-rom` → `expansion-modern-boot-check`,
 documented below) is what the default quickstart path now builds and
@@ -109,12 +111,24 @@ explicit way to reach the archival lane instead. The modern
 (`bmcontainer.o`, which defines `ClearSupplyItems` and `GetConvoyItemArray` for
 save dependency closure but is not itself one of the save objects), the Proc
 scheduler object (`proc.o`), the hardware/input object (`hardware.o`, which
-calls into `proc.o`'s `Proc_Start`), and the object defining `AgbMain` remain
-compile-only; none is linked into or executed by the ROM. `proc.o` and
+calls into `proc.o`'s `Proc_Start`), and the object defining `AgbMain` are
+compile-only *under this target*: `expansion-modern-cohort` itself never
+links an ELF or a ROM, so none of them is linked or executed as part of
+running this target. That is not the same as saying these objects are
+never linked at all -- the cohort's C sources are a strict subset of
+`MODERN_ALL_C_SOURCES`, and the cohort and full/linked targets share the
+same isolated `build/expansion-modern/<config>/<abi>/` output tree, so an
+already-built cohort object for a given `MODERN_CONFIG`/`MODERN_ABI` is
+reused, not recompiled, by a later `expansion-modern-elf`/`-rom`/
+`-boot-check` run with a matching `MODERN_CONFIG` and
+`MODERN_ABI=aapcs` (the only ABI those linked targets accept) -- meaning
+these same objects are among the ones that do get linked into, and
+executed by, the modern AAPCS ROM once that fuller chain runs.
+`proc.o` and
 `hardware.o` are neither save nor container objects; they close prior
 cohort-internal Proc and key/VBlank dependencies but do not claim OAM,
 software-reset, callback, ABI, SRAM, EWRAM-overlay, or any other runtime
-readiness. Cross-ABI layout probes cover the world-map save structures, but
+readiness on their own. Cross-ABI layout probes cover the world-map save structures, but
 this does not claim callback, ABI, SRAM, EWRAM-overlay, or save-persistence
 readiness.
 

@@ -11,13 +11,15 @@
 > [`docs/architecture.md`](architecture.md) and
 > [`docs/generated_data_tutorial.md`](generated_data_tutorial.md) instead.
 >
-> The historical upstream project wiki
-> ([`fireemblem8u/wiki`](https://github.com/laqieer/fireemblem8u/wiki)) is
-> `[historical upstream]` context, not this repository's source of truth.
-> This document, [`docs/upstream-porting.md`](upstream-porting.md) (the
-> canonical-upstream-drift tool), and the canonical upstream repository
-> itself (`https://github.com/laqieer/fireemblem8u.git`) are authoritative
-> for this codebase.
+> The historical upstream project repository and its wiki
+> ([`fireemblem8u`](https://github.com/laqieer/fireemblem8u.git),
+> [`fireemblem8u/wiki`](https://github.com/laqieer/fireemblem8u/wiki)) are
+> `[historical upstream]` context only -- provenance and reference
+> material for where this codebase originally came from, not this
+> repository's source of truth. Only this repository's own tracked docs,
+> including this document and
+> [`docs/upstream-porting.md`](upstream-porting.md) (the
+> canonical-upstream-drift tool), are authoritative for this codebase.
 
 ## When to use this lane
 

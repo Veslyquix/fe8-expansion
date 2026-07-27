@@ -165,8 +165,10 @@ no network access, and no mutation of tracked source, so anyone reviewing
 this candidate can reproduce it directly against this worktree:
 
 ```bash
-# Doc unit tests (81 tests as of this round, includes 18 new adversarial
-# ReferenceStyleLinkTests fixtures)
+# Doc unit tests (includes the new adversarial ReferenceStyleLinkTests
+# fixtures added this round; the suite must pass in full -- do not trust
+# a test count written in this report, it drifts every time a test is
+# added or removed; reproduce it yourself
 python3 -m unittest discover -s scripts/docs_check_tests -v
 
 # Full checker, including the hardcoded --help-only safe examples
@@ -297,7 +299,10 @@ own stated scope -- not a general natural-language number parser.
 Reproduce the fix and its evidence directly against this worktree:
 
 ```bash
-# Full doc checker: 0 findings (60 Markdown files)
+# Full doc checker: 0 findings (the checker itself reports how many
+# Markdown files it checked each run -- do not trust a file count
+# written in this report, it drifts every time a Markdown file is
+# added or removed; reproduce it yourself
 python3 scripts/check_docs.py
 
 # Regression tests for this round, plus the full existing suite
@@ -311,8 +316,10 @@ python3 -m unittest discover -s scripts/docs_check_tests -v
 # would make this very report line self-match when the same search is run
 # over all Markdown, which is exactly the false-positive this evidence is
 # careful to avoid). `python3 scripts/check_docs.py` above already
-# exercises every one of those seven regexes across all 60 Markdown files
-# with 0 findings.
+# exercises every one of those seven regexes across every currently
+# tracked/untracked Markdown file with 0 findings (the checker's own
+# run above reports the current file count; not repeated here since it
+# drifts).
 
 # Current, actual object counts (this is what quickstart.md now tells the
 # reader to reproduce themselves, instead of hardcoding a number). The
@@ -392,12 +399,17 @@ accepts it for `expansion-modern-cohort`/`-all`).
 Reproduce the fix and its evidence directly against this worktree:
 
 ```bash
-# Full doc checker: 0 findings (60 Markdown files, including the three
-# new STALE_PHRASE_RULES entries from this round)
+# Full doc checker: 0 findings, including the three new
+# STALE_PHRASE_RULES entries from this round (the checker itself
+# reports the current Markdown file count each run -- not repeated
+# here since it drifts; reproduce it yourself
 python3 scripts/check_docs.py
 
-# Full doc unit test suite for this round (97 tests as of this round,
-# includes the 13 new ABI-contract/stale-phrase/real-make-probe tests)
+# Full doc unit test suite for this round, including the new
+# ABI-contract/stale-phrase/real-make-probe tests added this round --
+# the suite must pass in full; do not trust a test count written in
+# this report, it drifts every time a test is added or removed;
+# reproduce it yourself
 python3 -m unittest discover -s scripts/docs_check_tests -v
 
 # The same real make -n dry-run probe the new unittest exercises,

@@ -98,9 +98,19 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 
 ## Notes
 
-- `owner` is the accountable reviewer per `.github/CODEOWNERS` (this
-  repository currently has a single maintainer, `@laqieer`, for every
-  path) -- it is **not** a claim of per-file solo authorship.
+- `owner` is maintainer/DRI (directly-responsible-individual) routing
+  metadata: the person accountable for this file's content and who to
+  route questions/reviews to. It records human responsibility, **not**
+  automated GitHub review enforcement, and it is **not** a claim of
+  per-file solo authorship.
+- This `owner` field is independent of `.github/CODEOWNERS`. Only paths
+  that `.github/CODEOWNERS` explicitly lists get any automatic
+  reviewer-request behavior from GitHub; as of this writing that file
+  lists a small, specific set of protected baseline/fingerprint and
+  artifact-governance paths (see that file directly for the current
+  list), not every path in this inventory. A file's `owner` here does
+  not imply -- and must never be read as implying -- that the same path
+  is also matched by a `.github/CODEOWNERS` rule.
 - Adding a new Markdown file anywhere in this repository requires adding
   an entry here in the same change, or `scripts/check_docs.py --check`
   fails. Deleting a Markdown file requires removing its entry.

@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 CHECK_DOCS_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "check_docs.py"
@@ -92,6 +93,24 @@ class HeadingSlugTests(unittest.TestCase):
             "oversized-agbpal-with-hidden-trailing-assets",
         )
 
+    def test_explicit_suffix_collision_uses_global_used_slug_set(self):
+        # Regression for issue #17 finding 10: a per-base counter dict
+        # (keyed only by the un-suffixed base "foo") would independently
+        # assign the *second* literal "foo-1" heading the slug "foo-1"
+        # again (a silent duplicate id), instead of walking past the
+        # already-used "foo-1" the way GitHub's own renderer does. The
+        # sequence "foo", "foo-1", "foo" must produce three distinct,
+        # GitHub-matching slugs: foo, foo-1, foo-2.
+        text = "# Doc\n## foo\nbody\n## foo-1\nbody\n## foo\nbody\n"
+        slugs = check_docs.compute_heading_slugs(text)
+        self.assertEqual(slugs, ["doc", "foo", "foo-1", "foo-2"])
+        self.assertEqual(len(slugs), len(set(slugs)), "slugs must be globally unique: %r" % (slugs,))
+
+    def test_plain_duplicate_heading_sequence_still_correct(self):
+        text = "# Doc\n## Setup\nfoo\n## Setup\nbar\n"
+        slugs = check_docs.compute_heading_slugs(text)
+        self.assertEqual(slugs, ["doc", "setup", "setup-1"])
+
 
 class InternalLinkExtractionTests(unittest.TestCase):
     def test_finds_plain_link(self):
@@ -112,6 +131,35 @@ class InternalLinkExtractionTests(unittest.TestCase):
         targets = list(check_docs.extract_internal_link_targets(stripped))
         self.assertEqual(targets, [])
 
+    def test_angle_bracket_destination_with_space_supported(self):
+        stripped = check_docs.strip_fenced_blocks("See [x](<docs/a b.md>) for more.")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a b.md"])
+
+    def test_angle_bracket_destination_with_title_supported(self):
+        stripped = check_docs.strip_fenced_blocks('See [x](<docs/a b.md> "title") here.')
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a b.md"])
+
+    def test_single_quoted_title_supported(self):
+        stripped = check_docs.strip_fenced_blocks("See [x](docs/a.md 'title') for more.")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["docs/a.md"])
+
+    def test_uppercase_scheme_link_destination_classified_external(self):
+        # Regression: the internal-link/external-URL split relies on
+        # ``_is_external`` recognizing the destination's scheme -- an
+        # uppercase-scheme destination like "HTTP://EXAMPLE.COM/page"
+        # must still be classified external (so the internal-link
+        # existence/anchor check correctly skips it instead of
+        # misinterpreting it as a broken relative path, and it is instead
+        # covered by the external-URL registry check -- see
+        # ExternalUrlExtractionTests for that half of the contract).
+        stripped = check_docs.strip_fenced_blocks("[x](HTTP://EXAMPLE.COM/page)")
+        targets = [t for _, t in check_docs.extract_internal_link_targets(stripped)]
+        self.assertEqual(targets, ["HTTP://EXAMPLE.COM/page"])
+        self.assertTrue(check_docs._is_external(targets[0]))
+
 
 class ExternalUrlExtractionTests(unittest.TestCase):
     def test_bare_url_in_inline_code_is_found(self):
@@ -129,6 +177,17 @@ class ExternalUrlExtractionTests(unittest.TestCase):
         stripped = check_docs.strip_fenced_blocks("See https://example.com/page.")
         urls = [u for _, u in check_docs.extract_external_urls(stripped)]
         self.assertEqual(urls, ["https://example.com/page"])
+
+    def test_uppercase_scheme_url_is_extracted(self):
+        # Regression: a case-sensitive "https?://" pattern would silently
+        # miss "HTTP://"/"HTTPS://" URLs entirely -- a total blind spot,
+        # since such a link would then be misread as a relative internal
+        # path by the internal-link checker too (see
+        # InternalLinkExtractionTests.test_uppercase_scheme_link_destination_classified_external),
+        # meaning it would never reach either check.
+        stripped = check_docs.strip_fenced_blocks("Canonical: HTTP://EXAMPLE.COM/Page")
+        urls = [u for _, u in check_docs.extract_external_urls(stripped)]
+        self.assertEqual(urls, ["HTTP://EXAMPLE.COM/Page"])
 
 
 # ---------------------------------------------------------------------------
@@ -514,6 +573,85 @@ class RegistryTests(unittest.TestCase):
             self._write_registry(root, "- example.com | alice | third-party-reference | missing host:/prefix:")
             _, errors = check_docs.parse_registry(root)
             self.assertTrue(any("must start with" in e for e in errors))
+
+    def _registry_and_rules(self, repo, rules_block):
+        root = repo.root
+        self._write_registry(root, rules_block)
+        rules, errors = check_docs.parse_registry(root)
+        self.assertEqual(errors, [])
+        return root, rules
+
+    def test_prefix_lookalike_hyphen_suffix_rejected_even_with_generic_host_fallback(self):
+        # Adversarial regression for issue #17 finding 7/8: a lookalike
+        # repo name that merely shares the registered fireemblem8u prefix
+        # as a literal string ("fireemblem8u-evil") must still be
+        # rejected, even though the doc/registry also carries a broad
+        # ``host:github.com`` fallback rule that would otherwise happily
+        # accept *any* github.com URL, including this spoof.
+        with TempRepo() as repo:
+            root, rules = self._registry_and_rules(
+                repo,
+                "- prefix:https://github.com/laqieer/fireemblem8u | alice | historical-upstream | upstream\n"
+                "- host:github.com | alice | third-party-reference | generic github fallback",
+            )
+            write(root, "doc.md", "See https://github.com/laqieer/fireemblem8u-evil for details.\n")
+            findings = check_docs.check_external_urls(["doc.md"], root, rules)
+            messages = [f.message for f in findings]
+            self.assertTrue(any("upstream-lookalike" in m or "lookalike" in m for m in messages), messages)
+
+    def test_prefix_lookalike_dot_suffix_rejected(self):
+        with TempRepo() as repo:
+            root, rules = self._registry_and_rules(
+                repo,
+                "- prefix:https://github.com/laqieer/fireemblem8u | alice | historical-upstream | upstream\n"
+                "- host:github.com | alice | third-party-reference | generic github fallback",
+            )
+            write(root, "doc.md", "See https://github.com/laqieer/fireemblem8u.evil.example for details.\n")
+            findings = check_docs.check_external_urls(["doc.md"], root, rules)
+            messages = [f.message for f in findings]
+            self.assertTrue(any("lookalike" in m for m in messages), messages)
+
+    def test_legitimate_git_clone_suffix_still_passes(self):
+        # ".git" is the standard, legitimate way to write this exact
+        # upstream repository's clone URL -- it must classify the same as
+        # any other real subpath, not as a lookalike continuation.
+        with TempRepo() as repo:
+            root, rules = self._registry_and_rules(
+                repo,
+                "- prefix:https://github.com/laqieer/fireemblem8u | alice | historical-upstream | upstream",
+            )
+            write(root, "doc.md", "Clone: `https://github.com/laqieer/fireemblem8u.git`\n")
+            findings = check_docs.check_external_urls(["doc.md"], root, rules)
+            self.assertEqual(findings, [])
+
+    def test_scheme_and_host_case_normalized_for_registry_match(self):
+        with TempRepo() as repo:
+            root, rules = self._registry_and_rules(
+                repo, "- host:example.com | alice | third-party-reference | n",
+            )
+            write(root, "doc.md", "See HTTPS://EXAMPLE.COM/Page for details.\n")
+            findings = check_docs.check_external_urls(["doc.md"], root, rules)
+            self.assertEqual(findings, [])
+
+    def test_query_and_fragment_on_legitimate_upstream_url_pass(self):
+        with TempRepo() as repo:
+            root, rules = self._registry_and_rules(
+                repo,
+                "- prefix:https://github.com/laqieer/fireemblem8u | alice | historical-upstream | upstream",
+            )
+            write(root, "doc.md",
+                  "See https://github.com/laqieer/fireemblem8u/wiki?tab=readme#history for details.\n")
+            findings = check_docs.check_external_urls(["doc.md"], root, rules)
+            self.assertEqual(findings, [])
+
+    def test_ordinary_other_github_repo_link_still_governed_by_normal_registry_rules(self):
+        with TempRepo() as repo:
+            root, rules = self._registry_and_rules(
+                repo, "- host:github.com | alice | third-party-reference | n",
+            )
+            write(root, "doc.md", "See https://github.com/someorg/unrelated-repo for details.\n")
+            findings = check_docs.check_external_urls(["doc.md"], root, rules)
+            self.assertEqual(findings, [])
 
 
 # ---------------------------------------------------------------------------
@@ -984,6 +1122,53 @@ class MakeInvocationExtractionTests(unittest.TestCase):
         results = list(check_docs.extract_make_invocations(text))
         self.assertEqual(results, [])
 
+    def test_multiple_targets_all_yielded_not_just_the_first(self):
+        # Regression for issue #17 finding 11: previously only the first
+        # literal target token was ever inspected (via an early `break`),
+        # so "make all nonexistent-target" silently ignored the second,
+        # nonexistent target entirely. Both must now be yielded so a
+        # downstream check_make_targets pass can flag the bad one even
+        # though the first token is a real target.
+        text = "```bash\nmake all nonexistent-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertIn((False, "all"), results)
+        self.assertIn((False, "nonexistent-target"), results)
+        self.assertEqual(len(results), 2)
+
+    def test_multiple_legitimate_targets_all_pass_downstream_check(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "Makefile", "all:\n\techo hi\nclean:\n\techo bye\n")
+            write(root, "doc.md", "```bash\nmake all clean\n```\n")
+            literal, patterns = check_docs.parse_make_targets(root)
+            findings = check_docs.check_make_targets(["doc.md"], root, literal, patterns)
+            self.assertEqual(findings, [])
+
+    def test_second_of_two_targets_is_flagged_by_downstream_check(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "Makefile", "all:\n\techo hi\n")
+            write(root, "doc.md", "```bash\nmake all nonexistent-target\n```\n")
+            literal, patterns = check_docs.parse_make_targets(root)
+            findings = check_docs.check_make_targets(["doc.md"], root, literal, patterns)
+            self.assertTrue(any("nonexistent-target" in f.message for f in findings), findings)
+
+    def test_jobs_flag_and_its_value_token_skipped_target_still_found(self):
+        text = "```bash\nmake -j 4 expansion-modern-toolchain-check\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertIn((False, "expansion-modern-toolchain-check"), results)
+        self.assertNotIn((False, "4"), results)
+
+    def test_file_redirect_flag_skips_whole_invocation(self):
+        text = "```bash\nmake -f other.mk some-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_attached_file_redirect_flag_skips_whole_invocation(self):
+        text = "```bash\nmake --file=other.mk some-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
 
 class CheckMakeTargetsIntegrationTests(unittest.TestCase):
     def test_stale_target_flagged(self):
@@ -1063,6 +1248,64 @@ class SafeCommandRunnerTests(unittest.TestCase):
             root,
         )
         self.assertFalse(ok)
+
+    def test_bare_quickstart_with_no_arguments_is_unsafe(self):
+        # Regression for issue #17 finding 12: a bare `./scripts/quickstart.sh`
+        # invocation (no arguments at all) is a real installer/build/
+        # network-capable invocation, not a help request, and must never
+        # be judged safe.
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        self.assertFalse(check_docs.is_command_safe([quickstart]))
+
+    def test_quickstart_help_with_extra_positional_argument_is_unsafe(self):
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        self.assertFalse(check_docs.is_command_safe([quickstart, "--help", "extra-arg"]))
+
+    def test_quickstart_help_combined_with_build_flag_is_unsafe(self):
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        self.assertFalse(check_docs.is_command_safe([quickstart, "--rom", "--help"]))
+
+    def test_quickstart_install_flag_alone_is_unsafe(self):
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        self.assertFalse(check_docs.is_command_safe([quickstart, "--refresh-agbcc"]))
+
+    def test_quickstart_dash_h_alone_is_safe(self):
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        self.assertTrue(check_docs.is_command_safe([quickstart, "-h"]))
+
+    def test_bare_quickstart_rejected_by_run_safe_example_with_zero_subprocess_calls(self):
+        # Adversarial proof that the rejection happens *before* any
+        # subprocess is spawned: patch subprocess.run to explode if
+        # called at all, then confirm run_safe_example still reports
+        # refusal (not a crash from the patched subprocess.run).
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        with mock.patch.object(check_docs.subprocess, "run") as run_mock:
+            run_mock.side_effect = AssertionError(
+                "subprocess.run must never be called for an unsafe example"
+            )
+            ok, message = check_docs.run_safe_example("quickstart-bare", [quickstart], root)
+        self.assertFalse(ok)
+        self.assertIn("refused", message)
+        run_mock.assert_not_called()
+
+    def test_quickstart_extra_arg_rejected_by_run_safe_example_with_zero_subprocess_calls(self):
+        root = check_docs.get_repo_root(os.path.dirname(CHECK_DOCS_PATH))
+        quickstart = os.path.join(root, "scripts", "quickstart.sh")
+        with mock.patch.object(check_docs.subprocess, "run") as run_mock:
+            run_mock.side_effect = AssertionError(
+                "subprocess.run must never be called for an unsafe example"
+            )
+            ok, message = check_docs.run_safe_example(
+                "quickstart-help-plus-arg", [quickstart, "--help", "extra"], root,
+            )
+        self.assertFalse(ok)
+        run_mock.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

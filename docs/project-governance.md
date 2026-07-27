@@ -30,19 +30,26 @@ enforcement, and the baseline/fingerprint review process is
 
 This repository does not currently ship a `SECURITY.md`. Do not invent a
 contact address or process that isn't backed by a real, checked-in file or
-platform feature. Until a `SECURITY.md` is added:
+platform feature. **Never disclose a sensitive vulnerability's details in
+a public issue, pull request, or pull request review comment** -- every
+one of those is world-readable on GitHub by default; "avoid a public
+issue" is not satisfied by using a PR comment instead, since that is
+equally public. Until a `SECURITY.md` is added:
 
 - If GitHub's private vulnerability reporting is enabled for this
   repository, use it (repository → Security tab → "Report a vulnerability").
   Availability depends on the repository's platform configuration and is
-  not guaranteed by this document.
-- Otherwise, open a conversation with the maintainer (`@laqieer`, the sole
-  `CODEOWNERS` entry) through normal GitHub channels (an issue, or a pull
-  request review comment) rather than a public issue if the report is
-  sensitive.
+  not guaranteed by this document -- check the Security tab yourself
+  rather than assuming it is enabled.
+- If it is not enabled (or you cannot tell), do not post sensitive
+  vulnerability details anywhere public in this repository. Instead, open
+  a minimal, non-sensitive request asking the maintainer (`@laqieer`, the
+  sole `CODEOWNERS` entry) to establish or point you to a private
+  reporting channel, and withhold the actual sensitive details until a
+  private channel is confirmed available.
 
 This document does not create, and must not be read as creating, a
-guaranteed private-disclosure email address or SLA.
+guaranteed private-disclosure email address, contact method, or SLA.
 
 ## Copyright and provenance
 
