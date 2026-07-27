@@ -2000,6 +2000,51 @@ expansion-modern-combat-check:
 		'$(MODERN_CONFIG)'
 endif
 
+# Issue #6 starter-foundation runtime gate. The positive mechanics-hook
+# scenario needs a ROM built with the starter features ON, so this gate
+# builds a dedicated starter-foundation profile ROM (all EXPANSION_MECHANICS_*
+# and EXPANSION_DANGER_OVERLAY_MENU on) to its OWN build root -- it never
+# overwrites the default flags-off baseline ROM the linker/budget gates check
+# -- and verifies the positive hook scenario against it while verifying the
+# default-disabled negative control against the ordinary MODERN_ROM. Same
+# combat navigation, opposite semantic probe outcomes. Reuses the issue #13
+# gba-playtest harness (no new framework).
+MODERN_STARTER_PROFILE_ROOT := build/expansion-modern-starter
+MODERN_STARTER_PROFILE_ROM := $(MODERN_STARTER_PROFILE_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
+MODERN_STARTER_HOOK_SCENARIO := tools/gba-playtest/scenarios/starter-hook-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-hook-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-negative-modern-$(MODERN_CONFIG).json
+
+.PHONY: expansion-modern-starter-profile-rom expansion-modern-starter-hook-check
+expansion-modern-starter-profile-rom:
+	$(MAKE) expansion-modern-rom \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_BUILD_ROOT=$(MODERN_STARTER_PROFILE_ROOT) \
+		EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 \
+		EXPANSION_DANGER_OVERLAY_MENU=1
+
+ifeq ($(MODERN_CONFIG),debug)
+expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_NEG_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM starter-hook-check passed (positive registerOk=1/apply=2/sampleTrigger=2 on profile ROM; negative all-zero on default ROM): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+else
+expansion-modern-starter-hook-check:
+	@printf 'Modern ROM starter-hook-check skipped: the mechanics-hook scenario reuses the debug-calibrated combat navigation (config=%s); the release feature-enable proof is the host + linked release build (see reports/issue6_foundation_evidence.md).\n' \
+		'$(MODERN_CONFIG)'
+endif
+
 # Normal save/load runtime scenario (issue #13 closure). Reuses new-game.json's
 # clean-boot SaveMenu New Game -> slot 0 write, then a real A+B+SELECT+START
 # soft reset (RAM reinitialized), then the top-level SaveMenu RESTART item ->
@@ -2147,6 +2192,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-relocs \
 	expansion-modern-overlay-audit \
 	expansion-modern-shifted-check \
-	expansion-modern-linker-check
+	expansion-modern-linker-check \
+	expansion-modern-starter-hook-check
 
 -include $(wildcard $(sort $(MODERN_COHORT_DEPS) $(MODERN_ALL_DEPS) $(MODERN_FE6SIO_OBJ:.o=.d)))

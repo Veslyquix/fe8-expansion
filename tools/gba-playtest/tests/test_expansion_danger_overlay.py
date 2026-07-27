@@ -30,6 +30,8 @@ INCLUDE_DIRS = [REPO_ROOT / "include", REPO_ROOT / "include" / "generated"]
 MENU_DEF_SRC = REPO_ROOT / "src" / "menu_def.c"
 BMMENU_SRC = REPO_ROOT / "src" / "bmmenu.c"
 BMMENU_HEADER = REPO_ROOT / "include" / "bmmenu.h"
+PLAYERPHASE_SRC = REPO_ROOT / "src" / "playerphase.c"
+PROBE_HEADER = REPO_ROOT / "include" / "expansion_danger_overlay.h"
 
 CC = shutil.which("gcc") or shutil.which("cc")
 ARM_CC = shutil.which("arm-none-eabi-gcc")
@@ -204,6 +206,66 @@ class DangerOverlayWiringTests(unittest.TestCase):
                 proc = subprocess.run(cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
                 self.assertEqual(proc.returncode, 0,
                                  "arm compile of %s failed:\n%s" % (src.name, proc.stdout + proc.stderr))
+
+
+class DangerOverlayProbeTests(unittest.TestCase):
+    """The always-linked QoL semantic probe and its compile-gated writes."""
+
+    @classmethod
+    def setUpClass(cls):
+        _skip_if_no_host_compiler()
+
+    def test_probe_header_exists(self):
+        self.assertTrue(PROBE_HEADER.is_file(),
+                        "include/expansion_danger_overlay.h must exist")
+
+    def test_probe_symbol_is_always_linked_in_both_configs(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            for defs, tag in (([], "dis"), ([FLAG + "=1"], "en")):
+                rc, out, obj = _compile(tmp, PLAYERPHASE_SRC, "pp_%s.o" % tag, defines=defs)
+                self.assertEqual(rc, 0, "compiling playerphase.c (%s) failed:\n%s" % (tag, out))
+                syms = _referenced_symbol_names(obj)
+                self.assertIn("gExpansionDangerOverlayProbe", syms,
+                              "%s build must always link the probe symbol" % tag)
+
+    def test_probe_writes_are_compile_gated(self):
+        """Every probe field write in the shared danger-zone path must live
+        inside a #if FE8_EXPANSION_DANGER_OVERLAY_MENU region, so the default
+        build keeps vanilla playerphase/bmmenu behaviour."""
+        for src in (PLAYERPHASE_SRC, BMMENU_SRC):
+            text = src.read_text(encoding="utf-8")
+            gated = "".join(re.findall(
+                r"#if FE8_EXPANSION_DANGER_OVERLAY_MENU(.*?)#endif", text, flags=re.DOTALL))
+            ungated = re.sub(
+                r"#if FE8_EXPANSION_DANGER_OVERLAY_MENU.*?#endif", " ", text, flags=re.DOTALL)
+            ungated = _strip_c_comments(ungated)
+            # The probe struct definition is allowed ungated (always-linked);
+            # field writes (".<field>Count++/=") must not appear ungated.
+            self.assertNotRegex(
+                ungated, r"gExpansionDangerOverlayProbe\.\w+\s*(\+\+|=)",
+                "%s writes the danger-overlay probe outside a gated region" % src.name)
+            if "gExpansionDangerOverlayProbe." in text:
+                self.assertIn("gExpansionDangerOverlayProbe.", gated,
+                              "%s must write the probe only inside gated regions" % src.name)
+
+    def test_probe_header_uses_block_comments_only(self):
+        text = PROBE_HEADER.read_text(encoding="utf-8")
+        stripped = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
+        self.assertNotIn("//", stripped, "probe header must use /* */ comments only")
+
+    def test_playerphase_arm_compiles_enabled(self):
+        if ARM_CC is None:
+            raise unittest.SkipTest("arm-none-eabi-gcc not available")
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            obj = Path(tmp) / "pp.o"
+            cmd = [ARM_CC, "-mthumb", "-mcpu=arm7tdmi", "-mabi=aapcs", "-std=gnu89",
+                   "-c", "-w"] + _include_flags() + ["-D" + FLAG + "=1",
+                   str(PLAYERPHASE_SRC), "-o", str(obj)]
+            proc = subprocess.run(cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0,
+                             "arm compile of playerphase.c failed:\n" + proc.stdout + proc.stderr)
 
 
 if __name__ == "__main__":

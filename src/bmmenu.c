@@ -1,5 +1,7 @@
 #include "global.h"
 
+#include "expansion_danger_overlay.h"
+
 #include "hardware.h"
 #include "fontgrp.h"
 #include "uimenu.h"
@@ -198,6 +200,8 @@ u8 ExpansionDangerOverlay_MenuSelect(struct MenuProc* menu, struct MenuItemProc*
 {
     (void)menu;
     (void)menuItem;
+
+    gExpansionDangerOverlayProbe.menuSelectCount++;
 
     return MapMenu_DangerZone_UnusedEffect();
 }

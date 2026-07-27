@@ -18,6 +18,7 @@
 #include "bmio.h"
 #include "hardware.h"
 #include "bmphase.h"
+#include "expansion_danger_overlay.h"
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "minimap.h"
@@ -471,10 +472,26 @@ void DisplayActiveUnitEffectRange(ProcPtr proc)
     return;
 }
 
+/* Always-linked issue #6 danger/range overlay semantic probe (see
+ * include/expansion_danger_overlay.h). Present and zero in every build. */
+EWRAM_DATA struct ExpansionDangerOverlayProbe gExpansionDangerOverlayProbe = {0};
+
 //! FE8U = 0x0801CCB4
 void PlayerPhase_DisplayDangerZone(void)
 {
     GenerateDangerZoneRange(gBmSt.swapActionRangeCount & 1);
+#if FE8_EXPANSION_DANGER_OVERLAY_MENU
+    {
+        int rangeX, rangeY, rangeTiles = 0;
+        for (rangeY = 0; rangeY < gBmMapSize.y; rangeY++)
+            for (rangeX = 0; rangeX < gBmMapSize.x; rangeX++)
+                if (gBmMapRange[rangeY][rangeX] != 0)
+                    rangeTiles++;
+        gExpansionDangerOverlayProbe.dangerDisplayCount++;
+        gExpansionDangerOverlayProbe.lastRangeTileCount = (u32)rangeTiles;
+        gExpansionDangerOverlayProbe.rangeGraphicsActive = 1;
+    }
+#endif
 
     BmMapFill(gBmMapMovement, -1);
 
@@ -609,6 +626,13 @@ else_stmt:
 
             gBmSt.gameStateBits &= ~BM_FLAG_3;
 
+#if FE8_EXPANSION_DANGER_OVERLAY_MENU
+            if (gExpansionDangerOverlayProbe.rangeGraphicsActive)
+            {
+                gExpansionDangerOverlayProbe.cancelReturnCount++;
+                gExpansionDangerOverlayProbe.rangeGraphicsActive = 0;
+            }
+#endif
             HideMoveRangeGraphics();
 
             RefreshEntityBmMaps();
