@@ -141,4 +141,44 @@
 #define FE8_EXPANSION_SAVE_COMPAT_EPOCH 1
 #endif
 
+/* --- Starter-feature opt-in switches (issue #6) ------------------------- */
+/* See config.mk EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE, and
+ * EXPANSION_DANGER_OVERLAY_MENU. */
+/*
+ * Independent 0/1 build flags for the issue #6 starter-feature foundation.
+ * Each defaults to 0, so the legacy agbcc build (which never receives the
+ * modern -D flags) and any default modern build link none of these features
+ * and stay byte/behaviour identical to today's ROM. The modern build
+ * supplies each as a -D define computed from config.mk's matching
+ * EXPANSION_* value (see modern.mk), after
+ * scripts/modernize/expansion_config.py has validated it (only 0 or 1) and
+ * folded all three into the config-identity fingerprint. See
+ * docs/starter_features.md.
+ */
+
+/* Link the public battle-stat mechanics hook registry
+ * (include/expansion_mechanics.h, src/expansion_mechanics.c). */
+#ifndef FE8_EXPANSION_MECHANICS_HOOKS
+#define FE8_EXPANSION_MECHANICS_HOOKS 0
+#endif
+
+/* Register the bundled sample mechanic through that registry. Requires
+ * FE8_EXPANSION_MECHANICS_HOOKS (enforced below and in expansion_config.py). */
+#ifndef FE8_EXPANSION_MECHANICS_SAMPLE
+#define FE8_EXPANSION_MECHANICS_SAMPLE 0
+#endif
+
+/* Expose the player-facing danger/range overlay map-menu surface, reusing
+ * the existing danger-zone range path (src/playerphase.c). */
+#ifndef FE8_EXPANSION_DANGER_OVERLAY_MENU
+#define FE8_EXPANSION_DANGER_OVERLAY_MENU 0
+#endif
+
+/* Defence in depth: the same relationship expansion_config.py rejects at
+ * configure time is a hard compile error here, so a hand-passed -D (or a
+ * future include-only consumer) can never build a sample with no registry. */
+#if FE8_EXPANSION_MECHANICS_SAMPLE && !FE8_EXPANSION_MECHANICS_HOOKS
+#error "FE8_EXPANSION_MECHANICS_SAMPLE=1 requires FE8_EXPANSION_MECHANICS_HOOKS=1"
+#endif
+
 #endif /* GUARD_EXPANSION_CONFIG_H */

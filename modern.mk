@@ -1128,6 +1128,9 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 		--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 		--revision "$(EXPANSION_ROM_REVISION)" \
+		--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
+		--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
+		--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
@@ -1180,6 +1183,9 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 	--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 	--revision "$(EXPANSION_ROM_REVISION)" \
+	--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
+	--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
+	--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
     $(error $(MODERN_EXPANSION_CONFIG_RESOLVE))
@@ -1220,7 +1226,10 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_ROM_MAKER_CODE='"$(EXPANSION_ROM_MAKER_CODE)"' \
 	-DFE8_EXPANSION_ROM_REVISION=$(EXPANSION_ROM_REVISION) \
 	-DFE8_EXPANSION_ROM_SIZE_BYTES=$(MODERN_ROM_SIZE_BYTES) \
-	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH)
+	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
+	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
+	-DFE8_EXPANSION_MECHANICS_SAMPLE=$(EXPANSION_MECHANICS_SAMPLE) \
+	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU)
  endif
 endif
 
@@ -1271,6 +1280,9 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rom_revision=$(EXPANSION_ROM_REVISION)'; \
 		printf '%s\n' 'rom_size_bytes=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'save_compat_epoch=$(MODERN_SAVE_COMPAT_EPOCH)'; \
+		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
+		printf '%s\n' 'mechanics_sample=$(EXPANSION_MECHANICS_SAMPLE)'; \
+		printf '%s\n' 'danger_overlay_menu=$(EXPANSION_DANGER_OVERLAY_MENU)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"

@@ -66,3 +66,28 @@ EXPANSION_BUILD_ID ?=
 # list and docs/config_identity.md for how this fits the rest of the
 # identity surface.
 EXPANSION_SAVE_COMPAT_EPOCH ?= 1
+
+# --- Starter-feature opt-in build flags (issue #6) --------------------------
+# Independent 0/1 switches for the issue #6 starter-feature foundation. Each
+# flag defaults to 0, so a default build links none of them and stays
+# byte/behaviour-identical to today's ROM (see docs/starter_features.md).
+# Overriding a flag on the `make` command line (e.g.
+# `make ... EXPANSION_MECHANICS_HOOKS=1`) opts that one feature in.
+# scripts/modernize/expansion_config.py validates every value (only 0 or 1
+# is accepted; -1/2/text fail with an actionable message) and folds all
+# three into the config-identity fingerprint and embedded metadata JSON --
+# they are diagnostic identity only and never change the save format (see
+# EXPANSION_SAVE_COMPAT_EPOCH above, which stays independent).
+#
+#   EXPANSION_MECHANICS_HOOKS     -- link the public battle-stat mechanics
+#                                    hook registry (include/expansion_mechanics.h).
+#   EXPANSION_MECHANICS_SAMPLE    -- register the bundled sample mechanic
+#                                    through that registry. Requires
+#                                    EXPANSION_MECHANICS_HOOKS=1 (validated:
+#                                    sample=1 with hooks=0 is a hard error).
+#   EXPANSION_DANGER_OVERLAY_MENU -- expose the player-facing danger/range
+#                                    overlay map-menu surface (reuses the
+#                                    existing danger-zone range path).
+EXPANSION_MECHANICS_HOOKS     ?= 0
+EXPANSION_MECHANICS_SAMPLE    ?= 0
+EXPANSION_DANGER_OVERLAY_MENU ?= 0

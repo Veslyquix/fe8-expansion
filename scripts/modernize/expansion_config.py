@@ -50,6 +50,11 @@ VERSION_COMPONENT_MAX = 255
 SAVE_COMPAT_EPOCH_MIN = 0
 SAVE_COMPAT_EPOCH_MAX = 0xFFFF
 
+# Starter-feature opt-in flags (issue #6) are strict 0/1 build switches:
+# any other value (-1, 2, text) is rejected with an actionable message.
+FEATURE_FLAG_MIN = 0
+FEATURE_FLAG_MAX = 1
+
 # Named ROM sizes, matching modern.mk's MODERN_ROM_SIZE values.
 NAMED_ROM_SIZES = {"16M": 16 * 1024 * 1024, "32M": 32 * 1024 * 1024}
 
@@ -75,6 +80,17 @@ CONFIG_MK_KEYS = (
     "EXPANSION_ROM_REVISION",
     "EXPANSION_BUILD_ID",
     "EXPANSION_SAVE_COMPAT_EPOCH",
+)
+
+# Optional starter-feature flag keys (issue #6). Unlike CONFIG_MK_KEYS these
+# are NOT required to be present: a config.mk (or a synthetic test fixture)
+# that omits them is treated exactly as if each were 0, matching config.mk's
+# own `?= 0` default. This keeps the blast radius of adding the flags to a
+# single new source (config.mk) instead of every committed/synthetic fixture.
+CONFIG_MK_FEATURE_KEYS = (
+    "EXPANSION_MECHANICS_HOOKS",
+    "EXPANSION_MECHANICS_SAMPLE",
+    "EXPANSION_DANGER_OVERLAY_MENU",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -157,6 +173,47 @@ def validate_save_compat_epoch(value) -> int:
             f"[{SAVE_COMPAT_EPOCH_MIN}, {SAVE_COMPAT_EPOCH_MAX}]"
         )
     return epoch
+
+
+def validate_feature_flag(name: str, value) -> int:
+    """Validate a starter-feature opt-in flag (issue #6): strictly 0 or 1.
+
+    Any other value -- a negative number, 2, or non-numeric text -- is
+    rejected with a specific, actionable message, matching the rest of this
+    tool's fail-before-writing-anything contract.
+    """
+    try:
+        flag = int(str(value).strip(), 0)
+    except (TypeError, ValueError) as error:
+        raise ConfigError(
+            f"{name} {value!r} is not an integer; expected 0 or 1"
+        ) from error
+    if not (FEATURE_FLAG_MIN <= flag <= FEATURE_FLAG_MAX):
+        raise ConfigError(
+            f"{name} {flag} out of range [{FEATURE_FLAG_MIN}, {FEATURE_FLAG_MAX}]; "
+            f"expected 0 (off) or 1 (on)"
+        )
+    return flag
+
+
+def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu):
+    """Validate the three starter-feature flags plus their one dependency.
+
+    The sample mechanic can only be registered through the mechanics hook
+    registry, so EXPANSION_MECHANICS_SAMPLE=1 with EXPANSION_MECHANICS_HOOKS=0
+    is a contradiction and is rejected here (an actionable error), rather than
+    silently linking a sample with no registry to register it into.
+    """
+    hooks = validate_feature_flag("EXPANSION_MECHANICS_HOOKS", mechanics_hooks)
+    sample = validate_feature_flag("EXPANSION_MECHANICS_SAMPLE", mechanics_sample)
+    danger = validate_feature_flag("EXPANSION_DANGER_OVERLAY_MENU", danger_overlay_menu)
+    if sample and not hooks:
+        raise ConfigError(
+            "EXPANSION_MECHANICS_SAMPLE=1 requires EXPANSION_MECHANICS_HOOKS=1: "
+            "the sample mechanic is registered through the mechanics hook "
+            "registry, which is not linked when EXPANSION_MECHANICS_HOOKS=0"
+        )
+    return hooks, sample, danger
 
 
 def validate_rom_size(value) -> int:
@@ -262,7 +319,7 @@ def parse_config_mk(path: Path) -> Dict[str, str]:
         if not match:
             continue
         key, value = match.group(1), match.group(2)
-        if key in CONFIG_MK_KEYS:
+        if key in CONFIG_MK_KEYS or key in CONFIG_MK_FEATURE_KEYS:
             values[key] = value
     missing = [key for key in CONFIG_MK_KEYS if key not in values]
     if missing:
@@ -344,6 +401,9 @@ class ExpansionIdentity:
     text_shift: int
     build_commit: str
     save_compat_epoch: int
+    mechanics_hooks: int = 0
+    mechanics_sample: int = 0
+    danger_overlay_menu: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -357,7 +417,10 @@ class ExpansionIdentity:
     def fingerprint_fields(self) -> dict:
         """Compatibility-relevant settings folded into the config fingerprint:
         semantic version, ABI, ROM size, link-time text shift, ROM identity,
-        and the debug/release preset. See docs/config_identity.md."""
+        the debug/release preset, and the issue #6 starter-feature opt-in
+        flags (so toggling any feature flag changes the fingerprint, while the
+        independent save-compatibility epoch/key is deliberately NOT folded in
+        here). See docs/config_identity.md and docs/starter_features.md."""
         return {
             "version": [self.version_major, self.version_minor, self.version_patch],
             "abi": self.abi,
@@ -368,6 +431,11 @@ class ExpansionIdentity:
             "rom_game_code": self.rom_game_code,
             "rom_maker_code": self.rom_maker_code,
             "rom_revision": self.rom_revision,
+            "features": {
+                "mechanics_hooks": self.mechanics_hooks,
+                "mechanics_sample": self.mechanics_sample,
+                "danger_overlay_menu": self.danger_overlay_menu,
+            },
         }
 
     def to_dict(self) -> dict:
@@ -393,6 +461,9 @@ def load_identity(
     rom_maker_code: Optional[str] = None,
     rom_revision=None,
     save_compat_epoch=None,
+    mechanics_hooks=None,
+    mechanics_sample=None,
+    danger_overlay_menu=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
 
@@ -437,6 +508,17 @@ def load_identity(
         if save_compat_epoch not in (None, "")
         else cfg["EXPANSION_SAVE_COMPAT_EPOCH"]
     )
+    resolved_hooks, resolved_sample, resolved_danger = validate_feature_flags(
+        mechanics_hooks
+        if mechanics_hooks not in (None, "")
+        else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
+        mechanics_sample
+        if mechanics_sample not in (None, "")
+        else cfg.get("EXPANSION_MECHANICS_SAMPLE", "0"),
+        danger_overlay_menu
+        if danger_overlay_menu not in (None, "")
+        else cfg.get("EXPANSION_DANGER_OVERLAY_MENU", "0"),
+    )
     resolved_rom_size = validate_rom_size(rom_size)
     resolved_preset = validate_preset(config_preset)
     resolved_abi = validate_abi(abi)
@@ -460,6 +542,9 @@ def load_identity(
         text_shift=resolved_text_shift,
         build_commit=build_commit,
         save_compat_epoch=resolved_save_compat_epoch,
+        mechanics_hooks=resolved_hooks,
+        mechanics_sample=resolved_sample,
+        danger_overlay_menu=resolved_danger,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -535,6 +620,21 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--save-compat-epoch", default=None, help="override EXPANSION_SAVE_COMPAT_EPOCH"
     )
+    parser.add_argument(
+        "--mechanics-hooks",
+        default=None,
+        help="override EXPANSION_MECHANICS_HOOKS (0 or 1)",
+    )
+    parser.add_argument(
+        "--mechanics-sample",
+        default=None,
+        help="override EXPANSION_MECHANICS_SAMPLE (0 or 1)",
+    )
+    parser.add_argument(
+        "--danger-overlay-menu",
+        default=None,
+        help="override EXPANSION_DANGER_OVERLAY_MENU (0 or 1)",
+    )
 
 
 def _resolve_tokens(identity: ExpansionIdentity) -> str:
@@ -586,6 +686,9 @@ def main(argv=None) -> int:
             rom_maker_code=args.maker_code,
             rom_revision=args.revision,
             save_compat_epoch=args.save_compat_epoch,
+            mechanics_hooks=args.mechanics_hooks,
+            mechanics_sample=args.mechanics_sample,
+            danger_overlay_menu=args.danger_overlay_menu,
         )
     except ConfigError as error:
         print(f"error: {error}", file=sys.stderr)
