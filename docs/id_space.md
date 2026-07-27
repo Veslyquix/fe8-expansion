@@ -230,6 +230,41 @@ the deep Chapter 2 scenarios (`debugtools-*`, `savesuspend-resume`) are
 debug-only. Investigating that release-build world-map stall is out of scope
 for issue #10 and is reported as a separate finding.
 
+Re-assessed against the finalized issue #13 runtime harness when that harness
+was merged into this branch, rather than carried forward on the earlier
+wording:
+
+* The only release-config production entry that harness ships is
+  `new-game.json` / `expansion-modern-newgame-check MODERN_CONFIG=release`,
+  and it ends at the ordinary Save Menu -> New Game -> Easy -> first empty
+  slot write. Its last checkpoint is frame 1400, before any chapter or
+  battle map exists.
+* Every scenario in that harness which does reach a live map (`combat.json`,
+  `save-load.json`, `debugtools-ch4-prep-positive-modern-debug.json`) is
+  gated `ifeq ($(MODERN_CONFIG),debug)` in `modern.mk`, because each boots
+  through the debug-only Fast Boot launcher. The release mirrors
+  (`debugtools-tools-modern-release`,
+  `debugtools-ch4-prep-launch-modern-release`) exist precisely to prove those
+  tools are compiled out of a release ROM, so neither can serve as a release
+  map entry.
+* Reusing the release New Game entry was attempted, not assumed: the
+  committed `new-game.json` frame script extended with ordinary A
+  confirmations (frames 1300..30000, period 30) and L world-map cursor jumps
+  (frames 2000..30000, period 300), replayed against a freshly built plain
+  release ROM containing no probe code, still leaves the first word of
+  `gPlaySt` and both `struct Unit` character/class pointers of
+  `gUnitArrayBlue[0]` at zero on frame 30000 -- no chapter, no map, no unit.
+* The probe ROM itself was re-run fresh on the merged tree. `--frame 45000`
+  (over twice the gate window) and a five-times denser world-map input script
+  both end with `stagesCompleted=0x1`, `mapMainSeen=0`, `playerPhaseSeen=0`,
+  `wmLocation=0x1` and `phaseTimedOut=0x1`. The identical input script and
+  probe on the debug ROM reach `stagesCompleted=0x3F`, `mapMainSeen=1` and
+  `playerPhaseSeen=1`.
+
+`--require-stages boot` therefore stays the honest release contract: it is
+not raised to a stage set the release ROM cannot actually and repeatably
+reach.
+
 ### Layout note for expanded-cap ROMs
 
 Growing `gItemData[]` moves every ROM object placed after it. The committed

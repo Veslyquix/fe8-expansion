@@ -1,0 +1,43 @@
+{
+  "checkpoints": [
+    {
+      "frame": 1000,
+      "framebuffer_hash": "fnv1a64-rgb24:b9a0ec0ba45d82eb",
+      "name": "new-game-menu-selected",
+      "probes": []
+    },
+    {
+      "frame": 1140,
+      "framebuffer_hash": "fnv1a64-rgb24:134d278e3bf5807a",
+      "name": "empty-slot-list-shown",
+      "probes": [],
+      "sram_hash": "fnv1a64-sram-normalized:1c4a111733183e54"
+    },
+    {
+      "frame": 1400,
+      "framebuffer_hash": "fnv1a64-rgb24:37b1d7075b8c284c",
+      "name": "new-game-created",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:678951424638f3e1"
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "c03f232dff5b504a8268f7c87b6896bf34cbdfc7",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "new-game"
+}

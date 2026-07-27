@@ -1,0 +1,196 @@
+{
+  "checkpoints": [
+    {
+      "frame": 14240,
+      "name": "hub-open-release-zero",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031554",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031560",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031568",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031570",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203157c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031584",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 15920,
+      "name": "flag-toggle-confirmed-release-zero",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031554",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031560",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031568",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031570",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203157c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031584",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 17600,
+      "name": "save-back-readonly-unchanged-release-zero",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031554",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031560",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031568",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031570",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203157c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031584",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 17720,
+      "name": "hub-closed-map-interactive-release-zero",
+      "probes": [
+        {
+          "address": "0x02031504",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031508",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031554",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031560",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031568",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031570",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203157c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031584",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "164e7044231dda334d278a3b0c152c2a337f1f2d",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "debugtools-tools-modern-release"
+}

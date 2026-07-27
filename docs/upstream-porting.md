@@ -182,22 +182,42 @@ python3 -m scripts.upstream_port verify --dry-run   # list the gate commands wit
 **⚠️ This builds and checks the CURRENT TRUSTED WORKTREE (your repo, after
 you manually applied whatever you accepted) — it never builds, checks out,
 or executes the upstream ref/tree.** It orchestrates the same gates
-`.github/workflows/build.yml` runs, in the same order, fail-fast:
+`.github/workflows/build.yml` runs, in the same order, fail-fast. The
+workflow splits them across two jobs — a fast, host-only `host-tests` job
+(textually first: no arm-none-eabi toolchain, no ROM/linker build) and the
+`build` job (full modern ROM/ELF/linker) — and `verify` mirrors that exact
+argv-and-order sequence across both jobs:
 
-1. `python3 scripts/artifact_guard.py --revision HEAD`
-2. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
+1. `python3 -m unittest discover -s tools/gba-playtest/tests -v`
+   (issue #13: the full host-only tools/gba-playtest suite — host job,
+   never rebuilds the ROM)
+2. `python3 -m unittest discover -s tests/upstream_port -v`
+   (issue #12/#15: the 139 pure-stdlib upstream-port review tooling tests,
+   including this `verify.gates()` <-> `build.yml` mirror — host job, links
+   no C and never rebuilds the ROM)
+3. `python3 scripts/artifact_guard.py --revision HEAD`
+4. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
    (issue #15: bare `make`/`make all` always resolves to the modern
    release AAPCS lane)
-3. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
+5. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
    (issue #15: quickstart.sh only reaches the archival agbcc lane via
    explicit `make legacy`/`make fireemblem8.gba`)
-4. `make generated-data-check`
-5. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
-   (covers modern debug linker + boot + relocation/shift checks — see
+6. `make generated-data-check`
+7. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+   (aggregates the full modern debug ROM/runtime + linker suite off one
+   reused object/ELF build — boot/title/new-game/debugtools-hub/timer/map/
+   tools/prep/ch4-prep/combat/save-load/suspend/save-format-migration,
+   budget, shift/offset, raw-pointer, relocation and cross-overlay — so the
+   runtime scenarios are covered here, not re-run individually; see
    `modern.mk`'s `expansion-modern-linker-check` dependency chain)
-6. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+8. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+   (release-config counterpart, incl. the release debugtools-disabled
+   negative scenarios)
 
-None of these existing gates are weakened, reordered, or skipped.
+None of these existing gates are weakened, reordered, or skipped; the two
+host-lane gates were added by the issues #11/#13 <-> #12/#15 integration and
+run before the ROM build so a host-tooling regression fails in well under a
+minute.
 
 **There is no gate subset/selection flag, on the CLI or in the internal
 `verify.run_gates` API.** `verify` (with or without `--dry-run`) always

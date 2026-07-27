@@ -411,6 +411,20 @@ Verified: `tests/upstream_port` 139 passed / 8 subtests;
 order, the item-expansion gates rendering their `FE8_ITEM_ID_CAP=0xCE
 FE8_EXPANSION_ITEMTEST=1 make ...` prefix exactly as in `build.yml`.
 
+Merge update (integrating the finalized issue #11/#13 runtime harness
+`master`): that master split CI into two jobs and added a host-only
+`host-tests` lane with two further gate steps (`Run gba-playtest host test
+suite`, `Run upstream-port tooling test suite`), so the literal mirror is now
+**10** gates, not 8 -- the two host-lane gates first, then the eight steps of
+the ROM `build` job ending with the two item-expansion gates. Git merged both
+sides of `test_verify.py` without a conflict while each side independently
+still asserted `8`, so the three hardcoded counts
+(`test_dry_run_never_executes_subprocess`,
+`test_dry_run_lists_full_ordered_gate_set_never_a_subset`,
+`test_cli_verify_dry_run_lists_full_ordered_gate_set`) were corrected to
+`10`; the exact-count and full-ordered-name assertions themselves were kept
+exactly as strict. `tests/upstream_port` passes 139/139 on the merge result.
+
 ### C. Archival lane silently accepted an expanded item cap (parse-time guard)
 
 Root cause: `FE8_ITEM_ID_CAP` is threaded into the compile only by the modern

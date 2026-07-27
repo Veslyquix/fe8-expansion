@@ -1,9 +1,0 @@
-{
-  "blocker": "Combat requires a deterministic chapter route and target selection that have not been independently validated; the available shiftcheck smoke path never reaches combat.",
-  "checkpoints": [],
-  "description": "Schema-ready placeholder for deterministic combat capture.",
-  "disabled": true,
-  "frames": [],
-  "name": "combat",
-  "schema_version": 1
-}

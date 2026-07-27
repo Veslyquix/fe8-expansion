@@ -32,6 +32,7 @@ This module covers (host-only, no ROM/libmGBA required):
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -56,6 +57,7 @@ for _extra_path in (
         sys.path.insert(0, _extra_path)
 
 import gba_playtest  # noqa: E402
+import modern_mk_query as mmq  # noqa: E402
 import save_format_tool as sft  # noqa: E402
 import sram_fixture as sf  # noqa: E402
 from sram_hash_mirror import compute_sram_hash  # noqa: E402
@@ -253,79 +255,178 @@ class ScenarioExactHashPolicyTests(unittest.TestCase):
 
 
 class ModernMkWiringTests(unittest.TestCase):
-    """Proves modern.mk's Make-level wiring using `make -n` (dry run) --
-    like scripts/modernize/tests/test_save_compat_epoch_modern_build.py,
-    this runs against the real repository root and requires no
-    arm-none-eabi cross toolchain, since -n never executes recipe
-    commands."""
+    """Proves modern.mk's Make-level debugtools wiring **host-only**, by reading
+    modern.mk's fully parsed ``make -p`` database via :mod:`modern_mk_query`
+    instead of dry-running the modern goals themselves.
 
-    def _make_dry_run(self, *args: str) -> str:
-        result = subprocess.run(
-            ["make", "--no-print-directory", "-n", *args],
-            cwd=REPO_ROOT,
+    The previous ``make -n expansion-modern-debugtools-check`` approach was not
+    host-only: those goals are members of ``MODERN_ALL_SOURCE_GOALS``, so Make
+    remade the included per-source ``*.headers.d`` files -- running the
+    arm-none-eabi cross compiler through ``expansion-modern-toolchain-check`` --
+    *before* honouring ``-n``, which fails on the CI ``host-tests`` lane that,
+    by design, ships no cross toolchain (CI run 30243920318). The ``make -p``
+    probe query names only an inert non-source goal, so the header-dependency
+    ``include`` stays disabled and no compiler is ever needed. See
+    :mod:`modern_mk_query` for the full root-cause writeup.
+
+    Assertion semantics are preserved exactly: debug/release
+    ``expansion-modern-debugtools-check`` both pass ``--sram-image`` pointing at
+    their config-specific ``debugtools-current.sav`` (also wired as a build
+    prerequisite); the fixture recipe runs ``sram_fixture.py``; the timer-freeze
+    check is never given an sram image / debugtools fixture; and
+    ``expansion-modern-savefmt-check`` keeps its own ``savefmt-fixtures`` and
+    never references the debugtools fixture.
+    """
+
+    _FIXTURE_SUFFIX = "debugtools-fixtures/debugtools-current.sav"
+
+    def _assert_debugtools_check_seeds_config_fixture(self, config: str) -> None:
+        database = mmq.query_make_database(config)
+        fixture = mmq.variable_value(database, "MODERN_DEBUGTOOLS_SRAM_FIXTURE")
+        script = mmq.variable_value(database, "MODERN_DEBUGTOOLS_SRAM_FIXTURE_SCRIPT")
+
+        # Config-specific fixture path, authoritatively expanded by make.
+        self.assertEqual(
+            fixture,
+            f"build/expansion-modern/{config}/aapcs/{self._FIXTURE_SUFFIX}",
+        )
+
+        # expansion-modern-debugtools-check passes that fixture as --sram-image
+        # and depends on it, so it is generated before the check runs.
+        recipe = mmq.rule_recipe(database, "expansion-modern-debugtools-check")
+        self.assertIn(
+            '--sram-image "$(MODERN_DEBUGTOOLS_SRAM_FIXTURE)"',
+            recipe,
+            "debugtools-check must seed SRAM from the deterministic fixture",
+        )
+        self.assertIn(
+            fixture,
+            mmq.rule_prerequisites(database, "expansion-modern-debugtools-check"),
+            "the config-specific fixture must be a build prerequisite",
+        )
+
+        # The fixture is produced by sram_fixture.py's write-deterministic-current.
+        self.assertEqual(script, "tools/gba-playtest/tests/sram_fixture.py")
+        fixture_recipe = mmq.rule_recipe(database, fixture)
+        self.assertIn('"$(MODERN_DEBUGTOOLS_SRAM_FIXTURE_SCRIPT)"', fixture_recipe)
+        self.assertIn("write-deterministic-current", fixture_recipe)
+
+    def test_debug_debugtools_check_passes_sram_image(self):
+        self._assert_debugtools_check_seeds_config_fixture("debug")
+
+    def test_release_debugtools_check_passes_sram_image(self):
+        self._assert_debugtools_check_seeds_config_fixture("release")
+
+    def test_debug_timer_check_is_not_given_sram_image(self):
+        """The timer-freeze scenario has no sram_hash checkpoints (it never
+        observes SRAM), so it deliberately keeps booting from blank SRAM --
+        seeding it would only add risk (different boot timing) for no benefit."""
+        database = mmq.query_make_database("debug")
+        recipe = mmq.rule_recipe(database, "expansion-modern-debugtools-timer-check")
+        self.assertNotIn("--sram-image", recipe)
+        self.assertNotIn("debugtools-fixtures", recipe)
+        self.assertNotIn("MODERN_DEBUGTOOLS_SRAM_FIXTURE", recipe)
+        fixture = mmq.variable_value(database, "MODERN_DEBUGTOOLS_SRAM_FIXTURE")
+        self.assertNotIn(
+            fixture,
+            mmq.rule_prerequisites(
+                database, "expansion-modern-debugtools-timer-check"
+            ),
+        )
+
+    def test_savefmt_check_recipe_is_unaffected(self):
+        """expansion-modern-savefmt-check must keep using its own
+        savefmt-fixtures directory/fixtures (run_save_compat_checks.py), never
+        the new debugtools fixture target."""
+        database = mmq.query_make_database("debug")
+        recipe = mmq.rule_recipe(database, "expansion-modern-savefmt-check")
+        self.assertNotIn("debugtools-fixtures", recipe)
+        self.assertNotIn("MODERN_DEBUGTOOLS_SRAM_FIXTURE", recipe)
+        self.assertIn("$(MODERN_SAVEFMT_FIXTURE_DIR)", recipe)
+        self.assertTrue(
+            mmq.variable_value(database, "MODERN_SAVEFMT_FIXTURE_DIR").endswith(
+                "savefmt-fixtures"
+            )
+        )
+
+
+class DebugtoolsWiringToolchainFreeRegressionTests(unittest.TestCase):
+    """Regression teeth for the host-only wiring checks (CI run 30243920318).
+
+    Reconstructs the CI ``host-tests`` lane -- a PATH with **no**
+    ``arm-none-eabi-gcc`` -- and proves that (a) the four
+    :class:`ModernMkWiringTests` pass there, while (b) the old-style
+    ``make -n <modern goal>`` dry run they replaced still fails there with the
+    exact missing-compiler diagnostic. Guards against anyone reverting the
+    checks to a form that needs the cross toolchain.
+    """
+
+    def _run_wiring_tests(self, env) -> subprocess.CompletedProcess:
+        # Target the wiring class explicitly so this regression never recurses
+        # into itself.
+        return subprocess.run(
+            [
+                sys.executable, "-m", "unittest", "-v",
+                "test_debugtools_sram_fixture.ModernMkWiringTests",
+            ],
+            cwd=str(Path(__file__).resolve().parent),
+            env=env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             check=False,
         )
-        self.assertEqual(result.returncode, 0, result.stdout)
-        return result.stdout
 
-    @staticmethod
-    def _remove_if_present(relative_path: str) -> None:
-        # `make -n` only prints a prerequisite's own recipe when that
-        # prerequisite is considered out of date. A prior real (non-dry-run)
-        # build in this same working tree can leave the fixture file behind
-        # under build/, which would otherwise make this test's assertion on
-        # the fixture-generation recipe line order-dependent/flaky. Deleting
-        # only our own generated build artifact keeps the dry run
-        # deterministic without touching anything tracked by git.
-        path = REPO_ROOT / relative_path
-        if path.exists():
-            path.unlink()
+    def test_wiring_checks_are_host_only_without_cross_compiler(self):
+        env, bin_dir, tmp_root = mmq.build_toolchain_free_env(REPO_ROOT)
+        try:
+            # The reconstructed host lane must not resolve the cross compiler.
+            self.assertIsNone(
+                shutil.which("arm-none-eabi-gcc", path=str(bin_dir)),
+                "hermetic host bin unexpectedly exposes arm-none-eabi-gcc",
+            )
 
-    def test_debug_debugtools_check_passes_sram_image(self):
-        self._remove_if_present(
-            "build/expansion-modern/debug/aapcs/debugtools-fixtures/debugtools-current.sav"
-        )
-        stdout = self._make_dry_run("MODERN_CONFIG=debug", "expansion-modern-debugtools-check")
-        self.assertIn(
-            "--sram-image \"build/expansion-modern/debug/aapcs/debugtools-fixtures/"
-            "debugtools-current.sav\"",
-            stdout,
-        )
-        self.assertIn("tools/gba-playtest/tests/sram_fixture.py", stdout)
+            # Teeth: on a clean build tree the OLD approach genuinely fails here
+            # (the reproduced CI failure). A throwaway empty MODERN_BUILD_ROOT
+            # recreates the "no *.headers.d yet" clean checkout without touching
+            # this worktree's own build/ artifacts.
+            empty_root = tmp_root / "empty-build"
+            empty_root.mkdir()
+            old_style = subprocess.run(
+                [
+                    "make", "--no-print-directory", "-n",
+                    "MODERN_CONFIG=debug",
+                    f"MODERN_BUILD_ROOT={empty_root}",
+                    "expansion-modern-debugtools-check",
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertNotEqual(
+                old_style.returncode,
+                0,
+                "old-style `make -n <modern goal>` unexpectedly succeeded without "
+                "a cross compiler -- the root cause this test documents is gone; "
+                "revisit whether the wiring checks may safely name modern goals.",
+            )
+            self.assertIn("modern compiler not found", old_style.stdout)
 
-    def test_release_debugtools_check_passes_sram_image(self):
-        self._remove_if_present(
-            "build/expansion-modern/release/aapcs/debugtools-fixtures/debugtools-current.sav"
-        )
-        stdout = self._make_dry_run("MODERN_CONFIG=release", "expansion-modern-debugtools-check")
-        self.assertIn(
-            "--sram-image \"build/expansion-modern/release/aapcs/debugtools-fixtures/"
-            "debugtools-current.sav\"",
-            stdout,
-        )
-        self.assertIn("tools/gba-playtest/tests/sram_fixture.py", stdout)
-
-    def test_debug_timer_check_is_not_given_sram_image(self):
-        """The timer-freeze scenario has no sram_hash checkpoints (it
-        never observes SRAM), so it deliberately keeps booting from blank
-        SRAM -- seeding it would only add risk (different boot timing)
-        for no benefit."""
-        stdout = self._make_dry_run(
-            "MODERN_CONFIG=debug", "expansion-modern-debugtools-timer-check"
-        )
-        self.assertNotIn("--sram-image", stdout)
-        self.assertNotIn("debugtools-fixtures", stdout)
-
-    def test_savefmt_check_recipe_is_unaffected(self):
-        """expansion-modern-savefmt-check must keep using its own
-        savefmt-fixtures directory/fixtures (run_save_compat_checks.py),
-        never the new debugtools fixture target."""
-        stdout = self._make_dry_run("MODERN_CONFIG=debug", "expansion-modern-savefmt-check")
-        self.assertNotIn("debugtools-fixtures", stdout)
-        self.assertIn("savefmt-fixtures", stdout)
+            # The fixed, host-only checks must pass in this same toolchain-free env.
+            result = self._run_wiring_tests(env)
+            self.assertEqual(
+                result.returncode,
+                0,
+                "ModernMkWiringTests must pass without arm-none-eabi-gcc:\n"
+                + result.stdout,
+            )
+            self.assertIn("Ran 4 tests", result.stdout)
+            self.assertNotIn("FAILED", result.stdout)
+        finally:
+            shutil.rmtree(tmp_root, ignore_errors=True)
 
 
 class FixtureDependencyInvalidationTests(unittest.TestCase):

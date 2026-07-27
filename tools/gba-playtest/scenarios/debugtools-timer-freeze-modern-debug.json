@@ -75,12 +75,12 @@
       "name": "hub-open-early-sample",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031638",
+          "address": "0x02031828",
           "size": 4,
           "expected": "0x0000007b"
         }
@@ -92,12 +92,12 @@
       "name": "hub-open-late-frozen",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031638",
+          "address": "0x02031828",
           "size": 4,
           "expected": "0x0000007b"
         }
@@ -109,12 +109,12 @@
       "name": "hub-closed-resumed",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031638",
+          "address": "0x02031828",
           "size": 4,
           "expected": "0x00000111"
         }

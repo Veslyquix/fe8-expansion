@@ -1,0 +1,98 @@
+{
+  "checkpoints": [
+    {
+      "frame": 300,
+      "framebuffer_hash": "fnv1a64-rgb24:3855f352b10ce427",
+      "name": "hub-closed-before-hotkey",
+      "probes": [
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031848",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203184c",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 630,
+      "framebuffer_hash": "fnv1a64-rgb24:147388549cf5becb",
+      "name": "hub-opened-after-pulse",
+      "probes": [
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x0203181c",
+          "size": 4,
+          "value": "0x00000009"
+        }
+      ]
+    },
+    {
+      "frame": 895,
+      "name": "ch4-prep-request-armed",
+      "probes": [
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02031848",
+          "size": 4,
+          "value": "0x44424c32"
+        },
+        {
+          "address": "0x0203184c",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 1100,
+      "name": "gamecontrol-committed-chapter4-boot",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x04"
+        },
+        {
+          "address": "0x02031848",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203184c",
+          "size": 4,
+          "value": "0x44424c31"
+        },
+        {
+          "address": "0x02031850",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "8e333ae5b270f8a486aa27f196e577a0595f5005",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "debugtools-ch4-prep-launch-modern-debug"
+}

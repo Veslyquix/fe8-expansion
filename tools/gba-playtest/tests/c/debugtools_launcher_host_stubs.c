@@ -170,6 +170,16 @@ void DebugTools_RegisterWeatherFogActions(void)
      * though this launcher-lifecycle driver never itself calls OpenHub. */
 }
 
+void DebugTools_RegisterExtendedToolActions(void)
+{
+    /* Issue #11 closure: the real implementation (src/debugtools_tools.c)
+     * has its own dedicated host tests. Same rationale as
+     * DebugTools_RegisterWeatherFogActions above -- src/debugtools_registry.c's
+     * DebugTools_OpenHub calls this function unconditionally, so a stub
+     * must exist here even though this launcher-lifecycle driver never
+     * itself calls OpenHub. */
+}
+
 /* DebugToolsObserver_WaitForStablePlayerPhase is a PROC_REPEAT callback:
  * this host test drives it directly (see debugtools_launcher_driver.c),
  * so gProcScr_PlayerPhase only needs to exist as a distinguishable

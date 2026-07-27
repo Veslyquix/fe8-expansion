@@ -1,12 +1,17 @@
-# Debug-tools foundation (issue #11 slices 1-2)
+# Debug-tools subsystem (issue #11 closure)
 
-This document is the single reference for the debug-tools subsystem added in
-issue #11: slice 1's release-safe config gate, fixed-capacity contributor
-action-registration API, title-screen hub hotkey, one built-in deterministic
-launcher; and slice 2's config-gated map-phase/prep-screen hub entry points
-and the two safe, registry-backed Weather/Fog actions -- plus the
-playtest/host-test evidence that proves all of it. See "Remaining #11 scope"
-at the end for what is still explicitly deferred to later slices.
+This document is the single reference for the debug-tools subsystem built
+for issue #11: a release-safe config gate; a fixed-capacity, hardened
+contributor action-registration API (capacity/id/label/callback/reentrancy
+all explicitly validated); title/map/prep-screen hub hotkeys; two
+deterministic launchers (Chapter 2, and Chapter 4 for reaching a real prep
+screen); the Weather/Fog actions; a bounded diagnostics foundation (log
+ring + non-fatal assert record); five bounded validated tools (unit,
+convoy, flag/chapter, RNG, save-state); and the playtest/host-test evidence
+that proves all of it. See `reports/debugtools_issue11_closure.md` for the
+frozen-checklist-to-code-to-test closure mapping, and "Remaining #11 scope"
+at the end of this document for what otherwise remains (only the true
+non-goals -- `mgba_printf`/full debugger/arbitrary memory editor).
 
 ## Files
 
@@ -25,13 +30,22 @@ at the end for what is still explicitly deferred to later slices.
 | `tools/gba-playtest/scenarios/debugtools-map-hub-modern-debug.json` (slice 2) | Live map-phase hub scenario: opens the hub with the map mask on the real, interactive Chapter 2 map, exercises Weather then Fog, and proves the map stays interactive after the hub closes |
 | `tools/gba-playtest/scenarios/debugtools-{map,prep}-hub-modern-release.json` (slice 2) | Release mirrors proving both new hotkeys are compiled out (`gDebugToolsProbe` stays all-zero, framebuffer unchanged) |
 | `tools/gba-playtest/fingerprints/debugtools-{hub,map-hub,prep-hub}-modern-{debug,release}.json` | Captured fingerprints for the scenarios above |
+| `src/debugtools_diag.c` (closure) | Diagnostics foundation: bounded log ring (`DebugTools_LogEvent`/`GetLogEntry`/`GetLogCount`) and non-fatal assert record (`DEBUGTOOLS_ASSERT`/`DebugTools_RecordAssertFailure`) |
+| `src/debugtools_tools.c` (closure) | The five bounded validated tools: Unit Inspect (heal-to-full), Convoy Inspect (bounded add), Flag/Chapter (bounded flag toggle), RNG Inspect (bounded reseed), Save State (read-only) |
+| `src/gamecontrol.c` (closure) | `GameControl_PostIntro` also consumes the second, independent Ch4-Prep pending request and commits the deterministic Chapter 4 boot |
+| `tools/gba-playtest/scenarios/debugtools-ch4-prep-launch-modern-{debug,release}.json` (closure) | The Ch4-Prep launcher's own boot-commit lifecycle scenario + release mirror (see "Fast Boot: Chapter 4 (Prep)" below; the live prep-screen arrival itself is proven by the prep-positive scenario in the next row) |
+| `tools/gba-playtest/scenarios/debugtools-ch4-prep-positive-modern-debug.json` (closure) | Live prep-screen arrival (debug-only): drives the Chapter 4 world-map traversal + the real `PREP` opcode to a live `PrepScreenProc_MapIdle`, then fires the SELECT+B prep hotkey; proves `prepScreenObservedCount` 0->1 and `PLAY_FLAG_PREPSCREEN` held throughout. Gate: DEBUG branch of `expansion-modern-debugtools-prep-check` |
 | `tools/gba-playtest/tests/test_debugtools_registry.py` + `tools/gba-playtest/tests/c/*.c` | Host tests (see "Host tests" below) |
 
 This feature deliberately does **not** touch `src/bmdebug.c`, `src/uidebug.c`,
-or `src/menu_def.c` -- those dormant tools stay unreachable, and slice 2's
+or `src/menu_def.c` -- those dormant tools stay unreachable, and the
 Weather/Fog actions only ever reference their existing
 `DebugMenu_WeatherDraw/Idle`/`DebugMenu_FogDraw/Idle` functions **by
-pointer** from `src/debugtools_actions.c` (see "Remaining #11 scope").
+pointer** from `src/debugtools_actions.c`. `src/debugtools_diag.c` and
+`src/debugtools_tools.c` (issue #11 closure) follow the identical
+by-pointer/never-copy discipline for the engine helpers they call
+(`SetUnitHp`, `AddItemToConvoy`, `SetFlag`/`ClearFlag`, `SetLCGRNValue`,
+`ClassifySramSaveCompat`, etc. -- see "Five bounded validated tools" below).
 
 ## Config gate
 
@@ -105,6 +119,23 @@ a registration failure is never silently dropped:
 | `DEBUGTOOLS_ERR_DUPLICATE` | `id` or `label` already registered |
 | `DEBUGTOOLS_ERR_CAPACITY_FULL` | `DEBUGTOOLS_ACTION_MAX` (9) already reached |
 | `DEBUGTOOLS_ERR_ALREADY_ACTIVE` | `DebugTools_OpenHub()` called while the hub is already open |
+| `DEBUGTOOLS_ERR_ID_INVALID` (closure) | `action->id == 0` (reserved/uninitialized-looking sentinel; every shipped action uses ids 1-9) |
+| `DEBUGTOOLS_ERR_LABEL_INVALID` (closure) | `label` is empty (`""`) or longer than `DEBUGTOOLS_LABEL_MAX_LENGTH` (24) |
+
+Both closure codes are appended at the **end** of `enum DebugToolsResult` so
+every pre-existing named value keeps its original integer -- several
+scenario JSON files probe `gDebugToolsProbe.lastRegisterResult` by raw
+integer, so no existing value may ever be renumbered. Label validation does
+not copy or retain any bytes beyond the pointer itself (`sActions[sActionCount]
+= *action` in `src/debugtools_registry.c` still only stores the pointer) --
+contributors remain responsible for passing a label with static/persistent
+storage duration, which every action in this codebase already does by using
+a plain C string literal; the length bound is a rendering/policy contract,
+not a lifetime check C89 can perform at runtime. See
+`tools/gba-playtest/tests/c/debugtools_registry_label_validation_driver.c`
+for the host-executed proof of both new codes (including the exact
+boundary: a label of exactly `DEBUGTOOLS_LABEL_MAX_LENGTH` characters is
+accepted, one character over is rejected).
 
 `DebugTools_GetLastRegistrationResult()` always mirrors the most recent call.
 `gDebugToolsProbe.lastRegisterResult` mirrors the same value for playtest
@@ -657,31 +688,332 @@ own last two checkpoints) -- so these scenarios demonstrate the tail input
 changes nothing further, consistent with that already-accepted release
 baseline.
 
-A live prep-screen scenario mirroring the map scenario's depth is currently
-out of scope. `hasPrepScreen` is `FALSE` for all 79 chapters in
+A live prep-screen scenario reaching a real, engine-active prep screen is
+now **achieved** in this closure via Chapter 4 (see "Fast Boot: Chapter 4
+(Prep)" below). `hasPrepScreen` is `FALSE` for all 79 chapters in
 `src/data/chapter_settings.h` (a vestigial FE7-only field), but the `PREP`
 event-script command (`src/eventscr.c`'s `EventScr_CommonPrep`) is **not**
 dead code -- it is genuinely `CALL`ed from many linked, compiled-in chapter
 scripts (e.g. `ch4`/`ch5`/`ch6`/`ch7`/`tower`/`ruin`-eventscript.h and
-others), so a real prep screen is reachable through ordinary gameplay. The
-gap is deterministic *reach*, not existence: this slice's launcher and
-in-scope evidence are Chapter 2 only, and Chapter 2's own event script
-(`src/events/ch2-eventscript.h`) never calls `EventScr_CommonPrep`.
-Reaching one of the chapters that does call it deterministically, without
-playing through several preceding chapters, would require a chapter-data
-edit or a skirmish/chapter selector, both explicitly out of this slice's
-"HOW MUCH"/"DON'T" scope. `PrepScreenProc_MapIdle`'s hotkey entry point is
-still added and unit-tested (call-site ordering, mask collision checks,
-disabled/release stubs), and its release-mirror scenario proves the hotkey
-is inert on a release build -- only the live, in-ROM debug playtest proof
-against a real prep screen is deferred.
+others), so a real prep screen is reachable through ordinary gameplay. This
+slice's own launcher was Chapter 2 only, and Chapter 2's own event script
+(`src/events/ch2-eventscript.h`) never calls `EventScr_CommonPrep`; the
+closure's second launcher targets Chapter 4, whose
+`EventScr_Ch4_BeginningScene` does call it, so the live prep screen is
+reached deterministically without a chapter-data edit or skirmish selector.
+`PrepScreenProc_MapIdle`'s hotkey entry point is added and unit-tested
+(call-site ordering, mask collision checks, disabled/release stubs), its
+release-mirror scenario proves the hotkey is inert on a release build, and
+the live, in-ROM debug playtest proof against a real prep screen is now
+provided by `debugtools-ch4-prep-positive-modern-debug.json`.
+
+## Fast Boot: Chapter 4 (Prep) (issue #11 closure)
+
+Chapter 2's own event script (`EventScr_Ch2_BeginningScene`) never calls the
+`PREP` event opcode, so the Chapter 2 launcher above cannot exercise
+`DebugTools_PrepHotkeyCheck()`/`PrepScreenProc_MapIdle` against a real, live
+prep screen -- the gap this repository's docs previously described as
+deferred, now closed by the Chapter 4 launcher and the prep-positive
+scenario below. `EventScr_Ch4_BeginningScene` (`src/events/ch4-eventscript.h`) is
+self-contained (its own `LOAD1`/`LOAD2` ally+enemy unit definitions, no
+`CALL` into another chapter's own sub-script) and calls
+`CALL(EventScr_CommonPrep)` partway through -- so a second, independent
+deterministic launcher targeting Chapter 4 reaches a genuine, unmodified,
+engine-driven `PrepScreenProc` (`gProcScr_SALLYCURSOR`) through the real
+`PREP` event opcode (`Event3E_PrepScreenCall`, `src/eventscr.c`), not a
+hand-rolled substitute.
+
+### Mechanism: a second, independent pending-request pair
+
+`DebugTools_RequestChapter4PrepLaunch()` / `DebugTools_IsChapter4PrepLaunchPending()`
+/ `DebugTools_ConsumePendingChapter4PrepLaunch()` (`src/debugtools_launcher.c`)
+mirror the Chapter 2 request's exact one-shot arm/pending/consume contract,
+entirely independently: arming or consuming one never observably affects
+the other (`gDebugToolsProbe.pendingCh4PrepLaunchRequest`/
+`ch4PrepLauncherArmed`/`ch4PrepLaunchRequestConsumedCount` are separate
+fields from the Chapter 2 request's own). Both share the exact same
+`DebugTools_ArmBootstrapSuppression()`/`DebugToolsObserver_WaitForStablePlayerPhase`
+machinery -- that machinery was already chapter-agnostic (it only ever
+polls `gPlaySt.faction`/`gProcScr_PlayerPhase`, never a specific chapter
+index), so no changes were needed there for a second launch target.
+
+`GameControl_PostIntro` (`src/gamecontrol.c`) consumes the Ch4-Prep request
+at its own call site, textually after the Chapter 2 branch and before the
+ordinary `StartSaveMenu` branch, and commits an equivalent deterministic
+boot targeting `CHAPTER_L_4`: the same `InitPlayConfig`/`ResetPermanentFlags`/
+`ResetChapterFlags`/`InitUnits`/`GmDataInit` bootstrap, the same fixed debug
+RNG reseed, and the same one-shot bootstrap-suppression arming. The only
+difference is the world-map placement: `gGMData.units[0].location =
+NODE_BORGO_RIDGE` (instead of `NODE_CASTLE_FRELIA`) -- `NODE_BORGO_RIDGE`'s
+own `WMLoc_GetNextLocId` resolves to `NODE_ZAHA_WOODS` / `CHAPTER_L_4`
+(`src/worldmap_node_data.c`), exactly as `NODE_CASTLE_FRELIA` resolves to
+`NODE_IDE` / `CHAPTER_L_2` -- so the ordinary world-map traversal (an `L`
+cursor-jump + `A` node-confirm) reaches Chapter 4 without skipping any
+chapter-specific event/battle logic, and no chapter-specific event/battle
+logic is bypassed.
+
+### Hub menu ordering: Weather/Fog keep their pre-existing row indices
+
+`DebugTools_RegisterChapter4PrepAction()` is registered from its own call in
+`DebugTools_OpenHub()`, deliberately **after** `DebugTools_RegisterWeatherFogActions()`
+and **not** bundled into `DebugTools_RegisterBuiltinActions()` (which
+continues to register only the Chapter 2 launcher, completely unchanged).
+An earlier revision of this closure bundled both launchers into one
+registration call, which silently shifted Weather (index 1) and Fog (index
+2) down by one row -- breaking `debugtools-map-hub-modern-debug.json`'s own
+already-proven cursor-navigation input script (it would have landed one row
+early after the extra registration). Registering in this order keeps
+Weather/Fog at their pre-existing indices 1/2, so every already-committed
+map/prep-hub scenario's own input script keeps working unmodified; "Fast
+Boot: Ch4 Prep" and the five bounded tools below land at indices 3-8. The
+final hub menu order is: Chapter 2 (0), Weather (1), Fog (2), Ch4 Prep (3),
+Unit Inspect (4), Convoy Inspect (5), Flag/Chapter (6), RNG Inspect (7),
+Save State (8), Back (9) -- exactly `DEBUGTOOLS_ACTION_MAX` (9) actions.
+
+### Playtest evidence and its explicit, honest scope boundary
+
+`tools/gba-playtest/scenarios/debugtools-ch4-prep-launch-modern-debug.json`
+(4 checkpoints, live, debug-only) replays the same intro prefix as the
+title-hub scenario, pulses the title hotkey once, navigates down three rows
+to "Fast Boot: Ch4 Prep", selects it, and proves via `gDebugToolsProbe` that:
+the request arms independently (`pendingCh4PrepLaunchRequest ==
+DEBUGTOOLS_LAUNCH_REQUEST_MAGIC`), and `GameControl_PostIntro` consumes it
+exactly once and commits `gPlaySt.chapterIndex` to `CHAPTER_L_4`
+(`ch4PrepLauncherArmed == DEBUGTOOLS_LAUNCHER_ARMED_MAGIC`,
+`ch4PrepLaunchRequestConsumedCount == 1`). This is genuine, live-executed
+mGBA runtime evidence -- not a host-only or structural proof -- that the
+second launcher's pending-request handoff mechanism works end to end on
+real emulation, exactly like the Chapter 2 launcher's own
+`gamecontrol-consumed-launch` checkpoint.
+`debugtools-ch4-prep-launch-modern-release.json` replays the identical
+frame-for-frame input and asserts every probe stays `0x00000000`,
+confirming the second launcher is compiled out too (mirroring the Chapter 2
+release proof).
+
+**Scope of this launch scenario, and the separate positive scenario that
+completes it**: `debugtools-ch4-prep-launch-modern-debug.json` deliberately
+ends at the boot-commit checkpoint captured above -- it asserts the
+pending-request handoff and `gPlaySt.chapterIndex == CHAPTER_L_4`, and does
+**not** itself assert `gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN` or
+`gDebugToolsProbe.prepScreenObservedCount`. Reaching Chapter 4's actual
+live `PrepScreenProc` requires further world-map navigation (an `L`
+cursor-jump + `A` node-confirm once the world map becomes interactive)
+followed by skipping `EventScr_Ch4_BeginningScene`'s beginning
+event/scripted `FIGHT()` battle to its own `CALL(EventScr_CommonPrep)`,
+then navigating the prep at-menu. That remaining segment is now proven by a
+**separate, enabled** live scenario,
+`debugtools-ch4-prep-positive-modern-debug.json` (see "Live prep-screen
+arrival" below and `reports/debugtools_issue11_closure.md`), which rests
+`gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` and fires the SELECT+B
+hotkey there -- so the live prep-screen arrival is achieved, split cleanly
+across two focused scenarios.
+
+### Live prep-screen arrival: `DebugTools_PrepHotkeyCheck`'s observation (achieved)
+
+Independently of the launcher above, `DebugTools_PrepHotkeyCheck()`
+(`src/debugtools_registry.c`) now observes `gPlaySt.chapterStateBits &
+PLAY_FLAG_PREPSCREEN` (`include/types.h`) at the exact moment the prep
+hotkey fires, incrementing `gDebugToolsProbe.prepScreenObservedCount` only
+when it is genuinely set. `PLAY_FLAG_PREPSCREEN` is set by the real engine
+prep-screen lifecycle (`InitPrepScreenUnitsAndCamera`,
+`src/prep_sallycursor.c`) for as long as a genuine `PrepScreenProc`
+(`gProcScr_SALLYCURSOR`) is active -- so this counter is concrete,
+host/runtime-provable evidence *of the hotkey call site itself*: it can
+never read nonzero unless the hub was opened while a real, live prep
+screen was running. The committed live scenario
+`debugtools-ch4-prep-positive-modern-debug.json` now drives a real prep
+screen far enough to exercise this path: it observes
+`gDebugToolsProbe.prepScreenObservedCount` (`0x02031854`) transition
+`0 -> 1` on the SELECT+B hotkey while `gPlaySt.chapterStateBits`
+(`0x020210b8`) holds `PLAY_FLAG_PREPSCREEN` (`0x10`), the hub opens
+(`hubOpenCount` `0x02031818` `1 -> 2`, `sHubActive` `0x02031614`
+`0 -> 1`), a 2nd SELECT+B is idempotent (`hubOpenCount` stays `2`), and the
+hub then closes (`sHubActive -> 0`) with prep still live -- a safe return
+to prep. The field is always-linked and mirrors every other probe's
+zero-by-default contract in a release build.
+
+## Diagnostics: structured probe/log ring + non-fatal assert record (issue #11 closure)
+
+Issue #11 closure requirement 6: "emulator logging/assertion/
+crash-diagnostic/memory-inspection foundations". `src/debugtools_diag.c` is
+explicitly **not** an `mgba_printf`/AGB-print-protocol implementation,
+**not** an interactive debugger, and **not** an arbitrary memory editor --
+seethe explicit non-goals in `reports/debugtools_issue11_closure.md`. What
+it provides instead:
+
+- **A bounded log ring** (`DEBUGTOOLS_LOG_RING_SIZE` = 8 entries of
+  `struct DebugToolsLogEntry { code; a; b; }`) -- `DebugTools_LogEvent(code,
+  a, b)` always succeeds; the oldest entry is silently overwritten once
+  full (bounded by construction, never a growing allocation).
+  `DebugTools_GetLogCount()`/`DebugTools_GetLogEntry(index)` give bounded,
+  read-only, index-0-is-most-recent introspection (`NULL`/0 outside
+  range). `gDebugToolsProbe.logEventCount` mirrors the unbounded running
+  total (proving eviction doesn't stop counting) and
+  `gDebugToolsProbe.lastLogCode` mirrors the most recent code.
+- **A non-fatal assert record** -- `DEBUGTOOLS_ASSERT(cond, code)` evaluates
+  `cond` and, on failure, calls `DebugTools_RecordAssertFailure(code)`:
+  increments `gDebugToolsProbe.assertFailureCount`, sets
+  `gDebugToolsProbe.lastAssertCode`, and itself appends a
+  `DEBUGTOOLS_LOG_ASSERT_FAILURE` ring entry carrying the failing code.
+  This **never aborts, crashes, or halts the game** -- every call site in
+  `src/debugtools_tools.c` uses the "assert then bail out" idiom (skip the
+  mutation, return normally), matching every tool's own safe-return-to-game
+  contract. This is the bounded "crash-diagnostic" foundation: a record of
+  what would have gone wrong, not a debugger break or a fatal stop.
+- **Bounded, read-only, whitelisted introspection** --
+  `DebugTools_GetLogEntry`/`DebugTools_GetLogCount`/
+  `DebugTools_GetAssertFailureCount`/`DebugTools_GetLastAssertCode` are the
+  only read surface; there is no address parameter anywhere in this API,
+  so it is structurally impossible to use it as an arbitrary memory reader.
+
+No dedicated hub menu row is spent on a "Diagnostics" viewer: doing so would
+have consumed one of the fixed `DEBUGTOOLS_ACTION_MAX` (9) slots (already
+exactly filled by the nine actions listed in "Hub menu ordering" above) and
+would have changed the hub's own rendered content at moments several
+already-committed scenarios assert an exact framebuffer hash. The ring/
+assert state is instead exposed purely through `gDebugToolsProbe` fields and
+the plain introspection functions above, which is sufficient for both host
+tests (`DebugToolsDiagHostTests`, `tools/gba-playtest/tests/test_debugtools_registry.py`)
+and future runtime scenarios to assert against.
+
+Every one of the five bounded tools below calls `DebugTools_LogEvent`
+for both its inspect and (if applicable) confirm steps, and
+`DEBUGTOOLS_ASSERT` immediately before any mutation whose target/index
+needs a defensive bounds re-check beyond what its own fixed constant
+already guarantees at compile time (the Unit and Flag tools; see below).
+
+Release-inert: every function in `src/debugtools_diag.c` compiles to a
+trivial disabled stub (returning 0/`NULL`, recording nothing) when
+`FE8_EXPANSION_DEBUGTOOLS_ENABLED` is 0 -- confirmed by `nm` (the disabled
+translation unit defines exactly the six public entry points, no
+`sLogRing`/`sLogRingTotalWrites` storage at all).
+
+## Five bounded validated tools (issue #11 closure)
+
+Issue #11 closure requirement 5. Each is a single registry action
+(`src/debugtools_tools.c`) registered through the same public
+`DebugTools_RegisterAction()` API every other action uses -- no direct
+edits to `gDebugToolsHubMenuDef`/`sHubMenuItemDefs`. Each samples/displays
+read-only state immediately on selection (logged via
+`DEBUGTOOLS_LOG_*_INSPECT`), then -- for the four that can mutate anything
+-- opens a bounded two-item "Confirm `<action>`" / "Back" submenu (the
+exact same `StartOrphanMenu` idiom Weather/Fog already use in
+`src/debugtools_actions.c`) so a mutation only ever happens after an
+explicit, separate confirmation input, never on the initial hub selection
+alone. No tool ever performs a raw/arbitrary address write or accepts an
+unvalidated numeric index from outside this one fixed source file: every
+target is either a fixed, documented, in-range constant, or produced by an
+existing engine lookup helper that itself returns `NULL`/a safe sentinel on
+failure, re-checked via `UNIT_IS_VALID`/`DEBUGTOOLS_ASSERT` immediately
+before any mutation. None of the five ever touches SRAM or any save-block
+struct directly (RNG/flags/units/convoy are ordinary EWRAM runtime state;
+the fifth tool is read-only).
+
+1. **Unit Inspect** (id 5) -- target `GetUnitFromCharId(CHARACTER_EIRIKA)`
+   (a fixed, well-known character, always present on the Chapter 2 map this
+   session's launcher proves; `NULL` when not deployed/present on the
+   current map). Inspect samples `GetUnitCurrentHp`/`GetUnitMaxHp` into
+   `gDebugToolsProbe.unitInspectLastCurHp`/`unitInspectLastMaxHp`/
+   `unitInspectTargetFound`. Confirm re-checks `UNIT_IS_VALID` via
+   `DEBUGTOOLS_ASSERT(..., DEBUGTOOLS_ASSERT_UNIT_TARGET_INVALID)`
+   immediately before mutating; on a valid target it calls
+   `SetUnitHp(unit, GetUnitMaxHp(unit))` (the exact same full-heal idiom
+   already used by `src/bmsave.c`/`src/bmio.c`/`src/bmarena.c`/
+   `src/eventcall.c`/`src/bmusemind.c`) and `SetUnitStatus(unit, 0)`
+   (clears any status ailment), incrementing
+   `gDebugToolsProbe.unitHealTransactionCount`. On an invalid/missing
+   target, it is a safe, logged (`DEBUGTOOLS_LOG_UNIT_HEAL_SKIPPED_INVALID`),
+   assert-recorded no-op -- never a crash, never a mutation of an invalid
+   pointer.
+2. **Convoy Inspect** (id 6) -- inspect samples `GetConvoyItemCount()` into
+   `gDebugToolsProbe.convoyLastItemCount`. Confirm calls
+   `AddItemToConvoy(ITEM_VULNERARY)` (a fixed, safe consumable constant);
+   `AddItemToConvoy` (`src/bmcontainer.c`) already bounds-checks capacity
+   internally and returns `-1` without mutating anything when full -- a
+   full convoy is therefore a safe, logged
+   (`DEBUGTOOLS_LOG_CONVOY_ADD_SKIPPED_FULL`) no-op, never an overflow.
+   A successful add increments `gDebugToolsProbe.convoyAddTransactionCount`.
+3. **Flag/Chapter** (id 7) -- inspect samples `gPlaySt.chapterIndex` into
+   `gDebugToolsProbe.chapterIndexSample` (read-only) and
+   `CheckFlag(DEBUGTOOLS_DEBUG_EVENT_FLAG_ID)` into
+   `gDebugToolsProbe.debugFlagLastValue`. `DEBUGTOOLS_DEBUG_EVENT_FLAG_ID`
+   (39) is a single fixed, documented, chapter-scoped (never permanent)
+   event-flag index, deliberately within `include/constants/event-flags.h`'s
+   documented "free"/scratch range (indices 7-40; 0-6 are real gameplay
+   flags) and never a caller-supplied index. Confirm re-validates
+   `DEBUGTOOLS_DEBUG_EVENT_FLAG_ID < GetChapterFlagBitsSize() * 8` via
+   `DEBUGTOOLS_ASSERT(..., DEBUGTOOLS_ASSERT_FLAG_ID_OUT_OF_RANGE)` --
+   defense in depth, since `SetFlag`/`ClearFlag` (`src/eventinfo.c`) do not
+   themselves bounds-check a chapter-scoped index -- then toggles it
+   (`ClearFlag` if currently set, else `SetFlag`), incrementing
+   `gDebugToolsProbe.debugFlagToggleCount`.
+4. **RNG Inspect** (id 8) -- inspect calls `StoreRNState(seeds)` (`src/rng.c`)
+   and samples `seeds[0]` into `gDebugToolsProbe.rngInspectSeedSample0`
+   (the real, current LCG/Fibonacci generator state -- never reimplemented).
+   Confirm calls `SetLCGRNValue(DEBUGTOOLS_TOOLS_RNG_SEED)` +
+   `InitRN(AdvanceGetLCGRNValue())` -- the exact same fixed-reseed idiom
+   `GameControl_PostIntro`'s own Chapter 2/4 launchers already use for
+   their deterministic boot (`DEBUGTOOLS_TOOLS_RNG_SEED` is a distinct
+   constant from `DEBUGTOOLS_FASTBOOT_RNG_SEED`, so the two are never
+   confused in logs/tests) -- incrementing
+   `gDebugToolsProbe.rngReseedTransactionCount`.
+5. **Save State** (id 9) -- **read-only**, no Confirm item at all (nothing
+   to confirm): calls `ClassifySramSaveCompat()` (`src/bmsave-lib.c`),
+   which only inspects the global save header/expansion metadata record and
+   never mutates SRAM or any save-block struct, sampling the result into
+   `gDebugToolsProbe.saveCompatLastState` and incrementing
+   `gDebugToolsProbe.saveCompatInspectCount`. This tool never calls
+   `BuildCurrentExpansionSaveMeta` against a live SRAM target,
+   `InitGlobalSaveInfodata`, or any writer -- the safest of the five by
+   construction.
+
+### Host-executed evidence
+
+`DebugToolsExtendedToolsHostTests` (`tools/gba-playtest/tests/test_debugtools_registry.py`)
+compiles+links+executes the real, unmodified `src/debugtools_tools.c`
+together with the real `src/debugtools_registry.c` and `src/debugtools_diag.c`
+against `tools/gba-playtest/tests/c/debugtools_tools_driver.c` and
+`debugtools_tools_host_stubs.c` (small, test-controllable fakes for the
+engine subsystems each tool calls into -- `GetUnitFromCharId`,
+`GetConvoyItemCount`/`AddItemToConvoy`, `SetFlag`/`ClearFlag`/`CheckFlag`,
+`StoreRNState`/`SetLCGRNValue`/`InitRN`, `ClassifySramSaveCompat` -- mirroring
+`GetUnitMaxHp`/`SetUnitHp`/`SetUnitStatus`'s own real, simple clamping logic
+from `src/bmunit.c` exactly, so the host test proves real behavioral
+semantics, not just call wiring), proving: registration (ids 5-9,
+deterministic order, idempotent); each tool's inspect semantics; each
+mutating tool's confirm transaction actually applying (and incrementing its
+own probe counter exactly once); the two invalid/edge-case paths (missing
+Unit target, full Convoy) resulting in a safe, logged, assert-recorded
+no-op with the transaction counter unchanged; and Save State's read-only
+contract (no Confirm item, `Back` only). A second test compiles the
+disabled path and proves both behavior and physical symbol omission -- the
+disabled object defines exactly the one no-op
+`DebugTools_RegisterExtendedToolActions()` entry point and links clean with
+**no** engine/menu/hardware stub of any kind (an undefined reference there
+would mean the disabled path grew a real runtime dependency). A live
+runtime scenario driving all five tools through the map hub (mirroring
+`debugtools-map-hub-modern-debug.json`'s own live Weather/Fog proof) is now
+included: `debugtools-tools-modern-debug.json` (gate
+`expansion-modern-debugtools-tools-check`, host test
+`tools/gba-playtest/tests/test_tools_scenario.py`) drives all five tools live
+from the real Chapter 2 map hub, each with an asserted semantic state effect
+and a safe return to the hub -- see "Remaining #11 scope" below for the
+per-tool mapping. The host-executed evidence above remains the byte-exact
+mutation proof (e.g. a wounded unit healed to full) that complements it.
+
 
 ## Host tests
 
 `tools/gba-playtest/tests/test_debugtools_registry.py` (run via
 `python3 -m unittest discover -s tools/gba-playtest/tests -v`) exercises the
 real, unmodified sources with a native host compiler rather than
-re-implementing or pattern-matching their logic:
+re-implementing or pattern-matching their logic. Issue #11 closure added
+`DebugToolsDiagHostTests` (log ring/assert record), `DebugToolsExtendedToolsHostTests`
+(the five bounded tools), `test_registry_id_and_label_validation` (the two
+new `DebugToolsResult` codes), and `DebugToolsCh4PrepLaunchScenarioSchemaTests`
+(the Ch4-Prep-launch scenarios) alongside the slice 1/2 classes below --
+see "Fast Boot: Chapter 4 (Prep)"/"Diagnostics"/"Five bounded validated
+tools" above for what each proves.
 
 - **`DebugToolsRegistryHostTests`** compiles+links+executes the real
   `src/debugtools_registry.c` (enabled path) against a small driver
@@ -923,20 +1255,64 @@ builds have no equivalent deterministic entry point to drive this
 scenario from, so this proof (like the launcher itself) does not exist
 for `MODERN_CONFIG=release`.
 
-## Remaining #11 scope (explicitly NOT done in this slice)
+## Remaining #11 scope (issue #11 closure)
 
-This slice does **not** close issue #11. Deferred to later slices:
+Issue #11's frozen closure checklist is addressed end to end -- see
+`reports/debugtools_issue11_closure.md` for the full item-by-item mapping
+to code and test/command evidence. The previously-open live prep-screen
+arrival is now **achieved** (first bullet). What otherwise remains
+explicitly, honestly open is narrow:
 
-- Chapter/skirmish selector (needed to reach a live, deterministic prep
-  screen for playtest evidence -- see "Map/prep hub playtest evidence
-  (slice 2)" above; the prep-screen hotkey entry point itself is added and
-  unit-tested, only the live in-ROM proof is deferred).
-- Migrating the remaining dormant chapter-selector/BGM-commit tools out of
-  `bmdebug.c`/`uidebug.c`/`menu_def.c` into the new registration API
-  (Weather/Fog are migrated this slice; the rest are future slices).
-- Any validated editors/viewers (save/gold/unit/convoy/flag/event/RNG or
-  otherwise).
-- Full logging/assert/crash/memory-inspection tooling.
-- A complete `mgba_printf`/AGB debug print-protocol implementation (the
-  on-screen BG2 diagnostic line is this slice's retained, always-visible
-  substitute).
+- **Live prep-screen arrival -- ACHIEVED.** Both halves are proven live:
+  the "Fast Boot: Ch4 Prep" launcher's pending-request/boot-commit
+  lifecycle (`debugtools-ch4-prep-launch-modern-debug.json`: the request
+  arms independently, `GameControl_PostIntro` consumes it and commits
+  `gPlaySt.chapterIndex` to `CHAPTER_L_4`), and the
+  world-map-to-prep-screen arrival plus the SELECT+B hotkey
+  (`debugtools-ch4-prep-positive-modern-debug.json`, host test
+  `tools/gba-playtest/tests/test_prep_positive_scenario.py`). The positive
+  scenario does the world-map `L` cursor-jump + `A` node-confirm, skips the
+  beginning event/scripted `FIGHT()` battle to `CALL(EventScr_CommonPrep)`,
+  rests `gProcScr_SALLYCURSOR` in `PrepScreenProc_MapIdle` and fires SELECT+B
+  there: `DebugTools_PrepHotkeyCheck()`'s
+  `PLAY_FLAG_PREPSCREEN` observation
+  (`gDebugToolsProbe.prepScreenObservedCount`, `0x02031854`) is observed
+  `0 -> 1` at runtime while `gPlaySt.chapterStateBits` (`0x020210b8`) holds
+  `PLAY_FLAG_PREPSCREEN` (`0x10`), with an idempotent second SELECT+B and a
+  safe return to the still-live prep. Gate: the DEBUG branch of
+  `expansion-modern-debugtools-prep-check` (RELEASE verifies the
+  compiled-out mirror). Debug-only because the launcher + hotkey are
+  compiled out of a release build.
+- **A live runtime scenario driving all five bounded tools through the map
+  hub -- ACHIEVED.** `debugtools-tools-modern-debug.json` (gate
+  `expansion-modern-debugtools-tools-check`, host test
+  `tools/gba-playtest/tests/test_tools_scenario.py`) reuses the proven Fast
+  Boot: Chapter 2 map-hub prefix, opens the real map hub
+  (`registeredActionCount == 9`), and drives every tool from its real hub row,
+  each with an asserted semantic effect AND a safe hub return (all
+  relocation-independent `gDebugToolsProbe`/`gPlaySt`/`gBmSt` scalars):
+  Unit inspect resolves Eirika (16/16) then a separate confirm applies
+  Heal-to-Full (`unitHealTransactionCount 0 -> 1`; the byte-exact wounded->full
+  HP delta stays the host proof since Eirika starts full); Convoy count
+  `0 -> 1` across inspect/confirm-add/re-inspect; Flag `0 -> 1` on
+  inspect/confirm-toggle (`chapterIndex == 2`); RNG seed `0x0000ee77 ->
+  0x0000690b` across inspect/confirm-reseed/re-inspect; Save State classifies
+  `SAVE_COMPAT_CURRENT` read-only (inspect count `0 -> 1`, unchanged on Back).
+  After the last tool a final `B` closes the hub and the map is still
+  interactive (player cursor `0x06 -> 0x07`). The host-executed tests remain
+  the byte-exact mutation/invalid-input proof (real, unmodified
+  `src/debugtools_tools.c`) that complements the live runtime; the
+  config-parametrized release sibling proves the identical input is a
+  compiled-out all-zero no-op.
+- **A complete `mgba_printf`/AGB debug print-protocol implementation, an
+  interactive debugger, and an arbitrary memory editor** remain explicit,
+  deliberate non-goals (never attempted) -- see
+  `reports/debugtools_issue11_closure.md`'s "Explicit non-goals" section
+  for the reasoning. The on-screen BG2 diagnostic line plus the bounded
+  log ring/assert record (`src/debugtools_diag.c`) are this subsystem's
+  retained, always-visible/queryable substitutes.
+- **Migrating the remaining dormant chapter-selector/BGM-commit tools** out
+  of `bmdebug.c`/`uidebug.c`/`menu_def.c` into the new registration API
+  (Weather/Fog were migrated first; a chapter/skirmish selector specifically
+  would also unlock the live-prep-screen gap above) is not part of this
+  closure's WHAT and remains available as clearly-scoped future work.

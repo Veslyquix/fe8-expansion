@@ -23,6 +23,11 @@ PKG_CONFIG_TIMEOUT_SECONDS = 10
 COMPILER_TIMEOUT_SECONDS = 60
 MIN_BACKEND_TIMEOUT_SECONDS = 10
 MAX_BACKEND_TIMEOUT_SECONDS = 300
+# Hard ceiling on --retries regardless of the caller-requested value, so a
+# typo or a misguided "just retry more" edit can never turn this into an
+# unbounded/effectively-silent retry loop. 0 (the default everywhere) means
+# exactly one attempt -- retrying is always an explicit, capped opt-in.
+MAX_RETRIES_CAP = 5
 KEY_BITS = {
     "A": 1 << 0,
     "B": 1 << 1,
@@ -433,7 +438,54 @@ def rom_provenance(path: Path) -> dict[str, Any]:
     }
 
 
-def _compiler_command(source: Path, output: Path) -> list[str]:
+def _bounded_retry_count(retries: int) -> int:
+    """Clamps a caller-requested retry count into [0, MAX_RETRIES_CAP]."""
+    return max(0, min(retries, MAX_RETRIES_CAP))
+
+
+def _run_transient_retryable(
+    command: list[str], *, timeout: float, retries: int, operation: str
+) -> subprocess.CompletedProcess[str]:
+    """Runs `command`, retrying only a process time-out -- the one condition
+    here that can plausibly be transient host scheduling/load rather than a
+    deterministic outcome. A non-zero exit code is returned as-is (the
+    caller decides what it means) and is never retried here, and callers
+    must never retry a fingerprint mismatch or malformed-output diagnostic
+    either: retrying those would silently launder a real, reproducible
+    failure into intermittent-looking flake. `retries` is bounded by
+    `MAX_RETRIES_CAP` regardless of the caller-supplied value. Every timed
+    out attempt that will be retried is reported on stderr with its 1-based
+    attempt number out of the total planned attempts, so a flaky time out
+    is always visible in the log even when a later attempt succeeds; the
+    final attempt's time-out is left for the caller to turn into an
+    actionable `PlaytestError` exactly as before (naming the same total
+    attempt count).
+    """
+    attempts = _bounded_retry_count(retries) + 1
+    for attempt in range(1, attempts + 1):
+        try:
+            return subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            if attempt >= attempts:
+                raise
+            print(
+                f"gba-playtest: {operation} attempt {attempt}/{attempts} timed out "
+                f"after {timeout:g}s -- retrying (transient timeout only; a "
+                "non-zero exit or mismatched/malformed output is never retried)",
+                file=sys.stderr,
+            )
+    raise AssertionError("unreachable: loop always returns or raises")
+
+
+def _compiler_command(
+    source: Path, output: Path, retries: int = 0
+) -> list[str]:
     cc = os.environ.get("CC", "cc")
     if not shutil.which(cc):
         raise PlaytestError(f"libmGBA backend unavailable: C compiler {cc!r} was not found")
@@ -451,17 +503,18 @@ def _compiler_command(source: Path, output: Path) -> list[str]:
     pkg_config = shutil.which("pkg-config")
     if pkg_config:
         try:
-            flags = subprocess.run(
+            flags = _run_transient_retryable(
                 [pkg_config, "--cflags", "--libs", "mgba"],
-                capture_output=True,
-                text=True,
-                check=False,
                 timeout=PKG_CONFIG_TIMEOUT_SECONDS,
+                retries=retries,
+                operation="pkg-config",
             )
         except subprocess.TimeoutExpired as exc:
+            attempts = _bounded_retry_count(retries) + 1
             raise PlaytestError(
                 f"pkg-config timed out after {PKG_CONFIG_TIMEOUT_SECONDS}s "
-                "while locating libmGBA"
+                f"while locating libmGBA (attempt {attempts}/{attempts}, "
+                "no attempts remaining)"
             ) from exc
         if flags.returncode == 0:
             import shlex
@@ -472,21 +525,22 @@ def _compiler_command(source: Path, output: Path) -> list[str]:
     return command
 
 
-def build_backend(output: Path) -> None:
+def build_backend(output: Path, retries: int = 0) -> None:
     source = Path(__file__).with_name("backend.c")
-    command = _compiler_command(source, output)
+    command = _compiler_command(source, output, retries)
     try:
-        result = subprocess.run(
+        result = _run_transient_retryable(
             command,
-            capture_output=True,
-            text=True,
-            check=False,
             timeout=COMPILER_TIMEOUT_SECONDS,
+            retries=retries,
+            operation="libmGBA backend compilation",
         )
     except subprocess.TimeoutExpired as exc:
+        attempts = _bounded_retry_count(retries) + 1
         raise PlaytestError(
             f"libmGBA backend compilation timed out after "
-            f"{COMPILER_TIMEOUT_SECONDS}s"
+            f"{COMPILER_TIMEOUT_SECONDS}s (attempt {attempts}/{attempts}, "
+            "no attempts remaining)"
         ) from exc
     if result.returncode:
         detail = result.stderr.strip() or result.stdout.strip() or "compiler returned no diagnostics"
@@ -624,7 +678,12 @@ def _parse_backend_output(stdout: str, scenario: Scenario) -> dict[str, Any]:
     }
 
 
-def capture(rom: Path, scenario: Scenario, sram_image: Path | None = None) -> dict[str, Any]:
+def capture(
+    rom: Path,
+    scenario: Scenario,
+    sram_image: Path | None = None,
+    retries: int = 0,
+) -> dict[str, Any]:
     if scenario.disabled:
         raise PlaytestError(f"scenario {scenario.name!r} is disabled: {scenario.blocker}")
     if not rom.is_file():
@@ -664,7 +723,7 @@ def capture(rom: Path, scenario: Scenario, sram_image: Path | None = None) -> di
         # The identity is computed from the immutable temporary copy passed to
         # libmGBA, avoiding a path-replacement race between hashing and loading.
         provenance = rom_provenance(execution_rom)
-        build_backend(backend)
+        build_backend(backend, retries)
         _write_plan(plan, scenario)
         last_frame = scenario.checkpoints[-1].frame
         backend_timeout = min(
@@ -675,17 +734,18 @@ def capture(rom: Path, scenario: Scenario, sram_image: Path | None = None) -> di
         if execution_sram is not None:
             backend_args.append(str(execution_sram))
         try:
-            result = subprocess.run(
+            result = _run_transient_retryable(
                 backend_args,
-                capture_output=True,
-                text=True,
-                check=False,
                 timeout=backend_timeout,
+                retries=retries,
+                operation="libmGBA backend",
             )
         except subprocess.TimeoutExpired as exc:
+            attempts = _bounded_retry_count(retries) + 1
             raise PlaytestError(
                 f"libmGBA backend timed out after {backend_timeout:g}s "
-                f"while running through frame {last_frame}"
+                f"while running through frame {last_frame} "
+                f"(attempt {attempts}/{attempts}, no attempts remaining)"
             ) from exc
         if result.returncode:
             diagnostic = result.stderr.strip() or "backend returned no diagnostic"
@@ -888,6 +948,9 @@ def _make_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument(
         "--output", "-o", default="-", help="output JSON path (default: stdout)"
     )
+    capture_parser.add_argument(
+        "--retries", type=int, default=0, metavar="N", help='bounded number of additional attempts (capped at MAX_RETRIES_CAP=5) after a libmGBA backend or compiler process time-out only -- never for a non-zero exit code or a mismatched/malformed-output diagnostic, which are deterministic and must never be silently retried. Default 0 (a single attempt, no retry). Every retried attempt is reported on stderr.'
+    )
 
     verify_parser = subparsers.add_parser(
         "verify", help="capture and compare against an expected fingerprint"
@@ -910,9 +973,15 @@ def _make_parser() -> argparse.ArgumentParser:
             "behavior explicitly compares checkpoints across different ROM identities"
         ),
     )
+    verify_parser.add_argument(
+        "--retries", type=int, default=0, metavar="N", help='bounded number of additional attempts (capped at MAX_RETRIES_CAP=5) after a libmGBA backend or compiler process time-out only -- never for a non-zero exit code or a mismatched/malformed-output diagnostic, which are deterministic and must never be silently retried. Default 0 (a single attempt, no retry). Every retried attempt is reported on stderr.'
+    )
 
-    subparsers.add_parser(
+    backend_check_parser = subparsers.add_parser(
         "backend-check", help="compile the libmGBA backend without running a ROM"
+    )
+    backend_check_parser.add_argument(
+        "--retries", type=int, default=0, metavar="N", help='bounded number of additional attempts (capped at MAX_RETRIES_CAP=5) after a libmGBA backend or compiler process time-out only -- never for a non-zero exit code or a mismatched/malformed-output diagnostic, which are deterministic and must never be silently retried. Default 0 (a single attempt, no retry). Every retried attempt is reported on stderr.'
     )
     return parser
 
@@ -920,13 +989,17 @@ def _make_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _make_parser().parse_args(argv)
     try:
+        if args.retries < 0:
+            raise PlaytestError(
+                f"--retries must be a non-negative integer, got {args.retries}"
+            )
         if args.mode == "backend-check":
             with tempfile.TemporaryDirectory(prefix="gba-playtest-check-") as temporary:
-                build_backend(Path(temporary) / "gba-playtest-backend")
+                build_backend(Path(temporary) / "gba-playtest-backend", args.retries)
             print("libmGBA backend: available")
             return 0
         scenario = load_scenario(args.scenario)
-        actual = capture(args.rom, scenario, args.sram_image)
+        actual = capture(args.rom, scenario, args.sram_image, args.retries)
         if args.mode == "capture":
             _write_output(args.output, serialize_fingerprint(actual))
             return 0

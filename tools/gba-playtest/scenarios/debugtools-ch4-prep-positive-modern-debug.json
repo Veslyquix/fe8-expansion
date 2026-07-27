@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "name": "debugtools-ch4-prep-positive-modern-debug",
+  "description": "Issue #11 closure POSITIVE runtime proof: boots the debug ROM to the real, live Chapter 4 prep screen (gPlaySt.chapterStateBits PLAY_FLAG_PREPSCREEN=0x10 set by the genuine PrepScreenProc/gProcScr_SALLYCURSOR lifecycle), navigates the on-map prep command menu to 'View Map' so gProcScr_SALLYCURSOR rests in PrepScreenProc_MapIdle, then fires the SELECT+B prep hotkey. DebugTools_PrepHotkeyCheck (called ONLY from PrepScreenProc_MapIdle) increments gDebugToolsProbe.prepScreenObservedCount to 1 because PLAY_FLAG_PREPSCREEN is set, and opens the debug hub (gDebugToolsProbe.hubOpenCount 1->2, sHubActive 0->1). A second SELECT+B proves DebugTools_OpenHub reentrancy/idempotency (hubOpenCount stays 2 -- the sHubActive guard blocks a second StartOrphanMenu) while the same B cleanly cancels the hub menu (sHubActive 1->0), returning to the still-live prep MapIdle (chapterStateBits still 0x10, no crash), and a long-run checkpoint at frame 6000 re-confirms PLAY_FLAG_PREPSCREEN is still set with the hub closed (sHubActive==0). All evidence is relocation-independent semantic EWRAM probes -- PLAY_FLAG_PREPSCREEN, the prep-screen state byte at 0x020210b2, prepScreenObservedCount, hubOpenCount, and sHubActive -- at fixed addresses from this build's own ELF symbol table. The observedCount 0->1 increment (which only DebugTools_PrepHotkeyCheck, itself reachable only from PrepScreenProc_MapIdle, can produce) is itself the proof the hotkey fired from a live MapIdle, so no proc_idleCb/proc_scrCur ROM-pointer oracle is needed or asserted.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 150,
+      "end": 155,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 270,
+      "end": 275,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 330,
+      "end": 335,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 390,
+      "end": 395,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 450,
+      "end": 455,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 600,
+      "end": 606,
+      "keys": [
+        "SELECT",
+        "R"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 770,
+      "end": 776,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 830,
+      "end": 836,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 904,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1300,
+      "end": 1306,
+      "keys": [
+        "L"
+      ]
+    },
+    {
+      "start": 1360,
+      "end": 1366,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1650,
+      "end": 1655,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1760,
+      "end": 1765,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1870,
+      "end": 1875,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1980,
+      "end": 1985,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2090,
+      "end": 2095,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2200,
+      "end": 2205,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2310,
+      "end": 2315,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2420,
+      "end": 2425,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2530,
+      "end": 2535,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2640,
+      "end": 2645,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2750,
+      "end": 2755,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2860,
+      "end": 2865,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2970,
+      "end": 2975,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3080,
+      "end": 3085,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3250,
+      "end": 3255,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3550,
+      "end": 3556,
+      "keys": [
+        "B"
+      ]
+    },
+    {
+      "start": 4400,
+      "end": 4401,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 4600,
+      "end": 4606,
+      "keys": [
+        "SELECT",
+        "B"
+      ]
+    },
+    {
+      "start": 4800,
+      "end": 4806,
+      "keys": [
+        "SELECT",
+        "B"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 4550,
+      "framebuffer": false,
+      "name": "prep-mapidle-live-before-hotkey",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x04"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x02031854",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 4700,
+      "framebuffer": false,
+      "name": "select-b-opens-hub-in-live-prep",
+      "probes": [
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x02031854",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 4980,
+      "framebuffer": false,
+      "name": "second-select-b-idempotent-and-return-to-prep",
+      "probes": [
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031854",
+          "size": 4,
+          "expected": "0x00000002"
+        }
+      ]
+    },
+    {
+      "frame": 6000,
+      "framebuffer": false,
+      "name": "prep-still-live-and-stable-longrun",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x04"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    }
+  ]
+}

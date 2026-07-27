@@ -54,6 +54,47 @@ def gates(jobs: int = 2) -> List[Gate]:
     """
     return [
         Gate(
+            name="gba-playtest-host-suite",
+            command=[
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "tools/gba-playtest/tests",
+                "-v",
+            ],
+            applicable_note=(
+                "issue #13 host lane (build.yml `host-tests` job, textually "
+                "first): every tools/gba-playtest host test -- scenario/schema "
+                "parsing, generators, config, save/migration fixtures, "
+                "timeouts, retry policy, deterministic sorted-JSON output, "
+                "provenance/diagnostics. Host-only (build-essential + "
+                "libmgba-dev, no arm-none-eabi toolchain); never builds/links "
+                "the ROM, so it does not overlap the modern-linker gates below"
+            ),
+        ),
+        Gate(
+            name="upstream-port-tests",
+            command=[
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "tests/upstream_port",
+                "-v",
+            ],
+            applicable_note=(
+                "issue #12/#15 host lane (same `host-tests` job): the 139 "
+                "pure-stdlib upstream-port review tooling tests "
+                "(classify/scan/drift/state/ref-binding/output-safety/"
+                "merge-commit determinism and this verify.gates() <-> build.yml "
+                "mirror). Python/stdlib only, links no C and never rebuilds the "
+                "ROM"
+            ),
+        ),
+        Gate(
             name="artifact-guard",
             command=["python3", "scripts/artifact_guard.py", "--revision", "HEAD"],
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
@@ -110,9 +151,21 @@ def gates(jobs: int = 2) -> List[Gate]:
                 f"-j{jobs}",
             ],
             applicable_note=(
-                "covers modern debug linker + boot + relocation/shift checks "
-                "(expansion-modern-linker-check depends on "
-                "expansion-modern-boot-check and expansion-modern-shifted-check)"
+                "aggregates the full modern DEBUG ROM/ELF runtime + linker "
+                "suite off a single reused object/ELF build -- the runtime "
+                "scenarios are covered here and are NOT re-run individually by "
+                "verify, so no gate triggers a second/redundant ROM build. "
+                "expansion-modern-linker-check depends on -budget-check, "
+                "-overlay-audit (-> -relocs), -boot-check, -title-check, "
+                "-debugtools-check/-timer-check/-map-check/-tools-check, "
+                "-debugtools-prep-check, -debugtools-ch4prep-check, "
+                "-newgame-check, -combat-check, -saveload-check (incl. the "
+                "suspend/resume save scenario), -savefmt-check (save-format "
+                "migration) and -shifted-check, then runs the shift/offset "
+                "address scan and the raw-pointer cast audit. Net coverage: "
+                "boot, title, new-game, map, prep, combat, save-load, "
+                "suspend/resume, debugtools-tools, save migration, budget, "
+                "shift/offset, raw-pointer, relocation and cross-overlay"
             ),
         ),
         Gate(
@@ -124,7 +177,13 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "MODERN_ABI=aapcs",
                 f"-j{jobs}",
             ],
-            applicable_note="release-config counterpart of the debug gate above",
+            applicable_note=(
+                "release-config counterpart of the debug gate above: the same "
+                "aggregated runtime + linker suite off the reused RELEASE "
+                "object/ELF build, additionally exercising the release "
+                "debugtools-disabled negative scenarios. Runtime scenarios are "
+                "covered here, not re-run individually by verify"
+            ),
         ),
         Gate(
             name="modern-itemexpansion-check-debug",
@@ -138,9 +197,11 @@ def gates(jobs: int = 2) -> List[Gate]:
                 f"-j{jobs}",
             ],
             applicable_note=(
-                "issue #10 acceptance: boots the real modern debug ROM at an "
-                "expanded item cap (0xCE, FE8_EXPANSION_ITEMTEST=1) and runs the "
-                "item-ID-expansion runtime probe (expansion-modern-itemexpansion-check)"
+                "issue #10 acceptance (build.yml ROM `build` job, after the two "
+                "default-cap modern-linker gates above -- never the host lane): "
+                "boots the real modern debug ROM at an expanded item cap (0xCE, "
+                "FE8_EXPANSION_ITEMTEST=1) and runs the item-ID-expansion runtime "
+                "probe (expansion-modern-itemexpansion-check)"
             ),
         ),
         Gate(
@@ -154,7 +215,10 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "MODERN_ABI=aapcs",
                 f"-j{jobs}",
             ],
-            applicable_note="release-config counterpart of the item-expansion debug gate above",
+            applicable_note=(
+                "release-config counterpart of the item-expansion debug gate above, "
+                "and the final step of build.yml ROM `build` job"
+            ),
         ),
     ]
 

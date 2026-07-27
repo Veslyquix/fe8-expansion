@@ -20,6 +20,10 @@ _MULTI_RUN_RE = re.compile(r"^      run: \|\n((?:        .*\n?)+)", re.M)
 # `verify` needs to reproduce. Everything else in the workflow is expected
 # to have a literal, argv-identical counterpart in verify.gates().
 _NON_GATE_STEP_NAMES = {
+    # host-tests job setup: installs build-essential + libmgba-dev only (no
+    # arm-none-eabi toolchain), so it is environment setup, not a gate.
+    "Install host-only dependencies (no arm-none-eabi toolchain)",
+    # build job setup
     "Install dependencies",
     "Build tools",
 }
@@ -128,6 +132,8 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         self.assertEqual(
             names,
             [
+                "gba-playtest-host-suite",
+                "upstream-port-tests",
                 "artifact-guard",
                 "default-lane-check",
                 "quickstart-legacy-check",
@@ -138,9 +144,20 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 "modern-itemexpansion-check-release",
             ],
         )
+        # The merged CI runs the fast `host-tests` lane textually before the
+        # ROM `build` job, so the two host-only gates are first. They must stay
+        # host-only -- never a ROM/linker `make` build (that belongs solely to
+        # the modern-linker gates) -- so the fast host job and the ROM build
+        # job never duplicate work.
+        for g in verify_mod.gates()[:2]:
+            self.assertNotIn("make", g.command)
+            self.assertNotIn("expansion-modern-linker-check", g.command)
 
     def test_artifact_guard_command(self):
-        g = verify_mod.gates()[0]
+        # After the merged host lane, the two host-only gates come first, so
+        # the artifact guard (first gate of the ROM `build` job) is index 2.
+        g = verify_mod.gates()[2]
+        self.assertEqual(g.name, "artifact-guard")
         self.assertEqual(g.command, ["python3", "scripts/artifact_guard.py", "--revision", "HEAD"])
 
     def test_debug_and_release_configs_differ(self):
@@ -152,7 +169,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
 
     def test_dry_run_never_executes_subprocess(self):
         results = verify_mod.run_gates("/nonexistent/path/should/not/matter", dry_run=True)
-        self.assertEqual(len(results), 8)
+        self.assertEqual(len(results), 10)
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
@@ -163,7 +180,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
         real_names = [g.name for g in verify_mod.gates()]
         self.assertEqual(dry, real_names)
-        self.assertEqual(len(dry), 8)
+        self.assertEqual(len(dry), 10)
 
 
 class VerifyGateSelectionRemovedTests(unittest.TestCase):
@@ -223,7 +240,7 @@ class VerifyGateSelectionRemovedTests(unittest.TestCase):
             self.assertIn(name, printed)
         # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
         # -- never silently omitted, never marked PASS/FAIL without running.
-        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 8)
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 10)
 
 
 if __name__ == "__main__":

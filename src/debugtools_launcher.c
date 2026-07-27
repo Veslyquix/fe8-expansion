@@ -52,12 +52,47 @@ CONST_DATA static struct DebugToolsAction sFastBootChapter2Action = {
     1, "Fast Boot: Chapter 2", DebugToolsLauncher_FastBootChapter2
 };
 
+static u8 DebugToolsLauncher_FastBootChapter4Prep(struct MenuProc* menu, struct MenuItemProc* item)
+{
+    (void)menu;
+    (void)item;
+
+    /* Only arms the pending request and closes the hub -- exactly the
+     * same narrow contract as DebugToolsLauncher_FastBootChapter2 above:
+     * no Proc_EndEach/Proc_Start of gProcScr_GameControl, no Proc_Goto of
+     * gProc_BMapMain, no unit/event manipulation. */
+    DebugTools_RequestChapter4PrepLaunch();
+
+    return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+}
+
+CONST_DATA static struct DebugToolsAction sFastBootChapter4PrepAction = {
+    4, "Fast Boot: Ch4 Prep", DebugToolsLauncher_FastBootChapter4Prep
+};
+
 void DebugTools_RegisterBuiltinActions(void)
 {
     /* Idempotent: a repeat call reports DEBUGTOOLS_ERR_DUPLICATE (same
      * id/label) -- an expected, non-silent result that this one-shot
-     * lazy-init call site deliberately ignores. */
+     * lazy-init call site deliberately ignores. Registers *only* the
+     * Chapter 2 launcher -- unchanged from before issue #11 closure, so
+     * Weather/Fog's own hub-menu row indices (registered right after
+     * this call, from DebugTools_RegisterWeatherFogActions) stay exactly
+     * where every pre-existing scenario's own input script already
+     * expects them. */
     DebugTools_RegisterAction(&sFastBootChapter2Action);
+}
+
+/* Issue #11 closure: registered from its own call, deliberately *after*
+ * DebugTools_RegisterWeatherFogActions() in DebugTools_OpenHub()
+ * (src/debugtools_registry.c) -- not bundled into
+ * DebugTools_RegisterBuiltinActions() above -- specifically so this new
+ * action never shifts Weather/Fog's own pre-existing hub-menu row
+ * indices (1, 2), which every debugtools-map-hub-modern-*.json scenario's
+ * own cursor-navigation input script already depends on. */
+void DebugTools_RegisterChapter4PrepAction(void)
+{
+    DebugTools_RegisterAction(&sFastBootChapter4PrepAction);
 }
 
 void DebugTools_RequestChapter2Launch(void)
@@ -81,6 +116,49 @@ int DebugTools_ConsumePendingChapter2Launch(void)
     sChapter2LaunchPending = 0;
     gDebugToolsProbe.pendingLaunchRequest = 0;
     gDebugToolsProbe.launchRequestConsumedCount++;
+
+    return 1;
+}
+
+/* --- Fast Boot: Chapter 4 (Prep) --------------------------------------
+ * Issue #11 closure: a second, independent hub action + pending-request
+ * pair, reaching Chapter 4 instead of Chapter 2. Chapter 4's own
+ * beginning event script (EventScr_Ch4_BeginningScene,
+ * src/events/ch4-eventscript.h) calls CALL(EventScr_CommonPrep) partway
+ * through -- unlike Chapter 2's, which never does -- so this is the
+ * deterministic path to a genuine, live PrepScreenProc
+ * (gProcScr_SALLYCURSOR) that exercises the debug-tools prep hotkey
+ * entry point against real engine behavior. Entirely independent state from the
+ * Chapter 2 request above: arming one never affects the other, and
+ * GameControl_PostIntro (src/gamecontrol.c) consumes each at its own
+ * call site. Both share the same DebugTools_ArmBootstrapSuppression()/
+ * DebugToolsObserver_WaitForStablePlayerPhase machinery below -- that
+ * machinery is already chapter-agnostic (it only ever polls
+ * gPlaySt.faction/gProcScr_PlayerPhase, never a specific chapter index),
+ * so no changes were needed there for a second launch target. */
+
+EWRAM_DATA static u8 sChapter4PrepLaunchPending = 0;
+
+void DebugTools_RequestChapter4PrepLaunch(void)
+{
+    /* Idempotent, same contract as DebugTools_RequestChapter2Launch. */
+    sChapter4PrepLaunchPending = 1;
+    gDebugToolsProbe.pendingCh4PrepLaunchRequest = DEBUGTOOLS_LAUNCH_REQUEST_MAGIC;
+}
+
+int DebugTools_IsChapter4PrepLaunchPending(void)
+{
+    return sChapter4PrepLaunchPending;
+}
+
+int DebugTools_ConsumePendingChapter4PrepLaunch(void)
+{
+    if (!sChapter4PrepLaunchPending)
+        return 0;
+
+    sChapter4PrepLaunchPending = 0;
+    gDebugToolsProbe.pendingCh4PrepLaunchRequest = 0;
+    gDebugToolsProbe.ch4PrepLaunchRequestConsumedCount++;
 
     return 1;
 }
@@ -248,6 +326,11 @@ void DebugTools_RegisterBuiltinActions(void)
     /* No-op: nothing to register in a release build. */
 }
 
+void DebugTools_RegisterChapter4PrepAction(void)
+{
+    /* No-op: nothing to register in a release build. */
+}
+
 void DebugTools_RequestChapter2Launch(void)
 {
     /* No-op: the hub/action are unreachable in a release build. */
@@ -259,6 +342,21 @@ int DebugTools_IsChapter2LaunchPending(void)
 }
 
 int DebugTools_ConsumePendingChapter2Launch(void)
+{
+    return 0;
+}
+
+void DebugTools_RequestChapter4PrepLaunch(void)
+{
+    /* No-op: the hub/action are unreachable in a release build. */
+}
+
+int DebugTools_IsChapter4PrepLaunchPending(void)
+{
+    return 0;
+}
+
+int DebugTools_ConsumePendingChapter4PrepLaunch(void)
 {
     return 0;
 }
