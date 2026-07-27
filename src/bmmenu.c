@@ -177,6 +177,32 @@ u8 MapMenu_DangerZone_UnusedEffect(void) {
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
 
+#if FE8_EXPANSION_DANGER_OVERLAY_MENU
+/*
+ * Issue #6 player QoL: config-gated map-menu command that promotes the
+ * vanilla (previously unreferenced) MapMenu_DangerZone_UnusedEffect into a
+ * real, player-reachable entry. It reuses the existing danger-zone range
+ * path unchanged (PlayerPhase label 0xC -> PlayerPhase_DisplayDangerZone ->
+ * GenerateDangerZoneRange -> DisplayMoveRangeGraphics); no range math is
+ * rewritten and no second router is introduced.
+ *
+ * Availability: shown and enabled whenever the map menu is open
+ * (MenuAlwaysEnabled in gMapMenuItems). Effect: closes the menu
+ * (MENU_ACT_END | MENU_ACT_CLEAR) and enters the danger-range display. The
+ * vanilla map-menu cancel/return path is untouched, so B or a normal cancel
+ * returns to the map with the cursor and interactivity intact, and the entry
+ * is safe to open and exit repeatedly. It persists no option bit or save
+ * field -- the surface exists purely as a compile-time build flag.
+ */
+u8 ExpansionDangerOverlay_MenuSelect(struct MenuProc* menu, struct MenuItemProc* menuItem)
+{
+    (void)menu;
+    (void)menuItem;
+
+    return MapMenu_DangerZone_UnusedEffect();
+}
+#endif
+
 u8 MapMenu_SuspendCommandEffect(void) {
 
     Make6C_SaveMenuPostChapter(PROC_TREE_3);
