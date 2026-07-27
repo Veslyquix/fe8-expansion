@@ -1169,6 +1169,56 @@ class MakeInvocationExtractionTests(unittest.TestCase):
         results = list(check_docs.extract_make_invocations(text))
         self.assertEqual(results, [])
 
+    def test_attached_directory_long_form_redirect_flag_skips_whole_invocation(self):
+        text = "```bash\nmake --directory=subdir some-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_attached_makefile_long_form_redirect_flag_skips_whole_invocation(self):
+        text = "```bash\nmake --makefile=other.mk some-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_short_option_attached_file_redirect_flag_skips_whole_invocation(self):
+        # Regression for the fresh code-review finding: `-fFILE` (attached,
+        # no space/`=`) is just as legal to GNU make as `-f FILE`, but the
+        # attached-flag detector previously only recognized the `--long=`
+        # form, so `-fother.mk` fell through to the generic "starts with
+        # `-`" branch and `some-target` was wrongly validated against this
+        # repository's own Makefile graph instead of being skipped.
+        text = "```bash\nmake -fother.mk some-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_short_option_attached_directory_redirect_flag_skips_whole_invocation(self):
+        text = "```bash\nmake -Csubdir some-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_dangling_file_flag_alone_skips_invocation(self):
+        # No filename token at all still fails closed (skip, never
+        # validated) exactly like every other redirect form -- consistent
+        # with the pre-existing `make -C` (no arg) behavior below.
+        text = "`make -f`\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_dangling_directory_flag_alone_skips_invocation(self):
+        text = "`make -C`\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertEqual(results, [])
+
+    def test_jobs_short_attached_flag_not_mistaken_for_redirect(self):
+        # `-j2` (attached short form of `-j`) must NOT be treated as a
+        # Makefile/directory redirect -- only `-C`/`-f` get that
+        # treatment -- so both real target tokens that follow are still
+        # extracted and can be validated/flagged downstream.
+        text = "```bash\nmake -j2 all nonexistent-target\n```\n"
+        results = list(check_docs.extract_make_invocations(text))
+        self.assertIn((False, "all"), results)
+        self.assertIn((False, "nonexistent-target"), results)
+        self.assertEqual(len(results), 2)
+
 
 class CheckMakeTargetsIntegrationTests(unittest.TestCase):
     def test_stale_target_flagged(self):
@@ -1188,6 +1238,44 @@ class CheckMakeTargetsIntegrationTests(unittest.TestCase):
             literal, patterns = check_docs.parse_make_targets(root)
             findings = check_docs.check_make_targets(["doc.md"], root, literal, patterns)
             self.assertEqual(findings, [])
+
+    def test_attached_file_redirect_never_validated_against_wrong_graph(self):
+        # Regression for the fresh code-review finding: an external
+        # Makefile target reachable only via `-fFILE` (attached) must
+        # never be checked against *this* repository's root Makefile
+        # graph. `external-only-target` does not exist in the root
+        # Makefile below, but the whole invocation must still be skipped
+        # rather than flagged, because it is documented as targeting a
+        # different Makefile entirely.
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "Makefile", "all:\n\techo hi\n")
+            write(root, "doc.md", "```bash\nmake -fother.mk external-only-target\n```\n")
+            literal, patterns = check_docs.parse_make_targets(root)
+            findings = check_docs.check_make_targets(["doc.md"], root, literal, patterns)
+            self.assertEqual(findings, [])
+
+    def test_attached_directory_redirect_never_validated_against_wrong_graph(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "Makefile", "all:\n\techo hi\n")
+            write(root, "doc.md", "```bash\nmake -Csubdir external-only-target\n```\n")
+            literal, patterns = check_docs.parse_make_targets(root)
+            findings = check_docs.check_make_targets(["doc.md"], root, literal, patterns)
+            self.assertEqual(findings, [])
+
+    def test_j2_attached_flag_still_flags_nonexistent_second_target(self):
+        # Companion of the above: proves the fix does not overreach into
+        # silencing *every* command-with-attached-short-flag -- `-j2` is
+        # not a redirect flag, so a genuinely unknown target after it
+        # must still be caught.
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "Makefile", "all:\n\techo hi\n")
+            write(root, "doc.md", "```bash\nmake -j2 all nonexistent-target\n```\n")
+            literal, patterns = check_docs.parse_make_targets(root)
+            findings = check_docs.check_make_targets(["doc.md"], root, literal, patterns)
+            self.assertTrue(any("nonexistent-target" in f.message for f in findings), findings)
 
 
 # ---------------------------------------------------------------------------

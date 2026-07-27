@@ -1202,8 +1202,17 @@ PLACEHOLDER_CHARS = set("<>*{}")
 # repository's own root Makefile (see parse_make_targets), so any
 # invocation naming one of these is skipped outright (never validated,
 # never flagged) rather than guessed at against the wrong graph.
+#
+# ``-C``/``-f`` are POSIX short options and GNU make accepts their value
+# either as a separate next token (``-C dir``, ``-f file`` -- exact-match
+# against MAKEFILE_REDIRECT_FLAGS below) or attached directly to the flag
+# (``-Cdir``, ``-ffile`` -- MAKEFILE_REDIRECT_ATTACHED_RE below). Only
+# ``-C``/``-f`` get the attached-short-option treatment (never ``-j``/
+# ``-l``/etc., so ``-j2`` is never mistaken for a redirect).
 MAKEFILE_REDIRECT_FLAGS = {"-C", "--directory", "-f", "--file", "--makefile"}
-MAKEFILE_REDIRECT_ATTACHED_RE = re.compile(r"^--(?:directory|file|makefile)=")
+MAKEFILE_REDIRECT_ATTACHED_RE = re.compile(
+    r"^(?:--(?:directory|file|makefile)=|-[Cf].)"
+)
 
 # Flags that consume the *next* token as a separate value (as opposed to
 # an attached ``--flag=value`` form, which ``MAKEFILE_REDIRECT_ATTACHED_RE``
@@ -1242,10 +1251,12 @@ def extract_make_invocations(markdown_text):
     are all correctly skipped while still finding every real target
     token that follows them. A candidate containing a placeholder
     (``<target>``, ``%``, etc.) or that redirects to a different Makefile
-    via ``-C``/``-f``/``--directory``/``--file``/``--makefile`` is
-    intentionally not yielded at all (nothing to validate against this
-    repository's own Makefile database) -- this checker never parses,
-    let alone executes, a recipe line either way.
+    via ``-C``/``-f``/``--directory``/``--file``/``--makefile`` -- in
+    either standalone (``-C dir``, ``-f file``), attached (``-Cdir``,
+    ``-ffile``), or long ``--flag=value`` form -- is intentionally not
+    yielded at all (nothing to validate against this repository's own
+    Makefile database) -- this checker never parses, let alone executes,
+    a recipe line either way.
     """
     seen = set()
     for line in _make_invocation_lines(markdown_text):
