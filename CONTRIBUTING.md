@@ -27,6 +27,16 @@ full issue-closure, baseline/fingerprint review, and legal-boundary policy.
 
 # Decompiling Guide
 
+> **Closure note (issue #15):** this decompilation workflow is matched
+> against the **archival agbcc lane**, not the project's default/supported
+> modern GCC AAPCS release lane. A bare `make`/`make all` builds the modern
+> release ROM instead; every `make` invocation in this guide below means
+> `make legacy` (identical to the pre-existing `make fireemblem8.gba`) --
+> the explicit, unsupported side door kept specifically for this
+> byte-for-byte matching work. See `docs/quickstart.md` and the README's
+> "Archival/decomp agbcc build" section for the full default-vs-archival
+> rationale.
+
 Code starts out in `asm/`. When decompiled to C, it goes into `src/`. The goal is to decompile all the code.
 
 Some of the code in `asm/` is handwritten assembly. It can't and shouldn't be decompiled. It's already commented, so there's no further work to do on these files.
@@ -41,7 +51,7 @@ The rest of the `.s` files in `asm/` are fair game.
 The basic decompilation process is:
 * Choose a file in `asm/`, i.e. `asm/x.s`. Create a C file called `src/x.c`.
 * Translate the first function in `asm/x.s` to C in `src/x.c`.
-* `make`, and tweak the function until it matches.
+* `make legacy`, and tweak the function until it matches.
 * Clean up the code and comment.
 * Repeat for each function until `asm/x.s` is empty.
 
@@ -287,7 +297,7 @@ But what about `sub_8123244`? It's still not obvious what that function does. We
 ## 5. Build
 
 ```sh
-make
+make legacy
 ```
 ```gcc
 src/cable_car.c: In function `sub_81231EC':
@@ -335,7 +345,7 @@ void sub_81231EC(u8 taskId) {
 
 Build again, and we get:
 ```sh
-make
+make legacy
 ```
 
 This confirms that the source compiles and links. Use the project's disassembly
@@ -343,7 +353,7 @@ comparison tools when you need to investigate instruction-level matching.
 
 ---
 
-If the build fails, `make` reports the compiler or linker error to fix.
+If the build fails, `make legacy` reports the compiler or linker error to fix.
 
 ---
 

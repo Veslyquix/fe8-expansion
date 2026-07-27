@@ -335,7 +335,13 @@ build_project() {
     if (( LEGACY_MODE == 1 )); then
       echo "[+] Building archival fireemblem8.gba via the legacy compiler toolchain (this can take several minutes)"
       echo "    (first build also fetches/builds mgfembp's own agbcc variant for its FE6 SIO sub-build)"
-      make -j"${jobs}"
+      # Calls the explicit, clearly-named `legacy` target by name (see
+      # Makefile's Main Targets section) instead of relying on any
+      # environment/command-line variable to redirect a bare `make`: a
+      # plain `make`/`make all` always builds the supported modern AAPCS
+      # release lane, unconditionally, with no lane-selection variable of
+      # any kind able to change that.
+      make legacy -j"${jobs}"
       echo "[✓] Legacy build complete: ${PROJECT_DIR}/fireemblem8.gba"
     else
       echo "[+] Building and boot-verifying the supported modern AAPCS release ROM"

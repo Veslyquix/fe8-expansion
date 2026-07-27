@@ -50,7 +50,7 @@ decomp-matching work (see `CONTRIBUTING.md`), not the default/supported
 build. With `--legacy`, the script additionally:
 
 1. Checks whether `tools/agbcc/bin/agbcc` already exists. If it does, the script reuses it; otherwise it clones and builds [`pret/agbcc`](https://github.com/pret/agbcc) inside `.deps/agbcc` (ignored by git), installs it into `tools/agbcc`, and you can force a refresh any time with `--refresh-agbcc`.
-2. Runs parallel `make` to produce `fireemblem8.gba` instead of the modern boot-check. The first build also fetches/builds mgfembp's own agbcc variant (`010110-ThumbPatch`) for its FE6 SIO sub-build, which is only exercised by this archival path.
+2. Runs `make legacy -j"${jobs}"` (the explicit, clearly-named archival alias -- identical to the pre-existing `make fireemblem8.gba -j"${jobs}"`) to produce `fireemblem8.gba` instead of the modern boot-check. A bare `make`/`make all` always builds the modern release lane unconditionally (issue #15); there is no environment variable or `make` command-line variable that redirects it to the archival build instead, so quickstart names the `legacy` target directly rather than relying on any such override. The first build also fetches/builds mgfembp's own agbcc variant (`010110-ThumbPatch`) for its FE6 SIO sub-build, which is only exercised by this archival path.
 
 On success you’ll see:
 
@@ -73,8 +73,10 @@ On success you’ll see:
   `sudo pacman --sync --refresh --sysupgrade`, then rerun it.
 - **Slower rebuilds** – Subsequent runs are faster. For incremental modern
   work, run `make expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs -j4`
-  (or choose another suitable job count) manually; for `--legacy` rebuilds, use
-  `make -j4`.
+  (or choose another suitable job count) manually, or just a bare `make -j4`/
+  `make all -j4` (equivalent, since that is now the default release lane);
+  for `--legacy` rebuilds, use `make legacy -j4` (or the pre-existing
+  `make fireemblem8.gba -j4`) by name.
 
 After the script finishes, launch your preferred emulator with the printed ROM
 path or start modifying the source.
@@ -88,7 +90,11 @@ does **not** link an ELF or a ROM — the fuller modern chain
 documented below) is what the default quickstart path now builds and
 boot-verifies as the supported release ROM, superseding the legacy ROM as the
 default/supported output; `--legacy` remains available for archival/decomp
-work. The modern
+work. A bare `make`/`make all` (issue #15) builds and boot-verifies this same
+modern release ROM directly, with no quickstart script required and no
+`tools/agbcc` executable or library ever needed or resolved; `make legacy`
+(equivalent to the pre-existing `make fireemblem8.gba`) is the named,
+explicit way to reach the archival lane instead. The modern
 `ap.o`, the five save objects (`bmsave-misc.o`, `bmsave-gmap.o`,
 `bmsave-lib.o`, `bmsave.o`, and `bmsave-xmap.o`), the convoy/container object
 (`bmcontainer.o`, which defines `ClearSupplyItems` and `GetConvoyItemArray` for

@@ -326,11 +326,17 @@ endif
 # every linked table's shared generated .c/.o pair is race-free, and --
 # critically, since this whole
 # plumbing hinges on `include generated_data.mk` happening before `all:`
-# is defined in Makefile -- that a bare `make`/`make -n` still builds
-# the ROM by default, not generated-data-validate (generated_data.mk's
-# own first target, which would otherwise silently steal GNU Make's
-# implicit default-goal rule); that probe itself uses `-rR`
-# (--no-builtin-rules --no-builtin-variables) against a nonexistent
+# is defined in Makefile -- that a bare `make`/`make -n` still
+# unconditionally resolves to the modern release AAPCS boot-check chain by
+# default (issue #15: `all:` is a bare recipe target with no
+# fireemblem8.gba/legacy prerequisite of any kind, and no environment or
+# make command-line variable can redirect it), not generated-data-validate
+# (generated_data.mk's own first target, which would otherwise silently
+# steal GNU Make's implicit default-goal rule) and never the archival
+# agbcc lane, while the explicit `legacy:` alias/`fireemblem8.gba` target
+# stays reachable by name for the archival build this generated-data swap
+# also has to keep linking correctly; the `-p` database probe itself uses
+# `-rR` (--no-builtin-rules --no-builtin-variables) against a nonexistent
 # target so GNU Make's own implicit suffix-rule search can't accidentally
 # match the bogus probe name and spawn a real (if harmlessly failing)
 # assembler invocation -- our own `:=`-assigned AS/CC1/etc. variables are
@@ -348,17 +354,28 @@ generated-data-link-check: $(GENERATED_DATA_LINKED_OBJECTS)
 	@if [ "$(strip $(GENERATED_DATA_LINKED_TABLES))" != "classes items supports characters" ]; then \
 		echo "FAIL: GENERATED_DATA_LINKED_TABLES changed unexpectedly ('$(GENERATED_DATA_LINKED_TABLES)'); Batch 2c-1 + 2c-2 + 2c-3 + 2c-4 scope is classes, items, supports, and characters only" >&2; exit 1; \
 	fi
-	@echo '--- bare `make` default goal is still `all` (the ROM), not generated-data validation ---'
+	@echo '--- bare `make` default goal is still `all` (the modern release AAPCS boot-check), not generated-data validation or the archival lane ---'
 	@probe=$$($(MAKE) --no-print-directory -rR -p __generated_data_link_check_default_goal_probe__ 2>/dev/null); \
 	default_goal=$$(printf '%s\n' "$$probe" | grep -m1 '^\.DEFAULT_GOAL '); \
 	if [ "$$default_goal" != '.DEFAULT_GOAL := all' ]; then \
 		echo "FAIL: bare make's default goal is '$$default_goal' (want '.DEFAULT_GOAL := all') -- 'include generated_data.mk' before 'all:' would otherwise let generated-data-validate (its own first target) silently become the default goal instead, so a bare 'make' would validate JSON instead of building the ROM" >&2; exit 1; \
 	fi; \
 	all_rule=$$(printf '%s\n' "$$probe" | grep -m1 '^all:'); \
-	if ! printf '%s\n' "$$all_rule" | grep -q 'fireemblem8\.gba'; then \
-		echo "FAIL: the 'all:' rule ('$$all_rule') no longer depends on fireemblem8.gba (\$$(ROM)) -- bare make would not build the ROM" >&2; exit 1; \
+	if [ "$$all_rule" != 'all:' ]; then \
+		echo "FAIL: the 'all:' rule ('$$all_rule') is not the bare, no-file-prerequisite issue #15 recipe target (want literal 'all:') -- a lingering fireemblem8.gba/\$$(ROM) (or any other) file prerequisite here would mean bare make could silently resolve to the archival lane again" >&2; exit 1; \
+	fi; \
+	legacy_rule=$$(printf '%s\n' "$$probe" | grep -m1 '^legacy:'); \
+	if ! printf '%s\n' "$$legacy_rule" | grep -q 'fireemblem8\.gba'; then \
+		echo "FAIL: the explicit 'legacy:' alias ('$$legacy_rule') no longer depends on fireemblem8.gba (\$$(ROM)) -- the archival lane this generated-data swap also links against must stay reachable by name" >&2; exit 1; \
+	fi; \
+	dry_run=$$($(MAKE) --no-print-directory -n 2>&1); \
+	if ! printf '%s\n' "$$dry_run" | grep -q 'expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs'; then \
+		echo "FAIL: bare 'make -n' no longer plans the modern release AAPCS boot-check chain:" >&2; printf '%s\n' "$$dry_run" | tail -20 >&2; exit 1; \
+	fi; \
+	if printf '%s\n' "$$dry_run" | grep -q 'agbcc'; then \
+		echo "FAIL: bare 'make -n' unexpectedly mentions agbcc -- the default lane must never resolve to the archival compiler" >&2; exit 1; \
 	fi
-	@echo 'OK: bare make/make -n still target the ROM/ELF build (all), not just generated-data validation'
+	@echo 'OK: bare make/make -n unconditionally targets the modern release AAPCS boot-check (all); generated-data validation and the archival agbcc lane (legacy) both stay reachable only by name'
 	@echo '--- legacy CFILES/ALL_OBJECTS ---'
 	@if [ -n "$(strip $(filter $(GENERATED_DATA_LINKED_HAND_SOURCES),$(CFILES)))" ]; then \
 		echo "FAIL: $(GENERATED_DATA_LINKED_HAND_SOURCES) still present in legacy CFILES" >&2; exit 1; \

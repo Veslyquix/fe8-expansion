@@ -1,0 +1,176 @@
+name: Upstream Port Drift Scan
+
+# Read-only, textual drift/integrity check for the Issue #12 upstream-port
+# state file, run against a genuinely fresh fetch of the pinned canonical
+# upstream (decomp) remote.
+#
+# This workflow:
+#   - explicitly, anonymously, and read-only-ly fetches *objects/refs only*
+#     (never checks out, builds, imports, or executes any fetched tree or
+#     code) from the single pinned canonical URL
+#     (https://github.com/laqieer/fireemblem8u.git), by reusing the same
+#     `scripts.upstream_port fetch` subcommand a maintainer runs locally --
+#     which itself refuses to run unless the configured remote URL matches
+#     that pinned URL exactly (see scripts/upstream_port/cli.py
+#     verify_remote_or_raise / constants.CANONICAL_UPSTREAM_URL);
+#   - runs the read-only `drift` (and, best-effort, `scan`) subcommands
+#     against the freshly-fetched local remote-tracking ref (e.g.
+#     `decomp/master`), NOT against the recorded `last_ported` SHA itself --
+#     so it can actually discover new commits that have landed upstream
+#     since the last recorded scan/port boundary, instead of only checking
+#     this repo's own history for self-consistency;
+#   - NEVER commits, branches, opens a PR, merges, cherry-picks, or pushes
+#     anything, and NEVER mutates config/upstream-port-state.json (only the
+#     explicit, human-invoked `update-state` subcommand does that -- this
+#     workflow never calls it);
+#   - publishes the textual drift/scan report to the job summary and as an
+#     artifact, and fails the job only to surface a signal (real drift,
+#     an integrity problem, or a genuine tool error) to maintainers -- it
+#     never treats "drift detected" as a reason to skip writing the report,
+#     and never auto-applies any state update in response.
+#
+# `workflow_dispatch` intentionally takes no inputs, so there is no
+# caller-controlled string that could inject an alternate ref/remote/URL
+# into any command below.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly, Monday 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  drift-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history, no submodules, no credentials persisted)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure/verify the pinned canonical upstream remote (local .git/config only)
+        id: remote
+        run: |
+          set -euo pipefail
+          CANONICAL_URL=$(python3 -c "from scripts.upstream_port import constants; print(constants.CANONICAL_UPSTREAM_URL)")
+          REMOTE_NAME=$(python3 -c "from scripts.upstream_port import constants; print(constants.DEFAULT_REMOTE_NAME)")
+
+          if git remote get-url "$REMOTE_NAME" >/dev/null 2>&1; then
+            EXISTING_URL=$(git remote get-url "$REMOTE_NAME")
+            if [ "$EXISTING_URL" != "$CANONICAL_URL" ]; then
+              echo "::error::remote '$REMOTE_NAME' URL '$EXISTING_URL' does not match pinned canonical URL '$CANONICAL_URL'"
+              exit 1
+            fi
+          else
+            # Adding a remote only writes an entry to .git/config; it does
+            # not fetch, checkout, or touch any tracked file.
+            git remote add "$REMOTE_NAME" "$CANONICAL_URL"
+          fi
+
+          echo "remote_name=$REMOTE_NAME" >> "$GITHUB_OUTPUT"
+          echo "canonical_url=$CANONICAL_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Explicitly fetch canonical objects/refs (read-only; no checkout, no execution)
+        run: |
+          set -euo pipefail
+          # Delegates to the same `fetch` CLI subcommand a maintainer runs
+          # locally (scripts/upstream_port/cli.py + git_utils.fetch_remote):
+          # it re-verifies the remote URL against the pinned canonical URL
+          # itself (defense in depth), then runs a plain, anonymous
+          # `git fetch --quiet <remote>` that only updates this remote's
+          # remote-tracking refs/objects -- it never touches local branches,
+          # the working tree, or history, and never runs anything from the
+          # fetched tree.
+          python3 -m scripts.upstream_port fetch --remote "${{ steps.remote.outputs.remote_name }}"
+
+      - name: Run read-only drift + scan against the freshly-fetched canonical ref
+        id: drift
+        run: |
+          set +e
+          STATE_PATH="config/upstream-port-state.json"
+          if [ ! -f "$STATE_PATH" ]; then
+            echo "## Upstream Port Drift Scan" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "no state file found at $STATE_PATH" >> "$GITHUB_STEP_SUMMARY"
+            echo "exit_code=3" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RECORDED_LAST_PORTED_SHA=$(python3 -c "import json;print(json.load(open('$STATE_PATH'))['last_ported']['sha'])")
+          FRESH_REF=$(python3 -c "import json;print(json.load(open('$STATE_PATH'))['last_ported']['ref'])")
+
+          # Run drift/scan against the just-fetched local remote-tracking ref
+          # (e.g. `decomp/master`), which now reflects the real, live tip of
+          # the canonical upstream branch -- never against the recorded SHA
+          # itself, so this can genuinely detect new upstream commits instead
+          # of only re-checking this repo's own history for self-consistency.
+          python3 -m scripts.upstream_port drift --ref "$FRESH_REF" --format json > drift-report.json
+          code=$?
+
+          # Best-effort human-readable enumeration of any new commits; never
+          # gates the job's pass/fail decision (drift.py already reports
+          # unreviewed_count/has_drift, which is authoritative) and never
+          # aborts before the summary is written even if scan itself errors
+          # (e.g. on a diverged-history integrity problem, which `drift`
+          # above already flags via exit code 3).
+          python3 -m scripts.upstream_port scan --ref "$FRESH_REF" --format json > scan-report.json 2> scan-report.err
+          scan_code=$?
+
+          {
+            echo "## Upstream Port Drift Scan"
+            echo ""
+            echo "Recorded boundary: \`$FRESH_REF\` @ \`$RECORDED_LAST_PORTED_SHA\`"
+            echo "Freshly fetched tip of \`$FRESH_REF\` was scanned/drift-checked below --"
+            echo "this run explicitly fetched the pinned canonical remote first (see the"
+            echo "preceding job steps), so a moved ref here reflects a real upstream change,"
+            echo "not just this repo's own history."
+            echo ""
+            echo "### drift"
+            echo '```json'
+            cat drift-report.json
+            echo '```'
+            echo ""
+            echo "### scan (best-effort; new commits since the recorded last_ported boundary)"
+            if [ "$scan_code" -eq 0 ]; then
+              echo '```json'
+              cat scan-report.json
+              echo '```'
+            else
+              echo "scan could not enumerate individual commits (exit $scan_code); see drift"
+              echo "output above for the authoritative drift/integrity signal:"
+              echo '```text'
+              cat scan-report.err
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload drift + scan report artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upstream-port-drift-report
+          path: |
+            drift-report.json
+            scan-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Fail the job if drift/integrity issues or tool errors were found
+        if: always()
+        run: |
+          code="${{ steps.drift.outputs.exit_code }}"
+          if [ -z "$code" ] || [ "$code" != "0" ]; then
+            echo "drift scan reported exit code ${code:-unknown} (0=clean, 2=new upstream commits/drift found, 3=integrity problem or tool error)"
+            echo "See the job summary above for the full textual report. This failure is only"
+            echo "a visibility signal for maintainers -- no state, source, or history was"
+            echo "changed by this job."
+            exit 1
+          fi
+          echo "drift scan clean: no new upstream commits detected against the freshly-fetched canonical ref"

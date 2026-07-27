@@ -10,23 +10,28 @@ permissions:
   contents: read
 
 jobs:
-  # Fast, host-only lane (issue #13): exercises every tools/gba-playtest
-  # host test -- scenario/schema parsing, generators, config, save/migration
-  # fixtures, timeouts, retry policy, deterministic sorted-JSON output, and
-  # provenance/diagnostics -- without the arm-none-eabi cross-toolchain or a
-  # 16 MB ROM build. Only a native C compiler (build-essential) and
-  # libmgba-dev are installed, since the one integration test that actually
-  # drives libmGBA (test_backend_integration.py) compiles its tiny backend
-  # for the *host*, never the GBA target. This is intentionally a separate
-  # job from `build` below so a scenario/generator/host-tooling regression
-  # is reported in well under a minute, before paying for a full ROM/linker
-  # build. It is a genuine gate (required status), not merely advisory.
+  # Fast, host-only lane (issues #13 + #12/#15): exercises every
+  # tools/gba-playtest host test -- scenario/schema parsing, generators,
+  # config, save/migration fixtures, timeouts, retry policy, deterministic
+  # sorted-JSON output, and provenance/diagnostics -- and the pure-stdlib
+  # upstream-port review tooling suite (tests/upstream_port:
+  # classify/scan/drift/state/ref-binding/output-safety/merge-commit and the
+  # verify.gates() <-> build.yml mirror). Neither step needs the arm-none-eabi
+  # cross-toolchain or a 16 MB ROM build. Only a native C compiler
+  # (build-essential) and libmgba-dev are installed, since the one integration
+  # test that actually drives libmGBA (test_backend_integration.py) compiles
+  # its tiny backend for the *host*, never the GBA target; the upstream-port
+  # tests are Python/stdlib only and link no C. This is intentionally a
+  # separate job from `build` below so a scenario/generator/host-tooling
+  # regression is reported in well under a minute, before paying for a full
+  # ROM/linker build, and this lane never builds the ROM or runs the linker.
+  # Both test steps are genuine gates (required status), not merely advisory.
   host-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
 
@@ -35,6 +40,17 @@ jobs:
 
     - name: Run gba-playtest host test suite
       run: python3 -m unittest discover -s tools/gba-playtest/tests -v
+
+    # Issue #12/#15 upstream-port review tooling (scripts/upstream_port): 139
+    # pure-stdlib unittest cases covering classify/scan/drift/state/
+    # ref-binding/output-safety/merge-commit determinism and, crucially, the
+    # verify.gates() <-> this-workflow argv/order mirror. Runs here in the
+    # host lane (no arm-none-eabi toolchain, no ROM/linker rebuild) as an
+    # explicit required gate; scripts/upstream_port/verify.py re-states these
+    # same gate commands, argv-identical and in order, so `verify` reproduces
+    # this CI locally without a runner.
+    - name: Run upstream-port tooling test suite
+      run: python3 -m unittest discover -s tests/upstream_port -v
 
   # Ubuntu libmGBA ROM/runtime gate: builds the full modern object/ELF/ROM
   # chain for both supported configs (debug, release; AAPCS only -- see
@@ -56,7 +72,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
 
@@ -72,6 +88,21 @@ jobs:
 
     - name: Build tools
       run: ./build_tools.sh
+
+    # Issue #15 closure: a bare `make`/`make all` must unconditionally
+    # resolve to the modern release AAPCS boot-check chain, with the
+    # archival agbcc lane reachable only by explicitly naming `make
+    # legacy`/`make fireemblem8.gba` -- never via any environment variable
+    # or `make` command-line variable override. These targeted tests are
+    # stdlib `unittest` only (no pytest/network installs) and are dry-run/
+    # database-probe based against the real Makefile/quickstart.sh (never a
+    # real multi-minute compile/link/boot-check), so they run early and
+    # fail fast on any structural regression before the slower linker gate
+    # below.
+    - name: Check default build lane and quickstart legacy glue (issue #15)
+      run: |
+        python3 -m unittest discover -s scripts/modernize/tests -p "test_build_default_lane.py" -v
+        python3 -m unittest discover -s scripts/modernize/tests -p "test_quickstart.py" -v
 
     # Generated-data platform (Issue #5 Chapter 2 slice, Batch C): validates
     # every registered table's JSON source, cross-table references, the
