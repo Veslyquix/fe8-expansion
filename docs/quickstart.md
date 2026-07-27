@@ -310,9 +310,14 @@ Use the ROM/runtime targets below for behavior validation.
 (`ReadSramFast`, `VerifySramFast`, `gSoundInfo`, `gMPlayJumpTable`,
 `gCgbChans`, `gMPlayMemAccArea`, `SoundMainRAM_Buffer`, `gText_GoldBox`)
 are placed at their exact legacy IWRAM offsets via per-symbol BSS sections.
-Three source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`) receive
+The source files that need this treatment receive
 `-fdata-sections` so modern GCC emits the named `.bss.<symbol>` sections
-the clean linker places at pinned offsets.
+the clean linker places at pinned offsets. `modern.mk`'s "IWRAM-placed
+symbols need per-symbol BSS sections" block is the current source of truth
+for which sources carry the override and may grow as more symbols move to
+IWRAM; search that file for `-fdata-sections` (e.g.
+`grep -n -- '-fdata-sections' modern.mk`) rather than trusting a fixed list
+written here.
 `src/agb_sram.o` additionally receives `-fno-toplevel-reorder
 -fno-reorder-functions`: `SetSramFastFunc()` copies `ReadSramFast_Core`/
 `VerifySramFast_Core` into IWRAM scratch buffers at runtime by subtracting

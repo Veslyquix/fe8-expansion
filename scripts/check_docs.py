@@ -332,6 +332,41 @@ OBJECT_COUNT_SPELLED_RE = re.compile(
     re.IGNORECASE,
 )
 
+# ---------------------------------------------------------------------------
+# Spelled-out count + bare "source file(s)"/"file(s)" immediately followed
+# by an explicit enumeration (fresh-review residual finding)
+# ---------------------------------------------------------------------------
+#
+# OBJECT_COUNT_SPELLED_RE above deliberately excludes a bare "source"/
+# "file" noun with no qualifier (handwritten/assembly/save/etc.) precisely
+# so ordinary prose like "one source of truth", an unenumerated historical
+# narrative, or "all three boot checkpoints" never matches. That left the
+# exact same drift-prone claim shape free when the count is spelled out
+# and the noun is the bare "source file(s)"/"file(s)" *and* an explicit
+# list of the actual paths immediately follows -- docs/quickstart.md's own
+# "Three source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`)
+# receive -fdata-sections" was exactly this shape, and it silently passed
+# every rule above because "source files" alone is not one of
+# _OBJECT_COUNT_NOUN_PHRASES's qualified nouns. A spelled count *without*
+# a trailing enumeration ("the three files are validated independently")
+# stays harmless prose and is not matched here; only a parenthetical or
+# colon-introduced backtick/comma list bound directly to the noun (no
+# other words in between) counts as "explicit enumeration", which keeps
+# "one source of truth" and ordinary steps entirely unaffected.
+_ENUM_BACKTICK_ITEM = r"`[^`\n]+`"
+_ENUM_ITEM_SEP = r"\s*,\s*(?:and\s+|or\s+)?"
+OBJECT_COUNT_SPELLED_ENUM_RE = re.compile(
+    r"\b(?:%s)\b\s+(?:source\s+)?files?\b\s*"
+    r"(?:\(\s*%s(?:%s%s)+\s*\)"       # parenthetical backtick/comma list
+    r"|:\s*%s(?:%s%s)+)"                 # colon-introduced backtick/comma list
+    % (
+        "|".join(sorted(SPELLED_NUMBER_WORDS, key=len, reverse=True)),
+        _ENUM_BACKTICK_ITEM, _ENUM_ITEM_SEP, _ENUM_BACKTICK_ITEM,
+        _ENUM_BACKTICK_ITEM, _ENUM_ITEM_SEP, _ENUM_BACKTICK_ITEM,
+    ),
+    re.IGNORECASE,
+)
+
 FENCE_RE = re.compile(r"^(```+|~~~+)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 LINK_START_RE = re.compile(r'!?\[(?:[^\[\]]|\[[^\[\]]*\])*\]\(')
@@ -1531,6 +1566,23 @@ def check_object_count_claims(markdown_files, root):
                 "files\") -- describe qualitatively (drop the number word entirely, or "
                 "enumerate the items by name without counting them) and point at the "
                 "relevant `make print-MODERN_*_OBJECTS` command instead"))
+
+        # Same drift-prone shape as above, but for the bare "source
+        # file(s)"/"file(s)" noun (deliberately excluded above so "one
+        # source of truth" and unenumerated prose stay clean) -- only
+        # flagged when an explicit parenthetical/colon backtick-path
+        # enumeration immediately follows the noun. See
+        # OBJECT_COUNT_SPELLED_ENUM_RE's own comment for the full
+        # rationale and scoping.
+        for m in OBJECT_COUNT_SPELLED_ENUM_RE.finditer(text):
+            lineno = text.count("\n", 0, m.start()) + 1
+            findings.append(Finding(
+                path, lineno,
+                "hardcoded spelled-out file-count claim paired with an explicit "
+                "enumeration of the paths (e.g. \"three source files (`a.c`, `b.c`, "
+                "`c.c`)\") -- describe qualitatively (drop the number and the fixed "
+                "list) and point at the relevant modern.mk rule/search command or "
+                "`make print-MODERN_*_OBJECTS` instead"))
 
         for lineno, line in enumerate(text.split("\n"), start=1):
             if OBJECT_COUNT_HYPHEN_RE.search(line):

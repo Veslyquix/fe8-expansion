@@ -1214,8 +1214,6 @@ class SpelledObjectCountClaimRegressionTests(unittest.TestCase):
             "5. Runs `make expansion-modern-toolchain-check` then boot-checks.",
             "runs `gba_playtest.py verify --policy behavior` against all three\n"
             "checkpoints (frames 0/60/120).",
-            "Three source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`) receive\n"
-            "`-fdata-sections`.",
             "eight performance-critical symbols are pinned to legacy IWRAM offsets.",
             "Adding these closes 17 prior cohort-unsatisfied symbols (the debug/aapcs\n"
             "unsatisfied set moves from 139 to 131).",
@@ -1254,6 +1252,80 @@ class SpelledObjectCountClaimRegressionTests(unittest.TestCase):
             ))
             findings = check_docs.check_object_count_claims(["quickstart.md"], root)
             self.assertEqual(findings, [])
+
+
+# ---------------------------------------------------------------------------
+# Fresh-review residual finding: docs/quickstart.md still carried "Three
+# source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`) receive
+# -fdata-sections" -- a bare "source files" noun (deliberately excluded
+# from OBJECT_COUNT_SPELLED_RE's qualified-noun set so ordinary prose like
+# "one source of truth" stays clean) paired with an explicit parenthetical
+# enumeration of the actual paths. The prior round's own regression test
+# suite locked this exact sentence in as a *required* zero-findings
+# fixture (see the removed entry that used to live in
+# test_ordinary_prose_and_unrelated_counts_do_not_false_positive above),
+# which is precisely backwards: the checker should have caught this
+# sentence, not exempted it. OBJECT_COUNT_SPELLED_ENUM_RE closes that
+# escape; these fixtures prove the fail case is now caught, prove a
+# colon-introduced enumeration is caught too, and prove the narrow scoping
+# (no explicit enumeration attached) still leaves ordinary "one source of
+# truth"/unenumerated prose untouched.
+# ---------------------------------------------------------------------------
+
+class SpelledObjectCountEnumerationClaimRegressionTests(unittest.TestCase):
+    def test_real_old_quickstart_phrase_is_now_flagged(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md",
+                  "Three source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`) receive\n"
+                  "`-fdata-sections` so modern GCC emits the named sections.\n")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertTrue(findings, "expected the real removed quickstart sentence to be flagged")
+            self.assertTrue(any("enumeration" in f.message for f in findings))
+
+    def test_colon_introduced_enumeration_is_flagged(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md",
+                  "Two files: `src/foo.c`, `src/bar.c` receive the override.\n")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertTrue(findings, "expected a colon-introduced enumeration to be flagged")
+
+    def test_bare_file_word_without_source_qualifier_is_flagged(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "doc.md",
+                  "Four files (`a.mk`, `b.mk`, `c.mk`, `d.mk`) are included here.\n")
+            findings = check_docs.check_object_count_claims(["doc.md"], root)
+            self.assertTrue(findings, "expected the bare 'files' + enumeration shape to be flagged")
+
+    def test_one_source_of_truth_and_unenumerated_prose_do_not_false_positive(self):
+        for phrase in (
+            "This is one source of truth for the build.",
+            "The three files are validated independently.",
+            "all three boot checkpoints (frames 0/60/120) pass.",
+            "5. Runs `make expansion-modern-toolchain-check` then boot-checks.",
+            "step three of the process installs the toolchain.",
+            "The source files that need this treatment receive `-fdata-sections`.",
+            "modern.mk's \"IWRAM-placed symbols need per-symbol BSS sections\" block is "
+            "the current source of truth for which sources carry the override.",
+        ):
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_object_count_claims(["doc.md"], root)
+                self.assertEqual(findings, [], "unexpected finding for: %r" % phrase)
+
+    def test_current_quickstart_has_no_enumeration_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "quickstart.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "docs", "quickstart.md")
+            ))
+            findings = check_docs.check_object_count_claims(["quickstart.md"], root)
+            self.assertEqual(findings, [],
+                              "current quickstart.md should carry no explicit file-count "
+                              "enumeration findings")
 
 
 # ---------------------------------------------------------------------------
