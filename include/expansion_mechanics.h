@@ -78,9 +78,9 @@ struct ExpansionMechanicsContext
  * for THAT SUBJECT is computed and before ComputeBattleUnitEffectiveStats().
  * BattleGenerate() computes the two combatants in sequence:
  *
- *     ComputeBattleUnitStats(&gBattleActor,  &gBattleTarget);  // apply #1
- *     ComputeBattleUnitStats(&gBattleTarget, &gBattleActor);   // apply #2
- *     ComputeBattleUnitEffectiveStats(...);                    // both, after
+ *     ComputeBattleUnitStats(&gBattleActor,  &gBattleTarget);   <- apply #1
+ *     ComputeBattleUnitStats(&gBattleTarget, &gBattleActor);    <- apply #2
+ *     ComputeBattleUnitEffectiveStats(...);                     <- both, after
  *
  * So on apply #1 the subject is the ATTACKER and `context->opponent` (the
  * defender) has NOT had its battle stats computed yet: its battleAttack,
