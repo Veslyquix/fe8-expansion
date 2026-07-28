@@ -11,7 +11,7 @@
       "framebuffer_hash": "fnv1a64-rgb24:542665d6c06a779d",
       "name": "empty-slot-list-shown",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:1c4a111733183e54"
+      "sram_hash": "fnv1a64-sram-normalized:e6b01462da475735"
     },
     {
       "frame": 1400,
@@ -29,13 +29,13 @@
           "value": "0x00"
         }
       ],
-      "sram_hash": "fnv1a64-sram-normalized:055da3d88d59d79d"
+      "sram_hash": "fnv1a64-sram-normalized:0624f7a36b683360"
     }
   ],
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "9d5d27b71a4bf153d112d2da8af1e230cdedda5b",
+    "sha1": "529eb11d805f6788894056512426162ff37f346f",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

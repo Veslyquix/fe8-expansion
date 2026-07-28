@@ -19,13 +19,13 @@
       "framebuffer_hash": "fnv1a64-rgb24:723dfbe0cebe0522",
       "name": "erased",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:03453eaf5c7e59ba"
+      "sram_hash": "fnv1a64-sram-normalized:c44da4727cc92f41"
     }
   ],
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "6a95eb888102a98b83357a9878b6fce1b516191a",
+    "sha1": "529eb11d805f6788894056512426162ff37f346f",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },
