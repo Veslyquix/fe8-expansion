@@ -57,16 +57,54 @@ enum ExpansionMechanicsResult
 };
 
 /* Read-only context handed to every mechanic on each apply. Carries only
- * typed handles/flags -- never a void* and never a raw item/character ID. */
+ * typed handles/flags -- never a void* and never a raw item/character ID.
+ *
+ * IMPORTANT -- `opponent` is NOT guaranteed to have finalized battle stats.
+ * See "Apply order" on the callback typedef below before reading anything
+ * from it beyond its underlying `unit` fields. */
 struct ExpansionMechanicsContext
 {
     const struct BattleUnit* opponent; /* read-only opposing combatant; may be NULL */
     u16 battleConfig;                  /* BATTLE_CONFIG_* flags for this computation */
 };
 
-/* Typed battle-stat mechanic callback. It may adjust the mutable subject's
+/*
+ * Typed battle-stat mechanic callback. It may adjust the mutable subject's
  * already-computed battle stats and must treat the context (and the opponent
- * inside it) as read-only. */
+ * inside it) as read-only.
+ *
+ * Apply order (src/bmbattle.c). The seam runs at the END of
+ * ComputeBattleUnitStats(), once per subject, after every vanilla base stat
+ * for THAT SUBJECT is computed and before ComputeBattleUnitEffectiveStats().
+ * BattleGenerate() computes the two combatants in sequence:
+ *
+ *     ComputeBattleUnitStats(&gBattleActor,  &gBattleTarget);  // apply #1
+ *     ComputeBattleUnitStats(&gBattleTarget, &gBattleActor);   // apply #2
+ *     ComputeBattleUnitEffectiveStats(...);                    // both, after
+ *
+ * So on apply #1 the subject is the ATTACKER and `context->opponent` (the
+ * defender) has NOT had its battle stats computed yet: its battleAttack,
+ * battleDefense, battleHitRate, battleAvoidRate, battleCritRate,
+ * battleDodgeRate and friends still hold values from a previous computation
+ * or from initialization -- reading them is a real bug, not a rounding
+ * detail. Only on apply #2 is the opponent (the attacker) fully computed.
+ * Within either apply, effective-stat adjustments (weapon triangle, effective
+ * damage) have not run for EITHER combatant.
+ *
+ * Therefore a mechanic must be written so it is correct under both orders.
+ * Safe inputs: the subject's own already-computed battle stats, and the
+ * opponent's stable underlying `opponent->unit` data (class, level, status,
+ * position, current/max HP). Unsafe input: any `opponent->battle*` field.
+ * If a mechanic genuinely needs both combatants' finalized battle stats, it
+ * belongs at a later seam than this one; do not work around the ordering by
+ * caching state between applies -- registration and apply order are
+ * deterministic, but the pairing is not re-entrant and
+ * ExpansionMechanicsRegister() during an apply is rejected outright
+ * (EXPANSION_MECHANICS_ERR_REENTRANT).
+ *
+ * The bundled sample mechanic deliberately reads only the subject's own HP,
+ * so it is immune to this ordering.
+ */
 typedef void (*ExpansionMechanicsBattleStatFunc)(
     struct BattleUnit* subject,
     const struct ExpansionMechanicsContext* context);

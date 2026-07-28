@@ -51,7 +51,8 @@ test_save_format_meta_bytes_native / test_save_compat_epoch_modern_build green.
   safety, reentrancy guard.
 * Narrow seam in `ComputeBattleUnitStats()` after vanilla stats / before
   effective stats, `#if`-gated so the disabled/legacy object has **zero**
-  references (byte-identical vanilla battle math).
+  references (identical vanilla battle stats; a behaviour claim, not a
+  ROM-byte claim -- the modern path has no byte-identical requirement).
 * Meaningful default-disabled sample ("Full-HP Guard", +1 bounded battleDefense,
   clamped, content-free) registered only through the public API.
 
@@ -69,7 +70,7 @@ the `-Werror` modern gates (453 objects built).
 ### C. Player QoL danger/range overlay
 * Promoted `MapMenu_DangerZone_UnusedEffect` via a correct-signature wrapper +
   one gated `gMapMenuItems` entry (original label, `nameMsgId 0`), reusing the
-  existing danger-zone range path unchanged. Disabled table byte-identical
+  existing danger-zone range path unchanged. Disabled compiled table byte-identical
   vanilla; enabled adds exactly one `MenuItemDef` within `MENU_ITEM_MAX`. No
   second router, no range-math rewrite, no persisted option/save field.
 
@@ -146,9 +147,86 @@ default boot scenario passes under behavior policy on the feature-enabled ROM).
   feature-independent build input); a CI/verifier environment that initialises
   the `mgfembp` submodule builds it normally. This is pre-existing and unrelated
   to the issue #6 code.
-* Currently committed runtime scenarios are **debug**, mechanics-hook only
-  (positive + negative control). The QoL menu-navigation scenario and the
-  release-enabled libmGBA scenario are called out in the sprint escalation
-  (they need per-ROM input-timing calibration beyond this slice); the QoL probe
-  and release-enable-ability are proven at host + linked-build level in the
-  meantime.
+* The previously-recorded gap here -- "committed runtime scenarios are debug,
+  mechanics-hook only; the QoL scenario and the release-enabled scenario need
+  per-ROM input-timing calibration beyond this slice" -- is **now closed**. See
+  "Sprint 1 runtime closure" below. Nothing in Sprint 1 remains deferred.
+
+## Sprint 1 runtime closure
+
+### Clean-boot route (no fixture, no launcher, no debug tools)
+
+All six new scenarios reach a **real Prologue battle map** from a clean boot:
+the proven title/save-menu `A`/`START` cadence, `New Game`, one `DOWN` to
+select **Normal**, the first empty slot, then eleven `START` presses on the
+engine's own event-skip path (`EventEngine_CanStartSkip` /
+`EventEngine_StartSkip`, `src/event.c`). Player phase turn 1 on the 15x10
+Prologue map is reached at frame ~3.4k -- bounded, deterministic, each scenario
+verified twice. Normal difficulty is asserted semantically
+(`gPlaySt+0x42 == 0x20`, i.e. `PlaySt.config.controller` set, **and**
+`PLAY_FLAG_HARD` clear), which distinguishes Normal from both Easy and
+Difficult.
+
+### Captured values
+
+| Checkpoint | menuSel | display | tiles | gfxActive | cancel |
+| --- | --- | --- | --- | --- | --- |
+| player phase, pre-menu | 0 | 0 | 0 | 0 | 0 |
+| cursor moved (3,5) | 0 | 0 | 0 | 0 | 0 |
+| first overlay display | 1 | 1 | **39** | 1 | 0 |
+| first cancel | 1 | 1 | 39 | 0 | 1 |
+| second overlay display | 2 | 2 | **39** | 1 | 1 |
+| second cancel | 2 | 2 | 39 | 0 | 2 |
+| cursor moved again | 2 | 2 | 39 | 0 | 2 |
+
+Identical in **both** debug and release (asserted by a test). Enemy stays
+23/23 and faction stays `FACTION_BLUE` throughout. The default flags-off ROM
+runs the paired route with every field 0 at every checkpoint.
+
+Release mechanics hook, same clean route: `registerOkCount=1`,
+`registerErrCount=0`, `applyCount=2`, `lastAppliedCount=1`,
+`lastDefenseDelta=+1`, `sampleTriggerCount=2`, `lastResult=0`, with Seth
+(`gUnitArrayBlue[0]`) going 30/30 -> 13/30 from a bout the engine resolved. The
+default ROM replays the identical input list: all counters 0, same 30/30 ->
+13/30 outcome, i.e. vanilla battle maths untouched.
+
+### Root cause of the previously-blocking release stall
+
+The release route did not stall for want of input calibration. `-O2` miscompiled
+eight world-map iterator loops that dereferenced `Proc_FindNext()`'s result
+before the NULL check (undefined behaviour), so GCC proved the loop endless and
+deleted the exit:
+
+```
+release, before:                      release, after:
+  bl   Proc_FindNext                    bl   Proc_FindNext
+  ldrb r3, [r0, r5]  ; proc->index      cmp  r0, #0
+  cmp  r3, r4                           bne  loop
+  bne  loop          ; unconditional    movs r0, #0   ; reachable "not found"
+  movs r0, #1        ; only exit
+```
+
+`GmapRmBorder1Exists()` could therefore only ever return 1, and
+`EventBA_WmRemoveHighlightNationPart2()` (`src/eventscr_gmap.c`) returns
+`EVC_STOP_YIELD` while it is true -- an unconditional world-map lock. Evidence:
+
+* a single-step PC profile of the locked release ROM spends ~100% of samples in
+  `GmapRmBorder1Exists()`/`Proc_FindNext()`;
+* the `-Og` debug build and the archival agbcc build keep `cmp r0, #0` / `bne`
+  and do not lock;
+* sweeping the triggering input across a 380-frame window: **release locks on
+  every frame in [1840, 2140]; debug and legacy lock on none**;
+* it reproduces on the **default flags-off release ROM**, so it is
+  feature-independent and not caused by issue #6.
+
+Fixed in `src/worldmap_rm.c` / `src/worldmap_automu.c` using that file's own
+existing correct idiom, and pinned from both ends (source invariant + `-O2`
+codegen) by `tools/gba-playtest/tests/test_worldmap_proc_iter_null_guard.py`,
+whose four tests were confirmed to fail against the pre-fix sources.
+
+### Scope reminder
+
+Sprint 1 is the mechanics seam plus the player QoL overlay. **Issue #10
+(content) is not complete and is not started here** -- no chapters, units,
+classes, items or scripted events are added, and no unmerged #10 code is
+copied.

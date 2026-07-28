@@ -513,8 +513,11 @@ void ComputeBattleUnitStats(struct BattleUnit* attacker, struct BattleUnit* defe
 #if FE8_EXPANSION_MECHANICS_HOOKS
     /* Issue #6 narrow mechanics seam: vanilla base stats are now fully
      * computed; let registered mechanics adjust them before the effective-
-     * stat pass. Compiled out entirely when disabled, so the default and
-     * legacy builds keep byte-identical vanilla battle math. */
+     * stat pass. Compiled out entirely when disabled: the default and
+     * legacy builds hold zero references to the seam and compute vanilla
+     * battle stats identically (stat identity, not a ROM-byte claim -- the
+     * modern path carries no byte-identical-ROM requirement; see
+     * docs/issue-resolution-policy.md). */
     ExpansionMechanicsApplyBattleStats(attacker, defender, gBattleStats.config);
 #endif
 }

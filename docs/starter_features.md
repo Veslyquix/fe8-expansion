@@ -97,7 +97,12 @@ flags). No `void*` and no raw item/character IDs ever cross the boundary.
 `ExpansionMechanicsApplyBattleStats()` exactly once per subject, after every
 vanilla base stat is computed and before the effective-stat pass. The call is
 wrapped in `#if FE8_EXPANSION_MECHANICS_HOOKS`, so a default/legacy build has
-zero references to the seam -- byte-identical vanilla battle math. When enabled,
+zero references to the seam and computes **identical vanilla battle stats**.
+(That is a behaviour/stat-identity claim proven by the host tests and the
+default-disabled runtime negatives -- not a claim that the ROM is byte-identical
+to any other build. Per `docs/issue-resolution-policy.md` the supported modern
+path has no byte-identical requirement, and every build embeds its own commit
+and config fingerprint, so ROM bytes legitimately differ.) When enabled,
 built-ins are installed on first use and every registered mechanic runs in order.
 
 ### Sample mechanic ("Full-HP Guard")
@@ -125,8 +130,10 @@ map-menu command.
 * **Surface**: one gated `gMapMenuItems` entry (`src/menu_def.c`) with an
   original, copyright-free label ("Threat Range") drawn via `def->name`
   (`nameMsgId 0`), the exact pattern the debug hub already uses. The disabled
-  table is byte-identical vanilla; the enabled table adds exactly one
-  `MenuItemDef`, staying within `MENU_ITEM_MAX`.
+  build's compiled `gMapMenuItems` object is byte-for-byte the vanilla table
+  (asserted on the real compiled object by the host tests -- a table-level, not
+  ROM-level, claim); the enabled table adds exactly one `MenuItemDef`, staying
+  within `MENU_ITEM_MAX`.
 * **Availability / effect contract**: shown and enabled whenever the map menu
   is open. Selecting it closes the menu and enters the danger-range display,
   reusing the existing path unchanged (`PlayerPhase` label `0xC` ->
@@ -146,16 +153,80 @@ map-menu command.
 pointer): menu-select count, danger-display count, last nonzero danger-range
 tile count, a range-graphics-active flag, and cancel/return count. Every write
 is guarded by `FE8_EXPANSION_DANGER_OVERLAY_MENU`, so the default build keeps
-byte-identical vanilla `playerphase`/`bmmenu` behaviour while the probe symbol
-still links (all-zero) for negative-control scenarios.
+vanilla `playerphase`/`bmmenu` **behaviour** while the probe symbol still links
+(all-zero) for negative-control scenarios. The default-disabled runtime
+negatives prove exactly that: the same clean route reaches the same interactive
+map with every probe field 0.
 
 ## Runtime evidence
 
-The issue #13 gba-playtest harness is reused (no new framework). See
-`tools/gba-playtest/scenarios/starter-hook-modern-debug.json` (+ its negative
-control) and `tools/gba-playtest/tests/test_starter_features_scenarios.py`, and
-the `expansion-modern-starter-hook-check` Make gate. Captured counters and the
-full per-requirement matrix are in `reports/issue6_foundation_evidence.md`.
+The issue #13 gba-playtest harness is reused (no new framework), and every
+committed probe is a semantic scalar -- never a pointer, never a framebuffer or
+timing oracle (the pointer-oracle audit reports zero pointer oracles).
+
+### Clean-boot route
+
+The Sprint 1 scenarios reach a **real Prologue battle map through an ordinary
+clean boot**: no save/savestate fixture, no debug Fast Boot launcher, no debug
+tools, no test-only entry point. The route is the proven title/save-menu
+`A`/`START` cadence, `New Game`, one `DOWN` to select **Normal** difficulty, the
+first empty slot, then eleven `START` presses on the engine's own event-skip
+path (`EventEngine_CanStartSkip`/`EventEngine_StartSkip`, `src/event.c`) through
+the intro monologue, the world-map tour and the Prologue opening event. That
+reaches player phase turn 1 on the 15x10 Prologue map at frame ~3.4k -- bounded
+and deterministic (each scenario is verified twice).
+
+Normal difficulty is proven, not assumed. `SaveMenuWriteNewGame()` maps
+Easy/Normal/Difficult to `(isTutorial, isDifficult)` = `(0,0)`/`(1,0)`/`(1,1)`,
+and `InitPlayConfig()` stores `isTutorial` in `PlaySt.config.controller`. The
+scenarios assert `gPlaySt+0x42 == 0x20` (controller set) **and**
+`chapterStateBits`' `PLAY_FLAG_HARD` (`0x40`) clear, which identifies Normal
+uniquely.
+
+### Matrix
+
+| Scenario | Config | ROM | Proves |
+| --- | --- | --- | --- |
+| `starter-danger-overlay-modern-{debug,release}` | both | profile | overlay lifecycle |
+| `starter-danger-overlay-negative-modern-{debug,release}` | both | default | probe all-zero |
+| `starter-hook-clean-modern-release` | release | profile | hook on real bout |
+| `starter-hook-clean-negative-modern-release` | release | default | counters all-zero |
+| `starter-hook-modern-debug` (+ negative) | debug | profile/default | Ch4 launcher route |
+
+The QoL positive proves `menuSelectCount`/`dangerDisplayCount` `0 -> 1 -> 2`
+over two independent selections, `lastRangeTileCount` **exactly 39** non-zero
+`gBmMapRange` tiles on *both* displays, `rangeGraphicsActive` toggling `1 -> 0`
+on each `B` cancel, `cancelReturnCount` `0 -> 1 -> 2`, and cursor movement
+before and after -- the map stays interactive and the enemy stays 23/23. The
+debug and release positives assert **identical** semantics.
+
+The release hook positive rides the same clean route: the Prologue opening event
+contains a real scripted bout, so `ComputeBattleUnitStats()` genuinely runs.
+Seth (`gUnitArrayBlue[0]`) goes 30/30 -> 13/30 from damage the engine resolved,
+with `registerOkCount=1`, `registerErrCount=0`, `applyCount=2`,
+`lastAppliedCount=1`, `lastDefenseDelta=+1`, `sampleTriggerCount=2`,
+`lastResult=0`. Its negative replays the identical input list on the default
+ROM: every counter stays 0 while the bout resolves to the same 30/30 -> 13/30,
+proving vanilla battle maths is untouched when the seam is compiled out.
+
+All of it runs from one entry point, `expansion-modern-starter-runtime-check`
+(wired into `expansion-modern-linker-check`), which builds the
+starter-foundation profile ROM once per `(config, abi)` and reuses it for every
+positive scenario. Schema/contract tests:
+`tools/gba-playtest/tests/test_starter_clean_route_scenarios.py` and
+`test_starter_features_scenarios.py`. Captured counters and the full
+per-requirement matrix are in `reports/issue6_foundation_evidence.md`.
+
+### A release-only lock found on the way here
+
+Building this route surfaced a genuine, feature-independent bug: eight
+world-map helpers dereferenced `Proc_FindNext()`'s result before the NULL check,
+so `arm-none-eabi-gcc -O2` deleted the loop exit and `GmapRmBorder1Exists()`
+could only ever return 1. `EventBA_WmRemoveHighlightNationPart2()` then yielded
+forever and **any** clean-boot New Game on a modern *release* ROM -- including
+the default flags-off ROM -- hard-locked on the world map. It is fixed in
+`src/worldmap_rm.c`/`src/worldmap_automu.c` and pinned by
+`tools/gba-playtest/tests/test_worldmap_proc_iter_null_guard.py`.
 
 ## Safety notes
 
@@ -166,9 +237,13 @@ full per-requirement matrix are in `reports/issue6_foundation_evidence.md`.
 
 ## Non-goals (this sprint)
 
-* **No generated-content example.** Content (items/characters/generated data)
-  waits for issue #10's typed expanded IDs landing on `master`; no unmerged
-  code is copied. See `reports/issue6_foundation_evidence.md` for the #10
-  dependency and the read-only monitor SHA.
+* **No generated-content example -- issue #10 is NOT complete.** Sprint 1
+  delivers the mechanics seam and the player QoL overlay only; it ships no new
+  chapters, units, classes, items or scripted events, and nothing here should
+  be read as content coverage. Content waits for issue #10's typed expanded IDs
+  landing on `master`; no unmerged code is copied. See
+  `reports/issue6_foundation_evidence.md` for the #10 dependency and the
+  read-only monitor SHA. The sample mechanic is content-free by construction --
+  it exists solely to exercise the public registration API.
 * No raw numeric content IDs, no second router, no range-math rewrite, no
   UI/convoy/debug-editor growth, no persisted option, no save-epoch bump.
