@@ -5,21 +5,21 @@
       "framebuffer_hash": "fnv1a64-rgb24:bec54c71e514e8d5",
       "name": "erase-selected",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:d592c871716055be"
+      "sram_hash": "fnv1a64-sram-normalized:2908b7390b042385"
     },
     {
       "frame": 1200,
       "framebuffer_hash": "fnv1a64-rgb24:0ef4f599cf9c0122",
       "name": "confirm-shown",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:d592c871716055be"
+      "sram_hash": "fnv1a64-sram-normalized:2908b7390b042385"
     },
     {
       "frame": 1400,
       "framebuffer_hash": "fnv1a64-rgb24:723dfbe0cebe0522",
       "name": "erased",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:03453eaf5c7e59ba"
+      "sram_hash": "fnv1a64-sram-normalized:73a1a18d2bdb9453"
     }
   ],
   "format_version": 2,

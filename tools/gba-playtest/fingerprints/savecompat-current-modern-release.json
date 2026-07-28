@@ -5,7 +5,7 @@
       "framebuffer_hash": "fnv1a64-rgb24:9a0d10ad8761a13a",
       "name": "no-dialog-normal-savemenu",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:071a2fc7ed940ec0"
+      "sram_hash": "fnv1a64-sram-normalized:b93a8f3216a43891"
     }
   ],
   "format_version": 2,
