@@ -69,6 +69,38 @@ def _extract_struct(text: str, name: str) -> str:
     return text[start:end]
 
 
+def _extract_struct_with_trailing_attribute(text: str, name: str) -> str:
+    """Like _extract_struct(), but brace-depth-counts to the matching
+    closing brace and then to the *next* terminating ';' after it --
+    robust to a trailing attribute between the closing brace and the
+    semicolon (e.g. ``} ALIGN(4);``, struct ExpansionUserPrefs's own
+    closing line, include/expansion_save_prefs.h), which
+    _extract_struct()'s literal ``"};"`` search cannot match."""
+    decl_match = re.search(r"\nstruct " + re.escape(name) + r"\s*\{", text)
+    if decl_match is None:
+        raise AssertionError(f"could not locate struct {name!r}")
+    start = decl_match.start() + 1
+    brace_open = text.index("{", decl_match.end() - 1)
+
+    depth = 0
+    i = brace_open
+    close_brace = None
+    while i < len(text):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                close_brace = i
+                break
+        i += 1
+    if close_brace is None:
+        raise AssertionError(f"unbalanced braces while extracting struct {name!r}")
+
+    end = text.index(";", close_brace) + 1
+    return text[start:end]
+
+
 class BuildCurrentExpansionSaveMetaNativeByteTests(unittest.TestCase):
     """Compiles+runs the real C BuildCurrentExpansionSaveMeta() natively
     (host cc, not agbcc/ARM) and compares its raw output bytes -- pad
@@ -88,6 +120,9 @@ class BuildCurrentExpansionSaveMetaNativeByteTests(unittest.TestCase):
         cls.save_format_h = (ROOT / "include" / "save_format.h").read_text(encoding="utf-8")
         cls.bmsave_lib_c = (ROOT / "src" / "bmsave-lib.c").read_text(encoding="utf-8")
         cls.bmlib_c = (ROOT / "src" / "bmlib.c").read_text(encoding="utf-8")
+        cls.expansion_save_prefs_h = (
+            ROOT / "include" / "expansion_save_prefs.h"
+        ).read_text(encoding="utf-8")
 
     def _build_and_run_probe(self, defines):
         """Assembles the real struct + real function bodies (extracted
@@ -102,6 +137,17 @@ class BuildCurrentExpansionSaveMetaNativeByteTests(unittest.TestCase):
         build_meta_fn = _extract_c_function(self.bmsave_lib_c, "BuildCurrentExpansionSaveMeta")
         checksum_fn = _extract_c_function(self.bmsave_lib_c, "ExpansionSaveMetaChecksum")
 
+        # Issue #18 sprint 2: BuildCurrentExpansionSaveMeta() now also
+        # stamps a default struct ExpansionUserPrefs record into
+        # `reserved` -- extract that struct/its two pure functions
+        # verbatim too, so this probe keeps exercising the *real* C
+        # source rather than a stale pre-sprint-2 snapshot of it.
+        user_prefs_struct_def = _extract_struct_with_trailing_attribute(
+            self.expansion_save_prefs_h, "ExpansionUserPrefs"
+        )
+        user_prefs_build_fn = _extract_c_function(self.bmsave_lib_c, "ExpansionUserPrefs_Build")
+        user_prefs_checksum_fn = _extract_c_function(self.bmsave_lib_c, "ExpansionUserPrefsChecksum")
+
         probe_source = f"""\
 #include <stdint.h>
 #include <string.h>
@@ -112,13 +158,22 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int8_t s8;
 typedef s8 bool;
+typedef u8 bool8;
 enum {{ false, true }};
 
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+
 #define STRUCT_PAD(from, to) unsigned char _pad_ ## from[(to) - (from)]
+#define ALIGN(m) __attribute__((aligned (m)))
 
 #define EXPANSION_SAVE_META_MAGIC "FSAV"
 #define EXPANSION_SAVE_META_MAGIC_SIZE 4
-#define SAVE_FORMAT_VERSION_CURRENT 1
+#define SAVE_FORMAT_VERSION_CURRENT 2
 #define EXPANSION_SAVE_META_SIZE_FOR_CHECKSUM 0x2E
 
 enum SaveAbiId {{
@@ -127,6 +182,22 @@ enum SaveAbiId {{
 }};
 
 {struct_def};
+
+/* Issue #18 sprint 2: ExpansionUserPrefs's own type/macros -- kept
+ * minimal/self-contained here (rather than including the real
+ * include/expansion_locale.h, which pulls in a much larger
+ * message-registry surface this probe has no need for); the struct and
+ * functions themselves below are still extracted byte-for-byte from the
+ * real source files, only these small supporting type/macro
+ * declarations are hand-written. */
+typedef u8 ExpansionLocaleId;
+#define EXPANSION_USER_PREFS_MAGIC 0xA5u
+#define EXPANSION_USER_PREFS_VERSION_CURRENT 1u
+#define EXPANSION_USER_PREFS_FLAG_LOCALE_EXPLICIT 0x01u
+#define EXPANSION_USER_PREFS_SIZE_FOR_CHECKSUM 0x08
+#define EXPANSION_USER_PREFS_META_OFFSET 0
+
+{user_prefs_struct_def};
 
 #include "expansion_config.h"
 
@@ -137,6 +208,10 @@ enum SaveAbiId {{
 {copy_string_bounded_fn}
 
 {checksum_fn}
+
+{user_prefs_checksum_fn}
+
+{user_prefs_build_fn}
 
 {build_meta_fn}
 
@@ -188,6 +263,19 @@ int main(void)
         ]
         c_bytes = self._build_and_run_probe(defines)
 
+        # Issue #18 sprint 2: the C probe stamps a default
+        # ExpansionUserPrefs record (locale id 0 -- the -D flags above
+        # never override FE8_EXPANSION_DEFAULT_LOCALE_ID, so
+        # include/expansion_config.h's own fallback default (0) applies
+        # on both the C and Python sides identically) into `reserved`,
+        # zero-padded out to the full reserved-tail size -- no longer an
+        # all-zero reserved tail.
+        default_prefs = sft.build_default_user_prefs(0, explicit_selection=False)
+        default_prefs_bytes = default_prefs.pack()
+        expected_reserved = default_prefs_bytes + b"\x00" * (
+            sft.META_SIZE - sft.META_CHECKSUM_DOMAIN - 2 - len(default_prefs_bytes)
+        )
+
         py_meta = sft.ExpansionSaveMeta(
             magic=sft.META_MAGIC,
             format_version=sft.SAVE_FORMAT_VERSION_CURRENT,
@@ -197,7 +285,7 @@ int main(void)
             config_fingerprint=b"1234567890abcdef\x00",
             build_commit_short=(b"deadbeefcafebabe1234"[:8] + b"\x00" * 9)[:9],
             checksum=0,
-            reserved=b"\x00" * (sft.META_SIZE - sft.META_CHECKSUM_DOMAIN - 2),
+            reserved=expected_reserved,
         )
         py_meta.checksum = py_meta.computed_checksum()
         py_bytes = py_meta.pack()
@@ -215,6 +303,18 @@ int main(void)
             self.assertEqual(
                 c_bytes[offset], 0,
                 f"pad byte at offset 0x{offset:02X} was not deterministically zeroed",
+            )
+
+        # Every byte of `reserved` past the stamped ExpansionUserPrefs
+        # record (issue #18 sprint 2's remaining headroom) must also be
+        # exactly zero, not leftover stack garbage -- same determinism
+        # property, extended to the new sub-record's own tail.
+        reserved_start = sft.META_CHECKSUM_DOMAIN + 2
+        headroom_start = reserved_start + len(default_prefs_bytes)
+        for offset in range(headroom_start, sft.META_SIZE):
+            self.assertEqual(
+                c_bytes[offset], 0,
+                f"reserved headroom byte at offset 0x{offset:02X} was not deterministically zeroed",
             )
 
     def test_native_c_output_is_repeatable_across_builds(self):

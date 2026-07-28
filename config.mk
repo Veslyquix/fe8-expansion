@@ -65,7 +65,11 @@ EXPANSION_BUILD_ID ?=
 # see docs/save_format.md for the full compatibility-vs-diagnostic field
 # list and docs/config_identity.md for how this fits the rest of the
 # identity surface.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 1
+#
+# Bumped 1 -> 2 for issue #18 sprint 2: struct ExpansionUserPrefs
+# (include/expansion_save_prefs.h) now occupies part of ExpansionSaveMeta's
+# `reserved` tail.
+EXPANSION_SAVE_COMPAT_EPOCH ?= 2
 
 # --- Localization (issue #18 sprint 1) --------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see

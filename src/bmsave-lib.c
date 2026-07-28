@@ -10,6 +10,7 @@
 #include "bmlib.h"
 #include "eventinfo.h"
 #include "bonusclaim.h"
+#include "expansion_save_prefs.h"
 
 // TODO: Should be in "bmsave.h", but doing so causes a non-match (implicit declaration?) in "bonusclaim.c"
 bool LoadBonusContentData(void *buf);
@@ -161,6 +162,27 @@ static bool IsRegionBlank(void const *data, int size)
     return true;
 }
 
+/* True if every byte of the region is 0x00 -- the deterministic "never
+ * written" pattern every pre-issue-#18-sprint-2 build left in struct
+ * ExpansionSaveMeta's `reserved` tail (see BuildCurrentExpansionSaveMeta()
+ * below, which memset()s the whole struct before setting any named
+ * field). Used by ExpansionUserPrefs_ValidateRaw()'s callers alongside
+ * IsRegionBlank() above so either legacy "unset" pattern (all-zero or
+ * all-0xFF) is treated as EXPANSION_USER_PREFS_UNSET, never CORRUPT. */
+static bool IsRegionAllZero(void const *data, int size)
+{
+    u8 const *bytes = data;
+    int i;
+
+    for (i = 0; i < size; ++i)
+    {
+        if (bytes[i] != 0x00)
+            return false;
+    }
+
+    return true;
+}
+
 void BuildCurrentExpansionSaveMeta(struct ExpansionSaveMeta *meta)
 {
     int i;
@@ -188,7 +210,26 @@ void BuildCurrentExpansionSaveMeta(struct ExpansionSaveMeta *meta)
     CopyStringBounded(meta->configFingerprint, FE8_EXPANSION_CONFIG_FINGERPRINT, sizeof(meta->configFingerprint));
     CopyStringBounded(meta->buildCommitShort, FE8_EXPANSION_BUILD_COMMIT, sizeof(meta->buildCommitShort));
 
-    /* meta->reserved is already zeroed by the memset() above. */
+    /*
+     * Issue #18 sprint 2: a brand-new save (the only real caller of this
+     * function -- InitGlobalSaveInfodata(), on genuinely blank SRAM only)
+     * gets a fully-built, current ExpansionUserPrefs record stamped into
+     * the front of `reserved` (EXPANSION_USER_PREFS_META_OFFSET), rather
+     * than leaving it at the implicitly-zeroed EXPANSION_USER_PREFS_UNSET
+     * state -- the same "stamp current metadata now, don't wait for the
+     * player to touch it" precedent already used for formatVersion/
+     * compatEpoch above. explicitSelection=FALSE: this is this build's
+     * configured default, not something the player chose. Every
+     * remaining byte of `reserved` past this record stays zeroed by the
+     * memset() above (EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES of
+     * future headroom, include/expansion_save_prefs.h).
+     */
+    {
+        struct ExpansionUserPrefs prefs;
+
+        ExpansionUserPrefs_Build(&prefs, (ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID, FALSE);
+        memcpy(&meta->reserved[EXPANSION_USER_PREFS_META_OFFSET], &prefs, sizeof(prefs));
+    }
 
     meta->checksum = ExpansionSaveMetaChecksum(meta);
 }
@@ -253,6 +294,145 @@ enum SaveCompatState ClassifySramSaveCompat(void)
     return ClassifySaveCompatRaw(
         &header, IsRegionBlank(&header, sizeof(header)),
         &meta, IsRegionBlank(&meta, sizeof(meta)));
+}
+
+/* --- ExpansionUserPrefs (issue #18 sprint 2) --------------------------- */
+
+void ExpansionUserPrefs_Build(struct ExpansionUserPrefs *prefs, ExpansionLocaleId localeId, bool8 explicitSelection)
+{
+    memset(prefs, 0, sizeof(*prefs));
+
+    prefs->magic = EXPANSION_USER_PREFS_MAGIC;
+    prefs->version = EXPANSION_USER_PREFS_VERSION_CURRENT;
+    prefs->localeId = (u8)localeId;
+    prefs->flags = explicitSelection ? EXPANSION_USER_PREFS_FLAG_LOCALE_EXPLICIT : 0;
+
+    /* prefs->reserved is already zeroed by the memset() above. */
+
+    prefs->checksum = ExpansionUserPrefsChecksum(prefs);
+}
+
+u16 ExpansionUserPrefsChecksum(struct ExpansionUserPrefs const *prefs)
+{
+    return Checksum16(prefs, EXPANSION_USER_PREFS_SIZE_FOR_CHECKSUM);
+}
+
+enum ExpansionUserPrefsState ExpansionUserPrefs_ValidateRaw(struct ExpansionUserPrefs const *prefs, bool8 regionUnset)
+{
+    /*
+     * Deliberately checks EXPANSION_LOCALE_COUNT/FE8_EXPANSION_ENABLED_LOCALE_MASK
+     * directly (compile-time macros/constants, include/expansion_locale.h
+     * and include/expansion_config.h) rather than calling
+     * ExpansionLocale_IsSupported()/ExpansionLocale_IsEnabled()
+     * (src/expansion_locale.c): those real functions are only linked
+     * into the modern ROM (see include/expansion_locale.h's file
+     * comment), while this function -- like ClassifySaveCompatRaw() --
+     * must stay callable from the legacy-linked src/bmsave-lib.c. Both
+     * call sites derive the same answer from the same single-source-of-
+     * truth macros, so there is no duplicated business logic to drift.
+     */
+    if (regionUnset)
+        return EXPANSION_USER_PREFS_UNSET;
+
+    if (prefs->magic != EXPANSION_USER_PREFS_MAGIC)
+        return EXPANSION_USER_PREFS_CORRUPT;
+
+    if (prefs->checksum != ExpansionUserPrefsChecksum(prefs))
+        return EXPANSION_USER_PREFS_CORRUPT;
+
+    if (prefs->version > EXPANSION_USER_PREFS_VERSION_CURRENT)
+        return EXPANSION_USER_PREFS_CORRUPT;
+
+    if (prefs->localeId >= EXPANSION_LOCALE_COUNT)
+        return EXPANSION_USER_PREFS_UNKNOWN_LOCALE;
+
+    if (!(FE8_EXPANSION_ENABLED_LOCALE_MASK & ((u32)1 << prefs->localeId)))
+        return EXPANSION_USER_PREFS_DISABLED_LOCALE;
+
+    if (prefs->version < EXPANSION_USER_PREFS_VERSION_CURRENT)
+        return EXPANSION_USER_PREFS_MIGRATED;
+
+    return EXPANSION_USER_PREFS_VALID;
+}
+
+enum ExpansionUserPrefsState ExpansionUserPrefs_Load(struct ExpansionUserPrefs *out)
+{
+    struct ExpansionUserPrefs local;
+    bool regionUnset;
+
+    if (!IsSramWorking())
+    {
+        if (out != NULL)
+            memset(out, 0, sizeof(*out));
+        return EXPANSION_USER_PREFS_CORRUPT;
+    }
+
+    ReadSramFast(&gSram->expansionSaveMeta.reserved[EXPANSION_USER_PREFS_META_OFFSET], &local, sizeof(local));
+
+    regionUnset = IsRegionBlank(&local, sizeof(local)) || IsRegionAllZero(&local, sizeof(local));
+
+    if (out != NULL)
+        *out = local;
+
+    return ExpansionUserPrefs_ValidateRaw(&local, regionUnset);
+}
+
+enum ExpansionUserPrefsState ExpansionUserPrefs_Normalize(
+    struct ExpansionUserPrefs const *prefs,
+    enum ExpansionUserPrefsState state,
+    ExpansionLocaleId *outLocaleId,
+    bool8 *outRequiresPrompt)
+{
+    if (state == EXPANSION_USER_PREFS_VALID || state == EXPANSION_USER_PREFS_MIGRATED)
+    {
+        if (outLocaleId != NULL)
+            *outLocaleId = (ExpansionLocaleId)prefs->localeId;
+        if (outRequiresPrompt != NULL)
+            *outRequiresPrompt = FALSE;
+    }
+    else
+    {
+        if (outLocaleId != NULL)
+            *outLocaleId = (ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID;
+        if (outRequiresPrompt != NULL)
+            *outRequiresPrompt = TRUE;
+    }
+
+    return state;
+}
+
+bool8 ExpansionUserPrefs_StoreRaw(ExpansionLocaleId localeId, bool8 explicitSelection)
+{
+    struct ExpansionUserPrefs prefs;
+    u32 errorAddr;
+
+    if (localeId >= EXPANSION_LOCALE_COUNT)
+        return FALSE;
+
+    if (!(FE8_EXPANSION_ENABLED_LOCALE_MASK & ((u32)1 << localeId)))
+        return FALSE;
+
+    if (!IsSramWorking())
+        return FALSE;
+
+    /*
+     * Issue #18 sprint 2 write-interruption contract: build the whole
+     * record (magic/version/localeId/flags/checksum) in a local, non-SRAM
+     * temporary first, then perform exactly one bounded
+     * WriteAndVerifySramFast() call covering only this record's own
+     * fixed window inside gSram->expansionSaveMeta.reserved -- never
+     * WipeSram(), never any wider write. `prefs` (stack-local) and the
+     * SRAM destination never overlap. If interrupted/failed partway, at
+     * worst this record's own checksum stops matching on the next read
+     * (classified EXPANSION_USER_PREFS_CORRUPT -- safe fallback + a
+     * requires-prompt signal, never SRAM corruption elsewhere).
+     */
+    ExpansionUserPrefs_Build(&prefs, localeId, explicitSelection);
+
+    errorAddr = WriteAndVerifySramFast(
+        &prefs, &gSram->expansionSaveMeta.reserved[EXPANSION_USER_PREFS_META_OFFSET], sizeof(prefs));
+
+    return (bool8)(errorAddr == 0);
 }
 
 bool ReadGlobalSaveInfo(struct GlobalSaveInfo *buf)

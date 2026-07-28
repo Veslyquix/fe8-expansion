@@ -136,9 +136,15 @@
  * must never make an existing current save look incompatible). Bump only
  * this value when a save-layout/serialization change requires it -- see
  * docs/save_format.md.
+ *
+ * Bumped 1 -> 2 for issue #18 sprint 2 alongside SAVE_FORMAT_VERSION_CURRENT
+ * (include/save_format.h): struct ExpansionUserPrefs now occupies part of
+ * ExpansionSaveMeta's `reserved` tail. This default is compiled in only
+ * when config.mk does not itself define EXPANSION_SAVE_COMPAT_EPOCH (the
+ * repository's config.mk does, and is bumped to the same value).
  */
 #ifndef FE8_EXPANSION_SAVE_COMPAT_EPOCH
-#define FE8_EXPANSION_SAVE_COMPAT_EPOCH 1
+#define FE8_EXPANSION_SAVE_COMPAT_EPOCH 2
 #endif
 
 

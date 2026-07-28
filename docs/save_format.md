@@ -64,9 +64,82 @@ field (`STRUCT_PAD` fills the small alignment gaps between them):
 | `0x24` | 9 | `buildCommitShort` (8 hex chars + NUL) | diagnostic only |
 | `0x2D` | 1 | *(pad)* | -- |
 | `0x2E` | 2 | `checksum` (`Checksum16` over `[0x00, 0x2E)`) | -- |
-| `0x30` | 44 | `reserved` (zero-filled) | -- |
+| `0x30` | 44 | `reserved` (`struct ExpansionUserPrefs` at offset `0x00`-`0x0B` since issue #18 sprint 2, see below; remaining `0x0C`-`0x2B` still zero-filled headroom) | -- |
 
 Total: `0x5C` bytes exactly.
+
+### `struct ExpansionUserPrefs` (issue #18 sprint 2)
+
+The player's own persisted locale selection is a distinct, independently
+versioned/checksummed sub-record living at a **fixed byte offset inside
+`ExpansionSaveMeta.reserved`** (`EXPANSION_USER_PREFS_META_OFFSET`, currently
+`0`) -- it does **not** move `SRAM_OFFSET_EXPANSION_SAVE_META`, resize
+`ExpansionSaveMeta` (still exactly `0x5C` bytes), change any `0x00`-`0x2F`
+field's offset, or touch `xmap`/any other `SaveBlocks` field. See
+`include/expansion_save_prefs.h`.
+
+| Offset (within `reserved`) | Size | Field |
+| --- | --- | --- |
+| `0x00` | 1 | `magic` (`0xA5`) |
+| `0x01` | 1 | `version` (`EXPANSION_USER_PREFS_VERSION_CURRENT`, currently `1`) |
+| `0x02` | 1 | `localeId` (`ExpansionLocaleId`) |
+| `0x03` | 1 | `flags` (bit 0 = `EXPANSION_USER_PREFS_FLAG_LOCALE_EXPLICIT`) |
+| `0x04` | 4 | `reserved[4]` (always `0`, headroom for near-future fields) |
+| `0x08` | 2 | `checksum` (`Checksum16` over `[0x00, 0x08)`, its own independent domain -- never covered by `ExpansionSaveMeta`'s own checksum) |
+
+`sizeof(struct ExpansionUserPrefs) == 0x0C` (`ALIGN(4)` forces legacy agbcc
+and modern AAPCS-conformant GCC to agree on this size -- the same class of
+cross-compiler layout fix already used for `struct BonusClaimSaveData`,
+`include/bmsave.h`). This leaves `EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES
+== 0x20` (32 bytes) of `reserved` tail still free for future sub-records;
+`scripts/modernize/tests/test_save_format_layout.py` proves the headroom
+computation never goes negative and that every existing `0x00`-`0x2F` field
+offset is unchanged.
+
+**No-wipe contract.** None of `ExpansionUserPrefs_Build/ValidateRaw/Load/
+Normalize/StoreRaw` (`src/bmsave-lib.c`) ever calls `WipeSram()` or touches
+any byte outside this record's own `0x0C`-byte window. An all-zero record
+(every pre-sprint-2 "current" save's `reserved` tail, always deterministically
+zeroed by `BuildCurrentExpansionSaveMeta()`) or all-`0xFF` record (the
+documented blank-SRAM fill pattern) classifies `EXPANSION_USER_PREFS_UNSET`,
+never `EXPANSION_USER_PREFS_CORRUPT` -- so an old save that predates this
+sprint, or a never-yet-saved slot, is never misdiagnosed as damaged.
+`EXPANSION_USER_PREFS_CORRUPT` (bad magic/checksum/future version),
+`EXPANSION_USER_PREFS_UNKNOWN_LOCALE` (locale id outside this build's known
+slots), and `EXPANSION_USER_PREFS_DISABLED_LOCALE` (a known but currently
+disabled locale) likewise never mutate SRAM: `ExpansionUserPrefs_Normalize`
+resolves all four of these non-`VALID`/non-`MIGRATED` states down to this
+build's configured default locale (`FE8_EXPANSION_DEFAULT_LOCALE_ID`) with
+`requiresPrompt = TRUE`, so a runtime caller falls back safely and can
+re-prompt the player instead of silently trusting (or erasing) an unusable
+record. `EXPANSION_USER_PREFS_MIGRATED` (a well-formed older-version record)
+and `EXPANSION_USER_PREFS_VALID` both resolve with `requiresPrompt = FALSE`.
+
+`ExpansionUserPrefs_Store` (`src/expansion_save_prefs.c`, modern-only linked --
+see the file header comment) is the only function that ever writes this
+record: it builds a fresh checksummed record in a local temporary, rejects
+an unsupported/disabled `localeId` before touching SRAM at all, and reuses
+the exact same bounded single `ReadSramFast`/`WriteAndVerifySramFast`-based
+existing-API write path `BuildCurrentExpansionSaveMeta`'s callers already
+use -- no new parallel SRAM-write mechanism, no source/destination buffer
+overlap, no `WipeSram()` call on any validation failure. On a successful
+store it calls `ExpansionLocale_SetCurrent()` (which internally invalidates
+the runtime resolver's cache), so a UI that just persisted a selection can
+immediately observe it without a reboot.
+
+Host-side (`scripts/modernize/save_format_tool.py`) mirrors this exact
+struct/classification/checksum logic in Python (`ExpansionUserPrefs`
+dataclass + `classify_user_prefs_raw`/`classify_user_prefs_bytes`/
+`normalize_user_prefs`), and
+`cmd_migrate` **preserves** an existing source's `reserved` bytes (hence
+its prefs record) verbatim across a v1(+)->current migration -- only a
+true v0/vanilla source (nothing to preserve) gets a fresh default record.
+`scripts/modernize/tests/test_expansion_user_prefs_native.py` cross-checks
+the real C implementation (extracted verbatim from `src/bmsave-lib.c` and
+compiled/run as a host probe) against the Python mirror across the full
+9-case state matrix (blank-`0xFF`, unset-zero, valid, unknown-locale,
+disabled-locale, corrupt-magic, corrupt-checksum, corrupt-newer-version,
+migrated-older-version).
 
 ### Compatibility vs. diagnostic fields
 
@@ -686,6 +759,7 @@ required) and their only in-console options are Back or a full erase.
 | Any `FE8_EXPANSION_*` build/title/debug/ROM-size-only setting | neither `SAVE_FORMAT_VERSION_CURRENT` nor `EXPANSION_SAVE_COMPAT_EPOCH` | none -- these never gate compatibility |
 | A save-layout/serialization-compatible addition (e.g. a new optional field with a documented default) | `SAVE_FORMAT_VERSION_CURRENT` (metadata `formatVersion`) | old saves classify `SAVE_COMPAT_MIGRATABLE_OLDER` -> `MSG_SAVE_COMPAT_OLDER`; a newer save loaded on an older build classifies `SAVE_COMPAT_NEWER_UNSUPPORTED` -> `MSG_SAVE_COMPAT_NEWER` |
 | A save-layout/serialization-incompatible change (reordered/resized/reinterpreted fields, changed checksum domain, changed packing) | `EXPANSION_SAVE_COMPAT_EPOCH` (`config.mk`) | saves built under the old epoch classify `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` -> `MSG_SAVE_COMPAT_CONFIG_INCOMPATIBLE` |
+| Concrete instance: issue #18 sprint 2 stamped `struct ExpansionUserPrefs` into the previously-always-zero `reserved` tail and started reading it at boot -- an on-media semantic change to what a "current" save's bytes mean, even though `ExpansionSaveMeta`'s own `0x00`-`0x2E` checksum domain/fields are untouched | `SAVE_FORMAT_VERSION_CURRENT` `1`->`2` **and** `EXPANSION_SAVE_COMPAT_EPOCH` `1`->`2` (both bumped together, out of caution -- a v1 save's `reserved` tail was always zero-filled so it is also valid `EXPANSION_USER_PREFS_UNSET` input, but the epoch bump makes the classification change explicit/auditable rather than silent) | a genuine pre-sprint-2 save classifies `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` and must go through the host `migrate` CLI (which preserves any bytes already in `reserved`, so a hypothetical already-populated future field would survive; today's v1 saves have nothing there to preserve) |
 | Corrupted `GlobalSaveInfo` header | (detected, not a bump) | `SAVE_COMPAT_HEADER_CORRUPT` -> `MSG_SAVE_COMPAT_HEADER_CORRUPT` |
 | Corrupted `ExpansionSaveMeta` (bad checksum) | (detected, not a bump) | `SAVE_COMPAT_METADATA_CORRUPT` -> `MSG_SAVE_COMPAT_METADATA_CORRUPT` |
 | No metadata record at all (true vanilla, or pre-slice-1 expansion save) | (detected, not a bump) | `SAVE_COMPAT_VALID_LEGACY_OR_VANILLA` -> `MSG_SAVE_COMPAT_LEGACY` |

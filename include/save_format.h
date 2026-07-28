@@ -30,8 +30,20 @@
 
 /* Current on-media save-format version. Bump together with
  * FE8_EXPANSION_SAVE_COMPAT_EPOCH (include/expansion_config.h) whenever a
- * save-layout/serialization change is made -- see docs/save_format.md. */
-#define SAVE_FORMAT_VERSION_CURRENT 1
+ * save-layout/serialization change is made -- see docs/save_format.md.
+ *
+ * Bumped 1 -> 2 for issue #18 sprint 2: struct ExpansionUserPrefs
+ * (include/expansion_save_prefs.h) now occupies a fixed sub-region of
+ * this struct's `reserved` tail below. This is a conservative bump, not
+ * a strictly-required one -- the sub-record carries its own independent
+ * magic/version/checksum and treats a zeroed reserved tail (every
+ * pre-sprint-2 build's deterministic output) as EXPANSION_USER_PREFS_UNSET
+ * rather than corrupt, so a pre-sprint-2 build's saves already parse
+ * safely under the new logic and a post-sprint-2 build's saves are
+ * simply ignored (never misread) by a pre-sprint-2 build. The version
+ * is still bumped per this project's stated policy of bumping on any
+ * save-layout/serialization change to this struct, however additive. */
+#define SAVE_FORMAT_VERSION_CURRENT 2
 
 /* Diagnostic-only: which ABI produced this save. Never gates
  * compatibility -- see docs/save_format.md. */
@@ -64,7 +76,13 @@ struct ExpansionSaveMeta {
     /* 0x24 */ char buildCommitShort[9]; /* 8 hex chars + NUL */
     /* 0x2D */ STRUCT_PAD(0x2D, 0x2E);
     /* 0x2E */ u16 checksum; /* Checksum16() over bytes [0x00, 0x2E) */
-    /* 0x30 */ u8 reserved[0x5C - 0x30]; /* reserved for future fields */
+    /* 0x30 */ u8 reserved[0x5C - 0x30]; /* reserved for future fields --
+                                             * bytes [0x30, 0x30 +
+                                             * EXPANSION_USER_PREFS_SIZE)
+                                             * are struct ExpansionUserPrefs
+                                             * (include/expansion_save_prefs.h,
+                                             * issue #18 sprint 2); the
+                                             * remainder stays reserved. */
 }; /* size = 0x5C */
 
 /* Number of leading bytes of struct ExpansionSaveMeta covered by its own
