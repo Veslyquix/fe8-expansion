@@ -25,6 +25,7 @@ MODERN_GOALS := \
 	expansion-modern-overlay-audit \
 	expansion-modern-shifted-check \
 	expansion-modern-linker-check \
+	expansion-modern-idspace-active-check \
 	expansion-modern-clean
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
@@ -164,6 +165,25 @@ MODERN_CFLAGS := \
 	$(MODERN_WARNING_FLAGS) \
 	$(MODERN_CONFIG_FLAGS) \
 	$(MODERN_ABI_FLAGS)
+
+# Issue #10 (expansion-modern-idspace-active-check hermeticity): MODERN_CFLAGS
+# bakes in whatever FE8_ITEM_ID_CAP happened to be resolved when *this*
+# running instance of make parsed modern.mk (an ambient shell environment
+# variable, or a `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment
+# for this very invocation) via MODERN_DEFINE_FLAGS above -- MODERN_CFLAGS
+# itself is a plain `:=` snapshot, taken once, not re-evaluated per recipe
+# line. expansion-modern-idspace-active-check needs to compile three
+# DIFFERENT, explicit cap states (no cap define at all, -DFE8_ITEM_ID_CAP=0xCE,
+# and "the 0xCE-record table with no cap define") in the course of ONE gate
+# run, regardless of whatever ambient value the *caller* happened to invoke
+# it under. Reusing $(MODERN_CFLAGS) as-is for any of those three compiles
+# would silently fold the caller's ambient cap into all of them instead
+# (e.g. an ambient/CLI FE8_ITEM_ID_CAP=0xCE would make the "no cap flag"
+# steps compile with the flag anyway, turning the gate's own default and
+# negative-mismatch assertions into false failures/false passes). Strip any
+# existing -DFE8_ITEM_ID_CAP=... word so the gate can supply its own,
+# explicit, per-step cap define (or none) on top of this instead.
+MODERN_CFLAGS_NOCAP := $(filter-out -DFE8_ITEM_ID_CAP=%,$(MODERN_CFLAGS))
 
 MODERN_BUILD_ROOT := build/expansion-modern
 MODERN_OUTPUT_DIR := $(MODERN_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
@@ -1970,6 +1990,70 @@ expansion-modern-newgame-check: expansion-modern-boot-preflight expansion-modern
 # tools/gba-playtest/run_save_compat_checks.py is fully ROM/ABI-agnostic.
 MODERN_SAVEFMT_CHECKS := tools/gba-playtest/run_save_compat_checks.py
 MODERN_SAVEFMT_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/savefmt-fixtures
+
+# ---------------------------------------------------------------------------
+# Issue #10: the ACTIVE id-space contract must be COMPILED, not just generated
+# ---------------------------------------------------------------------------
+# The generated item table (build/generated/data/data_items.c) includes the
+# build-local ACTIVE header and compile-time asserts that the compiler cap
+# (-DFE8_ITEM_ID_CAP / include/id_space.h default) and the generated record
+# count are the same build input. This gate proves all three directions with
+# the real modern toolchain:
+#   * default    -> 0xCD / 206 records compiles;
+#   * configured -> 0xCE / 207 records compiles with -DFE8_ITEM_ID_CAP=0xCE;
+#   * mismatched -> the 0xCE table compiled WITHOUT the flag must fail, which
+#     is exactly the silent 206-vs-207 divergence this contract exists to stop.
+# Compile-only (no link/ROM), so it is fast and needs no emulator; it restores
+# the default-cap generated table on the way out.
+#
+# Hermeticity (this gate must pass identically regardless of how the CALLER
+# invoked it -- ambient shell environment unset, ambient FE8_ITEM_ID_CAP=0xCE,
+# or a `make ... FE8_ITEM_ID_CAP=0xCE` command-line assignment on the gate
+# itself): two independent leaks had to be closed, both stemming from the same
+# root cause -- FE8_ITEM_ID_CAP is resolved ONCE per make process, not
+# per-recipe-line, so a plain env-var prefix on a recipe command is not enough
+# to force a particular state:
+#   1. $(MODERN_CFLAGS) bakes in whatever FE8_ITEM_ID_CAP this gate's OWN
+#      make process resolved at parse time (see MODERN_CFLAGS_NOCAP above).
+#      Every compile below therefore uses $(MODERN_CFLAGS_NOCAP) plus its own
+#      explicit -DFE8_ITEM_ID_CAP (or none), never the ambient $(MODERN_CFLAGS).
+#   2. Each $(MAKE) recursion that regenerates $$C re-resolves FE8_ITEM_ID_CAP
+#      for that CHILD process. A `FE8_ITEM_ID_CAP=... $(MAKE) ...` shell env
+#      prefix is silently ignored by that child whenever the gate itself was
+#      invoked with a `make ... FE8_ITEM_ID_CAP=...` command-line assignment,
+#      because GNU Make auto-forwards command-line-origin variables to every
+#      recursive $(MAKE) via MAKEFLAGS, and command-line origin outranks a
+#      plain environment-variable prefix in the child too. The fix is GNU
+#      Make's own documented escape hatch: pass FE8_ITEM_ID_CAP as an explicit
+#      argument on the recursive make's OWN command line (`$(MAKE)
+#      FE8_ITEM_ID_CAP=... $$C`, including the empty `FE8_ITEM_ID_CAP=` to
+#      force the unset default) -- that always wins, in every ambient/CLI
+#      combination, because it is that child's own command line.
+.PHONY: expansion-modern-idspace-active-check
+expansion-modern-idspace-active-check: expansion-modern-toolchain-check
+	@set -e; \
+	OUT="$(MODERN_OUTPUT_DIR)/idspace-active-check"; mkdir -p "$$OUT"; \
+	C=$(GENERATED_DATA_OUT_DIR)/data_items.c; H=$(GENERATED_DATA_ACTIVE_HEADER); \
+	echo "--- default cap: generated table and ACTIVE header must both say 0xCD / 206 ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: ACTIVE header is not at the default cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: ACTIVE header record count is not 206" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_default.o"; \
+	echo "OK: default-cap generated table compiles against the ACTIVE contract (0xCD / 206)"; \
+	echo "--- configured cap: FE8_ITEM_ID_CAP=0xCE must move both to 0xCE / 207 ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: ACTIVE header did not follow the configured cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 207" $$H || { echo "FAIL: ACTIVE header record count is not 207" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -DFE8_ITEM_ID_CAP=0xCE -c "$$C" -o "$$OUT/items_active.o"; \
+	echo "OK: configured generated table compiles against the ACTIVE contract (0xCE / 207)"; \
+	echo "--- negative: the 0xCE table compiled without the cap flag must FAIL ---"; \
+	if "$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_mismatch.o" >/dev/null 2>&1; then \
+		echo "FAIL: a 207-record table compiled at the 0xCD compiler cap -- the contract assert is dead" >&2; exit 1; \
+	fi; \
+	echo "OK: cap/count divergence is a hard compile error, not a silent truncation"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap state was not restored" >&2; exit 1; }; \
+	echo "PASS: expansion-modern-idspace-active-check"
 
 expansion-modern-savefmt-check: expansion-modern-boot-preflight expansion-modern-rom
 	"$(PYTHON)" "$(MODERN_SAVEFMT_CHECKS)" \

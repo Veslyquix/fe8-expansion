@@ -8,10 +8,77 @@ domain (character, class, item, chapter, unit, event) and every consumer
 link/network representations, external interfaces) that must never silently
 truncate an expanded ID.
 
+## DEFAULT contract vs ACTIVE contract (read this first)
+
+There are two contracts, and mixing them up is the mistake this framework now
+makes impossible:
+
+| | DEFAULT (committed) | ACTIVE (build-local) |
+|---|---|---|
+| Where | `include/id_space.h`, `reports/id_space_audit.{json,md}`, `reports/generated_data_manifest.md` | `build/generated/data/id_space_active.h`, `id_space_active_audit.{json,md}` |
+| Item cap / records | always `0xCD` / `206` | whatever this build resolved (`0xCE` / `207` with `FE8_ITEM_ID_CAP=0xCE`) |
+| Changes with `FE8_ITEM_ID_CAP`? | **never** (byte-identical at every cap) | yes, that is its whole job |
+| Tracked in git? | yes | no (ephemeral, under `build/`) |
+
+The committed surfaces describe the *vanilla* platform: what a fresh checkout,
+the archival agbcc lane and an un-configured modern build compile against. They
+are deliberately env-independent, so opting into an expanded cap can never show
+up as tracked drift or force a report rewrite.
+
+**Never quote a committed report as the active value.** A configured build
+publishes its own numbers:
+
+```console
+$ FE8_ITEM_ID_CAP=0xCE make generated-data-check
+...
+active id-space contract up-to-date (3 outputs); item cap 0xCE, 207 record(s)
+
+$ grep ITEM_ID build/generated/data/id_space_active.h
+#define ITEM_ID_DEFAULT_CAP 0xCD
+#define ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE
+#define ITEM_ID_DEFAULT_RECORD_COUNT 206
+#define ITEM_ID_ACTIVE_RECORD_COUNT 207
+#define ITEM_ID_ACTIVE_EXPANDED 1
+```
+
+Downstream consumers:
+
+- **Tools / scripts** read `build/generated/data/id_space_active_audit.json`
+  (`domains[].active_configured_cap`, `domains[].active_record_count`, plus the
+  `default_*` twins and an explicit `record_count_status` of `counted` or `n/a`
+  with a written reason for domains that have no record table).
+- **Humans** read `build/generated/data/id_space_active_audit.md`.
+- **C code** includes the generated `id_space_active.h`. The generated item
+  table already does, and asserts at compile time that the compiler cap and the
+  emitted table agree:
+
+  ```c
+  ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP == ITEM_ID_ACTIVE_CONFIGURED_CAP, ...);
+  ID_SPACE_STATIC_ASSERT(sizeof(gItemData) / sizeof(gItemData[0]) == ITEM_ID_ACTIVE_RECORD_COUNT, ...);
+  ```
+
+  So a stale header, a stale table, or a build that flows a different
+  `-DFE8_ITEM_ID_CAP` than the generator saw is a hard compile error instead of
+  a silently truncated table. `make expansion-modern-idspace-active-check`
+  proves all three directions (default compiles, configured compiles, mismatch
+  fails) with the real modern toolchain. The archival agbcc lane stays
+  default-only and keeps its existing fast-fail guard.
+
+  The gate itself is hermetic: `make expansion-modern-idspace-active-check`,
+  `FE8_ITEM_ID_CAP=0xCE make expansion-modern-idspace-active-check`, and
+  `make expansion-modern-idspace-active-check FE8_ITEM_ID_CAP=0xCE` all PASS
+  identically, regardless of the caller's ambient shell environment or
+  command-line assignment -- the gate's own recipe pins each of its three cap
+  states explicitly (never `$(MODERN_CFLAGS)`'s ambient-baked cap define, and
+  never a plain env-var prefix on a recursive `$(MAKE)`, which GNU Make's own
+  command-line-beats-environment precedence can silently override) rather than
+  inheriting whatever cap the caller happened to be running under. See
+  `scripts/modernize/tests/test_idspace_active_check_gate_hermetic.py`.
+
 ## What the single source produces
 
 Running `python3 -m scripts.generated_data.idspace generate` deterministically
-renders three committed surfaces from that one description:
+renders three committed (DEFAULT) surfaces from that one description:
 
 - `include/id_space.h` -- C89 / agbcc-safe typed aliases plus
   width/signedness/sentinel/technical-max/configured-cap macros and
@@ -21,10 +88,57 @@ renders three committed surfaces from that one description:
 - `reports/id_space_audit.md` -- the human audit, generated from the exact
   same rows so the two never disagree.
 
+`python3 -m scripts.generated_data.idspace active-generate` renders the three
+build-local ACTIVE surfaces described above (`--out-dir` defaults to
+`build/generated/data`), and `active-check` self-heals plus verifies them.
+
 `python3 -m scripts.generated_data.idspace check` re-renders in memory and
-fails on any configured-cap violation or committed-output drift. It is folded
-into `make generated-data-check`, so the existing umbrella CI gate covers it
-with no workflow edits.
+fails on any configured-cap violation or committed-output drift. Both checks,
+plus the consumer census below, are folded into `make generated-data-check`, so
+the existing umbrella CI gate covers them with no workflow edits.
+
+## Source-driven consumer census (how coverage is proven)
+
+The consumer table in both audits is **generated from the source tree**, not
+curated by hand. `scripts/generated_data/consumer_census.py` scans `include/`,
+`src/`, `asm/` and `tools/gba-playtest/` for every declaration that stores,
+serialises, decodes or exposes an extensible ID -- struct/bitfield members,
+ID-typed tables and arrays, public signatures and macros, event operand/decoder
+macros, assembly symbols, host-tool constants -- and every hit must map 1:1 to
+a row in `scripts/generated_data/consumer_classification.json`.
+
+- A hit key is `path|kind|domain|symbol` (never a line number), so re-indenting
+  a header does not churn the classification; the line is carried as evidence
+  only.
+- A **new** consumer that nobody classified fails `generated-data-check` with
+  its key, kind and `path:line`.
+- A classified row whose declaration **disappeared** fails as stale.
+- A same-named false positive (for example `MenuProc.itemCount`, which counts
+  menu rows, or `Tsa_PrepItemSupplyBgA`, which is tilemap bytes) is never
+  silently pattern-ignored: it is classified `reviewed-exclusion` with a
+  written reason, and both audits print those rows in their own table.
+- What the scan structurally cannot resolve (assembly semantics, struct-typed
+  data instances, function bodies) is listed as a coverage limitation inside
+  the generated audits.
+
+### Workflow: adding or changing a consumer
+
+1. Write the code as usual.
+2. Run `make generated-data-check` (or
+   `python3 -m scripts.generated_data.consumer_census check`). A new consumer
+   fails with an actionable key.
+3. Propose rows with
+   `python3 -m scripts.generated_data.consumer_census bootstrap`, then **review
+   every new row by hand**: pick the real category
+   (`runtime-struct`, `runtime-macro`, `event-operand`, `save-field`,
+   `ui-buffer`, `lookup-table`, `link-network`, `external-interface`) or
+   `reviewed-exclusion` plus a reason that states what the symbol actually
+   stores.
+4. Regenerate the audits (`make generated-data-generate`) and commit the
+   classification together with the code that introduced the consumer.
+
+If the scanner genuinely cannot see a real consumer, fix the scanner rules --
+never hand-append a row that the scan cannot reproduce.
 
 ## Per-domain caps and cost
 

@@ -34,13 +34,44 @@ import json
 import os
 import sys
 
+from . import consumer_census
+
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 C_HEADER_PATH = os.path.join(REPO_ROOT, "include", "id_space.h")
 AUDIT_JSON_PATH = os.path.join(REPO_ROOT, "reports", "id_space_audit.json")
 AUDIT_MD_PATH = os.path.join(REPO_ROOT, "reports", "id_space_audit.md")
 
-SCHEMA_VERSION = 1
+# Build-local ACTIVE contract (never committed): what *this* configured build
+# actually resolved, as opposed to the committed DEFAULT contract above. The
+# committed surfaces stay byte-identical at every cap so a configured build can
+# never introduce tracked drift; the active surfaces are the ones that carry
+# 0xCE / 207 records when FE8_ITEM_ID_CAP opts in.
+ACTIVE_OUT_DIR = os.path.join(REPO_ROOT, "build", "generated", "data")
+ACTIVE_JSON_NAME = "id_space_active_audit.json"
+ACTIVE_MD_NAME = "id_space_active_audit.md"
+ACTIVE_HEADER_NAME = "id_space_active.h"
+
+SCHEMA_VERSION = 2
+
+# Which registered generated-data table (if any) holds a domain records, so the
+# active audit can report the *actually loaded* record count instead of a
+# hand-maintained number. Domains with no single record table report an honest
+# n/a plus the reason below -- never a silent blank.
+DOMAIN_RECORD_TABLES = {
+    "character": "characters",
+    "class": "classes",
+    "item": "items",
+}
+DOMAIN_RECORD_NA_REASONS = {
+    "chapter": ("no single record table: chapter data is authored per chapter in "
+                "src/data/chapter_settings.h, so the cap -- not a record count -- "
+                "is the contract"),
+    "unit": ("no single record table: deployment slots are per-chapter event unit "
+             "definitions; the 0x40 faction stride is the contract"),
+    "event": ("no record table: an event operand lane is a transport width, not a "
+              "table of records"),
+}
 
 # Item domain caps, single-sourced here (see items/schema.py).
 ITEM_TECHNICAL_MAX = 0xFF
@@ -254,8 +285,13 @@ def domain_by_key(key):
     raise KeyError(key)
 
 
-def consumer_rows():
-    """Flatten (domain x evidence) into deterministic per-consumer audit rows."""
+def evidence_rows():
+    """Curated, runtime-proven evidence rows (domain x evidence).
+
+    These are the rows a booted ROM actually exercised; they are deliberately
+    *not* the coverage proof -- see :func:`consumer_rows`, which is generated
+    from the source-driven census so a missed consumer fails the build.
+    """
     rows = []
     for domain in DOMAINS:
         for ev in domain.evidence:
@@ -276,6 +312,200 @@ def consumer_rows():
             })
     rows.sort(key=lambda r: (r["domain"], r["category"], r["path"], r["symbol"]))
     return rows
+
+
+def consumer_rows(caps=None, counts=None):
+    """Every source-scanned consumer, joined with its classification.
+
+    One fact source (scripts/generated_data/consumer_census.py plus the tracked
+    consumer_classification.json) feeds both audits; ``caps``/``counts`` swap
+    the DEFAULT contract numbers for this build ACTIVE ones without changing a
+    single row, so the two audits can never disagree about *who* consumes an
+    ID -- only about which cap/count is in force.
+    """
+    caps = caps or {d.key: d.configured_cap for d in DOMAINS}
+    # Default (committed) rows carry the DEFAULT record counts, so the audit
+    # never shows a bare n/a where a real, env-independent count exists.
+    if counts is None:
+        counts = {d.key: default_record_count(d.key) for d in DOMAINS}
+    rows = []
+    for row in consumer_census.classified_rows():
+        domain = domain_by_key(row["domain"])
+        rows.append({
+            "key": row["key"],
+            "domain": row["domain"],
+            "category": row["category"],
+            "reason": row["reason"],
+            "kind": row["kind"],
+            "path": row["path"],
+            "symbol": row["symbol"],
+            "declaration": row["declaration"],
+            "line": row["line"],
+            "surface": row["surface"],
+            "storage_bits": domain.storage_bits,
+            "signed": domain.signed,
+            "sentinel": domain.sentinel,
+            "technical_max": domain.technical_max,
+            "configured_cap": caps.get(row["domain"], domain.configured_cap),
+            "record_count": counts.get(row["domain"]),
+            "status": domain.status,
+        })
+    rows.sort(key=lambda r: (r["domain"], r["category"], r["path"], r["kind"], r["symbol"]))
+    return rows
+
+
+_RECORD_COUNT_CACHE = {}
+
+
+def _load_table_record_count(table):
+    """Actual number of records the registered table loads right now.
+
+    Cached per (table, resolved item cap) because the items table content is
+    cap-dependent: at FE8_ITEM_ID_CAP>=0xCE it merges the expansion overlay.
+    """
+    from .schema import REGISTRY
+    from . import registry  # noqa: F401  (import registers table schemas)
+    cache_key = (table, os.environ.get(ITEM_CAP_ENV, ""))
+    if cache_key not in _RECORD_COUNT_CACHE:
+        schema = REGISTRY.resolve(table)
+        _RECORD_COUNT_CACHE[cache_key] = len(schema.load_records(schema.default_source))
+    return _RECORD_COUNT_CACHE[cache_key]
+
+
+def default_record_count(domain_key):
+    """Record count of the committed DEFAULT contract (never env-dependent)."""
+    table = DOMAIN_RECORD_TABLES.get(domain_key)
+    if table is None:
+        return None
+    if domain_key == "item":
+        # Explicitly load at the vanilla cap so the committed number stays 206
+        # whatever FE8_ITEM_ID_CAP says in this shell.
+        from .items import schema as items_schema
+        return len(items_schema.load_records(
+            items_schema.ItemsTableSchema.default_source, item_cap=ITEM_DEFAULT_CAP))
+    return _load_table_record_count(table)
+
+
+def active_record_count(domain_key, env=None):
+    """Record count this configured build actually loads (env-dependent)."""
+    table = DOMAIN_RECORD_TABLES.get(domain_key)
+    if table is None:
+        return None
+    if domain_key == "item":
+        from .items import schema as items_schema
+        return len(items_schema.load_records(
+            items_schema.ItemsTableSchema.default_source,
+            item_cap=resolve_item_id_cap(env)))
+    return _load_table_record_count(table)
+
+
+def active_caps(env=None):
+    """Resolved ACTIVE cap per domain (only `item` is a build input today)."""
+    caps = {}
+    for domain in DOMAINS:
+        if domain.key == "item":
+            caps[domain.key] = resolve_item_id_cap(env)
+        else:
+            caps[domain.key] = domain.configured_cap
+    return caps
+
+
+def active_manifest_rows(env=None):
+    """Registry view for THIS build: committed manifest count vs actual load.
+
+    reports/generated_data_manifest.md deliberately stays at the committed
+    default (items: 206) so an opted-in build introduces no tracked drift --
+    which is exactly why the ACTIVE surfaces have to publish the real number
+    (items: 207 at cap 0xCE) instead of leaving downstream tools to read 206
+    and believe it.
+    """
+    from .schema import REGISTRY
+    from . import registry  # noqa: F401  (import registers table schemas)
+    rows = []
+    for name in REGISTRY.all_names():
+        schema = REGISTRY.resolve(name)
+        if name == "items":
+            from .items import schema as items_schema
+            records = items_schema.load_records(
+                schema.default_source, item_cap=resolve_item_id_cap(env),
+                overlay_source=items_schema.ITEMS_EXPANSION_SOURCE)
+        else:
+            records = schema.load_records(schema.default_source)
+        committed = schema.manifest_record_count(records)
+        active = len(records)
+        rows.append({
+            "table": name,
+            "committed_record_count": committed,
+            "active_record_count": active,
+            "differs_from_committed": committed != active,
+        })
+    rows.sort(key=lambda r: r["table"])
+    return rows
+
+
+def active_contract(env=None):
+    """Full machine model of the ACTIVE (this build) cap/count contract."""
+    caps = active_caps(env)
+    domains = []
+    counts = {}
+    for domain in DOMAINS:
+        default_count = default_record_count(domain.key)
+        count = active_record_count(domain.key, env)
+        counts[domain.key] = count
+        entry = {
+            "key": domain.key,
+            "title": domain.title,
+            "id_ctype": domain.id_ctype,
+            "storage_bits": domain.storage_bits,
+            "signed": domain.signed,
+            "sentinel": domain.sentinel,
+            "technical_max": domain.technical_max,
+            "status": domain.status,
+            "default_cap": domain.configured_cap,
+            # Hex twins: the numeric fields are what tools compare, but every
+            # human-facing spelling of a cap in this project is hex, so a
+            # grep/jq for 0xCE must hit in the machine audit too.
+            "default_cap_hex": _cap_hex(domain.configured_cap),
+            "default_record_count": default_count,
+            "active_configured_cap": caps[domain.key],
+            "active_configured_cap_hex": _cap_hex(caps[domain.key]),
+            "active_record_count": count,
+            "record_count_status": "counted" if count is not None else "n/a",
+            "record_count_note": DOMAIN_RECORD_NA_REASONS.get(domain.key),
+            "record_table": DOMAIN_RECORD_TABLES.get(domain.key),
+            "expanded_past_default": caps[domain.key] != domain.configured_cap,
+        }
+        domains.append(entry)
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "active",
+        "contract_note": (
+            "Build-local ACTIVE contract for this configured build. The committed "
+            "DEFAULT contract lives in reports/id_space_audit.{json,md} and "
+            "include/id_space.h and never changes with FE8_ITEM_ID_CAP."),
+        "item_cap_env": ITEM_CAP_ENV,
+        "item_cap_env_value": (env if env is not None else os.environ).get(ITEM_CAP_ENV) or None,
+        "domains": domains,
+        "manifest": active_manifest_rows(env),
+        "census": consumer_census.scan_scope(),
+        "census_digest": consumer_census.census_digest(),
+        "consumers": consumer_rows(caps=caps, counts=counts),
+    }
+    return payload
+
+
+def validate_active_contract(payload):
+    """Fail on an ACTIVE contract that cannot be true (cap/count mismatch)."""
+    for domain in payload["domains"]:
+        cap = domain["active_configured_cap"]
+        count = domain["active_record_count"]
+        if count is None:
+            continue
+        if count > cap + 1:
+            raise CapError(
+                "{} domain loads {} record(s) but the active cap 0x{:02X} only "
+                "addresses {} ID(s); raise the cap or drop records".format(
+                    domain["key"], count, cap, cap + 1))
 
 
 def resolve_item_id_cap(env=None):
@@ -329,6 +559,8 @@ def digest():
     payload = {
         "schema_version": SCHEMA_VERSION,
         "domains": [d.to_dict() for d in DOMAINS],
+        "evidence": evidence_rows(),
+        "census_digest": consumer_census.census_digest(),
         "consumers": consumer_rows(),
     }
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -346,49 +578,217 @@ def _cap_hex(value):
 def render_audit_json():
     payload = {
         "schema_version": SCHEMA_VERSION,
+        "contract": "default",
+        "contract_note": (
+            "Committed DEFAULT contract: the vanilla cap/count every checkout "
+            "and the archival lane compile against. It is deliberately "
+            "env-independent -- a build that opts into FE8_ITEM_ID_CAP>=0xCE "
+            "reads the build-local ACTIVE contract "
+            "(build/generated/data/id_space_active_audit.json and "
+            "id_space_active.h) instead, and never rewrites this file."),
+        "default_item_cap": ITEM_DEFAULT_CAP,
+        "default_item_record_count": default_record_count("item"),
         "digest": digest(),
         "required_categories": list(REQUIRED_CATEGORIES),
         "domains": [d.to_dict() for d in DOMAINS],
+        "domain_record_counts": {
+            d.key: {
+                "default_record_count": default_record_count(d.key),
+                "record_count_status": "counted" if default_record_count(d.key) is not None else "n/a",
+                "record_count_note": DOMAIN_RECORD_NA_REASONS.get(d.key),
+            }
+            for d in DOMAINS
+        },
+        "evidence": evidence_rows(),
+        "census": consumer_census.scan_scope(),
+        "census_digest": consumer_census.census_digest(),
         "consumers": consumer_rows(),
     }
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
+def _render_census_sections(lines, rows, scope):
+    """Shared census rendering for the DEFAULT and ACTIVE human audits."""
+    audited = [r for r in rows if r["category"] != consumer_census.EXCLUSION_CATEGORY]
+    excluded = [r for r in rows if r["category"] == consumer_census.EXCLUSION_CATEGORY]
+    lines.append("\n## Source-driven consumer census\n\n")
+    lines.append("Every row below comes from scanning the real source tree "
+                 "(`python3 -m scripts.generated_data.consumer_census scan`) and is "
+                 "mapped 1:1 to a category in "
+                 "`scripts/generated_data/consumer_classification.json`. A new "
+                 "declaration that names an ID domain fails "
+                 "`generated-data-check` until it is classified; a classified row "
+                 "that disappears fails as stale.\n\n")
+    lines.append("- Scanned hits: {} ({} audited, {} reviewed exclusions)\n".format(
+        len(rows), len(audited), len(excluded)))
+    lines.append("- Census digest (sha256): `{}`\n".format(consumer_census.census_digest()))
+    lines.append("- Scan roots: {}\n".format(", ".join(
+        "`{}` ({})".format(root["root"], "/".join(root["extensions"])) for root in scope["roots"])))
+    lines.append("- Excluded by configuration: {}\n".format(", ".join(
+        "`{}` ({})".format(item["prefix"], item["reason"]) for item in scope["excluded"])))
+    lines.append("\n### Coverage limitations (honest scope)\n\n")
+    for limitation in scope["coverage_limitations"]:
+        lines.append("- {}\n".format(limitation))
+    lines.append("\n### Category totals\n\n")
+    lines.append("| Category | Rows |\n|---|---|\n")
+    totals = {}
+    for row in rows:
+        totals[row["category"]] = totals.get(row["category"], 0) + 1
+    for category in sorted(totals):
+        lines.append("| {} | {} |\n".format(category, totals[category]))
+    lines.append("\n### Consumers\n\n")
+    lines.append("| Domain | Category | Kind | Path | Symbol | Bits | Cap | Records | Evidence line |\n")
+    lines.append("|---|---|---|---|---|---|---|---|---|\n")
+    for r in rows:
+        count = r.get("record_count")
+        lines.append("| {} | {} | {} | `{}` | `{}` | {} | {} | {} | {}:{} |\n".format(
+            r["domain"], r["category"], r["kind"], r["path"], r["symbol"],
+            r["storage_bits"], _cap_hex(r["configured_cap"]),
+            count if count is not None else "n/a", r["path"], r["line"]))
+    if excluded:
+        lines.append("\n### Reviewed exclusions (same-named, carries no ID)\n\n")
+        lines.append("| Path | Symbol | Reason |\n|---|---|---|\n")
+        for r in excluded:
+            lines.append("| `{}` | `{}` | {} |\n".format(r["path"], r["symbol"], r["reason"]))
+
+
 def render_audit_markdown():
     lines = []
-    lines.append("# Extensible ID space audit (Issue #10)\n\n")
+    lines.append("# Extensible ID space audit -- DEFAULT contract (Issue #10)\n\n")
     lines.append("_Auto-generated by `python3 -m scripts.generated_data.idspace "
                  "generate`. Do not edit by hand -- edit "
-                 "`scripts/generated_data/idspace.py` and regenerate._\n\n")
-    lines.append("Single machine+human source describing every extensible ID "
-                 "domain and every consumer that must not silently truncate an "
-                 "expanded ID.\n\n")
+                 "`scripts/generated_data/idspace.py` / "
+                 "`scripts/generated_data/consumer_classification.json` and "
+                 "regenerate._\n\n")
+    lines.append("**This file is the committed DEFAULT contract**: the vanilla "
+                 "cap/count that every checkout, the archival agbcc lane and an "
+                 "un-configured modern build compile against. It is "
+                 "env-independent by design -- `FE8_ITEM_ID_CAP=0xCE` does *not* "
+                 "rewrite it. A configured build publishes its own numbers in the "
+                 "build-local ACTIVE contract "
+                 "(`build/generated/data/id_space_active_audit.md`, "
+                 "`id_space_active_audit.json`, `id_space_active.h`); read those "
+                 "for the active cap/record count, never this file.\n\n")
     lines.append("- Schema version: {}\n".format(SCHEMA_VERSION))
+    lines.append("- Default item cap / record count: {} / {}\n".format(
+        _cap_hex(ITEM_DEFAULT_CAP), default_record_count("item")))
     lines.append("- Audit digest (sha256): `{}`\n\n".format(digest()))
-    lines.append("## Domains\n\n")
+    lines.append("## Domains (default contract)\n\n")
     lines.append("| Domain | C type | Bits | Signed | Sentinel | Technical max "
-                 "| Configured cap | Status | Budget |\n")
-    lines.append("|---|---|---|---|---|---|---|---|---|\n")
+                 "| Default cap | Default records | Status | Budget |\n")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|\n")
     for d in DOMAINS:
-        lines.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} |\n".format(
+        count = default_record_count(d.key)
+        lines.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n".format(
             d.key, d.id_ctype, d.storage_bits, "yes" if d.signed else "no",
             _cap_hex(d.sentinel), _cap_hex(d.technical_max),
-            _cap_hex(d.configured_cap), d.status, d.budget or "-"))
-    lines.append("\n## Consumers\n\n")
-    lines.append("| Domain | Category | Path | Symbol | Bits | Sentinel "
-                 "| Max safe cap | Configured cap | Status | Runtime evidence |\n")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|\n")
-    for r in consumer_rows():
-        lines.append("| {} | {} | `{}` | {} | {} | {} | {} | {} | {} | {} |\n".format(
-            r["domain"], r["category"], r["path"], r["symbol"], r["storage_bits"],
-            _cap_hex(r["sentinel"]), _cap_hex(r["technical_max"]),
-            _cap_hex(r["configured_cap"]), r["status"],
+            _cap_hex(d.configured_cap),
+            count if count is not None else "n/a",
+            d.status, d.budget or "-"))
+    lines.append("\nDomains with no record table report `n/a` for records: ")
+    lines.append("; ".join("**{}** -- {}".format(key, reason)
+                           for key, reason in sorted(DOMAIN_RECORD_NA_REASONS.items())))
+    lines.append("\n\n## Runtime-proven evidence\n\n")
+    lines.append("| Domain | Category | Path | Symbol | Runtime evidence |\n")
+    lines.append("|---|---|---|---|---|\n")
+    for r in evidence_rows():
+        lines.append("| {} | {} | `{}` | {} | {} |\n".format(
+            r["domain"], r["category"], r["path"], r["symbol"],
             r["runtime_evidence"] or "host-modelled only"))
+    _render_census_sections(lines, consumer_rows(), consumer_census.scan_scope())
     lines.append("\n## Frozen domains and future work\n\n")
     for d in DOMAINS:
         if d.freeze_reason:
             lines.append("- **{}**: {}\n".format(d.key, d.freeze_reason))
     return "".join(lines)
+
+
+def render_active_json(env=None):
+    """Machine-readable ACTIVE audit for this configured build."""
+    payload = active_contract(env)
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def render_active_markdown(env=None):
+    """Human ACTIVE audit -- same consumer rows, active cap/record counts."""
+    payload = active_contract(env)
+    lines = []
+    lines.append("# Extensible ID space audit -- ACTIVE contract (Issue #10)\n\n")
+    lines.append("_Auto-generated (build-local, never committed) by "
+                 "`python3 -m scripts.generated_data.idspace active-generate`._\n\n")
+    lines.append("**This is what the current build actually resolved.** The "
+                 "committed DEFAULT contract (`reports/id_space_audit.md`, "
+                 "`include/id_space.h`) stays at the vanilla numbers at every "
+                 "cap; downstream tooling that needs the *active* cap/record "
+                 "count must read this file, `id_space_active_audit.json`, or "
+                 "the generated `id_space_active.h`.\n\n")
+    lines.append("- `{}` = {}\n".format(
+        ITEM_CAP_ENV, payload["item_cap_env_value"] or "(unset -- vanilla default)"))
+    lines.append("- Census digest (sha256): `{}`\n\n".format(payload["census_digest"]))
+    lines.append("## Domains: default vs active\n\n")
+    lines.append("| Domain | Default cap | Default records | Active cap "
+                 "| Active records | Expanded | Record source |\n")
+    lines.append("|---|---|---|---|---|---|---|\n")
+    for d in payload["domains"]:
+        if d["record_count_status"] == "counted":
+            source = "`{}` table".format(d["record_table"])
+            default_count = str(d["default_record_count"])
+            active_count = str(d["active_record_count"])
+        else:
+            source = "n/a -- {}".format(d["record_count_note"])
+            default_count = "n/a"
+            active_count = "n/a"
+        lines.append("| {} | {} | {} | {} | {} | {} | {} |\n".format(
+            d["key"], _cap_hex(d["default_cap"]), default_count,
+            _cap_hex(d["active_configured_cap"]), active_count,
+            "yes" if d["expanded_past_default"] else "no", source))
+    lines.append("\n## Registry manifest: committed vs active record counts\n\n")
+    lines.append("The committed `reports/generated_data_manifest.md` is pinned to "
+                 "the default record counts so a configured build never rewrites "
+                 "a tracked report. These are the counts this build actually "
+                 "loaded.\n\n")
+    lines.append("| Table | Committed manifest | Active (this build) | Differs |\n")
+    lines.append("|---|---|---|---|\n")
+    for row in payload["manifest"]:
+        lines.append("| {} | {} | {} | {} |\n".format(
+            row["table"], row["committed_record_count"], row["active_record_count"],
+            "yes" if row["differs_from_committed"] else "no"))
+    _render_census_sections(lines, payload["consumers"], payload["census"])
+    return "".join(lines)
+
+
+def render_active_header(env=None):
+    """C89/agbcc-safe ACTIVE contract header consumed by the generated table."""
+    payload = active_contract(env)
+    out = []
+    out.append("/* AUTO-GENERATED by scripts/generated_data/idspace.py -- DO NOT EDIT BY HAND.\n")
+    out.append(" * Build-local ACTIVE id-space contract for THIS configured build.\n")
+    out.append(" * The committed include/id_space.h holds the DEFAULT contract; this\n")
+    out.append(" * header holds what {} actually resolved, so a compiled\n".format(ITEM_CAP_ENV))
+    out.append(" * consumer can assert the generated table and the compiler agree.\n")
+    out.append(" * Regenerate with: python3 -m scripts.generated_data.idspace active-generate\n")
+    out.append(" */\n")
+    out.append("#ifndef GUARD_ID_SPACE_ACTIVE_H\n")
+    out.append("#define GUARD_ID_SPACE_ACTIVE_H\n\n")
+    for d in payload["domains"]:
+        macro = d["key"].upper()
+        out.append("/* {} */\n".format(d["title"]))
+        out.append("#define {}_ID_DEFAULT_CAP {}\n".format(macro, _hexlit(d["default_cap"])))
+        out.append("#define {}_ID_ACTIVE_CONFIGURED_CAP {}\n".format(
+            macro, _hexlit(d["active_configured_cap"])))
+        if d["record_count_status"] == "counted":
+            out.append("#define {}_ID_DEFAULT_RECORD_COUNT {}\n".format(
+                macro, d["default_record_count"]))
+            out.append("#define {}_ID_ACTIVE_RECORD_COUNT {}\n".format(
+                macro, d["active_record_count"]))
+        else:
+            out.append("/* {}_ID_*_RECORD_COUNT: n/a -- {} */\n".format(
+                macro, d["record_count_note"]))
+        out.append("#define {}_ID_ACTIVE_EXPANDED {}\n".format(
+            macro, 1 if d["expanded_past_default"] else 0))
+        out.append("\n")
+    out.append("#endif /* GUARD_ID_SPACE_ACTIVE_H */\n")
+    return "".join(out)
 
 
 def render_c_header():
@@ -479,12 +879,71 @@ def _outputs():
     ]
 
 
+def _active_outputs(out_dir=None, env=None):
+    """The three build-local ACTIVE surfaces (machine, human, C header)."""
+    out_dir = out_dir or ACTIVE_OUT_DIR
+    return [
+        (os.path.join(out_dir, ACTIVE_HEADER_NAME), render_active_header(env)),
+        (os.path.join(out_dir, ACTIVE_JSON_NAME), render_active_json(env)),
+        (os.path.join(out_dir, ACTIVE_MD_NAME), render_active_markdown(env)),
+    ]
+
+
 def cmd_generate(_args):
     validate_all_configured_caps()
     for path, content in _outputs():
         changed = write_if_changed(path, content)
         rel = os.path.relpath(path, REPO_ROOT)
         print("{} {}".format("wrote" if changed else "up-to-date", rel))
+    return 0
+
+
+def cmd_active_generate(args):
+    """Write the build-local ACTIVE surfaces (never a committed file)."""
+    validate_all_configured_caps()
+    payload = active_contract()
+    validate_active_contract(payload)
+    out_dir = getattr(args, "out_dir", None)
+    for path, content in _active_outputs(out_dir):
+        changed = write_if_changed(path, content)
+        rel = os.path.relpath(path, REPO_ROOT)
+        print("{} {}".format("wrote" if changed else "up-to-date", rel))
+    item = [d for d in payload["domains"] if d["key"] == "item"][0]
+    print("active item contract: cap 0x{:02X}, {} record(s) "
+          "(default cap 0x{:02X}, {} record(s))".format(
+              item["active_configured_cap"], item["active_record_count"],
+              item["default_cap"], item["default_record_count"]))
+    return 0
+
+
+def cmd_active_check(args):
+    """Self-heal the build-local ACTIVE surfaces and prove they are current.
+
+    These outputs live only under build/, so there is no committed file to
+    drift against: like the manifest C header, `check` regenerates them
+    write-if-changed (so a cap flip or an out-of-band edit heals) and then
+    re-reads them to prove what is on disk is exactly what the model renders.
+    """
+    validate_all_configured_caps()
+    payload = active_contract()
+    validate_active_contract(payload)
+    out_dir = getattr(args, "out_dir", None)
+    outputs = _active_outputs(out_dir)
+    for path, content in outputs:
+        write_if_changed(path, content)
+    stale = []
+    for path, content in outputs:
+        with open(path, "r", encoding="utf-8") as handle:
+            if handle.read() != content:
+                stale.append(os.path.relpath(path, REPO_ROOT))
+    if stale:
+        for rel in stale:
+            print("stale active output: {}".format(rel), file=sys.stderr)
+        return 1
+    item = [d for d in payload["domains"] if d["key"] == "item"][0]
+    print("active id-space contract up-to-date ({} outputs); item cap 0x{:02X}, "
+          "{} record(s)".format(len(outputs), item["active_configured_cap"],
+                                item["active_record_count"]))
     return 0
 
 
@@ -516,6 +975,15 @@ def main(argv=None):
     gen.set_defaults(func=cmd_generate)
     chk = sub.add_parser("check", help="fail on cap violation or committed-output drift")
     chk.set_defaults(func=cmd_check)
+    act = sub.add_parser("active-generate",
+                         help="write the build-local ACTIVE cap/count contract "
+                              "(JSON + Markdown + C header) for this build")
+    act.add_argument("--out-dir", help="output directory (default: build/generated/data)")
+    act.set_defaults(func=cmd_active_generate)
+    act_chk = sub.add_parser("active-check",
+                             help="self-heal + verify the build-local ACTIVE contract")
+    act_chk.add_argument("--out-dir", help="output directory (default: build/generated/data)")
+    act_chk.set_defaults(func=cmd_active_check)
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):
         parser.print_help()

@@ -39,6 +39,15 @@ def generate_c_source(records, source_path):
     parts.append("#include \"constants/items.h\"\n")
     if uses_expansion:
         parts.append("#include \"constants/items_expansion.h\"\n")
+    # Issue #10: this generated table is the one real consumer that can prove
+    # the *generated* record count and the *compiled* cap are the same build
+    # input. id_space.h is the committed DEFAULT contract (ITEM_ID_CONFIGURED_CAP,
+    # overridable through -DFE8_ITEM_ID_CAP); id_space_active.h is the
+    # build-local ACTIVE contract this generator just resolved and sits in this
+    # same generated directory, so the quoted include resolves with no extra
+    # -I flag in either the modern or the archival lane.
+    parts.append("#include \"id_space.h\"\n")
+    parts.append("#include \"id_space_active.h\"\n")
     parts.append("\n")
     parts.append("CONST_DATA struct ItemData gItemData[] = {\n")
 
@@ -95,4 +104,20 @@ def generate_c_source(records, source_path):
         parts.append("\t},\n")
 
     parts.append("};\n")
+
+    # Compile-time proof, in the translation unit that owns the table:
+    #   1. the compiler cap (-DFE8_ITEM_ID_CAP / id_space.h default) is exactly
+    #      the cap this generator resolved, and
+    #   2. the emitted, index-designated gItemData[] really holds the active
+    #      record count (207 at cap 0xCE, 206 at the vanilla 0xCD).
+    # A stale generated table, a stale active header, or a build that flows a
+    # different -DFE8_ITEM_ID_CAP than the generator saw all fail to compile
+    # here instead of silently linking a truncated table.
+    parts.append("\n")
+    parts.append("/* Issue #10 active-contract proof (see scripts/generated_data/idspace.py). */\n")
+    parts.append("ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP == ITEM_ID_ACTIVE_CONFIGURED_CAP,\n")
+    parts.append("    generated_items_cap_matches_active_contract);\n")
+    parts.append("ID_SPACE_STATIC_ASSERT(\n")
+    parts.append("    sizeof(gItemData) / sizeof(gItemData[0]) == ITEM_ID_ACTIVE_RECORD_COUNT,\n")
+    parts.append("    generated_items_record_count_matches_active_contract);\n")
     return "".join(parts)

@@ -45,13 +45,16 @@ generated-data-generate:
 	done
 	@$(GENERATED_DATA_PY) manifest --out-dir $(GENERATED_DATA_OUT_DIR)
 	@$(GENERATED_DATA_PY).idspace generate
+	@$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
 
 generated-data-check:
 	@for table in $(GENERATED_DATA_TABLES); do \
 		$(GENERATED_DATA_PY) check --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --check --out-dir $(GENERATED_DATA_OUT_DIR)
+	@$(GENERATED_DATA_PY).consumer_census check
 	@$(GENERATED_DATA_PY).idspace check
+	@$(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR)
 
 generated-data-test:
 	$(PYTHON) -m unittest discover -s scripts/generated_data/tests -v
@@ -290,6 +293,49 @@ GENERATED_DATA_CONFIG_INPUTS_items += \
 	include/constants/items_expansion.h \
 	src/data/items_expansion.json \
 	$(GENERATED_DATA_ITEM_CAP_STAMP)
+
+# --- Issue #10 build-local ACTIVE id-space contract ------------------------
+# The generated item table (build/generated/data/data_items.c) #includes the
+# ACTIVE header from this same directory and compile-time asserts that (a) the
+# compiler cap (-DFE8_ITEM_ID_CAP / include/id_space.h default) equals the cap
+# the generator resolved and (b) sizeof(gItemData)/sizeof(gItemData[0]) equals
+# the ACTIVE record count. That makes the header a live build input, not a
+# dead artifact: listing it as an items config input means a cap flip
+# regenerates the header first and the table second, in one dependency graph,
+# with no clean and no manual ordering.
+#
+# The active outputs are deliberately build-local: reports/id_space_audit.*,
+# reports/generated_data_manifest.md and include/id_space.h stay byte-identical
+# at every cap, so an opted-in build never shows up as tracked drift.
+GENERATED_DATA_ACTIVE_HEADER := $(GENERATED_DATA_OUT_DIR)/id_space_active.h
+GENERATED_DATA_ACTIVE_JSON   := $(GENERATED_DATA_OUT_DIR)/id_space_active_audit.json
+GENERATED_DATA_ACTIVE_MD     := $(GENERATED_DATA_OUT_DIR)/id_space_active_audit.md
+GENERATED_DATA_ACTIVE_OUTPUTS := \
+	$(GENERATED_DATA_ACTIVE_HEADER) \
+	$(GENERATED_DATA_ACTIVE_JSON) \
+	$(GENERATED_DATA_ACTIVE_MD)
+
+# The census fact source feeds both audits, so a scanner/classification edit
+# must re-render the active audit exactly like a data edit does.
+GENERATED_DATA_CENSUS_INPUTS := \
+	scripts/generated_data/consumer_census.py \
+	scripts/generated_data/consumer_classification.json
+
+# One recipe renders all three surfaces; GNU Make 4.3 grouped targets (&:) say
+# so explicitly, so a parallel build never runs the generator three times.
+$(GENERATED_DATA_ACTIVE_OUTPUTS) &: \
+		$(GENERATED_DATA_ITEM_CAP_STAMP) \
+		$(GENERATED_DATA_SHARED_PY_SOURCES) \
+		$(GENERATED_DATA_CENSUS_INPUTS) \
+		$(wildcard scripts/generated_data/items/*.py) \
+		src/data/items.json \
+		src/data/items_expansion.json \
+		include/constants/items.h \
+		include/constants/items_expansion.h
+	@mkdir -p $(GENERATED_DATA_OUT_DIR)
+	$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
+
+GENERATED_DATA_CONFIG_INPUTS_items += $(GENERATED_DATA_ACTIVE_HEADER)
 
 # `supports`' own generator "config" inputs: headers
 # scripts/generated_data/supports/schema.py reads live constants from --
@@ -2440,13 +2486,37 @@ generated-data-weapontriangle-link-check: $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT
 # in check mode, fails on any configured-cap violation or committed-output
 # drift. Folded into generated-data-check/-generate above so the umbrella CI
 # gate covers it with no extra workflow edits.
-.PHONY: generated-data-idspace generated-data-idspace-check
+.PHONY: generated-data-idspace generated-data-idspace-check \
+        generated-data-idspace-active generated-data-idspace-active-check \
+        generated-data-census generated-data-census-check
 
 generated-data-idspace:
 	$(GENERATED_DATA_PY).idspace generate
 
 generated-data-idspace-check:
 	$(GENERATED_DATA_PY).idspace check
+
+# Build-local ACTIVE contract: what THIS configured build resolved (cap +
+# actually loaded record count), rendered as machine JSON, human Markdown and
+# the C header the generated item table compiles its asserts against. Never
+# touches a committed file, so `FE8_ITEM_ID_CAP=0xCE make generated-data-check`
+# reports 0xCE/207 without making reports/id_space_audit.* env-dependent.
+generated-data-idspace-active:
+	$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
+
+generated-data-idspace-active-check:
+	$(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR)
+
+# Source-driven consumer census: every declaration in include/, src/, asm/ and
+# tools/ that names an extensible ID must be classified (or explicitly
+# reviewed-excluded with a reason) in
+# scripts/generated_data/consumer_classification.json. A new unclassified
+# consumer, or a classified one that disappeared, fails here.
+generated-data-census:
+	$(GENERATED_DATA_PY).consumer_census scan
+
+generated-data-census-check:
+	$(GENERATED_DATA_PY).consumer_census check
 
 # ---------------------------------------------------------------------------
 # Issue #10 post-merge regression: item-cap self-heal (Batch fix)

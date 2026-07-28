@@ -717,3 +717,196 @@ deleted; no gate was removed, reordered or weakened (gate count stays 10, and
 the mirror test still parses the live workflow); the ROM `build` job does not
 inherit host-only mode; local runtime debugging keeps the previous
 artifact-driven behavior in normal mode.
+
+
+## Post-review batch: ACTIVE build contract + source-driven consumer census
+
+Two review findings were closed in this batch. Neither changed a gameplay
+feature, a fingerprint, a budget, a save epoch or any protected artifact.
+
+### Finding A -- the reports claimed a cap the build never published
+
+`FE8_ITEM_ID_CAP=0xCE` really did generate a 207-record `gItemData[]`, but
+every *reported* surface still said `0xCD`/`206`: `idspace.DOMAINS` carries a
+module-level `configured_cap` of `0xCD`, and `manifest_record_count()`
+deliberately holds the committed manifest at 206. There was no build-local
+surface that said what the build actually resolved.
+
+Fix: keep every committed surface exactly as stable as it was, and add three
+**build-local** ACTIVE surfaces rendered from the same model:
+
+| Surface | Path | Default build | `FE8_ITEM_ID_CAP=0xCE` |
+|---|---|---|---|
+| Machine audit | `build/generated/data/id_space_active_audit.json` | cap `0xCD`, 206 records | cap `0xCE`, 207 records |
+| Human audit | `build/generated/data/id_space_active_audit.md` | cap `0xCD`, 206 records | cap `0xCE`, 207 records |
+| C contract | `build/generated/data/id_space_active.h` | `ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD`, `ITEM_ID_ACTIVE_RECORD_COUNT 206` | `0xCE` / `207` |
+| Committed default audit | `reports/id_space_audit.{json,md}` | `0xCD` / `206` | **unchanged, byte-identical** |
+| Committed manifest | `reports/generated_data_manifest.md` | items 206 | **unchanged, 206** |
+
+Every domain reports `default_cap`, `active_configured_cap` and either both
+record counts or an explicit `record_count_status: n/a` plus a written reason
+(chapter/unit/event have no single record table). The active record count is
+the number of records actually loaded, not a hand-maintained constant.
+
+Observed:
+
+```console
+$ FE8_ITEM_ID_CAP=0xCE make generated-data-check
+OK: no manifest drift (13 table(s), 722 record(s))
+consumer census clean: 1070 hit(s), 1046 audited, 24 reviewed-exclusion, digest 11e8a358...
+id-space contract up-to-date (3 outputs)
+active id-space contract up-to-date (3 outputs); item cap 0xCE, 207 record(s)
+$ git status --porcelain        # no tracked drift from the configured run
+```
+
+**The header is compiled, not decorative.** The generated item table now
+includes `id_space.h` + `id_space_active.h` and carries two
+`ID_SPACE_STATIC_ASSERT`s: the compiler cap must equal the generator cap, and
+`sizeof(gItemData)/sizeof(gItemData[0])` must equal the active record count.
+`make expansion-modern-idspace-active-check` proves all three directions with
+the real modern toolchain:
+
+```console
+--- default cap: generated table and ACTIVE header must both say 0xCD / 206 ---
+OK: default-cap generated table compiles against the ACTIVE contract (0xCD / 206)
+--- configured cap: FE8_ITEM_ID_CAP=0xCE must move both to 0xCE / 207 ---
+OK: configured generated table compiles against the ACTIVE contract (0xCE / 207)
+--- negative: the 0xCE table compiled without the cap flag must FAIL ---
+OK: cap/count divergence is a hard compile error, not a silent truncation
+PASS: expansion-modern-idspace-active-check
+```
+
+The archival agbcc lane remains default-only and keeps its existing parse-time
+fast-fail (re-verified: `FE8_ITEM_ID_CAP=0xCE make -n fireemblem8.gba` still
+stops at `Makefile:308` with the actionable archival diagnostic); the active
+header is generated into the same directory as the generated table, so the
+quoted include resolves in both lanes with no new `-I`.
+
+**Linked, not just compiled.** A real modern release ELF was linked at both
+caps and the linked table size was read back from the ELF, not assumed:
+
+```console
+$ FE8_ITEM_ID_CAP=0xCE make -j4 expansion-modern-elf MODERN_CONFIG=release MODERN_ABI=aapcs
+Linked modern ELF: build/expansion-modern/release/aapcs/fireemblem8.elf
+$ arm-none-eabi-nm -S build/expansion-modern/release/aapcs/fireemblem8.elf | grep " gItemData$"
+08909498 00001d1c T gItemData      # 7452 bytes = 207 records x 36
+
+$ make -j4 expansion-modern-elf MODERN_CONFIG=release MODERN_ABI=aapcs   # default cap again
+08909498 00001cf8 T gItemData      # 7416 bytes = 206 records x 36
+```
+
+The build tree was left at the default cap (206-record ELF, ACTIVE header back
+to `0xCD`/`206`) so no later normal-mode host run inherits an expanded-cap
+artifact.
+
+### Finding B -- the consumer audit was a curated sample, not a census
+
+The previous audit contained 18 hand-written evidence rows and the tests only
+asserted that each of 8 categories appeared *at least once*. Real consumers
+were missing: `BonusClaimEnt.itemId`, `UnitDefinition.{charIndex,classIndex,
+items}`, the shop lists, `gDefaultShopInventory`, the convoy array plus
+`Write/ReadSupplyItems`, `ArenaData.{playerClassId,opponentClassId}`, the class
+reel/opinfo/uisupport UI, the monster lookup table and the worldmap interfaces.
+
+Fix: `scripts/generated_data/consumer_census.py` scans the real source tree and
+`scripts/generated_data/consumer_classification.json` maps **every** hit 1:1 to
+a category or to a `reviewed-exclusion` with a written reason.
+
+- Scanned surface: `include/**` (`.h`), `src/**` (`.c`/`.h`), `asm/**`
+  (`.s`/`.inc`), `tools/gba-playtest/**` (`.py`). Exclusions (`build/`,
+  `mgfembp/`, `tools/agbcc/`, `src/data/`) are configuration and are printed
+  inside the audits, together with the coverage limitations the rule set
+  structurally cannot resolve.
+- Current census: **1070 hits -- 1046 audited, 24 reviewed exclusions**
+  (11 chapter-number sprites, 4 prep-screen tile/palette assets, and 9
+  menu-machinery `item` symbols where "item" means a menu entry, not a game
+  item ID). See Finding C for the fresh-review scope-tracking fix that removed
+  60 fabricated function-body hits from the earlier 1130 figure.
+- Hit identity is `path|kind|domain|symbol`; line numbers are evidence only, so
+  re-indenting a file does not churn the classification.
+- The curated runtime-proven evidence rows are kept as their own section --
+  they prove *what a booted ROM exercised*; the census proves *nobody was
+  missed*. The two now live in the same generated audits.
+
+Verifier-named consumers, all present in both audits (spot check):
+
+| Consumer | Path | Category |
+|---|---|---|
+| `BonusClaimEnt.itemId` | `include/bonusclaim.h` | runtime-struct |
+| `UnitDefinition.charIndex` / `.classIndex` / `.items` | `include/bmunit.h` | runtime-struct |
+| `gDefaultShopInventory` + 37 `ShopList_*` | `include/bmshop.h`, `include/eventcall.h` | lookup-table |
+| `ItemList_WM_*` (worldmap shops, 87 symbols) | `include/worldmap.h`, `src/worldmap_shop_data.c` | lookup-table |
+| `gConvoyItemArray`, `gConvoyItemCount`, `Write/ReadSupplyItems` | `include/variables.h`, `include/bmsave.h` | lookup-table / save-field |
+| `ArenaData.playerClassId` / `.opponentClassId` | `include/bmarena.h` | runtime-struct |
+| `ClassReelEnt.classId`, `OpInfoIconProc.classId`, `OpInfoViewProc.charIndex` | `include/opinfo.h` | ui-buffer |
+| `GetSupportScreenCharIdAt`, `GetSupportClassForCharId` | `include/uisupport.h` | ui-buffer |
+| `MonsterItemsByClassEntry.classId`, `gMonsterItemTable` | `include/monstergen.h`, `src/monstergen_data.c` | runtime-struct / lookup-table |
+| `GMapNodeData.chapteridx_eirika`, `GmapTimeMonsConf.jid` | `include/worldmap.h` | runtime-struct |
+
+Enforcement is machine-side, not review-side: a new unclassified consumer fails
+with its key and `path:line`; a classified row whose declaration disappeared
+fails as stale; a duplicate key or an exclusion without a reason is fatal at
+load. `scripts/generated_data/tests/test_consumer_census.py` proves this with
+temporary-fixture mutations (new consumer -> unclassified failure, removed
+consumer -> stale failure, edited file -> same key, different evidence line),
+not by asserting that a category appears once.
+
+### Finding C -- the scanner fabricated struct fields out of function-body locals (fresh review P2)
+
+The first census landed at **1130 hits**, but a fresh review found the scope
+tracker was structurally unsound: `_track_braces` pushed *every* `{` onto the
+struct stack and reused the last-seen `struct X` token as the owner. A function
+signature whose parameter is a struct type therefore made the whole function
+**body** "owned" by that struct, and ordinary body locals were minted into
+struct fields that do not exist:
+
+| Fabricated hit | Real source | Truth |
+|---|---|---|
+| `MenuItemDef.pid` | `src/bmmenu.c:1611` `int pid;` inside `SupplyUsability(const struct MenuItemDef * def, ...)` | a loop-local character index, not a `MenuItemDef` field |
+| `ProcShop.item` | `src/bmshop.c:388` `u16 item;` inside `ShopDrawBuyItemLine(struct ProcShop * proc, ...)` | a local, not a `ProcShop` field |
+| `anonymous.item` (x9) | `int item;` / `u16 item;` in nine function bodies | plain locals; no struct at all |
+| `MenuItemProc.item` | `src/bmmenu.c` local | previously *hidden* as a `reviewed-exclusion`, i.e. the classification was being used to launder a fake hit |
+
+This violated the module's own stated boundary ("function bodies are not
+analysed") and inflated every reported count, so the 1130 figure could not be
+trusted.
+
+**Root cause:** brace nesting was conflated with struct-definition nesting. A
+`{` only opens a field-bearing scope when a `struct`/`union` keyword (optionally
+a tag) is *immediately* followed by `{`; a use as a parameter, variable, cast,
+forward declaration or `sizeof(struct X)` always inserts another token first.
+
+**Fix:** `consumer_census._ScopeTracker` replaces `_track_braces`. It opens a
+struct scope only for a real definition head, treats function/`if`/`for`
+/initializer/`enum` braces as plain blocks, harvests `struct-field` hits **only**
+when the innermost open scope is a struct/union definition, and restricts
+`data-symbol`/`function-signature` detection to file scope. Owners are stable:
+a tag before the brace names the fields, a `typedef struct { .. } Alias;` uses
+the closing alias, and a nested anonymous struct/union inherits its nearest
+named ancestor.
+
+**Before / after (TRF):**
+
+| Metric | Before (fabricating) | After (fixed) |
+|---|---|---|
+| Total scanned hits | 1130 | 1070 |
+| `struct-field` hits | 177 | 117 |
+| `data-symbol` / `function-signature` / `macro` | 328 / 468 / 154 | 328 / 468 / 154 (unchanged) |
+| Audited / reviewed-exclusion | 1105 / 25 | 1046 / 24 |
+| Fabricated function-body struct fields | 60 | 0 |
+| Census digest (sha256) | `f43cb69f...` | `11e8a3582f0f05e7de3b453a20fdb6e2f97737ec72e39dfa7f837ad85b476433` |
+
+All 60 removed rows are function-body locals in `src/**.c`; **zero** header
+struct fields were dropped, and every verifier-named real consumer above is
+still audited (non-exclusion). The classification diff is removal-only (60
+stale struct-field rows dropped, 0 added, 0 recategorised). New RCA fixtures in
+`test_consumer_census.py::ScopeTrackingTests` reproduce the fabrications (they
+fail on the old tracker) and pin the corrected behaviour, including a fresh
+unclassified fixture that still fails the gate.
+
+### Host-only workflow fix: untouched
+
+The `GBA_PLAYTEST_HOST_ONLY=1` gate-1 fix, the 10-gate count, the normal/live
+runtime build coverage and every fingerprint/budget artifact are unchanged in
+this batch (`git status --porcelain` lists only the census/active-contract
+files, the two makefiles, the two audits and the docs).

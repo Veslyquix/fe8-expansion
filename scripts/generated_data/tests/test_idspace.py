@@ -30,8 +30,24 @@ class ModelShapeTests(unittest.TestCase):
 
     def test_consumer_rows_are_sorted(self):
         rows = idspace.consumer_rows()
-        keys = [(r["domain"], r["category"], r["path"], r["symbol"]) for r in rows]
+        keys = [(r["domain"], r["category"], r["path"], r["kind"], r["symbol"]) for r in rows]
         self.assertEqual(keys, sorted(keys))
+
+    def test_consumer_rows_come_from_the_source_census(self):
+        # The audit consumer table is generated from the source scan + the
+        # tracked classification, never hand-curated: a hand-written row would
+        # have no scanner key and would break this 1:1 identity.
+        from scripts.generated_data import consumer_census
+        audit_keys = [r["key"] for r in idspace.consumer_rows()]
+        census_keys = [r["key"] for r in consumer_census.classified_rows()]
+        self.assertEqual(sorted(audit_keys), sorted(census_keys))
+        self.assertGreater(len(audit_keys), 500,
+                           "the census must audit the whole source surface, not a sample")
+
+    def test_curated_evidence_is_a_subset_not_the_coverage_proof(self):
+        evidence = idspace.evidence_rows()
+        self.assertTrue(evidence)
+        self.assertLess(len(evidence), len(idspace.consumer_rows()))
 
     def test_digest_is_deterministic(self):
         self.assertEqual(idspace.digest(), idspace.digest())
@@ -128,6 +144,19 @@ class OutputDriftTests(unittest.TestCase):
         payload = json.loads(idspace.render_audit_json())
         self.assertEqual(payload["digest"], idspace.digest())
         self.assertEqual(len(payload["domains"]), 6)
+
+    def test_audit_json_is_labelled_default_and_carries_the_census(self):
+        import json
+        from scripts.generated_data import consumer_census
+        payload = json.loads(idspace.render_audit_json())
+        self.assertEqual(payload["contract"], "default")
+        self.assertEqual(payload["default_item_cap"], 0xCD)
+        self.assertEqual(payload["default_item_record_count"], 206)
+        self.assertEqual(payload["census_digest"], consumer_census.census_digest())
+        self.assertIn("coverage_limitations", payload["census"])
+        for key, entry in payload["domain_record_counts"].items():
+            if entry["record_count_status"] == "n/a":
+                self.assertTrue((entry["record_count_note"] or "").strip(), key)
 
 
 if __name__ == "__main__":
