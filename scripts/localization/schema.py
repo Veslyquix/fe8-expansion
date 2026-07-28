@@ -48,6 +48,23 @@ INITIALLY_SUPPORTED_LOCALES: Tuple[str, ...] = ("en", PSEUDO_LOCALE)
 
 DEFAULT_LOCALE = "en"
 
+# --- Message id contract -----------------------------------------------
+
+# Mirrors include/expansion_locale.h's `typedef u16 ExpansionMsgId;` +
+# `#define EXPANSION_MSG_ID_INVALID 0xFFFFu` exactly (kept in sync
+# explicitly, not imported from C -- there is no Python/C shared build
+# step here -- and cross-checked by scripts/localization/tests/
+# test_schema.py). 0xFFFF is the one reserved "no such message" sentinel
+# value every resolver caller must be able to represent; it can therefore
+# never be assigned to a real registry entry (active or tombstone) by any
+# path that produces a build -- see catalog.parse_registry (source-of-
+# truth validation) and generate.py's defensive re-check (belt-and-braces
+# against any future caller that builds a registry/catalog in-process,
+# bypassing parse_registry).
+MSG_ID_INVALID = 0xFFFF
+MSG_ID_MIN = 0
+MSG_ID_MAX = MSG_ID_INVALID - 1  # 0xFFFE -- highest assignable id
+
 # --- Message registry field contract ----------------------------------------
 
 STATUS_ACTIVE = "active"

@@ -75,6 +75,64 @@ class ParseRegistryTests(unittest.TestCase):
         with self.assertRaises(SchemaError):
             parse_registry(reg)
 
+    def test_max_assignable_id_65534_active_accepted(self):
+        reg = _base_registry()
+        reg["messages"][0]["id"] = 0
+        reg["messages"][1]["id"] = schema.MSG_ID_MAX
+        entries = parse_registry(reg)
+        self.assertEqual(entries[1].id, 0xFFFE)
+
+    def test_max_assignable_id_65534_tombstone_accepted(self):
+        reg = _base_registry()
+        reg["messages"].append(
+            {"id": schema.MSG_ID_MAX, "key": "a.retired", "status": "tombstone"}
+        )
+        entries = parse_registry(reg)
+        self.assertEqual(entries[2].id, 0xFFFE)
+        self.assertEqual(entries[2].status, "tombstone")
+
+    def test_sentinel_id_65535_active_rejected(self):
+        reg = _base_registry()
+        reg["messages"][1]["id"] = 0xFFFF
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
+    def test_sentinel_id_65535_tombstone_rejected(self):
+        reg = _base_registry()
+        reg["messages"].append({"id": 0xFFFF, "key": "a.retired", "status": "tombstone"})
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
+    def test_id_65536_rejected(self):
+        reg = _base_registry()
+        reg["messages"][1]["id"] = 65536
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
+    def test_id_70000_rejected(self):
+        reg = _base_registry()
+        reg["messages"][1]["id"] = 70000
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
+    def test_bool_id_rejected(self):
+        reg = _base_registry()
+        reg["messages"][0]["id"] = True
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
+    def test_float_id_rejected(self):
+        reg = _base_registry()
+        reg["messages"][0]["id"] = 1.5
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
+    def test_string_id_rejected(self):
+        reg = _base_registry()
+        reg["messages"][0]["id"] = "0"
+        with self.assertRaises(SchemaError):
+            parse_registry(reg)
+
     def test_invalid_status_rejected(self):
         reg = _base_registry()
         reg["messages"][0]["status"] = "bogus"

@@ -7,7 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
-from scripts.localization.catalog import load_catalog
+from scripts.localization import schema
+from scripts.localization.catalog import LoadedCatalog, RegistryEntry, load_catalog
 from scripts.localization.generate import (
     build_budget,
     build_catalog_c,
@@ -123,6 +124,66 @@ class GenerateWritesFilesTests(unittest.TestCase):
                 "gExpansionLocaleTombstoneCount",
             ):
                 self.assertIn(symbol, source)
+
+
+class DefensiveIdBypassTests(unittest.TestCase):
+    """Simulates a caller that constructs a LoadedCatalog directly,
+    bypassing catalog.parse_registry's own id-range validation --
+    generate.py's own defensive re-check (schema.MSG_ID_MAX /
+    MSG_ID_INVALID) must still catch it."""
+
+    def _catalog_with_bad_active_id(self, bad_id):
+        entry = RegistryEntry(
+            id=bad_id,
+            key="a.bad",
+            status="active",
+            surface="framework_generic",
+            max_width=20,
+            max_decoded_bytes=32,
+        )
+        return LoadedCatalog(
+            entries=(entry,),
+            active_entries=(entry,),
+            tombstone_entries=(),
+            en_strings={"a.bad": "Hello"},
+            pseudo_strings={"a.bad": "Hello"},
+        )
+
+    def test_build_msg_ids_header_rejects_sentinel_bypass(self):
+        catalog = self._catalog_with_bad_active_id(schema.MSG_ID_INVALID)
+        with self.assertRaises(schema.SchemaError):
+            build_msg_ids_header(catalog)
+
+    def test_build_catalog_c_rejects_sentinel_bypass(self):
+        catalog = self._catalog_with_bad_active_id(schema.MSG_ID_INVALID)
+        with self.assertRaises(schema.SchemaError):
+            build_catalog_c(catalog)
+
+    def test_build_msg_ids_header_rejects_over_u16_bypass(self):
+        catalog = self._catalog_with_bad_active_id(70000)
+        with self.assertRaises(schema.SchemaError):
+            build_msg_ids_header(catalog)
+
+    def test_build_msg_ids_header_accepts_max_assignable_id_bypass(self):
+        catalog = self._catalog_with_bad_active_id(schema.MSG_ID_MAX)
+        header = build_msg_ids_header(catalog)
+        self.assertIn(f"{schema.MSG_ID_MAX}u", header)
+
+    def test_generate_raises_before_writing_any_file_on_bad_id(self):
+        catalog = self._catalog_with_bad_active_id(schema.MSG_ID_INVALID)
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "generated"
+
+            import scripts.localization.generate as generate_module
+
+            original_load_catalog = generate_module.load_catalog
+            generate_module.load_catalog = lambda **kwargs: catalog
+            try:
+                with self.assertRaises(schema.SchemaError):
+                    generate(output_dir=out_dir)
+            finally:
+                generate_module.load_catalog = original_load_catalog
+            self.assertFalse(out_dir.exists() and any(out_dir.iterdir()))
 
 
 if __name__ == "__main__":

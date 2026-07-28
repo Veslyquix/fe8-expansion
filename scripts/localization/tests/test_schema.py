@@ -75,6 +75,24 @@ class CSyncTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(int(match.group(1)), schema.MAX_DECODED_BYTES_MAX)
 
+    def test_msg_id_invalid_sentinel_matches(self):
+        text = self._header_text()
+        match = re.search(r"#define EXPANSION_MSG_ID_INVALID\s+0x([0-9A-Fa-f]+)u", text)
+        self.assertIsNotNone(match)
+        self.assertEqual(int(match.group(1), 16), schema.MSG_ID_INVALID)
+
+
+class MsgIdContractTests(unittest.TestCase):
+    def test_msg_id_invalid_is_0xffff(self):
+        self.assertEqual(schema.MSG_ID_INVALID, 0xFFFF)
+
+    def test_msg_id_max_is_one_below_invalid(self):
+        self.assertEqual(schema.MSG_ID_MAX, schema.MSG_ID_INVALID - 1)
+        self.assertEqual(schema.MSG_ID_MAX, 0xFFFE)
+
+    def test_msg_id_min_is_zero(self):
+        self.assertEqual(schema.MSG_ID_MIN, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

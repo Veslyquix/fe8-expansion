@@ -90,8 +90,14 @@ def parse_registry(data: dict) -> Tuple[RegistryEntry, ...]:
                 f"message {key!r} (id {entry_id}) has invalid status {status!r}; "
                 f"expected one of {schema.STATUSES}"
             )
-        if entry_id < 0:
-            raise schema.SchemaError(f"message {key!r} has a negative id {entry_id}")
+        if entry_id < schema.MSG_ID_MIN or entry_id > schema.MSG_ID_MAX:
+            raise schema.SchemaError(
+                f"message {key!r} has id {entry_id} outside the assignable "
+                f"ExpansionMsgId range [{schema.MSG_ID_MIN}, {schema.MSG_ID_MAX}]; "
+                f"{schema.MSG_ID_INVALID} (0x{schema.MSG_ID_INVALID:04X}) is the "
+                f"reserved EXPANSION_MSG_ID_INVALID sentinel and can never be "
+                f"assigned to a real message"
+            )
         if entry_id in seen_ids:
             raise schema.SchemaError(f"duplicate message id {entry_id} (key {key!r})")
         if previous_id is not None and entry_id <= previous_id:

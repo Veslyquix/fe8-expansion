@@ -79,6 +79,18 @@ typedef u16 ExpansionMsgId;
 #define EXPANSION_MSG_ID_INVALID 0xFFFFu
 
 /*
+ * 0xFFFF (EXPANSION_MSG_ID_INVALID above) is reserved: no registry entry
+ * (active or tombstone) may ever be assigned that id, so the highest
+ * assignable id is 0xFFFE. This is enforced (and is the single source of
+ * truth) at build time by scripts/localization/schema.py's MSG_ID_MAX /
+ * MSG_ID_INVALID constants -- both catalog.parse_registry (the registry
+ * loader) and generate.py's own defensive re-check apply it before any
+ * generated output is written; this comment intentionally does not
+ * duplicate that logic in C, only documents the contract for readers of
+ * this header.
+ */
+
+/*
  * Per-slot byte budget for the runtime resolver's single bounded scratch
  * cache slot below -- every active registry message's max_decoded_bytes
  * (texts/expansion/registry.json) must be <= this value in both English
