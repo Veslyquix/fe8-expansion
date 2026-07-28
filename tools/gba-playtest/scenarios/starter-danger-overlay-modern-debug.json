@@ -1,0 +1,849 @@
+{
+  "schema_version": 1,
+  "name": "starter-danger-overlay-modern-debug",
+  "description": "Issue #6 player QoL danger/range overlay runtime proof on a starter-foundation profile ROM (EXPANSION_DANGER_OVERLAY_MENU=1), reached by an ORDINARY clean-boot route with no save fixture, no debug launcher and no debug tools: the shared title/save-menu A/START cadence to the top-level Save Menu, New Game, one DOWN to select NORMAL difficulty (proven by difficultyConfigByte -- PlaySt.config.controller, bit 5 of gPlaySt+0x42 -- reading 0x20 while chapterStateBits keeps PLAY_FLAG_HARD (0x40) clear; Easy leaves that byte 0x00), the first empty slot, then eleven START presses on the engine's own event-skip path (EventEngine_CanStartSkip/EventEngine_StartSkip, src/event.c) through the intro monologue, the world-map tour and the Prologue opening event. That lands on the REAL Prologue battle map (mapSize 15x10, chapterIndex CHAPTER_L_PROLOGUE 0x00, faction FACTION_BLUE 0x00, chapterTurnNumber 1) with a live enemy (gUnitArrayRed[0] maxHP/curHP 23/23, the Prologue boss). One LEFT moves the cursor from Eirika's tile (4,5) to the empty tile (3,5) -- proving the map is interactive -- A opens the vanilla map menu there (PLAYER_SELECT_NOUNIT, src/playerphase.c), and one UP wraps the menu cursor to the gated 'Threat Range' item, which is the LAST entry of gMapMenuItems. Selecting it drives the real vanilla danger-zone path (ExpansionDangerOverlay_MenuSelect -> MapMenu_DangerZone_UnusedEffect -> PlayerPhase_DisplayDangerZone -> GenerateDangerZoneRange -> DisplayMoveRangeGraphics). The semantic scalar probes then show the full lifecycle: menuSelectCount and dangerDisplayCount go 0->1->2 over two independent selections, lastRangeTileCount is the exact count of non-zero gBmMapRange tiles generated for the Prologue's three enemies (39) on BOTH displays, rangeGraphicsActive toggles 1->0 on each B cancel through the vanilla ACT_CANCEL path, and cancelReturnCount goes 0->1->2. The final checkpoint moves the cursor again (3,5)->(4,5) with the enemy still 23/23 and faction still FACTION_BLUE, proving the map stayed interactive and undamaged after the overlay. Semantic scalars only -- never a pointer, never a framebuffer hash.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 350,
+      "end": 355,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 415,
+      "end": 420,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 480,
+      "end": 485,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 545,
+      "end": 550,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 950,
+      "end": 956,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1020,
+      "end": 1026,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 1090,
+      "end": 1096,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1380,
+      "end": 1386,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1503,
+      "end": 1509,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1599,
+      "end": 1605,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1764,
+      "end": 1770,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1860,
+      "end": 1866,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2101,
+      "end": 2107,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2254,
+      "end": 2260,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2383,
+      "end": 2389,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2624,
+      "end": 2630,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2865,
+      "end": 2871,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3106,
+      "end": 3112,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3347,
+      "end": 3353,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3500,
+      "end": 3506,
+      "keys": [
+        "LEFT"
+      ]
+    },
+    {
+      "start": 3570,
+      "end": 3576,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3660,
+      "end": 3666,
+      "keys": [
+        "UP"
+      ]
+    },
+    {
+      "start": 3740,
+      "end": 3746,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3900,
+      "end": 3906,
+      "keys": [
+        "B"
+      ]
+    },
+    {
+      "start": 4020,
+      "end": 4026,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 4110,
+      "end": 4116,
+      "keys": [
+        "UP"
+      ]
+    },
+    {
+      "start": 4190,
+      "end": 4196,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 4350,
+      "end": 4356,
+      "keys": [
+        "B"
+      ]
+    },
+    {
+      "start": 4470,
+      "end": 4476,
+      "keys": [
+        "RIGHT"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 3450,
+      "framebuffer": false,
+      "name": "prologue-map-normal-mode-player-phase",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0004"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3550,
+      "framebuffer": false,
+      "name": "cursor-moved-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3800,
+      "framebuffer": false,
+      "name": "overlay-first-display-39-tiles",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000027"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3980,
+      "framebuffer": false,
+      "name": "overlay-cancel-returns-to-map",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000027"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 4250,
+      "framebuffer": false,
+      "name": "overlay-second-display-repeatable",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000027"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 4430,
+      "framebuffer": false,
+      "name": "overlay-second-cancel",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000027"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000002"
+        }
+      ]
+    },
+    {
+      "frame": 4550,
+      "framebuffer": false,
+      "name": "map-interactive-after-overlay",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "expected": "0x0004"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x020381cc",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x020381d0",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x020381d4",
+          "size": 4,
+          "expected": "0x00000027"
+        },
+        {
+          "address": "0x020381d8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x020381dc",
+          "size": 4,
+          "expected": "0x00000002"
+        }
+      ]
+    }
+  ]
+}

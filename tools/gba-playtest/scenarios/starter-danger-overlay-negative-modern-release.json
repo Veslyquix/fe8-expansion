@@ -1,0 +1,640 @@
+{
+  "schema_version": 1,
+  "name": "starter-danger-overlay-negative-modern-release",
+  "description": "Issue #6 player QoL danger/range overlay DEFAULT-DISABLED negative control. Same ordinary clean-boot Normal-difficulty route to the same REAL Prologue battle map as the positive scenario (same title/save-menu cadence, same New Game + DOWN-to-Normal + first empty slot, same eleven engine START skips), run against the ORDINARY default flags-off ROM where EXPANSION_DANGER_OVERLAY_MENU is 0. The identical LEFT cursor move and A map-menu open are replayed, but this build's gMapMenuItems has no 'Threat Range' entry at all, so the menu is byte-identical vanilla and there is nothing to select; the menu is dismissed with the vanilla B cancel and the cursor is moved twice more. Every gExpansionDangerOverlayProbe field (menuSelectCount, dangerDisplayCount, lastRangeTileCount, rangeGraphicsActive, cancelReturnCount) stays 0 at every checkpoint -- the probe is always linked, so all-zero is a real measurement and not a missing symbol -- while chapterIndex/faction/chapterTurnNumber/mapSize/enemy HP match the positive scenario exactly and the cursor still moves, proving the default build reaches the same interactive vanilla map and simply has no overlay surface. Semantic scalars only.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 350,
+      "end": 355,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 415,
+      "end": 420,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 480,
+      "end": 485,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 545,
+      "end": 550,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 950,
+      "end": 956,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1020,
+      "end": 1026,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 1090,
+      "end": 1096,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1380,
+      "end": 1386,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1487,
+      "end": 1493,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1583,
+      "end": 1589,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1748,
+      "end": 1754,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1844,
+      "end": 1850,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2085,
+      "end": 2091,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2238,
+      "end": 2244,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2347,
+      "end": 2353,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2588,
+      "end": 2594,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 2829,
+      "end": 2835,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3070,
+      "end": 3076,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3311,
+      "end": 3317,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 3500,
+      "end": 3506,
+      "keys": [
+        "LEFT"
+      ]
+    },
+    {
+      "start": 3570,
+      "end": 3576,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3660,
+      "end": 3666,
+      "keys": [
+        "B"
+      ]
+    },
+    {
+      "start": 3760,
+      "end": 3766,
+      "keys": [
+        "RIGHT"
+      ]
+    },
+    {
+      "start": 3860,
+      "end": 3866,
+      "keys": [
+        "DOWN"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 3450,
+      "framebuffer": false,
+      "name": "prologue-map-normal-mode-player-phase",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x0004"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3550,
+      "framebuffer": false,
+      "name": "cursor-moved-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3700,
+      "framebuffer": false,
+      "name": "vanilla-map-menu-open-no-overlay-item",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x0003"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3820,
+      "framebuffer": false,
+      "name": "vanilla-menu-cancelled-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x0004"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "expected": "0x0005"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3950,
+      "framebuffer": false,
+      "name": "cursor-moved-again-probe-still-zero",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "expected": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "expected": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "expected": "0x000a"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x0004"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "expected": "0x0006"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "expected": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    }
+  ]
+}

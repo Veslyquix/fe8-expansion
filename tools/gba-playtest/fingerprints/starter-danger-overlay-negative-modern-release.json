@@ -1,0 +1,442 @@
+{
+  "checkpoints": [
+    {
+      "frame": 3450,
+      "name": "prologue-map-normal-mode-player-phase",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0004"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3550,
+      "name": "cursor-moved-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3700,
+      "name": "vanilla-map-menu-open-no-overlay-item",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3820,
+      "name": "vanilla-menu-cancelled-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0004"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3950,
+      "name": "cursor-moved-again-probe-still-zero",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0004"
+        },
+        {
+          "address": "0x02021102",
+          "size": 2,
+          "value": "0x0006"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02037ad0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad4",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ad8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037adc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037ae0",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "9b312ab0a51ef20c5fe520c6ead432eba9d1ca52",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "starter-danger-overlay-negative-modern-release"
+}
