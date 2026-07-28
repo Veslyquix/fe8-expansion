@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "debugtools-prep-hub-modern-release",
-  "description": "Release counterpart of the prep-screen debug hotkey (Issue #11 slice 2). Replays debugtools-hub-modern-release.json's own already-verified 259-frame input script verbatim (same rationale as debugtools-map-hub-modern-release.json: with FE8_EXPANSION_DEBUGTOOLS_ENABLED compiled out, the title-screen SELECT+R hotkey never diverts Title_IDLE, so this modern release build's outcome for that input script is the same stable, unchanging frame -- expected_framebuffer_hash fnv1a64-rgb24:d11078d0ec60076d matches debugtools-hub-modern-release.json's own 'chapter2-interactive-stable'/'post-interactive-cursor-response' checkpoints and debugtools-map-hub-modern-release.json's checkpoints exactly, frame for frame, byte for byte), then appends this slice's new prep-hotkey tail: two FE8_EXPANSION_DEBUGTOOLS_PREP_HOTKEY_MASK (SELECT+B) pulses, followed by the same DOWN/A/RIGHT/RIGHT/B/DOWN/A/RIGHT/B/B tap sequence used in the map-hub release mirror. In this release build, DebugTools_PrepHotkeyCheck (src/debugtools_registry.c) compiles to an empty no-op body and DebugTools_IsHubActive() always returns 0, so src/prep_sallycursor.c's PrepScreenProc_MapIdle never returns early for these keys and gDebugToolsProbe is never written by any debugtools code path -- there is no live sHubActive symbol at all in this build (see docs/debugtools.md). Every appended checkpoint's framebuffer_hash is proven identical to the pre-existing frozen frame and to every other checkpoint in this scenario: the prep hotkey (like the map and title hotkeys before it) has zero observable effect, and gDebugToolsProbe.hubOpenCount/registeredActionCount/lastRegisterResult/launcherArmed all stay 0x00000000 throughout -- proving the prep-phase debug entry point is compiled out, not merely unreached, and introduces no new behavior whatsoever into a release build. NOTE: this repository's chapter data has hasPrepScreen=FALSE for all chapters (a vestigial FE7 field, see include/chapterdata.h) and no in-scope, already-decompiled event script currently drives PrepScreenProc_MapIdle from a deterministic boot sequence without a chapter/skirmish selector (explicitly out of scope for this slice, see docs/debugtools.md 'Remaining #11 scope'); this release-mirror scenario and the host C test suite (mask distinctness, call-site ordering, compile-time validation, idempotent registration) are the available deterministic proof for the prep hotkey until a future slice adds an in-scope deterministic path to a live prep screen.",
+  "description": "Release compiled-out mirror for the prep-phase SELECT+B hotkey: replays debugtools-hub-modern-release.json's own frame script verbatim, then appends two separated SELECT+B pulses plus a trailing input tail. In a release build the prep hotkey and its 'Fast Boot: Ch4 Prep' launcher are compiled out, so gDebugToolsProbe -- including the prep-specific pendingCh4PrepLaunchRequest / ch4PrepLauncherArmed / ch4PrepLaunchRequestConsumedCount / prepScreenObservedCount fields -- stays all-zero across the pulses. IMPORTANT/HONEST SCOPE: this release input does NOT reach a real prep screen (gPlaySt.chapterStateBits never sets PLAY_FLAG_PREPSCREEN). The shared prefix drives the vanilla path into the live opening world-map sequence (chapterIndex==0x10, faction==0x40 (NPC), map cursor==0x0e); the appended SELECT+B tail leaves those semantic progress scalars unchanged across all four checkpoints -- proving the prep hotkey tail is inert on top of a genuinely running, unfrozen world map, NOT that a prep screen was entered. The former frozen-framebuffer-hash oracle (d11078d0) is deleted in favour of these semantic scalars plus the all-zero gDebugToolsProbe. See docs/debugtools.md 'Remaining #11 scope'.",
   "frames": [
     {
       "start": 90,
@@ -1907,11 +1907,35 @@
   ],
   "checkpoints": [
     {
+      "name": "worldmap-intro-pre-prephotkey-inert",
       "frame": 14796,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "pre-prep-hotkey",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -1931,15 +1955,59 @@
           "address": "0x02031510",
           "size": 4,
           "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
+          "size": 4,
+          "expected": "0x00000000"
         }
       ]
     },
     {
+      "name": "worldmap-intro-prephotkey-pulse1-inert",
       "frame": 14856,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-prep-pulse1",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -1959,15 +2027,59 @@
           "address": "0x02031510",
           "size": 4,
           "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
+          "size": 4,
+          "expected": "0x00000000"
         }
       ]
     },
     {
+      "name": "worldmap-intro-prephotkey-pulse2-inert",
       "frame": 14916,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-prep-pulse2",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -1985,17 +2097,61 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
           "size": 4,
           "expected": "0x00000000"
         }
       ]
     },
     {
+      "name": "worldmap-intro-after-prephotkey-tail-inert",
       "frame": 15476,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-full-input-mirror",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -2013,6 +2169,26 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
           "size": 4,
           "expected": "0x00000000"
         }

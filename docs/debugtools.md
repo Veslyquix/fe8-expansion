@@ -28,7 +28,7 @@ non-goals -- `mgba_printf`/full debugger/arbitrary memory editor).
 | `src/bm.c`, `src/playerphase.c`, `src/soundwrapper.c` | Narrow, one-shot bootstrap-suppression guards on the automatic per-phase suspend-save calls (`BmMain_SuspendBeforePhase`, `PlayerPhase_Suspend`) and the song-room unlock write (`UnlockSoundRoomSong`) |
 | `tools/gba-playtest/scenarios/debugtools-hub-modern-{debug,release}.json` | Slice 1 title-hub playtest scenarios (input script + probe expectations) |
 | `tools/gba-playtest/scenarios/debugtools-map-hub-modern-debug.json` (slice 2) | Live map-phase hub scenario: opens the hub with the map mask on the real, interactive Chapter 2 map, exercises Weather then Fog, and proves the map stays interactive after the hub closes |
-| `tools/gba-playtest/scenarios/debugtools-{map,prep}-hub-modern-release.json` (slice 2) | Release mirrors proving both new hotkeys are compiled out (`gDebugToolsProbe` stays all-zero, framebuffer unchanged) |
+| `tools/gba-playtest/scenarios/debugtools-{map,prep}-hub-modern-release.json` (slice 2) | Release mirrors proving both new hotkeys are compiled out (`gDebugToolsProbe` stays all-zero) atop the live opening world map -- semantic `gPlaySt`/cursor progress probes, no framebuffer oracle |
 | `tools/gba-playtest/fingerprints/debugtools-{hub,map-hub,prep-hub}-modern-{debug,release}.json` | Captured fingerprints for the scenarios above |
 | `src/debugtools_diag.c` (closure) | Diagnostics foundation: bounded log ring (`DebugTools_LogEvent`/`GetLogEntry`/`GetLogCount`) and non-fatal assert record (`DEBUGTOOLS_ASSERT`/`DebugTools_RecordAssertFailure`) |
 | `src/debugtools_tools.c` (closure) | The five bounded validated tools: Unit Inspect (heal-to-full), Convoy Inspect (bounded add), Flag/Chapter (bounded flag toggle), RNG Inspect (bounded reseed), Save State (read-only) |
@@ -546,14 +546,37 @@ exclusions), and `post-interactive-cursor-response` (frame 14900, after the
 `RIGHT`/`DOWN` taps, proving the battle-map cursor moved -- this checkpoint's
 SRAM hash is expected to differ from the first two, since ordinary
 suspend-saves are no longer suppressed once past
-`chapter2-interactive-stable`). The release scenario replays the exact same
-frame-for-frame input (all 259 frame entries, identical to the debug
-scenario) against a release build and asserts every probe field stays
-`0x00000000` at all 7 checkpoints -- proving the entire subsystem is
-compiled out, not merely unreached, even across the full Chapter 2 tap
-sequence (which a release build's own vanilla title-to-SaveMenu handling
-still processes as ordinary input, since none of it is debugtools-specific
-behavior).
+`chapter2-interactive-stable`).
+
+The **release** scenario (`debugtools-hub-modern-release.json`) replays the
+exact same frame-for-frame input (all 259 frame entries, identical to the
+debug scenario) against a release build, where the whole debugtools
+subsystem is compiled out, so `gDebugToolsProbe` stays all-zero at all 7
+checkpoints (the compiled-out proof). It carries **no** framebuffer oracle.
+An earlier revision asserted the frozen-screen hash
+`fnv1a64-rgb24:d11078d0ec60076d` at its last two checkpoints, but that was
+vacuous: the world-map UB (a `Proc_FindNext` NULL-deref the `-O2` release
+build mis-optimised into an infinite loop, fixed in `src/worldmap_rm.c` /
+`src/worldmap_automu.c`; see `reports/issue6_foundation_evidence.md`) had
+frozen the screen, so a frozen-screen hash matched whether or not
+debugtools linked -- and once the fix unfroze the screen the hash became a
+false negative. Because the debug hotkeys are inert in release, the same
+`START`/`A` taps simply drive the vanilla title-to-new-game path into the
+game's **live opening world-map sequence**, and the checkpoints now assert
+relocation-independent semantic `gPlaySt`/cursor scalars for it:
+`chapterIndex` advances from `0x00` (title, frames 300-950) to a real
+non-title `0x10` with `faction == 0x40` (NPC phase) and the map cursor
+initialised to `0x0e` by frames 14000-14900. That title->world-map
+progression is impossible on the pre-fix build (which locked with
+`chapterIndex` stuck at `0x00`), so the scenario genuinely **fails on the
+frozen build and passes on the fixed one**, instead of passing vacuously on
+both. This world-map sequence is the plain vanilla path -- **not** a debug
+hub and **not** a real chapter map (`gBmSt`'s tactical main loop is not
+active) -- so the release checkpoints were renamed
+(`title-idle-preboot-inert`, `title-hotkey-pulse{1,2}-inert`,
+`title-a-press-inert`, `newgame-intro-pre-worldmap-inert`,
+`worldmap-intro-live-progress`, `worldmap-intro-live-progress-sustained`)
+from the old, misleading debug-shaped names.
 
 ### Title-idle-timer freeze (`titleIdleTimerSample`)
 
@@ -677,16 +700,26 @@ never desyncs ordinary map-phase input handling.
 `debugtools-prep-hub-modern-release.json` are release-mirror scenarios: each
 replays `debugtools-hub-modern-release.json`'s own exact input script
 verbatim, then appends a hotkey tail (map mask + `B`/direction taps, or prep
-mask + `B`/direction taps respectively) and asserts every probe stays
-`0x00000000` and the framebuffer hash is identical at every checkpoint --
-proving the map/prep hotkey masks are compiled out in a release build with
-zero observable effect, exactly like the title mask. By the frame these
-tails execute, the release build's own framebuffer is already fully static
-(confirmed identical, `fnv1a64-rgb24:d11078d0ec60076d`, across every
-checkpoint in both files, matching `debugtools-hub-modern-release.json`'s
-own last two checkpoints) -- so these scenarios demonstrate the tail input
-changes nothing further, consistent with that already-accepted release
-baseline.
+mask + `B`/direction taps respectively). In a release build the map/prep
+hotkey masks are compiled out, so `gDebugToolsProbe` -- including the
+prep-specific `pendingCh4PrepLaunchRequest`/`ch4PrepLauncherArmed`/
+`ch4PrepLaunchRequestConsumedCount`/`prepScreenObservedCount` fields --
+stays all-zero across the pulses. These scenarios carry **no** framebuffer
+oracle. An earlier revision asserted the frozen-screen hash
+`fnv1a64-rgb24:d11078d0ec60076d` at every checkpoint, reasoning the tail
+input "changes nothing further"; but that hash was frozen only because the
+world-map UB had locked the screen, so it proved nothing about debugtools
+being compiled out (and became a false negative once the fix unfroze it).
+The shared prefix has already driven the vanilla path into the live opening
+world-map sequence (`gPlaySt.chapterIndex == 0x10`, `faction == 0x40` NPC,
+map cursor `== 0x0e`); the appended hotkey tail leaves each of those
+semantic progress scalars **unchanged** across all four checkpoints, which
+is the real proof that the map/prep hotkey tail is inert on top of a
+genuinely running, unfrozen world map (the pre-fix build locked here with
+`chapterIndex` stuck at `0x00`). **Honest scope:** this release input
+reaches the opening world-map cinematic, never a debug hub and never a real
+prep screen (`gPlaySt.chapterStateBits` never sets `PLAY_FLAG_PREPSCREEN`);
+the checkpoint names reflect that.
 
 A live prep-screen scenario reaching a real, engine-active prep screen is
 now **achieved** in this closure via Chapter 4 (see "Fast Boot: Chapter 4
@@ -1195,9 +1228,14 @@ tools" above for what each proves.
   remains cursor-interactive after the hub closes; confirms both
   `-modern-release.json` mirror scenarios reuse
   `debugtools-hub-modern-release.json`'s own frame script verbatim as a
-  prefix (not a hand-authored approximation) and assert every probe and
-  the framebuffer hash stay identical/zero across the appended hotkey
-  tail; and confirms the map/prep masks used in the input scripts match
+  prefix (not a hand-authored approximation) and carry no framebuffer
+  oracle -- instead asserting all-zero `gDebugToolsProbe` fields plus the
+  live world-map semantic progress scalars (`chapterIndex`/`faction`/
+  cursor) held constant across the appended hotkey tail (a dedicated
+  standing guard,
+  `test_release_negatives_forbid_any_framebuffer_and_require_semantic_probes`,
+  also rejects any reintroduced framebuffer or pointer oracle); and
+  confirms the map/prep masks used in the input scripts match
   the header's actual configured default masks (so the scenario can never
   silently drift from the real compiled-in hotkey).
 
