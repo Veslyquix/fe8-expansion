@@ -12,6 +12,20 @@
     "debug.diagnostics_header": "Diagnostics",
     "debug.catalog_stats_label": "Catalog Stats:",
     "debug.sample_placeholder_pair": "Sample {0} of {1}",
-    "debug.sample_two_line": "Line one\nLine two"
+    "debug.sample_two_line": "Line one\nLine two",
+    "language.selector_title": "Select Language",
+    "language.settings_label": "Language",
+    "language.settings_help": "Change UI language",
+    "framework.back": "Back",
+    "save_compat.menu_erase_all": "Erase All Save Data",
+    "debug.action.fastboot_ch2": "Fast Boot: Chapter 2",
+    "debug.action.weather": "Weather",
+    "debug.action.fog": "Fog",
+    "debug.action.fastboot_ch4prep": "Fast Boot: Ch4 Prep",
+    "debug.action.unit_inspect": "Unit Inspect",
+    "debug.action.convoy_inspect": "Convoy Inspect",
+    "debug.action.flag_chapter": "Flag/Chapter",
+    "debug.action.rng_inspect": "RNG Inspect",
+    "debug.action.save_state": "Save State"
   }
 }

@@ -1404,6 +1404,23 @@ $(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCAL
 	@mkdir -p "$(MODERN_LOCALIZATION_GENERATED_DIR)"
 	@python3 -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
 
+# Issue #18 sprint 3: ordinary compiles are not otherwise made to wait for
+# expansion_msg_ids.h -- only the synthetic expansion_locale-catalog.o
+# object above has its own explicit prerequisite on the generated catalog
+# .c. Sprint 3 adds several new `#ifdef MODERN` call sites (src/uiconfig.c,
+# src/save_compat_menu.c, src/debugtools_registry.c,
+# src/expansion_language_menu.c) that #include expansion_msg_ids.h
+# directly, so every modern C object now needs this same generate-first
+# guarantee, not just the catalog object -- otherwise a clean build can
+# race a real compiler error ("expansion_msg_ids.h: No such file or
+# directory") depending on unrelated build parallelism/ordering. Guarded
+# by MODERN_LOCALIZATION_AVAILABLE exactly like every other localization
+# prerequisite in this section (a no-op, unreachable line when modern.mk
+# is included standalone without the localization toolchain present).
+ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
+$(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_LOCALIZATION_MSG_IDS_H)
+endif
+
 # Explicit (non-pattern) compile rule for the generated catalog's synthetic
 # slot object (see the MODERN_ALL_C_OBJECTS += comment above for why this
 # path is synthetic, not a reinstated "original" one). GNU Make always

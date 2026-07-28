@@ -8,6 +8,21 @@
 #include "uimenu.h"
 #include "expansion_debugtools.h"
 
+#ifdef MODERN
+/* Issue #18 sprint 3: render-time-only ExpansionMsgId mapping for the
+ * nine title/map/prep-reachable *builtin* action ids (1-9, see
+ * src/debugtools_launcher.c/src/debugtools_actions.c/
+ * src/debugtools_tools.c) -- purely additive to how those specific
+ * rows are *drawn*; struct DebugToolsAction/DebugToolsResult/
+ * DebugTools_RegisterAction's ABI and every registered action's own
+ * `id`/`label`/`onSelected` fields are completely untouched. Any
+ * third-party/unmapped id (0, or >9) keeps the exact original
+ * pointer-based (def->name = action->label, onDraw = NULL) rendering
+ * below -- never redirected through this table. */
+#include "expansion_locale.h"
+#include "expansion_msg_ids.h"
+#endif
+
 /*
  * Issue #11 slice 1 -- contributor debug-action registry and the
  * title-screen debug hub.
@@ -73,6 +88,60 @@ CONST_DATA struct MenuDef gDebugToolsHubMenuDef = {
     0
 };
 
+#ifdef MODERN
+/* Parallel-indexed by builtin action id (1-9); id 0 is never a real
+ * action (see DEBUGTOOLS_ERR_ID_INVALID), so slot 0 is an unused
+ * placeholder. Every entry here is one of the nine builtin ids -- a
+ * contributor/third-party registration always uses some other id and
+ * therefore is never looked up in this table (see
+ * DebugToolsHub_ResolveBuiltinLabelMsgId below). */
+static const ExpansionMsgId sBuiltinActionLabelMsgIds[DEBUGTOOLS_ACTION_MAX + 1] =
+{
+    EXPANSION_MSG_ID_INVALID,               /* id 0: never a real action */
+    EXP_MSG_DEBUG_ACTION_FASTBOOT_CH2,      /* id 1 */
+    EXP_MSG_DEBUG_ACTION_WEATHER,           /* id 2 */
+    EXP_MSG_DEBUG_ACTION_FOG,               /* id 3 */
+    EXP_MSG_DEBUG_ACTION_FASTBOOT_CH4PREP,  /* id 4 */
+    EXP_MSG_DEBUG_ACTION_UNIT_INSPECT,      /* id 5 */
+    EXP_MSG_DEBUG_ACTION_CONVOY_INSPECT,    /* id 6 */
+    EXP_MSG_DEBUG_ACTION_FLAG_CHAPTER,      /* id 7 */
+    EXP_MSG_DEBUG_ACTION_RNG_INSPECT,       /* id 8 */
+    EXP_MSG_DEBUG_ACTION_SAVE_STATE,        /* id 9 */
+};
+
+/* Returns EXPANSION_MSG_ID_INVALID for any id outside the builtin
+ * 1-9 range (every third-party/contributor id included) -- never an
+ * out-of-bounds table read. */
+static ExpansionMsgId DebugToolsHub_ResolveBuiltinLabelMsgId(u16 id)
+{
+    if (id == 0 || id > DEBUGTOOLS_ACTION_MAX)
+        return EXPANSION_MSG_ID_INVALID;
+
+    return sBuiltinActionLabelMsgIds[id];
+}
+
+/* onDraw for a builtin action's hub row only -- resolved fresh every
+ * redraw (menu redraws happen on every hub open/locale-settings
+ * round-trip), so a locale switch is picked up on the very next render
+ * with no cached scratch pointer held across frames. Mirrors the
+ * engine's own default per-item draw (src/uimenu.c) except for the
+ * label source. */
+static int DebugToolsHub_BuiltinActionRowDraw(struct MenuProc* proc, struct MenuItemProc* item)
+{
+    if (item->def->color)
+        Text_SetColor(&item->text, item->def->color);
+
+    if (item->availability == MENU_DISABLED)
+        Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
+
+    Text_DrawStringASCII(&item->text, ExpansionLocale_ResolveCurrent((ExpansionMsgId)item->def->helpMsgId));
+
+    PutText(&item->text, TILEMAP_LOCATED(BG_GetMapBuffer(proc->frontBg), item->xTile, item->yTile));
+
+    return 0;
+}
+#endif /* MODERN */
+
 static void DebugToolsHub_BuildMenuItems(void)
 {
     int i;
@@ -82,6 +151,9 @@ static void DebugToolsHub_BuildMenuItems(void)
     for (i = 0; i < sActionCount; ++i)
     {
         struct MenuItemDef* def = &sHubMenuItemDefs[i];
+#ifdef MODERN
+        ExpansionMsgId builtinMsgId = DebugToolsHub_ResolveBuiltinLabelMsgId(sActions[i].id);
+#endif
 
         def->name = sActions[i].label;
         def->nameMsgId = 0;
@@ -94,6 +166,18 @@ static void DebugToolsHub_BuildMenuItems(void)
         def->onIdle = NULL;
         def->onSwitchIn = NULL;
         def->onSwitchOut = NULL;
+
+#ifdef MODERN
+        /* Builtin action ids only -- every third-party/contributor
+         * registration keeps the exact original pointer-based rendering
+         * (def->name/onDraw = NULL) set just above, completely
+         * untouched. */
+        if (builtinMsgId != EXPANSION_MSG_ID_INVALID)
+        {
+            def->helpMsgId = (u16)builtinMsgId;
+            def->onDraw = DebugToolsHub_BuiltinActionRowDraw;
+        }
+#endif
     }
 
     /* Reserved Back/Exit entry -- always the entry right after the last

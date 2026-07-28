@@ -20,6 +20,17 @@
 #include "save_format.h"
 #include "save_compat_menu.h"
 
+#ifdef MODERN
+/* Issue #18 sprint 3: these two labels are expansion-authored
+ * (registry keys framework.back/save_compat.menu_erase_all), so they
+ * are resolved through the catalog/current-locale resolver instead of
+ * the vanilla MSG_SAVE_COMPAT_BACK/MSG_SAVE_COMPAT_ERASE_ALL lookup --
+ * every other string in this file (diagnostic HelpBox messages, the
+ * erase-confirmation Yes/No labels) is untouched vanilla dialogue. */
+#include "expansion_locale.h"
+#include "expansion_msg_ids.h"
+#endif
+
 /*
  * Global save-compatibility gate UI (issue #2 slice 2). See
  * include/save_compat_menu.h and docs/save_format.md for the full design
@@ -145,9 +156,46 @@ static u8 SaveCompatMenu_SelectErase(struct MenuProc* menu, struct MenuItemProc*
     return MENU_ACT_SKIPCURSOR | MENU_ACT_CLEAR | MENU_ACT_END | MENU_ACT_SND6A;
 }
 
+#ifdef MODERN
+static int SaveCompatMenu_DrawBackLabel(struct MenuProc *proc, struct MenuItemProc *item)
+{
+    if (item->def->color)
+        Text_SetColor(&item->text, item->def->color);
+
+    if (item->availability == MENU_DISABLED)
+        Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
+
+    Text_DrawStringASCII(&item->text, ExpansionLocale_ResolveCurrent(EXP_MSG_FRAMEWORK_BACK));
+
+    PutText(&item->text, TILEMAP_LOCATED(BG_GetMapBuffer(proc->frontBg), item->xTile, item->yTile));
+
+    return 0;
+}
+
+static int SaveCompatMenu_DrawEraseAllLabel(struct MenuProc *proc, struct MenuItemProc *item)
+{
+    if (item->def->color)
+        Text_SetColor(&item->text, item->def->color);
+
+    if (item->availability == MENU_DISABLED)
+        Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
+
+    Text_DrawStringASCII(&item->text, ExpansionLocale_ResolveCurrent(EXP_MSG_SAVE_COMPAT_MENU_ERASE_ALL));
+
+    PutText(&item->text, TILEMAP_LOCATED(BG_GetMapBuffer(proc->frontBg), item->xTile, item->yTile));
+
+    return 0;
+}
+#endif
+
 CONST_DATA struct MenuItemDef gSaveCompatMenuItems[] = {
+#ifdef MODERN
+    {"", 0, 0, 0, 121, MenuAlwaysEnabled, SaveCompatMenu_DrawBackLabel, SaveCompatMenu_SelectBack, 0, 0, 0},
+    {"", 0, 0, 0, 122, MenuAlwaysEnabled, SaveCompatMenu_DrawEraseAllLabel, SaveCompatMenu_SelectErase, 0, 0, 0},
+#else
     {"", MSG_SAVE_COMPAT_BACK, 0, 0, 121, MenuAlwaysEnabled, 0, SaveCompatMenu_SelectBack, 0, 0, 0},
     {"", MSG_SAVE_COMPAT_ERASE_ALL, 0, 0, 122, MenuAlwaysEnabled, 0, SaveCompatMenu_SelectErase, 0, 0, 0},
+#endif
     MenuItemsEnd
 };
 

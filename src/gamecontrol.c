@@ -22,6 +22,7 @@
 #include "constants/event-flags.h"
 #include "constants/songs.h"
 #include "expansion_debugtools.h"
+#include "expansion_language_menu.h"
 
 /* Reused verbatim from AgbMain's own clean-boot RNG seed (src/main.c) --
  * reseeding to this exact constant immediately before the debug hub's
@@ -64,6 +65,22 @@ PROC_LABEL(LGAMECTRL_GAME_INTRO_UI),
 
     // fallthrough
 
+#ifdef MODERN
+    /* Issue #18 sprint 3: blocking first-start language selector/auto-
+     * apply gate -- after early UI/SRAM init (ProcScr_GameEarlyStartUI
+     * above has already run), strictly before the intro cutscene/title
+     * (ProcScr_OpAnim below). Never touches Title_IDLE or any issue #11
+     * debug hotkey; ends immediately (no visible UI) whenever the
+     * startup decision is APPLY_ONLY/AUTO_SELECT (see
+     * src/expansion_language_menu.c). Guarded because this proc script
+     * lives in src/expansion_language_menu.c, which -- like
+     * src/expansion_locale.c/src/expansion_save_prefs.c -- is only
+     * linked into the modern ROM. */
+    PROC_START_CHILD_BLOCKING(ProcScr_ExpansionLanguageSelector),
+
+    // fallthrough
+
+#endif /* MODERN */
 PROC_LABEL(LGAMECTRL_OP_ANIM),
     PROC_CALL(GameControl_EnableSoundEffects),
     PROC_START_CHILD_BLOCKING(ProcScr_OpAnim),

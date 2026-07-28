@@ -67,6 +67,12 @@ enum
     GAME_OPTION_OBJECTIVE      = 14,
     GAME_OPTION_CONTROLLER     = 15,
     GAME_OPTION_RANK_DISPLAY   = 16,
+#ifdef MODERN
+    /* Issue #18 sprint 3: language settings entry row. Modern-only --
+     * never referenced by the legacy/agbcc build (no selectors[4]
+     * expansion; struct GameOption's layout/size is unchanged). */
+    GAME_OPTION_LANGUAGE       = 17,
+#endif
 };
 
 enum
@@ -101,6 +107,9 @@ void Config_Init(struct ConfigProc * proc);
 bool WindowColorOptionChangeHandler(ProcPtr proc);
 bool MusicOptionChangeHandler(ProcPtr proc);
 bool GenericOptionChangeHandler(ProcPtr proc);
+#ifdef MODERN
+bool LanguageOptionEntryHandler(ProcPtr proc);
+#endif
 u8 GetGameOption(u8 index);
 void SetGameOption(u8 index, u8 newValue);
 void PutGameOptionRow(ProcPtr proc, int selectedIdx, int c);
