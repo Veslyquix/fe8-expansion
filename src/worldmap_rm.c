@@ -774,12 +774,17 @@ void EndGmapRmBorder1(int index)
     {
         proc = Proc_FindNext(&procIter);
 
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (proc->index == index)
         {
             Proc_End(proc);
             return;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return;
 }
@@ -800,11 +805,17 @@ int GmapRmBorder1Exists(int index)
     do
     {
         proc = Proc_FindNext(&procIter);
+
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (proc->index == index)
         {
             return 1;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return 0;
 }
@@ -820,6 +831,12 @@ void RequestGmapRmBorder1Remove(int index)
     do
     {
         proc = Proc_FindNext(&procIter);
+
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (index < 0)
         {
             proc->flag = 1;
@@ -829,7 +846,7 @@ void RequestGmapRmBorder1Remove(int index)
             proc->flag = 1;
             return;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return;
 }
@@ -1171,12 +1188,18 @@ void EndWmPlaceDotByIndex(int index)
     do
     {
         proc = Proc_FindNext(&procIter);
+
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (proc->unk_2b == index)
         {
             Proc_End(proc);
             return;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return;
 }
@@ -1196,11 +1219,17 @@ bool IsWmPlaceDotActiveAtIndex(int index)
     do
     {
         proc = Proc_FindNext(&procIter);
+
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (proc->unk_2b == index)
         {
             return true;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return false;
 }
@@ -1215,6 +1244,12 @@ void SetWmPlaceDotFlagForIndex(int index)
     do
     {
         proc = Proc_FindNext(&procIter);
+
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (index < 0)
         {
             proc->flag = 1;
@@ -1224,7 +1259,7 @@ void SetWmPlaceDotFlagForIndex(int index)
             proc->flag = 1;
             return;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return;
 }
