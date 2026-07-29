@@ -267,15 +267,42 @@ tools/scaninc/scaninc$(EXE): $(wildcard tools/scaninc/*.cpp tools/scaninc/*.h to
 # modern.mk-only fixture tree (neither file present) safely no-ops instead
 # of failing to find a rule for a target nothing added to
 # MODERN_ALL_C_OBJECTS. The generated catalog/header/budget files
-# themselves live under a single config/ABI-independent build directory
-# (their content never depends on MODERN_CONFIG/MODERN_ABI/MODERN_ROM_SIZE
-# -- only on texts/expansion/registry.json + catalog.en.json), so every
-# MODERN_CONFIG/MODERN_ABI combination shares one generated copy instead of
-# needlessly regenerating an identical copy per $(MODERN_OUTPUT_DIR).
+# themselves live under $(MODERN_BUILD_ROOT) (their content never depends
+# on MODERN_CONFIG/MODERN_ABI/MODERN_ROM_SIZE -- only on
+# texts/expansion/registry.json + catalog.en.json), so every
+# MODERN_CONFIG/MODERN_ABI combination *within the same build root* shares
+# one generated copy instead of needlessly regenerating an identical copy
+# per $(MODERN_OUTPUT_DIR).
+#
+# Issue #18 sprint 5 root-cause fix: this used to be a single, hardcoded
+# "build/expansion-localization" path shared by *every* build root,
+# including expansion-modern-localization-runtime-multi-check's own
+# recursive `+$(MAKE) expansion-modern-rom MODERN_BUILD_ROOT=build/
+# expansion-modern-multi ...` sub-invocation (modern.mk's own
+# "Localization runtime checks" section below). Content-wise this was
+# always safe (the generator is a pure function of the registry/catalog,
+# never of MODERN_BUILD_ROOT/MODERN_CONFIG/EXPANSION_ENABLED_LOCALES), but
+# *process*-wise it meant the default single-locale build and the
+# multi-locale build's own independent `make` process tree both read/wrote
+# the exact same on-disk generated header/catalog/budget files -- a real
+# recursive-make/shared-output hazard (see the "&:" grouped-target comment
+# on the generation recipe below for the *intra*-process-tree version of
+# this same class of hazard, which grouped targets already close) whenever
+# two independent process trees raced this shared path (observed as a
+# transient "missing generated header" clean-build failure specifically on
+# the multi-locale build). Keying this path off $(MODERN_BUILD_ROOT)
+# instead gives the default build and every recursively-invoked
+# alternate-build-root sub-make (multi-locale today; any future one) its
+# own private, non-shared copy -- eliminating the cross-process-tree race
+# at its root instead of merely documenting a "never run this with -j"
+# workaround. A useful side effect: expansion-modern-clean's `$(RM) -r
+# $(MODERN_BUILD_ROOT)` now also cleans this build root's own generated
+# localization output, instead of silently leaving it behind under a
+# sibling path clean never touched.
 MODERN_LOCALIZATION_CLI := scripts/localization/cli.py
 MODERN_LOCALIZATION_REGISTRY := texts/expansion/registry.json
 MODERN_LOCALIZATION_AVAILABLE := $(and $(wildcard $(MODERN_LOCALIZATION_CLI)),$(wildcard $(MODERN_LOCALIZATION_REGISTRY)))
-MODERN_LOCALIZATION_ROOT := build/expansion-localization
+MODERN_LOCALIZATION_ROOT := $(MODERN_BUILD_ROOT)/expansion-localization
 MODERN_LOCALIZATION_GENERATED_DIR := $(MODERN_LOCALIZATION_ROOT)/generated
 MODERN_LOCALIZATION_CATALOG_C := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_locale_catalog.c
 MODERN_LOCALIZATION_MSG_IDS_H := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_msg_ids.h
@@ -452,7 +479,7 @@ MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/bmb-weapontriangle.o
 endif
 
 # Issue #18 sprint 1: the generated locale catalog .c
-# ($(MODERN_LOCALIZATION_CATALOG_C), under build/expansion-localization/
+# ($(MODERN_LOCALIZATION_CATALOG_C), under $(MODERN_BUILD_ROOT)/expansion-localization/
 # generated/ -- never a committed source directory) has no "original hand
 # path" to reuse (there is no hand-written predecessor; it is brand new
 # this sprint, defining the `extern const` data
@@ -1445,7 +1472,7 @@ endif
 $(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_COMPILE_SETTINGS)
 
 # --- Localization catalog generation (issue #18 sprint 1) -------------------
-# Regenerates build/expansion-localization/generated/{expansion_locale_catalog.c,
+# Regenerates $(MODERN_BUILD_ROOT)/expansion-localization/generated/{expansion_locale_catalog.c,
 # expansion_msg_ids.h,budget.json} from texts/expansion/registry.json +
 # catalog.en.json via scripts/localization/generate.py (invoked through its
 # CLI, scripts/localization/cli.py -- see also localization.mk's own
@@ -2453,7 +2480,20 @@ endif
 #    SetCurrent/GetCurrent round-trip fixed this sprint actually works.
 #    Uses its own build root + EXPANSION_ENABLED_LOCALES override so it
 #    never disturbs the default single-locale $(MODERN_ROM) above.
-MODERN_LOCALE_MULTI_BUILD_ROOT := build/expansion-modern-multi
+#
+#    Issue #18 sprint 5: derived from $(MODERN_BUILD_ROOT) (a "-multi"
+#    sibling) rather than a hardcoded "build/expansion-modern-multi"
+#    literal, so a caller that overrides MODERN_BUILD_ROOT (e.g. an
+#    isolated/hermetic regression test -- see
+#    scripts/modernize/tests/test_modern_localization_header_bootstrap.py's
+#    ModernLocalizationMultiCheckColdCleanTests) gets its own equally
+#    isolated multi-locale build root instead of always falling through to
+#    the real repository-tracked default path regardless of the caller's
+#    own override. The default value (MODERN_BUILD_ROOT's own default,
+#    "build/expansion-modern") still resolves to exactly
+#    "build/expansion-modern-multi" as before, so no real invocation's
+#    on-disk output path actually changes.
+MODERN_LOCALE_MULTI_BUILD_ROOT := $(MODERN_BUILD_ROOT)-multi
 MODERN_LOCALE_MULTI_ROM := $(MODERN_LOCALE_MULTI_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
 
 expansion-modern-localization-runtime-multi-check: expansion-modern-boot-preflight \
@@ -2470,6 +2510,14 @@ ifeq ($(MODERN_CONFIG),debug)
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-selector-multi-switch-qps-modern-debug.json" \
 		--expected "$(MODERN_LOCALE_FP)/locale-selector-multi-switch-qps-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-settings-real-navigation-multi-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-settings-real-navigation-multi-modern-debug.json" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-softreset-persistence-multi-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-softreset-persistence-multi-modern-debug.json" \
 		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
 endif
 	@printf 'Modern ROM localization-runtime multi-check passed (config=%s): %s\n' '$(MODERN_CONFIG)' "$(MODERN_LOCALE_MULTI_ROM)"
@@ -2541,7 +2589,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
 	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \
 		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
-	@printf 'Modern ROM localization-runtime shifted-check passed (locale resolver/selector probes unaffected by __text_shift): %s\n' "$(MODERN_LOCALE_MULTI_ROM)"
+	@printf 'Modern ROM localization-runtime shifted-check passed (locale resolver/selector probes unaffected by __text_shift), shifted output: %s\n' "$(MODERN_SHIFTED_OUTDIR)"
 else
 	@printf 'Modern ROM localization-runtime shifted-check skipped for config=%s (debug-only boot-timing calibration, matches expansion-modern-shifted-check)\n' '$(MODERN_CONFIG)'
 endif

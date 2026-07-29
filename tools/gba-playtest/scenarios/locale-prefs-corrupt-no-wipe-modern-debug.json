@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "locale-prefs-corrupt-no-wipe-modern-debug",
-  "description": "Issue #18 sprint 4: a real ExpansionUserPrefs record whose stored checksum has been corrupted (magic/version/localeId otherwise valid -- see tools/gba-playtest/tests/locale_prefs_fixture.py's PREFS_STATE_CORRUPT) is classified EXPANSION_USER_PREFS_CORRUPT by the real ExpansionUserPrefs_ValidateRaw()/Normalize() pair, requiring a re-prompt (here AUTO_SELECT collapses it, since the default build only enables one locale). Proves the re-prompt/auto-correct path never wipes SRAM: both checkpoints hash the WHOLE 0x8000 image excluding (a) the 12-byte ExpansionUserPrefs sub-record itself (offset 0x73D4 -- the only bytes this path is allowed to rewrite) and (b) the vanilla SoundRoomSaveData struct (include/bmsave.h, offset 0x7224, size 0x24) -- a pre-existing, locale-unrelated struct that ordinary vanilla boot-time bookkeeping legitimately rewrites on every boot regardless of prefs state, confirmed via a full-0x8000-byte diff sweep during this sprint (see reports/issue18_localization_closure.md). An equal sram_hash at both checkpoints -- captured for real, not hand-written -- is empirical proof that InitGlobalSaveInfodata()'s full-SRAM wipe path was never taken.",
+  "description": "Issue #18 sprint 4: a real ExpansionUserPrefs record whose stored checksum has been corrupted (magic/version/localeId otherwise valid -- see tools/gba-playtest/tests/locale_prefs_fixture.py's PREFS_STATE_CORRUPT) is classified EXPANSION_USER_PREFS_CORRUPT by the real ExpansionUserPrefs_ValidateRaw()/Normalize() pair, requiring a re-prompt (here AUTO_SELECT collapses it, since the default build only enables one locale). Proves the re-prompt/auto-correct path never wipes SRAM: both checkpoints hash the WHOLE 0x8000 image excluding (a) the 12-byte ExpansionUserPrefs sub-record itself (offset 0x73D4 -- the only bytes this path is allowed to rewrite), (b) the vanilla SoundRoomSaveData struct (include/bmsave.h, offset 0x7224, size 0x24), and (c) the vanilla SramInit() hardware self-test scratch pad (gSram->reserved, include/bmsave.h, offset 0x73A0, size 4) -- three pre-existing, locale-unrelated regions that ordinary vanilla boot-time bookkeeping legitimately rewrites on every boot regardless of prefs state, confirmed via a full-0x8000-byte chunked diff sweep during this sprint (see reports/issue18_localization_closure.md). Rather than widening the hash-exclusion blind spot further, this scenario now also independently probes every excluded/adjacent protected region byte-by-byte (GBA SRAM is 8-bit-wide hardware -- multi-byte reads from it alias a single byte across all lanes, so each field below is probed one byte at a time) at both the pre-runtimeinit baseline and the post-decision-settled checkpoint: the SramInit() self-test pad itself, ExpansionSaveMeta's magic/checksum, and the not-yet-populated XMAP save header's magic/checksum/save_magic32 -- proving those regions are stable/known rather than silently masked, without hand-writing any of their values. An equal sram_hash at both checkpoints -- captured for real, not hand-written -- is empirical proof that InitGlobalSaveInfodata()'s full-SRAM wipe path was never taken.",
   "frames": [
     {
       "start": 90,
@@ -44,11 +44,114 @@
           "length": 36
         },
         {
+          "offset": 29600,
+          "length": 4
+        },
+        {
           "offset": 29652,
           "length": 12
         }
       ],
-      "probes": []
+      "probes": [
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "expected": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "expected": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "expected": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "expected": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "expected": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "expected": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
     },
     {
       "frame": 600,
@@ -61,11 +164,113 @@
           "length": 36
         },
         {
+          "offset": 29600,
+          "length": 4
+        },
+        {
           "offset": 29652,
           "length": 12
         }
       ],
       "probes": [
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "expected": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "expected": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "expected": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "expected": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "expected": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "expected": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "expected": "0x00"
+        },
         {
           "address": "0x02031a94",
           "size": 1

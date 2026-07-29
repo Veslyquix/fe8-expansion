@@ -42,6 +42,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -53,7 +54,19 @@ ROOT = Path(__file__).resolve().parents[3]
 # gitignored build/ subdirectory (see .gitignore's blanket "build/" entry)
 # -- never a committed source path -- so removing it never touches or
 # resets any source file.
-LOCALIZATION_ROOT = ROOT / "build" / "expansion-localization"
+#
+# Issue #18 sprint 5: this used to be a single hardcoded
+# "build/expansion-localization" shared by every MODERN_BUILD_ROOT
+# (default and the recursively-invoked multi-locale build alike) -- see
+# modern.mk's own comment on MODERN_LOCALIZATION_ROOT for the real
+# cross-process-tree race this caused. It is now keyed off
+# MODERN_BUILD_ROOT (default "build/expansion-modern"), so this
+# constant -- covering the *default* build root specifically -- moves in
+# lockstep with modern.mk's own default. `_run_real_isolated_build` below
+# derives its own build-root-specific header path per call instead of
+# reusing this constant, exactly because its whole point is exercising a
+# *different* MODERN_BUILD_ROOT each time.
+LOCALIZATION_ROOT = ROOT / "build" / "expansion-modern" / "expansion-localization"
 LOCALIZATION_HEADER = LOCALIZATION_ROOT / "generated" / "expansion_msg_ids.h"
 
 # The direct, real (non-fixture) generated-header consumers this sprint's
@@ -90,6 +103,15 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
     def _clean_localization_output():
         if LOCALIZATION_ROOT.is_dir():
             shutil.rmtree(LOCALIZATION_ROOT)
+        # The multi-locale build root (issue #18 sprint 4's
+        # expansion-modern-localization-runtime-multi-check) is a
+        # completely separate MODERN_BUILD_ROOT with its own,
+        # independent generated-localization copy since sprint 5's
+        # config-specific-path fix -- clean it too so this suite never
+        # depends on (or is polluted by) a previous multi-locale build.
+        multi_root = ROOT / "build" / "expansion-modern-multi" / "expansion-localization"
+        if multi_root.is_dir():
+            shutil.rmtree(multi_root)
 
     def _make(self, *args, env=None):
         return subprocess.run(
@@ -169,10 +191,21 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
     # and these real consumers interact -- with build output isolated to
     # a throwaway directory (MODERN_BUILD_ROOT) so no repository-tracked
     # state or other tests' cached objects are read or disturbed.
+    #
+    # The expected header path is derived from *this call's own*
+    # iso_root (not the shared LOCALIZATION_ROOT/LOCALIZATION_HEADER
+    # constants above) -- since sprint 5's config-specific-path fix,
+    # MODERN_LOCALIZATION_ROOT lives under $(MODERN_BUILD_ROOT) itself,
+    # so a caller-supplied MODERN_BUILD_ROOT override (exactly what this
+    # isolated-build helper does) must be honored here too, or this test
+    # would silently degrade into checking the wrong (unrelated, real
+    # default-build-root) path instead of proving *this* isolated build
+    # actually generated its own private copy.
 
     def _run_real_isolated_build(self, config):
         with tempfile.TemporaryDirectory() as tmp:
             iso_root = Path(tmp) / "iso-build"
+            iso_header = iso_root / "expansion-localization" / "generated" / "expansion_msg_ids.h"
             result = self._make(
                 "expansion-modern-elf",
                 f"MODERN_CONFIG={config}",
@@ -181,8 +214,9 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout[-3000:])
             self._assert_no_missing_rule(result.stdout)
             self.assertTrue(
-                LOCALIZATION_HEADER.is_file(),
-                "expansion_msg_ids.h was not actually generated",
+                iso_header.is_file(),
+                "expansion_msg_ids.h was not actually generated under this "
+                "isolated build's own MODERN_BUILD_ROOT",
             )
             out_dir = iso_root / config / "aapcs" / "src"
             for source in CONSUMER_SOURCES:
@@ -201,6 +235,113 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
         if not _toolchain_available():
             self.skipTest("modern toolchain not available")
         self._run_real_isolated_build("release")
+
+
+def _libmgba_available():
+    """Whether tools/gba-playtest/backend.c actually links against a real
+    libmGBA on this host -- checked the *same* way gba_playtest.py's own
+    build_backend() resolves it (a bare ``-lmgba`` fallback whenever
+    ``pkg-config --cflags --libs mgba`` is unavailable/fails, e.g. this
+    sprint's own dev container, which ships libmgba-dev's headers/.so but
+    no mgba.pc), never a pkg-config-only probe that would wrongly report
+    "unavailable" on hosts exactly like that one. Reuses gba_playtest.py's
+    own real compiler-invocation logic directly (never a duplicated,
+    potentially-drifting re-implementation of it) via a throwaway
+    temp-directory build of the real backend.c."""
+    sys.path.insert(0, str(ROOT / "tools" / "gba-playtest"))
+    import gba_playtest as _gba_playtest  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory(prefix="libmgba-probe-") as tmp:
+        probe_binary = Path(tmp) / "gba_playtest_backend_probe"
+        try:
+            _gba_playtest.build_backend(probe_binary)
+        except _gba_playtest.PlaytestError:
+            return False
+    return True
+
+
+class ModernLocalizationMultiCheckColdCleanTests(unittest.TestCase):
+    """Issue #18 sprint 5 contract item #1: a genuinely cold (no
+    prebuilt/precached ``build/`` output anywhere, and *never* a manual
+    ``make expansion-localization-generate``/``scripts.localization.cli
+    generate`` run first) invocation of
+    ``expansion-modern-localization-runtime-multi-check`` -- the target
+    whose own recursive ``+$(MAKE) expansion-modern-rom
+    MODERN_BUILD_ROOT=build/expansion-modern-multi ...`` sub-invocation
+    was the concrete repro for the cross-process-tree generated-header
+    race documented on modern.mk's own ``MODERN_LOCALIZATION_ROOT``
+    comment -- must always succeed sequentially (deliberately never
+    passed ``-j``/``MAKEFLAGS`` here: see modern.mk's own "Bugs found and
+    fixed" note on ``-j`` parallelism, which remains a real, separate,
+    documented hazard this specific regression does not attempt to
+    reproduce or fix).
+
+    Runs both ``MODERN_CONFIG`` values against a throwaway, isolated
+    ``MODERN_BUILD_ROOT`` (never the real repository-tracked ``build/``
+    tree, and never seeded with a prebuilt generated header) so this
+    test is itself fully hermetic and safe to run alongside every other
+    test in this module.
+    """
+
+    def _run_cold_multi_check(self, config):
+        with tempfile.TemporaryDirectory() as tmp:
+            iso_root = Path(tmp) / "iso-build"
+            result = subprocess.run(
+                [
+                    "make", "--no-print-directory",
+                    "expansion-modern-localization-runtime-multi-check",
+                    f"MODERN_CONFIG={config}",
+                    "MODERN_ABI=aapcs",
+                    f"MODERN_BUILD_ROOT={iso_root}",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout[-4000:])
+            self.assertNotIn(
+                "No rule to make target", result.stdout,
+                "cold expansion-modern-localization-runtime-multi-check "
+                "must never hit an unresolvable generated-header "
+                "prerequisite for either build root",
+            )
+            self.assertIn(
+                "localization-runtime multi-check passed", result.stdout,
+            )
+            # This target's own recursive sub-make actually builds under
+            # MODERN_LOCALE_MULTI_BUILD_ROOT (a "-multi" sibling of the
+            # caller-supplied MODERN_BUILD_ROOT since this sprint's own
+            # fix -- see modern.mk's own comment there), never the
+            # caller's MODERN_BUILD_ROOT directly and never the real
+            # repository-tracked default -- so this isolated build's own
+            # generated header must exist under *that* derived path.
+            iso_multi_root = iso_root.parent / (iso_root.name + "-multi")
+            iso_header = (
+                iso_multi_root / "expansion-localization" / "generated"
+                / "expansion_msg_ids.h"
+            )
+            self.assertTrue(
+                iso_header.is_file(),
+                "expansion_msg_ids.h was not generated under this cold "
+                "isolated multi-check build's own derived multi-locale "
+                "build root",
+            )
+
+    def test_debug_cold_clean_multi_check_succeeds(self):
+        if not _toolchain_available():
+            self.skipTest("modern toolchain not available")
+        if not _libmgba_available():
+            self.skipTest("libmGBA (pkg-config mgba) not available")
+        self._run_cold_multi_check("debug")
+
+    def test_release_cold_clean_multi_check_succeeds(self):
+        if not _toolchain_available():
+            self.skipTest("modern toolchain not available")
+        if not _libmgba_available():
+            self.skipTest("libmGBA (pkg-config mgba) not available")
+        self._run_cold_multi_check("release")
 
 
 class ModernLocalizationHeaderFilterPortabilityTests(unittest.TestCase):

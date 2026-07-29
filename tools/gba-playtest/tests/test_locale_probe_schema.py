@@ -123,6 +123,29 @@ class ExpansionLanguageMenuProbeSchemaTests(unittest.TestCase):
     def _scenario_files(self):
         return sorted(SCENARIOS_DIR.glob("locale-*.json"))
 
+    # EWRAM address space (GBA memory map): this schema only governs
+    # gExpansionLanguageMenuProbe reads, which always live here. Some
+    # locale-*-no-wipe-*.json scenarios (issue #18 sprint 5 WHAT #2) also
+    # legitimately probe cart SRAM (0x0e000000-0x0e007fff) -- individual,
+    # honestly-described bytes proving specific known-noise SRAM regions
+    # (the vanilla SoundRoom self-test pad, ExpansionSaveMeta's own
+    # magic/checksum, and the untouched XMAP region) are stable/expected,
+    # which is an entirely different probe domain from this EWRAM struct
+    # and is intentionally out of scope for this module's offsetof()/
+    # sizeof() cross-check. Those SRAM probes are excluded here (not
+    # exempted from review -- see the same scenarios' own description
+    # fields and docs/localization.md).
+    _EWRAM_RANGE = (0x02000000, 0x02040000)
+
+    def _probe_ewram_addresses(self, data):
+        addrs = set()
+        for checkpoint in data["checkpoints"]:
+            for probe in checkpoint.get("probes", []):
+                addr = int(probe["address"], 16)
+                if self._EWRAM_RANGE[0] <= addr < self._EWRAM_RANGE[1]:
+                    addrs.add(addr)
+        return addrs
+
     def test_every_locale_scenario_probe_address_matches_a_documented_field_offset(self):
         """Every probe address used by any locale-*.json scenario must be
         `base + offsetof(field)` for some real field, where `base` is
@@ -136,10 +159,7 @@ class ExpansionLanguageMenuProbeSchemaTests(unittest.TestCase):
         offset_to_field = {v: k for k, v in self.offsets.items()}
         for path in scenario_files:
             data = json.loads(path.read_text(encoding="utf-8"))
-            addrs = set()
-            for checkpoint in data["checkpoints"]:
-                for probe in checkpoint.get("probes", []):
-                    addrs.add(int(probe["address"], 16))
+            addrs = self._probe_ewram_addresses(data)
             if not addrs:
                 continue
             base = min(addrs)
@@ -165,16 +185,15 @@ class ExpansionLanguageMenuProbeSchemaTests(unittest.TestCase):
         adjacent EWRAM state."""
         for path in self._scenario_files():
             data = json.loads(path.read_text(encoding="utf-8"))
-            addrs = set()
-            for checkpoint in data["checkpoints"]:
-                for probe in checkpoint.get("probes", []):
-                    addrs.add(int(probe["address"], 16))
+            addrs = self._probe_ewram_addresses(data)
             if not addrs:
                 continue
             base = min(addrs)
             for checkpoint in data["checkpoints"]:
                 for probe in checkpoint.get("probes", []):
                     addr = int(probe["address"], 16)
+                    if addr not in addrs:
+                        continue  # not an EWRAM gExpansionLanguageMenuProbe read (see _probe_ewram_addresses)
                     size = int(probe["size"])
                     end_offset = (addr - base) + size
                     self.assertLessEqual(
@@ -191,16 +210,15 @@ class ExpansionLanguageMenuProbeSchemaTests(unittest.TestCase):
         offset_to_field = {v: k for k, v in self.offsets.items()}
         for path in self._scenario_files():
             data = json.loads(path.read_text(encoding="utf-8"))
-            addrs = set()
-            for checkpoint in data["checkpoints"]:
-                for probe in checkpoint.get("probes", []):
-                    addrs.add(int(probe["address"], 16))
+            addrs = self._probe_ewram_addresses(data)
             if not addrs:
                 continue
             base = min(addrs)
             for checkpoint in data["checkpoints"]:
                 for probe in checkpoint.get("probes", []):
                     addr = int(probe["address"], 16)
+                    if addr not in addrs:
+                        continue  # not an EWRAM gExpansionLanguageMenuProbe read (see _probe_ewram_addresses)
                     rel = addr - base
                     field = offset_to_field.get(rel)
                     if field is None:

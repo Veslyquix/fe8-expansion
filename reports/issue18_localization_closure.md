@@ -5,11 +5,46 @@ Status: **candidate closure evidence for reviewer/verifier. GitHub issue
 #18 is OPEN at time of writing; this report does not close it, and does
 not claim any CI run URL or merged state.** It maps every item of this
 sprint's frozen contract (the WHAT/DONE sections of the task that produced
-this commit) to concrete code, scenarios, tests, and explicit non-goals/
-descoped items, so a reviewer can verify closure claim-by-claim. It builds
-on Sprint 1 (`5436ec27`), Sprint 2 (`795d2abd`, `6b9fe068`), and Sprint 3
-(`b746df2c`, `92ed1b6b`) rather than duplicating their host-only test
-coverage.
+this commit) to concrete code, scenarios, tests, and explicit non-goals,
+so a reviewer can verify closure claim-by-claim. It builds on Sprint 1
+(`5436ec27`), Sprint 2 (`795d2abd`, `6b9fe068`), and Sprint 3 (`b746df2c`,
+`92ed1b6b`) rather than duplicating their host-only test coverage.
+
+**Sprint 5 addendum (this commit)**: fixed every Harness review/verifier
+finding raised against this report's sprint-4 claims, closing all three
+previously-descoped items for real (see the WHAT #2-3 section above and
+"Non-applicable items" below) plus four additional real defects:
+
+1. **Multi-locale clean-build header-path DAG bug**: a clean, uncached,
+   non-`-j` multi-locale build could race two configs'/output roots'
+   generated-header prerequisites against each other. Root-caused to
+   `modern.mk`'s `MODERN_LOCALIZATION_ROOT`/`MODERN_LOCALE_MULTI_BUILD_
+   ROOT` not being config/output-root-specific; fixed by deriving both
+   from `$(MODERN_BUILD_ROOT)`, and locked in with a new cold debug/release
+   `expansion-modern-localization-runtime-multi-check` regression run with
+   no cache and no `-j` (`scripts/modernize/tests/test_modern_
+   localization_header_bootstrap.py`'s `ModernLocalizationMultiCheckColdCleanTests`).
+2. **Prefs-corruption "no-wipe" SRAM-hash false red**: root-caused an
+   undocumented, vanilla `SramInit()` hardware self-test scratch-pad
+   write (`gSram->reserved`, offset `0x73A0`, 4 bytes) as a second
+   locale-unrelated noise source beyond the already-known `SoundRoomSaveData`
+   struct. Fixed by adding it as a third, explicit `sram_hash_exclude_
+   ranges` entry (never by deleting the whole-SRAM comparison) plus new,
+   real per-byte probes covering it, `ExpansionSaveMeta`'s own magic/
+   checksum, and the untouched XMAP region's magic/checksum/`save_magic32`
+   -- proving these regions are stable/known rather than silently masked.
+3. **Real settings navigation / real soft-reset persistence / visible
+   pseudo marker**: implemented for real (see WHAT #2-3 above); no longer
+   descoped.
+4. **Shifted-check success log printed the wrong path**: `expansion-
+   modern-localization-runtime-shifted-check`'s success `printf` referenced
+   `$(MODERN_LOCALE_MULTI_ROM)` instead of the actual shifted-build output
+   path; fixed to print `$(MODERN_SHIFTED_OUTDIR)`.
+
+No fixture is described as a reboot; no whole-framebuffer/whole-SRAM
+comparison was deleted to hide unexplained drift; every fingerprint this
+sprint touched was captured via a real `gba_playtest.py capture` run
+against a real, freshly-built ROM, never hand-written.
 
 Tool versions used to produce every command/output below:
 
@@ -102,8 +137,8 @@ was never actually left modified).
 ### 2-3. Semantic scenarios/targets with real assertions (not frame-only)
 
 `tools/gba-playtest/scenarios/locale-*.json` +
-`tools/gba-playtest/fingerprints/locale-*.json` (10 scenario/fingerprint
-pairs, real libmGBA captures):
+`tools/gba-playtest/fingerprints/locale-*.json` (12 scenario/fingerprint
+pairs as of sprint 5, real libmGBA captures):
 
 | Scenario | Config(s) | Contract item |
 |---|---|---|
@@ -114,6 +149,8 @@ pairs, real libmGBA captures):
 | `locale-prefs-corrupt-no-wipe` | debug | Corrupt prefs -> re-prompt; SRAM hash unchanged (see exclusions below): no wipe. |
 | `locale-prefs-unknown-locale-no-wipe` | debug | Unknown-locale-id prefs -> re-prompt; SRAM hash unchanged: no wipe. |
 | `locale-prefs-disabled-locale-no-wipe` | debug | Prefs naming a locale not compiled into this build -> re-prompt; SRAM hash unchanged: no wipe. |
+| `locale-settings-real-navigation-multi` (sprint 5) | debug | Real Prep Map -> Options -> Configuration -> Language -> `RIGHT` navigation opens the real settings submenu; real qps-ploc selection; real Back-cancel-never-mutates-prefs proof; visible pseudo-marker region/pixel checkpoints. |
+| `locale-softreset-persistence-multi` (sprint 5) | debug | Real first-run selector chooses qps-ploc; real `A+B+SELECT+START` soft-reset combo reboots via libmGBA's own HLE BIOS; continuous SRAM proves persistence (no selector re-prompt, locale retained). |
 
 Every scenario asserts real `gExpansionLanguageMenuProbe` field values
 (via the schema-locked probe addresses above) plus SRAM hash and/or
@@ -125,41 +162,53 @@ intro-mash sequence was found to accidentally auto-dismiss the selector
 before its checkpoint frame, and was abandoned in favor of this
 minimal-input, semantically-targeted sequence.
 
-**English/pseudo render + explicit pseudo marker**: `locale-selector-
-multi-switch-qps` exercises selecting `qps-ploc` from the real selector
-and captures the resulting framebuffer hash plus
-`gExpansionLanguageMenuProbe.selectedLocale`/`currentLocale`/
-`cacheGeneration`. It does not additionally assert an OCR/pixel-pattern
-proof that the rendered glyphs specifically spell the pseudo test marker
-text (e.g. bracket/padding characters) beyond the probe's locale-id fields
-and the framebuffer hash's opacity as a pinned artifact -- **this
-finer-grained visible-marker assertion is explicitly descoped** (see
-"Descoped items" below); the `"Pseudo (Test)"` label-never-a-language-name
-guarantee is proven at the host level instead (Sprint 3's
-`test_expansion_language_menu.py`, unchanged this sprint) and by
-`docs/localization.md`'s legal/non-goals section.
+**English/pseudo render + explicit pseudo marker (implemented, sprint 5)**:
+a prior sprint's `locale-selector-multi-switch-qps` framebuffer-hash-only
+evidence has been superseded -- `locale-settings-real-navigation-multi-
+modern-debug` now carries a per-checkpoint `back_row_label` framebuffer
+**region** hash (never the whole-screen hash alone) plus two individual
+**pixel probes** at the settings submenu's `Back` row, the one row in this
+menu resolved in the *current* locale (`ExpansionLocale_ResolveCurrent
+(EXP_MSG_FRAMEWORK_BACK)`; every locale-name row is always resolved in
+English regardless of current locale). Real capture proves this region's
+hash, and concrete pixel byte values, differ between the English
+(`currentLocale=0`) and qps-ploc checkpoints -- e.g. a dark-ink byte in
+English becomes a light-background/white byte in qps-ploc at the same
+screen coordinate -- real, screen-region/pixel-level proof the qps-ploc
+decoration marker (`scripts/localization/pseudo.py`'s deterministic
+`"Back"` -> `"[[BaaCk]]"` transform) is visible and differs from English.
+See `tools/gba-playtest/backend.c`/`gba_playtest.py`'s new plan-format-v3
+`regions`/`pixel_probes` checkpoint fields and their mandatory host schema
+tests, `tools/gba-playtest/tests/test_region_pixel_schema.py` (32 tests)
+and `tools/gba-playtest/tests/region_hash_mirror.py`.
 
-**Soft-reboot-specific persistence**: rather than a literal soft-reset
-(`START+SELECT+A+B`) mid-scenario, persistence-across-boot is proven via
-the `locale-auto-select-single-locale` fixture: a real, reachable
-`ExpansionUserPrefs` sub-state (`UNSET`, with the *outer*
-`ExpansionSaveMeta` already `SAVE_COMPAT_CURRENT` so the blank-chip
-auto-stamp path never runs) is loaded from a fresh cold boot, and the
-probe/SRAM evidence shows the previously-stored preference is read and
-applied without re-prompting. This is the same code path a soft reboot
-would exercise (`ExpansionUserPrefs_Load()`/`_Normalize()` at boot,
-independent of how the console reached that boot) -- **the literal
-soft-reset key-combo variant is explicitly descoped** as a semantically
-equivalent, lower-value duplicate of this proof (see "Descoped items").
+**Soft-reboot persistence (implemented, sprint 5)**: a prior sprint's
+fresh-cold-boot-from-fixture proof (semantically related but not a
+literal reboot) has been superseded -- `locale-softreset-persistence-
+multi-modern-debug` now replays the real first-run-selector input
+choosing `qps-ploc`, then holds the actual GBA hardware soft-reset key
+combo (`A+B+SELECT+START`, ~20-24 frames). libmGBA's default HLE BIOS
+implements this combo without any custom backend/game code, producing a
+genuine full reboot (fresh EWRAM/BSS -- `startupRunCount` resets to `0`)
+while the underlying SRAM image is never swapped/replaced. Post-reboot,
+the selector does not reappear and `currentLocale` reads back `qps-ploc`
+without re-selection -- real persistence across a real reboot on
+continuous SRAM, not a fixture stand-in.
 
-**Real Config settings-submenu live navigation**: descoped in a prior
-session after an inconclusive live-navigation investigation (documented
-there); this sprint's evidence for the settings-submenu contract item
-instead relies on Sprint 3's host-level `ExpansionLanguageMenu_
-OpenSettings`/decision-function tests (unchanged) plus this sprint's
-`locale-selector-multi-switch-qps` scenario for the *startup* selector
-path specifically. **Explicitly descoped, not fabricated** (see "Descoped
-items").
+**Real Config settings-submenu live navigation (implemented, sprint 5)**:
+a prior sprint's inconclusive live-navigation investigation has been
+superseded -- `locale-settings-real-navigation-multi-modern-debug` drives
+the actual reachable in-game path (Prep Map -> `Options` -> Configuration
+screen -> `Language` row -> `RIGHT`) entirely through replayed controller
+input, never calling `ExpansionLanguageMenu_OpenSettings()` directly and
+never substituting a fixture for the entry point. Real probe evidence:
+`settingsActive` toggles 0->1 on real entry; selecting `qps-ploc` moves
+`currentLocale`/`cacheGeneration`/`settingsChangeCount` and auto-closes
+the submenu; reopening the submenu and pressing `B` (Back, no selection)
+leaves `currentLocale`/`cacheGeneration`/`settingsChangeCount` and all 6
+persisted `ExpansionUserPrefs` SRAM bytes byte-identical while
+`settingsOpenCount` still increments -- real, capture-verified proof that
+Back never mutates prefs.
 
 Debug/release matrix: every scenario with cross-config relevance ships
 both a `-modern-debug` and `-modern-release` pair (7 of 10 file pairs);
@@ -230,7 +279,7 @@ Debug, release, and the `en,qps-ploc` multi-locale config were all built
 via real `arm-none-eabi-gcc` (`MODERN_CONFIG=debug|release`, plus the
 separate multi-locale build root) and exercised through the real libmGBA
 backend (`libmgba-dev 0.10.2`) for every capture/verify in this report --
-no fingerprint in this diff was hand-written. All 10 new locale-* scenario/
+no fingerprint in this diff was hand-written. All 12 locale-* scenario/
 fingerprint pairs, plus every pre-existing fingerprint this sprint's own
 `src/expansion_locale.c` EWRAM fix legitimately drifted, were captured via
 `gba_playtest.py capture` and confirmed via `verify --policy behavior`.
@@ -339,20 +388,15 @@ sprint) -- every fix this sprint is confined to `modern.mk`, `scripts/
 shiftcheck/modern_shifted_boot.sh`, scenario/fingerprint JSON, and this
 sprint's own new files.
 
-## Descoped items (explicit, not silently dropped)
+## Non-applicable items (explicit, not silently dropped)
 
-- **Real Config settings-submenu live-navigation proof** (a prior
-  session's inconclusive investigation into driving the actual in-game
-  Config screen to the settings submenu via input replay). Host-level
-  coverage of `ExpansionLanguageMenu_OpenSettings`'s logic (Sprint 3)
-  stands in for it; `needs_review` if a reviewer requires the live
-  navigation specifically.
-- **Explicit pseudo-marker pixel/OCR visibility proof** beyond the
-  `locale-selector-multi-switch-qps` scenario's probe+framebuffer-hash
-  evidence (see WHAT #2-3 above).
-- **Literal soft-reset key-combo persistence variant** (vs. the
-  semantically equivalent fresh-cold-boot-from-already-selected-fixture
-  proof actually shipped -- see WHAT #2-3 above).
+The three items previously listed here as descoped in an earlier sprint
+-- real Config settings-submenu live navigation, an explicit visible
+pseudo-marker pixel/region proof, and a literal soft-reset key-combo
+persistence variant -- are **no longer descoped**: all three are now
+implemented with real libmGBA evidence (see the WHAT #2-3 section above
+and the sprint 5 addendum below). The one remaining item from that list:
+
 - **Docs inventory / checker registry update**: searched for at HEAD;
   no such registry file exists in this worktree's `docs/`/`reports/` tree
   (confirmed via `find`/`ls`), so per the task's own conditional

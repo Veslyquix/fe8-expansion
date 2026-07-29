@@ -43,6 +43,21 @@ KEY_BITS = {
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 HEX_ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{8}$")
 HASH_RE = re.compile(r"^fnv1a64-rgb24:[0-9a-f]{16}$")
+# Screen-region hash (same FNV-1a-over-canonical-R,G,B construction as
+# HASH_RE, restricted to a checkpoint-declared rectangular sub-region of
+# the 240x160 framebuffer -- see backend.c's hash_region()). Distinct
+# algorithm name so a region hash and a whole-frame hash can never be
+# silently confused downstream.
+REGION_HASH_RE = re.compile(r"^fnv1a64-region:[0-9a-f]{16}$")
+# A single captured/expected pixel's 24-bit R,G,B value (backend.c's
+# read_pixel()) -- lowercase 0x plus exactly 6 hex digits, no alpha/padding.
+PIXEL_RE = re.compile(r"^0x[0-9a-f]{6}$")
+GBA_SCREEN_WIDTH = 240
+GBA_SCREEN_HEIGHT = 160
+# Matches backend.c's read_plan() rejection of checkpoint->region_count > 64
+# / checkpoint->pixel_probe_count > 256.
+MAX_REGIONS_PER_CHECKPOINT = 64
+MAX_PIXEL_PROBES_PER_CHECKPOINT = 256
 # "fnv1a64-sram:" is the exact whole-0x8000-byte hash (default, required for
 # any checkpoint that must prove byte-for-byte SRAM preservation, e.g. the
 # non-destructive Back scenarios). "fnv1a64-sram-normalized:" is the same
@@ -157,6 +172,23 @@ class Probe:
 
 
 @dataclass(frozen=True)
+class Region:
+    name: str
+    x: int
+    y: int
+    width: int
+    height: int
+    expected_hash: str | None
+
+
+@dataclass(frozen=True)
+class PixelProbe:
+    x: int
+    y: int
+    expected: str | None
+
+
+@dataclass(frozen=True)
 class Checkpoint:
     name: str
     frame: int
@@ -171,6 +203,14 @@ class Checkpoint:
     # see docs/save_format.md's "SRAM hash policy: exact vs. normalized".
     sram_hash_exclude_ranges: tuple[tuple[int, int], ...]
     probes: tuple[Probe, ...]
+    # Named rectangular sub-regions of the 240x160 framebuffer, each hashed
+    # independently of the whole-frame hash (backend.c's hash_region()) --
+    # real, targeted proof a specific on-screen area changed/differs.
+    regions: tuple[Region, ...]
+    # Individual (x, y) framebuffer coordinates read back as an exact
+    # 24-bit R,G,B color value (backend.c's read_pixel()) -- the finest-
+    # grained real visible-pixel assertion available.
+    pixel_probes: tuple[PixelProbe, ...]
 
 
 @dataclass(frozen=True)
@@ -265,6 +305,8 @@ def parse_scenario_data(data: Any, source: str = "<scenario>") -> Scenario:
                 "sram_hash",
                 "expected_sram_hash",
                 "sram_hash_exclude_ranges",
+                "regions",
+                "pixel_probes",
             },
         )
         checkpoint_name = _expect_name(item["name"], f"{path}.name")
@@ -369,6 +411,104 @@ def parse_scenario_data(data: Any, source: str = "<scenario>") -> Scenario:
                         f"{probe_path}.expected must be lowercase 0x plus {size * 2} hex digits"
                     )
             probes.append(Probe(address, size, expected))
+
+        regions_data = item.get("regions", [])
+        if not isinstance(regions_data, list):
+            raise PlaytestError(f"{path}.regions must be an array")
+        if len(regions_data) > MAX_REGIONS_PER_CHECKPOINT:
+            raise PlaytestError(
+                f"{path}.regions for checkpoint {checkpoint_name!r} has "
+                f"{len(regions_data)} entries, exceeding the "
+                f"{MAX_REGIONS_PER_CHECKPOINT}-region limit per checkpoint "
+                "(matches backend.c's plan-format cap)"
+            )
+        regions: list[Region] = []
+        seen_region_names: set[str] = set()
+        for region_index, raw_region in enumerate(regions_data):
+            region_path = f"{path}.regions[{region_index}]"
+            region_data = _expect_object(
+                raw_region,
+                region_path,
+                {"name", "x", "y", "width", "height"},
+                {"expected_hash"},
+            )
+            region_name = _expect_name(region_data["name"], f"{region_path}.name")
+            if region_name in seen_region_names:
+                raise PlaytestError(f"{region_path}.name duplicates {region_name!r}")
+            seen_region_names.add(region_name)
+            x = region_data["x"]
+            y = region_data["y"]
+            width = region_data["width"]
+            height = region_data["height"]
+            if not _is_int(x) or x < 0 or x >= GBA_SCREEN_WIDTH:
+                raise PlaytestError(
+                    f"{region_path}.x must be an integer from 0 through {GBA_SCREEN_WIDTH - 1}"
+                )
+            if not _is_int(y) or y < 0 or y >= GBA_SCREEN_HEIGHT:
+                raise PlaytestError(
+                    f"{region_path}.y must be an integer from 0 through {GBA_SCREEN_HEIGHT - 1}"
+                )
+            if not _is_int(width) or width < 1 or width > GBA_SCREEN_WIDTH - x:
+                raise PlaytestError(
+                    f"{region_path}.width must be an integer from 1 through {GBA_SCREEN_WIDTH - x}"
+                )
+            if not _is_int(height) or height < 1 or height > GBA_SCREEN_HEIGHT - y:
+                raise PlaytestError(
+                    f"{region_path}.height must be an integer from 1 through {GBA_SCREEN_HEIGHT - y}"
+                )
+            if not framebuffer:
+                raise PlaytestError(f"{region_path} requires the checkpoint's framebuffer to be true")
+            expected_region_hash = region_data.get("expected_hash")
+            if expected_region_hash is not None and (
+                not isinstance(expected_region_hash, str)
+                or not REGION_HASH_RE.fullmatch(expected_region_hash)
+            ):
+                raise PlaytestError(
+                    f"{region_path}.expected_hash must look like "
+                    "'fnv1a64-region:0123456789abcdef'"
+                )
+            regions.append(Region(region_name, x, y, width, height, expected_region_hash))
+
+        pixel_probes_data = item.get("pixel_probes", [])
+        if not isinstance(pixel_probes_data, list):
+            raise PlaytestError(f"{path}.pixel_probes must be an array")
+        if len(pixel_probes_data) > MAX_PIXEL_PROBES_PER_CHECKPOINT:
+            raise PlaytestError(
+                f"{path}.pixel_probes for checkpoint {checkpoint_name!r} has "
+                f"{len(pixel_probes_data)} entries, exceeding the "
+                f"{MAX_PIXEL_PROBES_PER_CHECKPOINT}-pixel-probe limit per checkpoint "
+                "(matches backend.c's plan-format cap)"
+            )
+        pixel_probes: list[PixelProbe] = []
+        seen_pixels: set[tuple[int, int]] = set()
+        for pixel_index, raw_pixel in enumerate(pixel_probes_data):
+            pixel_path = f"{path}.pixel_probes[{pixel_index}]"
+            pixel_data = _expect_object(raw_pixel, pixel_path, {"x", "y"}, {"expected"})
+            x = pixel_data["x"]
+            y = pixel_data["y"]
+            if not _is_int(x) or x < 0 or x >= GBA_SCREEN_WIDTH:
+                raise PlaytestError(
+                    f"{pixel_path}.x must be an integer from 0 through {GBA_SCREEN_WIDTH - 1}"
+                )
+            if not _is_int(y) or y < 0 or y >= GBA_SCREEN_HEIGHT:
+                raise PlaytestError(
+                    f"{pixel_path}.y must be an integer from 0 through {GBA_SCREEN_HEIGHT - 1}"
+                )
+            identity = (x, y)
+            if identity in seen_pixels:
+                raise PlaytestError(f"{pixel_path} duplicates coordinate ({x}, {y}) in this checkpoint")
+            seen_pixels.add(identity)
+            if not framebuffer:
+                raise PlaytestError(f"{pixel_path} requires the checkpoint's framebuffer to be true")
+            expected_pixel = pixel_data.get("expected")
+            if expected_pixel is not None and (
+                not isinstance(expected_pixel, str) or not PIXEL_RE.fullmatch(expected_pixel)
+            ):
+                raise PlaytestError(
+                    f"{pixel_path}.expected must be lowercase 0x plus 6 hex digits (RRGGBB)"
+                )
+            pixel_probes.append(PixelProbe(x, y, expected_pixel))
+
         if not framebuffer and not probes and not sram_hash:
             raise PlaytestError(
                 f"{path} must capture a framebuffer, sram_hash, or at least one probe"
@@ -383,6 +523,8 @@ def parse_scenario_data(data: Any, source: str = "<scenario>") -> Scenario:
                 expected_sram_hash,
                 tuple(sram_hash_exclude_ranges),
                 tuple(sorted(probes, key=lambda probe: (probe.address, probe.size))),
+                tuple(sorted(regions, key=lambda region: region.name)),
+                tuple(sorted(pixel_probes, key=lambda pixel: (pixel.x, pixel.y))),
             )
         )
     if not disabled and inputs:
@@ -552,14 +694,17 @@ def build_backend(output: Path, retries: int = 0) -> None:
 
 
 def _write_plan(path: Path, scenario: Scenario) -> None:
-    # Plan format version 2 adds a per-checkpoint SRAM-hash-exclude-range
-    # count/list (before the probe list) to support
-    # `sram_hash_exclude_ranges`. This plan file is generated and consumed
-    # within the same `capture()`/`verify` invocation only (never persisted
-    # across gba_playtest.py/backend.c versions), so there is no backward
+    # Plan format version 3 adds a per-checkpoint region-count/pixel-probe-
+    # count pair (after the SRAM-hash-exclude-range count) plus the region
+    # (x, y, width, height) and pixel-probe (x, y) record lists (after the
+    # probe list) to support `regions`/`pixel_probes` -- real screen-region
+    # hash and single-pixel proof, distinct from the existing whole-frame
+    # `framebuffer_hash`. This plan file is generated and consumed within
+    # the same `capture()`/`verify` invocation only (never persisted across
+    # gba_playtest.py/backend.c versions), so there is no backward
     # compatibility to preserve here -- backend.c's read_plan() is updated
     # in lockstep.
-    lines = ["GBA_PLAYTEST_PLAN 2", f"RANGES {len(scenario.inputs)}"]
+    lines = ["GBA_PLAYTEST_PLAN 3", f"RANGES {len(scenario.inputs)}"]
     lines.extend(
         f"{frame_range.start} {frame_range.end} {frame_range.key_mask}"
         for frame_range in scenario.inputs
@@ -568,13 +713,19 @@ def _write_plan(path: Path, scenario: Scenario) -> None:
     for checkpoint in scenario.checkpoints:
         lines.append(
             f"{checkpoint.frame} {len(checkpoint.probes)} {int(checkpoint.sram_hash)} "
-            f"{len(checkpoint.sram_hash_exclude_ranges)}"
+            f"{len(checkpoint.sram_hash_exclude_ranges)} {len(checkpoint.regions)} "
+            f"{len(checkpoint.pixel_probes)}"
         )
         lines.extend(
             f"{offset} {length}"
             for offset, length in checkpoint.sram_hash_exclude_ranges
         )
         lines.extend(f"{probe.address} {probe.size}" for probe in checkpoint.probes)
+        lines.extend(
+            f"{region.x} {region.y} {region.width} {region.height}"
+            for region in checkpoint.regions
+        )
+        lines.extend(f"{pixel.x} {pixel.y}" for pixel in checkpoint.pixel_probes)
     path.write_text("\n".join(lines) + "\n", encoding="ascii")
 
 
@@ -582,6 +733,8 @@ def _parse_backend_output(stdout: str, scenario: Scenario) -> dict[str, Any]:
     hashes: dict[int, str] = {}
     sram_hashes: dict[int, str] = {}
     values: dict[tuple[int, int], int] = {}
+    region_hashes: dict[tuple[int, int], str] = {}
+    pixel_values: dict[tuple[int, int], int] = {}
     for line_number, line in enumerate(stdout.splitlines(), 1):
         fields = line.split("\t")
         try:
@@ -629,6 +782,40 @@ def _parse_backend_output(stdout: str, scenario: Scenario) -> dict[str, Any]:
                 if not (0 <= probe_index < len(scenario.checkpoints[checkpoint_index].probes)):
                     raise ValueError("probe index out of range")
                 values[identity] = value
+            elif len(fields) == 4 and fields[0] == "REGIONHASH":
+                checkpoint_index = int(fields[1])
+                region_index = int(fields[2])
+                identity = (checkpoint_index, region_index)
+                if identity in region_hashes:
+                    raise ValueError("duplicate region hash")
+                if not (0 <= checkpoint_index < len(scenario.checkpoints)):
+                    raise ValueError("region hash checkpoint index out of range")
+                if not (
+                    0
+                    <= region_index
+                    < len(scenario.checkpoints[checkpoint_index].regions)
+                ):
+                    raise ValueError("region hash index out of range")
+                if not re.fullmatch(r"[0-9a-f]{16}", fields[3]):
+                    raise ValueError("malformed region hash")
+                region_hashes[identity] = f"fnv1a64-region:{fields[3]}"
+            elif len(fields) == 4 and fields[0] == "PIXEL":
+                checkpoint_index = int(fields[1])
+                pixel_index = int(fields[2])
+                identity = (checkpoint_index, pixel_index)
+                if identity in pixel_values:
+                    raise ValueError("duplicate pixel probe")
+                if not (0 <= checkpoint_index < len(scenario.checkpoints)):
+                    raise ValueError("pixel probe checkpoint index out of range")
+                if not (
+                    0
+                    <= pixel_index
+                    < len(scenario.checkpoints[checkpoint_index].pixel_probes)
+                ):
+                    raise ValueError("pixel probe index out of range")
+                if not re.fullmatch(r"[0-9a-f]{6}", fields[3]):
+                    raise ValueError("malformed pixel value")
+                pixel_values[identity] = int(fields[3], 16)
             else:
                 raise ValueError("unknown record")
         except ValueError as exc:
@@ -651,6 +838,18 @@ def _parse_backend_output(stdout: str, scenario: Scenario) -> dict[str, Any]:
         raise PlaytestError(
             f"backend returned {len(values)} of {expected_probe_count} probes"
         )
+    expected_region_count = sum(len(checkpoint.regions) for checkpoint in scenario.checkpoints)
+    if len(region_hashes) != expected_region_count:
+        raise PlaytestError(
+            f"backend returned {len(region_hashes)} of {expected_region_count} region hashes"
+        )
+    expected_pixel_probe_count = sum(
+        len(checkpoint.pixel_probes) for checkpoint in scenario.checkpoints
+    )
+    if len(pixel_values) != expected_pixel_probe_count:
+        raise PlaytestError(
+            f"backend returned {len(pixel_values)} of {expected_pixel_probe_count} pixel probes"
+        )
     checkpoints: list[dict[str, Any]] = []
     for checkpoint_index, checkpoint in enumerate(scenario.checkpoints):
         captured: dict[str, Any] = {
@@ -670,6 +869,27 @@ def _parse_backend_output(stdout: str, scenario: Scenario) -> dict[str, Any]:
             }
             for probe_index, probe in enumerate(checkpoint.probes)
         ]
+        if checkpoint.regions:
+            captured["regions"] = [
+                {
+                    "name": region.name,
+                    "x": region.x,
+                    "y": region.y,
+                    "width": region.width,
+                    "height": region.height,
+                    "hash": region_hashes[(checkpoint_index, region_index)],
+                }
+                for region_index, region in enumerate(checkpoint.regions)
+            ]
+        if checkpoint.pixel_probes:
+            captured["pixel_probes"] = [
+                {
+                    "x": pixel.x,
+                    "y": pixel.y,
+                    "value": f"0x{pixel_values[(checkpoint_index, pixel_index)]:06x}",
+                }
+                for pixel_index, pixel in enumerate(checkpoint.pixel_probes)
+            ]
         checkpoints.append(captured)
     return {
         "checkpoints": checkpoints,
@@ -797,6 +1017,24 @@ def compare_inline_expectations(
                     f"{prefix} probe 0x{probe.address:08x}/{probe.size}: "
                     f"expected {probe.expected!r}, actual {actual_value!r}"
                 )
+        for region_index, region in enumerate(checkpoint.regions):
+            if region.expected_hash is None:
+                continue
+            actual_hash = actual["regions"][region_index]["hash"]
+            if actual_hash != region.expected_hash:
+                differences.append(
+                    f"{prefix} region {region.name!r}: "
+                    f"expected {region.expected_hash!r}, actual {actual_hash!r}"
+                )
+        for pixel_index, pixel in enumerate(checkpoint.pixel_probes):
+            if pixel.expected is None:
+                continue
+            actual_pixel = actual["pixel_probes"][pixel_index]["value"]
+            if actual_pixel != pixel.expected:
+                differences.append(
+                    f"{prefix} pixel ({pixel.x}, {pixel.y}): "
+                    f"expected {pixel.expected!r}, actual {actual_pixel!r}"
+                )
     return differences
 
 
@@ -833,7 +1071,10 @@ def validate_fingerprint(data: Any, source: str) -> dict[str, Any]:
     for index, raw in enumerate(root["checkpoints"]):
         path = f"{source}.checkpoints[{index}]"
         checkpoint = _expect_object(
-            raw, path, {"frame", "name", "probes"}, {"framebuffer_hash", "sram_hash"}
+            raw,
+            path,
+            {"frame", "name", "probes"},
+            {"framebuffer_hash", "sram_hash", "regions", "pixel_probes"},
         )
         frame = _expect_frame(checkpoint["frame"], f"{path}.frame")
         if frame <= previous_frame:
@@ -870,6 +1111,66 @@ def validate_fingerprint(data: Any, source: str) -> dict[str, Any]:
             pattern = re.compile(rf"^0x[0-9a-f]{{{size * 2}}}$")
             if not isinstance(probe["value"], str) or not pattern.fullmatch(probe["value"]):
                 raise PlaytestError(f"{probe_path}.value is malformed for size {size}")
+        regions = checkpoint.get("regions")
+        if regions is not None:
+            if not isinstance(regions, list) or not regions:
+                raise PlaytestError(f"{path}.regions must be a non-empty array")
+            seen_region_names: set[str] = set()
+            for region_index, raw_region in enumerate(regions):
+                region_path = f"{path}.regions[{region_index}]"
+                region = _expect_object(
+                    raw_region, region_path, {"name", "x", "y", "width", "height", "hash"}
+                )
+                region_name = _expect_name(region["name"], f"{region_path}.name")
+                if region_name in seen_region_names:
+                    raise PlaytestError(f"{region_path}.name duplicates {region_name!r}")
+                seen_region_names.add(region_name)
+                for field, limit in (("x", GBA_SCREEN_WIDTH), ("y", GBA_SCREEN_HEIGHT)):
+                    if not _is_int(region[field]) or region[field] < 0 or region[field] >= limit:
+                        raise PlaytestError(
+                            f"{region_path}.{field} must be an integer from 0 through {limit - 1}"
+                        )
+                for field in ("width", "height"):
+                    if not _is_int(region[field]) or region[field] < 1:
+                        raise PlaytestError(f"{region_path}.{field} must be a positive integer")
+                if region["x"] + region["width"] > GBA_SCREEN_WIDTH:
+                    raise PlaytestError(f"{region_path} exceeds the framebuffer width")
+                if region["y"] + region["height"] > GBA_SCREEN_HEIGHT:
+                    raise PlaytestError(f"{region_path} exceeds the framebuffer height")
+                if not isinstance(region["hash"], str) or not REGION_HASH_RE.fullmatch(
+                    region["hash"]
+                ):
+                    raise PlaytestError(f"{region_path}.hash is malformed")
+        pixel_probes = checkpoint.get("pixel_probes")
+        if pixel_probes is not None:
+            if not isinstance(pixel_probes, list) or not pixel_probes:
+                raise PlaytestError(f"{path}.pixel_probes must be a non-empty array")
+            seen_pixel_coords: set[tuple[int, int]] = set()
+            for pixel_index, raw_pixel in enumerate(pixel_probes):
+                pixel_path = f"{path}.pixel_probes[{pixel_index}]"
+                pixel = _expect_object(raw_pixel, pixel_path, {"x", "y", "value"})
+                if (
+                    not _is_int(pixel["x"])
+                    or pixel["x"] < 0
+                    or pixel["x"] >= GBA_SCREEN_WIDTH
+                ):
+                    raise PlaytestError(
+                        f"{pixel_path}.x must be an integer from 0 through {GBA_SCREEN_WIDTH - 1}"
+                    )
+                if (
+                    not _is_int(pixel["y"])
+                    or pixel["y"] < 0
+                    or pixel["y"] >= GBA_SCREEN_HEIGHT
+                ):
+                    raise PlaytestError(
+                        f"{pixel_path}.y must be an integer from 0 through {GBA_SCREEN_HEIGHT - 1}"
+                    )
+                identity = (pixel["x"], pixel["y"])
+                if identity in seen_pixel_coords:
+                    raise PlaytestError(f"{pixel_path} duplicates coordinate {identity}")
+                seen_pixel_coords.add(identity)
+                if not isinstance(pixel["value"], str) or not PIXEL_RE.fullmatch(pixel["value"]):
+                    raise PlaytestError(f"{pixel_path}.value is malformed")
     return root
 
 

@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--localization-budget", default=None,
         help="Optional path to a generated localization budget.json "
-             "(build/expansion-localization/generated/budget.json)",
+             "(e.g. build/expansion-modern/expansion-localization/generated/budget.json)",
     )
     parser.add_argument("--output", required=True, help="Path to write JSON report")
     parser.add_argument(

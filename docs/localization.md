@@ -136,9 +136,11 @@ fingerprints in the matching `tools/gba-playtest/fingerprints/` file):
 | `locale-blank-sram-no-selector-multi-modern-{debug,release}` | Blank SRAM, multi-locale build (`en,qps-ploc`): selector prompt path is genuinely reachable pre-title. |
 | `locale-auto-select-single-locale-modern-{debug,release}` | An `UNSET` prefs sub-state (real reachable fixture, not blank SRAM) with one enabled locale: `AUTO_SELECT`, `promptShown=0`, never a visible selector -- contract item "one enabled en auto-select no visible selector". |
 | `locale-selector-multi-switch-qps-modern-debug` | Real selector navigation choosing `qps-ploc`; persisted via `ExpansionUserPrefs_Store` (`cacheGeneration` bump visible in probe). |
-| `locale-prefs-corrupt-no-wipe-modern-debug` | Corrupt `ExpansionUserPrefs` -> re-prompt; full-SRAM hash (minus two justified exclusions below) is unchanged frame-5 to frame-600: no wipe. |
+| `locale-prefs-corrupt-no-wipe-modern-debug` | Corrupt `ExpansionUserPrefs` -> re-prompt; full-SRAM hash (minus three justified exclusions below) is unchanged frame-5 to frame-600: no wipe. |
 | `locale-prefs-unknown-locale-no-wipe-modern-debug` | Same, for an unknown-locale-id prefs record. |
 | `locale-prefs-disabled-locale-no-wipe-modern-debug` | Same, for a prefs record naming a locale not compiled into this build. |
+| `locale-settings-real-navigation-multi-modern-debug` | **Real** navigation from a live Prep Map -> Options -> Configuration screen (never a direct `ExpansionLanguageMenu_OpenSettings()` call/fixture) to the Language row, opening the real settings submenu (`settingsActive` 0->1), selecting `qps-ploc` (locale/cache-generation/change-count all move), and proving a `B`-cancel (no selection) leaves `currentLocale`/`cacheGeneration`/`settingsChangeCount` and all 6 persisted `ExpansionUserPrefs` SRAM bytes byte-identical while `settingsOpenCount` still increments -- real proof that Back never mutates prefs. Also carries the visible pseudo-marker region/pixel checkpoints below. |
+| `locale-softreset-persistence-multi-modern-debug` | Real first-run selector chooses `qps-ploc`, then a genuine A+B+SELECT+START soft-reset key combo (held ~20-24 frames through libmGBA's own HLE BIOS -- a real hardware reboot, not a fixture swap) reboots the ROM; continuous, never-swapped SRAM: selector is skipped post-reset (`promptShown`/`active` stay 0) and `currentLocale` is `qps-ploc` again without re-selection. |
 
 Every save/load and suspend/resume regression coverage for locale prefs
 reuses the existing, unmodified `expansion-modern-saveload-check`/
@@ -156,15 +158,88 @@ The three prefs-safety scenarios' `sram_hash_exclude_ranges` are exactly:
   code or prefs state** (confirmed identical across all three fixtures via
   a full 0x8000-byte SRAM diff, chunked at the backend's 1024-probe/
   checkpoint cap).
+- `{"offset": "0x73A0", "length": "0x04"}` -- the vanilla `SramInit()`
+  hardware self-test scratch pad (`gSram->reserved`, `include/bmsave.h`),
+  which the console's own boot-time SRAM self-test legitimately rewrites
+  on every boot, **unrelated to locale/expansion code or prefs state**.
 - `{"offset": "0x73D4", "length": "0x0C"}` -- the `ExpansionUserPrefs`
   record itself, which is *expected* to be rewritten (its own checksum/
   version bookkeeping) even when the effective locale choice is unchanged
   by a rejected corrupt/unknown/disabled value.
 
+Each of these three excluded regions is additionally probed byte-by-byte
+(GBA SRAM is 8-bit-wide hardware -- multi-byte reads alias a single byte
+across all lanes, so every probe here uses `size: 1`) at both the pre-
+runtime-init baseline and the post-decision-settled checkpoint, alongside
+`ExpansionSaveMeta`'s own magic/checksum and the untouched XMAP save
+header's magic/checksum/`save_magic32` -- proving these regions are
+stable/known rather than silently masked by the exclusion, without hand-
+writing any of their expected values (only the two genuinely vanilla,
+locale-independent fields above -- the SoundRoom struct and the SRAM
+self-test pad -- have inline `expected` values at all; `ExpansionSaveMeta`/
+XMAP checksums are commit-dependent and therefore captured, never
+hand-typed).
+
 No other byte anywhere in the 0x8000-byte SRAM image differs between the
 pre- and post-boot checkpoints for any of the three fixtures -- this is
 the real, capture-verified evidence for the "corrupt/unknown/disabled
 prefs never wipe SRAM" contract item, not an assumption.
+
+### Real settings navigation, real soft-reset persistence, visible pseudo marker
+
+`locale-settings-real-navigation-multi-modern-debug` drives the actual,
+reachable in-game UI path a player uses -- Prep Map -> `Options` ->
+Configuration screen -> the `Language` row -> `RIGHT` opens the real
+`ExpansionLanguageMenu_OpenSettings()` submenu -- entirely through
+replayed controller input; it never calls `OpenSettings()` directly and
+never substitutes a fixture for the entry point. It proves, via real
+`gExpansionLanguageMenuProbe` fields: `settingsActive` toggles 0->1 on
+real entry; selecting `qps-ploc` moves `currentLocale`/`cacheGeneration`/
+`settingsChangeCount` and auto-closes the submenu; reopening the submenu
+and pressing `B` (Back, no selection) leaves `currentLocale`/
+`cacheGeneration`/`settingsChangeCount` and all 6 persisted
+`ExpansionUserPrefs` SRAM bytes byte-identical while `settingsOpenCount`
+still increments -- real, capture-verified proof that Back never mutates
+prefs.
+
+`locale-softreset-persistence-multi-modern-debug` proves persistence
+across an actual reboot, not a fixture swap: it replays the real
+first-run-selector input choosing `qps-ploc` (same proven sequence as
+`locale-selector-multi-switch-qps`), then holds the real GBA hardware
+soft-reset combo (`A+B+SELECT+START`) for ~20-24 frames. libmGBA's
+default HLE BIOS implements this combo without any custom backend/game
+code -- holding it triggers a genuine full reboot (fresh EWRAM/BSS,
+`startupRunCount` resets to 0), while the underlying SRAM image is never
+swapped or replaced. Post-reboot, the selector does not reappear
+(`promptShown`/`active` stay 0) and `currentLocale` reads back `qps-ploc`
+without any re-selection -- real persistence across a real reboot on
+continuous SRAM.
+
+**Visible pseudo-locale marker**: the settings submenu's `Back` row is the
+one row in this menu resolved in the *current* locale (`ExpansionLocale_
+ResolveCurrent(EXP_MSG_FRAMEWORK_BACK)` -- `src/expansion_language_menu.c`'s
+`ExpansionLanguageMenu_RowDraw`; every locale-name row is always resolved
+in English regardless of current locale, since it is a menu of language
+*names*, not translated UI chrome). `tools/gba-playtest` gained a new,
+host-schema-tested backend feature for this (`backend.c`/`gba_playtest.py`
+plan format version 3): per-checkpoint named rectangular framebuffer
+`regions` (independently FNV-1a-hashed, never the whole-screen hash) and
+individual `pixel_probes` (exact 24-bit RGB byte triples at a single
+(x, y) coordinate) -- see `tools/gba-playtest/tests/test_region_pixel_
+schema.py` (32 host-only tests) and `tools/gba-playtest/tests/region_hash_
+mirror.py`. `locale-settings-real-navigation-multi-modern-debug`'s own
+`settings-submenu-opened` (English, `currentLocale=0`) and
+`settings-reopened-second-time` (`currentLocale=qps-ploc`, after the real
+in-menu switch above) checkpoints each carry a `back_row_label` region
+(the exact on-screen tile row the Back label draws to) plus two pixel
+probes inside it. Real capture proves the region hash differs between the
+two checkpoints and that concrete pixel bytes flip between dark ink and
+light background/white at the same screen coordinate -- real,
+screen-region/pixel-level proof that the qps-ploc decoration marker
+(`scripts/localization/pseudo.py`'s deterministic bracket-wrapped,
+alternating-case, vowel-doubled transform, e.g. `"Back"` -> `"[[BaaCk]]"`)
+is visible and differs from English at the same location, never merely a
+whole-framebuffer hash difference.
 
 ### Probe schema/bounds host tests
 

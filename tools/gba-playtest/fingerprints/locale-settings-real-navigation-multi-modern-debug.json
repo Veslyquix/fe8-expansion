@@ -1,0 +1,298 @@
+{
+  "checkpoints": [
+    {
+      "frame": 4650,
+      "name": "config-open-before-language-row",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 5550,
+      "framebuffer_hash": "fnv1a64-rgb24:637659069788efa0",
+      "name": "cursor-on-language-row",
+      "probes": [
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 5800,
+      "framebuffer_hash": "fnv1a64-rgb24:d1a1108961845afc",
+      "name": "settings-submenu-opened",
+      "pixel_probes": [
+        {
+          "value": "0x393129",
+          "x": 66,
+          "y": 93
+        },
+        {
+          "value": "0x393129",
+          "x": 142,
+          "y": 91
+        }
+      ],
+      "probes": [
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0001"
+        }
+      ],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:dd2f0844ce7e9d5d",
+          "height": 8,
+          "name": "back_row_label",
+          "width": 136,
+          "x": 56,
+          "y": 88
+        }
+      ]
+    },
+    {
+      "frame": 6200,
+      "framebuffer_hash": "fnv1a64-rgb24:b71f4010c1c9cf00",
+      "name": "qps-ploc-selected",
+      "probes": [
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0001"
+        }
+      ]
+    },
+    {
+      "frame": 6350,
+      "name": "prefs-before-second-open",
+      "probes": [
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x0e0073d4",
+          "size": 1,
+          "value": "0xa5"
+        },
+        {
+          "address": "0x0e0073d5",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x0e0073d7",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0e0073dc",
+          "size": 1,
+          "value": "0x4e"
+        },
+        {
+          "address": "0x0e0073dd",
+          "size": 1,
+          "value": "0x03"
+        }
+      ]
+    },
+    {
+      "frame": 6500,
+      "framebuffer_hash": "fnv1a64-rgb24:0c1402d1d9b44803",
+      "name": "settings-reopened-second-time",
+      "pixel_probes": [
+        {
+          "value": "0xffffff",
+          "x": 66,
+          "y": 93
+        },
+        {
+          "value": "0x7a9db8",
+          "x": 142,
+          "y": 91
+        }
+      ],
+      "probes": [
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0002"
+        }
+      ],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:e899b0d259e4ae5e",
+          "height": 8,
+          "name": "back_row_label",
+          "width": 136,
+          "x": 56,
+          "y": 88
+        }
+      ]
+    },
+    {
+      "frame": 6800,
+      "framebuffer_hash": "fnv1a64-rgb24:5192ebd4cc0bcdee",
+      "name": "back-cancel-no-mutation",
+      "probes": [
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0002"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x0e0073d4",
+          "size": 1,
+          "value": "0xa5"
+        },
+        {
+          "address": "0x0e0073d5",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x0e0073d7",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0e0073dc",
+          "size": 1,
+          "value": "0x4e"
+        },
+        {
+          "address": "0x0e0073dd",
+          "size": 1,
+          "value": "0x03"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "21d8ba4446b11368d6cd3180a90b3bffb1dff2af",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-settings-real-navigation-multi-modern-debug"
+}
