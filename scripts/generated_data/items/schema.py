@@ -51,14 +51,21 @@ integer (the vanilla authoring form -- all 206 hand-ported records use it)
 or a symbolic ``MSG_*`` name from ``include/constants/msg.h``, the header
 ``scripts/texttools/textprocess.py`` regenerates from ``texts/texts.txt``::
 
-    "nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME"
+    "nameTextId": "MSG_SAVE_COMPAT_BACK"
 
-Framework-authored (non-vanilla) records should use the symbolic form: it
-binds the record to a message the text pipeline actually emits, so removing
-or renaming that message fails the data build with an actionable diagnostic
-instead of silently repointing the item at whatever text later lands on that
-number. Both forms resolve to the same integer before generation, so the
-generated C and the round-trip comparison are identical either way.
+The symbolic form binds a record to a message the text pipeline actually
+emits, so removing or renaming that message fails the data build with an
+actionable diagnostic instead of silently repointing the item at whatever
+text later lands on that number. Both forms resolve to the same integer
+before generation, so the generated C and the round-trip comparison are
+identical either way.
+
+POLICY: a framework-authored (expansion overlay) record must not author a
+NEW message for itself. ``texts/texts.txt`` feeds one shared,
+Huffman-compressed blob, so one added message re-encodes the text of every
+build -- default, feature-free ones included. Such a record leaves its text
+IDs unset (they stay ``0``) and authors its display text literally instead;
+see ``authoringName`` below.
 
 Optional ``ItemData`` fields default exactly like the hand-written
 designated initializers that only set the fields they need:

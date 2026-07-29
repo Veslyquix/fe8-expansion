@@ -9,10 +9,16 @@ fields bit-exactly (those fields are already 14-bit, so 0 layout change).
 
 The issue #6 half proves the record is a genuine authored content example
 rather than a placeholder: it carries meaningful, bounded, schema-validated
-item fields and ORIGINAL name/description/use-description text authored
-through the repository's own text pipeline (texts/texts.txt ->
-include/constants/msg.h), referenced symbolically so the binding cannot
-silently drift.
+item fields.
+
+It also pins the POLICY invariant this record must never break again: a
+framework-authored content record consumes NO shared-message slot. The
+global message table (texts/texts.txt -> include/constants/msg.h ->
+src/msg_data.c) is Huffman-compressed as one blob, so appending a message
+re-encodes it for EVERY build -- including default, content-free ones. The
+content example therefore authors no message at all; its original display
+text travels the config-gated generated-content path instead (see
+scripts/generated_data/items/content_text.py).
 """
 
 import json
@@ -107,44 +113,37 @@ class AuthoredContentRecordTests(unittest.TestCase):
         self.raw_record = self.raw["items"][0]
         self.msg = items_schema.read_msg_constants()
 
-    def test_text_ids_are_authored_symbolically(self):
-        """Every text field must name a MSG_* symbol, never a bare number:
-        a raw number would silently repoint at whatever message later lands
-        on that index."""
+    def test_record_consumes_no_shared_message_slot(self):
+        """POLICY: a framework-authored content record must not append to
+        the shared, Huffman-compressed global message table -- doing so
+        re-encodes the text blob of every build, default ones included."""
         for field in ("nameTextId", "descTextId", "useDescTextId"):
-            value = self.raw_record.get(field)
-            self.assertIsInstance(
-                value, str,
-                "{} must be authored as a symbolic MSG_* name".format(field))
-            self.assertIn(value, self.msg)
+            self.assertNotIn(
+                field, self.raw_record,
+                "{} points the content record at the shared message table; "
+                "author the display text through the config-gated content "
+                "text path instead".format(field))
+        self.assertEqual(self.record.name_text_id, 0)
+        self.assertEqual(self.record.desc_text_id, 0)
+        self.assertEqual(self.record.use_desc_text_id, 0)
 
-    def test_text_ids_are_framework_original_messages(self):
-        """The three messages must be the framework's OWN new messages --
-        not a reused vanilla message index."""
-        for field in ("nameTextId", "descTextId", "useDescTextId"):
-            symbol = self.raw_record[field]
-            self.assertTrue(
-                symbol.startswith("MSG_EXPANSION_"),
-                "{} reuses '{}'; author an original MSG_EXPANSION_* message "
-                "instead".format(field, symbol))
-
-    def test_resolved_text_ids_match_the_header(self):
-        self.assertEqual(self.record.name_text_id,
-                         self.msg[self.raw_record["nameTextId"]][0])
-        self.assertEqual(self.record.desc_text_id,
-                         self.msg[self.raw_record["descTextId"]][0])
-        self.assertEqual(self.record.use_desc_text_id,
-                         self.msg[self.raw_record["useDescTextId"]][0])
-
-    def test_original_messages_are_not_vanilla_indices(self):
-        """The authored messages must live beyond every vanilla message the
-        206 hand-ported records use, i.e. they are genuinely new."""
-        vanilla_max = max(
-            max(r.name_text_id, r.desc_text_id, r.use_desc_text_id)
-            for r in self.records if r.item != "ITEM_EXPANSION_CE")
+    def test_no_vanilla_message_is_reused(self):
+        """The record must not borrow a vanilla message index either: a
+        blank binding is honest, a copied one is copyright reuse."""
+        vanilla = {
+            value
+            for r in self.records if r.item != "ITEM_EXPANSION_CE"
+            for value in (r.name_text_id, r.desc_text_id, r.use_desc_text_id)
+            if value
+        }
         for value in (self.record.name_text_id, self.record.desc_text_id,
                       self.record.use_desc_text_id):
-            self.assertGreater(value, vanilla_max)
+            self.assertNotIn(value, vanilla)
+
+    def test_msg_count_is_the_vanilla_bound(self):
+        """Guards the regression directly: the live MSG_COUNT must still be
+        the count this branch inherited, i.e. issue #6 added no message."""
+        self.assertEqual(items_schema.read_msg_count(), 0x0D56)
 
     def test_item_fields_are_meaningful_and_bounded(self):
         """Not a blank placeholder: a real type, real uses, a real attribute
@@ -168,9 +167,9 @@ class AuthoredContentRecordTests(unittest.TestCase):
         c = items_generate.generate_c_source(self.records, ITEMS_JSON)
         body = c[c.index("[ITEM_EXPANSION_CE] = {"):]
         body = body[:body.index("\n\t},")]
-        self.assertIn(".nameTextId = {},".format(self.record.name_text_id), body)
-        self.assertIn(".descTextId = {},".format(self.record.desc_text_id), body)
-        self.assertIn(".useDescTextId = {},".format(self.record.use_desc_text_id), body)
+        self.assertNotIn(".nameTextId", body)
+        self.assertNotIn(".descTextId", body)
+        self.assertNotIn(".useDescTextId", body)
         self.assertIn(".number = ITEM_EXPANSION_CE,", body)
         self.assertIn(".weaponType = ITYPE_ITEM,", body)
         self.assertIn(".attributes = IA_UNSELLABLE,", body)

@@ -155,37 +155,27 @@ that the three public seams compose with **nothing special-cased**:
 | Field | Value | Why |
 |---|---|---|
 | `item` | `ITEM_EXPANSION_CE` | The typed, symbolic expansion ID; no raw `0xCE` appears in any issue #6 implementation source. |
-| `nameTextId` | `MSG_EXPANSION_STARTER_ITEM_NAME` | Original message, authored in `texts/texts.txt`. |
-| `descTextId` | `MSG_EXPANSION_STARTER_ITEM_DESC` | Original message. |
-| `useDescTextId` | `MSG_EXPANSION_STARTER_ITEM_USE_DESC` | Original message. |
+| `nameTextId` / `descTextId` / `useDescTextId` | *unset* (`0`) | The record binds **no** message: a framework-authored record must not append to the shared, Huffman-compressed message table (see below). |
 | `weaponType` | `ITYPE_ITEM` | A real non-weapon item, not a blank slot. |
 | `attributes` | `IA_UNSELLABLE` | A real, meaningful attribute bit. |
 | `maxUses` | `3` | Observable end-to-end: `MakeNewItem()` packs it, so every runtime item halfword is `0x03CE`. |
 | `iconId` | `222` | An **existing** icon slot. |
 
-**Copyright hygiene.** The name/description/use-description are new,
-framework-authored English strings added through the repository's own text
-pipeline (`texts/texts.txt` -> `scripts/texttools/textprocess.py` ->
-`include/constants/msg.h` + `src/msg_data.c`) -- the same supported path the
-issue #2 save-compatibility UI already used. No vanilla message index, item
-name or icon artwork is reused as a shortcut, and **no new graphics asset is
-added**: `iconId 222` is the vanilla data's own unused, purely geometric
-placeholder tile (`item_icon_unused_9`, a hollow box with a diagonal cross),
-chosen deliberately because it depicts nothing.
+**Copyright hygiene.** No vanilla message index, item name or icon artwork is
+reused as a shortcut, and **no new graphics asset is added**: `iconId 222` is
+the vanilla data's own unused, purely geometric placeholder tile
+(`item_icon_unused_9`, a hollow box with a diagonal cross), chosen
+deliberately because it depicts nothing.
 
-Text IDs are authored **symbolically**. `src/data/items_expansion.json` names
-`MSG_*` constants, which the items schema resolves against
-`include/constants/msg.h`; an unknown symbol fails the data build with an
-actionable diagnostic instead of silently repointing the item at whatever text
-later lands on that index. The 206 vanilla records keep their numeric form and
-still round-trip byte-for-byte against `src/data_items.c`.
-
-**Cost of the three new messages.** They are appended to the shared,
-Huffman-compressed message table, so they exist (unreferenced) in every build,
-including default ones. That is a few hundred ROM bytes and no RAM; it changes
-no decoded string, no layout and no behaviour. See "Baseline review" in
-`reports/issue6_closure.md` for the exact, field-level review of the two
-transient menu framebuffers this shifted.
+**Why the record binds no message.** `texts/texts.txt` is unconditional and
+compiles into ONE shared, Huffman-compressed blob (`src/msg_data.c`). Adding
+a content-only message therefore re-encodes the text blob of **every** build,
+default and feature-free ones included -- a default-identity regression that
+an opt-in feature must never cause. An earlier revision of this branch did
+exactly that and then re-derived 14 savecompat baselines to match; both are
+reverted (see "Policy remediation" in `reports/issue6_closure.md`). The
+item's original display text is authored instead through the config-gated
+content path described below.
 
 ### The bundled mechanic
 

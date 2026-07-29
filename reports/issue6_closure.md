@@ -20,8 +20,8 @@ published.
 | Layer | Artifact |
 | --- | --- |
 | config | `EXPANSION_STARTER_CONTENT` / `FE8_EXPANSION_STARTER_CONTENT`, default `0` (`config.mk`, `include/expansion_config.h`, `scripts/modernize/expansion_config.py`, `modern.mk`) |
-| data | `ITEM_EXPANSION_CE` authored in `src/data/items_expansion.json`; original messages in `texts/texts.txt` -> `include/constants/msg.h` |
-| schema | symbolic `MSG_*` text IDs (`scripts/generated_data/items/schema.py`, `scripts/generated_data/validators.py`) |
+| data | `ITEM_EXPANSION_CE` authored in `src/data/items_expansion.json`; **no shared message is added** (`texts/texts.txt` and `include/constants/msg.h` are byte-identical to the merge parent) |
+| schema | symbolic `MSG_*` text IDs remain available for records that point at an existing message (`scripts/generated_data/items/schema.py`, `scripts/generated_data/validators.py`); the content record uses none |
 | hook | `include/expansion_starter_content.h`, `src/expansion_starter_content.c`, installed from the one existing `ExpansionMechanicsInstallBuiltins()` |
 | evidence | extended `include/expansion_itemtest.h` / `src/expansion_itemtest.c` probe + `tools/gba-playtest/run_item_expansion_checks.py` |
 
@@ -30,17 +30,16 @@ published.
 ### A. Original, opt-in, generated content
 
 * The 207th record is a genuine authored example, not a placeholder:
-  `ITYPE_ITEM`, `maxUses 3`, `attributes IA_UNSELLABLE`, `iconId 222`, and
-  three original text IDs. It is produced **only** by the ordinary
-  generated-data pipeline; `build/generated/data/data_items.c` is never
-  hand-edited (it is git-ignored build output).
-* **Original authoring identity.** Name/description/use-description are new
-  framework-authored English strings added through the repository's own
-  supported text pipeline (`texts/texts.txt` ->
-  `scripts/texttools/textprocess.py` -> `include/constants/msg.h` +
-  `src/msg_data.c`) -- the same path the issue #2 save-compatibility UI
-  already used for `MSG_SAVE_COMPAT_*`. No vanilla message index, item name
-  or icon design is reused as a shortcut.
+  `ITYPE_ITEM`, `maxUses 3`, `attributes IA_UNSELLABLE`, `iconId 222`. It is
+  produced **only** by the ordinary generated-data pipeline;
+  `build/generated/data/data_items.c` is never hand-edited (it is git-ignored
+  build output).
+* **Original authoring identity, with no default-build cost.** The record
+  binds **no** message ID (`nameTextId`/`descTextId`/`useDescTextId` all stay
+  `0`) and reuses no vanilla message, name or icon design. Its original
+  display name is authored as literal text in the same JSON record and
+  travels the config-gated generated-content text path (next section), so a
+  default build's shared message table is untouched.
 * **No new graphics asset.** `iconId 222` is the vanilla data's own unused,
   purely geometric placeholder tile (`item_icon_unused_9`: a hollow box with
   a diagonal cross). It was chosen precisely because it depicts nothing; the
@@ -53,11 +52,13 @@ published.
   (`test_no_raw_numeric_content_item_id`); the single permitted `0xCE`
   mention is the `#error` string that tells a contributor which
   `FE8_ITEM_ID_CAP` to pass, and that is asserted to stay actionable.
-* **Symbolic text IDs.** `"nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME"`
-  is resolved against `include/constants/msg.h`; an unknown symbol fails the
-  data build with an actionable diagnostic naming `texts/texts.txt`. The 206
-  vanilla records keep their numeric form and still round-trip byte-for-byte
-  against `src/data_items.c`.
+* **Symbolic text IDs (generic schema capability, unused by this record).**
+  A record *may* author `"nameTextId": "MSG_*"` and have it resolved against
+  `include/constants/msg.h`, with an unknown symbol failing the data build
+  actionably. The bundled content record deliberately uses none of that: a
+  framework-authored record must not consume a slot in the shared message
+  table (see "Policy remediation" below). The 206 vanilla records keep their
+  numeric form and still round-trip byte-for-byte against `src/data_items.c`.
 * **Round trip / counts.** Default cap `0xCD`: 206 records, no expansion
   record, committed manifest and inventory unchanged. Opt-in cap `0xCE`: 207
   records, the `[ITEM_EXPANSION_CE]` record emitted with
@@ -183,43 +184,42 @@ Runtime (semantic scalars only -- no pointer, no framebuffer oracle):
   (`build/expansion-modern-starter`), so there is no cross-profile build-root
   contamination.
 
-## Baseline review (explicit; nothing auto-refreshed)
+## Policy remediation -- default text leakage removed, baselines restored
 
-Adding three original messages changes the **shared, Huffman-compressed**
-message table, so every build's text blob is re-encoded. Decoded strings are
-identical -- but two *transient* menu framebuffers land on a different phase
-of the same blinking-text cycle.
+**Retraction.** An earlier revision of this branch appended three original
+messages (`MSG_EXPANSION_STARTER_ITEM_{NAME,DESC,USE_DESC}`) to
+`texts/texts.txt`, and this report argued that the resulting **shared
+Huffman table re-encode** was an acceptable cost and that re-deriving the
+affected framebuffer baselines was a legitimate, reviewed refresh. **That
+argument is withdrawn.** It is wrong on two counts:
 
-Diagnosis was empirical, not assumed:
+1. `texts/texts.txt` is unconditional. Three content-only messages therefore
+   changed the text blob -- and the transient framebuffer timing -- of every
+   build, **including a default, feature-free ROM**. An opt-in feature that
+   moves the default ROM is not opt-in.
+2. Re-deriving 14 committed savecompat fingerprints to match the new ROM
+   moved the oracle to fit the change. Even a reviewed, field-by-field
+   refresh weakens a baseline whose entire purpose is to notice exactly this
+   class of drift.
 
-1. A per-frame framebuffer scan (frames 1035..1075) showed the observed
-   screen cycling through five hashes; the committed hash appeared at none of
-   them, ruling out a simple frame offset.
-2. An A/B ROM built with **only** the three messages reverted (content
-   module, new flag and fingerprint change all kept) verified the committed
-   fingerprint exactly, isolating the cause to the text-table addition.
-3. A pixel diff of the two ROMs at the failing frame showed 264 differing
-   pixels in one 13-row text band, toggling between the text colour and the
-   background -- i.e. the same glyphs at a different blink phase.
+**What was done instead (this revision):**
 
-The baselines were then re-derived through the sanctioned explicit
-`capture -o` path and reviewed **field by field**. Across all 19 save-format
-fingerprints the union of changed fields is exactly two:
-
-* `checkpoints[1].framebuffer_hash` in the six `savecompat-dialog-back-*`
-  pairs (12 files) and `checkpoints[0].framebuffer_hash` in the two
-  `savecompat-erase-*` files -- the transient blink-phase frames above;
-* `rom.sha1`, the informational provenance field (not compared under the
-  `behavior` policy).
-
-Everything else is bit-identical: all six state-specific diagnostic screens,
-every returned screen, and **every single `sram_hash`** -- the scenario's own
-primary assertion that passive display and confirmed Back leave SRAM
-byte-for-byte unchanged, and that the confirmed erase changes it. No
-checkpoint was removed, relaxed or moved, and no gate was weakened. The
-`savecompat-current`, `savecompat-current-migrated` and
-`savesuspend-resume` fingerprints had no semantic change and were left
-untouched.
+* The three messages are gone. `texts/texts.txt` and
+  `include/constants/msg.h` are **byte-identical to the merge parent**
+  `bdd9add3` (`MSG_COUNT` is back to `0x0D56`), so `src/msg_data.c` and the
+  Huffman-compressed text blob regenerate identically.
+* All **14** `savecompat-*` fingerprints were restored to their `bdd9add3`
+  contents with `git checkout bdd9add3 -- <path>` -- an exact restore, not a
+  re-capture. No hash was refreshed, recorded or substituted, and the
+  Sprint 1 `configFingerprint` normalization plus the semantic world-map
+  negatives that were merged before this work are untouched.
+* No default-lane gate needed a baseline edit to pass, which is the point:
+  the default ROM is the same ROM again.
+* The bundled content keeps its **original authored text**. It is authored as
+  literal text in `src/data/items_expansion.json` and emitted by the
+  generated-data pipeline into a **build-local, content-profile-only** text
+  table; a default build generates and links no such string at all (see
+  "Config-gated content text" in `docs/starter_features.md`).
 
 The linker budget baselines (`reports/linker-budget/modern-{debug,release}.json`)
 did **not** drift and were not touched.

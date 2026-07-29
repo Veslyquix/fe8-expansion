@@ -107,16 +107,21 @@ Text IDs may also be authored **symbolically** as `MSG_*` names resolved
 against `include/constants/msg.h`:
 
 ```json
-{ "item": "ITEM_EXPANSION_CE", "nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME" }
+{ "item": "ITEM_SWORD_STEEL", "nameTextId": "MSG_SAVE_COMPAT_BACK" }
 ```
 
-Use the symbolic form for any framework-authored (non-vanilla) record: it
-binds the record to a message the text pipeline actually emits, so removing
-or renaming that message fails the data build with an actionable diagnostic
-instead of silently repointing the item at whatever text later lands on that
-number. Author the message itself in `texts/texts.txt` and regenerate with
-`make src/msg_data.c`. The 206 vanilla records keep the plain-integer form
-and still round-trip byte-for-byte. See `docs/starter_features.md` for the
+(any `MSG_*` constant the live header defines; the one above is only a
+spelling example). An unknown symbol fails the data build with an actionable
+diagnostic instead of silently repointing the item at whatever text later
+lands on that number.
+The 206 vanilla records keep the plain-integer form and still round-trip
+byte-for-byte.
+
+**Framework-authored (expansion) records must not add a message at all.**
+`texts/texts.txt` feeds one shared, Huffman-compressed blob, so appending a
+message re-encodes the text of every build, default ones included. Leave the
+text IDs unset on such a record and author its display text through the
+config-gated content path instead -- see `docs/starter_features.md` for the
 bundled worked example.
 
 ### Add or modify a **support** (`--table supports`)

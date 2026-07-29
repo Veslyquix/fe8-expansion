@@ -330,18 +330,18 @@ generated objects) are unaffected.
 ## Adding a supported item record
 
 1. Add the enum constant to `include/constants/items_expansion.h`.
-2. Add the record to `src/data/items_expansion.json`. Author **original**
-   name/description text through the repository's own text pipeline
-   (add `## MSG_...` entries to `texts/texts.txt`, run `make src/msg_data.c`
-   to regenerate `include/constants/msg.h`), then reference them
-   **symbolically** -- `"nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME"`.
-   The schema resolves `MSG_*` names against `include/constants/msg.h` and
-   rejects an unknown symbol with an actionable diagnostic, so the record can
-   never silently repoint at another message. Never reuse a vanilla
-   message/name/icon design, and do not add new graphics assets: point
-   `iconId` at an existing neutral slot and document the choice. The bundled
-   issue #6 example (`ITEM_EXPANSION_CE`) is the worked reference -- see
-   `docs/starter_features.md`.
+2. Add the record to `src/data/items_expansion.json`. **Do not append a
+   message to `texts/texts.txt` for it.** That table is Huffman-compressed
+   as one shared blob, so one added message re-encodes the text blob of
+   *every* build -- including default, feature-free ones -- which this
+   repository treats as a default-identity regression, not a cost of doing
+   business. Leave `nameTextId`/`descTextId`/`useDescTextId` unset (they
+   stay `0`); never reuse a vanilla message index, name or icon design as a
+   shortcut, and do not add new graphics assets: point `iconId` at an
+   existing neutral slot and document the choice. The bundled issue #6
+   example (`ITEM_EXPANSION_CE`) is the worked reference for authoring the
+   record's *original* display text through the config-gated content path --
+   see `docs/starter_features.md`.
 3. Raise `FE8_ITEM_ID_CAP` to at least the new ID.
 4. Regenerate and test (no `--no-roundtrip`: the vanilla 206-record round
    trip stays fully enforced; overlay-only IDs are verified separately):

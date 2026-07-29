@@ -26,7 +26,7 @@ FE8_EXPANSION_ITEMTEST=1`. It:
 
 Every expected item-record value is READ FROM THE AUTHORED SOURCE OF TRUTH
 (`src/data/items_expansion.json` resolved through the generated-data schema,
-plus the `MSG_*`/`ITYPE_*`/`IA_*`/`CHARACTER_*` headers and the content
+plus the `ITYPE_*`/`IA_*`/`CHARACTER_*` headers and the content
 module's own bonus constants), never restated as a literal here: the check
 therefore fails if the ROM and the authored data ever disagree, and cannot
 silently drift when the record is re-authored.
@@ -439,9 +439,11 @@ def check(values: dict[str, int], cap: int, require: str,
            f"{authored.weapon_type_name}, as authored in items_expansion.json")
     expect("dataMaxUses", authored.max_uses, "maxUses, as authored in items_expansion.json")
     expect("dataNameTextId", authored.name_text_id,
-           "nameTextId, the original message authored in texts/texts.txt")
+           "nameTextId stays 0: an authored content record consumes no slot in "
+           "the shared, Huffman-compressed global message table")
     expect("dataDescTextId", authored.desc_text_id,
-           "descTextId, the original message authored in texts/texts.txt")
+           "descTextId stays 0 for the same reason (see docs/starter_features.md, "
+           "\"Config-gated content text\")")
     expect("dataIconId", authored.icon_id, "iconId, as authored in items_expansion.json")
     expect("dataAttributes", authored.attributes,
            "attributes bitmask, as authored in items_expansion.json")
@@ -493,7 +495,8 @@ def check(values: dict[str, int], cap: int, require: str,
     # Stage 3 -- production item UI lookup/draw for the expanded ID.
     expect("uiIconId", authored.icon_id, "GetItemIconId() as the UI itself read it")
     expect("uiDescId", authored.desc_text_id,
-           f"GetItemDescId(0x{expansion_id:X}) resolves the authored description")
+           f"GetItemDescId(0x{expansion_id:X}) reads the record's own (unbound) "
+           "description slot -- the help box shows no borrowed vanilla text")
     # GetItemName() resolves the record's nameTextId through the text
     # system, which hands back a decoded string in EWRAM (not a raw ROM
     # pointer), so accept either -- what matters is that the expanded ID

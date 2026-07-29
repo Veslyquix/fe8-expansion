@@ -2,7 +2,7 @@
   "checkpoints": [
     {
       "frame": 1100,
-      "framebuffer_hash": "fnv1a64-rgb24:316217dd27b1f822",
+      "framebuffer_hash": "fnv1a64-rgb24:bec54c71e514e8d5",
       "name": "erase-selected",
       "probes": [],
       "sram_hash": "fnv1a64-sram-normalized:2908b7390b042385"
@@ -25,7 +25,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "dd9c97374fd8065433e241abb1b2b4395d729335",
+    "sha1": "6129df3db230c80b1152eb85675f6a338760bfc7",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

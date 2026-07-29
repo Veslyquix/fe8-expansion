@@ -9,7 +9,7 @@
     },
     {
       "frame": 1050,
-      "framebuffer_hash": "fnv1a64-rgb24:358b2e519116fe6d",
+      "framebuffer_hash": "fnv1a64-rgb24:28e2e7bd71f27d50",
       "name": "after-dismiss",
       "probes": [],
       "sram_hash": "fnv1a64-sram:e14ff3e403457a79"
@@ -25,7 +25,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "8a57c213e106b1a945a614ff35ac9b2be17343c6",
+    "sha1": "f67049cb36e550bcad6a693e0a09f6134bc1cb22",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },
