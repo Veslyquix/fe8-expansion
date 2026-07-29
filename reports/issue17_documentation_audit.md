@@ -10,6 +10,12 @@ follow-up work.
 
 ## Post-merge integration update (issues #10/#11/#13 into this docs branch)
 
+**Historical snapshot, superseded for gate-count/composition facts by the
+Remediation addendum immediately below -- this section is left unedited as
+an accurate, point-in-time record of candidate commit
+`df374b9e0db81fee9e08b3969ed4be4cf11f8e18` (the merge this branch produced
+before independent review), not a description of the current tree.**
+
 This branch (`agent/issues7-17-docs`) was normal-merged with
 `origin/master` (bringing in the merged issue #10 typed-ID/cap work, issue
 #11 debug-tools productization, and issue #13 regression harness) after
@@ -49,6 +55,53 @@ numbers without rerunning them):
   reviewer/policy sign-off. Left as an explicit, bounded, reported
   finding for that review, not silently bypassed and not hidden by
   rewording the evidence it describes.
+
+## Remediation addendum (post-rejection fix)
+
+**Status: candidate remediation evidence. Independent review rejected
+candidate `df374b9e0db81fee9e08b3969ed4be4cf11f8e18` (the state the
+Post-merge integration update above describes) for two P0 defects: (1)
+`docs-check`/`docs-check-tests` failed on two fixable prose examples in
+`reports/issue10_closure.md`, and (2) this branch had expanded the
+explicitly preserved upstream-verify contract from 10 to 12 gates. Both
+are fixed by this addendum; reproduce with the commands shown, do not
+trust these numbers without rerunning them.**
+
+- `reports/issue10_closure.md` no longer invokes `make` against a
+  computed build-output path; the two flagged lines now name real,
+  checker-resolvable targets (`expansion-modern-elf
+  MODERN_CONFIG=debug MODERN_ABI=aapcs`) that are already proven
+  elsewhere in that same report, and the computed object/source paths
+  they exercise are kept as plain descriptive text, not as invocable
+  `make <path>` examples. `python3 scripts/check_docs.py --check
+  --check-examples` now reports **0** findings (down from the 2 the
+  Post-merge integration update above recorded) -- `scripts/check_docs.py`
+  itself was not modified.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` lists
+  **10** gates, not 12: `docs-check-tests`/`docs-check` were removed
+  from `scripts/upstream_port/verify.py`'s `gates()`, restoring the
+  exact pinned #10/#11/#13 contract (host-suite, upstream-port-tests,
+  artifact-guard, default-lane-check, quickstart-legacy-check,
+  generated-data-check, the two linker-check gates, and the two issue
+  #10 item-expansion gates) -- see [`docs/upstream-porting.md`](../docs/upstream-porting.md)
+  for the corrected, renumbered 10-gate list. Documentation governance
+  (`scripts/docs_check_tests` then `scripts/check_docs.py --check
+  --check-examples`) remains a required, standalone `build.yml` CI step
+  in the exact same position (immediately after `Check tracked
+  artifacts`, before the issue #15 default-lane step) -- it is not
+  dropped from CI, only excluded from this one pinned gate mirror.
+- `python3 -m unittest discover -s tests/upstream_port -v`: still
+  **145** tests, all passing (the renamed
+  `test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate`
+  now asserts the restored contract -- docs-check-tests/docs-check are
+  absent from `verify.gates()`, and the standalone `build.yml` step is
+  unchanged -- in place of the prior branch's
+  `test_issue_7_17_docs_governance_gates_present`, which asserted the
+  now-superseded 12-gate contract).
+- The "8 gates, not 6" sentence in the CI evidence section below
+  described this branch's own pre-master-merge state and is likewise
+  superseded by the 10-gate figures above; it is left unedited as an
+  accurate record of that earlier point in time.
 
 ## 100% Markdown count
 

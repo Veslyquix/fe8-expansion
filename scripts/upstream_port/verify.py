@@ -6,7 +6,14 @@ repository's *own* current working tree/commit. It never builds, checks out,
 or executes the canonical upstream ref/tree. It is a thin, literal mirror of
 .github/workflows/build.yml's gate steps (kept independent from that file:
 this module doesn't parse/execute the workflow, it re-states the same gate
-commands so `verify` stays runnable locally without a CI runner).
+commands so `verify` stays runnable locally without a CI runner) -- WITH ONE
+DELIBERATE EXCEPTION: build.yml's "Check documentation (issues #7/#17)" step
+is a required, standalone CI gate that is intentionally NOT part of this
+mirror. Repository policy pins this verify gate set to exactly the original
+10 #10/#11/#13 gates; documentation governance (scripts/docs_check_tests and
+scripts/check_docs.py --check --check-examples) is enforced directly by CI
+instead of by growing this pinned list. Run those two commands yourself to
+reproduce that standalone step locally -- see docs/upstream-porting.md.
 """
 
 from __future__ import annotations
@@ -96,12 +103,13 @@ def gates(jobs: int = 2) -> List[Gate]:
             applicable_note=(
                 "issue #12/#15 host lane (same `host-tests` job): 145 "
                 "pure-stdlib upstream-port review tooling tests as of the "
-                "issues #7/#17 integration merge -- re-run this suite for the "
-                "current count -- "
+                "issues #7/#17 remediation (restoring the pinned 10-gate "
+                "contract) -- re-run this suite for the current count -- "
                 "(classify/scan/drift/state/ref-binding/output-safety/"
                 "merge-commit determinism and this verify.gates() <-> build.yml "
-                "mirror). Python/stdlib only, links no C and never rebuilds the "
-                "ROM"
+                "mirror, which now deliberately excludes the standalone "
+                "documentation-governance step). Python/stdlib only, links no C "
+                "and never rebuilds the ROM"
             ),
         ),
         Gate(
@@ -109,33 +117,15 @@ def gates(jobs: int = 2) -> List[Gate]:
             command=["python3", "scripts/artifact_guard.py", "--revision", "HEAD"],
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
         ),
-        Gate(
-            name="docs-check-tests",
-            command=[
-                "python3",
-                "-m",
-                "unittest",
-                "discover",
-                "-s",
-                "scripts/docs_check_tests",
-                "-v",
-            ],
-            applicable_note=(
-                "issues #7/#17 closure: the documentation checker's own "
-                "stdlib unittest suite, run before the checker itself"
-            ),
-        ),
-        Gate(
-            name="docs-check",
-            command=["python3", "scripts/check_docs.py", "--check", "--check-examples"],
-            applicable_note=(
-                "issues #7/#17 closure: fast, stdlib-only, zero-network, "
-                "zero-ROM Markdown-inventory/link/anchor/stale-reference/"
-                "Makefile-target documentation governance gate, mirrored "
-                "here per issue #12 so a manually-applied port batch cannot "
-                "skip the same governance CI enforces"
-            ),
-        ),
+        # NOTE: build.yml's "Check documentation (issues #7/#17)" step
+        # (scripts/docs_check_tests then scripts/check_docs.py --check
+        # --check-examples) intentionally has NO Gate(...) entry here. It
+        # remains a required, standalone build.yml CI step immediately after
+        # "Check tracked artifacts" and before "Check default build lane and
+        # quickstart legacy glue (issue #15)" -- see the module docstring
+        # above and docs/upstream-porting.md. Restoring/keeping this pinned
+        # verify gate set at exactly 10 (the original #10/#11/#13 gates) is
+        # deliberate repository policy, not an oversight or a coverage drop.
         Gate(
             name="default-lane-check",
             command=[

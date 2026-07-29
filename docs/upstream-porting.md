@@ -181,12 +181,14 @@ python3 -m scripts.upstream_port verify --dry-run   # list the gate commands wit
 
 **⚠️ This builds and checks the CURRENT TRUSTED WORKTREE (your repo, after
 you manually applied whatever you accepted) — it never builds, checks out,
-or executes the upstream ref/tree.** It orchestrates the same gates
-`.github/workflows/build.yml` runs, in the same order, fail-fast. The
-workflow splits them across two jobs — a fast, host-only `host-tests` job
-(textually first: no arm-none-eabi toolchain, no ROM/linker build) and the
-`build` job (full modern ROM/ELF/linker) — and `verify` mirrors that exact
-argv-and-order sequence across both jobs:
+or executes the upstream ref/tree.** It orchestrates the same 10
+correctness gates `.github/workflows/build.yml` runs (excluding one
+required, standalone documentation-governance CI step described after the
+list below), in the same order, fail-fast. The workflow splits them across
+two jobs — a fast, host-only `host-tests` job (textually first: no
+arm-none-eabi toolchain, no ROM/linker build) and the `build` job (full
+modern ROM/ELF/linker) — and `verify` mirrors that exact argv-and-order
+sequence across both jobs:
 
 1. `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`
    (issue #13: the full tools/gba-playtest suite in explicit host-only mode
@@ -195,64 +197,78 @@ argv-and-order sequence across both jobs:
    and applied to that one child process only, so the ROM/runtime gates
    below never inherit it and keep owning live coverage. It makes this gate
    independent of whether a git-ignored ROM happens to exist in the worktree
-   while gates 9-12 rebuild it — see `tools/gba-playtest/README.md`,
+   while gates 7-10 rebuild it — see `tools/gba-playtest/README.md`,
    "Host-only test mode".)
 2. `python3 -m unittest discover -s tests/upstream_port -v`
    (issue #12/#15: the pure-stdlib upstream-port review tooling tests —
-   145 as of the issues #7/#17 integration merge (144 pre-existing plus 1
-   added by gate 4/5's own docs-gate-position assertion below; re-run the
-   command above for the current count instead of trusting any number
-   written here), including this `verify.gates()` <-> `build.yml` mirror
+   145 as of the issues #7/#17 remediation that restored this pinned
+   10-gate contract; re-run the command above for the current count
+   instead of trusting any number written here), including this
+   `verify.gates()` <-> `build.yml` mirror (which deliberately excludes the
+   standalone documentation-governance step described after the list below)
    — host job, links no C and never rebuilds the ROM)
 3. `python3 scripts/artifact_guard.py --revision HEAD`
-4. `python3 -m unittest discover -s scripts/docs_check_tests -v`
-   (issues #7/#17: the documentation checker's own stdlib unittest suite,
-   run before the checker itself)
-5. `python3 scripts/check_docs.py --check --check-examples`
-   (issues #7/#17: fast, stdlib-only, zero-network, zero-ROM
-   Markdown-inventory/link/anchor/stale-reference/Makefile-target
-   documentation governance gate — mirrored here per issue #12 so a
-   manually-applied port batch cannot skip the same documentation
-   governance CI enforces)
-6. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
+4. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
    (issue #15: bare `make`/`make all` always resolves to the modern
    release AAPCS lane)
-7. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
+5. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
    (issue #15: quickstart.sh only reaches the archival agbcc lane via
    explicit `make legacy`/`make fireemblem8.gba`)
-8. `make generated-data-check`
-9. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+6. `make generated-data-check`
+7. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
    (aggregates the full modern debug ROM/runtime + linker suite off one
    reused object/ELF build — boot/title/new-game/debugtools-hub/timer/map/
    tools/prep/ch4-prep/combat/save-load/suspend/save-format-migration,
    budget, shift/offset, raw-pointer, relocation and cross-overlay — so the
-   runtime scenarios are covered here, not re-run individually; see
-   `modern.mk`'s `expansion-modern-linker-check` dependency chain)
-10. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+   runtime scenarios are covered here, not re-run individually; see the
+   `expansion-modern-linker-check` dependency chain in `modern.mk`)
+8. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
    (release-config counterpart, incl. the release debugtools-disabled
    negative scenarios)
-11. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+9. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
    (issue #10 acceptance — "Boundary, serialization, and migration
    tests gate CI": boots the real modern debug ROM at an expanded
    item cap (0xCE) with `FE8_EXPANSION_ITEMTEST=1` and runs the
    item-ID-expansion runtime probe, immediately after the default-cap
    linker-check gates above and against the same `MODERN_OUTPUT_DIR` they
    just populated — additive only: does not modify, reorder, or relax
-   gates 9-10 above, and touches no committed fingerprint/baseline)
-12. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs`
-   (release-config counterpart of gate 11; the final step of build.yml's
-   `build` job)
+   gates 7-8 above, and touches no committed fingerprint/baseline)
+10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+   (release-config counterpart of gate 9; the final step of the `build`
+   job in `build.yml`)
+
+**`build.yml` also runs a required, standalone documentation-governance CI
+step that `verify` deliberately does NOT mirror.** Immediately after step 3
+above (`Check tracked artifacts`, the artifact-guard step) and before step 4
+above (`Check default build lane and quickstart legacy glue (issue #15)`),
+the `build` job runs a `Check documentation (issues #7/#17)` step:
+
+```sh
+python3 -m unittest discover -s scripts/docs_check_tests -v
+python3 scripts/check_docs.py --check --check-examples
+```
+
+(runs the documentation checker unit test suite first, then the checker
+itself — fast, stdlib-only, zero-network, zero-ROM
+Markdown-inventory/link/anchor/stale-reference/Makefile-target
+documentation governance). This step is a required CI gate exactly like
+the 10 numbered above — CI still fails if it fails, and it is never
+skipped — but repository policy pins the `verify.gates()` contract at
+exactly the original 10 #10/#11/#13 gates, so this step is intentionally
+not renumbered into the list above. Reproduce it locally with the two
+commands shown, independently of `verify`.
 
 None of these existing gates are weakened, reordered, or skipped. The two
 host-lane gates (1-2) were added by the issues #11/#13 <-> #12/#15
 integration and run before the ROM build so a host-tooling regression fails
-in well under a minute. The two documentation-governance gates (4-5) were
-added by this issues #7/#17 integration, immediately after the artifact
-guard and before any dependency install/tool build/ROM linker gate, so a
-documentation regression fails in seconds. The two item-ID-expansion gates
-(11-12) were added by issue #10 as the final step of the `build` job, after
-the two default-cap linker-check gates (9-10) they reuse the object/ELF
-output of.
+in well under a minute. The two item-ID-expansion gates (9-10) were added
+by issue #10 as the final step of the `build` job, after the two
+default-cap linker-check gates (7-8) they reuse the object/ELF output of.
+The standalone documentation-governance CI step above (added by the issues
+#7/#17 integration, immediately after the artifact guard and before any
+dependency install/tool build/ROM linker gate, so a documentation
+regression fails in seconds) is deliberately excluded from this numbered
+gate list; see immediately above for why.
 
 **There is no gate subset/selection flag, on the CLI or in the internal
 `verify.run_gates` API.** `verify` (with or without `--dry-run`) always

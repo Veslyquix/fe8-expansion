@@ -925,7 +925,7 @@ $ FE8_ITEM_ID_CAP=0xCE make generated-data-check         # leaves ACTIVE header 
 $ stat -c '%Y %n' build/generated/data/{id_space_active.h,.item_id_cap.stamp}
 1785238039 build/generated/data/id_space_active.h        # 0xCE, newest
 1785237943 build/generated/data/.item_id_cap.stamp       # still 0xCD, older
-$ make build/expansion-modern/debug/aapcs/src/data_items.o   # plain default, no manual fix
+$ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # plain default, no manual fix
 include/id_space.h:12: error: size of array
   'id_space_static_assert_generated_items_record_count_matches_active_contract' is negative
 make: *** [modern.mk:607: build/expansion-modern/debug/aapcs/src/data_items.o] Error 1
@@ -963,11 +963,11 @@ relied on, no oracle/gold artifact was touched.
 
 ```
 # desync staged exactly as above (header 0xCE, stamp 0xCD)
-$ make build/expansion-modern/debug/aapcs/src/data_items.o          # plain default, exit 0
+$ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # plain default, exit 0
 $ grep ITEM_ID_ACTIVE_ build/generated/data/id_space_active.h
 #define ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD
 #define ITEM_ID_ACTIVE_RECORD_COUNT 206
-# full modern ELF from the same desync also self-heals + links:
+# re-staging the same desync and rebuilding again proves the self-heal repeats, not a one-off:
 $ FE8_ITEM_ID_CAP=0xCE make generated-data-check >/dev/null   # re-stage 0xCE header
 $ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # exit 0
 Modern ELF ready: build/expansion-modern/debug/aapcs/fireemblem8.elf   # header healed to 0xCD/206
@@ -1012,7 +1012,7 @@ Measured on this host (`/usr/bin/time -v`):
 idspace active-check  (removed from the recipe)   0:08.10   full census / 658-file walk
 idspace active-heal   (new warm no-op)            0:00.32   census-free probe, no write
 check --table items   (pre-existing recipe heal)  0:00.82   unchanged neighbour
-warm no-op `make build/generated/data/data_items.c`:  ~8-11 s  ->  ~2.6 s (x3 runs)
+warm no-op rebuild of build/generated/data/data_items.c:  ~8-11 s  ->  ~2.6 s (x3 runs)
 ```
 
 The warm heal is now on par with the neighbouring items-table self-heal instead
@@ -1071,6 +1071,6 @@ make generated-data-cap-heal-check               # PASS
 make generated-data-check                        # PASS (item cap 0xCD, 206 record(s))
 make expansion-modern-idspace-active-check ...   # PASS (incl. desync-recovery leg, real compile)
 python3 -m unittest discover -s scripts/generated_data/tests   # Ran 613 tests, OK
-make -j4 build/expansion-modern/debug/aapcs/src/data_items.o   # from staged desync: exit 0, header healed to 0xCD/206
+make -j4 expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # from staged desync: exit 0, header healed to 0xCD/206
 idspace active-heal warm no-op / active-check    # 0.32 s vs 8.10 s (per /usr/bin/time -v)
 ```

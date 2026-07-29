@@ -30,6 +30,20 @@ _NON_GATE_STEP_NAMES = {
     "Build tools",
 }
 
+# Issues #7/#17 remediation: build.yml step "Check documentation (issues
+# #7/#17)" IS a genuine pass/fail correctness gate (unlike the pure
+# environment-setup steps in _NON_GATE_STEP_NAMES above) -- it is a
+# required, standalone CI step -- but repository policy deliberately keeps
+# it OUT of the pinned 10-gate mirror inside verify.gates() (that pinned
+# contract is reserved for the original #10/#11/#13 gate set; see the
+# scripts/upstream_port/verify.py module docstring). It is asserted
+# separately below, by exact name/position/argv straight from the live
+# workflow text, in
+# test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate
+# -- never silently dropped from CI, only excluded from this one mirror
+# comparison.
+_DOCS_GOVERNANCE_STEP_NAME = "Check documentation (issues #7/#17)"
+
 
 def _parse_workflow_gate_commands(path=BUILD_WORKFLOW_PATH):
     """Read build.yml with stdlib only (no PyYAML) and return the ordered
@@ -72,18 +86,33 @@ def _parse_workflow_gate_commands(path=BUILD_WORKFLOW_PATH):
 
 class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
     """Assert verify.gates() is a literal, argv-identical, order-preserving
-    mirror of .github/workflows/build.yml's gate steps -- parsed from the
-    live workflow file, not a hardcoded copy of it."""
+    mirror of the gate steps in .github/workflows/build.yml -- parsed from
+    the live workflow file, not a hardcoded copy of it -- with one
+    deliberate, separately-tested exception: the standalone
+    documentation-governance step (_DOCS_GOVERNANCE_STEP_NAME; see
+    test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate
+    below)."""
 
     def test_gate_argv_matches_workflow_commands_in_order(self):
-        workflow_commands = _parse_workflow_gate_commands()
+        # Issues #7/#17 remediation: verify.gates() pins exactly the
+        # original 10 #10/#11/#13 gates, so the standalone
+        # documentation-governance workflow step (_DOCS_GOVERNANCE_STEP_NAME)
+        # is deliberately excluded from this mirror comparison -- it is
+        # covered separately by
+        # test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate
+        # below, which asserts it still exists, unchanged, in build.yml.
+        workflow_commands = [
+            (step_name, argv)
+            for step_name, argv in _parse_workflow_gate_commands()
+            if step_name != _DOCS_GOVERNANCE_STEP_NAME
+        ]
         gate_commands = [g.command for g in verify_mod.gates(jobs=2)]
 
         self.assertEqual(
             len(gate_commands),
             len(workflow_commands),
             f"verify.gates() has {len(gate_commands)} gate(s) but build.yml "
-            f"has {len(workflow_commands)} gate command(s): "
+            f"has {len(workflow_commands)} non-docs-governance gate command(s): "
             f"{[c for _, c in workflow_commands]!r}",
         )
         for gate_command, (step_name, workflow_argv) in zip(gate_commands, workflow_commands):
@@ -94,48 +123,61 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 f"build.yml step {step_name!r} command {workflow_argv!r}",
             )
 
-    def test_issue_7_17_docs_governance_gates_present(self):
-        """Issues #7/#17 -> #12 closure mirror: the docs-check-tests and
-        docs-check gates must exist, sit immediately after artifact-guard
-        and before the #15 default-lane gates (same position as build.yml's
-        "Check documentation" step), and have argv-identical commands to
-        what build.yml runs -- so a manually-applied port batch cannot
-        skip the same documentation governance CI enforces."""
+    def test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate(self):
+        """Issues #7/#17 remediation: docs-check-tests and docs-check must
+        NOT be part of verify.gates() -- the pinned upstream-verify contract
+        stays exactly the original 10 #10/#11/#13 gates -- but the
+        "Check documentation (issues #7/#17)" build.yml step must still
+        exist, unchanged, as a required, standalone CI step immediately
+        after "Check tracked artifacts" (the artifact-guard step) and
+        before "Check default build lane and quickstart legacy glue (issue
+        #15)" (the default-lane-check step), running the same
+        argv-identical commands, so documentation governance is never
+        silently dropped from CI even though it is deliberately excluded
+        from this pinned gate mirror."""
         names = [g.name for g in verify_mod.gates()]
-        self.assertIn("docs-check-tests", names)
-        self.assertIn("docs-check", names)
+        self.assertNotIn("docs-check-tests", names)
+        self.assertNotIn("docs-check", names)
+
+        all_workflow_commands = _parse_workflow_gate_commands()
+        docs_commands = [
+            argv
+            for step_name, argv in all_workflow_commands
+            if step_name == _DOCS_GOVERNANCE_STEP_NAME
+        ]
         self.assertEqual(
-            names.index("docs-check-tests"),
-            names.index("artifact-guard") + 1,
-            "docs-check-tests must immediately follow artifact-guard",
-        )
-        self.assertEqual(
-            names.index("docs-check"),
-            names.index("docs-check-tests") + 1,
-            "docs-check must immediately follow docs-check-tests",
-        )
-        self.assertLess(
-            names.index("docs-check"),
-            names.index("default-lane-check"),
-            "docs gates must run before the #15 default-lane gate",
+            docs_commands,
+            [
+                [
+                    "python3",
+                    "-m",
+                    "unittest",
+                    "discover",
+                    "-s",
+                    "scripts/docs_check_tests",
+                    "-v",
+                ],
+                ["python3", "scripts/check_docs.py", "--check", "--check-examples"],
+            ],
+            "build.yml standalone docs-governance step must still run both "
+            "commands, argv-identical, even though verify.gates() no longer "
+            "mirrors them",
         )
 
-        by_name = {g.name: g for g in verify_mod.gates()}
+        ordered_unique_steps = []
+        for step_name, _ in all_workflow_commands:
+            if not ordered_unique_steps or ordered_unique_steps[-1] != step_name:
+                ordered_unique_steps.append(step_name)
+        docs_index = ordered_unique_steps.index(_DOCS_GOVERNANCE_STEP_NAME)
         self.assertEqual(
-            by_name["docs-check-tests"].command,
-            [
-                "python3",
-                "-m",
-                "unittest",
-                "discover",
-                "-s",
-                "scripts/docs_check_tests",
-                "-v",
-            ],
+            ordered_unique_steps[docs_index - 1],
+            "Check tracked artifacts",
+            "docs-governance step must immediately follow the artifact-guard step",
         )
         self.assertEqual(
-            by_name["docs-check"].command,
-            ["python3", "scripts/check_docs.py", "--check", "--check-examples"],
+            ordered_unique_steps[docs_index + 1],
+            "Check default build lane and quickstart legacy glue (issue #15)",
+            "docs-governance step must immediately precede the #15 default-lane step",
         )
 
     def test_issue_15_default_lane_and_quickstart_gates_present(self):
@@ -174,6 +216,9 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         )
 
     def test_gate_list_full_ordered_names(self):
+        # Issues #7/#17 remediation: exactly the original 10 #10/#11/#13
+        # gates -- docs-check-tests/docs-check are deliberately absent (see
+        # test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate).
         names = [g.name for g in verify_mod.gates()]
         self.assertEqual(
             names,
@@ -181,8 +226,6 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 "gba-playtest-host-suite",
                 "upstream-port-tests",
                 "artifact-guard",
-                "docs-check-tests",
-                "docs-check",
                 "default-lane-check",
                 "quickstart-legacy-check",
                 "generated-data-check",
@@ -217,7 +260,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
 
     def test_dry_run_never_executes_subprocess(self):
         results = verify_mod.run_gates("/nonexistent/path/should/not/matter", dry_run=True)
-        self.assertEqual(len(results), 12)
+        self.assertEqual(len(results), 10)
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
@@ -228,7 +271,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
         real_names = [g.name for g in verify_mod.gates()]
         self.assertEqual(dry, real_names)
-        self.assertEqual(len(dry), 12)
+        self.assertEqual(len(dry), 10)
 
 
 class VerifyGateSelectionRemovedTests(unittest.TestCase):
@@ -288,7 +331,7 @@ class VerifyGateSelectionRemovedTests(unittest.TestCase):
             self.assertIn(name, printed)
         # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
         # -- never silently omitted, never marked PASS/FAIL without running.
-        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 12)
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 10)
 
 
 class HostOnlyEnvGateMirrorTests(unittest.TestCase):
@@ -377,9 +420,9 @@ class HostOnlyEnvGateMirrorTests(unittest.TestCase):
                 "run_gates must not mutate the parent environment",
             )
 
-        self.assertEqual(len(results), 12)
+        self.assertEqual(len(results), 10)
         self.assertTrue(all(result.passed for result in results))
-        self.assertEqual(len(seen), 12)
+        self.assertEqual(len(seen), 10)
 
         host_argv, host_env = seen[0]
         self.assertEqual(host_argv[0], "python3")
