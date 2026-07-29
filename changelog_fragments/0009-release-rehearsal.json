@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "internal",
+  "summary": "Add a read-only release/publication rehearsal system (policy, changelog fragments, release manifest, migration registry, source-release guard/provenance, deterministic archive rehearsal, and a read-only CI workflow); publication remains mechanically BLOCKED pending human license/provenance approval.",
+  "semver_impact": "none"
+}
