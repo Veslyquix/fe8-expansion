@@ -910,3 +910,167 @@ The `GBA_PLAYTEST_HOST_ONLY=1` gate-1 fix, the 10-gate count, the normal/live
 runtime build coverage and every fingerprint/budget artifact are unchanged in
 this batch (`git status --porcelain` lists only the census/active-contract
 files, the two makefiles, the two audits and the docs).
+
+## Cap-flip follow-up: ACTIVE-header stamp/header desync self-heal
+
+A final verifier recommended pass but its log reproduced a real first-fail that
+is **not** hidden here: any modern configured/default build must self-heal to
+its own resolved cap before compiling the consumer, and one sequence did not.
+
+### First-fail reproduced (before)
+
+```
+$ make generated-data-check                              # default baseline: header 0xCD/206
+$ FE8_ITEM_ID_CAP=0xCE make generated-data-check         # leaves ACTIVE header at 0xCE/207, stamp stays 0xCD
+$ stat -c '%Y %n' build/generated/data/{id_space_active.h,.item_id_cap.stamp}
+1785238039 build/generated/data/id_space_active.h        # 0xCE, newest
+1785237943 build/generated/data/.item_id_cap.stamp       # still 0xCD, older
+$ make build/expansion-modern/debug/aapcs/src/data_items.o   # plain default, no manual fix
+include/id_space.h:12: error: size of array
+  'id_space_static_assert_generated_items_record_count_matches_active_contract' is negative
+make: *** [modern.mk:607: build/expansion-modern/debug/aapcs/src/data_items.o] Error 1
+```
+
+### Root cause
+
+The build-local ACTIVE header is re-rendered **only** by the stamp-driven
+grouped rule, which fires purely on `.item_id_cap.stamp`'s mtime. An
+out-of-band `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes
+the header to 0xCE (advancing *its* mtime) but never touches the stamp. On the
+next plain/default build the resolved cap is unchanged (0xCD==0xCD), so the
+stamp mtime does not advance; the 0xCE header now looks newer than the stamp,
+the grouped rule is judged up to date and never re-renders -- yet
+`data_items.c` (which lists the header as a prerequisite) *does* regenerate at
+the default cap, so a 206-record table `#include`s a 207-record header: the
+negative static assert on the first consumer compile, previously only
+recoverable with a manual `make generated-data-check`. Hard-fail beats silent
+corruption, but a build must never require a manual pre-step to recover.
+
+### Fix (single-command, parallel-safe self-heal)
+
+`generated_data.mk`, the `$(GENERATED_DATA_ITEM_CAP_STAMP)` recipe (a `FORCE`
+prerequisite of `data_items.c`, so it runs on every build): heal the ACTIVE
+surfaces with `idspace active-check` the same write-if-changed way the items
+table is already healed, keyed off *this* make process's own resolved cap. The
+header is therefore restored to the resolved cap **before** any consumer
+compiles, in every direction, including `-j`. It is a mtime-preserving no-op at
+the correct cap (no rebuild storm) and a single rewrite when stale. The
+grouped rule still owns the ordinary cap-flip path; this closes only the
+out-of-band stamp/header desync. No static assert was removed, no `clean` is
+relied on, no oracle/gold artifact was touched.
+
+### After (single command heals, first compile passes)
+
+```
+# desync staged exactly as above (header 0xCE, stamp 0xCD)
+$ make build/expansion-modern/debug/aapcs/src/data_items.o          # plain default, exit 0
+$ grep ITEM_ID_ACTIVE_ build/generated/data/id_space_active.h
+#define ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD
+#define ITEM_ID_ACTIVE_RECORD_COUNT 206
+# full modern ELF from the same desync also self-heals + links:
+$ FE8_ITEM_ID_CAP=0xCE make generated-data-check >/dev/null   # re-stage 0xCE header
+$ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # exit 0
+Modern ELF ready: build/expansion-modern/debug/aapcs/fireemblem8.elf   # header healed to 0xCD/206
+```
+
+### Regression coverage (both real-run)
+
+- `make generated-data-active-heal-check` (generated_data.mk, host-only, no
+  agbcc/arm toolchain -- CI-friendly): stages the exact stamp/header desync and
+  asserts one plain default build re-syncs header+table to 0xCD/206; covers the
+  reverse default->0xCE flip, a correct-cap no-op (proves no rebuild storm), and
+  never cleans. Verified to **fail** with the fix reverted (negative control:
+  "the stale 0xCE header did not self-heal on the first plain default build")
+  and PASS with it in place.
+- The "desync recovery" leg of `make expansion-modern-idspace-active-check`
+  (modern.mk): the same recovery proven with a **real modern compile** so the
+  stale-header negative assert can never silently return, alongside the existing
+  default/configured/negative legs.
+
+### Performance follow-up: the every-build heal is now a sub-second probe
+
+The first version of this self-heal called `idspace active-check` from the
+`FORCE`-driven `.item_id_cap.stamp` recipe. That recipe runs on **every** build,
+and `active-check` re-renders the ACTIVE surfaces through the full consumer
+census -- a ~15 MB source walk (658 files / ~1070 hits) -- so a *warm, already
+correct* no-op build paid a fixed ~8-11 s tax for work it did not need to do.
+
+The recipe now calls a new `idspace active-heal` instead. `active-heal` runs a
+census-free probe first: it computes only the resolved cap and the real record
+counts (`_active_domain_entries`, the same census-free model `active_contract`
+layers the census on top of, so the two can never disagree) and compares them to
+the cap/count/schema metadata already on disk in the header, JSON and Markdown.
+If every surface already agrees it returns immediately -- no census, no write,
+no mtime change. Only a missing/unparseable/schema-outdated/cap-count-mismatched
+surface falls through to one full `active-generate`. Errors are **not** swallowed
+(the old line ended in `|| true`): a bad `FE8_ITEM_ID_CAP` or a schema/IO error
+now fails the build loudly at the probe.
+
+Measured on this host (`/usr/bin/time -v`):
+
+```
+idspace active-check  (removed from the recipe)   0:08.10   full census / 658-file walk
+idspace active-heal   (new warm no-op)            0:00.32   census-free probe, no write
+check --table items   (pre-existing recipe heal)  0:00.82   unchanged neighbour
+warm no-op `make build/generated/data/data_items.c`:  ~8-11 s  ->  ~2.6 s (x3 runs)
+```
+
+The warm heal is now on par with the neighbouring items-table self-heal instead
+of dominating the build; the numbers are recorded as evidence, not asserted as a
+wall-clock gate (the tests assert the *mechanism* -- the poisoned-scan no-op
+contract -- so they stay deterministic across machines). `generated-data-check`
+still runs the authoritative full-census `active-check`; the cheap probe changes
+only the per-build FORCE path.
+
+Regression coverage for the probe itself: `ActiveHealProbeTests` in
+`scripts/generated_data/tests/test_idspace_active.py` proves (a) a warm no-op
+never runs the census scan (a poisoned `consumer_census.scan` would raise), (b)
+detection is itself census-free, (c) a stale cap flip regenerates all three
+surfaces, (d) an out-of-band 0xCE header on a default build heals back to
+0xCD/206, (e) missing/corrupt-JSON/corrupt-header/schema-bump surfaces are
+flagged stale, and (f) a bad cap raises loudly (no swallowed exit-1). The
+`make generated-data-active-heal-check` and modern "desync recovery" legs above
+exercise the same recovery end-to-end through the real recipe.
+
+**Follow-up: header/Markdown decode errors (`OSError`/`UnicodeDecodeError`) now
+heal too, not just JSON.** `active_heal_reasons` already caught `(ValueError,
+OSError)` around the JSON `json.load` (a `UnicodeDecodeError` is itself a
+`ValueError` subclass, so corrupt JSON bytes were already covered), but the
+header and Markdown reads were bare `open(...).read()` calls with nothing
+catching a decode failure or a permission error -- a truncated/binary-corrupt
+header or Markdown file, or one the process can no longer read, raised an
+unhandled exception straight out of the probe instead of being reported as an
+actionable, healable reason. Both reads are now wrapped the same way as JSON:
+`except (OSError, UnicodeDecodeError)` records `unparseable: <file> (...)` and
+skips that surface's field checks (the same "reasons, not a crash" contract
+JSON already had), then falls through to one full regen exactly as any other
+stale surface would. The regen path needed the matching fix: `write_if_changed`
+unconditionally decoded the pre-existing file to decide whether a write was
+necessary, so a corrupt on-disk file would crash the *regen* it was supposed to
+repair. That decode is now best-effort (`existing = None` on `OSError`/
+`UnicodeDecodeError`, meaning "assume it differs, write it") -- the actual
+write is untouched, so a genuine write failure (permission denied, read-only
+filesystem) still raises straight out rather than being swallowed into a false
+"healed" success. New regression coverage: `test_corrupt_header_invalid_utf8_
+triggers_regen_not_a_crash`, `test_corrupt_md_invalid_utf8_triggers_regen_not_
+a_crash`, `test_all_three_surfaces_corrupt_recover_in_one_heal` (header +
+Markdown poisoned with raw non-UTF-8 bytes and JSON poisoned with invalid JSON,
+all at once, one heal call restores all three), and
+`test_unreadable_header_is_reported_honestly_and_write_error_propagates` (a
+permission-denied header is diagnosed as an actionable reason without
+crashing, but the follow-up regen's write still raises rather than reporting a
+false success). `python3 -m unittest discover -s scripts/generated_data/tests`
+now runs 613 tests (598 baseline + 15 new `ActiveHealProbeTests`), OK; `make generated-data-active-heal-check` and
+`make generated-data-check` both still PASS unchanged.
+
+### Verification run for this follow-up
+
+```
+make generated-data-active-heal-check            # PASS
+make generated-data-cap-heal-check               # PASS
+make generated-data-check                        # PASS (item cap 0xCD, 206 record(s))
+make expansion-modern-idspace-active-check ...   # PASS (incl. desync-recovery leg, real compile)
+python3 -m unittest discover -s scripts/generated_data/tests   # Ran 613 tests, OK
+make -j4 build/expansion-modern/debug/aapcs/src/data_items.o (from staged desync)  # exit 0, header healed to 0xCD/206
+idspace active-heal warm no-op / active-check    # 0.32 s vs 8.10 s (per /usr/bin/time -v)
+```

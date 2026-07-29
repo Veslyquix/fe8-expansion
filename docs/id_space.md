@@ -75,6 +75,66 @@ Downstream consumers:
   inheriting whatever cap the caller happened to be running under. See
   `scripts/modernize/tests/test_idspace_active_check_gate_hermetic.py`.
 
+  **Automatic build self-heal (cap-flip / stale / heal).** Any modern
+  configured or default build regenerates the ACTIVE header *and* the generated
+  table to match *its own* resolved cap **before** the first consumer compiles
+  -- you never have to run `make generated-data-check` by hand first. The
+  `.item_id_cap.stamp` recipe is a `FORCE` prerequisite of `data_items.c`, so it
+  runs on every build and heals both surfaces write-if-changed: a
+  mtime-preserving no-op at the correct cap (no rebuild storm), a single rewrite
+  (recompiling exactly the affected object) when either surface is stale.
+  This closes a real first-fail that a final verifier reproduced and that this
+  doc deliberately does not hide: an out-of-band, differently-capped
+  `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes the ACTIVE
+  header to 0xCE (advancing *its* mtime) while never touching the cap stamp; on
+  the next plain/default build the resolved cap is unchanged, so the stamp mtime
+  does not advance, the 0xCE header looks newer than the stamp, and the
+  stamp-driven grouped rule -- keyed only on the stamp's mtime -- is judged up
+  to date and never re-renders. The table `data_items.c` *does* regenerate at
+  the default cap, so a 206-record table ends up `#include`-ing a 207-record
+  header: exactly the negative static assert above, on the very first compile,
+  which previously required a manual `make generated-data-check` to recover.
+  Healing the ACTIVE surfaces inside the stamp recipe (keyed off the make
+  process's own resolved cap) makes the recovery automatic and single-command in
+  every direction, including `-j`. Regression coverage:
+  `make generated-data-active-heal-check` (host-only: default->0xCE->default and
+  the reverse, correct-cap no-op, no clean) and the "desync recovery" leg of
+  `make expansion-modern-idspace-active-check` (the same recovery proven with a
+  real modern compile, so the stale-header negative assert can never silently
+  return).
+
+  **The heal is a sub-second probe, not a full audit re-render.** Because this
+  runs on *every* build, the stamp recipe calls `idspace active-heal`, not
+  `idspace active-check`. `active-check` re-renders the ACTIVE surfaces through
+  the full consumer census -- a ~15 MB source walk (658 files / ~1070 hits),
+  ~8-11 s -- which turned every warm no-op build into a fixed multi-second tax.
+  `active-heal` instead runs a census-free probe: it computes only the resolved
+  cap and the real record counts (a fraction of a second) and compares them to
+  the cap/count/schema metadata already written in the on-disk header, JSON and
+  Markdown. When every surface already agrees it returns immediately -- no
+  census, no write, no mtime change, so the warm no-op is now on par with the
+  neighbouring items-table self-heal instead of dominating the build. Only a
+  missing, unparseable, schema-outdated, or cap/count-mismatched surface falls
+  through to a single full `active-generate` (census included). There is no
+  `|| true` mask: a bad `FE8_ITEM_ID_CAP` or a schema/IO error fails the build
+  loudly here rather than silently deferring to a later gate. Ordinary
+  source/classification drift stays owned by the grouped rule's Make
+  prerequisites (`generated-data-check` remains the authoritative full-census
+  validation gate); the probe owns only the cheap "is what's on disk still true
+  for *this* resolved cap" question. A header or Markdown surface that is
+  missing, truncated, or simply not valid UTF-8 (a corrupt/partial write, not a
+  cap/count mismatch) is caught (`OSError`/`UnicodeDecodeError`) and recorded as
+  the same actionable `unparseable: <file> (...)` reason the JSON surface
+  already used, then healed by the same full regen -- never an unhandled
+  decode traceback. The regen's own write-if-changed comparison is symmetric:
+  it no longer needs to *decode* the stale on-disk bytes to know they differ,
+  so a corrupt file never blocks its own repair; only a genuine write failure
+  (permission denied, read-only filesystem) still raises straight out, honestly,
+  rather than being reported as a false "healed" success. The probe's
+  no-op-never-scans contract and every stale/missing/corrupt/IO-error path are
+  covered by `ActiveHealProbeTests` in
+  `scripts/generated_data/tests/test_idspace_active.py`.
+
 ## What the single source produces
 
 Running `python3 -m scripts.generated_data.idspace generate` deterministically

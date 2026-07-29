@@ -8,6 +8,8 @@ consumed by a real compiled translation unit.
 """
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import tempfile
@@ -177,6 +179,251 @@ class ActiveOutputTests(unittest.TestCase):
                     open(os.path.join(tmp, idspace.ACTIVE_JSON_NAME), encoding='utf-8').read())
             item = [d for d in payload['domains'] if d['key'] == 'item'][0]
             self.assertEqual(item['active_record_count'], 207)
+
+
+class ActiveHealProbeTests(unittest.TestCase):
+    """The cheap `active-heal` probe: no source walk on a warm no-op, one full
+    render (all three surfaces) only when a surface is missing/stale, and loud
+    propagation of cap/schema/IO errors (never a swallowed exit-1 / `|| true`)."""
+
+    def _seed(self, tmp, env=None):
+        """Render the three surfaces once with the real census."""
+        if env is None:
+            idspace.cmd_active_generate(_args(tmp))
+        else:
+            with mock.patch.dict(os.environ, env, clear=False):
+                idspace.cmd_active_generate(_args(tmp))
+
+    def _mtimes(self, tmp):
+        return {name: os.stat(os.path.join(tmp, name)).st_mtime_ns
+                for name in sorted(os.listdir(tmp))}
+
+    def test_warm_no_op_never_walks_the_consumer_source_scan(self):
+        # A poisoned scan proves the warm probe is census-free: if the no-op
+        # heal touched the ~15 MB source walk this would raise, not pass.
+        from scripts.generated_data import consumer_census
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            consumer_census._SCAN_CACHE.clear()
+            with mock.patch.object(
+                    consumer_census, 'scan',
+                    side_effect=AssertionError('warm active-heal must not run the census scan')):
+                self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+
+    def test_warm_no_op_writes_nothing_and_preserves_mtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            before = self._mtimes(tmp)
+            self.assertEqual(idspace.active_heal_reasons(tmp), [])
+            self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            self.assertEqual(self._mtimes(tmp), before)
+
+    def test_stale_cap_flip_regenerates_all_three_surfaces(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)  # default 0xCD/206 on disk
+            with mock.patch.dict(os.environ, {idspace.ITEM_CAP_ENV: '0xCE'}, clear=False):
+                self.assertTrue(idspace.active_heal_reasons(tmp),
+                                'a 0xCE build over a 0xCD-on-disk header must be stale')
+                self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            header = open(os.path.join(tmp, idspace.ACTIVE_HEADER_NAME), encoding='utf-8').read()
+            self.assertIn('ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE', header)
+            self.assertIn('ITEM_ID_ACTIVE_RECORD_COUNT 207', header)
+            payload = json.loads(
+                open(os.path.join(tmp, idspace.ACTIVE_JSON_NAME), encoding='utf-8').read())
+            item = [d for d in payload['domains'] if d['key'] == 'item'][0]
+            self.assertEqual(item['active_configured_cap'], 0xCE)
+            self.assertEqual(item['active_record_count'], 207)
+            md = open(os.path.join(tmp, idspace.ACTIVE_MD_NAME), encoding='utf-8').read()
+            self.assertIn('0xCE', md)
+            self.assertIn('207', md)
+
+    def test_stale_cap_flip_is_detected_without_the_census(self):
+        # Detection (the reason list) must itself be census-free -- only the
+        # *regen* leg is allowed to walk the source scan.
+        from scripts.generated_data import consumer_census
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            consumer_census._SCAN_CACHE.clear()
+            with mock.patch.object(
+                    consumer_census, 'scan',
+                    side_effect=AssertionError('the heal probe must not scan to detect staleness')):
+                with mock.patch.dict(os.environ, {idspace.ITEM_CAP_ENV: '0xCE'}, clear=False):
+                    self.assertTrue(idspace.active_heal_reasons(tmp))
+
+    def test_out_of_band_header_desync_heals_back_to_the_resolved_cap(self):
+        # The reported first-fail: an out-of-band 0xCE render on disk, resolved
+        # cap still default 0xCD -> stale -> one heal restores 0xCD/206.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp, env={idspace.ITEM_CAP_ENV: '0xCE'})  # disk holds 0xCE/207
+            self.assertTrue(idspace.active_heal_reasons(tmp),
+                            'a 0xCE-on-disk header on a default build must be stale')
+            self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            header = open(os.path.join(tmp, idspace.ACTIVE_HEADER_NAME), encoding='utf-8').read()
+            self.assertIn('ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD', header)
+            self.assertIn('ITEM_ID_ACTIVE_RECORD_COUNT 206', header)
+
+    def test_missing_surface_triggers_regen(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            os.remove(os.path.join(tmp, idspace.ACTIVE_HEADER_NAME))
+            reasons = idspace.active_heal_reasons(tmp)
+            self.assertTrue(any('missing' in r for r in reasons), reasons)
+            self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            self.assertTrue(os.path.exists(os.path.join(tmp, idspace.ACTIVE_HEADER_NAME)))
+
+    def test_corrupt_json_metadata_triggers_regen_not_a_crash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            with open(os.path.join(tmp, idspace.ACTIVE_JSON_NAME), 'w', encoding='utf-8') as h:
+                h.write('{ this is not valid json')
+            reasons = idspace.active_heal_reasons(tmp)
+            self.assertTrue(any('unparseable' in r for r in reasons), reasons)
+            self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            # Regen restored a well-formed audit.
+            json.loads(open(os.path.join(tmp, idspace.ACTIVE_JSON_NAME), encoding='utf-8').read())
+
+    def test_corrupt_header_invalid_utf8_triggers_regen_not_a_crash(self):
+        # An out-of-band write can leave the header as raw, non-UTF-8 bytes
+        # (truncated build, disk corruption, a bad merge). That must be an
+        # actionable "unparseable" heal reason -- not an unhandled
+        # UnicodeDecodeError blowing up the probe.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            header_path = os.path.join(tmp, idspace.ACTIVE_HEADER_NAME)
+            with open(header_path, 'wb') as handle:
+                handle.write(b'#define ITEM_ID_ACTIVE_RECORD_COUNT 206\n\xff\xfe\x00garbage')
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                reasons = idspace.active_heal_reasons(tmp)
+                self.assertTrue(
+                    any('unparseable' in r and idspace.ACTIVE_HEADER_NAME in r for r in reasons),
+                    reasons)
+                self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            self.assertNotIn('Traceback', stdout.getvalue())
+            # All three surfaces recovered, not just the corrupt one.
+            header = open(header_path, encoding='utf-8').read()
+            self.assertIn('ITEM_ID_ACTIVE_RECORD_COUNT 206', header)
+            json.loads(open(os.path.join(tmp, idspace.ACTIVE_JSON_NAME), encoding='utf-8').read())
+            md = open(os.path.join(tmp, idspace.ACTIVE_MD_NAME), encoding='utf-8').read()
+            self.assertIn('0xCD', md)
+
+    def test_corrupt_md_invalid_utf8_triggers_regen_not_a_crash(self):
+        # Same failure mode as the header case, but for the human-readable
+        # Markdown surface: raw non-UTF-8 bytes on disk must be diagnosed as
+        # an actionable reason, never an unhandled UnicodeDecodeError.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            md_path = os.path.join(tmp, idspace.ACTIVE_MD_NAME)
+            with open(md_path, 'wb') as handle:
+                handle.write(b'# ACTIVE contract\n\xff\xfe\x00garbage')
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                reasons = idspace.active_heal_reasons(tmp)
+                self.assertTrue(
+                    any('unparseable' in r and idspace.ACTIVE_MD_NAME in r for r in reasons),
+                    reasons)
+                self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            self.assertNotIn('Traceback', stdout.getvalue())
+            md = open(md_path, encoding='utf-8').read()
+            self.assertIn('0xCD', md)
+            self.assertIn('206', md)
+
+    def test_all_three_surfaces_corrupt_recover_in_one_heal(self):
+        # Header and Markdown poisoned with raw non-UTF-8 bytes, JSON poisoned
+        # with invalid JSON, all at once. One heal call must diagnose all
+        # three (no crash) and restore all three to a matching, valid state.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            header_path = os.path.join(tmp, idspace.ACTIVE_HEADER_NAME)
+            json_path = os.path.join(tmp, idspace.ACTIVE_JSON_NAME)
+            md_path = os.path.join(tmp, idspace.ACTIVE_MD_NAME)
+            with open(header_path, 'wb') as handle:
+                handle.write(b'\xff\xfe not utf-8 at all')
+            with open(json_path, 'w', encoding='utf-8') as handle:
+                handle.write('{ not valid json')
+            with open(md_path, 'wb') as handle:
+                handle.write(b'\xff\xfe not utf-8 at all')
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                reasons = idspace.active_heal_reasons(tmp)
+                self.assertTrue(
+                    any('unparseable' in r and idspace.ACTIVE_HEADER_NAME in r for r in reasons),
+                    reasons)
+                self.assertTrue(
+                    any('unparseable' in r and idspace.ACTIVE_JSON_NAME in r for r in reasons),
+                    reasons)
+                self.assertTrue(
+                    any('unparseable' in r and idspace.ACTIVE_MD_NAME in r for r in reasons),
+                    reasons)
+                self.assertEqual(idspace.cmd_active_heal(_args(tmp)), 0)
+            self.assertNotIn('Traceback', stdout.getvalue())
+            header = open(header_path, encoding='utf-8').read()
+            self.assertIn('ITEM_ID_ACTIVE_RECORD_COUNT 206', header)
+            payload = json.loads(open(json_path, encoding='utf-8').read())
+            item = [d for d in payload['domains'] if d['key'] == 'item'][0]
+            self.assertEqual(item['active_record_count'], 206)
+            md = open(md_path, encoding='utf-8').read()
+            self.assertIn('0xCD', md)
+            self.assertIn('206', md)
+
+    def test_unreadable_header_is_reported_honestly_and_write_error_propagates(self):
+        # A stale header the OS refuses to let us read (permission denied) is
+        # a real IO error, not a parse error: the probe must still classify it
+        # as an actionable, non-crashing reason (recoverable diagnosis), but
+        # the follow-up regen write is genuinely blocked by the OS and that
+        # failure must propagate -- never be swallowed into a false "healed"
+        # success.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            header_path = os.path.join(tmp, idspace.ACTIVE_HEADER_NAME)
+            os.chmod(header_path, 0o000)
+            try:
+                reasons = idspace.active_heal_reasons(tmp)  # must not raise
+                self.assertTrue(
+                    any('unparseable' in r and idspace.ACTIVE_HEADER_NAME in r
+                        for r in reasons),
+                    reasons)
+                with self.assertRaises(OSError):
+                    idspace.cmd_active_heal(_args(tmp))
+            finally:
+                os.chmod(header_path, 0o644)
+
+    def test_schema_version_bump_marks_surfaces_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            with mock.patch.object(idspace, 'SCHEMA_VERSION', idspace.SCHEMA_VERSION + 1):
+                reasons = idspace.active_heal_reasons(tmp)
+            self.assertTrue(any('schema_version' in r for r in reasons), reasons)
+
+    def test_corrupt_header_cap_line_is_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            header_path = os.path.join(tmp, idspace.ACTIVE_HEADER_NAME)
+            text = open(header_path, encoding='utf-8').read().replace(
+                '#define ITEM_ID_ACTIVE_RECORD_COUNT 206',
+                '#define ITEM_ID_ACTIVE_RECORD_COUNT 999')
+            open(header_path, 'w', encoding='utf-8').write(text)
+            reasons = idspace.active_heal_reasons(tmp)
+            self.assertTrue(any('ITEM_ID_ACTIVE_RECORD_COUNT' in r for r in reasons), reasons)
+
+    def test_bad_cap_env_fails_loudly_and_is_not_swallowed(self):
+        # No exit-1 mask / no `|| true`: a bad cap raises straight out of the
+        # probe rather than silently reporting "current".
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            with mock.patch.dict(os.environ, {idspace.ITEM_CAP_ENV: '0x999'}, clear=False):
+                with self.assertRaises(idspace.CapError):
+                    idspace.active_heal_reasons(tmp)
+            with mock.patch.dict(os.environ, {idspace.ITEM_CAP_ENV: 'notanint'}, clear=False):
+                with self.assertRaises(idspace.CapError):
+                    idspace.cmd_active_heal(_args(tmp))
+
+    def test_cli_active_heal_bad_cap_returns_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._seed(tmp)
+            with mock.patch.dict(os.environ, {idspace.ITEM_CAP_ENV: '0x999'}, clear=False):
+                rc = idspace.main(['active-heal', '--out-dir', tmp])
+            self.assertEqual(rc, 1)
 
 
 class CommittedDefaultStabilityTests(unittest.TestCase):

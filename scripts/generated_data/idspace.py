@@ -32,6 +32,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 
 from . import consumer_census
@@ -443,8 +444,15 @@ def active_manifest_rows(env=None):
     return rows
 
 
-def active_contract(env=None):
-    """Full machine model of the ACTIVE (this build) cap/count contract."""
+def _active_domain_entries(env=None):
+    """Per-domain ACTIVE cap/count model for THIS build -- census-free.
+
+    Deliberately excludes the consumer census (the ~15 MB source walk): this
+    is the cap/record-count contract only, computed from resolve_item_id_cap
+    and the registered record tables (a fraction of a second). active_contract
+    layers the expensive census on top; the cheap `active-heal` probe reuses
+    exactly this model so the two can never disagree on the numbers.
+    """
     caps = active_caps(env)
     domains = []
     counts = {}
@@ -476,6 +484,12 @@ def active_contract(env=None):
             "expanded_past_default": caps[domain.key] != domain.configured_cap,
         }
         domains.append(entry)
+    return domains, caps, counts
+
+
+def active_contract(env=None):
+    """Full machine model of the ACTIVE (this build) cap/count contract."""
+    domains, caps, counts = _active_domain_entries(env)
     payload = {
         "schema_version": SCHEMA_VERSION,
         "contract": "active",
@@ -857,10 +871,26 @@ def _hexlit(value):
 
 
 def write_if_changed(path, content):
+    """Write `content` to `path` only when it differs from what is there.
+
+    The pre-existing-content read is purely a change-detection optimization
+    (skip the write when the file already matches). An on-disk file that is
+    missing, unreadable, or not valid UTF-8 (a corrupt/partial ACTIVE surface
+    is exactly the case active-heal exists to repair) must not block the
+    *actual* write: it is treated as "differs" and we fall through to writing
+    the correct content. This is deliberately narrower than swallowing all
+    write errors -- the write itself is never guarded, so a genuine write
+    failure (permission denied, read-only filesystem, disk full) still
+    raises straight out to the caller instead of being masked into a false
+    success.
+    """
     existing = None
     if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
-            existing = handle.read()
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                existing = handle.read()
+        except (OSError, UnicodeDecodeError):
+            existing = None
     if existing == content:
         return False
     directory = os.path.dirname(path)
@@ -898,13 +928,18 @@ def cmd_generate(_args):
     return 0
 
 
-def cmd_active_generate(args):
-    """Write the build-local ACTIVE surfaces (never a committed file)."""
+def _write_active_surfaces(out_dir, env=None):
+    """Render (census included) + write-if-changed the three ACTIVE surfaces.
+
+    Shared by `active-generate` and by the `active-heal` regen leg, so both
+    write byte-identical files and both loudly propagate any cap/schema/IO
+    error (validate_all_configured_caps / validate_active_contract raise, the
+    table loaders raise) instead of swallowing it.
+    """
     validate_all_configured_caps()
-    payload = active_contract()
+    payload = active_contract(env)
     validate_active_contract(payload)
-    out_dir = getattr(args, "out_dir", None)
-    for path, content in _active_outputs(out_dir):
+    for path, content in _active_outputs(out_dir, env):
         changed = write_if_changed(path, content)
         rel = os.path.relpath(path, REPO_ROOT)
         print("{} {}".format("wrote" if changed else "up-to-date", rel))
@@ -913,6 +948,171 @@ def cmd_active_generate(args):
           "(default cap 0x{:02X}, {} record(s))".format(
               item["active_configured_cap"], item["active_record_count"],
               item["default_cap"], item["default_record_count"]))
+    return payload
+
+
+def cmd_active_generate(args):
+    """Write the build-local ACTIVE surfaces (never a committed file)."""
+    _write_active_surfaces(getattr(args, "out_dir", None))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# Cheap ACTIVE self-heal probe (no consumer census / source walk)
+# --------------------------------------------------------------------------
+# The ACTIVE surfaces are a FORCE prerequisite of the generated table, so their
+# heal recipe runs on *every* build. Re-rendering them means the full
+# consumer_census source walk (~15 MB, ~8-11 s) even for a warm, already-correct
+# build -- a fixed per-build tax on a no-op. `active-heal` replaces that with a
+# sub-second probe: it computes ONLY the census-free cap/record-count model
+# (_active_domain_entries) and compares it against the metadata already on disk.
+# If every surface already agrees (the warm no-op) it writes nothing and returns
+# -- no census, no mtime change, no rebuild storm. Only when a surface is
+# missing, unparseable, schema-outdated, or reports a stale cap/count does it
+# fall through to one full active render (census included). Source/classification
+# drift stays owned by the grouped rule's ordinary Make prerequisites; this probe
+# owns only the cheap "is what's on disk still true for THIS resolved cap" question.
+
+_HDR_DEFINE_RE = re.compile(
+    r"^#define\s+(?P<name>[A-Z0-9_]+)\s+(?P<val>0[xX][0-9A-Fa-f]+|-?\d+)\s*$",
+    re.MULTILINE,
+)
+
+
+def _parse_active_header_defines(text):
+    """Macro name -> int for every simple `#define NAME <intlit>` in a header."""
+    out = {}
+    for m in _HDR_DEFINE_RE.finditer(text):
+        out[m.group("name")] = int(m.group("val"), 0)
+    return out
+
+
+def _expected_active_summary(env=None):
+    """Cheap ({key: entry}, item_entry) census-free expectation for THIS build."""
+    domains, _caps, _counts = _active_domain_entries(env)
+    by_key = {d["key"]: d for d in domains}
+    return by_key, by_key["item"]
+
+
+def active_heal_reasons(out_dir=None, env=None):
+    """Reasons the on-disk ACTIVE surfaces are stale for THIS resolved build.
+
+    Returns an empty list when every surface already matches the census-free
+    model (the warm no-op path). A non-empty list means a full regen is due.
+    A missing/unparseable/mismatched *on-disk* surface is a heal reason (not an
+    error); errors from computing the expectation itself (bad cap, schema/IO
+    failure loading a record table) propagate loudly to the caller.
+    """
+    out_dir = out_dir or ACTIVE_OUT_DIR
+    expected, _item = _expected_active_summary(env)
+    reasons = []
+
+    header_path = os.path.join(out_dir, ACTIVE_HEADER_NAME)
+    json_path = os.path.join(out_dir, ACTIVE_JSON_NAME)
+    md_path = os.path.join(out_dir, ACTIVE_MD_NAME)
+    for path in (header_path, json_path, md_path):
+        if not os.path.exists(path):
+            reasons.append("missing: {}".format(os.path.relpath(path, REPO_ROOT)))
+    if reasons:
+        return reasons
+
+    # --- ACTIVE C header (the compile-authoritative surface) ---------------
+    try:
+        with open(header_path, "r", encoding="utf-8") as handle:
+            defines = _parse_active_header_defines(handle.read())
+    except (OSError, UnicodeDecodeError) as exc:
+        reasons.append("unparseable: {} ({})".format(ACTIVE_HEADER_NAME, exc))
+        defines = None
+    if defines is not None:
+        for key, d in expected.items():
+            macro = key.upper()
+            checks = [
+                (macro + "_ID_DEFAULT_CAP", d["default_cap"]),
+                (macro + "_ID_ACTIVE_CONFIGURED_CAP", d["active_configured_cap"]),
+                (macro + "_ID_ACTIVE_EXPANDED", 1 if d["expanded_past_default"] else 0),
+            ]
+            if d["record_count_status"] == "counted":
+                checks.append((macro + "_ID_DEFAULT_RECORD_COUNT", d["default_record_count"]))
+                checks.append((macro + "_ID_ACTIVE_RECORD_COUNT", d["active_record_count"]))
+            for name, want in checks:
+                got = defines.get(name)
+                if got != want:
+                    reasons.append(
+                        "header {}: {} = {} (expected {})".format(
+                            ACTIVE_HEADER_NAME, name, got, want))
+
+    # --- ACTIVE JSON (schema version + machine cap/count model) ------------
+    try:
+        with open(json_path, "r", encoding="utf-8") as handle:
+            doc = json.load(handle)
+    except (ValueError, OSError) as exc:
+        reasons.append("unparseable: {} ({})".format(ACTIVE_JSON_NAME, exc))
+        doc = None
+    if doc is not None:
+        if doc.get("schema_version") != SCHEMA_VERSION:
+            reasons.append(
+                "json {}: schema_version {} (expected {})".format(
+                    ACTIVE_JSON_NAME, doc.get("schema_version"), SCHEMA_VERSION))
+        json_by_key = {d.get("key"): d for d in doc.get("domains", [])}
+        for key, d in expected.items():
+            jd = json_by_key.get(key)
+            if jd is None:
+                reasons.append("json {}: missing domain {}".format(ACTIVE_JSON_NAME, key))
+                continue
+            for field in ("default_cap", "active_configured_cap",
+                          "default_record_count", "active_record_count"):
+                if jd.get(field) != d[field]:
+                    reasons.append(
+                        "json {}: {}.{} = {} (expected {})".format(
+                            ACTIVE_JSON_NAME, key, field, jd.get(field), d[field]))
+
+    # --- ACTIVE Markdown (human table -- verify the volatile cap/count row) -
+    try:
+        with open(md_path, "r", encoding="utf-8") as handle:
+            md_text = handle.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        reasons.append("unparseable: {} ({})".format(ACTIVE_MD_NAME, exc))
+        md_text = None
+    if md_text is not None:
+        for key, d in expected.items():
+            if d["record_count_status"] != "counted":
+                continue
+            # The domains table renders one row per domain:
+            #   | item | 0xCD | 206 | 0xCD | 206 | no | `items` table |
+            want_cells = "| {} | {} | {} | {} | {} | {} |".format(
+                key, d["default_cap_hex"], d["default_record_count"],
+                d["active_configured_cap_hex"], d["active_record_count"],
+                "yes" if d["expanded_past_default"] else "no")
+            if want_cells not in md_text:
+                reasons.append(
+                    "md {}: no current row for domain {} (expected cap {} / {} record(s))".format(
+                        ACTIVE_MD_NAME, key, d["active_configured_cap_hex"],
+                        d["active_record_count"]))
+
+    return reasons
+
+
+def cmd_active_heal(args):
+    """Cheap probe; regenerate the ACTIVE surfaces once only when stale.
+
+    Warm, already-correct builds return without touching the census or any file
+    (mtime preserved -- no rebuild storm). Missing/stale/cap-count-mismatched
+    surfaces fall through to a single full render. Cap/schema/IO errors are not
+    swallowed: they raise straight out (no exit-1 mask, no `|| true`).
+    """
+    out_dir = getattr(args, "out_dir", None)
+    reasons = active_heal_reasons(out_dir)
+    if not reasons:
+        _by_key, item = _expected_active_summary()
+        print("active id-space contract current (cheap probe, no regen); "
+              "item cap 0x{:02X}, {} record(s)".format(
+                  item["active_configured_cap"], item["active_record_count"]))
+        return 0
+    print("active id-space contract stale -- regenerating ({} reason(s)):".format(
+        len(reasons)))
+    for reason in reasons:
+        print("  - {}".format(reason))
+    _write_active_surfaces(out_dir)
     return 0
 
 
@@ -980,6 +1180,13 @@ def main(argv=None):
                               "(JSON + Markdown + C header) for this build")
     act.add_argument("--out-dir", help="output directory (default: build/generated/data)")
     act.set_defaults(func=cmd_active_generate)
+    act_heal = sub.add_parser(
+        "active-heal",
+        help="cheap probe: regenerate the build-local ACTIVE contract only when "
+             "a surface is missing/stale for the resolved cap (no source walk on "
+             "a warm no-op)")
+    act_heal.add_argument("--out-dir", help="output directory (default: build/generated/data)")
+    act_heal.set_defaults(func=cmd_active_heal)
     act_chk = sub.add_parser("active-check",
                              help="self-heal + verify the build-local ACTIVE contract")
     act_chk.add_argument("--out-dir", help="output directory (default: build/generated/data)")

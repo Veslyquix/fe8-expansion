@@ -278,6 +278,34 @@ $(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
 	@mkdir -p "$(@D)"
 	@printf 'item_id_cap=%s\n' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
 	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+	@# issue #10 self-heal (ACTIVE header): FE8_ITEM_ID_CAP is an env/config
+	@# input, and the build-local ACTIVE header + audits are otherwise
+	@# re-rendered ONLY by the stamp-driven grouped rule below -- which fires
+	@# purely on the stamp's mtime. But a prior out-of-band, differently-capped
+	@# `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes the
+	@# ACTIVE header to 0xCE (advancing ITS mtime) while never touching this
+	@# stamp; on the next plain/default build the resolved cap is unchanged
+	@# (0xCD==0xCD) so the stamp mtime does NOT advance, the 0xCE header then
+	@# looks NEWER than the stamp, the grouped rule is judged up to date and
+	@# never re-renders -- yet data_items.c (which lists the header as a prereq)
+	@# DOES regenerate at the default cap, producing a 206-record table that
+	@# #includes a 207-record header: a negative static assert on the very
+	@# first consumer compile, requiring a manual `make generated-data-check`
+	@# to recover. Heal the ACTIVE surfaces here, keyed off THIS make process's
+	@# own resolved cap, so every default/configured build restores a correct
+	@# ACTIVE header *before* any consumer compiles. Use `active-heal`, NOT
+	@# `active-check`: this recipe is a FORCE prerequisite that runs on EVERY
+	@# build, and `active-check` re-renders through the full consumer census (a
+	@# ~15 MB source walk, ~8-11 s) even for a warm no-op -- a fixed per-build
+	@# tax. `active-heal` first runs a sub-second, census-free probe (resolved
+	@# cap + record counts vs the metadata already on disk): a mtime-preserving
+	@# no-op at the correct cap (no census, no rebuild storm), and only a single
+	@# full render when a surface is missing/stale/cap-count-mismatched. No
+	@# `|| true` mask: a bad cap or a schema/IO error must fail the build loudly
+	@# here, not silently defer to a later gate. The grouped rule below (stamp
+	@# -> header) still owns the ordinary cap-flip path and source/classification
+	@# drift; this closes only the out-of-band stamp/header desync, cheaply.
+	@$(GENERATED_DATA_PY).idspace active-heal --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null
 	@# issue #10 self-heal: FE8_ITEM_ID_CAP is an env/config input, so an
 	@# out-of-band write of build/generated/data/data_items.c at a different
 	@# cap (newer mtime than every tracked input) would otherwise be treated
@@ -2568,3 +2596,61 @@ generated-data-cap-heal-check:
 	if grep -q EXPANSION_CE $$C; then echo FAIL: shared build data_items.c left poisoned after the test suite >&2; exit 1; fi; \
 	echo OK: the item-cap CLI check tests run entirely in a TemporaryDirectory and leave the shared default-cap build .c untouched; \
 	echo PASS: generated-data-cap-heal-check
+
+# ---------------------------------------------------------------------------
+# Issue #10 cap-flip follow-up: ACTIVE-header stamp/header desync self-heal
+# ---------------------------------------------------------------------------
+# Companion to generated-data-cap-heal-check above, but guarding the *ACTIVE
+# header* half of the contract rather than the generated .c half -- and
+# deliberately host-only (no agbcc/arm toolchain), so CI covers it even where
+# the object build is unavailable. The real modern compile proof of the same
+# recovery (the negative static assert that a stale header would trigger)
+# lives in modern.mk's expansion-modern-idspace-active-check "desync recovery"
+# leg.
+#
+# Reproduces the exact reported first-fail: a differently-capped, out-of-band
+# `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes the
+# build-local ACTIVE header to 0xCE (advancing its mtime) while never touching
+# $(GENERATED_DATA_ITEM_CAP_STAMP). On the next plain/default build the
+# resolved cap is unchanged, so the stamp mtime does not advance, the 0xCE
+# header looks newer than the stamp, the stamp-driven grouped rule is judged
+# up to date and never re-renders -- yet data_items.c still regenerates at the
+# default cap, leaving a 206-record table that #includes a 207-record header
+# (a negative static assert on the first consumer compile). The stamp recipe's
+# ACTIVE-header self-heal must restore the header to the resolved cap on the
+# first plain build, with no manual generated-data-check and no clean.
+.PHONY: generated-data-active-heal-check
+generated-data-active-heal-check:
+	@C=$(GENERATED_DATA_OUT_DIR)/data_items.c; H=$(GENERATED_DATA_ACTIVE_HEADER); \
+	S=$(GENERATED_DATA_ITEM_CAP_STAMP); \
+	echo --- baseline: a plain default build agrees on 0xCD/206 across header, stamp and table ---; \
+	$(MAKE) --no-print-directory $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: baseline ACTIVE header is not at the default cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: baseline ACTIVE header count is not 206" >&2; exit 1; }; \
+	grep -q "item_id_cap=0xCD" $$S || { echo "FAIL: baseline cap stamp is not at the default cap" >&2; exit 1; }; \
+	if grep -q EXPANSION_CE $$C; then echo "FAIL: baseline default-cap .c already carries an expansion record" >&2; exit 1; fi; \
+	echo --- desync: an out-of-band FE8_ITEM_ID_CAP=0xCE active render advances the header to 0xCE while the stamp stays default and the .c stays 206 ---; \
+	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
+	touch $$H; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: desync setup did not advance the ACTIVE header to 0xCE" >&2; exit 1; }; \
+	grep -q "item_id_cap=0xCD" $$S || { echo "FAIL: desync setup unexpectedly moved the cap stamp off the default cap" >&2; exit 1; }; \
+	if grep -q EXPANSION_CE $$C; then echo "FAIL: desync setup unexpectedly rewrote the default-cap .c" >&2; exit 1; fi; \
+	echo --- heal: a single plain default build must restore the header to 0xCD/206 so header and table agree, with no manual generated-data-check ---; \
+	$(MAKE) --no-print-directory $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: the stale 0xCE header did not self-heal on the first plain default build" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: the self-healed header count is not 206" >&2; exit 1; }; \
+	if grep -q EXPANSION_CE $$C; then echo "FAIL: default-cap .c gained an expansion record while healing" >&2; exit 1; fi; \
+	echo "OK: stamp=default plus a stale 0xCE header, one plain default build re-synced header+table to 0xCD/206 with no clean and no manual ordering"; \
+	echo --- reverse: a configured FE8_ITEM_ID_CAP=0xCE build must move header and table together to 0xCE/207 ---; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: configured build did not move the header to 0xCE" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 207" $$H || { echo "FAIL: configured header count is not 207" >&2; exit 1; }; \
+	grep -q EXPANSION_CE $$C || { echo "FAIL: configured .c did not gain the expansion record" >&2; exit 1; }; \
+	echo "OK: the reverse (default -> 0xCE) cap flip moves header and table together to 0xCE/207"; \
+	echo --- no-op: an already-correct header rebuild must be a mtime-preserving no-op ---; \
+	m1=$$(stat -c %Y $$H); $(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null 2>&1; m2=$$(stat -c %Y $$H); \
+	if [ x$$m1 != x$$m2 ]; then echo "FAIL: an already-correct ACTIVE header was rewritten -- rebuild storm" >&2; exit 1; fi; \
+	echo "OK: an already-correct configured rebuild leaves the ACTIVE header untouched (no rebuild storm)"; \
+	$(MAKE) --no-print-directory $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap header state was not restored" >&2; exit 1; }; \
+	echo PASS: generated-data-active-heal-check
