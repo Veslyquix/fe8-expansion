@@ -4,7 +4,9 @@ import io
 import os
 import re
 import shlex
+import subprocess
 import unittest
+from unittest import mock
 
 from scripts.upstream_port import cli, verify as verify_mod
 
@@ -140,6 +142,8 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 "generated-data-check",
                 "modern-linker-check-debug",
                 "modern-linker-check-release",
+                "modern-itemexpansion-check-debug",
+                "modern-itemexpansion-check-release",
             ],
         )
         # The merged CI runs the fast `host-tests` lane textually before the
@@ -167,7 +171,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
 
     def test_dry_run_never_executes_subprocess(self):
         results = verify_mod.run_gates("/nonexistent/path/should/not/matter", dry_run=True)
-        self.assertEqual(len(results), 8)
+        self.assertEqual(len(results), 10)
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
@@ -178,7 +182,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
         real_names = [g.name for g in verify_mod.gates()]
         self.assertEqual(dry, real_names)
-        self.assertEqual(len(dry), 8)
+        self.assertEqual(len(dry), 10)
 
 
 class VerifyGateSelectionRemovedTests(unittest.TestCase):
@@ -238,7 +242,111 @@ class VerifyGateSelectionRemovedTests(unittest.TestCase):
             self.assertIn(name, printed)
         # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
         # -- never silently omitted, never marked PASS/FAIL without running.
-        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 8)
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 10)
+
+
+class HostOnlyEnvGateMirrorTests(unittest.TestCase):
+    """Issue #10/#13 harness fix: the host lane runs the tools/gba-playtest
+    suite in explicit host-only mode (GBA_PLAYTEST_HOST_ONLY=1), so its
+    result is decided by mode, never by whether a git-ignored ROM happens to
+    exist in the worktree while the later ROM gates rebuild it. That env
+    assignment must be a literal part of the mirrored gate argv, must be
+    applied to that one child process only, and must never reach the ROM
+    build gates (which own the live/runtime coverage)."""
+
+    HOST_ONLY_ENV = "GBA_PLAYTEST_HOST_ONLY"
+
+    def test_host_suite_gate_carries_the_literal_env_assignment(self):
+        gate = verify_mod.gates()[0]
+        self.assertEqual(gate.name, "gba-playtest-host-suite")
+        self.assertEqual(
+            gate.command,
+            [
+                "GBA_PLAYTEST_HOST_ONLY=1",
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "tools/gba-playtest/tests",
+                "-v",
+            ],
+        )
+
+    def test_env_prefix_splits_into_child_env_and_unchanged_argv(self):
+        env_overrides, argv = verify_mod._split_env_prefix(verify_mod.gates()[0].command)
+        self.assertEqual(env_overrides, {self.HOST_ONLY_ENV: "1"})
+        self.assertEqual(argv[0], "python3")
+        self.assertNotIn(self.HOST_ONLY_ENV, " ".join(argv))
+
+    def test_no_other_gate_requests_host_only_mode(self):
+        for gate in verify_mod.gates()[1:]:
+            with self.subTest(gate=gate.name):
+                self.assertNotIn(
+                    self.HOST_ONLY_ENV,
+                    " ".join(gate.command),
+                    f"{gate.name} must not inherit or repeat the host-only "
+                    f"switch: the ROM/runtime gates own live coverage",
+                )
+
+    def test_workflow_sets_host_only_in_the_host_job_only(self):
+        with open(BUILD_WORKFLOW_PATH, "r", encoding="utf-8") as handle:
+            workflow = handle.read()
+        host_job_start = workflow.index("\n  host-tests:\n")
+        build_job_start = workflow.index("\n  build:\n")
+        self.assertLess(host_job_start, build_job_start)
+        host_job = workflow[host_job_start:build_job_start]
+        build_job = workflow[build_job_start:]
+        self.assertIn(
+            "run: GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover "
+            "-s tools/gba-playtest/tests -v",
+            host_job,
+        )
+        self.assertNotIn(
+            self.HOST_ONLY_ENV,
+            build_job,
+            "the ROM build job must never inherit host-only mode, or its "
+            "runtime scenarios would skip",
+        )
+
+    def test_run_gates_injects_host_only_into_that_child_only(self):
+        """Concurrency/isolation: with --jobs 2 the host gate and the later
+        `make -j2` ROM gates run against the same worktree, so the host-only
+        switch must live in exactly one child environment and must not leak
+        into any later gate or into this process."""
+        seen = []
+
+        def fake_run(argv, cwd=None, env=None, **kwargs):
+            seen.append((tuple(argv), None if env is None else dict(env)))
+            return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+        parent_env = {key: value for key, value in os.environ.items()}
+        parent_env.pop(self.HOST_ONLY_ENV, None)
+        with mock.patch.dict(os.environ, parent_env, clear=True):
+            with mock.patch.object(verify_mod.subprocess, "run", side_effect=fake_run):
+                results = verify_mod.run_gates(".", jobs=2)
+            self.assertNotIn(
+                self.HOST_ONLY_ENV,
+                os.environ,
+                "run_gates must not mutate the parent environment",
+            )
+
+        self.assertEqual(len(results), 10)
+        self.assertTrue(all(result.passed for result in results))
+        self.assertEqual(len(seen), 10)
+
+        host_argv, host_env = seen[0]
+        self.assertEqual(host_argv[0], "python3")
+        self.assertIsNotNone(host_env)
+        self.assertEqual(host_env[self.HOST_ONLY_ENV], "1")
+
+        for gate, (argv, env) in zip(verify_mod.gates(jobs=2)[1:], seen[1:]):
+            with self.subTest(gate=gate.name):
+                self.assertNotIn(
+                    self.HOST_ONLY_ENV,
+                    {} if env is None else env,
+                    f"host-only mode leaked into {gate.name}",
+                )
 
 
 if __name__ == "__main__":

@@ -36,10 +36,6 @@ FINGERPRINT_PATHS = {
     "debug": FINGERPRINTS_DIR / "new-game-modern-debug.json",
     "release": FINGERPRINTS_DIR / "new-game-modern-release.json",
 }
-MODERN_ROMS = {
-    config: REPO_ROOT / "build" / "expansion-modern" / config / "aapcs" / "fireemblem8.gba"
-    for config in ("debug", "release")
-}
 # The same deterministic CURRENT-format SRAM fixture issue #11 already uses
 # for expansion-modern-debugtools-check (see modern.mk's
 # MODERN_DEBUGTOOLS_SRAM_FIXTURE) -- reused here via the host-side generator
@@ -50,26 +46,10 @@ sys.path.insert(0, str(PLAYTEST_DIR))
 sys.path.insert(0, str(PLAYTEST_DIR / "tests"))
 
 import gba_playtest  # noqa: E402
+import host_mode  # noqa: E402
 import sram_fixture as sf  # noqa: E402
 
-_UNAVAILABLE_MARKERS = (
-    "C compiler ",
-    "mgba/core/core.h: No such file",
-    "'mgba/core/core.h' file not found",
-    "cannot find -lmgba",
-    "library not found for -lmgba",
-)
-
-
-def _capture_or_skip(rom: Path, scenario, sram_image: Path):
-    try:
-        return gba_playtest.capture(rom, scenario, sram_image)
-    except gba_playtest.PlaytestError as exc:
-        if any(marker in str(exc) for marker in _UNAVAILABLE_MARKERS):
-            raise unittest.SkipTest(
-                f"libmGBA integration skipped explicitly: {exc}"
-            ) from exc
-        raise
+MODERN_ROMS = {config: host_mode.modern_rom(config) for config in ("debug", "release")}
 
 
 class NewGameScenarioFilesTests(unittest.TestCase):
@@ -164,20 +144,22 @@ class NewGameScenarioFilesTests(unittest.TestCase):
         self.assertNotEqual(debug_fp["rom"]["sha1"], release_fp["rom"]["sha1"])
 
 
+@host_mode.live_artifact_testcase("new-game runtime coverage")
 class NewGameRuntimeTests(unittest.TestCase):
     """Live libmGBA runs against the built modern ROMs, when available.
 
-    Skips explicitly (never silently) when the modern ROM for a config has
-    not been built locally -- the same gating `test_savesuspend_resume_scenario.py`
-    already uses, so this test still runs (and must pass) anywhere the ROM
-    exists, including the target-ROM CI gate that builds it just before
-    running `python3 -m unittest`.
+    Category B (see tests/host_mode.py): in host-only mode
+    (GBA_PLAYTEST_HOST_ONLY=1) this whole class skips before any ROM is
+    touched. In normal mode it behaves exactly as before -- skipping
+    explicitly (never silently) when the modern ROM for a config has not been
+    built locally, and running (and passing) anywhere the ROM exists,
+    including the target-ROM CI gate that builds it just before running the
+    runtime scenarios.
     """
 
     def _run(self, config: str):
         rom = MODERN_ROMS[config]
-        if not rom.exists():
-            raise unittest.SkipTest(f"modern {config} ROM not built: {rom}")
+        host_mode.require_built_rom(rom, f"modern {config} ROM")
         scenario = gba_playtest.load_scenario(SCENARIO_PATH)
         expected = gba_playtest.validate_fingerprint(
             json.loads(FINGERPRINT_PATHS[config].read_text(encoding="utf-8")),
@@ -187,7 +169,12 @@ class NewGameRuntimeTests(unittest.TestCase):
             fixture_path = sf.write_deterministic_current_fixture(
                 Path(tmp) / "current.sav"
             )
-            actual = _capture_or_skip(rom, scenario, fixture_path)
+            actual = host_mode.capture_live_or_skip(
+                rom,
+                scenario,
+                fixture_path,
+                label=f"new-game runtime coverage ({config})",
+            )
         differences = gba_playtest.compare_fingerprints(
             expected, actual, policy="behavior"
         )

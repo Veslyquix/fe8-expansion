@@ -53,6 +53,11 @@ skip, and its skip reason includes the backend diagnostic.
 # Host tests (no ROM and no libmGBA needed, except the explicit integration test)
 python3 -m unittest discover -s tools/gba-playtest/tests -v
 
+# Same suite, explicitly host-only: every ROM-dependent live-integration test
+# skips by mode, regardless of which ROMs exist in the worktree (see
+# "Host-only test mode" below). This is the exact CI `host-tests` command.
+GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v
+
 # Capture sorted, reproducible JSON
 python3 tools/gba-playtest/gba_playtest.py capture \
   --rom fireemblem8.gba \
@@ -106,6 +111,57 @@ when changed ROM bytes are expected; it never silently turns off identity
 reporting. Capture JSON always contains provenance under `"rom"` regardless of
 the later verification policy. Scenario schema version remains 1; provenance is
 mandatory in fingerprint format version 2.
+
+## Host-only test mode
+
+`GBA_PLAYTEST_HOST_ONLY=1` is the single public switch that makes this test
+suite host-only. It is the one thing that decides whether the ROM-dependent
+tests run; the presence, absence, freshness or content of a build artifact
+never does.
+
+```sh
+# Exactly what CI `host-tests` (and the first gate of
+# `scripts/upstream_port/verify.py`) runs: fast, deterministic and
+# artifact-independent.
+GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v
+```
+
+* **Host-only mode**: every Category B (live-integration) test raises an
+  explicit `unittest.SkipTest` *before* it opens, stats, hashes or hands any
+  ROM/ELF/save artifact to libmGBA -- even when the debug, release and legacy
+  ROMs all exist, and even when one appears mid-run because a build is
+  running concurrently. Category A tests (scenario/schema parsing,
+  generators, config, save/migration fixtures, timeouts, retry policy,
+  deterministic sorted-JSON output, provenance/diagnostics, the host-compiled
+  debugtools drivers and the homebrew libmGBA backend integration) all keep
+  running -- this is not a blanket suite-level skip.
+* **Normal mode** (variable unset, or `0`/`false`/`no`/`off`): unchanged
+  behavior. If a ROM has been built, its live scenarios still run against it;
+  if it has not, they skip exactly as before. Local runtime debugging is
+  therefore unaffected.
+* An unrecognized value (for example `GBA_PLAYTEST_HOST_ONLY=maybe`) is
+  refused with an actionable error instead of silently falling back to
+  running live integration.
+
+Why: `build/` is git-ignored and user-owned, so gating live runs on
+"does the ROM file exist" made the *host* lane a function of local artifact
+timing -- a clean checkout skipped, while a worktree holding a stale or
+concurrently rebuilding ROM ran live captures against it and reported
+fingerprint failures that say nothing about the commit under test (worst
+under `python3 -m scripts.upstream_port verify --jobs 2`, whose later gates
+rewrite exactly those artifacts). Live/runtime coverage is owned by the ROM
+gates -- `make expansion-modern-linker-check` and
+`make expansion-modern-itemexpansion-check` (build.yml `build` job; the last
+four of the ten `verify` gates) -- which build the ROM they then boot, so
+nothing is lost by removing the opportunistic host-lane runs. No fingerprint
+refresh and no `clean` is involved either way.
+
+The classification of every test module, the registry of live TestCase
+classes and the enforcement tests live in
+`tools/gba-playtest/tests/host_mode.py` and
+`tools/gba-playtest/tests/test_host_only_mode.py`: a new live test must build
+its ROM path through `host_mode` and register its class, or the host-only
+regression fails.
 
 ## Scenario format
 

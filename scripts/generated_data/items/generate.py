@@ -1,34 +1,54 @@
-"""C89 generation for the ``gItemData[]`` (index-designated ``struct
-ItemData[]``) table."""
+"""C89 generation for the gItemData[] (index-designated struct ItemData[]) table."""
 
 from __future__ import annotations
 
+import os
+
 from ..cgen import render_banner
 from ..validators import extract_enum_constants
-from .schema import BMITEM_HEADER, ITEMS_HEADER, read_item_attributes
+from .schema import BMITEM_HEADER, ITEMS_HEADER, ITEMS_EXPANSION_HEADER, read_item_attributes
 
 
 def _sorted_attributes(attributes, attribute_flags):
-    """Emit flags in ascending bit-value order -- matches the vanilla
-    hand file's own convention field-for-field (every ``.attributes``
-    combo in ``src/data_items.c`` lists its ``IA_*`` flags in ascending
-    bit-position order)."""
+    """Emit flags in ascending bit-value order -- matches the vanilla hand
+    file convention field-for-field (every .attributes combo in
+    src/data_items.c lists its IA_* flags in ascending bit-position order)."""
     return sorted(attributes, key=lambda name: attribute_flags.get(name, 0))
 
 
 def generate_c_source(records, source_path):
     items_enum = extract_enum_constants(ITEMS_HEADER, name_prefix="ITEM_")
+    if os.path.exists(ITEMS_EXPANSION_HEADER):
+        expansion_enum = extract_enum_constants(ITEMS_EXPANSION_HEADER, name_prefix="ITEM_")
+    else:
+        expansion_enum = {}
+    order_enum = dict(items_enum)
+    order_enum.update(expansion_enum)
     attribute_flags = read_item_attributes(BMITEM_HEADER)
 
     ordered = sorted(
         records,
-        key=lambda r: items_enum[r.item][0] if r.item in items_enum else 1 << 30,
+        key=lambda r: order_enum[r.item][0] if r.item in order_enum else 1 << 30,
     )
 
+    uses_expansion = any(r.item in expansion_enum for r in records)
+
     parts = [render_banner(source=source_path, table="items")]
-    parts.append('#include "global.h"\n')
-    parts.append('#include "bmitem.h"\n')
-    parts.append('#include "constants/items.h"\n\n')
+    parts.append("#include \"global.h\"\n")
+    parts.append("#include \"bmitem.h\"\n")
+    parts.append("#include \"constants/items.h\"\n")
+    if uses_expansion:
+        parts.append("#include \"constants/items_expansion.h\"\n")
+    # Issue #10: this generated table is the one real consumer that can prove
+    # the *generated* record count and the *compiled* cap are the same build
+    # input. id_space.h is the committed DEFAULT contract (ITEM_ID_CONFIGURED_CAP,
+    # overridable through -DFE8_ITEM_ID_CAP); id_space_active.h is the
+    # build-local ACTIVE contract this generator just resolved and sits in this
+    # same generated directory, so the quoted include resolves with no extra
+    # -I flag in either the modern or the archival lane.
+    parts.append("#include \"id_space.h\"\n")
+    parts.append("#include \"id_space_active.h\"\n")
+    parts.append("\n")
     parts.append("CONST_DATA struct ItemData gItemData[] = {\n")
 
     for record in ordered:
@@ -84,4 +104,20 @@ def generate_c_source(records, source_path):
         parts.append("\t},\n")
 
     parts.append("};\n")
+
+    # Compile-time proof, in the translation unit that owns the table:
+    #   1. the compiler cap (-DFE8_ITEM_ID_CAP / id_space.h default) is exactly
+    #      the cap this generator resolved, and
+    #   2. the emitted, index-designated gItemData[] really holds the active
+    #      record count (207 at cap 0xCE, 206 at the vanilla 0xCD).
+    # A stale generated table, a stale active header, or a build that flows a
+    # different -DFE8_ITEM_ID_CAP than the generator saw all fail to compile
+    # here instead of silently linking a truncated table.
+    parts.append("\n")
+    parts.append("/* Issue #10 active-contract proof (see scripts/generated_data/idspace.py). */\n")
+    parts.append("ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP == ITEM_ID_ACTIVE_CONFIGURED_CAP,\n")
+    parts.append("    generated_items_cap_matches_active_contract);\n")
+    parts.append("ID_SPACE_STATIC_ASSERT(\n")
+    parts.append("    sizeof(gItemData) / sizeof(gItemData[0]) == ITEM_ID_ACTIVE_RECORD_COUNT,\n")
+    parts.append("    generated_items_record_count_matches_active_contract);\n")
     return "".join(parts)

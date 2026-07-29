@@ -12,8 +12,12 @@ SaveCompatState values, Back-preservation, confirmed erase, and the
 host-migrated v0->v1 load are therefore verified here against every
 supported build identically -- no ABI scoping, no legacy-only carve-out.
 
-Each ROM's coverage is skipped independently (never a false pass) if that
-particular ROM has not been built yet:
+These are Category B (live) tests -- see tests/host_mode.py. With
+GBA_PLAYTEST_HOST_ONLY=1 (the CI host lane) every ROM below is skipped by
+mode, before the artifact is touched at all, and the runtime coverage is
+owned by the ROM gates that build what they boot. In normal mode each ROM's
+coverage is skipped independently (never a false pass) if that particular ROM
+has not been built yet:
   - legacy:         `make fireemblem8.gba`
   - modern debug:   `make expansion-modern-rom MODERN_CONFIG=debug MODERN_ABI=aapcs`
   - modern release: `make expansion-modern-rom MODERN_CONFIG=release MODERN_ABI=aapcs`
@@ -39,6 +43,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "modernize"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "modernize" / "tests"))
 
 import gba_playtest  # noqa: E402
+import host_mode  # noqa: E402
 import sram_fixture as sf  # noqa: E402
 
 # Every non-CURRENT SaveCompatState covered by the savecompat-dialog-back
@@ -52,31 +57,22 @@ _DIALOG_BACK_STATES = {
     "config-incompatible": sf.STATE_CONFIG_INCOMPATIBLE,
 }
 
-# (fingerprint-suffix, ROM path relative to REPO_ROOT, human-readable name)
-_ROMS = {
-    "legacy": REPO_ROOT / "fireemblem8.gba",
-    "modern-debug": REPO_ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.gba",
-    "modern-release": REPO_ROOT / "build" / "expansion-modern" / "release" / "aapcs" / "fireemblem8.gba",
-}
-
-_UNAVAILABLE_MARKERS = (
-    "C compiler ",
-    "mgba/core/core.h: No such file",
-    "'mgba/core/core.h' file not found",
-    "cannot find -lmgba",
-    "library not found for -lmgba",
-)
+# fingerprint-suffix -> ROM path, taken from the single host_mode source of
+# truth for repository ROM identities (tests/host_mode.py).
+_ROMS = host_mode.LIVE_ROMS
+_SUFFIX_BY_ROM = {rom: suffix for suffix, rom in _ROMS.items()}
 
 
 def _capture_or_skip(rom: Path, scenario, sram_image: Path):
-    try:
-        return gba_playtest.capture(rom, scenario, sram_image)
-    except gba_playtest.PlaytestError as exc:
-        if any(marker in str(exc) for marker in _UNAVAILABLE_MARKERS):
-            raise unittest.SkipTest(
-                f"libmGBA integration skipped explicitly: {exc}"
-            ) from exc
-        raise
+    """Live capture against a repository ROM. In host-only mode
+    (GBA_PLAYTEST_HOST_ONLY=1) this skips before the ROM is touched at all;
+    otherwise it keeps the previous explicit backend-unavailable skip."""
+    return host_mode.capture_live_or_skip(
+        rom,
+        scenario,
+        sram_image,
+        label=f"save-compat runtime coverage ({_SUFFIX_BY_ROM.get(rom, rom)})",
+    )
 
 
 def _load_committed_fingerprint(name: str) -> dict:
@@ -96,10 +92,7 @@ def _make_test_class(suffix: str, rom: Path):
 
         @classmethod
         def setUpClass(cls):
-            if not rom.exists():
-                raise unittest.SkipTest(
-                    f"ROM not built for '{suffix}': {rom}"
-                )
+            host_mode.require_built_rom(rom, f"{suffix} ROM")
 
         def setUp(self):
             self._tmpdir = tempfile.TemporaryDirectory(prefix=f"gba-playtest-{suffix}-")
@@ -211,7 +204,9 @@ def _make_test_class(suffix: str, rom: Path):
             )
 
     _SaveCompatScenarioTests.__name__ = f"SaveCompatScenarioTests_{suffix.replace('-', '_')}"
-    return _SaveCompatScenarioTests
+    return host_mode.live_artifact_testcase(
+        f"save-compat runtime coverage for the {suffix} ROM"
+    )(_SaveCompatScenarioTests)
 
 
 # Register one TestCase subclass per ROM in this module's globals so

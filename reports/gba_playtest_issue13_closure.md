@@ -27,8 +27,14 @@ Run the evidence locally:
 
 ```sh
 # Host tests (fast, no ROM/ARM toolchain needed except the one documented
-# libmGBA-integration skip precedent)
+# libmGBA-integration skip precedent). The runs recorded below predate the
+# issue #10/#13 host-only switch and were made in normal mode, with the
+# modern ROMs present, so the live runtime scenarios really ran.
 python3 -m unittest discover -s tools/gba-playtest/tests -v
+
+# The CI host lane command today (explicit host-only mode): identical result
+# on a clean checkout, deterministic in an artifact-rich worktree.
+GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v
 
 # libmGBA backend availability
 python3 tools/gba-playtest/gba_playtest.py backend-check
@@ -221,9 +227,18 @@ evidence).
 
 - `host-tests` (new): `ubuntu-latest`, installs only `build-essential` +
   `libmgba-dev` (no `arm-none-eabi` cross-toolchain), runs
-  `python3 -m unittest discover -s tools/gba-playtest/tests -v`. This is the
-  fast, host-only lane the task asked to separate out; it is a required
-  status like `build`, not merely advisory.
+  `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s
+  tools/gba-playtest/tests -v`. This is the fast, host-only lane the task
+  asked to separate out; it is a required status like `build`, not merely
+  advisory. `GBA_PLAYTEST_HOST_ONLY=1` (added by the issue #10/#13
+  integrated-harness follow-up, see `tools/gba-playtest/README.md`,
+  “Host-only test mode”) makes the host-only scope explicit: the
+  ROM-dependent runtime scenarios below skip by mode, not by whether a
+  git-ignored ROM happens to exist in the worktree. On a clean CI checkout
+  the observable result is identical; locally it removes the
+  artifact-timing-controlled live runs. The env is inline on that one step,
+  so the `build` job never inherits it and the runtime coverage listed below
+  is unchanged. No fingerprint was refreshed for this.
 - `build` (pre-existing, extended by reuse not duplication): artifact guard
   -> generated-data-check -> `expansion-modern-linker-check` for
   `MODERN_CONFIG=debug` then `release` (both `MODERN_ABI=aapcs`, the only
