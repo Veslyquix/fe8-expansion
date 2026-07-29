@@ -1,0 +1,81 @@
+{
+  "checkpoints": [
+    {
+      "frame": 5,
+      "name": "pre-runtimeinit-sram-baseline",
+      "probes": [],
+      "sram_hash": "fnv1a64-sram-normalized:96bb2b3a741719e4"
+    },
+    {
+      "frame": 600,
+      "framebuffer_hash": "fnv1a64-rgb24:645ace29b411a325",
+      "name": "post-decision-settled",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:96bb2b3a741719e4"
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "13c0d76934ff168a6dc8a2233406a6c3c5ba9b4b",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-prefs-corrupt-no-wipe-modern-debug"
+}

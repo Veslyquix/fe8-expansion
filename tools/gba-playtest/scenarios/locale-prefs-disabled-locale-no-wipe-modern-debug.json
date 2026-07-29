@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "name": "locale-prefs-disabled-locale-no-wipe-modern-debug",
+  "description": "Issue #18 sprint 4: a real ExpansionUserPrefs record whose stored localeId (qps-ploc, 7) IS a supported slot but is not enabled by THIS build's own compiled-in mask is classified EXPANSION_USER_PREFS_DISABLED_LOCALE by the real ExpansionUserPrefs_ValidateRaw()/Normalize() pair, requiring a re-prompt (here AUTO_SELECT collapses it, since the default build only enables one locale). Proves the re-prompt/auto-correct path never wipes SRAM: both checkpoints hash the WHOLE 0x8000 image excluding (a) the 12-byte ExpansionUserPrefs sub-record itself (offset 0x73D4 -- the only bytes this path is allowed to rewrite) and (b) the vanilla SoundRoomSaveData struct (include/bmsave.h, offset 0x7224, size 0x24) -- a pre-existing, locale-unrelated struct that ordinary vanilla boot-time bookkeeping legitimately rewrites on every boot regardless of prefs state, confirmed via a full-0x8000-byte diff sweep during this sprint (see reports/issue18_localization_closure.md). An equal sram_hash at both checkpoints -- captured for real, not hand-written -- is empirical proof that InitGlobalSaveInfodata()'s full-SRAM wipe path was never taken.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 5,
+      "framebuffer": false,
+      "name": "pre-runtimeinit-sram-baseline",
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "offset": 29220,
+          "length": 36
+        },
+        {
+          "offset": 29652,
+          "length": 12
+        }
+      ],
+      "probes": []
+    },
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "post-decision-settled",
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "offset": 29220,
+          "length": 36
+        },
+        {
+          "offset": 29652,
+          "length": 12
+        }
+      ],
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x04"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x03"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2
+        }
+      ]
+    }
+  ]
+}

@@ -95,11 +95,20 @@ python3 scripts/modernize/verify_rom_header.py \
     die "shifted ROM header verification failed"
 
 # --- Verify boot and title behavior ---
+# SHIFTCHECK_SRAM_IMAGE (issue #18 sprint 4): optional path to an exact
+# 0x8000-byte raw SRAM image loaded before frame 0, for scenarios that
+# require a specific starting save state (e.g. a synthetic
+# ExpansionUserPrefs fixture) rather than this backend's own default/blank
+# SRAM. Unset by default -- every pre-existing caller (BOOT/TITLE, and any
+# SHIFTCHECK_SCENARIO override that does not set it) is completely
+# unaffected and keeps booting from the backend's default SRAM exactly as
+# before.
 verify_scenario()
 {
     label=$1
     scenario=$2
     expected=$3
+    sram_image=${4:-}
 
     [ -f "$scenario" ] || die "missing scenario: $scenario"
     [ -f "$expected" ] || die "missing fingerprint: $expected"
@@ -109,6 +118,7 @@ verify_scenario()
         --rom "$OUTDIR/shifted.gba" \
         --scenario "$scenario" \
         --expected "$expected" \
+        ${sram_image:+--sram-image "$sram_image"} \
         --policy behavior
     then
         printf 'SHIFTED %s: FAIL (shift=%s)\n' "$label" "$SHIFT" >&2
@@ -122,7 +132,8 @@ if [ -n "${SHIFTCHECK_SCENARIO:-}" ] || [ -n "${SHIFTCHECK_EXPECTED:-}" ]; then
     [ -n "${SHIFTCHECK_SCENARIO:-}" ] &&
         [ -n "${SHIFTCHECK_EXPECTED:-}" ] ||
         die "SHIFTCHECK_SCENARIO and SHIFTCHECK_EXPECTED must be set together"
-    verify_scenario "SCENARIO" "$SHIFTCHECK_SCENARIO" "$SHIFTCHECK_EXPECTED" ||
+    verify_scenario "SCENARIO" "$SHIFTCHECK_SCENARIO" "$SHIFTCHECK_EXPECTED" \
+        "${SHIFTCHECK_SRAM_IMAGE:-}" ||
         exit 1
 else
     verify_scenario \

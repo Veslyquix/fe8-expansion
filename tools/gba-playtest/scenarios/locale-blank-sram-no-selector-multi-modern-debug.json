@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "name": "locale-blank-sram-no-selector-multi-modern-debug",
+  "description": "Issue #18 sprint 4 contract evidence (multi-locale build variant of locale-blank-sram-no-selector-default-modern-debug): booting the EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1 modern debug ROM from a genuinely blank (all-0xFF) SRAM chip STILL never shows the selector, even though enabledLocaleCount=2 here (a build where the selector WOULD be shown for any other 'requires prompt' prefs state -- see locale-selector-multi-switch-qps-modern-debug). This proves the blank-SRAM auto-stamp finding is a property of BuildCurrentExpansionSaveMeta()'s own SAVE_COMPAT_EMPTY handling, not an artifact of a single-enabled-locale AUTO_SELECT collapse.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "post-startup-settled",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x05"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 1400,
+      "framebuffer": true,
+      "name": "long-run-still-no-selector",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2
+        }
+      ]
+    }
+  ]
+}

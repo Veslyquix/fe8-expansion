@@ -24,6 +24,14 @@ MODERN_GOALS := \
 	expansion-modern-overlay-audit \
 	expansion-modern-shifted-check \
 	expansion-modern-linker-check \
+	expansion-modern-localization-budget \
+	expansion-modern-localization-budget-check \
+	expansion-modern-localization-runtime-debug-check \
+	expansion-modern-localization-runtime-release-check \
+	expansion-modern-localization-runtime-multi-check \
+	expansion-modern-localization-runtime-prefs-check \
+	expansion-modern-localization-runtime-save-check \
+	expansion-modern-localization-runtime-shifted-check \
 	expansion-modern-clean
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
@@ -2261,6 +2269,34 @@ expansion-modern-budget-check: expansion-modern-elf
 		--output "$(MODERN_BUDGET_REPORT)" \
 		--check
 
+# Localization-specific runtime budget rollup (issue #18 sprint 4): combines
+# the real per-region headroom already computed above (real floating_end ->
+# next-pinned-region free_bytes from THIS build's own .map, never a hardcoded
+# 2820/3508-style constant), the source-catalog budget (build-config-
+# independent string/index/glyph counts from scripts/localization/generate
+# .build_budget), and real `nm`-derived EWRAM/ROM symbol sizes for the
+# concrete locale-resolver + language-menu-probe module symbols. See
+# scripts/linker_report/localization_budget.py's module docstring for the
+# exact provenance of every field. `--check` only fails on a real map-
+# reported region overflow -- it asserts no magic byte thresholds.
+MODERN_LOCALIZATION_BUDGET_REPORT ?= reports/linker-budget/modern-localization-$(MODERN_CONFIG).json
+MODERN_LOCALIZATION_BUDGET_SCRIPT := scripts/linker_report/localization_budget.py
+
+expansion-modern-localization-budget: expansion-modern-elf $(MODERN_LOCALIZATION_BUDGET_JSON)
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_LOCALIZATION_BUDGET_SCRIPT)" \
+		--map "$(MODERN_MAP)" \
+		--elf "$(MODERN_ELF)" \
+		--localization-budget "$(MODERN_LOCALIZATION_BUDGET_JSON)" \
+		--output "$(MODERN_LOCALIZATION_BUDGET_REPORT)"
+
+expansion-modern-localization-budget-check: expansion-modern-elf $(MODERN_LOCALIZATION_BUDGET_JSON)
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_LOCALIZATION_BUDGET_SCRIPT)" \
+		--map "$(MODERN_MAP)" \
+		--elf "$(MODERN_ELF)" \
+		--localization-budget "$(MODERN_LOCALIZATION_BUDGET_JSON)" \
+		--output "$(MODERN_LOCALIZATION_BUDGET_REPORT)" \
+		--check
+
 MODERN_SHIFTCHECK_DIR := $(MODERN_OUTPUT_DIR)/shiftcheck
 MODERN_RELOCS_ELF := $(MODERN_SHIFTCHECK_DIR)/fireemblem8.relocs.elf
 MODERN_OVERLAY_REPORT := $(MODERN_SHIFTCHECK_DIR)/overlay-audit.json
@@ -2312,6 +2348,192 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	SHIFTCHECK_TITLE_EXPECTED="$(MODERN_TITLE_FINGERPRINT)" \
 	"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
 
+
+# --- Issue #18 sprint 4: semantic locale runtime scenarios -----------------
+# Real libmGBA captures proving locale-selection/persistence/settings/
+# corrupt-prefs-safety milestones are actually reached at runtime -- never
+# just host-structure or frame-replay self-assertions. Every scenario here
+# was captured against a real built ROM + a byte-exact synthetic SRAM
+# fixture (tools/gba-playtest/tests/locale_prefs_fixture.py /
+# sram_fixture.py), verified via gba_playtest.py's own inline-expectation
+# and fingerprint-equality checks (never hand-written fingerprint JSON).
+MODERN_LOCALE_SCEN := tools/gba-playtest/scenarios
+MODERN_LOCALE_FP := tools/gba-playtest/fingerprints
+MODERN_LOCALE_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/locale-fixtures
+MODERN_LOCALE_PREFS_FIXTURE_PY := tools/gba-playtest/tests/locale_prefs_fixture.py
+MODERN_LOCALE_SRAM_FIXTURE_PY := tools/gba-playtest/tests/sram_fixture.py
+
+$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav:
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_SRAM_FIXTURE_PY)" write-state SAVE_COMPAT_EMPTY "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav:
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_UNSET "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav:
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_CORRUPT "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav:
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_UNKNOWN_LOCALE "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav:
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
+		--disabled-locale-id 7
+
+# 1. Blank SRAM + single-locale default build: auto-stamp path never shows
+#    the selector; unset (never-saved) prefs on that same build auto-selects
+#    the sole enabled locale with no visible selector either.
+expansion-modern-localization-runtime-debug-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime debug-check passed (blank-sram + auto-select): %s\n' "$(MODERN_ROM)"
+else
+	@printf 'Modern ROM localization-runtime debug-check skipped for config=%s (debug-only boot-timing calibration)\n' '$(MODERN_CONFIG)'
+endif
+
+# 2. Same milestones, release build (different EWRAM probe-symbol layout,
+#    same SKIP_HS boot-timing recipe -- both captured for real, separately).
+expansion-modern-localization-runtime-release-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+ifeq ($(MODERN_CONFIG),release)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-release.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-release.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-release.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-release.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime release-check passed (blank-sram + auto-select): %s\n' "$(MODERN_ROM)"
+else
+	@printf 'Modern ROM localization-runtime release-check skipped for config=%s (release-only)\n' '$(MODERN_CONFIG)'
+endif
+
+# 3. Multi-locale (en + qps-ploc) build: blank SRAM still never shows the
+#    selector (still auto-stamped VALID); real unset prefs DOES show the
+#    selector, and DOWN+A picks qps-ploc -- proving the EWRAM
+#    SetCurrent/GetCurrent round-trip fixed this sprint actually works.
+#    Uses its own build root + EXPANSION_ENABLED_LOCALES override so it
+#    never disturbs the default single-locale $(MODERN_ROM) above.
+MODERN_LOCALE_MULTI_BUILD_ROOT := build/expansion-modern-multi
+MODERN_LOCALE_MULTI_ROM := $(MODERN_LOCALE_MULTI_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
+
+expansion-modern-localization-runtime-multi-check: expansion-modern-boot-preflight \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) \
+		MODERN_BUILD_ROOT=$(MODERN_LOCALE_MULTI_BUILD_ROOT) \
+		EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-selector-multi-switch-qps-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-selector-multi-switch-qps-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+endif
+	@printf 'Modern ROM localization-runtime multi-check passed (config=%s): %s\n' '$(MODERN_CONFIG)' "$(MODERN_LOCALE_MULTI_ROM)"
+
+# 4. Corrupt/unknown-locale/disabled-locale ExpansionUserPrefs sub-states
+#    all re-prompt (collapsing to AUTO_SELECT on this single-locale build)
+#    and provably never wipe SRAM outside (a) the 12-byte prefs record
+#    itself and (b) the pre-existing, locale-unrelated vanilla
+#    SoundRoomSaveData struct (include/bmsave.h) that ordinary boot-time
+#    bookkeeping legitimately rewrites on every boot regardless of prefs
+#    state (see reports/issue18_localization_closure.md).
+expansion-modern-localization-runtime-prefs-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-prefs-corrupt-no-wipe-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-prefs-corrupt-no-wipe-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-prefs-unknown-locale-no-wipe-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-prefs-unknown-locale-no-wipe-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-prefs-disabled-locale-no-wipe-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-prefs-disabled-locale-no-wipe-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime prefs-check passed (corrupt/unknown/disabled no-wipe): %s\n' "$(MODERN_ROM)"
+else
+	@printf 'Modern ROM localization-runtime prefs-check skipped for config=%s (debug-only boot-timing calibration)\n' '$(MODERN_CONFIG)'
+endif
+
+# 5. Locale prefs must not regress ordinary normal save/load and
+#    suspend/resume behavior -- reruns the existing (unmodified) issue #13
+#    save-path gates as-is; this is a regression check, not a new scenario.
+expansion-modern-localization-runtime-save-check: expansion-modern-saveload-check \
+		expansion-modern-savefmt-check
+	@printf 'Modern ROM localization-runtime save-check passed (normal save/load + suspend/resume unaffected, config=%s)\n' '$(MODERN_CONFIG)'
+
+# 6. Shifted ROM layout (P9-A __text_shift regression class): locale
+#    resolver/selector probes must behave identically after the whole ROM
+#    is relocated -- EWRAM probe addresses are unaffected by a ROM-only
+#    text shift, so the exact same debug scenarios/fingerprints are reused
+#    against the shifted ROM.
+expansion-modern-localization-runtime-shifted-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+ifeq ($(MODERN_CONFIG),debug)
+	MODERN_CC="$(MODERN_CC)" MODERN_LD="$(MODERN_LD)" MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
+	MODERN_NM="$(MODERN_NM)" MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
+	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
+	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
+	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" \
+	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-debug.json" \
+	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-debug.json" \
+		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
+	MODERN_CC="$(MODERN_CC)" MODERN_LD="$(MODERN_LD)" MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
+	MODERN_NM="$(MODERN_NM)" MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
+	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
+	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
+	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" \
+	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
+	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \
+		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
+	@printf 'Modern ROM localization-runtime shifted-check passed (locale resolver/selector probes unaffected by __text_shift): %s\n' "$(MODERN_LOCALE_MULTI_ROM)"
+else
+	@printf 'Modern ROM localization-runtime shifted-check skipped for config=%s (debug-only boot-timing calibration, matches expansion-modern-shifted-check)\n' '$(MODERN_CONFIG)'
+endif
+
+.PHONY: \
+	expansion-modern-localization-budget \
+	expansion-modern-localization-budget-check \
+	expansion-modern-localization-runtime-debug-check \
+	expansion-modern-localization-runtime-release-check \
+	expansion-modern-localization-runtime-multi-check \
+	expansion-modern-localization-runtime-prefs-check \
+	expansion-modern-localization-runtime-save-check \
+	expansion-modern-localization-runtime-shifted-check
+
 expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-overlay-audit \
 		expansion-modern-boot-check \
@@ -2326,7 +2548,14 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-combat-check \
 		expansion-modern-saveload-check \
 		expansion-modern-savefmt-check \
-		expansion-modern-shifted-check
+		expansion-modern-shifted-check \
+		expansion-modern-localization-budget-check \
+		expansion-modern-localization-runtime-debug-check \
+		expansion-modern-localization-runtime-release-check \
+		expansion-modern-localization-runtime-multi-check \
+		expansion-modern-localization-runtime-prefs-check \
+		expansion-modern-localization-runtime-save-check \
+		expansion-modern-localization-runtime-shifted-check
 	"$(PYTHON)" scripts/shiftcheck/scan_build_addrs.py \
 		--makefile Makefile \
 		--ldscript "$(MODERN_CLEAN_LDSCRIPT)" \

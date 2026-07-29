@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "name": "locale-selector-multi-switch-qps-modern-debug",
+  "description": "Issue #18 sprint 4 core semantic milestone: the blocking first-start selector actually appears on a real multi-locale (EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1) debug ROM booted from a real ExpansionUserPrefs UNSET fixture (active=1 at frame 600/660, no stray input given -- only the health/safety/Nintendo/IS skip presses, deliberately NOT the longer generic intro-mash recipe other scenarios use, since the selector opens much earlier than those and a stray A/START would otherwise be consumed as an immediate 'confirm row 0' before this scenario's own DOWN+A gets to run), then DOWN (move cursor to the qps-ploc row) + A (confirm) actually dismisses it (active 1->0) and commits the selection: selectedLocale AND currentLocale both become 0x07 (qps-ploc), cacheGeneration goes 0->1. currentLocale tracking selectedLocale is itself the empirical, real-capture proof that this sprint's critical fix (sCurrentLocale/sCacheLocale/sCacheMsgId were missing EWRAM_DATA, silently placing them in the read-only ROM output section per linker/expansion.ld, making ExpansionLocale_SetCurrent() a complete no-op) actually restores real locale-switching behavior -- before the fix, currentLocale would have stayed 0x00 here forever regardless of selection. See docs/localization.md's 'Runtime placement pitfall' section.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 700,
+      "end": 706,
+      "keys": [
+        "A"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "selector-shown-before-pick",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 660,
+      "framebuffer": true,
+      "name": "selector-still-shown-after-down",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2
+        }
+      ]
+    },
+    {
+      "frame": 800,
+      "framebuffer": true,
+      "name": "qps-ploc-committed-and-dismissed",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x07"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x07"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        }
+      ]
+    }
+  ]
+}

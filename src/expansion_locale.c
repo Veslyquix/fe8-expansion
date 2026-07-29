@@ -23,15 +23,49 @@ struct ExpansionLocaleCatalogView
     u16 count;
 };
 
-static ExpansionLocaleId sCurrentLocale = EXPANSION_LOCALE_INVALID;
+/*
+ * EWRAM_DATA (not a bare `static`): this project's modern linker
+ * script (linker/expansion.ld) places any *non-zero*-initialized
+ * file-scope static that lacks an explicit section attribute into
+ * the pinned ROM output section as ordinary initialized `.data`
+ * (there is no generic per-object EWRAM `.data` copy-on-boot step --
+ * only files with an explicit `ewram_data`-tagged symbol, i.e. the
+ * EWRAM_DATA attribute, land in the writable `ewram_data` EWRAM
+ * region; see every other EWRAM_DATA static elsewhere in this
+ * codebase, e.g. src/hardware.c/src/uiselecttarget.c). Without this
+ * attribute, every write through ExpansionLocale_SetCurrent() would
+ * silently target read-only cartridge ROM and have no effect,
+ * leaving ExpansionLocale_GetCurrent() stuck reading back whatever
+ * byte the ROM image happens to hold at that address forever --
+ * i.e. locale selection would never actually take effect. `ewram_data`
+ * is a NOLOAD output section (like `.bss`), so it only guarantees a
+ * zero initial value, never the compiled non-zero initializer below
+ * -- hence the separate sCurrentLocaleValid flag (naturally
+ * zero/FALSE at boot) rather than relying on an EXPANSION_LOCALE_INVALID
+ * sentinel surviving as this variable's true first-boot value.
+ */
+static EWRAM_DATA ExpansionLocaleId sCurrentLocale;
+static EWRAM_DATA bool8 sCurrentLocaleValid = FALSE;
 
 /* Single bounded, owned scratch cache slot. Deliberately not shared with
  * (and never aliased to) gGenericBuffer -- see this header's file
  * comment -- to avoid any concurrent-use hazard with unrelated systems
  * that already use that buffer. */
 static char sScratch[EXPANSION_LOCALE_SCRATCH_SLOT_BYTES];
-static ExpansionLocaleId sCacheLocale = EXPANSION_LOCALE_INVALID;
-static ExpansionMsgId sCacheMsgId = EXPANSION_MSG_ID_INVALID;
+/*
+ * Also EWRAM_DATA for the same reason as sCurrentLocale above.
+ * These two are read only when sCacheValid is TRUE (see
+ * ExpansionLocale_Resolve() below), so -- unlike sCurrentLocale --
+ * their exact value before the very first cache population is
+ * never observed; they are given the EXPANSION_LOCALE_INVALID/
+ * EXPANSION_MSG_ID_INVALID sentinels here purely for defensive
+ * clarity when inspected (e.g. by a debugger or playtest probe),
+ * not because any control-flow branch depends on that exact
+ * first-boot bit pattern the way ExpansionLocale_GetCurrent()
+ * depends on sCurrentLocaleValid.
+ */
+static EWRAM_DATA ExpansionLocaleId sCacheLocale = EXPANSION_LOCALE_INVALID;
+static EWRAM_DATA ExpansionMsgId sCacheMsgId = EXPANSION_MSG_ID_INVALID;
 static bool8 sCacheValid = FALSE;
 
 /* Visible, always-safe (no catalog lookup, no locale, never fails its own
@@ -108,7 +142,7 @@ ExpansionLocaleId ExpansionLocale_GetDefault(void)
 
 ExpansionLocaleId ExpansionLocale_GetCurrent(void)
 {
-    if (sCurrentLocale == EXPANSION_LOCALE_INVALID)
+    if (!sCurrentLocaleValid)
         return ExpansionLocale_GetDefault();
     return sCurrentLocale;
 }
@@ -117,9 +151,10 @@ bool8 ExpansionLocale_SetCurrent(ExpansionLocaleId locale)
 {
     if (!ExpansionLocale_IsSupported(locale) || !ExpansionLocale_IsEnabled(locale))
         return FALSE;
-    if (ExpansionLocale_GetCurrent() != locale)
+    if (!sCurrentLocaleValid || sCurrentLocale != locale)
     {
         sCurrentLocale = locale;
+        sCurrentLocaleValid = TRUE;
         ExpansionLocale_InvalidateCache();
     }
     return TRUE;
