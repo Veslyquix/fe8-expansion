@@ -224,6 +224,56 @@ untouched.
 The linker budget baselines (`reports/linker-budget/modern-{debug,release}.json`)
 did **not** drift and were not touched.
 
+## Validation run (this branch, this tree)
+
+Clean build: `build/expansion-modern`, `build/expansion-modern-starter`,
+`build/generated` and `build/shiftcheck` were deleted before the four ROM
+gates below, which then ran in CI order.
+
+| Gate (CI order) | Result |
+| --- | --- |
+| 1. `GBA_PLAYTEST_HOST_ONLY=1 ... tools/gba-playtest/tests` | 339 tests, OK (11 skipped) |
+| 2. `... tests/upstream_port` | 144 tests, OK |
+| 3. `scripts/artifact_guard.py --revision HEAD` | pass (silent) |
+| 4. `test_build_default_lane.py` | 15 tests, OK |
+| 5. `test_quickstart.py` | 15 tests, OK |
+| 6. `make generated-data-check` | 13 tables, 722 records, no manifest drift; census clean (1076 hits, 1051 audited, 25 reviewed exclusions); id-space + active contract up to date (cap 0xCD, 206 records) |
+| 7. `expansion-modern-linker-check MODERN_CONFIG=debug` | pass (budget, overlay audit, starter runtime matrix, boot/title/debugtools/newgame/combat/saveload/savefmt/shifted, shift+offset scan, raw-pointer audit) |
+| 8. `expansion-modern-linker-check MODERN_CONFIG=release` | pass |
+| 9. item-expansion + content gate, debug | pass, `stages=all content=1`, active contract `cap 0xCE, 207 record(s)` |
+| 10. item-expansion + content gate, release | pass, `stages=boot content=1`, active contract `cap 0xCE, 207 record(s)` |
+
+Additional (not CI commands):
+
+| Check | Result |
+| --- | --- |
+| `make generated-data-test` | 624 tests, OK (613 before this work; +11 authored-content/symbolic-text-ID tests) |
+| `scripts/modernize/tests` (full) | 439 tests, OK (1 skipped) |
+| `test_archival_lane_item_cap_guard.py` | 26 tests, OK |
+| `test_idspace_active_check_gate_hermetic.py` | 6 tests, OK |
+| `make expansion-modern-idspace-active-check` | pass, including the stale-ACTIVE-header self-heal and the cap/count divergence negative |
+| `gba_playtest.py backend-check` | libMGBA backend available |
+| `python3 -m scripts.upstream_port verify --dry-run` | exactly 10 gates, in order, argv-identical to `build.yml` |
+
+**Isolated build roots and determinism.** The bundled-content ROM was rebuilt
+into a separate root (`MODERN_BUILD_ROOT=build/iso-content`) and is
+**byte-identical** to the one the CI-order gate produced in the default root
+(`sha1 866c3f9a3c5a318e5715ac6440863174737bd2f2`). The default (cap `0xCD`,
+all flags off) ROM built into its own root is a distinct ROM
+(`sha1 f44b46b10a3469c3a5c882a7e04db275dd966a31`), so there is no
+cross-profile build-root contamination.
+
+**Artifact-level record counts**, read from the linked ELFs:
+
+| Build | `gItemData` | Records | Probe symbol |
+| --- | --- | --- | --- |
+| default (cap `0xCD`, flags off) | 7416 bytes | 206 | `gItemExpansionProbe` absent (TU compiled out) |
+| content (cap `0xCE`, content on) | 7452 bytes | 207 | present |
+
+The content module's symbols exist in both ROMs, but the default build links
+only the three stubs -- `ExpansionStarterContentCharmEvade` exists **only** in
+the content build.
+
 ## Non-goals (explicitly not delivered)
 
 * No growth UI, no convoy feature, no debug editor, no persisted option, no
