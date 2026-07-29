@@ -2181,8 +2181,24 @@
       "category": "runtime-struct",
       "reason": null
     },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentBearerItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentControlItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentItemId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
     "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.eventItemSlot": {
       "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemId": {
+      "category": "external-interface",
       "reason": null
     },
     "include/functions.h|function-signature|item|ConvoyMenuProc_MaybeStartSelectConvoyItem": {

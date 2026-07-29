@@ -134,8 +134,11 @@ int ExpansionMechanicsIsApplying(void); /* 1 while inside an apply, else 0 */
 void ExpansionMechanicsReset(void);
 
 /* Register the framework's built-in mechanics through the public
- * ExpansionMechanicsRegister() API. Only the sample, and only when
- * FE8_EXPANSION_MECHANICS_SAMPLE=1. Idempotent (safe to call repeatedly). */
+ * ExpansionMechanicsRegister() API, in a deterministic order: the
+ * content-free sample first (only when FE8_EXPANSION_MECHANICS_SAMPLE=1),
+ * then the bundled issue #6 content example (only when
+ * FE8_EXPANSION_STARTER_CONTENT=1, see include/expansion_starter_content.h).
+ * Idempotent (safe to call repeatedly). */
 void ExpansionMechanicsInstallBuiltins(void);
 
 /*

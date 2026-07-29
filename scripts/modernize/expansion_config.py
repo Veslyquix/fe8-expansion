@@ -55,6 +55,16 @@ SAVE_COMPAT_EPOCH_MAX = 0xFFFF
 FEATURE_FLAG_MIN = 0
 FEATURE_FLAG_MAX = 1
 
+# Item ID cap boundary the issue #6 starter *content* flag depends on.
+# scripts/generated_data/idspace.py owns these numbers (ITEM domain
+# `default_cap` / `ITEM_EXPANSION_FIRST`); they are restated here because
+# this tool is deliberately import-free (it runs as a bare script from
+# modern.mk, not as a package module). scripts/modernize/tests/
+# test_expansion_config.py asserts the two definitions stay equal, so a
+# future cap change cannot silently desynchronize them.
+ITEM_ID_DEFAULT_CAP = 0xCD
+ITEM_ID_EXPANSION_FIRST = 0xCE
+
 # Named ROM sizes, matching modern.mk's MODERN_ROM_SIZE values.
 NAMED_ROM_SIZES = {"16M": 16 * 1024 * 1024, "32M": 32 * 1024 * 1024}
 
@@ -91,6 +101,7 @@ CONFIG_MK_FEATURE_KEYS = (
     "EXPANSION_MECHANICS_HOOKS",
     "EXPANSION_MECHANICS_SAMPLE",
     "EXPANSION_DANGER_OVERLAY_MENU",
+    "EXPANSION_STARTER_CONTENT",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -196,7 +207,32 @@ def validate_feature_flag(name: str, value) -> int:
     return flag
 
 
-def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu):
+def validate_item_id_cap(value) -> int:
+    """Resolve the active item ID cap (modern.mk's FE8_ITEM_ID_CAP).
+
+    An empty/None value means "not overridden", i.e. the committed default
+    cap in include/id_space.h. Anything else must be an integer in
+    [0, 0xFF] (the item ID storage width, see
+    scripts/generated_data/idspace.py's item domain).
+    """
+    if value in (None, ""):
+        return ITEM_ID_DEFAULT_CAP
+    try:
+        cap = int(str(value).strip(), 0)
+    except (TypeError, ValueError) as error:
+        raise ConfigError(
+            f"FE8_ITEM_ID_CAP {value!r} is not an integer"
+        ) from error
+    if not (0 <= cap <= 0xFF):
+        raise ConfigError(
+            f"FE8_ITEM_ID_CAP 0x{cap:X} out of range [0x00, 0xFF]; the item ID "
+            f"storage width is 8 bits (see scripts/generated_data/idspace.py)"
+        )
+    return cap
+
+
+def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
+                           starter_content=0, item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
     The sample mechanic can only be registered through the mechanics hook
@@ -207,13 +243,30 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     hooks = validate_feature_flag("EXPANSION_MECHANICS_HOOKS", mechanics_hooks)
     sample = validate_feature_flag("EXPANSION_MECHANICS_SAMPLE", mechanics_sample)
     danger = validate_feature_flag("EXPANSION_DANGER_OVERLAY_MENU", danger_overlay_menu)
+    content = validate_feature_flag("EXPANSION_STARTER_CONTENT", starter_content)
+    cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
             "EXPANSION_MECHANICS_SAMPLE=1 requires EXPANSION_MECHANICS_HOOKS=1: "
             "the sample mechanic is registered through the mechanics hook "
             "registry, which is not linked when EXPANSION_MECHANICS_HOOKS=0"
         )
-    return hooks, sample, danger
+    if content and not hooks:
+        raise ConfigError(
+            "EXPANSION_STARTER_CONTENT=1 requires EXPANSION_MECHANICS_HOOKS=1: "
+            "the bundled content item's mechanic is registered through the "
+            "mechanics hook registry, which is not linked when "
+            "EXPANSION_MECHANICS_HOOKS=0"
+        )
+    if content and cap < ITEM_ID_EXPANSION_FIRST:
+        raise ConfigError(
+            f"EXPANSION_STARTER_CONTENT=1 requires an expanded item ID cap: the "
+            f"bundled content item is ITEM_EXPANSION_CE "
+            f"(0x{ITEM_ID_EXPANSION_FIRST:02X}) and the active cap is "
+            f"0x{cap:02X}; build with FE8_ITEM_ID_CAP=0x"
+            f"{ITEM_ID_EXPANSION_FIRST:02X} (or higher)"
+        )
+    return hooks, sample, danger, content
 
 
 def validate_rom_size(value) -> int:
@@ -404,6 +457,7 @@ class ExpansionIdentity:
     mechanics_hooks: int = 0
     mechanics_sample: int = 0
     danger_overlay_menu: int = 0
+    starter_content: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -435,6 +489,7 @@ class ExpansionIdentity:
                 "mechanics_hooks": self.mechanics_hooks,
                 "mechanics_sample": self.mechanics_sample,
                 "danger_overlay_menu": self.danger_overlay_menu,
+                "starter_content": self.starter_content,
             },
         }
 
@@ -464,6 +519,8 @@ def load_identity(
     mechanics_hooks=None,
     mechanics_sample=None,
     danger_overlay_menu=None,
+    starter_content=None,
+    item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
 
@@ -508,7 +565,7 @@ def load_identity(
         if save_compat_epoch not in (None, "")
         else cfg["EXPANSION_SAVE_COMPAT_EPOCH"]
     )
-    resolved_hooks, resolved_sample, resolved_danger = validate_feature_flags(
+    resolved_hooks, resolved_sample, resolved_danger, resolved_content = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -518,6 +575,10 @@ def load_identity(
         danger_overlay_menu
         if danger_overlay_menu not in (None, "")
         else cfg.get("EXPANSION_DANGER_OVERLAY_MENU", "0"),
+        starter_content
+        if starter_content not in (None, "")
+        else cfg.get("EXPANSION_STARTER_CONTENT", "0"),
+        item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
     resolved_preset = validate_preset(config_preset)
@@ -545,6 +606,7 @@ def load_identity(
         mechanics_hooks=resolved_hooks,
         mechanics_sample=resolved_sample,
         danger_overlay_menu=resolved_danger,
+        starter_content=resolved_content,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -635,6 +697,20 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="override EXPANSION_DANGER_OVERLAY_MENU (0 or 1)",
     )
+    parser.add_argument(
+        "--starter-content",
+        default=None,
+        help="override EXPANSION_STARTER_CONTENT (0 or 1)",
+    )
+    parser.add_argument(
+        "--item-id-cap",
+        default=None,
+        help=(
+            "the build's active FE8_ITEM_ID_CAP (empty = the committed default "
+            "cap); EXPANSION_STARTER_CONTENT=1 requires it to reach "
+            "ITEM_EXPANSION_CE"
+        ),
+    )
 
 
 def _resolve_tokens(identity: ExpansionIdentity) -> str:
@@ -689,6 +765,8 @@ def main(argv=None) -> int:
             mechanics_hooks=args.mechanics_hooks,
             mechanics_sample=args.mechanics_sample,
             danger_overlay_menu=args.danger_overlay_menu,
+            starter_content=args.starter_content,
+            item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:
         print(f"error: {error}", file=sys.stderr)

@@ -74,8 +74,8 @@ EXPANSION_SAVE_COMPAT_EPOCH ?= 1
 # Overriding a flag on the `make` command line (e.g.
 # `make ... EXPANSION_MECHANICS_HOOKS=1`) opts that one feature in.
 # scripts/modernize/expansion_config.py validates every value (only 0 or 1
-# is accepted; -1/2/text fail with an actionable message) and folds all
-# three into the config-identity fingerprint and embedded metadata JSON --
+# is accepted; -1/2/text fail with an actionable message) and folds every
+# one of them into the config-identity fingerprint and embedded metadata JSON --
 # they are diagnostic identity only and never change the save format (see
 # EXPANSION_SAVE_COMPAT_EPOCH above, which stays independent).
 #
@@ -88,6 +88,17 @@ EXPANSION_SAVE_COMPAT_EPOCH ?= 1
 #   EXPANSION_DANGER_OVERLAY_MENU -- expose the player-facing danger/range
 #                                    overlay map-menu surface (reuses the
 #                                    existing danger-zone range path).
+#   EXPANSION_STARTER_CONTENT     -- link the bundled generated-data content
+#                                    example: the framework-authored item
+#                                    ITEM_EXPANSION_CE ("Sample Charm",
+#                                    src/data/items_expansion.json) and its
+#                                    mechanic, registered through the public
+#                                    hook registry. Requires
+#                                    EXPANSION_MECHANICS_HOOKS=1 AND an
+#                                    expanded item ID cap
+#                                    (FE8_ITEM_ID_CAP=0xCE or higher) --
+#                                    both validated, both hard errors.
 EXPANSION_MECHANICS_HOOKS     ?= 0
 EXPANSION_MECHANICS_SAMPLE    ?= 0
 EXPANSION_DANGER_OVERLAY_MENU ?= 0
+EXPANSION_STARTER_CONTENT     ?= 0

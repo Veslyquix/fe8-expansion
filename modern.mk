@@ -1178,6 +1178,8 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
 		--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
 		--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
+		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
+		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
@@ -1233,6 +1235,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
 	--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
 	--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
+	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
+	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
     $(error $(MODERN_EXPANSION_CONFIG_RESOLVE))
@@ -1276,7 +1280,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
 	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
 	-DFE8_EXPANSION_MECHANICS_SAMPLE=$(EXPANSION_MECHANICS_SAMPLE) \
-	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU)
+	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU) \
+	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1338,6 +1343,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
 		printf '%s\n' 'mechanics_sample=$(EXPANSION_MECHANICS_SAMPLE)'; \
 		printf '%s\n' 'danger_overlay_menu=$(EXPANSION_DANGER_OVERLAY_MENU)'; \
+		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -2381,15 +2387,33 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 # with full navigation input, stalls on the world map exactly the same way),
 # so the map-dependent stages are proven against the debug configuration.
 # See docs/id_space.md, "Runtime probe".
+#
+# Issue #6 (Sprint 2) rides this SAME gate and this SAME single ROM build
+# rather than adding a second harness or a second ROM: when the caller also
+# supplies the bundled-content profile (EXPANSION_STARTER_CONTENT=1, which
+# itself requires EXPANSION_MECHANICS_HOOKS=1, plus EXPANSION_MECHANICS_SAMPLE=1
+# so both the content mechanic and the pre-existing content-free sample are
+# registered), the runner additionally asserts the authored content record's
+# original name/description/uses/type/attributes/icon and the content
+# mechanic's bounded, item-gated bonus. Requiring them here (instead of
+# silently skipping) keeps the gate's contract explicit and its ROM one build.
 MODERN_ITEMEXPANSION_SCRIPT := tools/gba-playtest/run_item_expansion_checks.py
 MODERN_ITEMEXPANSION_DIR := $(MODERN_OUTPUT_DIR)/itemexpansion
 MODERN_ITEMEXPANSION_STAGES := $(if $(filter release,$(MODERN_CONFIG)),boot,all)
+MODERN_ITEMEXPANSION_ACTIVE_HEADER := $(GENERATED_DATA_ACTIVE_HEADER)
 
 expansion-modern-itemexpansion-check: expansion-modern-rom
 	@if [ "$(FE8_EXPANSION_ITEMTEST)" != "1" ] || [ -z "$(FE8_ITEM_ID_CAP)" ]; then \
 		printf 'error: %s needs a probe build\n' 'expansion-modern-itemexpansion-check' >&2; \
-		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s\n' \
+		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1\n' \
 			'expansion-modern-itemexpansion-check' '$(MODERN_CONFIG)' '$(MODERN_ABI)' >&2; \
+		exit 1; \
+	fi
+	@if [ "$(EXPANSION_STARTER_CONTENT)" = "1" ] && \
+		{ [ "$(EXPANSION_MECHANICS_HOOKS)" != "1" ] || [ "$(EXPANSION_MECHANICS_SAMPLE)" != "1" ]; }; then \
+		printf 'error: %s with EXPANSION_STARTER_CONTENT=1 needs the full content profile\n' \
+			'expansion-modern-itemexpansion-check' >&2; \
+		printf '  add: EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1\n' >&2; \
 		exit 1; \
 	fi
 	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_ITEMEXPANSION_SCRIPT)" \
@@ -2397,10 +2421,12 @@ expansion-modern-itemexpansion-check: expansion-modern-rom
 		--elf "$(MODERN_ELF)" \
 		--config "$(MODERN_CONFIG)" \
 		--cap "$(FE8_ITEM_ID_CAP)" \
+		--content "$(EXPANSION_STARTER_CONTENT)" \
+		--active-header "$(MODERN_ITEMEXPANSION_ACTIVE_HEADER)" \
 		--require-stages "$(MODERN_ITEMEXPANSION_STAGES)" \
 		--out-dir "$(MODERN_ITEMEXPANSION_DIR)"
-	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s)\n' \
-		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)'
+	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s content=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)' '$(EXPANSION_STARTER_CONTENT)'
 
 expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-overlay-audit \

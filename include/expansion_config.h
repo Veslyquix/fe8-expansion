@@ -166,18 +166,17 @@
 #endif
 
 /* --- Starter-feature opt-in switches (issue #6) ------------------------- */
-/* See config.mk EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE, and
- * EXPANSION_DANGER_OVERLAY_MENU. */
+/* See config.mk EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE,
+ * EXPANSION_DANGER_OVERLAY_MENU, and EXPANSION_STARTER_CONTENT. */
 /*
- * Independent 0/1 build flags for the issue #6 starter-feature foundation.
- * Each defaults to 0, so the legacy agbcc build (which never receives the
- * modern -D flags) and any default modern build link none of these features
- * and stay byte/behaviour identical to today's ROM. The modern build
- * supplies each as a -D define computed from config.mk's matching
- * EXPANSION_* value (see modern.mk), after
- * scripts/modernize/expansion_config.py has validated it (only 0 or 1) and
- * folded all three into the config-identity fingerprint. See
- * docs/starter_features.md.
+ * Independent 0/1 build flags for the issue #6 starter features. Each
+ * defaults to 0, so the legacy agbcc build (which never receives the modern
+ * -D flags) and any default modern build link none of these features and
+ * stay behaviour-identical to today's ROM. The modern build supplies each as
+ * a -D define computed from config.mk's matching EXPANSION_* value (see
+ * modern.mk), after scripts/modernize/expansion_config.py has validated it
+ * (only 0 or 1) and folded every one of them into the config-identity
+ * fingerprint. See docs/starter_features.md.
  */
 
 /* Link the public battle-stat mechanics hook registry
@@ -198,11 +197,32 @@
 #define FE8_EXPANSION_DANGER_OVERLAY_MENU 0
 #endif
 
-/* Defence in depth: the same relationship expansion_config.py rejects at
- * configure time is a hard compile error here, so a hand-passed -D (or a
- * future include-only consumer) can never build a sample with no registry. */
+/* Link the bundled generated-data content example: the framework-authored
+ * item ITEM_EXPANSION_CE (src/data/items_expansion.json) and the mechanic
+ * that reads it, registered through the public hook registry
+ * (include/expansion_starter_content.h, src/expansion_starter_content.c).
+ *
+ * This flag gates CONTENT BEHAVIOUR only. The item RECORD itself is owned by
+ * the issue #10 ID-space platform and is generated purely from the active
+ * item ID cap (FE8_ITEM_ID_CAP >= ITEM_ID_EXPANSION_FIRST), so the platform
+ * stays independently testable at any cap with this flag off. */
+#ifndef FE8_EXPANSION_STARTER_CONTENT
+#define FE8_EXPANSION_STARTER_CONTENT 0
+#endif
+
+/* Defence in depth: the same relationships expansion_config.py rejects at
+ * configure time are hard compile errors here, so a hand-passed -D (or a
+ * future include-only consumer) can never build a sample with no registry,
+ * or the bundled content with no registry to register it into. The content
+ * flag's OTHER dependency -- an item cap that actually reaches
+ * ITEM_EXPANSION_CE -- needs include/id_space.h and is therefore asserted in
+ * include/expansion_starter_content.h, which owns that include. */
 #if FE8_EXPANSION_MECHANICS_SAMPLE && !FE8_EXPANSION_MECHANICS_HOOKS
 #error "FE8_EXPANSION_MECHANICS_SAMPLE=1 requires FE8_EXPANSION_MECHANICS_HOOKS=1"
+#endif
+
+#if FE8_EXPANSION_STARTER_CONTENT && !FE8_EXPANSION_MECHANICS_HOOKS
+#error "FE8_EXPANSION_STARTER_CONTENT=1 requires FE8_EXPANSION_MECHANICS_HOOKS=1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

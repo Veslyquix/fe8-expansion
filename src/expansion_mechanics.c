@@ -4,6 +4,7 @@
 
 #include "bmbattle.h"
 #include "expansion_mechanics.h"
+#include "expansion_starter_content.h"
 
 /*
  * Public battle-stat mechanics hook registry (issue #6). See
@@ -193,6 +194,12 @@ void ExpansionMechanicsInstallBuiltins(void)
         EXPANSION_MECHANICS_SAMPLE_LABEL,
         ExpansionMechanicsSampleFullHpGuard);
 #endif
+
+    /* The bundled issue #6 content example registers itself here, through
+     * the same public ExpansionMechanicsRegister() API, so the framework has
+     * exactly ONE built-in install point and no second router. A no-op when
+     * FE8_EXPANSION_STARTER_CONTENT is 0. */
+    ExpansionStarterContentInstallMechanics();
 }
 
 void ExpansionMechanicsApplyBattleStats(
