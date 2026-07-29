@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -50,6 +51,26 @@ class ShortShaTests(unittest.TestCase):
         with self.assertRaises(rm.ManifestError):
             rm.verify_short_sha("c717da36c51f94bc6051ec8954bed4ccec2b76fd", "deadbeef")
 
+    def test_verify_short_sha_wrong_length_is_actionable(self):
+        with self.assertRaises(rm.ManifestError):
+            rm.verify_short_sha("c717da36c51f94bc6051ec8954bed4ccec2b76fd", "c717da3")
+
+    def test_verify_short_sha_wrong_case_is_actionable(self):
+        with self.assertRaises(rm.ManifestError):
+            rm.verify_short_sha("c717da36c51f94bc6051ec8954bed4ccec2b76fd", "C717DA36")
+
+    def test_verify_short_sha_unknown_sentinel_is_actionable(self):
+        """scripts/modernize/expansion_config.py's own no-git-metadata
+        fallback build_commit is the literal sentinel "unknown" -- an
+        embedded short-sha of "unknown" must never be silently accepted
+        as if it were a real, resolved build identity."""
+        with self.assertRaises(rm.ManifestError):
+            rm.verify_short_sha("c717da36c51f94bc6051ec8954bed4ccec2b76fd", "unknown")
+
+    def test_verify_short_sha_missing_is_actionable(self):
+        with self.assertRaises(rm.ManifestError):
+            rm.verify_short_sha("c717da36c51f94bc6051ec8954bed4ccec2b76fd", "")
+
 
 class CandidateTagTests(unittest.TestCase):
     def test_valid_tag(self):
@@ -93,7 +114,7 @@ class CheckSourceGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._git("init", "-q", cwd=root)
-            self._write_allowlist(root, ["src", "docs"])
+            self._write_allowlist(root, ["src/main.c"])
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
             self._git("add", "src/main.c", "docs", cwd=root)
@@ -115,7 +136,7 @@ class CheckSourceGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._git("init", "-q", cwd=root)
-            self._write_allowlist(root, ["src", "docs"])
+            self._write_allowlist(root, ["src/main.c", "src/bad.gba", "docs"])
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
             (root / "src" / "bad.gba").write_bytes(b"\x00" * 16)
@@ -234,6 +255,92 @@ class BuildManifestTests(unittest.TestCase):
                     tmp_path, "release", "aapcs", "16M",
                     target_sha_override="c717da36c51f94bc6051ec8954bed4ccec2b76fd",
                 )
+
+    # --- issue #9 verifier remediation: new manifest sub-reports --------
+
+    def test_manifest_includes_allowlist_report(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("allowlist", manifest)
+        self.assertIn("ok", manifest["allowlist"])
+
+    def test_manifest_includes_version_ledger_report(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("version_ledger", manifest)
+        self.assertTrue(manifest["version_ledger"]["ok"], manifest["version_ledger"]["errors"])
+
+    def test_manifest_includes_c_fallback_metadata_report(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("c_fallback_metadata", manifest)
+        self.assertTrue(manifest["c_fallback_metadata"]["ok"], manifest["c_fallback_metadata"]["errors"])
+
+    def test_manifest_includes_migration_reachability_report(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("migration_reachability", manifest)
+        self.assertTrue(
+            manifest["migration_reachability"]["ok"], manifest["migration_reachability"]["errors"]
+        )
+
+    def test_manifest_includes_rebuild_report_and_it_is_blocked_today(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("rebuild", manifest)
+        self.assertEqual(manifest["rebuild"]["status"], "blocked")
+
+    def test_manifest_includes_doc_links_report_and_it_is_clean(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("doc_links", manifest)
+        self.assertTrue(manifest["doc_links"]["ok"], manifest["doc_links"]["errors"])
+
+
+class RebuildStatusGatesEligibilityTests(unittest.TestCase):
+    """issue #9 verifier remediation: the rebuild rehearsal's status must
+    participate in the overall candidate status -- a rebuild that is not
+    a verified success (blocked, not_run, or failed) must always force
+    "blocked", even hypothetically if every *other* check were green.
+    Exercised by mocking check_rebuild's dependency (archive_rehearsal's
+    rebuild_rehearsal_blocker) directly, since forcing every other real
+    check on this repository to pass would require actually resolving
+    mgfembp's provenance -- exactly what must never happen here."""
+
+    def _patched_manifest_reasons_for_rebuild_status(self, fake_rebuild_report):
+        with mock.patch.object(rm.ar, "rebuild_rehearsal_blocker", return_value=fake_rebuild_report):
+            return rm.build_manifest(ROOT, "release", "aapcs", "16M")
+
+    def test_blocked_rebuild_contributes_reasons(self):
+        manifest = self._patched_manifest_reasons_for_rebuild_status(
+            {"status": "blocked", "reasons": ["synthetic-blocked-marker"]}
+        )
+        self.assertEqual(manifest["rebuild"]["status"], "blocked")
+        self.assertIn("synthetic-blocked-marker", manifest["reasons"])
+        self.assertEqual(manifest["status"], "blocked")
+
+    def test_not_run_rebuild_contributes_reasons_and_blocks(self):
+        manifest = self._patched_manifest_reasons_for_rebuild_status(
+            {"status": "not_run", "reasons": ["synthetic-not-run-marker"]}
+        )
+        self.assertEqual(manifest["rebuild"]["status"], "not_run")
+        self.assertIn("synthetic-not-run-marker", manifest["reasons"])
+        self.assertEqual(manifest["status"], "blocked")
+
+    def test_failed_rebuild_contributes_reasons_and_blocks(self):
+        manifest = self._patched_manifest_reasons_for_rebuild_status(
+            {"status": "failed", "reasons": ["synthetic-failed-marker"]}
+        )
+        self.assertEqual(manifest["rebuild"]["status"], "failed")
+        self.assertIn("synthetic-failed-marker", manifest["reasons"])
+        self.assertEqual(manifest["status"], "blocked")
+
+    def test_verified_success_rebuild_adds_no_reasons_of_its_own(self):
+        """A hypothetically-successful rebuild must not itself add any
+        blocking reason -- the manifest may still be blocked overall for
+        *other* (today, real) reasons, but never because of the rebuild."""
+        manifest = self._patched_manifest_reasons_for_rebuild_status(
+            {"status": "verified_success", "reasons": []}
+        )
+        self.assertEqual(manifest["rebuild"]["status"], "verified_success")
+        self.assertNotIn("verified_success", " ".join(manifest["reasons"]))
+        # Confirm no reason string originates from the rebuild dimension:
+        for reason in manifest["reasons"]:
+            self.assertNotIn("rebuild rehearsal status is", reason)
 
 
 if __name__ == "__main__":

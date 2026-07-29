@@ -29,7 +29,11 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "modernize"))
 
 import expansion_config as ec  # noqa: E402
 
+from scripts.release_rehearsal import allowlist as al  # noqa: E402
+from scripts.release_rehearsal import archive_rehearsal as ar  # noqa: E402
 from scripts.release_rehearsal import changelog as cl  # noqa: E402
+from scripts.release_rehearsal import consistency as cc  # noqa: E402
+from scripts.release_rehearsal import doc_links as dl  # noqa: E402
 from scripts.release_rehearsal import provenance as prov  # noqa: E402
 from scripts.release_rehearsal import source_guard as sg  # noqa: E402
 from scripts.modernize.migrations import registry as migrations_registry  # noqa: E402
@@ -88,7 +92,23 @@ def derive_short_sha(target_sha: str) -> str:
     return target_sha[:SHORT_SHA_LEN]
 
 
+SHORT_SHA_RE = re.compile(r"^[0-9a-f]{8}$")
+
+
 def verify_short_sha(target_sha: str, embedded_short: str) -> None:
+    """Mandatory embedded short-SHA verification for a release candidate:
+    a missing/malformed/wrong-length/wrong-case value is rejected with an
+    actionable, distinct message (never merely "did not match"), and the
+    fixed sentinel "unknown" (scripts/modernize/expansion_config.py's own
+    no-git fallback) is exactly as unacceptable as any other malformed
+    value here -- a release candidate manifest must never accept an
+    unresolved build identity."""
+    if not isinstance(embedded_short, str) or not SHORT_SHA_RE.fullmatch(embedded_short):
+        raise ManifestError(
+            f"embedded short-form build commit {embedded_short!r} must be exactly "
+            f"{SHORT_SHA_LEN} lowercase hex characters (e.g. not 'unknown', not missing, "
+            "not wrong length/case)"
+        )
     expected = derive_short_sha(target_sha)
     if embedded_short != expected:
         raise ManifestError(
@@ -125,10 +145,10 @@ def check_provenance(repo_root: Path) -> Dict:
     allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
     if allowlist_path.is_file():
         allowlist = json.loads(allowlist_path.read_text(encoding="utf-8")).get("paths", [])
-        gaps = prov.coverage_gaps(entries, allowlist)
-        if gaps:
+        coverage_reasons = prov.evaluate_coverage(entries, allowlist)
+        if coverage_reasons:
             status = "blocked"
-            reasons = sorted(set(reasons) | {f"missing provenance entry for {path}" for path in gaps})
+            reasons = sorted(set(reasons) | set(coverage_reasons))
     return {"status": status, "reasons": reasons}
 
 
@@ -142,9 +162,14 @@ def check_source_guard(repo_root: Path) -> Dict:
     because of host/build state), while a genuine extracted archive or
     other non-git candidate tree is still scanned closed-world and fails
     closed (see sg.scan_source_release_candidate)."""
+    map_hex_exceptions_path = repo_root / "docs" / "release_data" / "map_hex_exceptions.json"
     try:
         allowlist = sg.load_allowlist(repo_root / "docs" / "release_data" / "source_allowlist.json")
-        violations = sg.scan_source_release_candidate(repo_root, allowlist)
+        map_hex_exceptions = (
+            sg.load_map_hex_exceptions(map_hex_exceptions_path)
+            if map_hex_exceptions_path.is_file() else frozenset()
+        )
+        violations = sg.scan_source_release_candidate(repo_root, allowlist, map_hex_exceptions)
     except sg.SourceGuardError as error:
         raise ManifestError(str(error)) from error
     return {
@@ -153,9 +178,90 @@ def check_source_guard(repo_root: Path) -> Dict:
     }
 
 
+def check_allowlist_exact(repo_root: Path, target_sha: str) -> Dict:
+    """Exact per-member allowlist completeness (issue #9 verifier
+    remediation): every git-tracked file/gitlink at `target_sha` must have
+    its own exact entry in docs/release_data/source_allowlist.json, and
+    every entry must still correspond to something actually tracked --
+    see scripts/release_rehearsal/allowlist.py. A brand-new tracked file
+    with no allowlist entry is exactly the "unlisted tracked file" issue
+    #9 requires to fail, not silently be omitted from the archive."""
+    allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
+    errors = al.check(repo_root, allowlist_path, target_sha)
+    return {"ok": not errors, "errors": errors}
+
+
 def check_migrations() -> Dict:
     errors = migrations_registry.check_registry()
     return {"ok": not errors, "errors": errors}
+
+
+def check_allowlist(repo_root: Path, target_sha: str) -> Dict:
+    return check_allowlist_exact(repo_root, target_sha)
+
+
+def check_version_ledger_and_semver(repo_root: Path, identity, changelog_report: Dict) -> Dict:
+    """Folds together the version-ledger topology/candidate-agreement
+    check and the changelog-declared-impact-vs-actual-delta check (see
+    scripts/release_rehearsal/consistency.py) into one report, since both
+    read the same ledger file."""
+    ledger_path = repo_root / "docs" / "release_data" / "version_ledger.json"
+    if not ledger_path.is_file():
+        return {"ok": False, "errors": [f"{ledger_path} not found"], "ledger": {}}
+    try:
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        return {"ok": False, "errors": [f"{ledger_path}: not valid JSON: {error}"], "ledger": {}}
+
+    errors = cc.check_version_ledger(ledger, identity.version_string)
+    errors += cc.check_changelog_semver_delta(
+        ledger.get("previous_supported_version"),
+        identity.version_string,
+        changelog_report.get("aggregate_impact", "none"),
+        identity.version_major,
+    )
+    return {"ok": not errors, "errors": errors, "ledger": ledger}
+
+
+def check_c_fallback(repo_root: Path) -> Dict:
+    try:
+        config_values = ec.parse_config_mk(repo_root / "config.mk")
+    except ec.ConfigError as error:
+        return {"ok": False, "errors": [str(error)]}
+    errors = cc.check_c_fallback_metadata(repo_root, config_values)
+    return {"ok": not errors, "errors": errors}
+
+
+def check_migration_reachability(save_compat_epoch: int) -> Dict:
+    errors = cc.check_migration_epoch_reachability(save_compat_epoch, migrations_registry.registry())
+    return {"ok": not errors, "errors": errors}
+
+
+def check_doc_links(repo_root: Path) -> Dict:
+    broken = dl.find_broken_links(repo_root)
+    errors = [f"{doc}: broken link -> {target}" for doc, target in broken]
+    return {"ok": not errors, "errors": errors}
+
+
+def check_rebuild(
+    repo_root: Path,
+    attempt_build: bool = False,
+    build_command: Optional[List[str]] = None,
+    output_relpaths: Optional[List[str]] = None,
+) -> Dict:
+    """Folds scripts/release_rehearsal/archive_rehearsal.py's rebuild
+    rehearsal into the manifest. `attempt_build` defaults to False here
+    (a fast eligibility-only check suitable for every `make release-check`
+    run) -- eligibility (submodule initialized/approved/identity-matched)
+    is still always evaluated; only the actual, potentially-heavy double
+    compile-and-compare is opt-in. Never "mechanically eligible" while
+    this reports anything other than `REBUILD_STATUS_VERIFIED_SUCCESS`
+    (see build_manifest below) -- a blocked/not-run/failed rebuild always
+    forces the overall candidate status to "blocked"."""
+    return ar.rebuild_rehearsal_blocker(
+        repo_root, attempt_build=attempt_build,
+        build_command=build_command, output_relpaths=output_relpaths,
+    )
 
 
 def build_manifest(
@@ -165,6 +271,9 @@ def build_manifest(
     rom_size: str,
     target_sha_override: Optional[str] = None,
     embedded_short_sha: Optional[str] = None,
+    attempt_rebuild_build: bool = False,
+    rebuild_build_command: Optional[List[str]] = None,
+    rebuild_output_relpaths: Optional[List[str]] = None,
 ) -> Dict:
     repo_root = Path(repo_root)
     identity = ec.load_identity(
@@ -184,9 +293,17 @@ def build_manifest(
     provenance_report = check_provenance(repo_root)
     source_guard_report = check_source_guard(repo_root)
     migrations_report = check_migrations()
+    allowlist_report = check_allowlist(repo_root, target_sha)
+    ledger_report = check_version_ledger_and_semver(repo_root, identity, changelog_report)
+    c_fallback_report = check_c_fallback(repo_root)
+    migration_reachability_report = check_migration_reachability(identity.save_compat_epoch)
+    doc_links_report = check_doc_links(repo_root)
+    rebuild_report = check_rebuild(
+        repo_root, attempt_build=attempt_rebuild_build,
+        build_command=rebuild_build_command, output_relpaths=rebuild_output_relpaths,
+    )
 
-    ledger_path = repo_root / "docs" / "release_data" / "version_ledger.json"
-    ledger = json.loads(ledger_path.read_text(encoding="utf-8")) if ledger_path.is_file() else {}
+    ledger = ledger_report["ledger"]
 
     reasons: List[str] = []
     if missing_docs:
@@ -199,6 +316,21 @@ def build_manifest(
         reasons.extend(source_guard_report["violations"])
     if not migrations_report["ok"]:
         reasons.extend(migrations_report["errors"])
+    if not allowlist_report["ok"]:
+        reasons.extend(allowlist_report["errors"])
+    if not ledger_report["ok"]:
+        reasons.extend(ledger_report["errors"])
+    if not c_fallback_report["ok"]:
+        reasons.extend(c_fallback_report["errors"])
+    if not migration_reachability_report["ok"]:
+        reasons.extend(migration_reachability_report["errors"])
+    if not doc_links_report["ok"]:
+        reasons.extend(doc_links_report["errors"])
+    if rebuild_report["status"] != ar.REBUILD_STATUS_VERIFIED_SUCCESS:
+        reasons.extend(
+            rebuild_report.get("reasons")
+            or [f"rebuild rehearsal status is {rebuild_report['status']!r}, not {ar.REBUILD_STATUS_VERIFIED_SUCCESS!r}"]
+        )
 
     status = "blocked" if reasons else "mechanically eligible"
 
@@ -217,6 +349,12 @@ def build_manifest(
         "provenance": provenance_report,
         "source_guard": source_guard_report,
         "migrations": migrations_report,
+        "allowlist": allowlist_report,
+        "version_ledger": ledger_report,
+        "c_fallback_metadata": c_fallback_report,
+        "migration_reachability": migration_reachability_report,
+        "doc_links": doc_links_report,
+        "rebuild": rebuild_report,
         "status": status,
         "reasons": reasons,
     }
