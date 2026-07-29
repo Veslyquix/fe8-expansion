@@ -9,6 +9,22 @@ weaken, ``scripts/artifact_guard.py`` (which governs ordinary tracked-Git
 content review, not release-archive safety) -- see
 docs/issue-resolution-policy.md and docs/release_process.md.
 
+``scan_tree(..., closed_world=True)`` is the fail-closed check for an
+actual, already-materialized release candidate (a genuine extracted
+archive/non-git tree): every top-level entry must equal the allowlist and
+everything is walked. A *live git development worktree* is not that --
+it routinely contains gitignored/untracked build byproducts alongside the
+real source -- so ``scan_source_release_candidate()`` instead evaluates
+exactly the git-tracked-intersect-allowlist candidate set that
+``scripts/release_rehearsal/archive_rehearsal.py`` itself would archive
+(``git_tracked_allowlisted_files()``), applying every hard-deny rule to
+that exact set, and transparently falls back to the closed-world
+``scan_tree`` check when there is no ``.git`` at all. This is what
+``scripts/release_rehearsal/manifest.py``'s source_guard check uses, so a
+manifest built against the live worktree is deterministic and
+host-state-independent while a manifest built against a genuine extracted
+archive still fails closed.
+
 Deliberately dependency-free (Python stdlib only).
 
 Exit codes (CLI): 0 clean, 1 hard-deny violation(s) found, 2
@@ -21,10 +37,11 @@ import argparse
 import json
 import os
 import stat
+import subprocess
 import sys
 import tarfile
 from pathlib import Path, PurePosixPath
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 MAGIC_READ_BYTES = 192
 MAGIC_ELF = b"\x7fELF"
@@ -185,6 +202,100 @@ def scan_tree(root: Path, allowlist: Iterable[str], closed_world: bool = True) -
                 _hard_deny_check_file(root, Path(dirpath) / name, violations)
 
     return sorted(set(violations))
+
+
+def git_tracked_allowlisted_files(root: Path, allowlist: Iterable[str]) -> Optional[List[Path]]:
+    """When `root` is a real git working tree, enumerate exactly its
+    *tracked* files restricted to the allowlist -- never a raw filesystem
+    walk. This is deliberately preferred over walking the live filesystem
+    whenever git metadata is available: a development worktree routinely
+    contains gitignored, host-built byproducts (compiled host tool
+    binaries under tools/*/, stale build/ output, a built ROM/ELF, .dep/
+    dependency files, etc.) that must never end up in a "source" release
+    candidate even though they may sit inside an otherwise-allowlisted
+    directory; git itself already knows, precisely and deterministically,
+    which files are the actual tracked source. Returns None (not a list)
+    when `root` has no `.git` (an extracted archive/non-git tree), so the
+    caller falls back to a real filesystem walk instead.
+
+    Deliberately still includes a tracked *symlink* (or any other tracked
+    non-directory path) in the returned list rather than silently
+    dropping it: only an actual real directory on disk (a submodule
+    gitlink mountpoint such as "mgfembp", which `git ls-files` also lists
+    as its own path) is excluded here, so that a tracked malicious/unsafe
+    symlink still reaches the caller's own hard-deny check
+    (`_hard_deny_check_file`, which lstat()s -- never follows -- the path
+    and flags a symlink as "prohibited-symlink") instead of vanishing
+    from the candidate set entirely. Ignoring *untracked* content must
+    never become a blind spot for *tracked* content.
+
+    This is the single, shared candidate-enumeration used by both
+    scripts/release_rehearsal/archive_rehearsal.py (to build the actual
+    release archive) and scan_source_release_candidate() below (so
+    scripts/release_rehearsal/manifest.py's source_guard check evaluates
+    the exact same tracked-intersect-allowlist set an archive rehearsal
+    would build, instead of a second, parallel definition of "the
+    candidate")."""
+    root = Path(root)
+    if not (root / ".git").exists():
+        return None
+    result = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=str(root), capture_output=True
+    )
+    if result.returncode != 0:
+        raise SourceGuardError(
+            f"git ls-files failed: {result.stderr.decode(errors='replace').strip()}"
+        )
+    allowlist = set(allowlist)
+    files: List[Path] = []
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        relpath = raw.decode("utf-8", "surrogateescape")
+        if relpath.split("/", 1)[0] not in allowlist:
+            continue
+        full = root / relpath
+        if full.is_dir() and not full.is_symlink():
+            continue
+        files.append(full)
+    return sorted(files)
+
+
+def scan_source_release_candidate(root: Path, allowlist: Iterable[str]) -> List[Violation]:
+    """Scan the actual source-release *candidate set* for `root`, exactly
+    consistent with what scripts/release_rehearsal/archive_rehearsal.py
+    would put in the archive -- never a raw closed-world filesystem walk
+    of a live, possibly-messy development worktree.
+
+    When `root` is a real git working tree, the candidate set is exactly
+    its tracked files intersected with the exact allowlist
+    (`git_tracked_allowlisted_files`); every one of those files still gets
+    the full recursive hard-deny check (prohibited extension/magic bytes,
+    unsafe path segments, symlinks, hardlinks). Gitignored/untracked
+    content anywhere in the live worktree (build/ output, .dep/ files, a
+    built ROM/ELF, host tool binaries, etc.) can never appear as a
+    violation purely because it happens to sit on disk -- it was never
+    going to be part of the release in the first place -- so this cannot
+    become a blind spot: any *tracked* malicious/unsafe content is still
+    denied exactly as before, and nothing gitignored was ever checked by
+    the real archive build either.
+
+    When `root` has no `.git` at all (a genuine extracted release archive
+    or other non-git candidate tree -- the tree *is* the actual candidate,
+    not a development worktree with byproducts alongside it), this falls
+    back to the original fail-closed `scan_tree(root, allowlist,
+    closed_world=True)` check: every top-level entry must be exactly the
+    allowlist and nothing else, and every file anywhere in the tree is
+    walked and hard-deny-checked."""
+    root = Path(root)
+    tracked = git_tracked_allowlisted_files(root, allowlist)
+    if tracked is None:
+        return scan_tree(root, allowlist, closed_world=True)
+    violations: List[Violation] = []
+    for path in tracked:
+        _hard_deny_check_file(root, path, violations)
+    return sorted(set(violations))
+
 
 def scan_archive_members(tar: "tarfile.TarFile", allowlist: Iterable[str]) -> List[Violation]:
     """Scan a tar archive's members without ever extracting anything to

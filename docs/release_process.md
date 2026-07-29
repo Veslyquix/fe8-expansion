@@ -146,6 +146,25 @@ instead governs an actual *release candidate tree or archive*:
   (`scan_archive_members`, using `TarFile.extractfile()` for read-only
   content access only, never `TarFile.extractall()`).
 
+`scan_source_release_candidate()` is what `manifest.py`'s source_guard
+check (and therefore `make release-check`/`make release-rehearse`)
+actually calls. It picks the right check for what `root` *is*: a genuine
+extracted archive/other non-git candidate tree (the tree *is* the
+release candidate) still gets the full fail-closed `scan_tree(...,
+closed_world=True)` check above -- every top-level entry must equal the
+allowlist, everything is walked. A **live git development worktree** is
+not that: it routinely accumulates gitignored/untracked build byproducts
+(`.dep/` dependency output, a built ROM/ELF, host tool binaries, stale
+`build/` output, etc.) that were never going to ship. For a worktree,
+`scan_source_release_candidate()` instead evaluates exactly the
+git-tracked-intersect-allowlist candidate set
+(`git_tracked_allowlisted_files()`) that
+`scripts/release_rehearsal/archive_rehearsal.py` itself would archive,
+running every hard-deny rule above against that exact set -- so the
+report is deterministic and independent of what happens to be lying
+around on disk, while any *tracked* malicious/unsafe content (including a
+tracked symlink) is still denied exactly as before.
+
 ## Deterministic archive and rebuild rehearsal
 
 `scripts/release_rehearsal/archive_rehearsal.py`:

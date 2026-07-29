@@ -4,6 +4,7 @@ import io
 import json
 import os
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -14,6 +15,19 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 from scripts.release_rehearsal import source_guard as sg
+
+
+def _git(*args, cwd):
+    result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
+    assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+    return result.stdout
+
+
+def _init_git_repo(root: Path) -> None:
+    """A minimal, throwaway git repo -- only ``git add`` (index staging)
+    is required for ``git ls-files`` to see tracked files; no commit or
+    configured identity is needed."""
+    _git("init", "-q", cwd=root)
 
 
 class MagicClassificationTests(unittest.TestCase):
@@ -198,6 +212,146 @@ class ScanArchiveMembersTests(unittest.TestCase):
     def test_clean_archive_no_violations(self):
         tar = self._make_tar([("src/main.c", b"int main(void){return 0;}", tarfile.REGTYPE)])
         self.assertEqual(sg.scan_archive_members(tar, {"src"}), [])
+
+
+class GitTrackedAllowlistedFilesTests(unittest.TestCase):
+    def test_non_git_tree_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int x;")
+            self.assertIsNone(sg.git_tracked_allowlisted_files(root, {"src"}))
+
+    def test_git_tree_returns_only_tracked_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            _git("add", "src/main.c", cwd=root)
+            # Untracked sibling in the same allowlisted directory must be
+            # excluded even though it is on disk.
+            (root / "src" / "untracked.c").write_text("int untracked;")
+            files = sg.git_tracked_allowlisted_files(root, {"src"})
+            relpaths = sorted(p.relative_to(root).as_posix() for p in files)
+            self.assertEqual(relpaths, ["src/main.c"])
+
+    def test_git_tree_excludes_tracked_files_outside_allowlist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            (root / "other").mkdir()
+            (root / "other" / "extra.c").write_text("int extra;")
+            _git("add", "src/main.c", "other/extra.c", cwd=root)
+            files = sg.git_tracked_allowlisted_files(root, {"src"})
+            relpaths = sorted(p.relative_to(root).as_posix() for p in files)
+            self.assertEqual(relpaths, ["src/main.c"])
+
+
+class ScanSourceReleaseCandidateTests(unittest.TestCase):
+    """Regression coverage for the reviewer-reproduced trust defect: a git
+    worktree manifest/source_guard check must evaluate the tracked-
+    intersect-allowlist candidate set (consistent with
+    scripts/release_rehearsal/archive_rehearsal.py), never a raw
+    closed-world filesystem walk of a live, possibly-messy development
+    worktree."""
+
+    def test_untracked_gitignored_dot_dep_and_elf_ignored_in_git_worktree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            _git("add", "src/main.c", cwd=root)
+
+            # Stray gitignored/untracked build byproducts a live worktree
+            # routinely contains: a .dep/ directory and a built ELF, both
+            # sitting at the top level (outside the allowlisted "src"
+            # entry) and therefore prohibited if this were a closed-world
+            # scan -- but they are host/build state, not the source
+            # release candidate, and must never affect this report.
+            (root / ".dep").mkdir()
+            (root / ".dep" / "main.o.d").write_text("main.o: src/main.c\n")
+            (root / "fireemblem8.elf").write_bytes(b"\x7fELF" + b"\x00" * 32)
+
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertEqual(violations, [])
+
+    def test_tracked_prohibited_extension_violation_still_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            (root / "src" / "bad.gba").write_bytes(b"\x00" * 16)
+            _git("add", "src/main.c", "src/bad.gba", cwd=root)
+
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertIn(("src/bad.gba", "prohibited-extension"), violations)
+
+    def test_tracked_prohibited_magic_violation_still_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "innocuous.c").write_bytes(b"\x7fELF" + b"\x00" * 32)
+            _git("add", "src/innocuous.c", cwd=root)
+
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertIn(("src/innocuous.c", "prohibited-magic-elf"), violations)
+
+    def test_tracked_symlink_violation_still_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            real = root / "src" / "real.c"
+            real.write_text("int x;")
+            link = root / "src" / "link.c"
+            link.symlink_to(real)
+            _git("add", "-A", "src", cwd=root)
+
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertIn(("src/link.c", "prohibited-symlink"), violations)
+
+    def test_untracked_only_repo_with_no_tracked_files_is_clean(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_git_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            (root / "build").mkdir()
+            (root / "build" / "out.o").write_bytes(b"junk")
+            # Nothing staged/tracked at all yet.
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertEqual(violations, [])
+
+    def test_non_git_tree_closed_world_rejects_extra_top_level_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            (root / "extra").mkdir()
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertIn(("extra", "not-allowlisted"), violations)
+
+    def test_non_git_tree_closed_world_rejects_nested_unsafe_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "sneaky.gba").write_bytes(b"\x00" * 32)
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertIn(("src/sneaky.gba", "prohibited-extension"), violations)
+
+    def test_non_git_tree_clean_candidate_has_no_violations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            violations = sg.scan_source_release_candidate(root, {"src"})
+            self.assertEqual(violations, [])
 
 
 class LoadAllowlistTests(unittest.TestCase):

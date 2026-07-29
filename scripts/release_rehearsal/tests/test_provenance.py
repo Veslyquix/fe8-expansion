@@ -115,12 +115,13 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(status, "blocked")
         self.assertTrue(any("no named reviewer" in reason for reason in reasons))
 
-    def test_fully_resolved_entry_is_approved(self):
+    def test_fully_resolved_entry_is_mechanically_eligible(self):
         status, reasons = prov.evaluate([_base_entry(
             author="Jane Doe", rightsholder="Jane Doe", license="MIT",
             redistribution_approved=True, reviewer="Jane Reviewer",
         )])
-        self.assertEqual(status, "approved")
+        self.assertEqual(status, "mechanically eligible")
+        self.assertNotEqual(status, "approved")
         self.assertEqual(reasons, [])
 
     def test_empty_entries_blocks(self):
@@ -149,7 +150,10 @@ class CoverageGapsTests(unittest.TestCase):
 
 class RepositoryStateTests(unittest.TestCase):
     """The current, real, committed provenance manifests must evaluate to
-    an honest, exact BLOCKED status -- never a false 'approved'."""
+    an honest, exact BLOCKED status -- never a false 'mechanically
+    eligible' (and this module must never emit the bare status token
+    "approved" at all -- see EvaluateTests.
+    test_fully_resolved_entry_is_mechanically_eligible)."""
 
     def test_real_manifests_are_blocked(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")

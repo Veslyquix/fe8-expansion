@@ -133,9 +133,18 @@ def check_provenance(repo_root: Path) -> Dict:
 
 
 def check_source_guard(repo_root: Path) -> Dict:
+    """Evaluates the actual source-release candidate set for `repo_root`,
+    consistent with scripts/release_rehearsal/archive_rehearsal.py: a git
+    working tree is scanned as its tracked-files-intersected-with-the-
+    allowlist candidate set (so gitignored/untracked build byproducts --
+    .dep/ output, a built ROM/ELF, host tool binaries, etc. -- sitting in
+    a live development worktree can never change this report purely
+    because of host/build state), while a genuine extracted archive or
+    other non-git candidate tree is still scanned closed-world and fails
+    closed (see sg.scan_source_release_candidate)."""
     try:
         allowlist = sg.load_allowlist(repo_root / "docs" / "release_data" / "source_allowlist.json")
-        violations = sg.scan_tree(repo_root, allowlist)
+        violations = sg.scan_source_release_candidate(repo_root, allowlist)
     except sg.SourceGuardError as error:
         raise ManifestError(str(error)) from error
     return {
@@ -184,7 +193,7 @@ def build_manifest(
         reasons.append(f"missing required doc(s): {', '.join(missing_docs)}")
     if not changelog_report["ok"]:
         reasons.extend(changelog_report["errors"])
-    if provenance_report["status"] != "approved":
+    if provenance_report["status"] != "mechanically eligible":
         reasons.extend(provenance_report["reasons"])
     if source_guard_report["status"] != "pass":
         reasons.extend(source_guard_report["violations"])

@@ -1,6 +1,9 @@
 """Tests for scripts/release_rehearsal/manifest.py (issue #9)."""
 
+import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -62,6 +65,106 @@ class CandidateTagTests(unittest.TestCase):
     def test_leading_zero_rejected(self):
         with self.assertRaises(rm.ManifestError):
             rm.build_candidate_tag("0.01.0")
+
+
+class CheckSourceGuardTests(unittest.TestCase):
+    """Regression coverage for the reviewer-reproduced trust defect
+    (post-815a5a8a): a git worktree manifest's source_guard result must be
+    deterministic and host-state-independent -- gitignored/untracked build
+    byproducts (.dep/ output, a built ELF/ROM, etc.) sitting in the live
+    worktree must never change it, while tracked violations and a genuine
+    non-git closed-world candidate must still be denied exactly as
+    before."""
+
+    @staticmethod
+    def _git(*args, cwd):
+        result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
+        assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+
+    @staticmethod
+    def _write_allowlist(root: Path, paths) -> None:
+        allow_dir = root / "docs" / "release_data"
+        allow_dir.mkdir(parents=True, exist_ok=True)
+        (allow_dir / "source_allowlist.json").write_text(
+            json.dumps({"paths": list(paths)}), encoding="utf-8"
+        )
+
+    def test_git_worktree_ignores_untracked_dot_dep_and_elf_byproducts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._git("init", "-q", cwd=root)
+            self._write_allowlist(root, ["src", "docs"])
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            self._git("add", "src/main.c", "docs", cwd=root)
+
+            report_before = rm.check_source_guard(root)
+            self.assertEqual(report_before["status"], "pass")
+            self.assertEqual(report_before["violations"], [])
+
+            # Inject harmless untracked/gitignored build byproducts a live
+            # development worktree routinely accumulates.
+            (root / ".dep").mkdir()
+            (root / ".dep" / "main.o.d").write_text("main.o: src/main.c\n")
+            (root / "fireemblem8.elf").write_bytes(b"\x7fELF" + b"\x00" * 32)
+
+            report_after = rm.check_source_guard(root)
+            self.assertEqual(report_after, report_before)
+
+    def test_git_worktree_still_detects_tracked_violation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._git("init", "-q", cwd=root)
+            self._write_allowlist(root, ["src", "docs"])
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            (root / "src" / "bad.gba").write_bytes(b"\x00" * 16)
+            self._git("add", "src", "docs", cwd=root)
+
+            report = rm.check_source_guard(root)
+            self.assertEqual(report["status"], "blocked")
+            self.assertTrue(any("bad.gba" in v for v in report["violations"]))
+
+    def test_non_git_tree_closed_world_still_rejects_extra_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_allowlist(root, ["src"])
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            (root / "evil").mkdir()
+
+            report = rm.check_source_guard(root)
+            self.assertEqual(report["status"], "blocked")
+            self.assertTrue(
+                any("evil" in v and "not-allowlisted" in v for v in report["violations"])
+            )
+
+    def test_non_git_tree_closed_world_still_rejects_unsafe_nested_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_allowlist(root, ["src"])
+            (root / "src").mkdir()
+            (root / "src" / "sneaky.gba").write_bytes(b"\x00" * 32)
+
+            report = rm.check_source_guard(root)
+            self.assertEqual(report["status"], "blocked")
+            self.assertTrue(any("sneaky.gba" in v for v in report["violations"]))
+
+    def test_real_repo_source_guard_unaffected_by_untracked_byproducts(self):
+        """The reviewer's exact reproduction: run against this real
+        worktree and confirm injecting a harmless untracked/gitignored
+        top-level byproduct never changes the report."""
+        report_before = rm.check_source_guard(ROOT)
+        marker = ROOT / ".pua-issue9-regression-marker-dir"
+        self.assertFalse(marker.exists(), "test fixture collided with real worktree state")
+        try:
+            marker.mkdir()
+            (marker / "fake.elf").write_bytes(b"\x7fELF" + b"\x00" * 32)
+            report_after = rm.check_source_guard(ROOT)
+            self.assertEqual(report_after, report_before)
+        finally:
+            (marker / "fake.elf").unlink()
+            marker.rmdir()
 
 
 class RequiredDocsTests(unittest.TestCase):

@@ -3,12 +3,14 @@
 
 Reads factual, hand-seeded JSON provenance manifests from
 ``docs/release_data/provenance/*.json`` and evaluates whether every entry has a
-complete, approved provenance record: a non-``NOASSERTION`` author,
-rightsholder, and license, an explicit ``redistribution_approved: true``,
-and a named human reviewer. This module never invents or infers any of
-those facts -- it only reads what a human has recorded -- and it never
-selects or adds a root license. See docs/release_process.md's "Legal and
-provenance boundary" section.
+complete provenance record with redistribution permission recorded: a
+non-``NOASSERTION`` author, rightsholder, and license, an explicit
+``redistribution_approved: true``, and a named human reviewer. This
+module never invents or infers any of those facts -- it only reads what a
+human has recorded -- and it never selects or adds a root license, and
+its own reported status is never a release/publication approval (see
+``evaluate()`` below and docs/release_process.md's "Legal and provenance
+boundary" section).
 
 Deliberately dependency-free (Python stdlib only, JSON only).
 
@@ -27,9 +29,10 @@ Manifest entry schema::
     }
 
 Exit codes (CLI): 0 well-formed report (status may be "blocked" or
-"approved" -- both are valid, expected outcomes), 2 actionable schema
-error (missing/invalid field -- a defect in the manifest itself, distinct
-from an honestly-recorded unresolved fact).
+"mechanically eligible" -- both are valid, expected outcomes; neither is
+itself a release/publication approval), 2 actionable schema error
+(missing/invalid field -- a defect in the manifest itself, distinct from
+an honestly-recorded unresolved fact).
 """
 
 from __future__ import annotations
@@ -119,13 +122,20 @@ def _entry_blocking_reasons(entry: Dict) -> List[str]:
 
 def evaluate(entries: List[Dict]) -> Tuple[str, List[str]]:
     """Returns (status, blocking_reasons). status is "blocked" unless every
-    entry is fully resolved and approved, in which case it is "approved"."""
+    entry is fully resolved (author/rightsholder/license recorded,
+    redistribution_approved is true, and a reviewer is named), in which
+    case it is "mechanically eligible" -- the same neutral vocabulary
+    scripts/release_rehearsal/manifest.py's overall candidate status uses,
+    deliberately never the bare word "approved": a provenance record
+    being fully, honestly recorded is a fact about the record, not a
+    release/publication approval, and this status must never be mistaken
+    for one."""
     if not entries:
         return "blocked", ["no provenance entries recorded"]
     reasons: List[str] = []
     for entry in entries:
         reasons.extend(_entry_blocking_reasons(entry))
-    status = "blocked" if reasons else "approved"
+    status = "blocked" if reasons else "mechanically eligible"
     return status, sorted(reasons)
 
 

@@ -59,40 +59,18 @@ class ArchiveRehearsalError(ValueError):
 
 
 def _git_tracked_allowlisted_files(root: Path, allowlist: Iterable[str]) -> Optional[List[Path]]:
-    """When `root` is a real git working tree, enumerate exactly its
-    *tracked* files restricted to the allowlist -- never a raw filesystem
-    walk. This is deliberately preferred over walking the live filesystem
-    whenever git metadata is available: a development worktree routinely
-    contains gitignored, host-built byproducts (compiled host tool
-    binaries under tools/*/, stale build/ output, etc.) that must never
-    end up in a "source" archive even though they may sit inside an
-    otherwise-allowlisted directory; git itself already knows, precisely
-    and deterministically, which files are the actual tracked source.
-    Returns None (not a list) when `root` has no `.git` (an extracted
-    archive/non-git tree), so the caller falls back to a real filesystem
-    walk instead."""
-    root = Path(root)
-    if not (root / ".git").exists():
-        return None
-    result = subprocess.run(
-        ["git", "ls-files", "-z"], cwd=str(root), capture_output=True
-    )
-    if result.returncode != 0:
-        raise ArchiveRehearsalError(
-            f"git ls-files failed: {result.stderr.decode(errors='replace').strip()}"
-        )
-    allowlist = set(allowlist)
-    files: List[Path] = []
-    for raw in result.stdout.split(b"\0"):
-        if not raw:
-            continue
-        relpath = raw.decode("utf-8", "surrogateescape")
-        if relpath.split("/", 1)[0] not in allowlist:
-            continue
-        full = root / relpath
-        if full.is_file() and not full.is_symlink():
-            files.append(full)
-    return sorted(files)
+    """Thin delegating wrapper: the actual tracked-intersect-allowlist
+    enumeration now lives in scripts/release_rehearsal/source_guard.py
+    (``git_tracked_allowlisted_files``) so that
+    scripts/release_rehearsal/manifest.py's source_guard check can reuse
+    the exact same candidate-file definition this archive build itself
+    uses, instead of a second, parallel enumeration drifting out of sync.
+    Preserves this module's original ``ArchiveRehearsalError`` on a git
+    failure for existing call-site/exception-handling compatibility."""
+    try:
+        return sg.git_tracked_allowlisted_files(root, allowlist)
+    except sg.SourceGuardError as error:
+        raise ArchiveRehearsalError(str(error)) from error
 
 
 def _filesystem_allowlisted_files(root: Path, allowlist: Iterable[str]) -> List[Path]:
