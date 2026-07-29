@@ -4300,6 +4300,10 @@
     "tools/gba-playtest/tests/test_debugtools_registry.py|tool-symbol|chapter|test_gamecontrol_chapter2_boot_never_bypasses_events_or_manually_loads_units": {
       "category": "external-interface",
       "reason": null
+    },
+    "tools/gba-playtest/tests/test_expansion_starter_content.py|tool-symbol|item|test_no_raw_numeric_content_item_id": {
+      "category": "reviewed-exclusion",
+      "reason": "a unittest method NAME in a host test, not an ID consumer: the test asserts that no raw numeric item ID literal appears in the issue #6 sources, so it stores no ID and is never indexed by one"
     }
   },
   "schema_version": 1
