@@ -1,0 +1,13 @@
+{
+  "_comment": "Factual supported-version ledger (issue #9). No release has ever been tagged/published from this repository, so 'previous' and 'next' are explicitly null rather than omitted -- see docs/release_process.md. Update this file by hand alongside a config.mk EXPANSION_VERSION_* bump.",
+  "current_version": "0.1.0",
+  "previous_supported_version": null,
+  "next_supported_version": null,
+  "supported": [
+    {
+      "version": "0.1.0",
+      "status": "current",
+      "eol": null
+    }
+  ]
+}

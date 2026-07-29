@@ -1,0 +1,58 @@
+name: Release Rehearsal
+
+# Read-only publication rehearsal (issue #9). This workflow never creates,
+# moves, or deletes a tag/ref/GitHub release, never uploads an artifact,
+# and never mutates any protected environment or repository state. It
+# exists to mechanically prove, on every pull request, that the release
+# rehearsal tooling runs and truthfully reports the current candidate's
+# eligibility -- which today is, and is expected to remain, BLOCKED (see
+# docs/release_process.md's "Legal and provenance boundary"). Publication
+# itself requires a separate, later, explicitly-authorized write-capable
+# workflow that does not exist in this repository.
+on:
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  release-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Run release rehearsal stdlib test suites
+        run: |
+          python3 -m unittest discover -s scripts/release_rehearsal/tests -v
+          python3 -m unittest discover -s scripts/modernize/migrations/tests -v
+
+      - name: Validate this workflow's own permission/safety contract
+        run: python3 -m scripts.release_rehearsal.workflow_guard .github/workflows/release-rehearsal.yml
+
+      - name: Run release migrations registry check
+        run: make release-migrations-check
+
+      - name: Run deterministic archive + rebuild rehearsal
+        run: make release-rehearse
+
+      - name: Run release eligibility check (current tree is expected BLOCKED)
+        run: make release-check
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Release Rehearsal"
+            echo ""
+            echo "Publication status: **BLOCKED** pending explicit human license/provenance approval."
+            echo ""
+            echo "See \`docs/release_process.md\` and \`docs/release_data/provenance/*.json\` for the exact unresolved inventory."
+            echo "This workflow is read-only: no tag, release, asset, comment, or protected-environment mutation ever occurs here."
+          } >> "$GITHUB_STEP_SUMMARY"
