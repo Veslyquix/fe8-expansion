@@ -128,6 +128,19 @@ class RehearseSubcommandTests(unittest.TestCase):
         self.assertIn("allowlist", data)
         self.assertIn("version_ledger", data)
 
+    def test_target_sha_override_binds_the_archive_itself_not_just_the_manifest(self):
+        """Regression test: --target-sha must bind the *archive's* content
+        (archive.target_sha), not only the manifest's own target_sha
+        field -- otherwise the two could silently refer to different
+        commits."""
+        head_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True,
+        ).stdout.strip()
+        result = run_cli("rehearse", "--target-sha", head_sha)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["archive"]["target_sha"], head_sha)
+
 
 class WorkflowGuardSubcommandTests(unittest.TestCase):
     """Dynamic, machine-JSON workflow guard invocation (issue #9 verifier

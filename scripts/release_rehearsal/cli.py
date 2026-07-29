@@ -263,7 +263,7 @@ def cmd_rehearse(args) -> int:
             if map_hex_exceptions_path.is_file() else frozenset()
         )
         archive_report = ar.rehearse_archive_twice(
-            args.repo_root, allowlist, map_hex_exceptions=map_hex_exceptions,
+            args.repo_root, allowlist, target_sha=args.target_sha, map_hex_exceptions=map_hex_exceptions,
         )
     except (sg.SourceGuardError, ar.ArchiveRehearsalError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
@@ -333,26 +333,40 @@ def _add_status_gate_arguments(subparser) -> None:
     )
 
 
+def _add_common_arguments(subparser) -> None:
+    """Shared repo/build-identity options, added to *each subparser*
+    (rather than only the top-level parser) so they may be given either
+    before or after the subcommand name -- e.g. both
+    `cli.py --target-sha X rehearse` and `cli.py rehearse --target-sha X`
+    work identically. A parent-only option in a subparsers-based argparse
+    CLI is otherwise silently unusable after the subcommand token, which
+    is the natural place most users (and this module's own tests) expect
+    to put it."""
+    subparser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
+    subparser.add_argument("--config", default="release", choices=("debug", "release"))
+    subparser.add_argument("--abi", default="aapcs", choices=("aapcs", "apcs-gnu"))
+    subparser.add_argument("--rom-size", default="16M")
+    subparser.add_argument("--target-sha", default=None)
+    subparser.add_argument("--embedded-short-sha", default=None)
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
-    parser.add_argument("--config", default="release", choices=("debug", "release"))
-    parser.add_argument("--abi", default="aapcs", choices=("aapcs", "apcs-gnu"))
-    parser.add_argument("--rom-size", default="16M")
-    parser.add_argument("--target-sha", default=None)
-    parser.add_argument("--embedded-short-sha", default=None)
     sub = parser.add_subparsers(dest="command", required=True)
 
     check_p = sub.add_parser("check")
+    _add_common_arguments(check_p)
     _add_status_gate_arguments(check_p)
 
     rehearse_p = sub.add_parser("rehearse")
+    _add_common_arguments(rehearse_p)
     _add_status_gate_arguments(rehearse_p)
 
     guard_p = sub.add_parser("workflow-guard", help="dynamic machine-JSON workflow permission/safety guard")
     guard_p.add_argument("workflow", type=Path)
 
-    sub.add_parser("summary", help="render a dynamic $GITHUB_STEP_SUMMARY-ready Markdown report")
+    summary_p = sub.add_parser("summary", help="render a dynamic $GITHUB_STEP_SUMMARY-ready Markdown report")
+    _add_common_arguments(summary_p)
 
     args = parser.parse_args(argv)
 
