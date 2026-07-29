@@ -1,0 +1,13 @@
+[
+  {
+    "path": "mgfembp",
+    "category": "submodule",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Git submodule pointing at StanHash/mgfembp (FE6 multiboot payload builder). Pinned to the exact commit this worktree's gitlink records; not redistributable as part of a source archive until upstream license/redistribution terms are reviewed and approved.",
+    "pinned_commit": "c87e74dcd6c8878b809e013cd8ff0c52baa75332"
+  }
+]
