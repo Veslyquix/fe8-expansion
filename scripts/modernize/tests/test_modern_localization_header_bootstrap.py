@@ -37,7 +37,10 @@ synthetic fixture tree), because the bug is specifically about how those
 two interact through modern.mk's own generated-header wiring.
 """
 
+import os
+import re
 import shutil
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -88,7 +91,7 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
         if LOCALIZATION_ROOT.is_dir():
             shutil.rmtree(LOCALIZATION_ROOT)
 
-    def _make(self, *args):
+    def _make(self, *args, env=None):
         return subprocess.run(
             ["make", "--no-print-directory", *args],
             cwd=ROOT,
@@ -96,6 +99,7 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             check=False,
+            env=env,
         )
 
     def _assert_no_missing_rule(self, stdout):
@@ -197,6 +201,202 @@ class ModernLocalizationHeaderBootstrapTests(unittest.TestCase):
         if not _toolchain_available():
             self.skipTest("modern toolchain not available")
         self._run_real_isolated_build("release")
+
+
+class ModernLocalizationHeaderFilterPortabilityTests(unittest.TestCase):
+    """Issue #18 known-High fix: the ``.headers.d`` bootstrap recipe's
+    bare-token filter used to run ``sed -E -i 's/.../' "$@.tmp"``. GNU
+    sed's ``-i`` takes an *optional* backup-suffix argument (bare ``-i``
+    means "no backup"); BSD/macOS sed's ``-i`` takes a *mandatory* one --
+    an explicit ``-i ''`` is required for "no backup", and a bare ``-i``
+    is either a hard usage error or silently consumes the very next token
+    (here, the actual filter regex) as the backup suffix. Either way, the
+    old recipe was GNU-sed-only and broke a supported host (macOS/
+    Homebrew; see this Makefile's own Darwin-conditional ``$(SED)``
+    definition used elsewhere in this codebase).
+
+    The fix (see modern.mk's own comment directly above the recipe)
+    drops ``-i`` entirely: the filtered stream is redirected to a second,
+    per-target-unique temp file and atomically renamed over the real
+    target, exactly like the pre-scan step immediately above it in the
+    same recipe. Plain ``sed -E 's/.../' in > out`` (no ``-i``) is
+    command-line identical on GNU and BSD/macOS sed.
+
+    A source-level string check alone would accept a merely *reworded*
+    but still GNU-only invocation (e.g. swapping flag order), so the
+    primary coverage here is behavioral: these tests run the real,
+    unmodified recipe through a real cold Linux build with a hostile,
+    intentionally-strict fake ``sed`` shim placed first on ``PATH`` --
+    one that hard-fails on any bare ``-i`` token exactly the way real
+    BSD/macOS sed would misbehave on one -- and confirm the build still
+    filters the bare ``expansion_msg_ids.h`` token correctly with that
+    shim active. The static source assertion below is kept only as a
+    cheap, fast *supplementary* guard against literally reintroducing
+    ``sed ... -i`` on this recipe, never as the sole test.
+    """
+
+    MODERN_MK_PATH = Path(__file__).resolve().parents[3] / "modern.mk"
+    MODERN_MK = MODERN_MK_PATH.read_text(encoding="utf-8")
+
+    # The hostile fake-sed shim's own diagnostic string (see
+    # _write_hostile_bsd_sed_shim below): if this ever appears in a
+    # build's output, the recipe under test reached a real `sed -i`
+    # invocation, which is exactly the portability landmine being
+    # guarded against here.
+    HOSTILE_SED_FAILURE_MARKER = (
+        "fake-bsd-sed: -i: option requires an argument"
+    )
+
+    _HOSTILE_SED_SHIM_TEMPLATE = """#!/usr/bin/env bash
+# Hostile BSD/macOS-like fake sed -- see
+# ModernLocalizationHeaderFilterPortabilityTests. Real BSD/macOS sed
+# requires an explicit (possibly empty) backup-suffix argument
+# immediately after -i; a bare -i is either a hard usage error or
+# silently consumes the very next token as that suffix. This shim
+# always hard-fails on a bare -i so any recipe reaching it is proven to
+# depend on GNU-only bare -i semantics.
+for arg in "$@"; do
+    if [ "$arg" = "-i" ]; then
+        echo "HOSTILE_SED_FAILURE_MARKER_TOKEN" >&2
+        exit 1
+    fi
+done
+exec "REAL_SED_PATH_TOKEN" "$@"
+"""
+
+    @classmethod
+    def _write_hostile_bsd_sed_shim(cls, directory):
+        """Writes an executable ``sed`` into ``directory`` that hard-fails
+        on any bare ``-i`` token (mimicking real BSD/macOS sed's mandatory
+        backup-suffix argument for ``-i``, which a bare ``-i`` never
+        supplies) and otherwise delegates to the real system sed. Placing
+        ``directory`` first on ``PATH`` makes every ``sed`` invocation in
+        a subprocess -- including every one inside a Make recipe's shell
+        -- go through this shim instead.
+        """
+        real_sed = shutil.which("sed")
+        assert real_sed, "a real system sed is required to build this shim"
+        script = cls._HOSTILE_SED_SHIM_TEMPLATE.replace(
+            "HOSTILE_SED_FAILURE_MARKER_TOKEN", cls.HOSTILE_SED_FAILURE_MARKER
+        ).replace("REAL_SED_PATH_TOKEN", real_sed)
+        shim = Path(directory) / "sed"
+        shim.write_text(script, encoding="utf-8")
+        shim.chmod(shim.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+        return shim
+
+    def setUp(self):
+        ModernLocalizationHeaderBootstrapTests._clean_localization_output()
+        self.addCleanup(
+            ModernLocalizationHeaderBootstrapTests._clean_localization_output
+        )
+
+    # Matches an actual *recipe* line (tab-indented shell command,
+    # optionally after Make's leading "@") invoking bare `sed ... -i`,
+    # never prose in a comment discussing it (this file's own modern.mk
+    # comment right above the fixed recipe deliberately quotes the old
+    # broken invocation as documentation, so a plain substring check
+    # would false-positive on that comment).
+    _BARE_SED_DASH_I_RECIPE_RE = re.compile(
+        r"^\t@?sed\b[^\n]*\s-i(\s|$)", re.MULTILINE
+    )
+
+    def test_source_never_uses_bare_sed_dash_i_for_header_filter(self):
+        # Cheap, fast, supplementary guard only -- see class docstring for
+        # why this can never be the sole regression test for this fix.
+        # Checked against actual recipe lines, not prose, so this fixed
+        # file's own explanatory comment (which quotes the old broken
+        # invocation on purpose) can never make this assertion vacuous.
+        match = self._BARE_SED_DASH_I_RECIPE_RE.search(self.MODERN_MK)
+        self.assertIsNone(
+            match,
+            "a Make recipe line invokes bare `sed ... -i` "
+            f"({match.group(0) if match else ''!r}) -- this breaks "
+            "macOS/Homebrew's BSD sed, which requires an explicit "
+            "backup-suffix argument for -i",
+        )
+        self.assertIn(
+            '> "$@.tmp2"', self.MODERN_MK,
+            "the .headers.d bare-token filter must redirect to a second "
+            "per-target temp file and atomically rename it over the real "
+            "target, rather than editing in place with sed -i",
+        )
+
+    def _run_hostile_sed_isolated_headers_d_build(self, config):
+        if not _toolchain_available():
+            self.skipTest("modern toolchain not available")
+        with tempfile.TemporaryDirectory() as tmp:
+            shim_dir = Path(tmp) / "hostile-sed-bin"
+            shim_dir.mkdir()
+            self._write_hostile_bsd_sed_shim(shim_dir)
+
+            iso_root = Path(tmp) / "iso-build"
+            env = dict(os.environ)
+            env["PATH"] = "{}{}{}".format(
+                shim_dir, os.pathsep, env.get("PATH", "")
+            )
+
+            # The top-level Makefile unconditionally exports
+            # `PATH := $(TOOLCHAIN)/bin:$(PATH)` (legacy devkitARM lookup,
+            # independent of the modern arm-none-eabi- toolchain used by
+            # this recipe). When TOOLCHAIN/DEVKITARM is unset (as in a
+            # bare modern-only environment, and in CI), `$(TOOLCHAIN)/bin`
+            # collapses to the literal path "/bin", which on most Linux
+            # hosts really does contain a real `sed` -- accidentally
+            # shadowing this hostile shim ahead of it on PATH and making
+            # this test a false pass. Pointing TOOLCHAIN at an empty,
+            # sed-free throwaway directory keeps that legacy PATH prefix
+            # harmless (nothing here builds a legacy, non-modern target)
+            # while guaranteeing PATH resolution actually falls through
+            # to this shim's directory, next in line.
+            toolchain_dir = Path(tmp) / "empty-legacy-toolchain"
+            toolchain_dir.mkdir()
+
+            headers_d_targets = [
+                str(iso_root / config / "aapcs" / Path(source).with_suffix(".headers.d"))
+                for source in CONSUMER_SOURCES
+            ]
+            result = self._make(
+                *headers_d_targets,
+                f"MODERN_CONFIG={config}",
+                f"MODERN_BUILD_ROOT={iso_root}",
+                f"TOOLCHAIN={toolchain_dir}",
+                env=env,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout[-3000:])
+            self.assertNotIn(
+                self.HOSTILE_SED_FAILURE_MARKER, result.stdout,
+                "the .headers.d recipe invoked `sed -i` -- this breaks "
+                "real BSD/macOS sed the same way this fake shim just "
+                "did",
+            )
+            self._assert_no_missing_rule(result.stdout)
+
+            for target in headers_d_targets:
+                target_path = Path(target)
+                self.assertTrue(
+                    target_path.is_file(),
+                    f"{target_path} was not produced under the hostile "
+                    f"fake-sed PATH",
+                )
+                text = target_path.read_text(encoding="utf-8")
+                self.assertNotRegex(
+                    text, r"(?:^|[\s\\])expansion_msg_ids\.h(?:$|\s)",
+                    f"{target_path} still lists the bare, unresolvable "
+                    f"expansion_msg_ids.h token even under a hostile "
+                    f"fake sed -- the filter must still take effect "
+                    f"without relying on `sed -i`",
+                )
+
+    _make = ModernLocalizationHeaderBootstrapTests._make
+    _assert_no_missing_rule = (
+        ModernLocalizationHeaderBootstrapTests._assert_no_missing_rule
+    )
+
+    def test_debug_cold_headers_d_filter_survives_hostile_bsd_like_sed(self):
+        self._run_hostile_sed_isolated_headers_d_build("debug")
+
+    def test_release_cold_headers_d_filter_survives_hostile_bsd_like_sed(self):
+        self._run_hostile_sed_isolated_headers_d_build("release")
 
 
 class ModernLocalizationGenerationParallelSafetyTests(unittest.TestCase):

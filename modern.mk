@@ -1047,6 +1047,23 @@ $(MODERN_ALL_C_HEADER_DEPS): | expansion-modern-toolchain-check
 MODERN_LOCALIZATION_MSG_IDS_H_BASENAME := $(notdir $(MODERN_LOCALIZATION_MSG_IDS_H))
 MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE := $(subst .,\.,$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME))
 
+# Portability note: this filter deliberately never uses `sed -i` (in-place
+# editing). GNU sed's `-i` takes an *optional* backup-suffix argument (no
+# argument at all means "no backup"), while BSD/macOS sed's `-i` takes a
+# *mandatory* one (an explicit empty string, `-i ''`, is required for "no
+# backup") -- the two are not command-line compatible, and macOS is a
+# supported host (see this Makefile's own Darwin-conditional $(SED)
+# definition). A bare `sed -E -i 's/.../' file` therefore either corrupts
+# the very first regex group as the "suffix" on macOS (BSD sed would
+# consume the script text as the backup suffix and then fail for a
+# missing operand) or silently does the wrong thing depending on the host
+# -- so this recipe instead redirects the filtered stream to a second,
+# equally per-target-unique temp file and atomically renames it over the
+# real target, exactly like the pre-scan step immediately above it. Plain
+# `sed -E 's/.../' in > out` (no `-i` at all) is one of the few sed
+# invocations that *is* command-line identical on GNU and BSD/macOS sed
+# (both accept `-E` for extended regexes), so no $(SED)/uname branch is
+# needed here at all. No backup file is ever created either way.
 $(MODERN_ALL_C_HEADER_DEPS): $(MODERN_OUTPUT_DIR)/%.headers.d: %.c
 	@mkdir -p "$(@D)"
 	@"$(MODERN_CC)" $(MODERN_CFLAGS) -MM -MG -MT "$(MODERN_OUTPUT_DIR)/$*.o" "$<" > "$@.tmp" || { \
@@ -1054,8 +1071,13 @@ $(MODERN_ALL_C_HEADER_DEPS): $(MODERN_OUTPUT_DIR)/%.headers.d: %.c
 		printf '%s\n' "error: failed to pre-scan $< for generated header dependencies" >&2; \
 		exit 1; \
 	}
-	@sed -E -i 's/(^|[[:space:]])$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE)([[:space:]]|$$)/\1\2/g' "$@.tmp"
-	@mv -f "$@.tmp" "$@"
+	@sed -E 's/(^|[[:space:]])$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE)([[:space:]]|$$)/\1\2/g' "$@.tmp" > "$@.tmp2" || { \
+		rm -f "$@.tmp" "$@.tmp2"; \
+		printf '%s\n' "error: failed to filter generated header dependencies for $<" >&2; \
+		exit 1; \
+	}
+	@rm -f "$@.tmp"
+	@mv -f "$@.tmp2" "$@"
 
 ifneq (,$(filter $(MODERN_ALL_SOURCE_GOALS),$(MAKECMDGOALS)))
 include $(MODERN_ALL_C_HEADER_DEPS)
