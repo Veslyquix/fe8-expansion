@@ -49,12 +49,18 @@ enum ItemExpansionTestStage
     ITEMTEST_STAGE_UI         = 1 << 2, /* item menu line + stat screen line */
     ITEMTEST_STAGE_MULTIARENA = 1 << 3, /* link/arena team representation */
     ITEMTEST_STAGE_GAMESAVE   = 1 << 4, /* WriteGameSave -> ReadGameSave */
-    ITEMTEST_STAGE_SUSPEND    = 1 << 5  /* WriteSuspendSave -> ReadSuspendSave */
+    ITEMTEST_STAGE_SUSPEND    = 1 << 5, /* WriteSuspendSave -> ReadSuspendSave */
+    ITEMTEST_STAGE_CONTENT    = 1 << 6  /* issue #6 content mechanic apply */
 };
 
 #define ITEMTEST_STAGE_ALL \
     (ITEMTEST_STAGE_ITEMDATA | ITEMTEST_STAGE_EVENT | ITEMTEST_STAGE_UI | \
-     ITEMTEST_STAGE_MULTIARENA | ITEMTEST_STAGE_GAMESAVE | ITEMTEST_STAGE_SUSPEND)
+     ITEMTEST_STAGE_MULTIARENA | ITEMTEST_STAGE_GAMESAVE | ITEMTEST_STAGE_SUSPEND | \
+     ITEMTEST_STAGE_CONTENT)
+
+/* Sentinel for "no such registry index / no such inventory slot", so a
+ * missing entry is an explicit recorded value instead of an ambiguous 0. */
+#define ITEMTEST_INDEX_NONE 0xFFFFFFFF
 
 /* Every field is a u32 so a playtest probe can read any of them with one
  * naturally aligned 4-byte read, and so the host-side runner can resolve
@@ -126,6 +132,33 @@ struct ItemExpansionProbe
     /* B8 */ u32 wmCurrentNode;     /* gGMData.current_node */
     /* BC */ u32 gameSavePackedField; /* the packed record's own 14-bit item field */
     /* C0 */ u32 suspendPackedField;  /* same, for the suspend record */
+
+    /* Issue #6 bundled content example (see
+     * include/expansion_starter_content.h). Recorded through the PUBLIC
+     * config/registry API only -- no numeric literal, no pointer.
+     *
+     * The first block is boot-stage state (no map needed), so a modern
+     * release ROM records it too; the second block is the map-dependent
+     * apply, recorded by ITEMTEST_STAGE_CONTENT. */
+    /* C4 */ u32 contentEnabled;      /* ExpansionStarterContentIsEnabled() */
+    /* C8 */ u32 contentItemId;       /* ExpansionStarterContentItemId() (typed) */
+    /* CC */ u32 contentMechanicsCount;  /* ExpansionMechanicsCount() after install */
+    /* D0 */ u32 contentMechanicIndex;   /* registry index of the content mechanic */
+    /* D4 */ u32 contentSampleIndex;     /* registry index of the content-free sample */
+    /* D8 */ u32 contentRegisterOk;      /* successful public registrations */
+    /* DC */ u32 contentRegisterErr;     /* rejected public registrations */
+    /* E0 */ u32 contentLastResult;      /* last enum ExpansionMechanicsResult */
+
+    /* E4 */ u32 contentBearerPid;          /* unit that carries the content item */
+    /* E8 */ u32 contentBearerItemSlot;     /* GetUnitItemSlot() of that item */
+    /* EC */ u32 contentBearerAvoidDelta;   /* battleAvoidRate change on one apply */
+    /* F0 */ u32 contentBearerDefenseDelta; /* battleDefense change on one apply */
+    /* F4 */ u32 contentControlPid;         /* unit that does NOT carry it */
+    /* F8 */ u32 contentControlItemSlot;    /* ITEMTEST_INDEX_NONE for the control */
+    /* FC */ u32 contentControlAvoidDelta;
+    /*100 */ u32 contentControlDefenseDelta;
+    /*104 */ u32 contentApplyCount;         /* seam applies this stage performed */
+    /*108 */ u32 contentSampleTriggerCount; /* sample bonuses granted this stage */
 };
 
 extern struct ItemExpansionProbe gItemExpansionProbe;

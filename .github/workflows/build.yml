@@ -150,6 +150,15 @@ jobs:
     # not modify, reorder, or relax the linker-check step above, and it does
     # not touch any committed fingerprint/baseline.
     #
+    # Issue #6 (Sprint 2) rides this SAME step and this SAME ROM build: the
+    # EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1
+    # EXPANSION_MECHANICS_SAMPLE=1 profile links the bundled generated-data
+    # content example, so the one probe run additionally asserts the authored
+    # item record (original name/description/uses/type/attributes/icon) and
+    # the content mechanic registered through the public hook registry. No
+    # extra workflow command and no extra ROM build: the CI correctness
+    # command count stays exactly 10.
+    #
     # Why this is not stale: every modern C/data object depends on
     # modern.mk's content-addressed MODERN_COMPILE_SETTINGS stamp (which
     # embeds FE8_ITEM_ID_CAP/FE8_EXPANSION_ITEMTEST), so flipping those
@@ -163,7 +172,7 @@ jobs:
     #
     # This is the workflow final step: per repository policy, CI ends after
     # these target-ROM checks.
-    - name: Boundary/serialization item-ID-expansion runtime gate (cap 0xCE)
+    - name: Boundary/serialization item-ID-expansion + content runtime gate (cap 0xCE)
       run: |
-        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs -j2
-        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs -j2
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2
