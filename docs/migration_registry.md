@@ -17,7 +17,7 @@ rather than duplicating.
 
 No `EXPANSION_SAVE_COMPAT_EPOCH` bump beyond `1` has ever shipped from this
 repository (see `config.mk` and
-[`docs/release_data/version_ledger.json`](release/version_ledger.json)), so no
+[`docs/release_data/version_ledger.json`](release_data/version_ledger.json)), so no
 further transition is registered yet. Any future epoch bump **must** add
 its own registry entry before that bump lands -- `make release-check`
 fails actionably (via `scripts.release_rehearsal.manifest`'s `migrations` field) if

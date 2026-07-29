@@ -101,7 +101,7 @@ later decide to cut a release; `scripts/release_rehearsal/manifest.py` only
 ## Support, EOL, and urgent-fix policy
 
 * **Supported version(s)**: recorded factually in
-  [`docs/release_data/version_ledger.json`](release/version_ledger.json)
+  [`docs/release_data/version_ledger.json`](release_data/version_ledger.json)
   (`current_version`, `previous_supported_version`,
   `next_supported_version`, and the `supported` list with each entry's
   `status`/`eol`). No release has ever been tagged from this repository,

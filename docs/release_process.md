@@ -16,7 +16,7 @@ Wave 0 deliberately deferred all of this to issue #9.
 today and until a human maintainer:
 
 1. resolves the legal/provenance status recorded in
-   [`docs/release_data/provenance/*.json`](release/provenance/) (currently every
+   [`docs/release_data/provenance/*.json`](release_data/provenance/) (currently every
    entry is honestly `NOASSERTION`/`redistribution_approved: false`/no
    reviewer -- see "Legal and provenance boundary" below), **and**
 2. separately authorizes (in a future, distinct change) any write-capable
@@ -33,45 +33,75 @@ document does **not** close issue #9.
 | Component | Module | Purpose |
 |---|---|---|
 | Changelog fragments | `scripts/release_rehearsal/changelog.py`, `changelog_fragments/*.json`, `CHANGELOG.md` | Categorized, schema-validated, deterministically-rendered change notes with declared SemVer impact. |
-| Release manifest | `scripts/release_rehearsal/manifest.py` | Ties together `config.mk` SemVer, embedded C metadata, a candidate tag string, changelog, docs, save format/migrations, and previous/next supported versions into one report. |
+| Release manifest | `scripts/release_rehearsal/manifest.py` | Ties together `config.mk` SemVer, embedded C metadata, a candidate tag string, changelog, docs, save format/migrations, previous/next supported versions, the exact allowlist, version-ledger topology, C-fallback-metadata consistency, migration-epoch reachability, doc-link validity, and the rebuild rehearsal into one report. |
+| Manifest consistency validators | `scripts/release_rehearsal/consistency.py` | Version-ledger topology/candidate-agreement, changelog-declared-SemVer-impact-vs-actual-delta (pre-/post-1.0 aware), `include/expansion_config.h` C-fallback-vs-`config.mk` cross-check, and save-format migration-registry epoch reachability. |
 | Migration registry | `scripts/modernize/migrations/registry.py` | Declares mechanical vs. manual save-format epoch transitions; see [`docs/migration_registry.md`](migration_registry.md). |
-| Provenance manifests | `scripts/release_rehearsal/provenance.py`, `docs/release_data/provenance/*.json` | Factual, hand-seeded code/asset/submodule provenance records. |
-| Source-release guard | `scripts/release_rehearsal/source_guard.py`, `docs/release_data/source_allowlist.json` | Exact top-level allowlist + recursive hard-deny rules for a release candidate tree/archive. Separate from, and does not modify, `scripts/artifact_guard.py`. |
-| Archive/rebuild rehearsal | `scripts/release_rehearsal/archive_rehearsal.py` | Deterministic double-build archive hash comparison; clean-rebuild blocker reporting. |
-| Workflow guard | `scripts/release_rehearsal/workflow_guard.py` | Validates `.github/workflows/release-rehearsal.yml`'s own permission/safety contract. |
-| CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`. |
-| CI | `.github/workflows/release-rehearsal.yml` | Runs all of the above read-only, on `pull_request`/`workflow_dispatch` only. |
+| Provenance manifests | `scripts/release_rehearsal/provenance.py`, `docs/release_data/provenance/*.json` | Factual, hand-seeded code/asset/submodule provenance records, bound to the exact allowlist by exact-or-directory-prefix coverage (no gap, no ghost entry, no ambiguous/duplicate coverage). |
+| Exact source allowlist | `scripts/release_rehearsal/allowlist.py`, `docs/release_data/source_allowlist.json` | Exact, deterministic, generated **per-member** (per tracked file, plus the single `mgfembp` gitlink) allowlist -- no directory-level/prefix grant. `check_allowlist_completeness()` fails actionably the moment a tracked file and the checked-in allowlist ever disagree in either direction. |
+| Source-release guard | `scripts/release_rehearsal/source_guard.py`, `docs/release_data/map_hex_exceptions.json` | Recursive hard-deny rules (path/extension **and** file-magic) for a release candidate tree/archive, including default-deny `.map`/`.hex` with an exact, factual, file-level exception list. Separate from, and does not modify, `scripts/artifact_guard.py`. |
+| Immutable Git-object source | `scripts/release_rehearsal/git_source.py` | `git ls-tree`/`git cat-file --batch` plumbing wrappers so archive content is always read from an immutable commit object, never the mutable worktree/index. |
+| Archive/rebuild rehearsal | `scripts/release_rehearsal/archive_rehearsal.py` | Deterministic double-build archive hash comparison (git-blob-bound); rebuild-eligibility evaluation plus (when eligible) an actually-executed double-compile-and-compare, with four machine-distinct states (`not_run`/`blocked`/`failed`/`verified_success`). |
+| Release-doc link validator | `scripts/release_rehearsal/doc_links.py` | Verifies every relative Markdown link in the release-process doc set resolves to a real file. |
+| Workflow guard | `scripts/release_rehearsal/workflow_guard.py` | Validates `.github/workflows/release-rehearsal.yml`'s own permission/safety contract: top-level/job-level/nested `contents: write`, shorthand `write-all` permissions, token/secrets interpolation, network/upload/publish/deploy/release commands and actions, ref mutation, and common shell-indirection evasions (line continuations, `eval`, `base64 -d`, `sh -c`/`bash -c`). |
+| CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`, plus the machine-distinct `*-require-eligible`/`*-expect-blocked` gate targets and `release-workflow-guard`/dynamic `cli summary`. |
+| CI | `.github/workflows/release-rehearsal.yml` | Runs all of the above read-only, on `pull_request`/`workflow_dispatch` only, and renders `$GITHUB_STEP_SUMMARY` dynamically from the tool's own canonical JSON. |
 
 ## Exit code contract
 
 This is the "documented, mechanically tested blocked/eligible contract"
-referenced by issue #9's acceptance criteria:
+referenced by issue #9's acceptance criteria. `scripts/release_rehearsal/cli.py`'s
+own module docstring is the normative source; summarized here:
 
-* **Exit `0`** -- the tool ran correctly and produced a well-formed report.
-  The report's own `"status"` field says either `"mechanically eligible"`
-  or `"blocked"`. **Both are valid, expected, successful outcomes of a
-  correctly-functioning checker** -- correctly detecting and reporting an
-  unresolved legal/provenance fact is the checker doing its job, not the
-  checker failing. A `"blocked"` report is never printed as, or
+* **Exit `0`** -- either (a) plain report mode: the tool ran correctly and
+  produced a well-formed report (the report's own `"status"` field says
+  either `"mechanically eligible"` or `"blocked"` -- **both are valid,
+  expected, successful outcomes of a correctly-functioning checker**), or
+  (b) a requested machine-distinct status gate's own condition was
+  satisfied (see below). A `"blocked"` report is never printed as, or
   confusable with, a publication success: every CLI additionally echoes
-  `status: blocked` plus the exact reasons to stderr, and CI's job summary
-  states the publication status in plain English.
-* **Exit `2`** (`1` for the standalone guard scripts' own hard-deny
-  findings) -- an **actionable defect**: a malformed changelog fragment, a
-  changelog/version-impact mismatch, an invalid candidate tag, a missing
-  required doc, a malformed provenance/allowlist JSON file, a migration
-  registry inconsistency, a source-release guard hard-deny hit (symlink,
-  device, traversal path, prohibited nested magic/extension), or an
-  archive-rehearsal hash mismatch. These represent tooling/input defects
-  to fix, distinct from an honestly-recorded unresolved business fact.
+  `status: blocked` plus the exact reasons to stderr (never stdout, which
+  is canonical JSON only), and CI's job summary is rendered dynamically
+  from that same JSON (see "Workflow and Make integration" below).
+* **Exit `1`** (`EXIT_NOT_ELIGIBLE`) -- **only** reachable via
+  `--require-eligible`: the candidate's status is not exactly
+  `"mechanically eligible"`. This is the publication-eligibility gate a
+  stricter pipeline stage uses to fail loudly instead of reading prose;
+  today, and expected for the foreseeable future, this always fires,
+  because the candidate is genuinely `"blocked"`.
+* **Exit `2`** (`EXIT_TOOLING_ERROR`; `1` for the standalone guard
+  scripts' own hard-deny findings) -- an **actionable defect**: a
+  malformed changelog fragment, a changelog/version-impact mismatch, an
+  invalid candidate tag, a missing required doc, a malformed provenance/
+  allowlist/map-hex-exceptions JSON file, a stale or incomplete exact
+  allowlist, a version-ledger topology/candidate contradiction, a
+  `include/expansion_config.h` C-fallback-vs-`config.mk` mismatch, an
+  unreachable migration-registry epoch, a broken release-doc link, a
+  migration registry inconsistency, a source-release guard hard-deny hit
+  (symlink, device, traversal path, prohibited nested magic/extension), or
+  an archive-rehearsal hash mismatch. These represent tooling/input
+  defects to fix, distinct from an honestly-recorded unresolved business
+  fact. Checked **before** either status gate below, since a gate cannot
+  be meaningfully evaluated against a broken report.
+* **Exit `3`** (`EXIT_STATUS_MISMATCH`) -- **only** reachable via
+  `--expect-status {blocked,mechanically-eligible}`: the actual status is
+  not exactly the one the caller named. There is no default/implicit
+  expected value -- the caller must say which status they expect, every
+  time.
 
-`make release-check` and `make release-rehearse` both exit `0` on the
-current tree (a well-formed `"blocked"` report) and exit non-zero only if
-a genuine defect is introduced (e.g. a stale changelog, a broken
-migration registry, a hard-deny content violation, or a workflow
-permission regression) -- this is intentional so this rehearsal can run in
-CI as an ordinary, informative, always-green (until something is actually
-broken) job without ever being misread as "ready to publish".
+`--require-eligible` and `--expect-status` are mutually exclusive (each is
+its own distinct gate). `make release-check` and `make release-rehearse`
+(plain, no flags) both exit `0` on the current tree (a well-formed
+`"blocked"` report) and exit non-zero only if a genuine tooling defect is
+introduced -- this is intentional so this rehearsal can run in CI as an
+ordinary, informative, always-green (until something is actually broken)
+job without ever being misread as "ready to publish". The **separate**
+`make release-check-require-eligible` / `make release-rehearse-require-
+eligible` targets are the ones **intentionally** expected to fail (exit
+`1`) while the candidate is `"blocked"`; `make release-check-expect-
+blocked` / `make release-rehearse-expect-blocked` are the complementary
+health-check targets that exit `0` only while truly `"blocked"` and exit
+`3` the moment that ever silently stops being true. See "Workflow and Make
+integration" below.
 
 ## Release manifest and identity checks
 
@@ -95,15 +125,46 @@ broken) job without ever being misread as "ready to publish".
   the full 40-character SHA;
 * changelog validity + aggregate declared SemVer impact;
 * required-docs presence;
-* save-format compatibility epoch + migration-registry consistency;
+* save-format compatibility epoch + migration-registry consistency, **and**
+  registry epoch *reachability* (`scripts/release_rehearsal/consistency.py`'s
+  `check_migration_epoch_reachability` -- a future epoch bump with no
+  connecting registry entry is an actionable contradiction, not silently
+  ignored);
+* the version ledger's own topology (unique versions, exactly one
+  `status: "current"` entry, previous/current/next ordering, valid EOL
+  dates) **and** its agreement with `config.mk`'s actual candidate version
+  (`docs/release_data/version_ledger.json`,
+  `check_version_ledger`);
+* the changelog's declared aggregate SemVer impact versus the *actual*
+  version delta from the ledger's previous version, honoring this
+  project's pre-1.0 carve-out (`check_changelog_semver_delta`);
+* `include/expansion_config.h`'s `#ifndef`-guarded C fallback literals
+  (version/ROM-identity/save-epoch, plus the config-fingerprint
+  placeholder's shape) against `config.mk`'s own resolved values
+  (`check_c_fallback_metadata`);
+* the exact per-member source allowlist's completeness against the
+  actual tracked-file/gitlink set at the target SHA
+  (`scripts/release_rehearsal/allowlist.py`'s `check_allowlist_completeness`
+  -- a new/unlisted tracked file, or a stale entry for something no
+  longer tracked, is an actionable failure, never a silent omission);
 * previous/next supported versions
   (`docs/release_data/version_ledger.json`);
-* provenance status (`scripts/release_rehearsal/provenance.py`);
-* source-release guard status (`scripts/release_rehearsal/source_guard.py`).
+* provenance status **and its exact coverage of the allowlist**
+  (`scripts/release_rehearsal/provenance.py`);
+* source-release guard status (`scripts/release_rehearsal/source_guard.py`);
+* every relative link in the release-process doc set actually resolves
+  (`scripts/release_rehearsal/doc_links.py`);
+* the rebuild rehearsal's own status (`scripts/release_rehearsal/
+  archive_rehearsal.py`'s `rebuild_rehearsal_blocker` -- see "Deterministic
+  archive and rebuild rehearsal" below): anything other than
+  `verified_success` (i.e. `blocked`, `not_run`, or `failed`) is folded
+  into `"reasons"` exactly like every other sub-check.
 
 The manifest's overall `"status"` is `"mechanically eligible"` only if
-**every** one of those sub-checks passes; otherwise it is `"blocked"`,
-with every contributing reason listed verbatim in `"reasons"`.
+**every** one of those sub-checks passes -- **including** the rebuild
+rehearsal actually having been executed and verified successful twice, not
+merely "not attempted" -- otherwise it is `"blocked"`, with every
+contributing reason listed verbatim in `"reasons"`.
 
 ## Legal and provenance boundary
 
@@ -124,6 +185,40 @@ entry has `NOASSERTION`, `redistribution_approved: false`, or no
 `reviewer` -- which is every entry, today. Resolving this is a human legal
 decision; no amount of running this tooling changes that.
 
+## Exact per-member source allowlist and provenance coverage
+
+`docs/release_data/source_allowlist.json` is **not** a top-level-directory
+grant any more. It is an exact, deterministic, generated list of every
+single tracked file's repo-relative path, plus the single `mgfembp`
+gitlink path -- generated and validated by
+`scripts/release_rehearsal/allowlist.py` directly from Git's own tree
+listing (`git ls-tree -r`), never hand-maintained. A brand-new tracked
+file with no corresponding entry is an actionable `make release-check`
+failure (`check_allowlist_completeness`'s "missing" list), not a silent
+gap; a stale entry for a file that no longer exists is equally reported
+("stale" list) so the allowlist can never quietly drift out of sync with
+reality in either direction. Regenerate it with:
+
+```sh
+python3 -m scripts.release_rehearsal.allowlist generate --target-sha HEAD --write
+```
+
+`docs/release_data/provenance/{code,assets,submodules}.json` still record
+one entry per reviewable *category* (a top-level directory or file, e.g.
+`"src"`, `"graphics"`, `"mgfembp"`) rather than one near-duplicate record
+per individual file -- hand-authoring ~9,000 identical `NOASSERTION`
+records would add no legal information and would itself be a maintenance
+hazard. Instead, `scripts/release_rehearsal/provenance.py`'s
+`evaluate_coverage()` proves this is an **equally strong** binding to the
+exact allowlist: every entry's `path` covers every allowlisted path it is
+an exact match or directory-prefix ancestor of; `find_ghost_entries()`
+requires every entry to cover *something* real; `find_ambiguous_entries()`
+(and `find_duplicate_entry_paths()`) require no two entries' coverage to
+overlap. Together these guarantee no missing included member, no
+provenance-only ghost entry, and no duplicate/ambiguous coverage -- a real
+bijection at the *category* granularity, mechanically checked against the
+*exact* per-file allowlist.
+
 ## Source-release guard
 
 `scripts/release_rehearsal/source_guard.py` is intentionally **separate from, and
@@ -132,36 +227,54 @@ to review ordinary tracked-Git content per
 [`docs/issue-resolution-policy.md`](issue-resolution-policy.md)). It
 instead governs an actual *release candidate tree or archive*:
 
-* an **exact top-level allowlist**
-  (`docs/release_data/source_allowlist.json`), seeded from this worktree's
-  tracked top-level entries plus the new entries issue #9 itself
-  introduces (`CHANGELOG.md`, `changelog_fragments/`, `release.mk`);
+* the **exact per-member allowlist** above;
 * recursive hard-deny rules for prohibited nested files/magic bytes
   (mirroring, independently, `scripts/artifact_guard.py`'s prohibited
-  extension/magic/path-segment classes), absolute or `..`-traversal
-  paths, unsafe archive member names (NUL bytes, backslashes, empty
-  components), symlinks, hardlinks (`st_nlink > 1`), and devices/FIFOs/
-  sockets -- for both a real filesystem tree (`scan_tree`) and a tar
-  archive's members without ever extracting them to disk
-  (`scan_archive_members`, using `TarFile.extractfile()` for read-only
-  content access only, never `TarFile.extractall()`).
+  extension/magic/path-segment classes): object/library/executable/debug
+  artifacts (`.o .obj .a .lib .so`, including versioned shared-object
+  suffixes like `.so.1.2.3`, `.dll .dylib .exe .pdb`, `.dSYM` bundles),
+  generic archive/compression containers including Java/JVM variants
+  (`.zip .jar .war .ear .tar .tgz .gz .bz2 .xz .7z .rar`), the pre-existing
+  GBA ROM/save-state/patch formats, and arbitrary build `.map`/`.hex`
+  output (default-denied; see below); content-based magic detection (ZIP,
+  Unix `ar`, gzip, bzip2, xz, 7z, rar, zstd, `ustar` tar, PE/Mach-O/Java
+  executables, plus the pre-existing ROM/patch magics) that catches a
+  nested archive/executable regardless of its extension or nesting depth;
+  absolute or `..`-traversal paths, `a//b` double slashes, `a/./b`
+  literal-dot components, leading/trailing slashes, NUL/control bytes,
+  backslashes, symlinks, hardlinks (`st_nlink > 1`), and devices/FIFOs/
+  sockets -- for a real filesystem tree (`scan_tree`), a tar archive's
+  members without ever extracting them to disk (`scan_archive_members`,
+  using `TarFile.extractfile()` for read-only content access only, never
+  `TarFile.extractall()`), and immutable Git blobs (see "Immutable archive
+  inputs" below).
+* **`.map`/`.hex` are default-denied**, exactly like every other build
+  artifact extension -- there is no broad carve-out. The *only* exception
+  mechanism is `docs/release_data/map_hex_exceptions.json`: an exact,
+  file-level allowlist where every entry records a factual rationale.
+  Every one of the 12 tracked `.map`/`.hex` paths at the time of this
+  audit is a synthetic/hand-authored test fixture under a `tests/
+  fixtures/` directory (verified individually; see that file's own
+  `_comment`/entries) -- a real build-generated map (e.g.
+  `fireemblem8.map`) is gitignored and was never one of the 12, so it
+  remains hard-denied with no exception.
 
 `scan_source_release_candidate()` is what `manifest.py`'s source_guard
 check (and therefore `make release-check`/`make release-rehearse`)
 actually calls. It picks the right check for what `root` *is*: a genuine
 extracted archive/other non-git candidate tree (the tree *is* the
 release candidate) still gets the full fail-closed `scan_tree(...,
-closed_world=True)` check above -- every top-level entry must equal the
-allowlist, everything is walked. A **live git development worktree** is
-not that: it routinely accumulates gitignored/untracked build byproducts
-(`.dep/` dependency output, a built ROM/ELF, host tool binaries, stale
-`build/` output, etc.) that were never going to ship. For a worktree,
-`scan_source_release_candidate()` instead evaluates exactly the
-git-tracked-intersect-allowlist candidate set
-(`git_tracked_allowlisted_files()`) that
-`scripts/release_rehearsal/archive_rehearsal.py` itself would archive,
-running every hard-deny rule above against that exact set -- so the
-report is deterministic and independent of what happens to be lying
+closed_world=True)` check above -- every top-level entry must be covered
+by the allowlist, everything is walked. A **live git development
+worktree** is not that: it routinely accumulates gitignored/untracked
+build byproducts (`.dep/` dependency output, a built ROM/ELF, host tool
+binaries, stale `build/` output, etc.) that were never going to ship. For
+a worktree, `scan_source_release_candidate()` instead evaluates exactly
+the git-tracked-intersect-allowlist candidate set
+(`git_tracked_allowlisted_files()`, now an **exact**, not top-level-prefix,
+match) that `scripts/release_rehearsal/archive_rehearsal.py` itself would
+archive, running every hard-deny rule above against that exact set -- so
+the report is deterministic and independent of what happens to be lying
 around on disk, while any *tracked* malicious/unsafe content (including a
 tracked symlink) is still denied exactly as before.
 
@@ -176,19 +289,77 @@ tracked symlink) is still denied exactly as before.
   and asserts they match;
 * both temporary directories (and therefore both archives) are removed by
   their `with` context managers on **any** exit path, success or
-  exception -- nothing is ever left on disk, nothing is ever uploaded;
-* separately attempts a **clean recursive rebuild** rehearsal
-  (`rebuild_rehearsal_blocker()`): checks `git submodule status` for
-  `mgfembp` and reports the **precise** blocker (uninitialized submodule
-  content it deliberately does not fetch, plus the still-unresolved
-  provenance approval) rather than silently skipping or fetching
-  unreviewed content over the network;
-* explicitly documents, in both the report JSON and this document, the
-  **GitHub auto-generated source archive contradiction**: GitHub's
-  "Source code (zip/tar.gz)" archives are generated from the tree alone
-  and never include submodule contents, so that archive can never be this
-  repository's supported, complete source artifact while `mgfembp` is a
-  submodule.
+  exception -- nothing is ever left on disk, nothing is ever uploaded.
+
+### Immutable archive inputs
+
+When `root` is a real Git working tree, every byte the archive contains
+is read **exclusively** through Git plumbing
+(`scripts/release_rehearsal/git_source.py`'s `git ls-tree`/`git cat-file
+--batch` wrappers), keyed to an exact, resolved commit SHA -- **never** by
+opening the tracked file's path in the worktree. A tracked file edited on
+disk, or even `git add`ed, without being committed therefore cannot
+change a single byte of the archive: the archive is bound to the commit
+object, not the checkout or the index. `rehearse_archive_twice()` resolves
+that commit SHA **once**, before either of the two builds runs, so both
+builds target the exact same immutable commit. Only for a genuine
+already-extracted archive/non-git candidate tree (no `.git` at all -- the
+tree *is* the candidate) does this fall back to a raw filesystem walk of
+exactly the allowlisted entries; that path never claims a Git-derived
+identity without an explicit, exact 40-lowercase-hex `--target-sha`
+override bound into the manifest (see `resolve_target_sha` in
+`scripts/release_rehearsal/manifest.py`).
+`scripts/release_rehearsal/tests/test_archive_rehearsal.py`'s
+`GitBackedArchiveTests` mutate a tracked file directly on disk (unstaged),
+then stage it (`git add`, still uncommitted), and prove the archive
+hash is unaffected either way -- and that an actual commit *does* change
+it, and that an unsafe Git mode (a tracked symlink) or a gitlink (no blob
+content at all) are handled correctly even though fully committed.
+
+### Rebuild rehearsal
+
+Never describes a rebuild as proved/clean when it was not actually
+executed. `rebuild_rehearsal_blocker()` reports exactly one of four
+machine-distinct states:
+
+* **`"blocked"`** -- not even eligible to attempt: `mgfembp` is
+  uninitialized and/or its provenance is `redistribution_approved: false`
+  and/or its checked-out commit does not match the pinned/reviewed
+  commit. This never fetches, initializes, or approves anything --
+  `evaluate_rebuild_eligibility()` only ever *reads* `git submodule
+  status` and `docs/release_data/provenance/submodules.json`. **This is
+  this repository's real, current, expected state.**
+* **`"not_run"`** -- eligible, but no actual build was attempted (the
+  caller passed `attempt_build=False`, or omitted an explicit
+  `--build-command`/`--output-paths` for the real pinned rebuild). Kept
+  strictly distinct from `"blocked"` so a report can never conflate "we
+  refused to even try" with "we tried and it worked".
+* **`"failed"`** -- a build was actually attempted
+  (`run_build_twice()`) and either run exited non-zero, a declared output
+  was missing, or the two runs' output hashes disagreed.
+* **`"verified_success"`** -- both runs actually executed, both exited
+  `0`, and every declared output was present and byte-identical.
+
+`run_build_twice()` is the actual, executable "run a build command twice
+and hash its outputs" mechanism -- never a mocked boolean: each run copies
+the source into its own fresh temporary directory and invokes the given
+command via `subprocess.run`.
+`scripts/release_rehearsal/tests/test_archive_rehearsal.py`'s
+`RunBuildTwiceTests` exercise this directly with real (trivial,
+hermetic, synthetic) build commands, proving both the match and the
+mismatch/failure paths genuinely execute; `RebuildRehearsalBlockerTests`
+additionally construct a fully synthetic eligible (initialized/approved/
+identity-matched) submodule fixture and run the pinned double-build path
+against it end-to-end. The manifest's overall `"status"` is never
+`"mechanically eligible"` while this reports anything other than
+`"verified_success"` (see "Release manifest and identity checks" above).
+
+Also explicitly documents, in both the report JSON and this document, the
+**GitHub auto-generated source archive contradiction**: GitHub's
+"Source code (zip/tar.gz)" archives are generated from the tree alone
+and never include submodule contents, so that archive can never be this
+repository's supported, complete source artifact while `mgfembp` is a
+submodule.
 
 ## Workflow and Make integration
 
@@ -198,7 +369,23 @@ read`, checks out with `persist-credentials: false`, uses no secrets, and
 never uploads an artifact or mutates a tag/release/comment/protected
 environment (only a job summary, which is explicitly allowed). Its own
 permission/safety contract is itself mechanically checked by
-`scripts/release_rehearsal/workflow_guard.py`, run as a step inside the workflow.
+`scripts/release_rehearsal/workflow_guard.py` (via `make
+release-workflow-guard`, using the CLI's dynamic-JSON `workflow-guard`
+subcommand -- not a bare script invocation), run as a step inside the
+workflow. A dedicated step additionally runs `make
+release-check-expect-blocked` to **mechanically assert** the current
+expected status is `blocked`, rather than relying on `make
+release-check`'s always-exit-`0` prose. The job summary
+(`$GITHUB_STEP_SUMMARY`) is rendered **dynamically** from
+`scripts.release_rehearsal.cli summary`'s own canonical JSON (stdlib
+`json`, no prose parsing) -- see `render_markdown_summary()` and
+`scripts/release_rehearsal/tests/test_cli.py`'s
+`RenderMarkdownSummaryTests`, which prove this with a **synthetic**
+`"mechanically eligible"` report dict (this real repository's own status
+alone could never prove the eligible branch is not secretly hardcoded).
+If a future, separately-authorized change ever makes the candidate
+`"mechanically eligible"`, the summary renders that truthfully with no
+workflow edit required.
 
 Make targets (`release.mk`, included from the top-level `Makefile`):
 
@@ -208,8 +395,21 @@ Make targets (`release.mk`, included from the top-level `Makefile`):
   `check` (always expected to pass on a well-formed registry).
 * `make release-rehearse` -- the deterministic double-archive-build +
   rebuild-blocker rehearsal, folding in the current provenance/
-  source-guard findings.
+  source-guard/allowlist/version-ledger findings. Always exits `0` for a
+  well-formed report (see "Exit code contract" above).
 * `make release-check` -- the full release-manifest eligibility check.
+  Always exits `0` for a well-formed report.
+* `make release-check-require-eligible` / `make
+  release-rehearse-require-eligible` -- the machine-distinct
+  publication-eligibility gates (`cli ... --require-eligible`).
+  **These are intentionally expected to, and currently do, exit non-zero
+  (`1`) while the candidate is `blocked`.**
+* `make release-check-expect-blocked` / `make
+  release-rehearse-expect-blocked` -- the complementary expected-status
+  health-check targets (`cli ... --expect-status blocked`); exit `0` only
+  while truly `blocked`, exit `3` the moment that ever stops being true.
+* `make release-workflow-guard` -- the dynamic machine-JSON workflow
+  guard invocation.
 
 None of these targets are wired into `all`, `expansion-modern-*`, or any
 existing host/build/generated/upstream/default/runtime gate; they are
