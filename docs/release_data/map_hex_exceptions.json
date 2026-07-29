@@ -1,0 +1,55 @@
+{
+  "_comment": "Issue #9 verifier remediation: exact, file-level audit of every tracked .map/.hex path (scripts/release_rehearsal/source_guard.py hard-denies the .map/.hex extensions by default -- see classify_path_segments()). This file is the ONLY carve-out mechanism: an entry here excepts exactly one literal repo-relative path, never a directory or extension in general. Every one of the 12 paths currently tracked by 'git ls-files | grep -E \"\\.(map|hex)$\"' at the time of this audit is listed below with a factual rationale; there is no broad/implicit .map or .hex allowance anywhere else in the guard. A real build-generated linker map (e.g. fireemblem8.map, fireemblem8_relocs.map) is gitignored (see .gitignore's '*.map'/'*.hex' entries) and was never one of these 12 -- so it remains hard-denied by the default rule with no exception, exactly as intended.",
+  "audit_command": "git ls-files | grep -E '\\.(map|hex)$' | sort",
+  "audit_total_tracked_map_hex_paths": 12,
+  "exceptions": [
+    {
+      "path": "scripts/baseline/tests/fixtures/gba_header.hex",
+      "rationale": "Synthetic, hand-authored 30-byte hex-encoded fake GBA ROM header (title/game-code/maker-code text 'FIREEMBLEM2EBE8E01' followed by zero padding) used only as a unit-test fixture for scripts/baseline's header-parsing tests. Not derived from, or a dump of, any real ROM; not a build output."
+    },
+    {
+      "path": "scripts/baseline/tests/fixtures/valid.map",
+      "rationale": "Synthetic, hand-authored minimal GNU ld linker-map excerpt (a couple hundred bytes: one memory-configuration block plus one symbol) used only as a unit-test fixture for scripts/baseline's map-parsing tests. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/basic.map",
+      "rationale": "Synthetic, hand-authored minimal GNU ld linker-map fixture exercising scripts/linker_report's basic parsing path. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/dotprefix.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture specifically exercising scripts/linker_report's handling of dot-prefixed section/symbol names. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/malformed.map",
+      "rationale": "Deliberately-invalid, hand-authored plain-text fixture (\"This is not a valid GNU ld map file...\") used to exercise scripts/linker_report's actionable-error path for a malformed map. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/modern_overlays.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture modeling the modern-build overlay-region layout scripts/linker_report reports on. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/overflow.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture constructed to exercise scripts/linker_report's overlay/region overflow-detection path. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/overlay.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture modeling a single overlay region for scripts/linker_report's parsing tests. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/overlay_bounds_exceeded.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture constructed so an overlay region exceeds its bound, exercising scripts/linker_report's bounds-checking failure path. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/overlay_bounds_ok.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture constructed so an overlay region stays within its bound, exercising scripts/linker_report's bounds-checking success path. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/overlay_contained.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture modeling one overlay fully contained within its region for scripts/linker_report's parsing tests. Not a real linker build output."
+    },
+    {
+      "path": "scripts/linker_report/tests/fixtures/overlay_growth.map",
+      "rationale": "Synthetic, hand-authored linker-map fixture modeling overlay growth across builds for scripts/linker_report's parsing tests. Not a real linker build output."
+    }
+  ]
+}
