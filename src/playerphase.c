@@ -472,9 +472,19 @@ void DisplayActiveUnitEffectRange(ProcPtr proc)
     return;
 }
 
-/* Always-linked issue #6 danger/range overlay semantic probe (see
- * include/expansion_danger_overlay.h). Present and zero in every build. */
+/*
+ * Issue #6 danger/range overlay semantic probe (see
+ * include/expansion_danger_overlay.h). Defined -- present and zero -- in
+ * every modern build (FE8_EXPANSION_MODERN_BUILD=1) so the negative-control
+ * scenarios always find it, and additionally whenever the feature itself is
+ * enabled. The legacy default build (no modern -D flags, feature off) defines
+ * nothing here, so src/playerphase.o emits no ewram_data section and cannot
+ * become a silent orphan under ldscript.txt's per-object ewram_data
+ * enumeration (which does not list src/playerphase.o). Only ever written on
+ * the enabled feature path (FE8_EXPANSION_DANGER_OVERLAY_MENU), below. */
+#if FE8_EXPANSION_MODERN_BUILD || FE8_EXPANSION_DANGER_OVERLAY_MENU
 EWRAM_DATA struct ExpansionDangerOverlayProbe gExpansionDangerOverlayProbe = {0};
+#endif
 
 //! FE8U = 0x0801CCB4
 void PlayerPhase_DisplayDangerZone(void)

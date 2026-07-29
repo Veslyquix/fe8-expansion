@@ -36,8 +36,10 @@ PROBE_HEADER = REPO_ROOT / "include" / "expansion_danger_overlay.h"
 CC = shutil.which("gcc") or shutil.which("cc")
 ARM_CC = shutil.which("arm-none-eabi-gcc")
 NM = shutil.which("nm")
+OBJDUMP = shutil.which("objdump")
 
 FLAG = "FE8_EXPANSION_DANGER_OVERLAY_MENU"
+MODERN = "FE8_EXPANSION_MODERN_BUILD"
 
 
 def _skip_if_no_host_compiler():
@@ -78,6 +80,50 @@ def _referenced_symbol_names(obj):
         raise unittest.SkipTest("no host 'nm' available")
     proc = subprocess.run([NM, str(obj)], capture_output=True, text=True)
     return {line.split()[-1] for line in proc.stdout.splitlines() if line.split()}
+
+
+def _symbol_type(obj, name):
+    """The single-letter nm type for a symbol (e.g. 'D'/'d' data, 'U'
+    undefined reference). Raises if the symbol is absent entirely."""
+    if NM is None:
+        raise unittest.SkipTest("no host 'nm' available")
+    proc = subprocess.run([NM, str(obj)], capture_output=True, text=True)
+    for line in proc.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[-1] == name:
+            return parts[-2]
+    raise AssertionError("symbol %r not found in %s" % (name, obj))
+
+
+def _object_section_names(obj):
+    if OBJDUMP is None:
+        raise unittest.SkipTest("no host 'objdump' available")
+    proc = subprocess.run([OBJDUMP, "-h", str(obj)], capture_output=True, text=True)
+    names = set()
+    for line in proc.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[0].isdigit():
+            names.add(parts[1])
+    return names
+
+
+def _section_is_all_zero(obj, section):
+    if OBJDUMP is None:
+        raise unittest.SkipTest("no host 'objdump' available")
+    proc = subprocess.run([OBJDUMP, "-s", "-j", section, str(obj)],
+                          capture_output=True, text=True)
+    started = False
+    for line in proc.stdout.splitlines():
+        if line.startswith("Contents of section"):
+            started = True
+            continue
+        if started:
+            parts = line.split()
+            if parts and re.fullmatch(r"[0-9a-fA-F]+", parts[0]):
+                for tok in parts[1:5]:
+                    if re.fullmatch(r"[0-9a-fA-F]+", tok) and set(tok) != {"0"}:
+                        return False
+    return True
 
 
 def _probe_constants(work_dir):
@@ -181,6 +227,13 @@ class DangerOverlayWiringTests(unittest.TestCase):
         modern_mk = (REPO_ROOT / "modern.mk").read_text(encoding="utf-8")
         self.assertIn("-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU)", modern_mk)
 
+    def test_modern_mk_wires_the_modern_build_define(self):
+        """Every modern translation unit gets FE8_EXPANSION_MODERN_BUILD=1 so
+        the always-linked probe stays present in modern builds while the
+        legacy build keeps expansion_config.h's 0 fallback (no orphan)."""
+        modern_mk = (REPO_ROOT / "modern.mk").read_text(encoding="utf-8")
+        self.assertIn("-DFE8_EXPANSION_MODERN_BUILD=1", modern_mk)
+
     def test_no_new_line_comments_in_added_regions(self):
         # Our additions (wrapper, gated item, declaration) must use /* */ only.
         for path, needle in ((BMMENU_SRC, "ExpansionDangerOverlay_MenuSelect"),
@@ -209,7 +262,8 @@ class DangerOverlayWiringTests(unittest.TestCase):
 
 
 class DangerOverlayProbeTests(unittest.TestCase):
-    """The always-linked QoL semantic probe and its compile-gated writes."""
+    """The QoL semantic probe (always-linked in every modern build) and its
+    compile-gated writes; plus the standing anti-orphan legacy regression."""
 
     @classmethod
     def setUpClass(cls):
@@ -219,15 +273,61 @@ class DangerOverlayProbeTests(unittest.TestCase):
         self.assertTrue(PROBE_HEADER.is_file(),
                         "include/expansion_danger_overlay.h must exist")
 
-    def test_probe_symbol_is_always_linked_in_both_configs(self):
+    def test_probe_defined_in_every_modern_build(self):
+        """The negative-control probe is *defined* (present, 20-byte struct)
+        in every modern build: the modern default (macro on, feature off),
+        the modern feature-on build, and any feature-on build. This is what
+        the runtime negative/positive scenarios rely on always finding."""
         import tempfile
+        configs = (
+            ([MODERN + "=1"], "modern_default"),
+            ([MODERN + "=1", FLAG + "=1"], "modern_enabled"),
+            ([FLAG + "=1"], "feature_only"),
+        )
         with tempfile.TemporaryDirectory() as tmp:
-            for defs, tag in (([], "dis"), ([FLAG + "=1"], "en")):
+            for defs, tag in configs:
                 rc, out, obj = _compile(tmp, PLAYERPHASE_SRC, "pp_%s.o" % tag, defines=defs)
                 self.assertEqual(rc, 0, "compiling playerphase.c (%s) failed:\n%s" % (tag, out))
-                syms = _referenced_symbol_names(obj)
-                self.assertIn("gExpansionDangerOverlayProbe", syms,
-                              "%s build must always link the probe symbol" % tag)
+                self.assertEqual(_symbol_type(obj, "gExpansionDangerOverlayProbe").upper(),
+                                 "D", "%s build must *define* the probe symbol" % tag)
+                self.assertEqual(_symbol_size(obj, "gExpansionDangerOverlayProbe"), 5 * 4,
+                                 "%s probe must be the 5x u32 struct (20 bytes)" % tag)
+
+    def test_modern_default_probe_is_present_and_all_zero(self):
+        """modern default (FE8_EXPANSION_MODERN_BUILD=1, feature off) keeps the
+        always-linked probe present and its ewram_data all-zero -- the exact
+        negative-control precondition, proven from the compiled object."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            rc, out, obj = _compile(tmp, PLAYERPHASE_SRC, "pp_md.o", defines=[MODERN + "=1"])
+            self.assertEqual(rc, 0, out)
+            self.assertIn("gExpansionDangerOverlayProbe", _referenced_symbol_names(obj))
+            self.assertIn("ewram_data", _object_section_names(obj),
+                          "modern-disabled playerphase.o must emit the probe ewram_data")
+            self.assertTrue(_section_is_all_zero(obj, "ewram_data"),
+                            "modern-disabled probe (ewram_data) must be all-zero")
+
+    def test_legacy_like_build_emits_no_probe_and_no_ewram_orphan(self):
+        """Standing anti-orphan regression (issue #6 Sprint 1 narrow fix): a
+        legacy-like compile (NO modern macro, feature off) must define nothing
+        here, so src/playerphase.o emits NO ewram_data section and NO probe
+        symbol (neither definition nor reference). Otherwise playerphase.o's
+        ewram_data becomes a *silent orphan* under ldscript.txt, whose legacy
+        ewram_data output section enumerates objects one-by-one and does not
+        list src/playerphase.o. Proven from the compiled object with
+        objdump/nm, since agbcc is not part of this host suite."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            rc, out, obj = _compile(tmp, PLAYERPHASE_SRC, "pp_legacy.o")  # no -D flags
+            self.assertEqual(rc, 0, out)
+            self.assertNotIn("ewram_data", _object_section_names(obj),
+                             "legacy-like playerphase.o must emit no ewram_data section "
+                             "(else it is a silent orphan under ldscript.txt)")
+            probe_syms = [n for n in _referenced_symbol_names(obj)
+                          if "DangerOverlayProbe" in n]
+            self.assertEqual(probe_syms, [],
+                             "legacy-like playerphase.o must neither define nor "
+                             "reference the probe; found: %r" % probe_syms)
 
     def test_probe_writes_are_compile_gated(self):
         """Every probe field write in the shared danger-zone path must live
@@ -240,8 +340,10 @@ class DangerOverlayProbeTests(unittest.TestCase):
             ungated = re.sub(
                 r"#if FE8_EXPANSION_DANGER_OVERLAY_MENU.*?#endif", " ", text, flags=re.DOTALL)
             ungated = _strip_c_comments(ungated)
-            # The probe struct definition is allowed ungated (always-linked);
-            # field writes (".<field>Count++/=") must not appear ungated.
+            # The probe struct definition may sit outside the feature-gated
+            # region (it is always-linked in every modern build, gated on
+            # FE8_EXPANSION_MODERN_BUILD || the feature flag); only field
+            # writes (".<field>Count++/=") must not appear ungated.
             self.assertNotRegex(
                 ungated, r"gExpansionDangerOverlayProbe\.\w+\s*(\+\+|=)",
                 "%s writes the danger-overlay probe outside a gated region" % src.name)

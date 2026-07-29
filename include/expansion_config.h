@@ -141,6 +141,30 @@
 #define FE8_EXPANSION_SAVE_COMPAT_EPOCH 1
 #endif
 
+/* --- Internal modern-build discriminator (see modern.mk) ---------------- */
+/*
+ * Build-provenance flag, NOT a user-facing feature flag: the modern build
+ * (modern.mk) supplies -DFE8_EXPANSION_MODERN_BUILD=1 for every one of its
+ * translation units, while the legacy agbcc/old_agbcc build (which never
+ * receives the modern -D flags) keeps the 0 fallback below. It is
+ * deliberately NOT folded into FE8_EXPANSION_CONFIG_FINGERPRINT and never
+ * touches save-compatibility or ROM identity -- it only lets always-linked
+ * modern-only negative-control scaffolding (e.g. the issue #6 danger/range
+ * overlay semantic probe in src/playerphase.c) stay present and zero in
+ * every modern build without emitting an unreferenced legacy ewram_data
+ * object -- a silent orphan under ldscript.txt's per-object ewram_data
+ * enumeration, which does not list src/playerphase.o. Do not gate feature
+ * behaviour on this; gate always-linked provenance/negative-control state
+ * only (feature writes stay gated on the feature flags below).
+ */
+#ifndef FE8_EXPANSION_MODERN_BUILD
+#define FE8_EXPANSION_MODERN_BUILD 0
+#endif
+
+#if (FE8_EXPANSION_MODERN_BUILD != 0) && (FE8_EXPANSION_MODERN_BUILD != 1)
+#error "FE8_EXPANSION_MODERN_BUILD must be 0 or 1"
+#endif
+
 /* --- Starter-feature opt-in switches (issue #6) ------------------------- */
 /* See config.mk EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE, and
  * EXPANSION_DANGER_OVERLAY_MENU. */

@@ -1233,6 +1233,14 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
 	-DFE8_EXPANSION_MECHANICS_SAMPLE=$(EXPANSION_MECHANICS_SAMPLE) \
 	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU)
+
+  # Internal modern-build provenance discriminator (NOT a user feature flag,
+  # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
+  # every modern translation unit so always-linked negative-control state
+  # (e.g. the issue #6 danger/range overlay probe in src/playerphase.c) stays
+  # present in every modern build, while the legacy build keeps
+  # include/expansion_config.h's 0 fallback and emits no orphan ewram_data.
+  MODERN_CFLAGS += -DFE8_EXPANSION_MODERN_BUILD=1
  endif
 endif
 
@@ -1286,6 +1294,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
 		printf '%s\n' 'mechanics_sample=$(EXPANSION_MECHANICS_SAMPLE)'; \
 		printf '%s\n' 'danger_overlay_menu=$(EXPANSION_DANGER_OVERLAY_MENU)'; \
+		printf '%s\n' 'modern_build=1'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"

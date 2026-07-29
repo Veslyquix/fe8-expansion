@@ -821,7 +821,15 @@ real emulation, exactly like the Chapter 2 launcher's own
 `debugtools-ch4-prep-launch-modern-release.json` replays the identical
 frame-for-frame input and asserts every probe stays `0x00000000`,
 confirming the second launcher is compiled out too (mirroring the Chapter 2
-release proof).
+release proof). Unlike the three post-world-map-lock release negatives (hub,
+map, prep) -- whose vacuous frozen-screen (`d11078d0`) oracle was removed and
+which the standing guard
+`test_release_negatives_forbid_any_framebuffer_and_require_semantic_probes`
+now forbids from carrying any framebuffer -- this launch scenario stops at the
+title/hub boot-commit stage before any world-map traversal, so it legitimately
+retains two ordinary pre-lock framebuffer captures (`hub-closed-before-hotkey`,
+`hub-opened-after-pulse`) of the vanilla title path, distinct from that removed
+frozen-screen hash.
 
 **Scope of this launch scenario, and the separate positive scenario that
 completes it**: `debugtools-ch4-prep-launch-modern-debug.json` deliberately

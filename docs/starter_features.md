@@ -148,15 +148,23 @@ map-menu command.
 
 ### QoL semantic probe
 
-`include/expansion_danger_overlay.h` declares an always-linked, zero-init EWRAM
+`include/expansion_danger_overlay.h` declares a zero-init EWRAM
 `gExpansionDangerOverlayProbe` recording semantic counters only (never a
 pointer): menu-select count, danger-display count, last nonzero danger-range
-tile count, a range-graphics-active flag, and cancel/return count. Every write
-is guarded by `FE8_EXPANSION_DANGER_OVERLAY_MENU`, so the default build keeps
-vanilla `playerphase`/`bmmenu` **behaviour** while the probe symbol still links
-(all-zero) for negative-control scenarios. The default-disabled runtime
-negatives prove exactly that: the same clean route reaches the same interactive
-map with every probe field 0.
+tile count, a range-graphics-active flag, and cancel/return count. It is always
+linked in every **modern** build -- defined when `FE8_EXPANSION_MODERN_BUILD`
+(which `modern.mk` sets for every modern translation unit) *or* the feature
+flag is set -- so the modern default/profile ROMs keep the same
+`src/playerphase.o` at the same address. The legacy default build (no modern
+`-D` flags, feature off) defines it nowhere, so `src/playerphase.o` emits no
+`ewram_data` section and cannot become a silent orphan under `ldscript.txt`'s
+per-object `ewram_data` enumeration, which does not list `src/playerphase.o`.
+Every write is guarded by `FE8_EXPANSION_DANGER_OVERLAY_MENU`, so a
+default-disabled *modern* build keeps vanilla `playerphase`/`bmmenu`
+**behaviour** while the probe symbol still links (all-zero) for
+negative-control scenarios. The default-disabled runtime negatives prove
+exactly that: the same clean route reaches the same interactive map with every
+probe field 0.
 
 ## Runtime evidence
 

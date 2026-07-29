@@ -80,13 +80,15 @@ $ python3 -m pytest tools/gba-playtest/tests/test_expansion_danger_overlay.py -q
 ```
 Proves from compiled objects: disabled gMapMenuItems == vanilla size, enabled ==
 +1 MenuItemDef within MENU_ITEM_MAX, compile-gated wrapper (default bmmenu has
-no reference) delegating to the vanilla effect, always-linked QoL probe with
-compile-gated writes, block-comment-only additions, arm AAPCS compile.
+no reference) delegating to the vanilla effect, a QoL probe defined + all-zero
+in every modern build yet absent (no `ewram_data` orphan) in a legacy-like
+build, compile-gated writes, block-comment-only additions, arm AAPCS compile.
 
 ### D. Semantic runtime harness
-* Reused issue #13 gba-playtest (no new framework). Always-linked semantic
-  probes (`gExpansionMechanicsProbe`, `gExpansionDangerOverlayProbe`);
-  pointer-oracle audit green.
+* Reused issue #13 gba-playtest (no new framework). Semantic probes always
+  linked in every modern build (`gExpansionMechanicsProbe`, a modern-only
+  object; `gExpansionDangerOverlayProbe`, gated on `FE8_EXPANSION_MODERN_BUILD`
+  so the legacy default stays orphan-free); pointer-oracle audit green.
 * Mechanics-hook scenario + fingerprint (positive) and negative control, from
   **real libmGBA runs** of built modern debug ROMs over the Chapter 4 combat
   navigation:
@@ -278,6 +280,19 @@ screen. New standing guard
 `test_release_negatives_forbid_any_framebuffer_and_require_semantic_probes`
 rejects any reintroduced framebuffer/pointer oracle. **No hash was
 refreshed** -- the framebuffer oracle was deleted, not re-baselined.
+
+That standing guard scopes to exactly those **three post-world-map-lock**
+release negatives (hub, map, prep) -- the ones whose input traverses the
+opening world-map sequence the pre-fix `-O2` build froze. It deliberately
+excludes `debugtools-ch4-prep-launch-modern-release.json`, which is *not* a
+post-lock scenario: it stops at the title/hub boot-commit stage before any
+world-map traversal, so its two retained framebuffer hashes
+(`hub-closed-before-hotkey` `fnv1a64-rgb24:3855f352b10ce427` and
+`hub-opened-after-pulse` `fnv1a64-rgb24:58d0b59d175916c8`) are ordinary
+pre-lock title/hub captures of the vanilla title path -- they differ from each
+other, so nothing is frozen -- never the vacuous d110
+(`fnv1a64-rgb24:d11078d0ec60076d`) frozen-screen oracle. Those two hashes are
+untouched by this narrow fix (no scenario/fingerprint baseline changed).
 
 ### B. Savecompat normalized SRAM: exclude the diagnostic configFingerprint
 

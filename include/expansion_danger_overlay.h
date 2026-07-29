@@ -2,11 +2,15 @@
 #define GUARD_EXPANSION_DANGER_OVERLAY_H
 
 /*
- * Always-linked semantic probe for the issue #6 player danger/range overlay
- * (see docs/starter_features.md). Zero-initialized EWRAM in every build; only
- * ever written on the enabled feature path (guarded by
- * FE8_EXPANSION_DANGER_OVERLAY_MENU), so a default/disabled build leaves it
- * all-zero for negative-control scenarios. Records semantic counters only --
+ * Semantic probe for the issue #6 player danger/range overlay (see
+ * docs/starter_features.md). Zero-initialized EWRAM that is always linked in
+ * every modern build (FE8_EXPANSION_MODERN_BUILD), and additionally whenever
+ * the feature is enabled, so a default/disabled modern build leaves it
+ * all-zero for negative-control scenarios. The legacy default build (no
+ * modern -D flags, feature off) defines it nowhere, so src/playerphase.o
+ * emits no ewram_data section and cannot become a silent orphan under the
+ * legacy ldscript.txt. Only ever written on the enabled feature path (guarded
+ * by FE8_EXPANSION_DANGER_OVERLAY_MENU). Records semantic counters only --
  * never a pointer value. Expects global.h (u32) to have been included first.
  */
 
