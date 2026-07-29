@@ -18,6 +18,7 @@ Do not hand-edit the text between the two HTML comment markers below --
 ### Internal
 
 - Add a read-only release/publication rehearsal system (policy, changelog fragments, release manifest, migration registry, source-release guard/provenance, deterministic archive rehearsal, and a read-only CI workflow); publication remains mechanically BLOCKED pending human license/provenance approval. (#9)
+- Remediate all ten independent-verifier findings against the read-only release/publication rehearsal system: exact per-member source allowlist and provenance coverage, expanded hard-deny rules with an audited map/hex exception list, immutable Git-blob-bound archive rehearsal, a truthful four-state rebuild rehearsal, additional manifest consistency validators, a machine-distinct exit/status contract, a dynamically-rendered CI job summary, a hardened workflow guard, and fixed broken docs links; publication remains mechanically BLOCKED throughout. (#9)
 <!-- release-rehearsal:unreleased:end -->
 
 ## [0.1.0] - baseline
