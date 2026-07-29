@@ -1,13 +1,14 @@
-# Starter features (issue #6 foundation)
+# Starter features (issue #6)
 
-Three independent, default-off build flags add an opt-in *runtime/config/hook/QoL*
-foundation on top of the existing modern build. Everything here is foundation
-only: no generated-content example ships in this sprint (that waits for issue
-#10's typed expanded IDs -- see the non-goals below).
+Four independent, default-off build flags add an opt-in
+*runtime/config/hook/QoL/content* starter surface on top of the existing modern
+build. Sprint 1 delivered the mechanics seam and the player QoL overlay;
+Sprint 2 adds the bundled **generated-data content example** now that issue
+#10's typed expanded item IDs are on `master`.
 
 Every flag defaults to `0`, so a default build (and the legacy agbcc build,
-which never receives the modern `-D` flags) links none of these features and is
-byte/behaviour identical to today's ROM.
+which never receives the modern `-D` flags) links none of these features and
+keeps vanilla behaviour.
 
 ## Build flags
 
@@ -16,12 +17,15 @@ byte/behaviour identical to today's ROM.
 | `EXPANSION_MECHANICS_HOOKS` | `FE8_EXPANSION_MECHANICS_HOOKS` | `0` | Link the public battle-stat mechanics hook registry. |
 | `EXPANSION_MECHANICS_SAMPLE` | `FE8_EXPANSION_MECHANICS_SAMPLE` | `0` | Register the bundled sample mechanic. **Requires `EXPANSION_MECHANICS_HOOKS=1`.** |
 | `EXPANSION_DANGER_OVERLAY_MENU` | `FE8_EXPANSION_DANGER_OVERLAY_MENU` | `0` | Expose the player-facing danger/range overlay map-menu surface. |
+| `EXPANSION_STARTER_CONTENT` | `FE8_EXPANSION_STARTER_CONTENT` | `0` | Link the bundled generated-data content example. **Requires `EXPANSION_MECHANICS_HOOKS=1` and `FE8_ITEM_ID_CAP >= 0xCE`.** |
 
 Opt in on the `make` command line, e.g.:
 
 ```bash
 make expansion-modern-rom EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1
 make expansion-modern-rom EXPANSION_DANGER_OVERLAY_MENU=1
+FE8_ITEM_ID_CAP=0xCE make expansion-modern-rom \
+    EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1
 ```
 
 ### Validation
@@ -35,10 +39,24 @@ compile or link:
   error (the sample is registered *through* the registry, which is not linked
   when hooks are off). The same relationship is a compile-time `#error` in
   `include/expansion_config.h` as defence in depth.
+* `EXPANSION_STARTER_CONTENT=1` carries **two** dependencies, each rejected
+  with its own actionable message and each also a compile-time `#error`:
+  * `EXPANSION_MECHANICS_HOOKS=1` (`include/expansion_config.h`) -- the
+    bundled content mechanic is registered through the same public registry;
+  * an active item ID cap that actually reaches `ITEM_EXPANSION_CE`
+    (`include/expansion_starter_content.h`, which owns the `id_space.h`
+    include). `modern.mk` passes the build's live `FE8_ITEM_ID_CAP` to
+    `expansion_config.py` as `--item-id-cap`, so Python, Make and C all fail
+    the same way.
+
+  The dependency is deliberately **one-way**: nothing in the issue #10
+  ID-space platform depends on this flag, so an expanded-cap build with
+  `EXPANSION_STARTER_CONTENT=0` is still a valid, independently testable
+  platform build at any cap.
 
 ### Config identity and save format
 
-The three flags are folded into the SHA-256 config-identity fingerprint
+All four flags are folded into the SHA-256 config-identity fingerprint
 (`FE8_EXPANSION_CONFIG_FINGERPRINT`, embedded in every modern ROM's
 `ExpansionMetadata`) and appear as explicit fields in the generated
 `expansion_build_metadata.json`. Toggling any flag therefore changes the
@@ -120,6 +138,94 @@ arena), so a forecast matches the real bout.
 1. Write a `static void MyMechanic(struct BattleUnit* subject, const struct ExpansionMechanicsContext* ctx)` that adjusts `subject`'s already-computed battle stats within bounds.
 2. Register it (once, at init) via `ExpansionMechanicsRegister("my.key", "My Label", MyMechanic)`.
 3. Gate it behind your own build flag; do **not** edit `ComputeBattleUnitStats()` directly.
+
+## Bundled content example (Sprint 2)
+
+`EXPANSION_STARTER_CONTENT=1` links the framework's one shipped demonstration
+that the three public seams compose with **nothing special-cased**:
+
+| Seam | What it contributes |
+|---|---|
+| **config** | `FE8_EXPANSION_STARTER_CONTENT`, a strict 0/1 flag with the two dependencies above. |
+| **data** | The framework-authored item record `ITEM_EXPANSION_CE`, authored in `src/data/items_expansion.json` and emitted into `gItemData[ITEM_EXPANSION_CE]` by the ordinary generated-data pipeline. No generated C is ever hand-edited. |
+| **hook** | One mechanic registered through the public `ExpansionMechanicsRegister()` API from the single existing `ExpansionMechanicsInstallBuiltins()` install point. `src/bmbattle.c` is untouched. |
+
+### The authored record
+
+| Field | Value | Why |
+|---|---|---|
+| `item` | `ITEM_EXPANSION_CE` | The typed, symbolic expansion ID; no raw `0xCE` appears in any issue #6 implementation source. |
+| `nameTextId` | `MSG_EXPANSION_STARTER_ITEM_NAME` | Original message, authored in `texts/texts.txt`. |
+| `descTextId` | `MSG_EXPANSION_STARTER_ITEM_DESC` | Original message. |
+| `useDescTextId` | `MSG_EXPANSION_STARTER_ITEM_USE_DESC` | Original message. |
+| `weaponType` | `ITYPE_ITEM` | A real non-weapon item, not a blank slot. |
+| `attributes` | `IA_UNSELLABLE` | A real, meaningful attribute bit. |
+| `maxUses` | `3` | Observable end-to-end: `MakeNewItem()` packs it, so every runtime item halfword is `0x03CE`. |
+| `iconId` | `222` | An **existing** icon slot. |
+
+**Copyright hygiene.** The name/description/use-description are new,
+framework-authored English strings added through the repository's own text
+pipeline (`texts/texts.txt` -> `scripts/texttools/textprocess.py` ->
+`include/constants/msg.h` + `src/msg_data.c`) -- the same supported path the
+issue #2 save-compatibility UI already used. No vanilla message index, item
+name or icon artwork is reused as a shortcut, and **no new graphics asset is
+added**: `iconId 222` is the vanilla data's own unused, purely geometric
+placeholder tile (`item_icon_unused_9`, a hollow box with a diagonal cross),
+chosen deliberately because it depicts nothing.
+
+Text IDs are authored **symbolically**. `src/data/items_expansion.json` names
+`MSG_*` constants, which the items schema resolves against
+`include/constants/msg.h`; an unknown symbol fails the data build with an
+actionable diagnostic instead of silently repointing the item at whatever text
+later lands on that index. The 206 vanilla records keep their numeric form and
+still round-trip byte-for-byte against `src/data_items.c`.
+
+**Cost of the three new messages.** They are appended to the shared,
+Huffman-compressed message table, so they exist (unreferenced) in every build,
+including default ones. That is a few hundred ROM bytes and no RAM; it changes
+no decoded string, no layout and no behaviour. See "Baseline review" in
+`reports/issue6_closure.md` for the exact, field-level review of the two
+transient menu framebuffers this shifted.
+
+### The bundled mechanic
+
+`include/expansion_starter_content.h` + `src/expansion_starter_content.c`.
+While the subject carries the bundled item, "Sample Charm Guard" grants a
+fixed `+5` `battleAvoidRate`, clamped at `120` so the bonus is strictly
+bounded. Inventory membership is read with the production accessor
+`GetUnitItemSlot()`; the item is named symbolically and held in a typed
+`ItemId`.
+
+| Property | Contract |
+|---|---|
+| Registration | Only through the public `ExpansionMechanicsRegister()`. It never touches the registry's internals. |
+| Install point | The one existing `ExpansionMechanicsInstallBuiltins()`. No second router, no second registry. |
+| Stat | `battleAvoidRate` -- deliberately **different** from the content-free sample's `battleDefense`, so both are independently observable in one apply and the pre-existing sample keeps its exact previous standalone semantics. |
+| Apply-order safety | Reads only the subject's own inventory and its own already-computed stat, never `context->opponent->battle*`, so it is correct under both apply orders. |
+| Disabled | The whole translation unit compiles to stubs with **zero** data/bss/rodata, so a default build's RAM layout -- and every committed scenario probe address -- is unchanged. |
+| Save format | Untouched. The item ID travels in the existing 14-bit item fields; no new save field, no epoch bump. |
+
+### Runtime evidence
+
+The content example rides the **existing** issue #10 item-expansion gate
+(`expansion-modern-itemexpansion-check`) and its existing ROM build -- no
+second harness, no second ROM, no extra CI command. `run_item_expansion_checks.py`
+reads every expected value from the authored source of truth
+(`src/data/items_expansion.json` through the generated-data schema, the
+`MSG_*`/`ITYPE_*`/`IA_*`/`CHARACTER_*` headers, and the content module's own
+bonus constants), so ROM-vs-data drift fails the gate.
+
+| Config | Proves |
+|---|---|
+| debug (`--require-stages all`) | The authored record end to end (`GetItemData`, `MakeNewItem`, event `GIVEITEM`, item menu + stat-screen draw, MultiArena/link, game-save and suspend roundtrips, all carrying `0x03CE`), **plus** the content flag, the typed item ID, both mechanics registered through the public API, and the mechanic firing for the item's bearer only. |
+| release (`--require-stages boot`) | The runtime record and the whole content config/registry half, in a real release ROM. |
+
+The in-run negative control is a second **deployed** unit that never receives
+the item: same apply, `+0` avoid, while the content-free sample's `+1` defence
+lands on both. The default-disabled negative control is the pre-existing
+`starter-hook-*-negative` pair, which still asserts `registerOkCount=1` on the
+flags-on profile ROM -- that is exactly what proves the content mechanic is
+**not** registered when the content flag is off.
 
 ## Player danger/range overlay
 
@@ -245,13 +351,19 @@ the default flags-off ROM -- hard-locked on the world map. It is fixed in
 
 ## Non-goals (this sprint)
 
-* **No generated-content example -- issue #10 is NOT complete.** Sprint 1
-  delivers the mechanics seam and the player QoL overlay only; it ships no new
-  chapters, units, classes, items or scripted events, and nothing here should
-  be read as content coverage. Content waits for issue #10's typed expanded IDs
-  landing on `master`; no unmerged code is copied. See
-  `reports/issue6_foundation_evidence.md` for the #10 dependency and the
-  read-only monitor SHA. The sample mechanic is content-free by construction --
-  it exists solely to exercise the public registration API.
-* No raw numeric content IDs, no second router, no range-math rewrite, no
-  UI/convoy/debug-editor growth, no persisted option, no save-epoch bump.
+* **Exactly one content example, and it is an example.** Sprint 2 ships the
+  single bundled item + its one mechanic. It ships no new chapters, units,
+  classes, scripted events or additional items, and nothing here should be read
+  as content coverage. The sample mechanic stays content-free by construction;
+  the content mechanic is the only item-aware one.
+* No growth UI, no convoy feature, no debug editor, no persisted option, no
+  additional QoL surface, no broad rewrite.
+* No raw numeric content IDs, no hand-edited generated C, no second
+  router/registry/harness, no range-math rewrite, no save field and no
+  save-epoch bump (`EXPANSION_SAVE_COMPAT_EPOCH` stays `1`).
+* No new graphics asset and no reuse of a vanilla message/name/icon design for
+  the authored content.
+
+Sprint 1's own foundation evidence stays in
+`reports/issue6_foundation_evidence.md`; the Sprint 2 content closure mapping
+is `reports/issue6_closure.md`.

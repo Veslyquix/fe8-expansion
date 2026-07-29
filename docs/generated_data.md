@@ -1072,7 +1072,11 @@ vanilla record references directly); nullable `statBonuses`/
 (`u8`/`u16`, and the `range.min`/`range.max` nibble bounds of `[0, 15]`);
 `nameTextId`/`descTextId`/`useDescTextId` bounded by the live
 `MSG_COUNT` (read via the new generic `extract_define_constant()`
-helper, since `MSG_COUNT` is a `#define`, not an enum entry); `iconId`
+helper, since `MSG_COUNT` is a `#define`, not an enum entry) and
+optionally authored as symbolic `MSG_*` names resolved through the
+companion `extract_define_constants()` helper against
+`include/constants/msg.h` (the form framework-authored records should
+use -- see `docs/generated_data_tutorial.md`); `iconId`
 bounded by a count of `u8 item_icon_*[] = INCBIN_U8(".../*.4bpp")`
 declarations in `src/data/data_item_icon.c` -- the strongest
 deterministic *source-level* bound available, since the real built

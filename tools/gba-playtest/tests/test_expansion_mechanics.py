@@ -21,6 +21,11 @@ C_FIXTURES_DIR = Path(__file__).resolve().parent / "c"
 
 MECHANICS_SRC = REPO_ROOT / "src" / "expansion_mechanics.c"
 MECHANICS_HEADER = REPO_ROOT / "include" / "expansion_mechanics.h"
+# The registry's single built-in install point also installs the issue #6
+# bundled content example (a no-op stub unless FE8_EXPANSION_STARTER_CONTENT
+# is 1), so the real content translation unit is linked here too -- the same
+# "execute the real, unmodified sources" rule this module already follows.
+CONTENT_SRC = REPO_ROOT / "src" / "expansion_starter_content.c"
 BMBATTLE_SRC = REPO_ROOT / "src" / "bmbattle.c"
 
 REGISTRY_DRIVER = C_FIXTURES_DIR / "expansion_mechanics_driver.c"
@@ -109,9 +114,12 @@ class MechanicsRegistryHostTests(unittest.TestCase):
     def _build_and_run(self, tmp, defines, driver, exe):
         rc, out, mech_obj = _compile(tmp, MECHANICS_SRC, "mech.o", defines=defines)
         self.assertEqual(rc, 0, "compiling src/expansion_mechanics.c failed:\n" + out)
+        rc, out, content_obj = _compile(tmp, CONTENT_SRC, "content.o", defines=defines)
+        self.assertEqual(
+            rc, 0, "compiling src/expansion_starter_content.c failed:\n" + out)
         rc, out, drv_obj = _compile(tmp, driver, "driver.o", defines=defines)
         self.assertEqual(rc, 0, "compiling %s failed:\n%s" % (driver.name, out))
-        rc, out, exe_path = _link(tmp, [mech_obj, drv_obj], exe)
+        rc, out, exe_path = _link(tmp, [mech_obj, content_obj, drv_obj], exe)
         self.assertEqual(rc, 0, "linking failed:\n" + out)
         rc, out = _run(exe_path)
         return rc, out

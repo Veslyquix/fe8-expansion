@@ -103,6 +103,22 @@ Source: `src/data/items.json` (the `items` array, one record per
 live `MSG_COUNT` bound; `attributes`/`requiredWexp`/`weaponType` are
 resolved symbolically. Output: `data_items.c`.
 
+Text IDs may also be authored **symbolically** as `MSG_*` names resolved
+against `include/constants/msg.h`:
+
+```json
+{ "item": "ITEM_EXPANSION_CE", "nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME" }
+```
+
+Use the symbolic form for any framework-authored (non-vanilla) record: it
+binds the record to a message the text pipeline actually emits, so removing
+or renaming that message fails the data build with an actionable diagnostic
+instead of silently repointing the item at whatever text later lands on that
+number. Author the message itself in `texts/texts.txt` and regenerate with
+`make src/msg_data.c`. The 206 vanilla records keep the plain-integer form
+and still round-trip byte-for-byte. See `docs/starter_features.md` for the
+bundled worked example.
+
 ### Add or modify a **support** (`--table supports`)
 
 Source: `src/data/supports.json`. A record is one owner and its parallel
