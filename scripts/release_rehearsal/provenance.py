@@ -139,11 +139,101 @@ def evaluate(entries: List[Dict]) -> Tuple[str, List[str]]:
     return status, sorted(reasons)
 
 
+def _entry_covers_path(entry_path: str, candidate_path: str) -> bool:
+    """True if `entry_path` is either exactly `candidate_path`, or a
+    directory-prefix ancestor of it (`candidate_path` starts with
+    `entry_path + "/"`). This is the exact-or-directory-prefix "coverage"
+    relationship every provenance-vs-allowlist check below is built from:
+    it is what lets a small number of hand-reviewed, category-level
+    provenance entries (e.g. a single "src" entry) legitimately cover
+    every one of the many thousands of exact per-file entries in
+    docs/release_data/source_allowlist.json (see
+    scripts/release_rehearsal/allowlist.py) without hand-authoring a
+    separate, near-duplicate provenance record for every single file --
+    an "equally strong binding" to a literal one-entry-per-file bijection,
+    since `find_ambiguous_entries`/`find_ghost_entries`/`coverage_gaps`
+    together guarantee every allowlisted path is covered by *exactly*
+    one entry, no entry covers *nothing*, and no two entries overlap."""
+    return candidate_path == entry_path or candidate_path.startswith(entry_path + "/")
+
+
 def coverage_gaps(entries: List[Dict], required_paths: List[str]) -> List[str]:
     """Every path in required_paths (typically the source allowlist) must be
-    covered by at least one provenance entry; report exact gaps."""
-    covered = {entry["path"] for entry in entries}
-    return sorted(path for path in required_paths if path not in covered)
+    covered (exactly, or by directory-prefix ancestry -- see
+    `_entry_covers_path`) by at least one provenance entry; report exact
+    gaps: a required path no entry covers at all."""
+    roots = [entry["path"] for entry in entries]
+    return sorted(
+        candidate for candidate in required_paths
+        if not any(_entry_covers_path(root, candidate) for root in roots)
+    )
+
+
+def find_ghost_entries(entries: List[Dict], required_paths: List[str]) -> List[str]:
+    """A "ghost" entry covers zero of `required_paths` -- e.g. a stale
+    provenance record left behind after the directory/file it described
+    was renamed or removed from the allowlist. Every entry must pull its
+    weight; an entry that matches nothing is exactly as much a
+    consistency defect as a gap is."""
+    ghosts = []
+    for entry in entries:
+        root = entry["path"]
+        if not any(_entry_covers_path(root, candidate) for candidate in required_paths):
+            ghosts.append(root)
+    return sorted(ghosts)
+
+
+def find_duplicate_entry_paths(entries: List[Dict]) -> List[str]:
+    """Two (or more) entries recording the exact same `path` -- always a
+    defect (ambiguous which record is authoritative), regardless of
+    whether their other fields happen to agree."""
+    seen = set()
+    dupes = set()
+    for entry in entries:
+        path = entry["path"]
+        if path in seen:
+            dupes.add(path)
+        seen.add(path)
+    return sorted(dupes)
+
+
+def find_ambiguous_entries(entries: List[Dict]) -> List[str]:
+    """Two entries whose `path`s are in a directory-ancestor relationship
+    (one is a prefix of the other, e.g. "src" and "src/lib") -- a file
+    under both could be claimed by either entry, which is exactly the
+    "duplicate/ambiguous coverage" issue #9's exact-provenance-binding
+    requirement forbids. (An *exact* duplicate path is reported by
+    `find_duplicate_entry_paths` instead, so this only reports genuine
+    ancestor/descendant overlaps between two distinct path strings.)"""
+    roots = sorted({entry["path"] for entry in entries})
+    ambiguous = set()
+    for index, first in enumerate(roots):
+        for second in roots[index + 1:]:
+            if _entry_covers_path(first, second) or _entry_covers_path(second, first):
+                ambiguous.add(first)
+                ambiguous.add(second)
+    return sorted(ambiguous)
+
+
+def evaluate_coverage(entries: List[Dict], required_paths: List[str]) -> List[str]:
+    """One combined, human-readable reason list covering every provenance-
+    vs-allowlist coverage defect class: exact-duplicate entry paths,
+    ambiguous/overlapping entry paths, missing coverage (a gap), and ghost
+    entries (covering nothing). An empty return means the coverage is a
+    clean bijection (or the "equally strong" exact/prefix-ancestor
+    binding this module implements -- see `_entry_covers_path`)."""
+    reasons: List[str] = []
+    reasons += [f"duplicate provenance entry path: {path}" for path in find_duplicate_entry_paths(entries)]
+    reasons += [
+        f"ambiguous/overlapping provenance coverage: {path}"
+        for path in find_ambiguous_entries(entries)
+    ]
+    reasons += [f"missing provenance entry for {path}" for path in coverage_gaps(entries, required_paths)]
+    reasons += [
+        f"ghost provenance entry (covers no allowlisted path): {path}"
+        for path in find_ghost_entries(entries, required_paths)
+    ]
+    return sorted(reasons)
 
 
 def main(argv=None) -> int:
@@ -166,10 +256,10 @@ def main(argv=None) -> int:
         except (OSError, json.JSONDecodeError) as error:
             print(f"error: {args.allowlist}: not valid JSON: {error}", file=sys.stderr)
             return 2
-        gaps = coverage_gaps(entries, allowlist.get("paths", []))
-        if gaps:
+        coverage_reasons = evaluate_coverage(entries, allowlist.get("paths", []))
+        if coverage_reasons:
             status = "blocked"
-            reasons = sorted(set(reasons) | {f"missing provenance entry for {path}" for path in gaps})
+            reasons = sorted(set(reasons) | set(coverage_reasons))
 
     print(f"provenance status: {status}")
     for reason in reasons:

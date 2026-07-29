@@ -147,6 +147,97 @@ class CoverageGapsTests(unittest.TestCase):
         gaps = prov.coverage_gaps(entries, ["src", "docs"])
         self.assertEqual(gaps, [])
 
+    def test_directory_prefix_covers_many_exact_files(self):
+        """issue #9 verifier remediation: a single category-level entry
+        (e.g. "src") must cover every exact per-file allowlist path
+        nested under it -- the "equally strong" exact-or-directory-prefix
+        binding this module implements instead of one near-duplicate
+        record per file."""
+        entries = [_base_entry(path="src")]
+        gaps = prov.coverage_gaps(entries, ["src/main.c", "src/lib/helper.c", "src"])
+        self.assertEqual(gaps, [])
+
+    def test_sibling_prefix_does_not_falsely_cover(self):
+        """"src" must not cover "scripts/x.py" merely because both start
+        with the same few letters -- coverage is a real path-segment
+        prefix (`src/`), never a bare string prefix."""
+        entries = [_base_entry(path="src")]
+        gaps = prov.coverage_gaps(entries, ["scripts/x.py"])
+        self.assertEqual(gaps, ["scripts/x.py"])
+
+
+class FindGhostEntriesTests(unittest.TestCase):
+    def test_entry_covering_nothing_is_a_ghost(self):
+        entries = [_base_entry(path="src"), _base_entry(path="long-deleted-dir")]
+        ghosts = prov.find_ghost_entries(entries, ["src/main.c"])
+        self.assertEqual(ghosts, ["long-deleted-dir"])
+
+    def test_entry_covering_something_is_not_a_ghost(self):
+        entries = [_base_entry(path="src")]
+        self.assertEqual(prov.find_ghost_entries(entries, ["src/main.c"]), [])
+
+
+class FindDuplicateEntryPathsTests(unittest.TestCase):
+    def test_exact_duplicate_path_detected(self):
+        entries = [_base_entry(path="src"), _base_entry(path="src")]
+        self.assertEqual(prov.find_duplicate_entry_paths(entries), ["src"])
+
+    def test_unique_paths_have_no_duplicates(self):
+        entries = [_base_entry(path="src"), _base_entry(path="docs")]
+        self.assertEqual(prov.find_duplicate_entry_paths(entries), [])
+
+
+class FindAmbiguousEntriesTests(unittest.TestCase):
+    def test_ancestor_descendant_pair_is_ambiguous(self):
+        entries = [_base_entry(path="src"), _base_entry(path="src/lib")]
+        ambiguous = prov.find_ambiguous_entries(entries)
+        self.assertEqual(ambiguous, ["src", "src/lib"])
+
+    def test_disjoint_siblings_are_not_ambiguous(self):
+        entries = [_base_entry(path="src"), _base_entry(path="docs")]
+        self.assertEqual(prov.find_ambiguous_entries(entries), [])
+
+    def test_single_entry_is_never_ambiguous(self):
+        entries = [_base_entry(path="src")]
+        self.assertEqual(prov.find_ambiguous_entries(entries), [])
+
+
+class EvaluateCoverageTests(unittest.TestCase):
+    def test_clean_bijection_has_no_reasons(self):
+        entries = [_base_entry(path="src"), _base_entry(path="docs")]
+        reasons = prov.evaluate_coverage(entries, ["src/main.c", "docs/readme.md"])
+        self.assertEqual(reasons, [])
+
+    def test_gap_reported(self):
+        entries = [_base_entry(path="src")]
+        reasons = prov.evaluate_coverage(entries, ["src/main.c", "docs/readme.md"])
+        self.assertTrue(any("missing provenance entry for docs/readme.md" in r for r in reasons))
+
+    def test_ghost_reported(self):
+        entries = [_base_entry(path="src"), _base_entry(path="nonexistent")]
+        reasons = prov.evaluate_coverage(entries, ["src/main.c"])
+        self.assertTrue(any("ghost provenance entry" in r and "nonexistent" in r for r in reasons))
+
+    def test_duplicate_reported(self):
+        entries = [_base_entry(path="src"), _base_entry(path="src")]
+        reasons = prov.evaluate_coverage(entries, ["src/main.c"])
+        self.assertTrue(any("duplicate provenance entry path" in r for r in reasons))
+
+    def test_ambiguous_reported(self):
+        entries = [_base_entry(path="src"), _base_entry(path="src/lib")]
+        reasons = prov.evaluate_coverage(entries, ["src/main.c", "src/lib/x.c"])
+        self.assertTrue(any("ambiguous/overlapping provenance coverage" in r for r in reasons))
+
+    def test_real_repo_provenance_is_a_clean_bijection_over_the_exact_allowlist(self):
+        """The real, checked-in provenance manifests must fully, cleanly,
+        unambiguously cover the real, checked-in exact allowlist -- no
+        gap, no ghost, no duplicate/ambiguous entry."""
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        allowlist = json.loads(
+            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
+        )["paths"]
+        self.assertEqual(prov.evaluate_coverage(entries, allowlist), [])
+
 
 class RepositoryStateTests(unittest.TestCase):
     """The current, real, committed provenance manifests must evaluate to
