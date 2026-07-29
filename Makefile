@@ -358,6 +358,12 @@ include graphics/banim/assets/img/banim_img_rules.mk
 include songs.mk
 include json_data_rules.mk
 
+# release.mk (issue #9): standalone release/publication rehearsal
+# targets (release-check, release-rehearse, release-migrations-check,
+# release-test). Not wired into `all` or any existing gate; see
+# docs/release_process.md.
+include release.mk
+
 # generated_data.mk is included earlier now (right after the Tools section,
 # before the Files section) -- see the comment there. Its
 # generated-data-* targets are standalone, not part of `all`;
