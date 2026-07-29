@@ -62,7 +62,7 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/config_identity.md | laqieer | current | Config surface + ROM identity fingerprint reference (issue #8)
 - docs/save_format.md | laqieer | current | Save format + compatibility gate reference (issue #2)
 - docs/id_space.md | laqieer | current | Extensible ID space DEFAULT vs ACTIVE contract reference (issue #10)
-- docs/debugtools.md | laqieer | current | Debug-tools foundation reference, slices 1-2 (issue #11)
+- docs/debugtools.md | laqieer | current | Debug-tools full closure reference: action registry, hotkey hub, five bounded tools, diagnostics, safety/release gating, non-goals (issue #11)
 - docs/generated_data.md | laqieer | current | Full generated-data platform design/reference (issue #5)
 - docs/generated_data_tutorial.md | laqieer | current | Contributor-facing generated-data authoring walkthrough
 - docs/upstream-porting.md | laqieer | current | Canonical upstream-port tracking tooling reference (issue #12)

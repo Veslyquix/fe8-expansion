@@ -68,7 +68,7 @@ hand-editing generated C under `build/generated/data/` is not.
 
 ## Runtime verification / test surfaces
 
-- `tools/gba-playtest/` replays a JSON input scenario through libmGBA and
+- `tools/gba-playtest/` replays JSON input scenarios through libmGBA and
   verifies deterministic framebuffer/RAM-checkpoint fingerprints bound to
   ROM provenance (SHA-1, size, header title/game code). See its own
   `README.md` for scenario/fingerprint format and host tests.
@@ -76,11 +76,25 @@ hand-editing generated C under `build/generated/data/` is not.
   0/60/120 with `--policy behavior` (not byte-identity — the modern ROM is
   not byte-identical to the legacy ROM). `expansion-modern-linker-check`
   adds budget-drift, shift, and overlay-audit gates on top.
-- **This is single-scenario, targeted verification, not a general
-  regression suite.** A complete regression-scenario library, a supported
-  host matrix for runtime verification, and a documented verification
-  policy are **issue #13 follow-up work**, not current fact — do not read
-  the existing scenarios/fingerprints as that broader guarantee.
+- **This is issue #13's merged, supported regression harness, not
+  single-scenario spot-checking.** `tools/gba-playtest` now provides the
+  full deterministic scenario/fingerprint suite (boot, title, new-game,
+  chapter load, combat, suspend/resume, save/load, debugtools hub/tools —
+  see its README's "Deterministic runtime scenario coverage (issue #13)"
+  table), a host-only vs. normal (live-ROM) run mode
+  (`GBA_PLAYTEST_HOST_ONLY=1`, also gate 1 of the pinned 10-gate
+  `scripts/upstream_port/verify.py`) that keeps scenario/schema/generator/
+  config/timeout/retry-policy tests toolchain-free while skipping only the
+  live-integration tests, an explicit human-run-only baseline-refresh
+  policy (no `verify --write-baseline`-style flag exists anywhere in the
+  tool; refreshing a fingerprint is always a reviewed `capture -o <path>`
+  commit — see `docs/issue-resolution-policy.md`'s "Baseline and
+  fingerprint review"), and relocation-independent probes rather than a
+  proc ROM-pointer oracle. The supported CI host matrix is Ubuntu +
+  `arm-none-eabi` — see
+  [`docs/framework-support.md`](framework-support.md#merged-framework-contracts-issues-10-11-13)
+  and `reports/gba_playtest_issue13_closure.md` for the scenario-by-
+  scenario DONE evidence.
 
 ## Upstream-port tooling
 
