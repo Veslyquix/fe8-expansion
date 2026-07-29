@@ -22,6 +22,7 @@
 #include "constants/event-flags.h"
 #include "constants/songs.h"
 #include "expansion_debugtools.h"
+#include "expansion_itemtest.h"
 
 /* Reused verbatim from AgbMain's own clean-boot RNG seed (src/main.c) --
  * reseeding to this exact constant immediately before the debug hub's
@@ -414,6 +415,28 @@ void GameControl_PostIntro(struct GameCtrlProc * proc)
         break;
 
     case GAME_ACTION_EVENT_RETURN:
+#if FE8_EXPANSION_ITEMTEST_ENABLED
+        /* Issue #10 opt-in runtime item-expansion probe (compiled out, and
+         * this whole block absent, in every ordinary build -- see
+         * include/expansion_itemtest.h). Consumed at most once, before the
+         * debug-hub handoff and the ordinary StartSaveMenu branch below;
+         * the bootstrap itself is the ordinary production new-game
+         * sequence and this proc continues its own normal lifecycle
+         * straight into the ordinary LGAMECTRL_EXEC_BM transition. */
+        if (ItemExpansionTest_ConsumeChapterBootRequest())
+        {
+            ItemExpansionTest_PrepareChapterBoot();
+            proc->nextChapter = CHAPTER_L_2;
+
+            /* The ordinary chapter-start state: the world map and the
+             * chapter's own unit loading/beginning event all run completely
+             * unmodified from here, exactly as they do for the debug hub's
+             * Chapter 2 launcher. */
+            Proc_Goto(proc, LGAMECTRL_EXEC_BM);
+            break;
+        }
+#endif
+
         /* Debug hub "Fast Boot: Chapter 2" handoff (see
          * src/debugtools_launcher.c, include/expansion_debugtools.h):
          * consumed at most once per armed request, and only here, before
@@ -469,6 +492,49 @@ void GameControl_PostIntro(struct GameCtrlProc * proc)
              * written here, once, the same frame the pending request is
              * consumed and this deterministic boot is committed to. */
             gDebugToolsProbe.launcherArmed = DEBUGTOOLS_LAUNCHER_ARMED_MAGIC;
+
+            Proc_Goto(proc, LGAMECTRL_EXEC_BM);
+            break;
+        }
+
+        /* Debug hub "Fast Boot: Ch4 Prep" handoff (issue #11 closure --
+         * see src/debugtools_launcher.c, include/expansion_debugtools.h).
+         * Same exact contract as the Chapter 2 branch above -- consumed
+         * at most once per armed request, before the ordinary
+         * StartSaveMenu branch, no proc torn down or recreated -- just a
+         * different target chapter/node so the resulting boot reaches a
+         * chapter whose own beginning event script
+         * (EventScr_Ch4_BeginningScene, src/events/ch4-eventscript.h)
+         * calls CALL(EventScr_CommonPrep) partway through, unlike
+         * Chapter 2's. */
+        if (DebugTools_ConsumePendingChapter4PrepLaunch())
+        {
+            SetLCGRNValue(DEBUGTOOLS_FASTBOOT_RNG_SEED);
+            InitRN(AdvanceGetLCGRNValue());
+
+            InitPlayConfig(0, 0);
+            gPlaySt.chapterModeIndex = CHAPTER_MODE_COMMON;
+            ResetPermanentFlags();
+            ResetChapterFlags();
+            InitUnits();
+            gPlaySt.chapterIndex = CHAPTER_L_4;
+            proc->nextChapter = CHAPTER_L_4;
+
+            GmDataInit();
+
+            /* Same node-placement idiom as the Chapter 2 branch above,
+             * one node earlier in the same linear node chain:
+             * NODE_BORGO_RIDGE's own WMLoc_GetNextLocId resolves to
+             * NODE_ZAHA_WOODS / CHAPTER_L_4 (src/worldmap_node_data.c),
+             * exactly as NODE_CASTLE_FRELIA resolves to NODE_IDE /
+             * CHAPTER_L_2 -- so the ordinary world-map traversal (an L
+             * cursor-jump + A node-confirm) reaches Chapter 4 without
+             * skipping any chapter-specific event/battle logic. */
+            gGMData.units[0].location = NODE_BORGO_RIDGE;
+
+            DebugTools_ArmBootstrapSuppression();
+
+            gDebugToolsProbe.ch4PrepLauncherArmed = DEBUGTOOLS_LAUNCHER_ARMED_MAGIC;
 
             Proc_Goto(proc, LGAMECTRL_EXEC_BM);
             break;

@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "name": "combat",
+  "description": "Issue #13 combat runtime proof: reaches Chapter 4's scripted opening battle FIGHT(CHARACTER_ARTUR, CHAR_EVT_ACTIVE_UNIT, 63, 0) in EventScr_Ch4_BeginningScene (src/events/ch4-eventscript.h), resolved by the real battle engine (GenerateScriptBattleHitFormEventQueue/Event3F_ScriptBattle, src/eventscr.c) and immediately followed by KILL of the enemy at SLOT_B position 0x30009. Proof is a relocation-independent semantic pre/post RAM change of the target enemy unit at gUnitArrayRed[0] (0x0202eb94): its maxHP (0x0202eba6) and curHP (0x0202eba7) are both 15 (alive at full HP) before the FIGHT, its curHP drops to exactly 0 (a genuine lethal battle-hit result, 15 damage) on the resolving frame while maxHP stays 15, and the unit is then removed by the scripted KILL -- its pCharacterData field (0x0202eb94) is cleared to a null 0x00000000 (a semantic 'slot empty' marker, not a relocated nonzero pointer value). Captured before Event3E_PrepScreenCall's HideAllUnits reorders the arrays. Probes are semantic unit maxHP/curHP fields plus a null-field check at fixed EWRAM addresses from this build's own symbol table; NO nonzero ROM/RAM pointer value is asserted as a behavior oracle, and NOT framebuffer or timing.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 150,
+      "end": 155,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 270,
+      "end": 275,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 330,
+      "end": 335,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 390,
+      "end": 395,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 450,
+      "end": 455,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 600,
+      "end": 606,
+      "keys": [
+        "SELECT",
+        "R"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 770,
+      "end": 776,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 830,
+      "end": 836,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 904,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1300,
+      "end": 1306,
+      "keys": [
+        "L"
+      ]
+    },
+    {
+      "start": 1360,
+      "end": 1366,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1650,
+      "end": 1655,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1760,
+      "end": 1765,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1870,
+      "end": 1875,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1980,
+      "end": 1985,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2090,
+      "end": 2095,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2200,
+      "end": 2205,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2310,
+      "end": 2315,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2420,
+      "end": 2425,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2530,
+      "end": 2535,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2640,
+      "end": 2645,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2750,
+      "end": 2755,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2860,
+      "end": 2865,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2970,
+      "end": 2975,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3080,
+      "end": 3085,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3250,
+      "end": 3255,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 3285,
+      "framebuffer": false,
+      "name": "enemy-alive-before-fight",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x0f"
+        }
+      ]
+    },
+    {
+      "frame": 3296,
+      "framebuffer": false,
+      "name": "artur-scripted-fight-lethal-hit",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3305,
+      "framebuffer": false,
+      "name": "enemy-dead-removed-by-kill",
+      "probes": [
+        {
+          "address": "0x0202eb94",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    }
+  ]
+}

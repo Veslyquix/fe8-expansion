@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "debugtools-hub-modern-debug",
-  "description": "Fast Boot: Chapter 2 -- lifecycle-safe deterministic launcher. The title-screen SELECT+R hotkey opens the debug hub, whose only entry is 'Fast Boot: Chapter 2'. As in the prior slice, the hub hotkey is pulsed TWICE (600-606, then 650-656) to prove hubOpenCount stays exactly 1 (DebugTools_OpenHub's reentrancy guard). The hub A-press at 700-706 only arms a pending launch request and closes the hub -- it never touches GameCtrlProc, never starts/ends any proc, never loads units, and never runs event/battle code itself (see src/debugtools_launcher.c). Title_IDLE (src/titlescreen.c) detects the pending request only after the hub has fully closed and does a normal Proc_Break -- no synthesized A/START input. GameControl_PostIntro (src/gamecontrol.c) then consumes the request exactly once, seeds a deterministic RNG, resets play state, and Proc_Goto's the *existing* GameCtrlProc to the ordinary LGAMECTRL_EXEC_BM state -- no proc-tree teardown/recreation. From there, the real Chapter 2 beginning event and world map run completely unmodified: this scenario's remaining input is ordinary A taps (advancing dialogue/menus) plus one L (world-map cursor jump to Ide) and one A (node confirm) to reach the real battle map, then RIGHT/DOWN to prove the cursor responds once the map is interactive. 'pre-launch' captures the whole-SRAM hash right after the request is armed (before GameControl_PostIntro's boot commits); 'chapter2-interactive-stable' is captured once the bootstrap suppression has cleared (playerPhaseObservedCount==1, bootstrapSuppressionActive==0) and its SRAM hash must be byte-for-byte identical to 'pre-launch' -- proving the entire deterministic Chapter 2 boot (RNG seed, InitPlayConfig, GmDataInit, world-map navigation, chapter-intro event, and the opening NPC phase, including its own automatic PlayerPhase_Suspend/BmMain_SuspendBeforePhase suspend-save calls) makes zero persistent SRAM writes while suppression is active. Unit-array probes confirm the real Chapter 2 roster (Eirika/Seth/Gilliam/Franz/Moulder/Vanessa in Blue, Ross in Green/NPC, Bone + generic Bandits in Red) and Eirika's Rapier (item0 low byte == ITEM_SWORD_RAPIER).",
+  "description": "Fast Boot: Chapter 2 -- lifecycle-safe deterministic launcher. The title-screen SELECT+R hotkey opens the debug hub, whose only entry is 'Fast Boot: Chapter 2'. As in the prior slice, the hub hotkey is pulsed TWICE (600-606, then 650-656) to prove hubOpenCount stays exactly 1 (DebugTools_OpenHub's reentrancy guard). The hub A-press at 700-706 only arms a pending launch request and closes the hub -- it never touches GameCtrlProc, never starts/ends any proc, never loads units, and never runs event/battle code itself (see src/debugtools_launcher.c). Title_IDLE (src/titlescreen.c) detects the pending request only after the hub has fully closed and does a normal Proc_Break -- no synthesized A/START input. GameControl_PostIntro (src/gamecontrol.c) then consumes the request exactly once, seeds a deterministic RNG, resets play state, and Proc_Goto's the *existing* GameCtrlProc to the ordinary LGAMECTRL_EXEC_BM state -- no proc-tree teardown/recreation. From there, the real Chapter 2 beginning event and world map run completely unmodified: this scenario's remaining input is ordinary A taps (advancing dialogue/menus) plus one L (world-map cursor jump to Ide) and one A (node confirm) to reach the real battle map, then RIGHT/DOWN to prove the cursor responds once the map is interactive. 'pre-launch' captures the whole-SRAM hash right after the request is armed (before GameControl_PostIntro's boot commits); 'chapter2-interactive-stable' is captured once the bootstrap suppression has cleared (playerPhaseObservedCount==1, bootstrapSuppressionActive==0) and its SRAM hash must be byte-for-byte identical to 'pre-launch' -- proving the entire deterministic Chapter 2 boot (RNG seed, InitPlayConfig, GmDataInit, world-map navigation, chapter-intro event, and the opening NPC phase, including its own automatic PlayerPhase_Suspend/BmMain_SuspendBeforePhase suspend-save calls) makes zero persistent SRAM writes while suppression is active. Interactivity is proven purely by relocation-independent semantic state: the player cursor (0x020210b6/0x020210b7) responds to input (advancing from 02,02 to 09,05 after the post-hub RIGHT/DOWN presses), the player-phase byte (0x020210b2==0x02), the map render-state word (0x0202fa0a==0x2809), the GameControl proc state (0x03005291==0x02), and the hub bookkeeping (hubOpenCount==1, launcherArmed=='DBL1'/0x44424c31, playerPhaseObservedCount==1, bootstrapSuppressionActive==0). Per-slot struct Unit.state fields (unit+0x0C, e.g. gUnitArrayBlue[0].state at 0x0202f9b0) are additionally sampled as relocation-independent semantic evidence that the real Chapter 2 roster occupies its slots and its live turn-state advances as the cursor is driven -- NO unit pCharacterData ROM pointer, nor any other nonzero ROM/RAM pointer value, is asserted as a behavior oracle.",
   "frames": [
     {
       "start": 90,
@@ -1826,22 +1826,22 @@
       "name": "hub-closed-before-hotkey",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x0203162c",
+          "address": "0x0203181c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -1853,22 +1853,22 @@
       "name": "hub-opened-after-first-pulse",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x0203162c",
+          "address": "0x0203181c",
           "size": 4,
-          "expected": "0x00000003"
+          "expected": "0x00000009"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -1880,22 +1880,22 @@
       "name": "hub-still-single-after-repeated-pulse",
       "probes": [
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x0203162c",
+          "address": "0x0203181c",
           "size": 4,
-          "expected": "0x00000003"
+          "expected": "0x00000009"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -1937,37 +1937,37 @@
           "expected": "0x0000"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x44424c32"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000000"
         },
@@ -2120,37 +2120,37 @@
           "expected": "0x0000"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x44424c31"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000000"
         },
@@ -2302,44 +2302,39 @@
           "expected": "0x2809"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x44424c31"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000001"
-        },
-        {
-          "address": "0x0202f9a4",
-          "size": 4,
-          "expected": "0x088fb8c4"
         },
         {
           "address": "0x0202f9b0",
@@ -2347,19 +2342,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202f9ec",
-          "size": 4,
-          "expected": "0x088fb7c0"
-        },
-        {
           "address": "0x0202f9f8",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202fa34",
-          "size": 4,
-          "expected": "0x088fb7f4"
         },
         {
           "address": "0x0202fa40",
@@ -2367,19 +2352,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202fa7c",
-          "size": 4,
-          "expected": "0x088fb85c"
-        },
-        {
           "address": "0x0202fa88",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202fac4",
-          "size": 4,
-          "expected": "0x088fb828"
         },
         {
           "address": "0x0202fad0",
@@ -2387,19 +2362,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202fb0c",
-          "size": 4,
-          "expected": "0x088fb890"
-        },
-        {
           "address": "0x0202fb18",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202eb94",
-          "size": 4,
-          "expected": "0x088fd464"
         },
         {
           "address": "0x0202eba0",
@@ -2407,19 +2372,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202ebdc",
-          "size": 4,
-          "expected": "0x088fd464"
-        },
-        {
           "address": "0x0202ebe8",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202ec24",
-          "size": 4,
-          "expected": "0x088fc5f8"
         },
         {
           "address": "0x0202ec30",
@@ -2427,19 +2382,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202ec6c",
-          "size": 4,
-          "expected": "0x088fd464"
-        },
-        {
           "address": "0x0202ec78",
           "size": 4,
           "expected": "0x00001000"
-        },
-        {
-          "address": "0x0202e5f4",
-          "size": 4,
-          "expected": "0x088fb8f8"
         },
         {
           "address": "0x0202e600",
@@ -2485,44 +2430,39 @@
           "expected": "0x2809"
         },
         {
-          "address": "0x02031628",
+          "address": "0x02031818",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031630",
+          "address": "0x02031820",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031634",
+          "address": "0x02031824",
           "size": 4,
           "expected": "0x44424c31"
         },
         {
-          "address": "0x0203163c",
+          "address": "0x0203182c",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031640",
+          "address": "0x02031830",
           "size": 4,
           "expected": "0x00000001"
         },
         {
-          "address": "0x02031644",
+          "address": "0x02031834",
           "size": 4,
           "expected": "0x00000000"
         },
         {
-          "address": "0x02031648",
+          "address": "0x02031838",
           "size": 4,
           "expected": "0x00000001"
-        },
-        {
-          "address": "0x0202f9a4",
-          "size": 4,
-          "expected": "0x088fb8c4"
         },
         {
           "address": "0x0202f9b0",
@@ -2530,19 +2470,9 @@
           "expected": "0x00000051"
         },
         {
-          "address": "0x0202f9ec",
-          "size": 4,
-          "expected": "0x088fb7c0"
-        },
-        {
           "address": "0x0202f9f8",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202fa34",
-          "size": 4,
-          "expected": "0x088fb7f4"
         },
         {
           "address": "0x0202fa40",
@@ -2550,19 +2480,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202fa7c",
-          "size": 4,
-          "expected": "0x088fb85c"
-        },
-        {
           "address": "0x0202fa88",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202fac4",
-          "size": 4,
-          "expected": "0x088fb828"
         },
         {
           "address": "0x0202fad0",
@@ -2570,19 +2490,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202fb0c",
-          "size": 4,
-          "expected": "0x088fb890"
-        },
-        {
           "address": "0x0202fb18",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202eb94",
-          "size": 4,
-          "expected": "0x088fd464"
         },
         {
           "address": "0x0202eba0",
@@ -2590,19 +2500,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202ebdc",
-          "size": 4,
-          "expected": "0x088fd464"
-        },
-        {
           "address": "0x0202ebe8",
           "size": 4,
           "expected": "0x00000000"
-        },
-        {
-          "address": "0x0202ec24",
-          "size": 4,
-          "expected": "0x088fc5f8"
         },
         {
           "address": "0x0202ec30",
@@ -2610,19 +2510,9 @@
           "expected": "0x00000000"
         },
         {
-          "address": "0x0202ec6c",
-          "size": 4,
-          "expected": "0x088fd464"
-        },
-        {
           "address": "0x0202ec78",
           "size": 4,
           "expected": "0x00001000"
-        },
-        {
-          "address": "0x0202e5f4",
-          "size": 4,
-          "expected": "0x088fb8f8"
         },
         {
           "address": "0x0202e600",

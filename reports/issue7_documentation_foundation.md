@@ -43,20 +43,31 @@ CI-enforced so regressions cannot land silently.
   issue closure is a human decision recorded in the linked PR/issue
   thread -- this report is evidence for that decision, not the decision
   itself.
-- **Not a claim that issues #10, #11, or #13 have final, merged, stable
-  public interfaces.** [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--later-integration-slots)
-  and [`docs/framework-support.md`](../docs/framework-support.md#later-integration-slots-not-yet-part-of-this-support-matrix)
-  both carry explicit "later integration slot" language for these three
-  issues; this documentation-foundation work does not shrink or resolve
-  that scope. In particular:
-  - **Issue #10** (extensible content-ID contracts/limits/migrations) --
-    no interface exists yet to document as current.
+- **Update (issues #7/#17 integration merge): issues #10, #11, and #13 are
+  now merged into `master` with final, supported public interfaces**,
+  superseding the original (pre-merge) framing of this bullet below.
+  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
+  and [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13)
+  now document each interface's supported surface and narrow, explicit
+  non-goals (not an open/deferred scope); this documentation-foundation
+  work does not itself implement or close those issues -- it documents
+  what the separately-merged code already does. In particular:
+  - **Issue #10** (typed IDs / extensible content-ID contracts/limits) --
+    the DEFAULT/ACTIVE contract is documented in
+    [`docs/id_space.md`](../docs/id_space.md); see
+    [`reports/issue10_closure.md`](issue10_closure.md) for the closure evidence
+    and its own explicit non-goals (no class/chapter/unit/character ID
+    widening; no save-migration tooling built yet).
   - **Issue #11** (debug-tools extension/config/safety interface) --
-    slices 1-2 exist ([`docs/debugtools.md`](../docs/debugtools.md)); the
-    full supported extension surface is still open.
+    the full registration API, hub entry points, five bounded tools, and
+    diagnostics are documented in
+    [`docs/debugtools.md`](../docs/debugtools.md); its own "Remaining #11
+    scope" section (not this report) is authoritative for the few
+    remaining narrow non-goals.
   - **Issue #13** (regression-scenario library/host matrix/verification
-    policy) -- `tools/gba-playtest` provides the mechanism; the policy
-    and coverage matrix are still open.
+    policy) -- `tools/gba-playtest` now provides the full deterministic
+    scenario suite and host-only/normal run-mode policy; see
+    [`reports/gba_playtest_issue13_closure.md`](gba_playtest_issue13_closure.md).
 - **Not a claim that every historical/archival document was re-verified
   against `master`.** `docs/documentation-inventory.md`'s `historical`
   status entries are explicitly point-in-time and are not re-verified by

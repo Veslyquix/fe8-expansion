@@ -104,11 +104,13 @@ for this repository:
 - Version-to-version migration guidance (once a versioned release exists)
   follows [`docs/release-migration-template.md`](release-migration-template.md).
 
-## Later integration slots
+## Merged vs. active integration slots
 
-Issues **#10** (extensible ID contracts), **#11** (debug-tools extension
-surface), and **#13** (regression/host-matrix policy) do not yet have
-final, merged, stable public interfaces in this baseline. Any governance
+Issues **#10** (typed IDs / extensible-ID contracts), **#11** (debug-tools
+extension surface), and **#13** (regression/host-matrix policy) are now
+merged with final, supported public interfaces — narrow, explicit
+non-goals remain per closure report, not open governance questions.
+Issues **#6**, **#9**, and **#18** remain open/active; any governance
 statement about "supported public API" scope for those areas is deferred
 to their own follow-up documentation updates — see
-[`docs/architecture.md`](architecture.md#public-extension-boundaries--later-integration-slots).
+[`docs/architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918).

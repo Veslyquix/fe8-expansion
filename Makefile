@@ -279,6 +279,62 @@ shiftcheck: shiftcheck-build shiftcheck-static shiftcheck-offsets shiftcheck-dif
 
 .PHONY: shiftcheck shiftcheck-build shiftcheck-static shiftcheck-offsets shiftcheck-diff shiftcheck-run
 
+# --- Issue #10 archival item-cap guard: parse-time known-goal fast-fail -----
+# The dependency-graph attachment below is the backstop for *unknown /
+# indirect / future* archival entries. But for a KNOWN, explicitly-named
+# public archival goal we must fail EARLIER than the graph can: at Make
+# parse/plan time, before any recipe, sub-make ($(MAKE) -C mgfembp ...), or
+# agbcc / arm-none-eabi compile is planned or run. That is what the reviewer's
+# 'fail early' requirement means -- a real `make legacy` / `make
+# fireemblem8.gba` at an expanded cap must NOT first churn mgfembp's sub-build
+# and hundreds of agbcc objects (all *regular* prerequisites of $(ROM),
+# updated before the order-only guard) only to abort at the final link. An
+# order-only prerequisite is updated AFTER the target's normal prerequisites,
+# so the graph guard alone cannot pre-empt that upfront compile churn.
+#
+# ARCHIVAL_KNOWN_GOALS is every public goal that reaches the agbcc archival
+# lane (verified against the Makefile / `make -p` DB, not guessed): the
+# `legacy` alias, the direct $(ROM)/$(ELF)/$(MAP) products, $(RELOCS_ELF),
+# $(OBJECTS_LST), and the whole shiftcheck aggregate + sub-targets that pull
+# in $(ROM)/$(MAP)/$(RELOCS_ELF)/$(OBJECTS_LST). (shiftcheck-build is omitted:
+# it only scans build-system addresses and reaches no archival product.)
+# Anything not listed still trips the graph backstop. Both gates share the
+# same actionable diagnostic ($(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG), defined
+# once in generated_data.mk) so they can never drift.
+ARCHIVAL_KNOWN_GOALS := legacy $(ROM) $(ELF) $(MAP) $(RELOCS_ELF) $(OBJECTS_LST) \
+    shiftcheck shiftcheck-static shiftcheck-offsets shiftcheck-diff shiftcheck-run
+ifneq (,$(GENERATED_DATA_ITEM_CAP_EXPANDED))
+ifneq (,$(filter $(ARCHIVAL_KNOWN_GOALS),$(MAKECMDGOALS)))
+$(error $(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG))
+endif
+endif
+
+# --- Issue #10 archival item-cap guard: dependency-graph attachment ----------
+# Bind generated_data.mk's archival item-cap guard (a .PHONY target whose
+# recipe fires a make $(error) at a non-vanilla item cap) to the archival
+# link/list/artifact boundary as an order-only prerequisite. Any target that
+# reaches the agbcc archival lane -- the direct $(ROM)/$(ELF)/$(MAP) products,
+# the `legacy` alias, $(RELOCS_ELF), the whole shiftcheck family (via
+# $(ROM)/$(MAP)/$(RELOCS_ELF)/$(OBJECTS_LST)), $(OBJECTS_LST) itself, and any
+# future target that depends on these -- therefore inherits an early,
+# `make -n`-visible, parse/plan-time failure at an expanded cap, with no
+# fragile MAKECMDGOALS whitelist to maintain. The
+# guard is bound to the archival LINK/LIST/ARTIFACT boundary, not to the
+# individual $(ALL_OBJECTS): several src/data/*.o data objects are *shared* --
+# the modern lane's expansion-modern-boot-check builds them through its own
+# `make NODEP=0 <objects>` sub-make -- so guarding objects would wrongly block
+# the modern lane at an expanded cap. $(OBJECTS_LST)/$(ELF)/$(ROM)/$(MAP)/
+# $(RELOCS_ELF), by contrast, are produced *only* by the agbcc archival lane
+# (the modern lane emits its own separate MODERN_* products, and the
+# generated-data checks build only generated objects), and every archival
+# artifact -- incl. the whole shiftcheck family -- funnels through at least one
+# of them. That is exactly the point where the generator's cap-sized table
+# meets the cap-baked agbcc engine code, so it is the correct divergence gate.
+# Order-only ('|') so the always-out-of-date .PHONY guard never forces an
+# archival relink at the vanilla cap; the guard is a no-op (`:`) there.
+ARCHIVAL_ITEM_CAP_GUARDED_TARGETS := $(OBJECTS_LST) $(ELF) $(ROM) $(MAP) $(RELOCS_ELF)
+$(ARCHIVAL_ITEM_CAP_GUARDED_TARGETS): | generated-data-archival-item-cap-guard
+
 CLEAN_FILES := $(ROM) $(ELF) $(MAP) $(OBJECTS_LST) $(SFILES_COMPILED) $(DATA_SRC_SFILES_COMPILED) graphics/*.h $(CFILES_GENERATED) $(RELOCS_ELF) $(RELOCS_ELF:.elf=.map)
 # $(GENERATED_DATA_OUT_DIR) (build/generated/data) holds every linked
 # table's stamp/.c/.s/.o (Issue #5 Batch 2c-1, generated_data.mk) -- added

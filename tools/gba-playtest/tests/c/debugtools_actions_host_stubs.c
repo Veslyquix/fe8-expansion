@@ -37,6 +37,12 @@ struct KeyStatusBuffer * CONST_DATA gKeyStatusPtr = &gDebugToolsActionsTestKeySt
 
 struct LCDControlBuffer gLCDControlBuffer = {0};
 
+/* Issue #11 closure: DebugTools_PrepHotkeyCheck (src/debugtools_registry.c)
+ * now reads gPlaySt.chapterStateBits to observe a live prep screen --
+ * a plain zero-initialized instance is enough for this Weather/Fog-
+ * focused driver (PLAY_FLAG_PREPSCREEN simply reads as unset). */
+struct PlaySt gPlaySt = {0};
+
 static u16 sActionsStubBgMap[32 * 32];
 
 u16* BG_GetMapBuffer(int bg)
@@ -206,4 +212,21 @@ void DebugTools_RegisterBuiltinActions(void)
      * directly (via DebugTools_RegisterAction) when it needs to prove the
      * "capacity remains <=9 including Chapter 2 launcher" boundary,
      * rather than depending on the real launcher module. */
+}
+
+void DebugTools_RegisterChapter4PrepAction(void)
+{
+    /* Issue #11 closure: the real implementation (src/debugtools_launcher.c)
+     * has its own dedicated host tests and is deliberately not linked
+     * here; src/debugtools_registry.c's DebugTools_OpenHub calls this
+     * function unconditionally, so a stand-in is needed here too. */
+}
+
+void DebugTools_RegisterExtendedToolActions(void)
+{
+    /* Issue #11 closure: the real implementation (src/debugtools_tools.c)
+     * has its own dedicated host tests and is deliberately not linked
+     * here (out of scope for this Weather/Fog-focused driver), so its
+     * lazy-registration call site (from DebugTools_OpenHub) still needs a
+     * stand-in. */
 }

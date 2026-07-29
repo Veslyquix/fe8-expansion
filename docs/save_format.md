@@ -558,6 +558,7 @@ while remaining sensitive to every other byte in the image.
 | `savecompat-dialog-back.json` | For a given non-CURRENT state: the dialog appears with a state-specific message, dismissing it and selecting **Back** leaves the game on the title/game-control path, and SRAM is byte-for-byte unchanged across all three checkpoints (dialog-shown / after-dismiss / back-returned). |
 | `savecompat-erase.json` | Selecting **Erase All Save Data** shows the irreversible-erase warning alongside the Yes/No submenu; confirming **Yes** wipes SRAM to a fresh, valid `SAVE_COMPAT_CURRENT` image, and the normal save menu becomes reachable afterward. |
 | `savesuspend-resume-modern-debug.json` (debug-only) | A genuine ordinary-UI manual **Suspend** (Map Menu) -> real **soft-reset** combo -> **Resume** (Save Menu) round trip, from a clean boot via #11 Slice 1's debug-only Chapter 2 launcher: proves the manual save is a distinct write from the automatic auto-save, SRAM changed and remains valid CURRENT-format, and the restored live game state matches the manually-saved one exactly. See "Save/load acceptance status" below. |
+| `save-load.json` (debug-only, issue #13) | A NORMAL (non-Suspend) game-save write + load, distinct from the Suspend round trip above: SaveMenu New Game -> slot 0 write, a real A+B+SELECT+START soft reset, then the top-level SaveMenu **RESTART** item -> `PostSaveMenuHandler` -> `ReadGameSave` of slot 0 (`src/savemenu.c`; RESTART is `main_sel_bitfile & 0x82`). Proven by `playthroughIdentifier` (`0x020210bc`)/`chapterModeIndex` (`0x020210bf`) going `1 -> 0 -> 1` (created / soft-reset-cleared / loaded), `gameSaveSlot` (`0x020210b0`) `== 0`, and differing before/after whole-SRAM hashes. See "Save/load acceptance status" below. |
 
 Committed fingerprints exist per-scenario/state for all three supported
 ROMs -- `-legacy`, `-modern-debug`, and `-modern-release` -- covering all
@@ -651,6 +652,21 @@ bytes (CURRENT-format validity persists post-resume).
 point -- format, migration, the global compatibility gate/UI, all-state
 coverage, and this deterministic write -> reset -> reload scenario -- is
 implemented and verified against a real, ordinary UI path.
+
+Separately, a NORMAL (non-Suspend) game-save write-and-load is now also
+proven by `save-load.json` (issue #13, `tools/gba-playtest/scenarios/`;
+host test `tools/gba-playtest/tests/test_save_load_scenario.py`; gate
+`expansion-modern-saveload-check`, debug-only because its soft-reset timing
+is debug-calibrated). It exercises the top-level SaveMenu **RESTART** item
+-> `PostSaveMenuHandler` -> `ReadGameSave` of slot 0 (`src/savemenu.c`;
+RESTART is `main_sel_bitfile & 0x82`) -- a different code path from both
+Suspend/`ReadSuspendSave()` and the initial New-Game write, with its own
+`playthroughIdentifier`/`chapterModeIndex` `1 -> 0 -> 1` discriminants and a
+before/after whole-SRAM hash difference (write proof). FE7/8's own
+post-chapter-clear "Would you like to save?" flow (`StartSaveMenuPostChapter`)
+is still `asm/`-only in this codebase; it is a distinct, separate path and
+is **not required** for normal save/load coverage, which is now proven the
+legitimate way above via SaveMenu RESTART -> `ReadGameSave`.
 
 ### Host migration workflow (recap)
 
@@ -817,6 +833,14 @@ Run the playtest suite (includes the save-compat gate/scenario tests):
 ```sh
 python3 -m unittest discover -s tools/gba-playtest/tests -p "test_*.py"
 ```
+
+That is normal mode: the live save-compat scenarios run against whichever
+ROMs are present in the worktree (legacy, modern debug, modern release) and
+skip explicitly for the ones that are not built. CI runs the same suite with
+`GBA_PLAYTEST_HOST_ONLY=1`, which skips those live scenarios by mode instead
+of by artifact presence -- their runtime coverage lives in
+`make expansion-modern-savefmt-check` / `expansion-modern-linker-check`. See
+`tools/gba-playtest/README.md`, “Host-only test mode”.
 
 Run the full modern CI-equivalent check (build + fixtures + host migration
 check + runtime scenarios, both debug and release):

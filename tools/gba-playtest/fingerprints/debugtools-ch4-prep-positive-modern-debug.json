@@ -1,0 +1,121 @@
+{
+  "checkpoints": [
+    {
+      "frame": 4550,
+      "name": "prep-mapidle-live-before-hotkey",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x04"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02031854",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 4700,
+      "name": "select-b-opens-hub-in-live-prep",
+      "probes": [
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02031854",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 4980,
+      "name": "second-select-b-idempotent-and-return-to-prep",
+      "probes": [
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02031854",
+          "size": 4,
+          "value": "0x00000002"
+        }
+      ]
+    },
+    {
+      "frame": 6000,
+      "name": "prep-still-live-and-stable-longrun",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x04"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000002"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "5b28bd4839c01a072941eb6c9b11932a6dddd73c",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "debugtools-ch4-prep-positive-modern-debug"
+}

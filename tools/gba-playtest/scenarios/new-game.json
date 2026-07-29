@@ -1,0 +1,135 @@
+{
+  "checkpoints": [
+    {
+      "frame": 1000,
+      "framebuffer": true,
+      "name": "new-game-menu-selected",
+      "probes": []
+    },
+    {
+      "frame": 1140,
+      "framebuffer": true,
+      "name": "empty-slot-list-shown",
+      "probes": [],
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "length": 9,
+          "offset": 29640
+        },
+        {
+          "length": 2,
+          "offset": 29650
+        }
+      ]
+    },
+    {
+      "frame": 1400,
+      "framebuffer": true,
+      "name": "new-game-created",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1
+        }
+      ],
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "length": 9,
+          "offset": 29640
+        },
+        {
+          "length": 2,
+          "offset": 29650
+        }
+      ]
+    }
+  ],
+  "description": "Deterministic clean-boot New Game creation, reusing savecompat-current.json's own shared A/START title cadence (frames 0..900) to reach the ordinary top-level Save Menu with no dialog, exactly as its own no-dialog-normal-savemenu checkpoint proves. From there this scenario replays only three further ordinary A confirmations, each on whatever item the real menu already defaults the cursor to (never a scripted cursor move): confirm 'New Game', confirm 'Easy' mode, and confirm the first empty ('NO DATA') save slot. 'new-game-menu-selected' proves the Select Mode screen is reached from the ordinary New Game entry point. 'empty-slot-list-shown' proves the three-slot chooser is reached with all slots still empty, and captures the pre-write whole-SRAM hash (normalized over the same build-commit/checksum diagnostic bytes as savecompat-current.json, excluded for the identical reason -- see docs/save_format.md's \"SRAM hash policy\"). 'new-game-created' proves the real SaveMenuWriteNewGame()/WriteGameSave()-class slot-0 write actually happened -- its own SRAM hash must differ from 'empty-slot-list-shown' -- and its gPlaySt.chapterIndex/faction probes read CHAPTER_L_PROLOGUE (0x00) and FACTION_BLUE (0x00), proving the created game begins at the Prologue as intended, not merely that some menu screen was reached. No savestate, save file, or other generated binary is used or committed; every checkpoint is reached from a clean boot through ordinary UI input alone.",
+  "frames": [
+    {
+      "end": 95,
+      "keys": [
+        "A"
+      ],
+      "start": 90
+    },
+    {
+      "end": 160,
+      "keys": [
+        "START"
+      ],
+      "start": 155
+    },
+    {
+      "end": 225,
+      "keys": [
+        "A"
+      ],
+      "start": 220
+    },
+    {
+      "end": 290,
+      "keys": [
+        "START"
+      ],
+      "start": 285
+    },
+    {
+      "end": 355,
+      "keys": [
+        "A"
+      ],
+      "start": 350
+    },
+    {
+      "end": 420,
+      "keys": [
+        "START"
+      ],
+      "start": 415
+    },
+    {
+      "end": 485,
+      "keys": [
+        "A"
+      ],
+      "start": 480
+    },
+    {
+      "end": 550,
+      "keys": [
+        "START"
+      ],
+      "start": 545
+    },
+    {
+      "end": 956,
+      "keys": [
+        "A"
+      ],
+      "start": 950
+    },
+    {
+      "end": 1056,
+      "keys": [
+        "A"
+      ],
+      "start": 1050
+    },
+    {
+      "end": 1156,
+      "keys": [
+        "A"
+      ],
+      "start": 1150
+    }
+  ],
+  "name": "new-game",
+  "schema_version": 1
+}

@@ -32,6 +32,7 @@
 #include "constants/songs.h"
 
 #include "expansion_debugtools.h"
+#include "expansion_itemtest.h"
 
 struct PalFadeSt EWRAM_DATA sPalFadeSt[0x20] = { 0 };
 struct BmSt EWRAM_DATA gBmSt = {};
@@ -486,6 +487,15 @@ void BmMain_SuspendBeforePhase(void)
      * writing normally. */
     if (DebugTools_IsBootstrapSuppressionActive())
         return;
+
+#if FE8_EXPANSION_ITEMTEST_ENABLED
+    /* Same one-shot boot window for the issue #10 runtime item-expansion
+     * probe build, which performs the identical deterministic boot without
+     * the debug hub (see include/expansion_itemtest.h). Absent from every
+     * ordinary build. */
+    if (ItemExpansionTest_IsBootSuppressionActive())
+        return;
+#endif
 
     gActionData.suspendPointType = SUSPEND_POINT_PHASECHANGE;
     WriteSuspendSave(SAVE_ID_SUSPEND);

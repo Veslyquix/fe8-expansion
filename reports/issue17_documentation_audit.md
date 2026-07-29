@@ -8,6 +8,48 @@ classification, authoritative/historical/generated/deprecated status
 accounting, and the checker/CI evidence backing it, plus the remaining
 follow-up work.
 
+## Post-merge integration update (issues #10/#11/#13 into this docs branch)
+
+This branch (`agent/issues7-17-docs`) was normal-merged with
+`origin/master` (bringing in the merged issue #10 typed-ID/cap work, issue
+#11 debug-tools productization, and issue #13 regression harness) after
+the audit evidence below was first recorded. Re-verified, current facts
+as of that merge (reproduce with the commands shown, do not trust these
+numbers without rerunning them):
+
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` lists **12**
+  gates, not the pre-merge 10: the issues #7/#17 `docs-check-tests`/
+  `docs-check` gates (added by this branch) and master's 10 pre-existing
+  gates (host-suite, upstream-port-tests, artifact-guard,
+  default-lane-check, quickstart-legacy-check, generated-data-check, the
+  two linker-check gates, and the two issue #10 item-expansion gates) are
+  now one fixed, ordered, 12-gate list — see
+  [`docs/upstream-porting.md`](../docs/upstream-porting.md) for the full list.
+- `python3 -m unittest discover -s tests/upstream_port -v`: **145** tests, all
+  passing (144 pre-existing on `master` plus 1 added by this branch's own
+  `test_issue_7_17_docs_governance_gates_present`).
+- `python3 -m unittest discover -s scripts/generated_data/tests -v`: **613**
+  tests, all passing.
+- `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`:
+  **271** tests, `OK (skipped=9)`.
+- `python3 scripts/check_docs.py --check --check-examples` surfaced two new,
+  genuine findings from this merge (both in `reports/issue10_closure.md`,
+  a file this docs branch never previously checked): two documented
+  build-output-path invocations (a modern per-config/ABI object-file
+  target and a generated-data source-file target -- see that report for
+  the literal commands), both real and `make -n`-confirmed working, that the checker's Makefile-target parser
+  cannot statically resolve because `parse_make_targets`'s
+  `_split_make_line_tokens` deliberately drops any target token containing an
+  unresolved Make variable (`$(MODERN_OUTPUT_DIR)`-style computed paths) rather than
+  attempting variable expansion. This is a pre-existing, intentional
+  design boundary of the checker (see its own comment at that function),
+  not a regression introduced by this merge, and it is **not** patched
+  here: doing so would modify a documentation validator/checker, which
+  is outside this integration pass's authority without separate
+  reviewer/policy sign-off. Left as an explicit, bounded, reported
+  finding for that review, not silently bypassed and not hidden by
+  rewording the evidence it describes.
+
 ## 100% Markdown count
 
 `scripts/check_docs.py`'s `discover_markdown_files()` enumerates every

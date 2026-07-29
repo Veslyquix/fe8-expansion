@@ -120,21 +120,62 @@ toolchain, slow rebuilds) is maintained in one place:
 compile-probe failures and the Homebrew cask-vs-formula pitfall are covered
 in [`docs/quickstart.md`](quickstart.md#modern-gcc-compile-only-object-cohort).
 
-## Later integration slots (not yet part of this support matrix)
+## Merged framework contracts (issues #10, #11, #13)
 
-The following are **explicitly not** part of the current support matrix and
-must not be read as stable/complete until their own follow-up documentation
-update lands:
+These three issues are merged into `master` and their public interfaces are
+supported, with the narrow, explicit non-goals below — they are **not**
+open/aspirational. Closure evidence: `reports/issue10_closure.md`,
+`reports/debugtools_issue11_closure.md`, `reports/gba_playtest_issue13_closure.md`.
 
-- **Issue #10** (extensible ID contracts / limits / migrations) — no final,
-  merged public interface exists in this baseline; nothing here should be
-  read as a supported content-ID API.
-- **Issue #11** (debug-tools extension surface) — slices 1-2 exist (see
-  [`docs/debugtools.md`](debugtools.md)) but the document's own "Remaining
-  #11 scope" section lists explicitly deferred work; there is no supported,
-  final debug-tools extension/config/safety interface yet.
-- **Issue #13** (regression/host-matrix policy) — `tools/gba-playtest`
-  provides deterministic single-scenario fingerprint verification today
-  (see its own `README.md`); a complete regression-scenario suite, a
-  supported host matrix, and a runtime-verification policy are follow-up
-  work, not current fact.
+- **Issue #10** (typed IDs / extensible-ID contracts / caps): the DEFAULT
+  contract (`include/id_space.h`, `reports/id_space_audit.{json,md}`) and
+  the build-local ACTIVE contract (regenerated under `FE8_ITEM_ID_CAP`) are
+  the supported public interface — see
+  [`docs/id_space.md`](id_space.md) for the full DEFAULT-vs-ACTIVE contract,
+  domain-by-domain caps/budgets, and the consumer census. Item IDs are
+  raised and CI-gated at cap `0xCE`/207 records
+  (`expansion-modern-itemexpansion-check`, gates 11-12 of
+  [`docs/upstream-porting.md`](upstream-porting.md)). **Explicit non-goals
+  (still true, not silently dropped):** no class/chapter/unit/character ID
+  widening; no save-layout/epoch change (`EXPANSION_SAVE_COMPAT_EPOCH`
+  untouched); no new event-command encoding; no migration tooling exists
+  yet because the item-cap raise needed none — see
+  `reports/issue10_closure.md`'s "Explicit non-goals"/"Known gaps" sections
+  before assuming any other domain's cap can be raised the same way.
+- **Issue #11** (debug-tools extension surface): a release-safe config gate
+  (`FE8_EXPANSION_DEBUGTOOLS_ENABLED`), a fixed-capacity action-registration
+  API, title/map/prep hotkey hub entry points, five bounded validated tools
+  (unit/convoy/flags/RNG/save-state), and structured diagnostics (probe/log
+  ring, non-fatal assert record) are the supported, merged surface — see
+  [`docs/debugtools.md`](debugtools.md). Its own "Remaining #11 scope"
+  section is the authoritative, current (not stale) list of the few
+  narrow, deliberate non-goals: a full `mgba_printf`/AGB debug-print
+  protocol, an interactive debugger, and an arbitrary memory editor are
+  never attempted; migrating the remaining dormant chapter/BGM-commit
+  tools out of `bmdebug.c`/`uidebug.c` is clearly-scoped future work, not
+  part of this closure.
+- **Issue #13** (regression harness): `tools/gba-playtest` now provides the
+  full deterministic scenario/fingerprint suite (boot, title, new-game,
+  chapter load, combat, suspend/resume, save/load, debugtools hub/tools),
+  a host-only vs. normal (live-ROM) run mode
+  (`GBA_PLAYTEST_HOST_ONLY=1`), retry/timeout/provenance policy, and the
+  Ubuntu + `arm-none-eabi` CI host matrix described above — see its own
+  [`README.md`](../tools/gba-playtest/README.md) and
+  `reports/gba_playtest_issue13_closure.md` for the scenario-by-scenario
+  DONE evidence. macOS/Homebrew is documented for local development but is
+  **not** CI-exercised (see "Supported hosts" above); that gap is
+  unchanged by this closure.
+
+## Active / unmerged work (do not read as current support)
+
+The following issues are **open** at the time of writing. Nothing in this
+repository's documentation should be read as promising their public API,
+behavior, or timeline; treat any mention of them elsewhere in the docs the
+same way:
+
+- **Issue #6** (starter expansion feature bundle) — not merged; no starter
+  feature/hook-registry public API exists yet.
+- **Issue #9** (versioned releases / downstream upgrades) — not merged; no
+  semantic-version/tag/release-CI policy exists yet.
+- **Issue #18** (in-game multilingual support) — not merged; no language
+  configuration/selection surface exists yet.

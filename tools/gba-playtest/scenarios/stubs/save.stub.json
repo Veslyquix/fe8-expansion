@@ -1,9 +1,0 @@
-{
-  "blocker": "Save behavior depends on first reaching a deterministic chapter state; no save file, savestate, or other generated binary may be committed as a shortcut.",
-  "checkpoints": [],
-  "description": "Schema-ready placeholder for deterministic save behavior.",
-  "disabled": true,
-  "frames": [],
-  "name": "save",
-  "schema_version": 1
-}

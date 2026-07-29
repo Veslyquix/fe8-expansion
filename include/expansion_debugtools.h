@@ -144,7 +144,19 @@
 enum
 {
     DEBUGTOOLS_ACTION_MAX = 9,
-    DEBUGTOOLS_HUB_MENU_SLOTS = DEBUGTOOLS_ACTION_MAX + 2 /* actions + Back + terminator */
+    DEBUGTOOLS_HUB_MENU_SLOTS = DEBUGTOOLS_ACTION_MAX + 2, /* actions + Back + terminator */
+
+    /* Issue #11 closure: explicit policy bound on a contributor label's
+     * length (excluding the NUL terminator). Not a hard memory-safety
+     * limit (DebugTools_RegisterAction never copies label bytes into a
+     * fixed buffer -- only the pointer itself is stored, see
+     * src/debugtools_registry.c), but a documented, enforced contract so
+     * a pathologically long label is rejected with an explicit,
+     * diagnosable result rather than silently accepted and left to
+     * whatever the menu renderer happens to do with it. The longest
+     * label shipped in this file (5 -- "Fast Boot: Chapter 2", 20 chars)
+     * stays comfortably under this. */
+    DEBUGTOOLS_LABEL_MAX_LENGTH = 24
 };
 
 /* Explicit result/error codes -- DebugTools_RegisterAction() always
@@ -157,7 +169,15 @@ enum DebugToolsResult
     DEBUGTOOLS_ERR_INVALID_ACTION,  /* NULL action, label, or callback */
     DEBUGTOOLS_ERR_DUPLICATE,       /* id already registered */
     DEBUGTOOLS_ERR_CAPACITY_FULL,   /* DEBUGTOOLS_ACTION_MAX already reached */
-    DEBUGTOOLS_ERR_ALREADY_ACTIVE   /* DebugTools_OpenHub called while the hub is already open */
+    DEBUGTOOLS_ERR_ALREADY_ACTIVE,  /* DebugTools_OpenHub called while the hub is already open */
+
+    /* Issue #11 closure: appended at the end so every existing named
+     * value above keeps its original integer (scenario JSON files probe
+     * gDebugToolsProbe.lastRegisterResult by raw integer -- see
+     * docs/debugtools.md -- so no existing value may ever be
+     * renumbered). */
+    DEBUGTOOLS_ERR_ID_INVALID,      /* action->id == 0 (reserved/uninitialized-looking sentinel) */
+    DEBUGTOOLS_ERR_LABEL_INVALID    /* label is empty, or longer than DEBUGTOOLS_LABEL_MAX_LENGTH */
 };
 
 /* A single contributor-registered debug action. label is a raw C string
@@ -376,6 +396,195 @@ int DebugTools_IsBootstrapSuppressionActive(void);
  * proc_script on free). No-op when the subsystem is compiled out. */
 void DebugTools_NotifyTitleScreenStarting(void);
 
+/* --- Fast Boot: Chapter 4 (reaches a live prep screen) --------------------
+ * Issue #11 closure -- a second, independent deterministic launcher
+ * alongside the Chapter 2 one above. Chapter 2's own event script never
+ * calls the PREP event opcode (EventScr_CommonPrep), so it cannot exercise
+ * DebugTools_PrepHotkeyCheck()/PrepScreenProc_MapIdle against a real, live
+ * prep screen -- the gap docs/debugtools.md previously left as "Remaining
+ * #11 scope". Chapter 4's own beginning event script
+ * (src/events/ch4-eventscript.h, EventScr_Ch4_BeginningScene) is
+ * self-contained (its own LOAD1/LOAD2 ally+enemy unit definitions, no
+ * CALL into another chapter's own sub-script) and calls
+ * CALL(EventScr_CommonPrep) partway through -- so booting into it via the
+ * exact same pending-request handoff pattern as Chapter 2 above (arm ->
+ * Title_IDLE detects after hub close -> GameControl_PostIntro consumes
+ * once) reaches a genuine, unmodified, engine-driven PrepScreenProc
+ * (gProcScr_SALLYCURSOR, src/prep_sallycursor.c) through the real PREP
+ * event opcode (Event3E_PrepScreenCall, src/eventscr.c) -- not a
+ * hand-rolled substitute. See docs/debugtools.md "Fast Boot: Chapter 4
+ * (Prep)" and reports/debugtools_issue11_closure.md.
+ *
+ * Placing the world-map party at NODE_BORGO_RIDGE (src/gamecontrol.c) --
+ * the same kind of "one node before the target" placement the Chapter 2
+ * launcher uses (NODE_CASTLE_FRELIA before NODE_IDE) -- lets the ordinary
+ * WorldMap_CallBeginningEvent node-resolution reach NODE_ZAHA_WOODS /
+ * CHAPTER_L_4 on its own; no chapter-specific event/battle logic is
+ * bypassed and no world-map traversal step is skipped. */
+
+/* Arms the second pending debug launch request. Same idempotent,
+ * side-effect-free-until-consumed contract as
+ * DebugTools_RequestChapter2Launch above -- see
+ * gDebugToolsProbe.pendingCh4PrepLaunchRequest. No-op when the subsystem
+ * is compiled out. */
+void DebugTools_RequestChapter4PrepLaunch(void);
+
+/* True from the frame the hub action arms this second request until
+ * GameControl_PostIntro consumes it. Same contract as
+ * DebugTools_IsChapter2LaunchPending above (independent flag -- arming one
+ * launch request never affects the other). Always 0 when the subsystem is
+ * compiled out. */
+int DebugTools_IsChapter4PrepLaunchPending(void);
+
+/* Consumes the second pending request exactly once. Same one-shot
+ * contract as DebugTools_ConsumePendingChapter2Launch above. Always 0 when
+ * the subsystem is compiled out. */
+int DebugTools_ConsumePendingChapter4PrepLaunch(void);
+
+/* Registers the Chapter 4 Prep launcher action alone. Called from
+ * DebugTools_OpenHub() (src/debugtools_registry.c) *after*
+ * DebugTools_RegisterWeatherFogActions() -- deliberately not bundled into
+ * DebugTools_RegisterBuiltinActions() above, so Weather/Fog's own
+ * pre-existing hub-menu row indices never shift. Idempotent -- safe to
+ * call more than once. A no-op in a release build. */
+void DebugTools_RegisterChapter4PrepAction(void);
+
+/* --- Diagnostics: structured probe/log ring + assert record ---------------
+ * Issue #11 closure requirement 6: "emulator logging/assertion/
+ * crash-diagnostic/memory-inspection foundations". This is explicitly
+ * NOT an mgba_printf/AGB-print-protocol implementation, NOT an
+ * interactive debugger, and NOT an arbitrary memory editor -- see
+ * docs/debugtools.md and reports/debugtools_issue11_closure.md for the
+ * non-goals this deliberately stops short of. What it does provide:
+ *
+ *   - a small, fixed-capacity (DEBUGTOOLS_LOG_RING_SIZE), always-linked
+ *     ring buffer of (code, a, b) event records that every mutating tool
+ *     action below writes to (DebugTools_LogEvent) -- a structured,
+ *     bounded probe/log surface, never a heap-growing log;
+ *   - a bounded "assert" record (DebugTools_RecordAssertFailure /
+ *     DEBUGTOOLS_ASSERT) that tools use to defensively re-validate a
+ *     bound (e.g. an event-flag index) immediately before a mutation --
+ *     on failure it records the failing code and safely skips the
+ *     mutation (returns to the caller normally); it never aborts,
+ *     crashes, or halts the game, matching every other tool's
+ *     safe-return-to-game contract;
+ *   - bounded, read-only, whitelisted introspection
+ *     (DebugTools_GetLogEntry/DebugTools_GetLogCount/
+ *     DebugTools_GetAssertFailureCount/DebugTools_GetLastAssertCode) --
+ *     never a raw/arbitrary address reader.
+ *
+ * All state additionally mirrors into gDebugToolsProbe fields (see below)
+ * so playtest scenarios can assert on it the same way as every other
+ * probe field. Release-inert: every function below compiles to a trivial
+ * disabled stub when the subsystem is disabled, same convention as every
+ * other file in this subsystem. */
+
+enum { DEBUGTOOLS_LOG_RING_SIZE = 8 };
+
+/* Named log codes -- deliberately small and closed (an enum, not a
+ * caller-supplied free-form string), so every log entry's `code` field is
+ * one of a fixed, documented set. `a`/`b` carry the code-specific payload
+ * (e.g. a unit's sampled HP, a convoy item id). */
+enum DebugToolsLogCode
+{
+    DEBUGTOOLS_LOG_NONE = 0,
+    DEBUGTOOLS_LOG_ASSERT_FAILURE,
+    DEBUGTOOLS_LOG_UNIT_INSPECT,
+    DEBUGTOOLS_LOG_UNIT_HEAL_APPLIED,
+    DEBUGTOOLS_LOG_UNIT_HEAL_SKIPPED_INVALID,
+    DEBUGTOOLS_LOG_CONVOY_INSPECT,
+    DEBUGTOOLS_LOG_CONVOY_ADD_APPLIED,
+    DEBUGTOOLS_LOG_CONVOY_ADD_SKIPPED_FULL,
+    DEBUGTOOLS_LOG_FLAG_INSPECT,
+    DEBUGTOOLS_LOG_FLAG_TOGGLE_APPLIED,
+    DEBUGTOOLS_LOG_RNG_INSPECT,
+    DEBUGTOOLS_LOG_RNG_RESEED_APPLIED,
+    DEBUGTOOLS_LOG_SAVESTATE_INSPECT
+};
+
+/* Named assert codes -- checked by DEBUGTOOLS_ASSERT at each tool's own
+ * defensive bound re-validation site immediately before a mutation. */
+enum DebugToolsAssertCode
+{
+    DEBUGTOOLS_ASSERT_NONE = 0,
+    DEBUGTOOLS_ASSERT_FLAG_ID_OUT_OF_RANGE,
+    DEBUGTOOLS_ASSERT_UNIT_TARGET_INVALID,
+    DEBUGTOOLS_ASSERT_CONVOY_INDEX_OUT_OF_RANGE
+};
+
+struct DebugToolsLogEntry
+{
+    u32 code; /* enum DebugToolsLogCode */
+    u32 a;
+    u32 b;
+};
+
+/* Appends one entry to the fixed-size ring (oldest entry silently
+ * overwritten once full -- bounded by construction, never a growing
+ * allocation). Always succeeds; mirrors gDebugToolsProbe.logEventCount
+ * (unbounded running total) and gDebugToolsProbe.lastLogCode. No-op when
+ * the subsystem is compiled out. */
+void DebugTools_LogEvent(u32 code, u32 a, u32 b);
+
+/* Number of entries currently readable via DebugTools_GetLogEntry -- 0 up
+ * to DEBUGTOOLS_LOG_RING_SIZE (never more; the ring wraps rather than
+ * growing past this). Always 0 when the subsystem is compiled out. */
+int DebugTools_GetLogCount(void);
+
+/* Bounds-checked, read-only, whitelisted introspection: index 0 is the
+ * most recently logged entry, increasing index walks backward in time.
+ * Returns NULL outside [0, DebugTools_GetLogCount()). Always NULL when
+ * the subsystem is compiled out. */
+const struct DebugToolsLogEntry* DebugTools_GetLogEntry(int index);
+
+/* Records a bounded, non-fatal assertion failure: increments
+ * gDebugToolsProbe.assertFailureCount, sets
+ * gDebugToolsProbe.lastAssertCode, and logs a
+ * DEBUGTOOLS_LOG_ASSERT_FAILURE event carrying `code`. Never
+ * aborts/halts/crashes the game -- the caller is expected to safely skip
+ * whatever mutation it was about to perform and return normally (every
+ * DEBUGTOOLS_ASSERT call site in src/debugtools_tools.c does exactly
+ * this). No-op when the subsystem is compiled out. */
+void DebugTools_RecordAssertFailure(u32 code);
+
+/* Total assert failures recorded so far (unbounded running total, mirrors
+ * gDebugToolsProbe.assertFailureCount). Always 0 when the subsystem is
+ * compiled out. */
+u32 DebugTools_GetAssertFailureCount(void);
+
+/* The most recently recorded assert failure code (enum
+ * DebugToolsAssertCode), or DEBUGTOOLS_ASSERT_NONE if none has ever
+ * fired. Always DEBUGTOOLS_ASSERT_NONE when the subsystem is compiled
+ * out. */
+u32 DebugTools_GetLastAssertCode(void);
+
+/* Evaluates `cond`; on false, records `code` via
+ * DebugTools_RecordAssertFailure. Callers must still act on the boolean
+ * result themselves (this macro does not alter control flow) -- see
+ * src/debugtools_tools.c for the "assert then bail out" idiom used at
+ * every mutation site. */
+#define DEBUGTOOLS_ASSERT(cond, code) \
+    do { if (!(cond)) DebugTools_RecordAssertFailure((u32)(code)); } while (0)
+
+/* --- Five bounded validated tools ------------------------------------
+ * Issue #11 closure requirement 5. Each is a single registry action (see
+ * src/debugtools_tools.c) that samples/displays read-only state on
+ * selection, then -- for the four that can mutate anything -- opens a
+ * bounded two-item "Confirm <action>" / "Back" submenu (same
+ * StartOrphanMenu idiom as Weather/Fog, src/debugtools_actions.c) so a
+ * mutation only ever happens after an explicit, separate confirmation
+ * input. No tool ever performs a raw/arbitrary address write or accepts
+ * an unvalidated numeric index from outside this fixed source file: every
+ * target/index/id is either a fixed, documented, in-range constant, or
+ * produced by an existing engine lookup helper (e.g. GetUnitFromCharId)
+ * that itself returns NULL/a safe sentinel on failure. Persistent SRAM
+ * state is never mutated by any of the five (RNG/flags/units/convoy are
+ * ordinary EWRAM runtime state; the fifth tool is read-only and never
+ * mutates anything). Registers all five (ids 5-9) through the same
+ * public DebugTools_RegisterAction() API every other action uses -- no
+ * direct edits to gDebugToolsHubMenuDef/sHubMenuItemDefs. */
+void DebugTools_RegisterExtendedToolActions(void);
+
 /* --- Playtest / host probe surface -----------------------------------
  * A small, stable, always-linked (both enabled and disabled builds)
  * diagnostic struct meant to be read directly by address by
@@ -452,6 +661,78 @@ struct DebugToolsProbe
                                       * TIMEOUT_FRAMES fail-safe (neither
                                       * success nor a detected title
                                       * return happened in time) */
+
+    /* --- Fast Boot: Chapter 4 (Prep) probe fields (issue #11 closure) --- */
+    u32 pendingCh4PrepLaunchRequest; /* DEBUGTOOLS_LAUNCH_REQUEST_MAGIC while
+                                       * armed, 0 once consumed -- see
+                                       * DebugTools_RequestChapter4PrepLaunch */
+    u32 ch4PrepLauncherArmed;        /* DEBUGTOOLS_LAUNCHER_ARMED_MAGIC once
+                                       * GameControl_PostIntro commits to the
+                                       * deterministic Chapter 4 boot */
+    u32 ch4PrepLaunchRequestConsumedCount; /* increments exactly once per
+                                             * consumed Chapter 4 request */
+    u32 prepScreenObservedCount;     /* increments once the debugtools prep
+                                       * hotkey call site observes
+                                       * gPlaySt.chapterStateBits &
+                                       * PLAY_FLAG_PREPSCREEN while the hub
+                                       * is open -- see
+                                       * DebugTools_PrepHotkeyCheck,
+                                       * src/debugtools_registry.c */
+
+    /* --- Diagnostics: log ring + assert record (issue #11 closure) --- */
+    u32 logEventCount;      /* unbounded running total of
+                              * DebugTools_LogEvent calls */
+    u32 lastLogCode;        /* enum DebugToolsLogCode of the most recent
+                              * DebugTools_LogEvent call */
+    u32 assertFailureCount; /* unbounded running total of
+                              * DEBUGTOOLS_ASSERT failures */
+    u32 lastAssertCode;     /* enum DebugToolsAssertCode of the most recent
+                              * assert failure, DEBUGTOOLS_ASSERT_NONE if
+                              * none has ever fired */
+
+    /* --- Unit inspector (issue #11 closure) --- */
+    u32 unitInspectTargetFound;   /* 1 if
+                                    * GetUnitFromCharId(CHARACTER_EIRIKA)
+                                    * resolved to a UNIT_IS_VALID unit at
+                                    * the most recent inspect, else 0 */
+    u32 unitInspectLastCurHp;     /* curHP sampled at the most recent
+                                    * inspect (0 if no valid target) */
+    u32 unitInspectLastMaxHp;     /* maxHP sampled at the most recent
+                                    * inspect (0 if no valid target) */
+    u32 unitHealTransactionCount; /* increments once per confirmed "Heal
+                                    * to Full" transaction actually applied
+                                    * to a valid target */
+
+    /* --- Convoy inspector (issue #11 closure) --- */
+    u32 convoyLastItemCount;       /* GetConvoyItemCount() sampled at the
+                                     * most recent inspect */
+    u32 convoyAddTransactionCount; /* increments once per confirmed "Add
+                                     * test item" transaction that actually
+                                     * added an item (AddItemToConvoy
+                                     * returned a valid slot, not -1) */
+
+    /* --- Flag/chapter/event state (issue #11 closure) --- */
+    u32 chapterIndexSample;   /* gPlaySt.chapterIndex sampled at the most
+                                * recent inspect */
+    u32 debugFlagToggleCount; /* increments once per confirmed debug-flag
+                                * toggle transaction */
+    u32 debugFlagLastValue;   /* CheckFlag(DEBUGTOOLS_DEBUG_EVENT_FLAG_ID)
+                                * sampled after the most recent
+                                * inspect/toggle */
+
+    /* --- RNG inspect/control (issue #11 closure) --- */
+    u32 rngInspectSeedSample0;     /* StoreRNState()'s seeds[0] sampled at
+                                     * the most recent inspect, before any
+                                     * control action */
+    u32 rngReseedTransactionCount; /* increments once per confirmed
+                                     * "Reseed to debug value" transaction */
+
+    /* --- Save compatibility/state inspection (issue #11 closure) ---
+     * Read-only: never mutates SRAM or any save-block struct. */
+    u32 saveCompatLastState;    /* ClassifySramSaveCompat() sampled at the
+                                  * most recent inspect (enum
+                                  * SaveCompatState) */
+    u32 saveCompatInspectCount; /* increments once per inspect */
 };
 
 enum

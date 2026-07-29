@@ -88,6 +88,7 @@ from ..diagnostics import GeneratedDataError
 from ..escape_hatch import CSymbolRefField
 from ..json_loader import load_json_file
 from ..schema import DependencyGraph, TableSchema
+from .. import idspace
 from ..validators import (
     extract_define_constant,
     extract_enum_constants,
@@ -107,6 +108,8 @@ BMITEM_HEADER = os.path.join(REPO_ROOT, "include", "bmitem.h")
 VARIABLES_HEADER = os.path.join(REPO_ROOT, "include", "variables.h")
 MSG_HEADER = os.path.join(REPO_ROOT, "include", "constants", "msg.h")
 ITEM_ICON_SOURCE = os.path.join(REPO_ROOT, "src", "data", "data_item_icon.c")
+ITEMS_EXPANSION_HEADER = os.path.join(REPO_ROOT, "include", "constants", "items_expansion.h")
+ITEMS_EXPANSION_SOURCE = os.path.join(REPO_ROOT, "src", "data", "items_expansion.json")
 
 _U8_MIN, _U8_MAX = 0, 255
 _U16_MIN, _U16_MAX = 0, 65535
@@ -293,7 +296,7 @@ class ItemRecordList(list):
         self.loc = loc
 
 
-def load_records(source_path):
+def _load_records_file(source_path):
     root = load_json_file(source_path)
     schema_node = root.require("$schema")
     if schema_node.as_str() != SCHEMA_ID:
@@ -370,9 +373,24 @@ def load_records(source_path):
     return ItemRecordList(records, items_node.loc)
 
 
+def load_records(source_path, item_cap=None, overlay_source=None):
+    """Load ItemData records, merging the opt-in expansion overlay only
+    when the resolved item ID cap has been raised to include those IDs.
+    Default (cap 0xCD) is byte-identical to the vanilla single-file load."""
+    records = _load_records_file(source_path)
+    cap = item_cap if item_cap is not None else idspace.resolve_item_id_cap()
+    if cap >= idspace.ITEM_EXPANSION_FIRST:
+        overlay_source = overlay_source or ITEMS_EXPANSION_SOURCE
+        if os.path.exists(overlay_source):
+            overlay = _load_records_file(overlay_source)
+            return ItemRecordList(list(records) + list(overlay), records.loc)
+    return records
+
+
 def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMITEM_HEADER,
              variables_header=VARIABLES_HEADER, msg_header=MSG_HEADER,
-             icon_source=ITEM_ICON_SOURCE, msg_count=None, icon_count=None):
+             icon_source=ITEM_ICON_SOURCE, msg_count=None, icon_count=None,
+             item_cap=None, expansion_header=None):
     """Run all ``ItemData`` validations, appending errors to ``diagnostics``.
 
     Checks: unique + full contiguous ``ITEM_*`` coverage (0..max enum
@@ -390,6 +408,13 @@ def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMIT
         icon_count = read_item_icon_count(icon_source)
 
     items_enum = extract_enum_constants(items_header, name_prefix="ITEM_")
+    cap = item_cap if item_cap is not None else idspace.resolve_item_id_cap()
+    # Always make expansion IDs *known* so an un-opted expansion record is
+    # rejected with the actionable cap diagnostic (raise FE8_ITEM_ID_CAP)
+    # rather than a generic undefined-reference error.
+    if expansion_header and os.path.exists(expansion_header):
+        items_enum = dict(items_enum)
+        items_enum.update(extract_enum_constants(expansion_header, name_prefix="ITEM_"))
     weapon_types = extract_enum_constants(bmitem_header, name_prefix="ITYPE_")
     wexp_thresholds = extract_enum_constants(bmitem_header, name_prefix="WPN_EXP_")
     weapon_effects = extract_enum_constants(bmitem_header, name_prefix="WPN_EFFECT_")
@@ -485,8 +510,17 @@ def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMIT
             )
 
     if items_enum:
-        max_value = max(value for value, _ in items_enum.values())
-        missing = sorted(set(range(0, max_value + 1)) - set(covered_values))
+        enum_max = max(value for value, _ in items_enum.values())
+        required_max = min(cap, enum_max)
+        for _rec in records:
+            _v = items_enum.get(_rec.item, (None, None))[0]
+            if _v is not None and _v > cap:
+                diagnostics.add(GeneratedDataError(
+                    "item {} (index {}) is beyond the configured item cap "
+                    "0x{:X}; raise FE8_ITEM_ID_CAP to opt this ID in".format(
+                        _rec.item, _v, cap),
+                    _rec.item_loc, "items"))
+        missing = sorted(set(range(0, required_max + 1)) - set(covered_values))
         if missing:
             value_to_name = {value: name for name, (value, _) in items_enum.items()}
             doc_loc = getattr(records, "loc", None)
@@ -518,10 +552,10 @@ class ItemsTableSchema(TableSchema):
         )
 
     def load_records(self, source_path):
-        return load_records(source_path)
+        return load_records(source_path, overlay_source=ITEMS_EXPANSION_SOURCE)
 
     def validate(self, records, diagnostics):
-        validate(records, diagnostics)
+        validate(records, diagnostics, expansion_header=ITEMS_EXPANSION_HEADER)
 
     def generate_c(self, records, source_path):
         from . import generate as items_generate
@@ -531,13 +565,36 @@ class ItemsTableSchema(TableSchema):
         from . import inventory as items_inventory
         return items_inventory.build_inventory(records)
 
+    def manifest_record_count(self, records):
+        # Archival/default manifest count: exclude opt-in ITEM_EXPANSION_*
+        # overlay records so the committed manifest stays byte-identical
+        # between the default (0xCD) and opt-in (>=0xCE) builds. Expansion
+        # records are audited in reports/id_space_audit.md and generated into
+        # the ROM table under build/.
+        items_enum = extract_enum_constants(ITEMS_HEADER, name_prefix="ITEM_")
+        return sum(1 for r in records if r.item in items_enum)
+
     def round_trip_errors(self, records, hand_source):
         if not hand_source or not os.path.exists(hand_source):
             return []
         from . import parser as items_roundtrip
-        item_names = [r.item for r in records]
+        # Opt-in expansion IDs (ITEM_EXPANSION_*, authored in the overlay
+        # src/data/items_expansion.json) never appear in the vanilla hand
+        # table src/data_items.c; they are validated separately (schema cap
+        # check + generated-source compile). The vanilla hand table must
+        # still round-trip 100%, so compare only the hand-backed records
+        # here. This is a scoped exclusion, never a global --no-roundtrip:
+        # every record that exists in the hand source is still compared
+        # field-for-field.
+        expansion_names = set()
+        if os.path.exists(ITEMS_EXPANSION_HEADER):
+            expansion_names = set(
+                extract_enum_constants(ITEMS_EXPANSION_HEADER, name_prefix="ITEM_"))
+        hand_backed = [r for r in records if r.item not in expansion_names]
+        item_names = [r.item for r in hand_backed]
         hand_records = items_roundtrip.parse_hand_written(hand_source, item_names)
-        return items_roundtrip.compare_records(records, hand_records, hand_path=hand_source)
+        return items_roundtrip.compare_records(
+            hand_backed, hand_records, hand_path=hand_source)
 
 
 def dependency_graph():

@@ -31,13 +31,35 @@ See [`../README.md`](../README.md) for the top-level project overview.
 1. [`migration-from-decomp.md`](migration-from-decomp.md) — what changed and why.
 2. [`archival-decomp.md`](archival-decomp.md) — if your goal is still byte-for-byte matching, this is unchanged and still supported *for that purpose*.
 
-**Maintaining framework identity, saves, or debug tooling:**
+**Maintaining framework identity, saves, typed IDs, or debug tooling:**
 1. [`config_identity.md`](config_identity.md)
 2. [`save_format.md`](save_format.md)
-3. [`debugtools.md`](debugtools.md)
+3. [`id_space.md`](id_space.md) — typed IDs / DEFAULT vs ACTIVE contract (issue #10)
+4. [`debugtools.md`](debugtools.md)
 
 **Tracking or applying upstream decomp changes:**
 1. [`upstream-porting.md`](upstream-porting.md)
+
+## Public API index (source of truth by subsystem)
+
+Concrete entry points a downstream contributor actually calls/includes/
+extends -- each row links the reference doc, not aspirational; issue
+numbers mark merged (closed) contracts only:
+
+| Subsystem | Public entry points | Reference |
+| --- | --- | --- |
+| Generated data authoring | JSON sources under `src/data/*.json` + table schemas in `scripts/generated_data/*/schema.py`; `make generated-data-check`/`generated-data-active-heal-check` | [`generated_data.md`](generated_data.md), [`generated_data_tutorial.md`](generated_data_tutorial.md) |
+| Typed IDs / caps (issue #10) | `include/id_space.h` (DEFAULT), `build/generated/data/id_space_active.h` (ACTIVE), `FE8_ITEM_ID_CAP` | [`id_space.md`](id_space.md), [`../reports/id_space_audit.md`](../reports/id_space_audit.md) |
+| Config / ROM identity | `struct ExpansionMetadata` (`include/expansion_metadata.h`), `EXPANSION_SAVE_COMPAT_EPOCH` | [`config_identity.md`](config_identity.md), [`save_format.md`](save_format.md) |
+| Debug-tools extension (issue #11) | Action-registration API (`include/expansion_debugtools.h`), `FE8_EXPANSION_DEBUGTOOLS_ENABLED` | [`debugtools.md`](debugtools.md) |
+| Runtime test harness (issue #13) | JSON scenario format + fingerprints, `GBA_PLAYTEST_HOST_ONLY` | [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md) |
+| Upstream-port review tooling | `python3 -m scripts.upstream_port {scan,drift,verify,update-state}` | [`upstream-porting.md`](upstream-porting.md) |
+| Proc/runtime core | `include/proc.h` (`struct Proc`, `struct ProcCmd[]`) | [`architecture.md`](architecture.md) |
+
+Not a public API today (active/unmerged; see "Merged vs. active
+integration slots" below): starter-feature hook registries (issue #6),
+release/version tooling (issue #9), language-selection config (issue
+#18).
 
 ## Documentation governance
 
@@ -70,7 +92,8 @@ and
 | [`archival-decomp.md`](archival-decomp.md) | Current, archival scope | Unsupported-for-releases decomp-matching workflow |
 | [`config_identity.md`](config_identity.md) | Current | Config surface + ROM identity fingerprint (issue #8) |
 | [`save_format.md`](save_format.md) | Current | Save format + compatibility gate (issue #2) |
-| [`debugtools.md`](debugtools.md) | Current, partial | Debug-tools slices 1-2 (issue #11); see its "Remaining #11 scope" |
+| [`id_space.md`](id_space.md) | Current | Typed-ID DEFAULT vs ACTIVE contract, cap switching (issue #10) |
+| [`debugtools.md`](debugtools.md) | Current | Debug-tools subsystem, merged (issue #11); see its "Remaining #11 scope" for the few narrow non-goals |
 | [`generated_data.md`](generated_data.md) | Current, reference | Full generated-data design reference (issue #5) |
 | [`generated_data_tutorial.md`](generated_data_tutorial.md) | Current, tutorial | Contributor-facing generated-data walkthrough |
 | [`upstream-porting.md`](upstream-porting.md) | Current | Canonical upstream drift tooling (issue #12) |
@@ -87,9 +110,10 @@ and
 workflow and is not re-verified against the modern framework. "Template"
 means it is intentionally unfilled scaffolding.
 
-## Later integration slots
+## Merged vs. active integration slots
 
-Issues **#10**, **#11**, and **#13** do not yet have final, merged, stable
-public interfaces in this baseline. See
-[`architecture.md`](architecture.md#public-extension-boundaries--later-integration-slots)
-for exactly what is and isn't documented for each.
+Issues **#10**, **#11**, and **#13** are merged, with narrow, explicit
+non-goals; issues **#6**, **#9**, and **#18** are still open/active. See
+[`architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
+and [`framework-support.md`](framework-support.md#merged-framework-contracts-issues-10-11-13)
+for exactly what is documented, supported, and still open for each.

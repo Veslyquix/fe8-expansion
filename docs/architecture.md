@@ -51,16 +51,20 @@ hand-editing generated C under `build/generated/data/` is not.
   (`include/proc.h`, `src/proc.c`): tree-based scheduler, `struct Proc`
   entities, `struct ProcCmd[]` script tables (`PROC_CALL`, `PROC_REPEAT`,
   `PROC_SLEEP`, `PROC_YIELD`, `PROC_START_CHILD_BLOCKING`, etc).
-- **Debug tools (issue #11, slices 1-2 only)**: a release-safe config gate
+- **Debug tools (issue #11, merged)**: a release-safe config gate
   (`FE8_EXPANSION_DEBUGTOOLS_ENABLED`), a fixed-capacity action-registration
-  API, and title/map/prep hotkey hub entry points exist today — see
-  [`docs/debugtools.md`](debugtools.md), including its own "Remaining #11
-  scope" section for what is explicitly deferred (chapter/skirmish
-  selector, migrating the rest of `bmdebug.c`/`uidebug.c`, validated
-  editors/viewers, full logging/assert/crash tooling, and a complete
-  `mgba_printf` debug-print protocol). **This document does not claim a
-  final, stable, or complete debug-tools extension/config/safety
-  interface** — that is issue #11 follow-up work.
+  API, title/map/prep hotkey hub entry points, five bounded validated
+  tools (unit/convoy/flags/RNG/save-state), and structured diagnostics
+  (probe/log ring, non-fatal assert record) are the supported, merged
+  surface — see [`docs/debugtools.md`](debugtools.md) and
+  `reports/debugtools_issue11_closure.md`. Its own "Remaining #11 scope"
+  section is the current, authoritative list of the few narrow,
+  deliberate non-goals that remain (a full `mgba_printf` debug-print
+  protocol, an interactive debugger, and an arbitrary memory editor are
+  never attempted; migrating the remaining dormant chapter/BGM-commit
+  tools out of `bmdebug.c`/`uidebug.c` is clearly-scoped future work) — it does
+  not claim a full `mgba_printf`/interactive-debugger/memory-editor surface,
+  which was never this issue's scope.
 
 ## Runtime verification / test surfaces
 
@@ -88,23 +92,34 @@ manually apply patches. Nothing in it auto-applies, merges, commits,
 branches, pushes, or fetches without an explicit subcommand. Full
 reference: [`docs/upstream-porting.md`](upstream-porting.md).
 
-## Public extension boundaries — later integration slots
+## Public extension boundaries — merged (#10/#11/#13) vs. active (#6/#9/#18)
 
-The following are **foundational/internal capabilities today, not stable
-public APIs**. Treat every item below as requiring its own follow-up
-documentation update once its issue's final interface actually merges —
-this document makes no current-stability or completeness claim for any of
-them, and no GitHub issue-state (open/closed) claim either:
+**Merged, supported today** (see [`docs/framework-support.md`](framework-support.md#merged-framework-contracts-issues-10-11-13) and each closure report for exact bounds — this section only summarizes):
 
-- **Issue #10 — extensible content-ID contracts, limits, and migrations.**
-  No such interface exists in this baseline's `master` history; there is
-  nothing to document as current here.
-- **Issue #11 — supported debug-tools extension/config/safety interface.**
-  Slices 1-2 exist (see above and `docs/debugtools.md`); the full,
-  supported extension surface is still open.
-- **Issue #13 — complete regression-scenario library, host matrix, and
-  runtime-verification policy.** `tools/gba-playtest` provides the
-  mechanism; the policy and coverage matrix around it are still open.
+- **Issue #10 — typed IDs / extensible content-ID contracts, limits.** The
+  DEFAULT/ACTIVE ID-space contract (`include/id_space.h`, `docs/id_space.md`,
+  `reports/id_space_audit.md`) is the current public interface. Migrations
+  for domains beyond the item-ID cap raise are not built — see
+  `reports/issue10_closure.md`'s explicit non-goals before assuming otherwise.
+- **Issue #11 — debug-tools extension/config/safety interface.** The
+  registration API, hotkey hub entry points, five bounded validated tools,
+  and structured diagnostics are the current, supported surface (see above
+  and `docs/debugtools.md`). `mgba_printf`/interactive-debugger/memory-editor
+  remain explicit non-goals, not a gap in this closure.
+- **Issue #13 — regression-scenario library, host matrix, runtime-verification
+  policy.** `tools/gba-playtest` now provides the full deterministic
+  scenario suite, host-only vs. normal run modes, and retry/timeout/
+  provenance policy described in its own `README.md`; the supported CI host
+  matrix is Ubuntu + `arm-none-eabi` (see `docs/framework-support.md`).
+
+**Active/unmerged — do not read as current support:**
+
+- **Issue #6** (starter expansion feature bundle), **issue #9** (versioned
+  releases/downstream upgrades), and **issue #18** (in-game multilingual
+  support) are open. No public hook-registry, release/versioning, or
+  language-selection API exists in this baseline; this document makes no
+  current-stability or completeness claim for any of them, and no GitHub
+  issue-state (open/closed) claim either.
 
 ## See also
 

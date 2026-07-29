@@ -49,13 +49,16 @@ each: what changed, why, and which lane(s) (modern/archival) it affects.
 
 - Public headers changed: `[list `include/*.h` files and the specific
   symbols added/removed/changed]`
-- If this migration involves issue **#10** (extensible ID contracts),
-  **#11** (debug-tools extension surface), or **#13** (regression/host
-  matrix policy) reaching a final merged interface for the first time,
-  say so explicitly here and update
-  [`docs/architecture.md`](architecture.md#public-extension-boundaries--later-integration-slots)
-  in the same change — do not leave that document's "later integration
-  slot" language stale once an interface actually ships.
+- Issues **#10**, **#11**, and **#13** already reached a final merged
+  interface (see
+  [`docs/architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918));
+  if this migration involves one of the still-open issues (currently
+  **#6**, **#9**, **#18**) reaching a final merged interface for the
+  first time, say so explicitly here and update
+  [`docs/architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
+  and [`docs/framework-support.md`](framework-support.md#active--unmerged-work-do-not-read-as-current-support)
+  in the same change — do not leave either document's active/unmerged-work
+  language stale once an interface actually ships.
 
 ## Debug and test surface changes
 

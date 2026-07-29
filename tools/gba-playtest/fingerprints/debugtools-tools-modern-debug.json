@@ -1,0 +1,371 @@
+{
+  "checkpoints": [
+    {
+      "frame": 14240,
+      "name": "hub-open",
+      "probes": [
+        {
+          "address": "0x02021104",
+          "size": 1,
+          "value": "0x06"
+        },
+        {
+          "address": "0x02021106",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x0203181c",
+          "size": 4,
+          "value": "0x00000009"
+        },
+        {
+          "address": "0x02031874",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203187c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031884",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031890",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031898",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 14540,
+      "name": "unit-inspected",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031868",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x0203186c",
+          "size": 4,
+          "value": "0x00000010"
+        },
+        {
+          "address": "0x02031870",
+          "size": 4,
+          "value": "0x00000010"
+        },
+        {
+          "address": "0x02031874",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 14600,
+      "name": "unit-heal-confirmed",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000003"
+        },
+        {
+          "address": "0x02031874",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 14960,
+      "name": "convoy-inspected",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031878",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203187c",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 15020,
+      "name": "convoy-add-confirmed",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000004"
+        },
+        {
+          "address": "0x0203187c",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 15380,
+      "name": "convoy-reinspected-count-rose",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031878",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x0203187c",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 15860,
+      "name": "flag-inspected",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031880",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02031884",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031888",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 15920,
+      "name": "flag-toggle-confirmed",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000006"
+        },
+        {
+          "address": "0x02031884",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02031888",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 16400,
+      "name": "rng-inspected",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203188c",
+          "size": 4,
+          "value": "0x0000ee77"
+        },
+        {
+          "address": "0x02031890",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 16460,
+      "name": "rng-reseed-confirmed",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000007"
+        },
+        {
+          "address": "0x02031890",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 16940,
+      "name": "rng-reinspected-seed-changed",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203188c",
+          "size": 4,
+          "value": "0x0000690b"
+        },
+        {
+          "address": "0x02031890",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 17540,
+      "name": "save-inspected",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031894",
+          "size": 4,
+          "value": "0x00000004"
+        },
+        {
+          "address": "0x02031898",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 17600,
+      "name": "save-back-readonly-unchanged",
+      "probes": [
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000009"
+        },
+        {
+          "address": "0x02031898",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 17720,
+      "name": "hub-closed-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02021104",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02021106",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x02031614",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031818",
+          "size": 4,
+          "value": "0x00000009"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "5b28bd4839c01a072941eb6c9b11932a6dddd73c",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "debugtools-tools-modern-debug"
+}

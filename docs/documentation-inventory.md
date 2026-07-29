@@ -61,6 +61,7 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/release-migration-template.md | laqieer | template | Unfilled scaffolding for a future version-to-version migration guide
 - docs/config_identity.md | laqieer | current | Config surface + ROM identity fingerprint reference (issue #8)
 - docs/save_format.md | laqieer | current | Save format + compatibility gate reference (issue #2)
+- docs/id_space.md | laqieer | current | Extensible ID space DEFAULT vs ACTIVE contract reference (issue #10)
 - docs/debugtools.md | laqieer | current | Debug-tools foundation reference, slices 1-2 (issue #11)
 - docs/generated_data.md | laqieer | current | Full generated-data platform design/reference (issue #5)
 - docs/generated_data_tutorial.md | laqieer | current | Contributor-facing generated-data authoring walkthrough
@@ -95,7 +96,11 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - reports/generated_data_traps_inventory.md | laqieer | generated | Auto-generated traps table inventory
 - reports/generated_data_units_inventory.md | laqieer | generated | Auto-generated units table inventory
 - reports/generated_data_weapontriangle_inventory.md | laqieer | generated | Auto-generated weapontriangle table inventory
+- reports/id_space_audit.md | laqieer | generated | Auto-generated DEFAULT ID-space contract audit (issue #10)
 - reports/generated_data_issue5_closure.md | laqieer | evidence | Candidate closure evidence mapping for issue #5, not a closure claim
+- reports/issue10_closure.md | laqieer | evidence | Candidate closure-mapping evidence for issue #10, not a closure claim
+- reports/debugtools_issue11_closure.md | laqieer | evidence | Candidate closure-mapping evidence for issue #11, not a closure claim
+- reports/gba_playtest_issue13_closure.md | laqieer | evidence | Candidate closure-mapping evidence for issue #13, not a closure claim
 - reports/issue7_documentation_foundation.md | laqieer | evidence | Candidate closure-mapping evidence for issue #7, not a closure claim
 - reports/issue17_documentation_audit.md | laqieer | evidence | Candidate closure-mapping evidence for issue #17, not a closure claim
 - scripts/symdoc.md | laqieer | subsystem-reference | Symbol-renaming tooling reference
