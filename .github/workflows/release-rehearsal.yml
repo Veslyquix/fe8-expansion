@@ -9,6 +9,12 @@ name: Release Rehearsal
 # docs/release_process.md's "Legal and provenance boundary"). Publication
 # itself requires a separate, later, explicitly-authorized write-capable
 # workflow that does not exist in this repository.
+#
+# This workflow's own permission/safety contract is itself mechanically
+# checked below (scripts/release_rehearsal/workflow_guard.py, via
+# `make release-workflow-guard`) -- both in CI, and by
+# scripts/release_rehearsal/tests/test_workflow_guard.py's
+# `RepositoryStateTests.test_real_release_rehearsal_workflow_is_clean`.
 on:
   pull_request:
     branches: [ "master" ]
@@ -33,8 +39,8 @@ jobs:
           python3 -m unittest discover -s scripts/release_rehearsal/tests -v
           python3 -m unittest discover -s scripts/modernize/migrations/tests -v
 
-      - name: Validate this workflow's own permission/safety contract
-        run: python3 -m scripts.release_rehearsal.workflow_guard .github/workflows/release-rehearsal.yml
+      - name: Validate this workflow's own permission/safety contract (dynamic machine JSON)
+        run: make release-workflow-guard
 
       - name: Run release migrations registry check
         run: make release-migrations-check
@@ -45,14 +51,9 @@ jobs:
       - name: Run release eligibility check (current tree is expected BLOCKED)
         run: make release-check
 
-      - name: Job summary
+      - name: Mechanically assert the current expected status is BLOCKED
+        run: make release-check-expect-blocked
+
+      - name: Job summary (rendered dynamically from canonical JSON -- never hardcoded)
         if: always()
-        run: |
-          {
-            echo "## Release Rehearsal"
-            echo ""
-            echo "Publication status: **BLOCKED** pending explicit human license/provenance approval."
-            echo ""
-            echo "See \`docs/release_process.md\` and \`docs/release_data/provenance/*.json\` for the exact unresolved inventory."
-            echo "This workflow is read-only: no tag, release, asset, comment, or protected-environment mutation ever occurs here."
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: python3 -m scripts.release_rehearsal.cli summary >> "$GITHUB_STEP_SUMMARY"
