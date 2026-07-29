@@ -63,8 +63,8 @@ repository and which issue #9 explicitly forbids adding).
   contract is itself checked by `scripts/release_rehearsal/workflow_guard.py`.
 * `release.mk` Make targets: `release-test`, `release-migrations-check`,
   `release-rehearse`, `release-check`, `release-changelog-check`.
-* 130 new stdlib tests under `scripts/release_rehearsal/tests/` + 17 under
-  `scripts/modernize/migrations/tests/` (147 total), covering valid
+* 146 new stdlib tests under `scripts/release_rehearsal/tests/` + 17 under
+  `scripts/modernize/migrations/tests/` (163 total), covering valid
   behavior and every required actionable-failure class (nested prohibited
   bytes/extensions, traversal/absolute archive members, symlinks/
   hardlinks/FIFOs, missing reviewer, `NOASSERTION`, unapproved
@@ -76,7 +76,7 @@ repository and which issue #9 explicitly forbids adding).
 
 ```text
 $ python3 -m unittest discover -s scripts/release_rehearsal/tests -v
-Ran 130 tests in ~39s
+Ran 146 tests in ~40s
 OK
 
 $ python3 -m unittest discover -s scripts/modernize/migrations/tests -v
