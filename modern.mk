@@ -999,6 +999,46 @@ endif
 # would risk hiding a real toolchain change made between the two runs.
 $(MODERN_ALL_C_HEADER_DEPS): | expansion-modern-toolchain-check
 
+# Issue #18 sprint 3 clean-build fix: expansion_msg_ids.h is
+# #include "expansion_msg_ids.h"'d bare (no directory) by several
+# modern-only C sources (src/uiconfig.c, src/save_compat_menu.c,
+# src/debugtools_registry.c, src/expansion_language_menu.c -- all gated
+# `#ifdef MODERN`) and is only ever resolved through this Makefile's own
+# -I$(MODERN_LOCALIZATION_GENERATED_DIR) (added above, guarded by
+# MODERN_LOCALIZATION_AVAILABLE) -- never through a same-directory or
+# repo-root-relative #include path the way json_data_rules.mk's
+# src/data/chapter_settings.h is (see the MODERN_ALL_C_HEADER_DEPS comment
+# above for why that legitimately-relative case works with plain "-MM
+# -MG"). On a cold/clean build the header does not exist on disk yet, so
+# GCC cannot resolve it through that extra -I search path at all: per
+# GCC's documented -MG behavior, a header it cannot find is recorded using
+# exactly the string written in the #include directive, with no directory
+# prepended -- i.e. the bare "expansion_msg_ids.h", never this generated
+# directory's real path. That bare name has no matching rule anywhere in
+# this Makefile (only $(MODERN_LOCALIZATION_MSG_IDS_H)'s real path does),
+# so once this recipe's output is `include`d below, GNU Make fails the
+# *entire* clean parallel build with "No rule to make target
+# 'expansion_msg_ids.h'" -- intermittently only, depending on whether some
+# unrelated earlier target already caused the real header to exist on
+# disk before this scan ran (e.g. a leftover build/ directory from a
+# previous invocation), which is exactly why this surfaced as a flaky
+# "passes if the cache happens to exist" clean-build regression rather
+# than a deterministic failure.
+#
+# The fix is to strip just that one unresolvable bare token from this
+# recipe's own freshly generated dependency file before it is ever
+# `include`d -- not to weaken/relax any #include directive (none are
+# touched) and not to commit the generated header. This loses no real
+# dependency tracking: this header's build ordering is already
+# independently and unconditionally guaranteed further below by
+# `$(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS):
+# $(MODERN_LOCALIZATION_MSG_IDS_H)` (the header's real, rule-backed path),
+# so every modern object -- not just the four direct consumers above --
+# already waits for generation first; this just removes the duplicate,
+# unresolvable alias GCC's -MG happens to also emit.
+MODERN_LOCALIZATION_MSG_IDS_H_BASENAME := $(notdir $(MODERN_LOCALIZATION_MSG_IDS_H))
+MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE := $(subst .,\.,$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME))
+
 $(MODERN_ALL_C_HEADER_DEPS): $(MODERN_OUTPUT_DIR)/%.headers.d: %.c
 	@mkdir -p "$(@D)"
 	@"$(MODERN_CC)" $(MODERN_CFLAGS) -MM -MG -MT "$(MODERN_OUTPUT_DIR)/$*.o" "$<" > "$@.tmp" || { \
@@ -1006,6 +1046,7 @@ $(MODERN_ALL_C_HEADER_DEPS): $(MODERN_OUTPUT_DIR)/%.headers.d: %.c
 		printf '%s\n' "error: failed to pre-scan $< for generated header dependencies" >&2; \
 		exit 1; \
 	}
+	@sed -E -i 's/(^|[[:space:]])$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE)([[:space:]]|$$)/\1\2/g' "$@.tmp"
 	@mv -f "$@.tmp" "$@"
 
 ifneq (,$(filter $(MODERN_ALL_SOURCE_GOALS),$(MAKECMDGOALS)))
@@ -1397,10 +1438,40 @@ $(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_COMPILE_SETTINGS)
 # therefore the modern build -- with an actionable message, exactly like
 # an invalid config.mk value fails MODERN_BUILD_METADATA_JSON's own
 # recipe.
+#
+# Parallel-build safety: this recipe's three outputs used to be a plain
+# (non-grouped) multi-target rule, "$(A) $(B) $(C): FORCE_MODERN_LOCALIZATION
+# \n\trecipe". Sprint 3 now has real, independent consumers of two
+# *different* outputs of that same rule at once -- every ordinary modern
+# object depends on $(MODERN_LOCALIZATION_MSG_IDS_H) (below), while the
+# generated-catalog object depends on $(MODERN_LOCALIZATION_CATALOG_C) --
+# so a real "-j>1" build now schedules both as independent goals in the
+# same invocation. GNU Make treats each target of a plain multi-target
+# rule as an independent goal with its *own copy* of the recipe (the same
+# hazard already documented and fixed for FETSATOOL's feimg/fetsa pairs
+# above, via a portable mkdir-lock wrapper because neither
+# graphics_file_rules.mk nor grouped targets could be touched there);
+# confirmed empirically here too (instrumented recipe run under "-j16":
+# two distinct PIDs both entered the recipe body before either finished).
+# Concurrent invocations both eventually write the exact same, correct
+# content -- scripts/localization/cli.py's generation is deterministic --
+# but scripts/localization/generate.py's own write-if-unchanged helper
+# writes each output file in place (no atomic temp-file-plus-rename), so
+# two concurrent writers really can interleave partial writes to the same
+# file, and a third process (the compiler, reading the header mid-write)
+# could observe a torn/partial file. Unlike the FETSATOOL case, this
+# recipe and both files it lives in (modern.mk, scripts/localization/
+# generate.py) are not off-limits, and this repository already requires
+# GNU Make 4.3 (see the FETSATOOL comment above's own "isolated GNU Make
+# 4.3 reproduction"), so grouped "&:" targets -- introduced in GNU Make
+# 4.3 specifically to guarantee a multi-output recipe runs at most once
+# per invocation regardless of how many of its outputs are needed -- are
+# the correct, minimal fix here: no lock file, no wrapper script, no
+# change to scripts/localization/generate.py's own write behavior needed.
 .PHONY: FORCE_MODERN_LOCALIZATION
 FORCE_MODERN_LOCALIZATION:
 
-$(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCALIZATION_BUDGET_JSON): FORCE_MODERN_LOCALIZATION
+$(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_LOCALIZATION
 	@mkdir -p "$(MODERN_LOCALIZATION_GENERATED_DIR)"
 	@python3 -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
 
