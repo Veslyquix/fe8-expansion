@@ -214,6 +214,24 @@ class RenderMarkdownSummaryTests(unittest.TestCase):
         text = rc.render_markdown_summary({"status": "some-future-status", "reasons": []})
         self.assertIn("`some-future-status`", text)
 
+    def test_long_reasons_list_is_capped_for_readability_but_not_silently_dropped(self):
+        """A real "blocked" report can carry 200+ individual reasons (one
+        per honestly-unresolved provenance fact); the *rendered Markdown*
+        caps how many are printed for readability, but must say exactly
+        how many more exist rather than silently truncating with no
+        indication."""
+        many_reasons = [f"synthetic-reason-{i}" for i in range(50)]
+        text = rc.render_markdown_summary({"status": "blocked", "reasons": many_reasons})
+        for reason in many_reasons[: rc._MAX_RENDERED_REASONS]:
+            self.assertIn(reason, text)
+        self.assertIn(f"and {50 - rc._MAX_RENDERED_REASONS} more reason(s)", text)
+        self.assertNotIn("synthetic-reason-49", text)
+
+    def test_short_reasons_list_is_never_truncated(self):
+        text = rc.render_markdown_summary({"status": "blocked", "reasons": ["only-one-reason"]})
+        self.assertIn("only-one-reason", text)
+        self.assertNotIn("more reason(s)", text)
+
     def test_real_repo_summary_command_matches_check_status(self):
         summary_result = run_cli("summary")
         check_result = run_cli("check")

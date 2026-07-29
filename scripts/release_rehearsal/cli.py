@@ -160,6 +160,16 @@ _SUB_REPORT_ORDER = (
     "archive", "rebuild",
 )
 
+# A real "blocked" report on this repository today carries 200+ individual
+# per-category provenance reasons (one honestly-unresolved NOASSERTION
+# fact per tracked category); rendering all of them verbatim into a CI
+# job summary is technically dynamic/accurate but unreadable. Cap the
+# rendered list and point at the full JSON for the rest -- purely a
+# presentation choice, never a truncation of the underlying report data
+# (the full "reasons" list is always in the JSON printed by `check`/
+# `rehearse`, never only in this Markdown rendering).
+_MAX_RENDERED_REASONS = 25
+
 
 def render_markdown_summary(report: dict) -> str:
     """Deterministically renders `report` (a build_manifest()-shaped dict,
@@ -181,8 +191,13 @@ def render_markdown_summary(report: dict) -> str:
         lines.append(f"Candidate status is `{status}` for the following reason(s):")
         lines.append("")
         reasons = report.get("reasons") or ["(no reasons recorded)"]
-        for reason in reasons:
+        for reason in reasons[:_MAX_RENDERED_REASONS]:
             lines.append(f"- {reason}")
+        if len(reasons) > _MAX_RENDERED_REASONS:
+            lines.append(
+                f"- ... and {len(reasons) - _MAX_RENDERED_REASONS} more reason(s) "
+                "(see the full JSON report, e.g. `make release-check`, for all of them)"
+            )
     lines.append("")
 
     rows = []
