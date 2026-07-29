@@ -40301,3 +40301,13 @@ Erase All Save Data[X]
 ## MSG_SAVE_COMPAT_ERASE_CONFIRM
 Erase all save data?[.][LF]
 This cannot be undone.[X]
+
+## MSG_EXPANSION_STARTER_ITEM_NAME
+Sample Charm[X]
+
+## MSG_EXPANSION_STARTER_ITEM_DESC
+Bundled sample item.[X]
+
+## MSG_EXPANSION_STARTER_ITEM_USE_DESC
+A framework example item.[.][LF]
+Its bearer evades better.[X]

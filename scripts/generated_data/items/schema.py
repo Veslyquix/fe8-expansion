@@ -46,6 +46,20 @@ JSON source shape (see ``src/data/items.json``)::
       ]
     }
 
+``nameTextId``/``descTextId``/``useDescTextId`` accept either a plain
+integer (the vanilla authoring form -- all 206 hand-ported records use it)
+or a symbolic ``MSG_*`` name from ``include/constants/msg.h``, the header
+``scripts/texttools/textprocess.py`` regenerates from ``texts/texts.txt``::
+
+    "nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME"
+
+Framework-authored (non-vanilla) records should use the symbolic form: it
+binds the record to a message the text pipeline actually emits, so removing
+or renaming that message fails the data build with an actionable diagnostic
+instead of silently repointing the item at whatever text later lands on that
+number. Both forms resolve to the same integer before generation, so the
+generated C and the round-trip comparison are identical either way.
+
 Optional ``ItemData`` fields default exactly like the hand-written
 designated initializers that only set the fields they need:
 
@@ -91,6 +105,7 @@ from ..schema import DependencyGraph, TableSchema
 from .. import idspace
 from ..validators import (
     extract_define_constant,
+    extract_define_constants,
     extract_enum_constants,
     resolve_bitmask_flags,
     validate_range,
@@ -159,6 +174,38 @@ def read_msg_count(header=MSG_HEADER):
     return value
 
 
+def read_msg_constants(header=MSG_HEADER):
+    """Read the live ``MSG_*`` text-ID constant family from
+    ``include/constants/msg.h`` (the header the text pipeline
+    ``scripts/texttools/textprocess.py`` regenerates from
+    ``texts/texts.txt``).
+
+    Returned as ``{name: (value, line_number)}``, i.e. the same shape
+    :func:`~scripts.generated_data.validators.extract_enum_constants`
+    produces, so a symbolic text ID can be validated and resolved with the
+    ordinary reference machinery.
+
+    ``MSG_COUNT`` is deliberately excluded: it is the table's *bound*, not
+    a message, and authoring it as a text ID would always be a bug.
+    """
+    constants = extract_define_constants(header, name_prefix="MSG_")
+    constants.pop("MSG_COUNT", None)
+    return constants
+
+
+# Cache keyed by header path: the MSG_* family is ~3.4k entries and every
+# record in a table load would otherwise re-read the whole header.
+_MSG_CONSTANTS_CACHE = {}
+
+
+def _msg_constants(header=MSG_HEADER):
+    cached = _MSG_CONSTANTS_CACHE.get(header)
+    if cached is None:
+        cached = read_msg_constants(header)
+        _MSG_CONSTANTS_CACHE[header] = cached
+    return cached
+
+
 def read_item_icon_count(source=ITEM_ICON_SOURCE):
     """Derive the number of item-icon graphics tiles from
     ``src/data/data_item_icon.c`` by counting ``u8 item_icon_*[] =
@@ -182,6 +229,37 @@ def read_item_icon_count(source=ITEM_ICON_SOURCE):
 def _optional_int(node, default=0):
     if node is None:
         return default, None
+    return node.as_int(), node.loc
+
+
+def _optional_text_id(node, msg_header=MSG_HEADER):
+    """``nameTextId``/``descTextId``/``useDescTextId``.
+
+    Accepts either the vanilla authoring form -- a plain integer, which the
+    206 hand-ported records all use -- or a symbolic ``MSG_*`` name from
+    ``include/constants/msg.h``. The symbolic form is what
+    framework-authored (non-vanilla) records should use: it binds the record
+    to a message the text pipeline actually emits, so deleting/renaming that
+    message fails the data build with an actionable diagnostic instead of
+    silently pointing the item at whatever text later lands on that number.
+
+    Always returns a resolved ``(int, loc)`` pair, so everything downstream
+    (generation, round-trip comparison, range validation) is unchanged.
+    """
+    if node is None:
+        return 0, None
+    if node.is_scalar() and isinstance(node.value, str):
+        symbol = node.as_str()
+        constants = _msg_constants(msg_header)
+        if symbol not in constants:
+            raise GeneratedDataError(
+                "unknown text ID '{}': no '#define {} ...' in {} (author it in "
+                "texts/texts.txt and regenerate with `make src/msg_data.c`)".format(
+                    symbol, symbol, os.path.relpath(msg_header, REPO_ROOT)),
+                node.loc,
+                SCHEMA_NAME,
+            )
+        return constants[symbol][0], node.loc
     return node.as_int(), node.loc
 
 
@@ -310,9 +388,9 @@ def _load_records_file(source_path):
         item_name_node = item_node.require("item")
         weapon_type_node = item_node.require("weaponType")
 
-        name_text_id, name_text_loc = _optional_int(item_node.get("nameTextId"))
-        desc_text_id, desc_text_loc = _optional_int(item_node.get("descTextId"))
-        use_desc_text_id, use_desc_text_loc = _optional_int(item_node.get("useDescTextId"))
+        name_text_id, name_text_loc = _optional_text_id(item_node.get("nameTextId"))
+        desc_text_id, desc_text_loc = _optional_text_id(item_node.get("descTextId"))
+        use_desc_text_id, use_desc_text_loc = _optional_text_id(item_node.get("useDescTextId"))
 
         attributes_node = item_node.get("attributes")
         attributes = [n.as_str() for n in attributes_node.as_list()] if attributes_node is not None else []

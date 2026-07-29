@@ -73,6 +73,35 @@ def extract_define_constant(header_path, name):
     raise GeneratedDataError("could not find '#define {} ...' in {}".format(name, header_path))
 
 
+def extract_define_constants(header_path, name_prefix=None):
+    """Scan a C header for every ``#define NAME VALUE`` object-like macro.
+
+    The plural companion of :func:`extract_define_constant`: it returns an
+    ordered ``dict`` of ``name -> (value, line_number)`` for a whole
+    constant family instead of one named macro, mirroring
+    :func:`extract_enum_constants`' shape so both can feed
+    :func:`validate_reference` unchanged.
+
+    ``name_prefix``, if given, filters to symbols starting with it (e.g.
+    ``"MSG_"`` for ``include/constants/msg.h``), so a header that also
+    defines unrelated macros (``MSG_COUNT``'s neighbours, include guards)
+    does not contaminate the family.
+    """
+    constants = {}
+    with open(header_path, "r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            match = _DEFINE_ENTRY_RE.match(line)
+            if not match:
+                continue
+            name = match.group(1)
+            if name_prefix is not None and not name.startswith(name_prefix):
+                continue
+            value_text = match.group(2)
+            value = int(value_text, 16) if value_text.lower().startswith(("0x", "-0x")) else int(value_text)
+            constants[name] = (value, line_number)
+    return constants
+
+
 def resolve_bitmask_flags(names, flag_values, loc, reference_path, kind="flag"):
     """Validate and resolve a list of symbolic bitmask flag names (e.g.
     ``["IA_WEAPON", "IA_UNSELLABLE"]``) against a ``{name: int_value}``

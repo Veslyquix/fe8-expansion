@@ -3,9 +3,13 @@
   "items": [
     {
       "item": "ITEM_EXPANSION_CE",
+      "nameTextId": "MSG_EXPANSION_STARTER_ITEM_NAME",
+      "descTextId": "MSG_EXPANSION_STARTER_ITEM_DESC",
+      "useDescTextId": "MSG_EXPANSION_STARTER_ITEM_USE_DESC",
       "weaponType": "ITYPE_ITEM",
-      "maxUses": 1,
-      "iconId": 0
+      "attributes": ["IA_UNSELLABLE"],
+      "maxUses": 3,
+      "iconId": 222
     }
   ]
 }
