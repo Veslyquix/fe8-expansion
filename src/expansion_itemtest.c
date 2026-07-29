@@ -180,6 +180,44 @@ static u32 ItemExpansionTest_SlotValue(int slot)
     return (u32)slot;
 }
 
+/* FNV-1a 32, over the NUL-terminated string the production name path
+ * returned. A hash plus the length is a scalar, order-sensitive witness of
+ * the exact bytes drawn, so the probe never has to publish a pointer (or a
+ * framebuffer) to prove the text. Offset basis/prime are the published
+ * FNV-1a 32 constants. */
+#define ITEMTEST_FNV1A_OFFSET 2166136261u
+#define ITEMTEST_FNV1A_PRIME 16777619u
+
+static u32 ItemExpansionTest_StringHash(const char * text)
+{
+    u32 hash = ITEMTEST_FNV1A_OFFSET;
+    const u8 * cursor = (const u8 *)text;
+
+    if (text == NULL)
+        return 0;
+
+    while (*cursor != 0)
+    {
+        hash ^= (u32)*cursor++;
+        hash *= ITEMTEST_FNV1A_PRIME;
+    }
+
+    return hash;
+}
+
+static u32 ItemExpansionTest_StringLength(const char * text)
+{
+    u32 length = 0;
+
+    if (text == NULL)
+        return 0;
+
+    while (text[length] != 0)
+        length++;
+
+    return length;
+}
+
 static int ItemExpansionTest_FindItemSlot(struct Unit * unit, int itemIndex)
 {
     int i;
@@ -399,6 +437,7 @@ static void ItemExpansionTest_StageUi(struct ItemExpansionTestProc * proc)
     struct Text text;
     u16 * mapOut;
     struct Unit * unit;
+    const char * name;
     int item;
 
     (void)proc;
@@ -409,7 +448,11 @@ static void ItemExpansionTest_StageUi(struct ItemExpansionTestProc * proc)
     if (item == 0)
         item = MakeNewItem(ITEM_EXPANSION_CE);
 
-    gItemExpansionProbe.uiNamePtr = (u32)GetItemName(item);
+    name = GetItemName(item);
+
+    gItemExpansionProbe.uiNamePtr = (u32)name;
+    gItemExpansionProbe.uiNameLen = ItemExpansionTest_StringLength(name);
+    gItemExpansionProbe.uiNameHash = ItemExpansionTest_StringHash(name);
     gItemExpansionProbe.uiIconId = GetItemIconId(item);
     gItemExpansionProbe.uiDescId = GetItemDescId(item);
 

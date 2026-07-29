@@ -67,6 +67,21 @@ build -- default, feature-free ones included. Such a record leaves its text
 IDs unset (they stay ``0``) and authors its display text literally instead;
 see ``authoringName`` below.
 
+``authoringName``/``authoringDescription``/``authoringUseDescription`` are
+that literal, original authoring text, and are accepted ONLY on expansion
+overlay records (``item`` >= ``ITEM_ID_EXPANSION_FIRST``)::
+
+    "authoringName": "Sample Charm"
+
+They never touch ``gItemData[]``: the generated table is byte-for-byte the
+same with or without them. ``authoringName`` is instead emitted, by
+:mod:`scripts.generated_data.items.content_text`, into a BUILD-LOCAL text
+table that only the content profile (``EXPANSION_STARTER_CONTENT=1``)
+generates and links; the descriptions are emitted only into that generator's
+audit catalog, because the vanilla description/help UI is addressed by
+message ID and this framework does not add messages (see
+``docs/starter_features.md``).
+
 Optional ``ItemData`` fields default exactly like the hand-written
 designated initializers that only set the fields they need:
 
@@ -270,6 +285,52 @@ def _optional_text_id(node, msg_header=MSG_HEADER):
     return node.as_int(), node.loc
 
 
+# Authoring-text bounds. The name is drawn by the production item menu /
+# stat-screen line, so it is held to a UI-plausible width (the longest
+# vanilla item name is 15 characters); the descriptions are audit/catalog
+# text only, so they only need a sane upper bound.
+AUTHORING_NAME_MAX_CHARS = 20
+AUTHORING_DESCRIPTION_MAX_CHARS = 120
+
+
+def _optional_authoring_text(node, field_name, max_chars):
+    """``authoringName``/``authoringDescription``/``authoringUseDescription``:
+    original literal text authored in the record itself.
+
+    Deliberately strict, because this string ends up in a generated C string
+    literal (the name) or a generated JSON catalog (the descriptions):
+    printable 7-bit ASCII only, no surrounding whitespace, non-empty, and
+    bounded. Anything else is a hard, located error rather than something
+    that silently reaches a build-local generated source."""
+    if node is None:
+        return None, None
+    text = node.as_str()
+    if text != text.strip() or not text:
+        raise GeneratedDataError(
+            "{} must be non-empty original text with no leading/trailing "
+            "whitespace".format(field_name),
+            node.loc,
+            SCHEMA_NAME,
+        )
+    if len(text) > max_chars:
+        raise GeneratedDataError(
+            "{} is {} characters; the bound is {}".format(
+                field_name, len(text), max_chars),
+            node.loc,
+            SCHEMA_NAME,
+        )
+    for char in text:
+        if not (0x20 <= ord(char) <= 0x7E):
+            raise GeneratedDataError(
+                "{} contains a non printable-ASCII character {!r}; authoring "
+                "text is emitted into generated C/JSON and must stay 7-bit "
+                "printable ASCII".format(field_name, char),
+                node.loc,
+                SCHEMA_NAME,
+            )
+    return text, node.loc
+
+
 def _optional_str(node, default):
     if node is None:
         return default, None
@@ -297,7 +358,10 @@ class ItemRecord:
                  range_min, range_min_loc, range_max, range_max_loc,
                  cost_per_use, cost_per_use_loc, required_wexp, required_wexp_loc,
                  icon_id, icon_id_loc, use_effect_id, use_effect_id_loc,
-                 weapon_effect, weapon_effect_loc, weapon_exp, weapon_exp_loc, loc):
+                 weapon_effect, weapon_effect_loc, weapon_exp, weapon_exp_loc, loc,
+                 authoring_name=None, authoring_name_loc=None,
+                 authoring_description=None, authoring_description_loc=None,
+                 authoring_use_description=None, authoring_use_description_loc=None):
         self.item = item
         self.item_loc = item_loc
         self.name_text_id = name_text_id
@@ -341,6 +405,16 @@ class ItemRecord:
         self.weapon_exp = weapon_exp
         self.weapon_exp_loc = weapon_exp_loc
         self.loc = loc
+        # Issue #6 content authoring: original literal display text carried
+        # by a framework-authored (expansion overlay) record. Never part of
+        # as_tuple() below -- gItemData[] is byte-identical with or without
+        # it -- see content_text.py for the build-local consumer.
+        self.authoring_name = authoring_name
+        self.authoring_name_loc = authoring_name_loc
+        self.authoring_description = authoring_description
+        self.authoring_description_loc = authoring_description_loc
+        self.authoring_use_description = authoring_use_description
+        self.authoring_use_description_loc = authoring_use_description_loc
 
     @property
     def encoded_range(self):
@@ -429,6 +503,15 @@ def _load_records_file(source_path):
         weapon_effect, weapon_effect_loc = _optional_str(item_node.get("weaponEffect"), WPN_EFFECT_DEFAULT)
         weapon_exp, weapon_exp_loc = _optional_int(item_node.get("weaponExp"))
 
+        authoring_name, authoring_name_loc = _optional_authoring_text(
+            item_node.get("authoringName"), "authoringName", AUTHORING_NAME_MAX_CHARS)
+        authoring_description, authoring_description_loc = _optional_authoring_text(
+            item_node.get("authoringDescription"), "authoringDescription",
+            AUTHORING_DESCRIPTION_MAX_CHARS)
+        authoring_use_description, authoring_use_description_loc = _optional_authoring_text(
+            item_node.get("authoringUseDescription"), "authoringUseDescription",
+            AUTHORING_DESCRIPTION_MAX_CHARS)
+
         records.append(
             ItemRecord(
                 item=item_name_node.as_str(), item_loc=item_name_node.loc,
@@ -453,6 +536,11 @@ def _load_records_file(source_path):
                 weapon_effect=weapon_effect, weapon_effect_loc=weapon_effect_loc,
                 weapon_exp=weapon_exp, weapon_exp_loc=weapon_exp_loc,
                 loc=item_node.loc,
+                authoring_name=authoring_name, authoring_name_loc=authoring_name_loc,
+                authoring_description=authoring_description,
+                authoring_description_loc=authoring_description_loc,
+                authoring_use_description=authoring_use_description,
+                authoring_use_description_loc=authoring_use_description_loc,
             )
         )
     return ItemRecordList(records, items_node.loc)
@@ -543,6 +631,37 @@ def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMIT
                 validate_range(value, 0, msg_count - 1, loc or record.loc,
                                 "{}.{}".format(ref, field_name), field_name=field_name)
             )
+
+        # Issue #6 content authoring: literal display text belongs ONLY to a
+        # framework-authored expansion record, and never coexists with a
+        # message ID for the same slot (one record, one source of truth).
+        item_value = items_enum.get(record.item, (None, None))[0]
+        is_expansion = (item_value is not None
+                        and item_value >= idspace.ITEM_EXPANSION_FIRST)
+        for field_name, value, loc, text_id, text_field in (
+            ("authoringName", record.authoring_name, record.authoring_name_loc,
+             record.name_text_id, "nameTextId"),
+            ("authoringDescription", record.authoring_description,
+             record.authoring_description_loc, record.desc_text_id, "descTextId"),
+            ("authoringUseDescription", record.authoring_use_description,
+             record.authoring_use_description_loc, record.use_desc_text_id,
+             "useDescTextId"),
+        ):
+            if value is None:
+                continue
+            if not is_expansion:
+                diagnostics.add(GeneratedDataError(
+                    "{}.{} is only valid on a framework-authored expansion "
+                    "record (item index >= 0x{:02X}): a vanilla record keeps "
+                    "its vanilla message ID".format(
+                        ref, field_name, idspace.ITEM_EXPANSION_FIRST),
+                    loc or record.loc, SCHEMA_NAME))
+            if text_id:
+                diagnostics.add(GeneratedDataError(
+                    "{}.{} authors literal text while {} also points at "
+                    "message {}: choose one source of truth".format(
+                        ref, field_name, text_field, text_id),
+                    loc or record.loc, SCHEMA_NAME))
 
         for field_name, value, loc in (
             ("maxUses", record.max_uses, record.max_uses_loc),

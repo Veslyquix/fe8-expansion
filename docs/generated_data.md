@@ -1075,8 +1075,13 @@ vanilla record references directly); nullable `statBonuses`/
 helper, since `MSG_COUNT` is a `#define`, not an enum entry) and
 optionally authored as symbolic `MSG_*` names resolved through the
 companion `extract_define_constants()` helper against
-`include/constants/msg.h` (the form framework-authored records should
-use -- see `docs/generated_data_tutorial.md`); `iconId`
+`include/constants/msg.h` -- for records that point at an **existing**
+message; a framework-authored expansion record must add none (see
+"Config-gated content text" below and
+`docs/generated_data_tutorial.md`); the optional
+`authoringName`/`authoringDescription`/`authoringUseDescription`
+literal-text fields (expansion records only, printable 7-bit ASCII,
+bounded, never combined with the matching `*TextId`); `iconId`
 bounded by a count of `u8 item_icon_*[] = INCBIN_U8(".../*.4bpp")`
 declarations in `src/data/data_item_icon.c` -- the strongest
 deterministic *source-level* bound available, since the real built
@@ -1119,6 +1124,35 @@ diagnostics.
 report: total record count and index range, a weapon-type histogram, an
 `IA_*` attribute-usage histogram, `pStatBonuses`/`pEffectiveness`
 pointer-symbol usage tables, and the table's own dependency-graph digest.
+
+### Config-gated content text (issue #6)
+
+`texts/texts.txt` is unconditional and compiles into ONE shared,
+Huffman-compressed blob (`src/msg_data.c`), so appending a content-only
+message re-encodes the text of **every** build -- default, feature-free ones
+included. A framework-authored (expansion overlay) record therefore adds no
+message: it leaves `nameTextId`/`descTextId`/`useDescTextId` unset and
+authors its original display text literally, in the record, as
+`authoringName` (plus the audit-only `authoringDescription`/
+`authoringUseDescription`).
+
+`scripts/generated_data/items/content_text.py` +
+`python3 -m scripts.generated_data content-text` turn that authoring input
+into two BUILD-LOCAL artifacts, and only in the content profile
+(`EXPANSION_STARTER_CONTENT=1`, which also requires an item cap that reaches
+the expansion IDs):
+
+| Artifact | Contents |
+|---|---|
+| `build/generated/data/items_expansion_content_text.h` | A C89, `ItemId`-keyed table of the authored **names** plus `EXPANSION_CONTENT_TEXT_COUNT`/`EXPANSION_CONTENT_TEXT_NAME_CAPACITY`. `src/expansion_starter_content.c` includes it (the include path is extended only in that profile) and publishes the narrow typed accessor the production `GetItemName()` reads. |
+| `build/generated/data/items_expansion_content_text.json` | An audit catalog of the same authored text *including* the descriptions, which the vanilla message-ID-addressed help UI cannot show and which are explicitly labelled as such. |
+
+At `EXPANSION_STARTER_CONTENT=0` the command writes nothing and removes any
+artifact a previous content build left behind, so a default build can neither
+generate nor link a content string. Neither artifact is ever committed, and
+the generated table is never hand-edited. `gItemData[]` itself is
+byte-identical with or without the authoring fields -- they never reach the
+item table.
 
 ## `classes` schema (Issue #5 Batch 1: full global class table)
 

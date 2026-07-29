@@ -159,6 +159,16 @@ struct ItemExpansionProbe
     /*100 */ u32 contentControlDefenseDelta;
     /*104 */ u32 contentApplyCount;         /* seam applies this stage performed */
     /*108 */ u32 contentSampleTriggerCount; /* sample bonuses granted this stage */
+
+    /* The exact bytes the production UI name path handed back, as scalars
+     * (never a pointer, never a framebuffer): the length and an FNV-1a 32
+     * hash of GetItemName()'s result. The host runner recomputes both from
+     * the authoring source of truth (`authoringName` in
+     * src/data/items_expansion.json), so the ROM proving "the original
+     * authored text is what the UI reads" needs no oracle file and cannot
+     * drift from the authored record. */
+    /*10C */ u32 uiNameLen;
+    /*110 */ u32 uiNameHash;
 };
 
 extern struct ItemExpansionProbe gItemExpansionProbe;

@@ -7,6 +7,11 @@ Commands:
 * ``generate`` -- validate, then write C89 output under ``build/generated/data``
   (write-if-changed), the committed inventory/summary report, and (for
   tables that have one) run the hand-written round-trip comparison.
+* ``content-text`` -- issue #6: write the build-local, content-profile-only
+  authored item text (a C89 header consumed by
+  ``src/expansion_starter_content.c`` plus an audit catalog). Writes nothing
+  when ``EXPANSION_STARTER_CONTENT`` is 0, so a default build links no
+  content string at all.
 * ``check`` -- like ``generate``, self-healing the ephemeral ``build/``
   output (write-if-changed, exactly like ``generate``), but never writing
   the committed inventory: it only compares against what's on disk and
@@ -300,6 +305,76 @@ def cmd_manifest(args):
     return 0
 
 
+def cmd_content_text(args):
+    """Issue #6: emit the BUILD-LOCAL content text artifacts, and only in the
+    content profile.
+
+    Default profile (``EXPANSION_STARTER_CONTENT`` unset/0) writes nothing at
+    all and removes any artifact a previous content build left behind, so a
+    default build can never pick up a stale string table. Everything written
+    lives under ``--out-dir`` (build/), is never committed, and is never
+    hand-edited.
+    """
+    from .items import content_text as items_content_text
+    from .items import schema as items_schema
+    from . import idspace
+
+    out_dir = args.out_dir or DEFAULT_OUT_DIR
+    try:
+        content = items_content_text.resolve_content_flag(args.content)
+        paths = [os.path.join(out_dir, name)
+                 for name in items_content_text.CONTENT_TEXT_ARTIFACTS]
+        if not content:
+            removed = [path for path in paths if os.path.exists(path)]
+            for path in removed:
+                os.remove(path)
+            print("skip: EXPANSION_STARTER_CONTENT=0; no content text generated"
+                  + (" (removed {} stale artifact(s))".format(len(removed)) if removed else ""))
+            return 0
+
+        cap = idspace.resolve_item_id_cap()
+        items_content_text.require_cap(cap)
+
+        source_path = args.source or items_schema.ITEMS_EXPANSION_SOURCE
+        # Render the repo-relative path (never an absolute workspace path):
+        # the generated artifacts must be byte-identical wherever the tree
+        # is checked out.
+        display_source = os.path.relpath(source_path, items_schema.REPO_ROOT)
+        base_source = os.path.join(items_schema.REPO_ROOT, "src", "data", "items.json")
+        records = items_schema.load_records(
+            base_source, item_cap=cap, overlay_source=source_path)
+        diagnostics = DiagnosticCollector()
+        items_schema.validate(records, diagnostics, item_cap=cap,
+                              expansion_header=items_schema.ITEMS_EXPANSION_HEADER)
+        if diagnostics.errors:
+            for error in diagnostics.errors:
+                print(str(error), file=sys.stderr)
+            print("FAILED: {} diagnostic(s); nothing written".format(
+                len(diagnostics.errors)), file=sys.stderr)
+            return 1
+
+        collected = items_content_text.collect(records)
+        if not collected:
+            print("error: EXPANSION_STARTER_CONTENT=1 but no record in {} authors "
+                  "content text (add an 'authoringName')".format(display_source),
+                  file=sys.stderr)
+            return 1
+
+        header_path, catalog_path = paths
+        header_changed = write_if_changed(
+            header_path, items_content_text.render_header(collected, display_source))
+        catalog_changed = write_if_changed(
+            catalog_path, items_content_text.render_catalog(collected, display_source))
+    except GeneratedDataError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    print("{} {} ({} authored content record(s))".format(
+        "wrote" if header_changed else "up to date:", header_path, len(collected)))
+    print("{} {}".format("wrote" if catalog_changed else "up to date:", catalog_path))
+    return 0
+
+
 def build_arg_parser():
     parser = argparse.ArgumentParser(prog="python3 -m scripts.generated_data")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -341,6 +416,22 @@ def build_arg_parser():
         "--check", action="store_true",
         help="fail on manifest drift or record-budget overflow; write nothing committed")
     manifest_parser.set_defaults(func=cmd_manifest)
+
+    content_text_parser = subparsers.add_parser(
+        "content-text",
+        help="issue #6: emit the build-local, content-profile-only authored "
+             "item text (header + audit catalog); a no-op at "
+             "EXPANSION_STARTER_CONTENT=0")
+    content_text_parser.add_argument(
+        "--out-dir", help="output directory (default: build/generated/data)")
+    content_text_parser.add_argument(
+        "--source", help="path to the expansion overlay JSON "
+                         "(default: src/data/items_expansion.json)")
+    content_text_parser.add_argument(
+        "--content", default=None,
+        help="1 to generate the content text, 0 to generate nothing "
+             "(default: the EXPANSION_STARTER_CONTENT environment value, else 0)")
+    content_text_parser.set_defaults(func=cmd_content_text)
 
     return parser
 

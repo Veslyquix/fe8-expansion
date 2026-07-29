@@ -401,6 +401,59 @@ GENERATED_DATA_CONFIG_INPUTS_characters := \
 # deliberately excluded -- they never affect generated output.
 GENERATED_DATA_SHARED_PY_SOURCES := $(wildcard scripts/generated_data/*.py)
 
+# --- Issue #6 config-gated CONTENT text -----------------------------------
+# Placed AFTER GENERATED_DATA_SHARED_PY_SOURCES above on purpose: make
+# expands a rule's prerequisite list when the rule is read, so a rule that
+# names that variable earlier in the file would silently get an empty list.
+#
+# A framework-authored item record must not append a message to
+# texts/texts.txt: that table is Huffman-compressed as ONE shared blob, so a
+# content-only message re-encodes the text of every build -- including a
+# default, feature-free ROM. The record therefore authors its ORIGINAL
+# display text literally ("authoringName", src/data/items_expansion.json) and
+# the generator emits it into a BUILD-LOCAL header that only the content
+# profile links (scripts/generated_data/items/content_text.py).
+#
+# EXPANSION_STARTER_CONTENT is an env/config value exactly like
+# FE8_ITEM_ID_CAP above: flipping it changes no source mtime, so it gets the
+# same FORCE + write-if-changed stamp idiom. At 0 the recipe writes nothing
+# and removes any artifact a previous content build left behind, so the
+# default profile can never pick up a stale string table.
+GENERATED_DATA_CONTENT_TEXT_HEADER  := $(GENERATED_DATA_OUT_DIR)/items_expansion_content_text.h
+GENERATED_DATA_CONTENT_TEXT_CATALOG := $(GENERATED_DATA_OUT_DIR)/items_expansion_content_text.json
+GENERATED_DATA_CONTENT_TEXT_STAMP   := $(GENERATED_DATA_OUT_DIR)/.starter_content.stamp
+
+.PHONY: FORCE_GENERATED_DATA_CONTENT_TEXT
+FORCE_GENERATED_DATA_CONTENT_TEXT:
+
+$(GENERATED_DATA_CONTENT_TEXT_STAMP): FORCE_GENERATED_DATA_CONTENT_TEXT
+	@mkdir -p "$(@D)"
+	@printf 'starter_content=%s item_id_cap=%s\n' \
+		'$(EXPANSION_STARTER_CONTENT)' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+
+$(GENERATED_DATA_CONTENT_TEXT_HEADER): \
+		$(GENERATED_DATA_CONTENT_TEXT_STAMP) \
+		$(GENERATED_DATA_SHARED_PY_SOURCES) \
+		$(wildcard scripts/generated_data/items/*.py) \
+		src/data/items.json \
+		src/data/items_expansion.json \
+		include/constants/items.h \
+		include/constants/items_expansion.h
+	@mkdir -p $(GENERATED_DATA_OUT_DIR)
+	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
+
+# The audit catalog is written by that same one recipe.
+$(GENERATED_DATA_CONTENT_TEXT_CATALOG): $(GENERATED_DATA_CONTENT_TEXT_HEADER)
+
+# Standalone entry point (contributor convenience + host tests): honours the
+# same EXPANSION_STARTER_CONTENT value and writes only under build/.
+.PHONY: generated-data-content-text
+generated-data-content-text:
+	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
+
 # Each linked table's top-level generated C symbol name(s) -- used by
 # generated-data-link-check to prove exactly one definition of each links
 # from the generated object. Cannot be derived generically from the table

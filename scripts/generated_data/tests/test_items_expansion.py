@@ -23,6 +23,7 @@ scripts/generated_data/items/content_text.py).
 
 import json
 import os
+import pathlib
 import tempfile
 import unittest
 
@@ -31,6 +32,7 @@ from scripts.generated_data.diagnostics import GeneratedDataError
 from scripts.generated_data.diagnostics import DiagnosticCollector
 from scripts.generated_data.items import schema as items_schema
 from scripts.generated_data.items import generate as items_generate
+from scripts.generated_data.items import content_text as items_content_text
 
 REPO_ROOT = idspace.REPO_ROOT
 ITEMS_JSON = os.path.join(REPO_ROOT, "src", "data", "items.json")
@@ -109,7 +111,7 @@ class AuthoredContentRecordTests(unittest.TestCase):
         self.records = items_schema.load_records(
             ITEMS_JSON, item_cap=0xCE, overlay_source=EXP_SOURCE)
         self.record = next(r for r in self.records if r.item == "ITEM_EXPANSION_CE")
-        self.raw = json.loads(open(EXP_SOURCE, encoding="utf-8").read())
+        self.raw = json.loads(pathlib.Path(EXP_SOURCE).read_text(encoding="utf-8"))
         self.raw_record = self.raw["items"][0]
         self.msg = items_schema.read_msg_constants()
 
@@ -180,6 +182,156 @@ class AuthoredContentRecordTests(unittest.TestCase):
         """MakeNewItem(item) = uses<<8 | id (src/bmitem.c), so the authored
         uses count is observable in every runtime item halfword."""
         self.assertEqual((self.record.max_uses << 8) | 0xCE, 0x03CE)
+
+
+class AuthoringTextTests(unittest.TestCase):
+    """The replacement for the removed messages: ORIGINAL literal text,
+    authored in the record, generated only into the content profile."""
+
+    def setUp(self):
+        self.records = items_schema.load_records(
+            ITEMS_JSON, item_cap=0xCE, overlay_source=EXP_SOURCE)
+        self.record = next(r for r in self.records if r.item == "ITEM_EXPANSION_CE")
+        self.raw_record = json.loads(pathlib.Path(EXP_SOURCE).read_text(encoding="utf-8"))["items"][0]
+
+    def _overlay(self, tmp, record):
+        path = os.path.join(tmp, "overlay.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"$schema": "fe8.items.v1", "items": [record]}, handle)
+        return path
+
+    def _validate(self, path):
+        records = items_schema.load_records(ITEMS_JSON, item_cap=0xCE, overlay_source=path)
+        diags = DiagnosticCollector()
+        items_schema.validate(records, diags, item_cap=0xCE, expansion_header=EXP_HEADER)
+        return [str(e) for e in diags.errors]
+
+    def test_record_authors_original_literal_text(self):
+        self.assertEqual(self.record.authoring_name, self.raw_record["authoringName"])
+        self.assertTrue(self.record.authoring_name.strip())
+        self.assertTrue(self.record.authoring_description)
+        self.assertTrue(self.record.authoring_use_description)
+
+    def test_authoring_text_never_reaches_the_item_table(self):
+        """gItemData[] must be byte-identical with or without the authoring
+        fields: they are content-profile text, not item data."""
+        with_text = items_generate.generate_c_source(self.records, ITEMS_JSON)
+        stripped = json.loads(pathlib.Path(EXP_SOURCE).read_text(encoding="utf-8"))
+        for field in ("authoringName", "authoringDescription", "authoringUseDescription"):
+            stripped["items"][0].pop(field)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "no_text.json")
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(stripped, handle)
+            without = items_generate.generate_c_source(
+                items_schema.load_records(ITEMS_JSON, item_cap=0xCE, overlay_source=path),
+                ITEMS_JSON)
+        self.assertEqual(with_text, without)
+        self.assertNotIn(self.record.authoring_name, with_text)
+
+    def test_vanilla_record_may_not_author_literal_text(self):
+        """A vanilla record keeps its vanilla message ID; overriding its name
+        with literal text is not an authoring surface this schema offers."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "vanilla.json")
+            raw = json.loads(pathlib.Path(ITEMS_JSON).read_text(encoding="utf-8"))
+            raw["items"][1]["authoringName"] = "Renamed"
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(raw, handle)
+            records = items_schema.load_records(path, item_cap=0xCE, overlay_source=EXP_SOURCE)
+            diags = DiagnosticCollector()
+            items_schema.validate(records, diags, item_cap=0xCE, expansion_header=EXP_HEADER)
+            messages = [str(e) for e in diags.errors]
+        self.assertTrue(any("only valid on a framework-authored expansion record" in m
+                            for m in messages), messages)
+
+    def test_literal_text_and_message_id_are_mutually_exclusive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._overlay(tmp, {
+                "item": "ITEM_EXPANSION_CE",
+                "weaponType": "ITYPE_ITEM",
+                "authoringName": "Both",
+                "nameTextId": 7,
+            })
+            messages = self._validate(path)
+        self.assertTrue(any("choose one source of truth" in m for m in messages), messages)
+
+    def test_authoring_text_is_bounded_and_printable_ascii(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            too_long = self._overlay(tmp, {
+                "item": "ITEM_EXPANSION_CE",
+                "weaponType": "ITYPE_ITEM",
+                "authoringName": "x" * (items_schema.AUTHORING_NAME_MAX_CHARS + 1),
+            })
+            with self.assertRaises(GeneratedDataError) as ctx:
+                items_schema.load_records(ITEMS_JSON, item_cap=0xCE, overlay_source=too_long)
+            self.assertIn("the bound is", str(ctx.exception))
+
+            non_ascii = self._overlay(tmp, {
+                "item": "ITEM_EXPANSION_CE",
+                "weaponType": "ITYPE_ITEM",
+                "authoringName": "Caf\u00e9 Charm",
+            })
+            with self.assertRaises(GeneratedDataError) as ctx:
+                items_schema.load_records(ITEMS_JSON, item_cap=0xCE, overlay_source=non_ascii)
+            self.assertIn("printable ASCII", str(ctx.exception))
+
+            padded = self._overlay(tmp, {
+                "item": "ITEM_EXPANSION_CE",
+                "weaponType": "ITYPE_ITEM",
+                "authoringName": " Padded ",
+            })
+            with self.assertRaises(GeneratedDataError) as ctx:
+                items_schema.load_records(ITEMS_JSON, item_cap=0xCE, overlay_source=padded)
+            self.assertIn("whitespace", str(ctx.exception))
+
+
+class ContentTextGeneratorTests(unittest.TestCase):
+    """scripts/generated_data/items/content_text.py itself."""
+
+    def setUp(self):
+        self.records = items_schema.load_records(
+            ITEMS_JSON, item_cap=0xCE, overlay_source=EXP_SOURCE)
+        self.collected = items_content_text.collect(self.records)
+
+    def test_only_authored_expansion_records_are_collected(self):
+        self.assertEqual(len(self.collected), 1)
+        symbol, value, record = self.collected[0]
+        self.assertEqual(symbol, "ITEM_EXPANSION_CE")
+        self.assertEqual(value, 0xCE)
+        self.assertEqual(record.authoring_name, "Sample Charm")
+
+    def test_default_cap_collects_nothing(self):
+        """No overlay merged at the vanilla cap -> nothing to generate."""
+        self.assertEqual(items_content_text.collect(
+            items_schema.load_records(ITEMS_JSON)), [])
+
+    def test_header_holds_the_exact_literal_and_capacity(self):
+        header = items_content_text.render_header(
+            self.collected, "src/data/items_expansion.json")
+        self.assertIn('{ ITEM_EXPANSION_CE, "Sample Charm" },', header)
+        self.assertIn("#define EXPANSION_CONTENT_TEXT_COUNT 1", header)
+        self.assertIn("#define EXPANSION_CONTENT_TEXT_NAME_CAPACITY {}".format(
+            len("Sample Charm") + 1), header)
+        self.assertIn("AUTO-GENERATED", header)
+        self.assertNotIn("//", header)
+
+    def test_catalog_is_honest_about_the_description_boundary(self):
+        catalog = json.loads(items_content_text.render_catalog(
+            self.collected, "src/data/items_expansion.json"))
+        entry = catalog["items"][0]
+        self.assertEqual(entry["authoringName"], "Sample Charm")
+        self.assertIn("not shown in game", entry["runtimeText"]["description"])
+        self.assertIn("GetItemName()", entry["runtimeText"]["name"])
+
+    def test_content_flag_and_cap_dependencies_are_hard_errors(self):
+        self.assertEqual(items_content_text.resolve_content_flag("1"), 1)
+        self.assertEqual(items_content_text.resolve_content_flag(None, {}), 0)
+        with self.assertRaises(GeneratedDataError):
+            items_content_text.resolve_content_flag("2")
+        with self.assertRaises(GeneratedDataError) as ctx:
+            items_content_text.require_cap(idspace.ITEM_DEFAULT_CAP)
+        self.assertIn("FE8_ITEM_ID_CAP", str(ctx.exception))
 
 
 class SymbolicTextIdTests(unittest.TestCase):

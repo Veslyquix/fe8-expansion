@@ -340,8 +340,11 @@ generated objects) are unaffected.
    shortcut, and do not add new graphics assets: point `iconId` at an
    existing neutral slot and document the choice. The bundled issue #6
    example (`ITEM_EXPANSION_CE`) is the worked reference for authoring the
-   record's *original* display text through the config-gated content path --
-   see `docs/starter_features.md`.
+   record's *original* display text through the config-gated content path:
+   put it in the record as `"authoringName": "..."`, which
+   `scripts/generated_data/items/content_text.py` emits into a build-local
+   text table that only an `EXPANSION_STARTER_CONTENT=1` build generates and
+   links -- see `docs/starter_features.md`, "Config-gated content text".
 3. Raise `FE8_ITEM_ID_CAP` to at least the new ID.
 4. Regenerate and test (no `--no-roundtrip`: the vanilla 206-record round
    trip stays fully enforced; overlay-only IDs are verified separately):

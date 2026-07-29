@@ -155,6 +155,8 @@ that the three public seams compose with **nothing special-cased**:
 | Field | Value | Why |
 |---|---|---|
 | `item` | `ITEM_EXPANSION_CE` | The typed, symbolic expansion ID; no raw `0xCE` appears in any issue #6 implementation source. |
+| `authoringName` | `"Sample Charm"` | The **original** display name, authored as literal text in the record itself and generated into a build-local, content-profile-only text table (see below). |
+| `authoringDescription` / `authoringUseDescription` | original text | Authoring/audit text, emitted only into the generated catalog -- see "What the description does *not* do" below. |
 | `nameTextId` / `descTextId` / `useDescTextId` | *unset* (`0`) | The record binds **no** message: a framework-authored record must not append to the shared, Huffman-compressed message table (see below). |
 | `weaponType` | `ITYPE_ITEM` | A real non-weapon item, not a blank slot. |
 | `attributes` | `IA_UNSELLABLE` | A real, meaningful attribute bit. |
@@ -177,10 +179,51 @@ reverted (see "Policy remediation" in `reports/issue6_closure.md`). The
 item's original display text is authored instead through the config-gated
 content path described below.
 
+### Config-gated content text
+
+The item's display name is real, original, authored content -- and it costs a
+default build exactly nothing:
+
+```
+src/data/items_expansion.json          "authoringName": "Sample Charm"
+  -> scripts/generated_data/items/content_text.py   (EXPANSION_STARTER_CONTENT=1 only)
+     -> build/generated/data/items_expansion_content_text.h    (typed, ItemId-keyed)
+        -> src/expansion_starter_content.c : ExpansionStarterContentItemName(ItemId)
+           -> src/bmitem.c : GetItemName()  (#if FE8_EXPANSION_STARTER_CONTENT)
+```
+
+| Property | Contract |
+|---|---|
+| Authoring input | The ordinary supported JSON authoring surface. `authoringName` is schema-validated: expansion records only, printable 7-bit ASCII, no surrounding whitespace, bounded length; it may never coexist with a `nameTextId`. |
+| Generation | `python3 -m scripts.generated_data content-text` (wired into `generated_data.mk`, with the same FORCE + write-if-changed stamp idiom `FE8_ITEM_ID_CAP` uses, since the flag is an env/config value). At `EXPANSION_STARTER_CONTENT=0` it writes **nothing** and deletes any artifact a previous content build left behind. |
+| Generated output | Build-local only (`build/generated/data/`), never committed, never hand-edited. |
+| Include path | `modern.mk` adds `build/generated/data` to `-I` **only** in the content profile, so a default build cannot even see the header -- and its compile flags, and therefore its objects, are unchanged. |
+| Production read | One narrow, typed, public accessor (`char *ExpansionStarterContentItemName(ItemId)`), called from `GetItemName()` -- the single function every item-name consumer (item menu, trade, shop, stat screen, popups, the `[Item]` text substitution) already goes through. `NULL` means "not a content record": the vanilla path runs unchanged. |
+| Default build | The accessor is not declared, not defined, not called and not linked; `GetItemName()` preprocesses back to its exact vanilla body. Proven per-object by `tools/gba-playtest/tests/test_expansion_starter_content.py` (no `ExpansionStarterContent*` symbol and no authored bytes in a default `bmitem.o`/content object) and per-ROM by the starter gate's content-disabled artifact negative. |
+| Bound | The generated table publishes `EXPANSION_CONTENT_TEXT_NAME_CAPACITY`; the module statically asserts it fits `EXPANSION_STARTER_CONTENT_NAME_BUFFER`, so over-long authoring text is a build error, not a truncated name on screen. |
+
+**What the description does *not* do (honest boundary).** The vanilla
+item-description/help UI is addressed **exclusively** by message ID
+(`GetItemDescId()` -> the shared message table), and this framework does not
+add messages. Building a config-specific message table just for one bundled
+example would be a large, risky change to the text pipeline for no framework
+value, so it is deliberately out of scope. Consequently:
+
+* the item's `descTextId`/`useDescTextId` stay `0` and its in-game help box
+  shows no text -- and **no vanilla description is borrowed** to fake one;
+* the authored descriptions are still real, original authoring input: they
+  are emitted into the generated audit catalog
+  (`build/generated/data/items_expansion_content_text.json`) for
+  documentation/review, and are explicitly labelled there as not shown in
+  game.
+
+Only the **name** travels the raw-string supported path, because that is the
+one production text path a record can feed without a message ID.
+
 ### The bundled mechanic
 
 `include/expansion_starter_content.h` + `src/expansion_starter_content.c`.
-While the subject carries the bundled item, "Sample Charm Guard" grants a
+While the subject carries the bundled item, "Content Sample Evade" grants a
 fixed `+5` `battleAvoidRate`, clamped at `120` so the bonus is strictly
 bounded. Inventory membership is read with the production accessor
 `GetUnitItemSlot()`; the item is named symbolically and held in a typed
@@ -202,20 +245,30 @@ The content example rides the **existing** issue #10 item-expansion gate
 second harness, no second ROM, no extra CI command. `run_item_expansion_checks.py`
 reads every expected value from the authored source of truth
 (`src/data/items_expansion.json` through the generated-data schema, the
-`MSG_*`/`ITYPE_*`/`IA_*`/`CHARACTER_*` headers, and the content module's own
-bonus constants), so ROM-vs-data drift fails the gate.
+`ITYPE_*`/`IA_*`/`CHARACTER_*` headers, and the content module's own bonus
+constants), so ROM-vs-data drift fails the gate.
 
 | Config | Proves |
 |---|---|
-| debug (`--require-stages all`) | The authored record end to end (`GetItemData`, `MakeNewItem`, event `GIVEITEM`, item menu + stat-screen draw, MultiArena/link, game-save and suspend roundtrips, all carrying `0x03CE`), **plus** the content flag, the typed item ID, both mechanics registered through the public API, and the mechanic firing for the item's bearer only. |
-| release (`--require-stages boot`) | The runtime record and the whole content config/registry half, in a real release ROM. |
+| debug (`--require-stages all`) | The authored record end to end (`GetItemData`, `MakeNewItem`, event `GIVEITEM`, item menu + stat-screen draw, MultiArena/link, game-save and suspend roundtrips, all carrying `0x03CE`), the **original authored name the production `GetItemName()` returned** (its length and FNV-1a 32 hash, recomputed from `authoringName` -- scalars only, never a pointer), **plus** the content flag, the typed item ID, both mechanics registered through the public API, and the mechanic firing for the item's bearer only. |
+| release (`--require-stages boot`) | The item cap and record count actually compiled in, the whole authored record as `GetItemData()` returns it, the content flag, the typed item ID and the public registry's post-install contents -- in a real release ROM. It deliberately does **not** claim a live-map chain: that release limitation predates this work (see `docs/id_space.md`, "Release-configuration limitation"), and the frozen mechanics/QoL runtime proof in a release ROM is carried by the starter runtime scenarios instead. |
 
 The in-run negative control is a second **deployed** unit that never receives
 the item: same apply, `+0` avoid, while the content-free sample's `+1` defence
-lands on both. The default-disabled negative control is the pre-existing
-`starter-hook-*-negative` pair, which still asserts `registerOkCount=1` on the
-flags-on profile ROM -- that is exactly what proves the content mechanic is
-**not** registered when the content flag is off.
+lands on both.
+
+The **content-disabled** negative control needs no extra ROM: the starter
+profile ROM (`EXPANSION_MECHANICS_HOOKS/SAMPLE/DANGER_OVERLAY_MENU=1`,
+content `0`, vanilla item cap) that the `starter-hook-*` scenarios already
+build carries it in both configs:
+
+* the scenarios assert `registerOkCount=1` on that ROM -- exactly one built-in
+  registered -- versus `contentMechanicsCount=2`/`contentRegisterOk=2` in the
+  content profile, so the registry count itself distinguishes the two; and
+* `expansion-modern-starter-hook-check` then asserts, on that same already
+  built ELF/ROM, that the content callback and the content name accessor are
+  **not linked at all**, that the authored display text appears **nowhere** in
+  the ROM image, and that `gItemData` is still the vanilla-cap table.
 
 ## Player danger/range overlay
 

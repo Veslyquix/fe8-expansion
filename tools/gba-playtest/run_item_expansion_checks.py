@@ -19,7 +19,9 @@ FE8_EXPANSION_ITEMTEST=1`. It:
    empty (0x0000) slots next to them.
 4. With `--content 1` (issue #6), additionally asserts the bundled
    generated-data content example: the compile-time content flag, the
-   bundled item's typed ID, the public mechanics registry's contents after
+   bundled item's typed ID, the ORIGINAL authored display name the
+   production `GetItemName()` returned (length + FNV-1a 32, recomputed here
+   from `authoringName`), the public mechanics registry's contents after
    the framework's single built-in install point ran, and -- on a live map --
    the content mechanic's bounded bonus firing for the item's bearer and NOT
    firing for a deployed control unit that does not carry it.
@@ -122,6 +124,8 @@ PROBE_FIELDS = (
     "contentControlDefenseDelta",
     "contentApplyCount",
     "contentSampleTriggerCount",
+    "uiNameLen",
+    "uiNameHash",
 )
 
 ALL_STAGES = 0x7F  # ITEMTEST_STAGE_ALL, include/expansion_itemtest.h
@@ -188,6 +192,14 @@ class CheckError(Exception):
     pass
 
 
+def fnv1a32(data: bytes) -> int:
+    """FNV-1a 32 -- the same constants src/expansion_itemtest.c uses."""
+    digest = 2166136261
+    for byte in data:
+        digest = ((digest ^ byte) * 16777619) & 0xFFFFFFFF
+    return digest
+
+
 def _repo_module(dotted: str):
     """Import a repository module (scripts.*) from this tool.
 
@@ -248,6 +260,16 @@ class AuthoredRecord:
         self.icon_id = record.icon_id
         # MakeNewItem(item) packs uses into the high byte (see src/bmitem.c).
         self.made_item = (record.max_uses << 8) | self.item_id
+        # Issue #6: the ORIGINAL display name, authored literally in the same
+        # record and generated into the build-local content text table. The
+        # ROM records the length and FNV-1a 32 hash of whatever the
+        # production GetItemName() returned, so recomputing both here binds
+        # the drawn text to the authored source of truth with no oracle file.
+        self.authoring_name = record.authoring_name
+        self.authoring_description = record.authoring_description
+        self.authoring_use_description = record.authoring_use_description
+        self.name_len = len(record.authoring_name or "")
+        self.name_hash = fnv1a32((record.authoring_name or "").encode("ascii"))
 
 
 class ContentContract:
@@ -509,6 +531,20 @@ def check(values: dict[str, int], cap: int, require: str,
             f"uiNamePtr: expected GetItemName(0x{expansion_id:X}) to resolve to a "
             f"real string (EWRAM or ROM), observed 0x{values['uiNamePtr']:x}"
         )
+    if content:
+        # The production name path returned the ORIGINAL authored text --
+        # byte for byte, as scalars. This is what proves the content example
+        # kept real authored content after the shared message table was
+        # (correctly) left alone: the string comes from the build-local
+        # generated content text table, through the narrow typed accessor
+        # ExpansionStarterContentItemName(), read by the unmodified
+        # GetItemName() every item menu / trade / shop / stat screen uses.
+        expect("uiNameLen", authored.name_len,
+               f"length of the authored name {authored.authoring_name!r}")
+        expect("uiNameHash", authored.name_hash,
+               f"FNV-1a 32 of the authored name {authored.authoring_name!r} "
+               "as GetItemName() returned it")
+
     if values["uiMenuIconTile"] != values["uiStatIconTile"]:
         failures.append(
             "uiMenuIconTile/uiStatIconTile: both production draw paths must place "
@@ -659,6 +695,11 @@ def main(argv: list[str] | None = None) -> int:
             f"icon={authored.icon_id} attrs=0x{authored.attributes:X} "
             f"name/desc/useDesc={authored.name_text_id}/{authored.desc_text_id}/"
             f"{authored.use_desc_text_id} (records={authored.record_count})"
+        )
+        print(
+            f"  authored content text: name={authored.authoring_name!r} "
+            f"len={authored.name_len} fnv1a32=0x{authored.name_hash:08x} "
+            "(no shared message consumed)"
         )
         for name in PROBE_FIELDS:
             print(f"  {name} = 0x{values[name]:08x}")

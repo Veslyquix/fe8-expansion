@@ -2201,6 +2201,10 @@
       "category": "external-interface",
       "reason": null
     },
+    "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemName": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/functions.h|function-signature|item|ConvoyMenuProc_MaybeStartSelectConvoyItem": {
       "category": "external-interface",
       "reason": null

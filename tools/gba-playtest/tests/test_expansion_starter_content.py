@@ -14,14 +14,21 @@ depends on:
 
   * the disabled translation unit emits NO data at all, so a default build's
     EWRAM/BSS layout -- and therefore every committed scenario probe address
-    -- is untouched by adding this feature; and
+    -- is untouched by adding this feature;
   * the issue #6 implementation sources name the content item symbolically
-    (ITEM_EXPANSION_CE), never as a raw numeric ID.
+    (ITEM_EXPANSION_CE), never as a raw numeric ID; and
+  * the ORIGINAL authored display text is config-gated end to end: the
+    generator writes nothing at EXPANSION_STARTER_CONTENT=0, the default
+    objects contain no such string and no call into the content seam, and the
+    content objects contain exactly the authored bytes and do read them
+    through the production name path.
 """
 
+import os
 import re
 import shutil
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -35,9 +42,41 @@ ITEMTEST_SRC = REPO_ROOT / "src" / "expansion_itemtest.c"
 ITEMTEST_HEADER = REPO_ROOT / "include" / "expansion_itemtest.h"
 RUNNER = REPO_ROOT / "tools" / "gba-playtest" / "run_item_expansion_checks.py"
 
+BMITEM_SRC = REPO_ROOT / "src" / "bmitem.c"
+ITEMS_EXPANSION_JSON = REPO_ROOT / "src" / "data" / "items_expansion.json"
+CONTENT_TEXT_HEADER_NAME = "items_expansion_content_text.h"
+CONTENT_TEXT_CATALOG_NAME = "items_expansion_content_text.json"
+
 CC = shutil.which("gcc") or shutil.which("cc")
 ARM_CC = shutil.which("arm-none-eabi-gcc")
 SIZE = shutil.which("arm-none-eabi-size")
+NM = shutil.which("arm-none-eabi-nm")
+
+CONTENT_DEFINES = (
+    "FE8_EXPANSION_STARTER_CONTENT=1",
+    "FE8_EXPANSION_MECHANICS_HOOKS=1",
+    "FE8_EXPANSION_MECHANICS_SAMPLE=1",
+    "FE8_ITEM_ID_CAP=0xCE",
+)
+
+
+def authored_name():
+    """The ONE authoring source of truth for the bundled content text."""
+    import json
+
+    record = json.loads(ITEMS_EXPANSION_JSON.read_text(encoding="utf-8"))["items"][0]
+    return record["authoringName"]
+
+
+def generate_content_text(out_dir, content):
+    """Run the real generator exactly as generated_data.mk does."""
+    env = dict(os.environ)
+    env["EXPANSION_STARTER_CONTENT"] = str(content)
+    env["FE8_ITEM_ID_CAP"] = "0xCE"
+    return subprocess.run(
+        [sys.executable, "-m", "scripts.generated_data", "content-text",
+         "--out-dir", str(out_dir)],
+        cwd=str(REPO_ROOT), env=env, capture_output=True, text=True)
 
 
 def _strip_c_comments(text):
@@ -53,10 +92,12 @@ def _include_flags():
     return flags
 
 
-def _arm_compile(work_dir, src, obj_name, defines=()):
+def _arm_compile(work_dir, src, obj_name, defines=(), extra_includes=()):
     obj = Path(work_dir) / obj_name
     cmd = [ARM_CC, "-c", "-w", "-std=gnu89", "-mthumb"] + _include_flags()
     cmd += ["-I", str(REPO_ROOT)]
+    for directory in extra_includes:
+        cmd += ["-I", str(directory)]
     for define in defines:
         cmd += ["-D", define]
     cmd += [str(src), "-o", str(obj)]
@@ -211,7 +252,13 @@ class CompileTimeDependencyTests(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            return _arm_compile(tmp, CONTENT_SRC, "probe.o", defines)[:2]
+            # The content profile also needs the build-local generated text
+            # header on the include path (exactly as modern.mk arranges it),
+            # so a *dependency* failure below is the dependency's own #error
+            # and never a missing-file artefact of the test setup.
+            generated = Path(tmp) / "generated"
+            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
+            return _arm_compile(tmp, CONTENT_SRC, "probe.o", defines, [generated])[:2]
 
     def test_content_without_hooks_fails(self):
         code, output = self._compile(
@@ -237,6 +284,170 @@ class CompileTimeDependencyTests(unittest.TestCase):
     def test_default_build_compiles(self):
         code, output = self._compile([])
         self.assertEqual(code, 0, output)
+
+
+class ContentTextGenerationTests(unittest.TestCase):
+    """The ORIGINAL authored display text is generated, config-gated and
+    build-local -- never a message appended to the shared, Huffman-compressed
+    table (which would re-encode a DEFAULT build's text blob)."""
+
+    def test_default_profile_generates_nothing(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = generate_content_text(tmp, 0)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            for name in (CONTENT_TEXT_HEADER_NAME, CONTENT_TEXT_CATALOG_NAME):
+                self.assertFalse(
+                    (Path(tmp) / name).exists(),
+                    "a default build must generate no content text artifact")
+
+    def test_default_profile_removes_a_stale_artifact(self):
+        """A previous content build must never leave a string table behind
+        for a later default build to pick up."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(generate_content_text(tmp, 1).returncode, 0)
+            self.assertTrue((Path(tmp) / CONTENT_TEXT_HEADER_NAME).exists())
+            self.assertEqual(generate_content_text(tmp, 0).returncode, 0)
+            self.assertFalse((Path(tmp) / CONTENT_TEXT_HEADER_NAME).exists())
+            self.assertFalse((Path(tmp) / CONTENT_TEXT_CATALOG_NAME).exists())
+
+    def test_content_profile_emits_the_exact_authored_name(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = generate_content_text(tmp, 1)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            header = (Path(tmp) / CONTENT_TEXT_HEADER_NAME).read_text(encoding="utf-8")
+            name = authored_name()
+            self.assertIn('"{}"'.format(name), header)
+            self.assertIn("ITEM_EXPANSION_CE", header)
+            self.assertIn("AUTO-GENERATED", header)
+
+            capacity = int(re.search(
+                r"#define EXPANSION_CONTENT_TEXT_NAME_CAPACITY (\d+)", header).group(1))
+            self.assertEqual(capacity, len(name) + 1)
+
+            buffer_size = int(re.search(
+                r"#define EXPANSION_STARTER_CONTENT_NAME_BUFFER\s+(\d+)",
+                CONTENT_HEADER.read_text(encoding="utf-8")).group(1))
+            self.assertLessEqual(capacity, buffer_size)
+
+            catalog = json.loads((Path(tmp) / CONTENT_TEXT_CATALOG_NAME).read_text(
+                encoding="utf-8"))
+            entry = catalog["items"][0]
+            self.assertEqual(entry["authoringName"], name)
+            self.assertTrue(entry["authoringDescription"])
+            self.assertIn("not shown in game", entry["runtimeText"]["description"])
+
+    def test_generated_output_is_deterministic_and_path_independent(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as one, tempfile.TemporaryDirectory() as two:
+            self.assertEqual(generate_content_text(one, 1).returncode, 0)
+            self.assertEqual(generate_content_text(two, 1).returncode, 0)
+            for name in (CONTENT_TEXT_HEADER_NAME, CONTENT_TEXT_CATALOG_NAME):
+                first = (Path(one) / name).read_text(encoding="utf-8")
+                second = (Path(two) / name).read_text(encoding="utf-8")
+                self.assertEqual(first, second)
+                self.assertNotIn(str(REPO_ROOT), first)
+
+    def test_no_committed_source_hand_holds_the_authored_text(self):
+        """The literal lives in the JSON record and in generated build/
+        output only -- never hand-copied into a committed C file."""
+        name = authored_name()
+        for relative in ("src/expansion_starter_content.c",
+                         "include/expansion_starter_content.h",
+                         "src/bmitem.c",
+                         "src/expansion_itemtest.c"):
+            self.assertNotIn(
+                name, (REPO_ROOT / relative).read_text(encoding="utf-8"),
+                "{} hand-copies the authored content text".format(relative))
+
+    def test_texts_table_carries_no_content_message(self):
+        """The regression this whole path exists to prevent."""
+        texts = (REPO_ROOT / "texts" / "texts.txt").read_text(
+            encoding="utf-8", errors="replace")
+        self.assertNotIn("MSG_EXPANSION_", texts)
+        msg_header = (REPO_ROOT / "include" / "constants" / "msg.h").read_text(
+            encoding="utf-8")
+        self.assertNotIn("MSG_EXPANSION_", msg_header)
+
+
+@unittest.skipIf(ARM_CC is None or NM is None, "no arm-none-eabi toolchain")
+class ProductionNamePathTests(unittest.TestCase):
+    """src/bmitem.c's GetItemName() -- the ONE function every production item
+    name consumer goes through -- reads the authored text in the content
+    profile and is preprocessed back to vanilla in a default build."""
+
+    def _symbols(self, obj):
+        out = subprocess.run([NM, str(obj)], capture_output=True, text=True,
+                             check=True).stdout
+        return out
+
+    def test_default_bmitem_has_no_content_seam(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            code, output, obj = _arm_compile(tmp, BMITEM_SRC, "bmitem_off.o")
+            self.assertEqual(code, 0, output)
+            self.assertNotIn("ExpansionStarterContent", self._symbols(obj))
+            self.assertNotIn(authored_name().encode("ascii"), obj.read_bytes())
+
+    def test_content_bmitem_reads_the_typed_accessor(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            generated = Path(tmp) / "generated"
+            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
+            code, output, obj = _arm_compile(
+                tmp, BMITEM_SRC, "bmitem_on.o", CONTENT_DEFINES, [generated])
+            self.assertEqual(code, 0, output)
+            symbols = self._symbols(obj)
+            self.assertIn("U ExpansionStarterContentItemName", symbols)
+
+    def test_content_module_carries_exactly_the_generated_text(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            generated = Path(tmp) / "generated"
+            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
+            code, output, obj = _arm_compile(
+                tmp, CONTENT_SRC, "content_on.o", CONTENT_DEFINES, [generated])
+            self.assertEqual(code, 0, output)
+            self.assertIn(authored_name().encode("ascii"), obj.read_bytes())
+            self.assertIn("T ExpansionStarterContentItemName", self._symbols(obj))
+
+    def test_default_content_module_has_no_authored_text(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            code, output, obj = _arm_compile(tmp, CONTENT_SRC, "content_off.o")
+            self.assertEqual(code, 0, output)
+            self.assertNotIn(authored_name().encode("ascii"), obj.read_bytes())
+            self.assertNotIn("ExpansionStarterContentItemName", self._symbols(obj))
+
+    def test_over_long_authoring_text_fails_the_build(self):
+        """The generated capacity is statically asserted against the module's
+        buffer, so authoring text that cannot fit is a compile error rather
+        than silent truncation on screen."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            generated = Path(tmp) / "generated"
+            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
+            header = generated / CONTENT_TEXT_HEADER_NAME
+            text = header.read_text(encoding="utf-8")
+            text = re.sub(r"(#define EXPANSION_CONTENT_TEXT_NAME_CAPACITY )\d+",
+                          r"\g<1>999", text)
+            header.write_text(text, encoding="utf-8")
+            code, output, _ = _arm_compile(
+                tmp, CONTENT_SRC, "content_overlong.o", CONTENT_DEFINES, [generated])
+            self.assertNotEqual(code, 0)
+            self.assertIn("expansion_starter_content_name_fits_buffer", output)
 
 
 if __name__ == "__main__":

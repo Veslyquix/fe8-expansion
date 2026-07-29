@@ -137,6 +137,17 @@ ifeq ($(FE8_EXPANSION_ITEMTEST),1)
 MODERN_DEFINE_FLAGS += -DFE8_EXPANSION_ITEMTEST_ENABLED=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
+
+# Issue #6 bundled content example: its ORIGINAL display text is authored in
+# src/data/items_expansion.json and generated into a BUILD-LOCAL header
+# (build/generated/data/items_expansion_content_text.h, see generated_data.mk)
+# rather than added to the shared, Huffman-compressed message table, which
+# would re-encode a DEFAULT build's text blob. Only the content profile puts
+# that directory on the include path, so a default build cannot even see the
+# header -- and its compile flags, and therefore its objects, are unchanged.
+ifeq ($(EXPANSION_STARTER_CONTENT),1)
+MODERN_INCLUDE_FLAGS += -I$(GENERATED_DATA_OUT_DIR)
+endif
 MODERN_WARNING_FLAGS := \
 	-Wall -Wextra \
 	-Werror=strict-prototypes \
@@ -607,6 +618,16 @@ $(MODERN_OUTPUT_DIR)/src/data_$(1).o: $(GENERATED_DATA_OUT_DIR)/data_$(1).c
 endef
 
 $(foreach t,$(GENERATED_DATA_LINKED_TABLES),$(eval $(call GENERATED_DATA_MODERN_OVERRIDE_RULES,$(t))))
+
+# Issue #6: in the content profile the bundled content module compiles the
+# BUILD-LOCAL generated authored-text header, so make it an explicit
+# prerequisite -- the generic -MM -MG header scan only learns about it after
+# a first successful compile, and this must work on a clean tree too. Only
+# declared when the flag is on: a default build neither generates nor
+# consumes that header.
+ifeq ($(EXPANSION_STARTER_CONTENT),1)
+$(MODERN_OUTPUT_DIR)/src/expansion_starter_content.o: $(GENERATED_DATA_CONTENT_TEXT_HEADER)
+endif
 
 # Issue #5 Batch 3a: explicit (non-pattern) compile rule for the `units`
 # table's synthetic slot object (see the MODERN_ALL_C_OBJECTS +=
@@ -2180,6 +2201,61 @@ expansion-modern-starter-profile-rom:
 		EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 \
 		EXPANSION_DANGER_OVERLAY_MENU=1
 
+MODERN_STARTER_PROFILE_ELF := $(MODERN_STARTER_PROFILE_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.elf
+
+# sizeof(struct ItemData) (include/bmitem.h). Used only to turn the linked
+# gItemData symbol size into a record count for the negative below; a future
+# struct-layout change fails that check loudly instead of silently.
+MODERN_ITEM_DATA_RECORD_BYTES := 36
+
+# Issue #6 content-DISABLED artifact negative, run against the SAME starter
+# profile ROM/ELF the scenarios above already built (no extra ROM build, no
+# second harness). The starter profile is the strongest possible negative:
+# every other issue #6 flag is ON (hooks, sample, overlay) and the item cap is
+# the vanilla default, so anything it still lacks is attributable to
+# EXPANSION_STARTER_CONTENT=0 alone.
+#
+# It asserts three semantic facts a scenario cannot see:
+#   1. the content mechanic's callback is not even compiled in, so it cannot
+#      have been registered -- which is what the scenarios' registerOkCount=1
+#      (sample only, versus 2 in the content profile) means at the artifact
+#      level;
+#   2. the content name accessor -- the only production seam that can read
+#      authored content text -- is absent, so src/bmitem.c's GetItemName() is
+#      the vanilla one; and
+#   3. the authored display text itself appears NOWHERE in the ROM image, and
+#      gItemData is still the 206-record vanilla table.
+# The authored string is read from the authoring source of truth, so renaming
+# the content item cannot make this negative vacuous.
+define modern_starter_content_disabled_negative
+	@set -eu; \
+	elf='$(MODERN_STARTER_PROFILE_ELF)'; \
+	rom='$(MODERN_STARTER_PROFILE_ROM)'; \
+	for symbol in ExpansionStarterContentCharmEvade ExpansionStarterContentItemName; do \
+		if "$(MODERN_NM)" "$$elf" | grep -q " $$symbol$$"; then \
+			printf 'error: %s is linked into the content-DISABLED starter profile ROM\n' "$$symbol" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	name=$$("$(PYTHON)" -c "import json; print(json.load(open('src/data/items_expansion.json'))['items'][0]['authoringName'])"); \
+	if LC_ALL=C grep -a -q -F "$$name" "$$rom"; then \
+		printf 'error: authored content text "%s" is present in the content-DISABLED ROM\n' "$$name" >&2; \
+		exit 1; \
+	fi; \
+	size=$$("$(MODERN_NM)" -S "$$elf" | awk '$$4 == "gItemData" { print $$2 }'); \
+	if [ -z "$$size" ]; then \
+		printf 'error: gItemData has no linked size in %s\n' "$$elf" >&2; \
+		exit 1; \
+	fi; \
+	expected=$$("$(PYTHON)" -c "from scripts.generated_data.items import schema; print(len(schema.load_records('src/data/items.json', item_cap=0xCD)) * $(MODERN_ITEM_DATA_RECORD_BYTES))"); \
+	if [ $$(( 0x$$size )) -ne "$$expected" ]; then \
+		printf 'error: content-disabled gItemData is 0x%s bytes, expected %s (the vanilla-cap table)\n' "$$size" "$$expected" >&2; \
+		exit 1; \
+	fi; \
+	printf 'Content-disabled artifact negative passed (no content callback/accessor symbol, no authored text in the ROM, vanilla-cap gItemData): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endef
+
 # Fail loudly rather than silently skipping when a scenario/fingerprint pair
 # named by the matrix above is missing.
 define modern_starter_require_pair
@@ -2206,7 +2282,8 @@ expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
 		--scenario "$(MODERN_STARTER_HOOK_NEG_SCENARIO)" \
 		--expected "$(MODERN_STARTER_HOOK_NEG_FINGERPRINT)" \
 		--policy behavior
-	@printf 'Modern ROM starter-hook-check passed (positive registerOk=1/apply=2/sampleTrigger=2 on profile ROM; negative all-zero on default ROM): config=%s abi=%s\n' \
+	$(modern_starter_content_disabled_negative)
+	@printf 'Modern ROM starter-hook-check passed (positive registerOk=1/apply=2/sampleTrigger=2 on profile ROM; negative all-zero on default ROM; content-disabled artifact negative): config=%s abi=%s\n' \
 		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
 else
 expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
@@ -2223,7 +2300,8 @@ expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
 		--scenario "$(MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO)" \
 		--expected "$(MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT)" \
 		--policy behavior
-	@printf 'Modern ROM starter-hook-check passed (clean-boot Prologue bout: positive registerOk=1/apply=2/sampleTrigger=2/delta=+1 on profile ROM; negative all-zero on default ROM, same resolved battle): config=%s abi=%s\n' \
+	$(modern_starter_content_disabled_negative)
+	@printf 'Modern ROM starter-hook-check passed (clean-boot Prologue bout: positive registerOk=1/apply=2/sampleTrigger=2/delta=+1 on profile ROM; negative all-zero on default ROM, same resolved battle; content-disabled artifact negative): config=%s abi=%s\n' \
 		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
 endif
 
