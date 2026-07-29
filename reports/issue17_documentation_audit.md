@@ -113,15 +113,29 @@ filtering the full `git ls-files --cached --others --exclude-standard`
 listing in Python, not a `*.md`-only pathspec glob (which would silently
 miss any other recognized extension); `docs/documentation-inventory.md`
 is required (by `scripts/check_docs.py --check`) to have **exactly** one
-entry per path in that set -- no more, no fewer. At the time of this
-audit that is **60 files**: the pre-existing 49 tracked files, the 7
-files added by the prior documentation-foundation rewrite
+entry per path in that set -- no more, no fewer. At the original
+establishment of this audit (commit `a6dab189`, 2026-07-26) that was
+**60 files**: the pre-existing 49 tracked files, the 7 files added by
+the prior documentation-foundation rewrite
 (`docs/README.md`, `docs/architecture.md`, `docs/archival-decomp.md`,
 `docs/framework-support.md`, `docs/migration-from-decomp.md`,
 `docs/project-governance.md`, `docs/release-migration-template.md`), and
 the 4 files added by this governance closure
 (`docs/documentation-inventory.md`, `docs/external-link-registry.md`,
-this file, and `reports/issue7_documentation_foundation.md`).
+this file, and `reports/issue7_documentation_foundation.md`) -- a
+historical, point-in-time snapshot, not a current-tense count.
+
+**Current, superseding count: 65 files.** The issues #10/#11/#13 merge
+integration (commit `df374b9e`) added 5 more tracked Markdown files on
+top of the 60 above (`docs/id_space.md`, `reports/id_space_audit.md`,
+`reports/issue10_closure.md`, `reports/debugtools_issue11_closure.md`,
+and `reports/gba_playtest_issue13_closure.md`); the count has stayed 65
+through this remediation (commit `742eb5b8`). This is likewise not
+restated as a hardcoded number inside the checker -- `scripts/check_docs.py`
+itself reports the live count on every run (`check_docs: OK -- 65
+Markdown file(s) checked, 0 findings.` at the time of this remediation);
+reproduce it directly against the commit under review rather than
+trusting either number written above.
 
 This count is deliberately **not restated as a hardcoded number inside
 the checker** (only the *set equality* is enforced) so it cannot silently
@@ -135,7 +149,9 @@ pathspec -- is what the checker itself actually enforces).
 ## Status/category accounting
 
 `docs/documentation-inventory.md`'s "Status enum" table is the
-controlled vocabulary; every one of the 60 entries has exactly one of:
+controlled vocabulary; every one of the currently-65 tracked entries
+(see "100% Markdown count" above for the reproducible, non-hardcoded
+source of that number) has exactly one of:
 `current`, `historical`, `generated`, `subsystem-reference`,
 `deprecated` (unused today -- no entry is currently deprecated),
 `evidence`, or `template`. See that file for the full per-path
@@ -178,9 +194,10 @@ breakdown; in summary:
   blocks are excluded from link/URL scanning so pseudo-links in shell/
   code samples are never checked; single-backtick inline code spans are
   still scanned.
-- **External URLs**: every `http(s)://` occurrence across all 60
-  recognized-Markdown-extension files (fenced code excluded) must match a
-  `host:`/`prefix:`
+- **External URLs**: every `http(s)://` occurrence across all
+  currently-65 recognized-Markdown-extension files (fenced code
+  excluded; see "100% Markdown count" above for the reproducible
+  source of that number) must match a `host:`/`prefix:`
   rule in `docs/external-link-registry.md`. This is registry/syntax
   coverage only -- **no network request is ever made**; nothing here
   claims the upstream wiki, decomp.dev tracker, or any third-party site
@@ -246,6 +263,23 @@ the shortcut-unsupported-detection fixture).
 
 ## CI evidence
 
+**Historical snapshot, superseded for gate-composition facts by the
+Remediation addendum above -- left unedited below as an accurate,
+point-in-time record of this branch in its pre-master-merge state, when
+`docs-check-tests`/`docs-check` were still mirrored inside the
+`gates()` function of `scripts/upstream_port/verify.py`. Current,
+corrected contract (reproduce yourself, do not trust this sentence
+either): `python3 -m scripts.upstream_port verify --dry-run --jobs 2`
+lists exactly 10 gates; `docs-check-tests`/`docs-check` are absent from
+that list. Documentation governance (`scripts/docs_check_tests` then
+`scripts/check_docs.py --check --check-examples`) remains a required,
+standalone `build.yml` "Check documentation (issues #7/#17)" CI step in
+the same position described below -- it is not dropped from CI, only
+excluded from the pinned `verify.gates()` mirror. See the Remediation
+addendum above and
+[`docs/upstream-porting.md`](../docs/upstream-porting.md#6-verify-the-manually-applied-batch)
+for the full, current, renumbered 10-gate list.**
+
 `.github/workflows/build.yml`'s new "Check documentation" step runs
 `python3 -m unittest discover -s scripts/docs_check_tests` and
 `python3 scripts/check_docs.py --check --check-examples`, placed after
@@ -297,7 +331,7 @@ make -n expansion-modern-all
 # (recognized-extension set: .md/.markdown/.mdown/.mkd; no alternate-extension
 # files exist in this repository today, so this is currently equivalent to a
 # *.md-only count -- see RECOGNIZED_MARKDOWN_EXTENSIONS)
-git ls-files --cached --others --exclude-standard -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l   # -> 60
+git ls-files --cached --others --exclude-standard -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l   # -> 65 as of this remediation (commit 742eb5b8) -- do not trust this number, reproduce it yourself
 ```
 
 This round's findings-driven fixes:
@@ -325,7 +359,11 @@ This round's findings-driven fixes:
   [`reports/issue7_documentation_foundation.md`](issue7_documentation_foundation.md).
   This document still does not read issues #10/#11/#13 as having a
   final, merged, current public interface (see "Remaining follow-ups"
-  below, unchanged by this round).
+  below, unchanged by this round). **Superseded by the time of this
+  remediation: see the "Post-merge integration update" section above
+  and the corrected "Remaining follow-ups" section below -- issues
+  #10/#11/#13 merged with final, documented public interfaces before
+  this remediation.**
 
 ## Verifier finding follow-up: docs/quickstart.md stale object counts
 
@@ -684,15 +722,56 @@ follow-ups" below, which are unchanged by this round.
 
 ## Remaining follow-ups (explicitly not closed by this work)
 
-- **Issue #10** -- typed content-ID contracts, engine limits, and
-  save-event migrations; no public extension boundary exists yet to
-  document as current.
-- **Issue #11** -- a *supported* debug-tools registration/config/safety
-  interface beyond the existing slices 1-2
-  ([`docs/debugtools.md`](../docs/debugtools.md)).
-- **Issue #13** -- a complete deterministic regression-scenario library,
-  supported host matrix, comparison methodology, and flake policy beyond
-  today's single-scenario `tools/gba-playtest` mechanism.
-- This audit does not re-verify every historical/archival document's
-  factual accuracy against `master` -- only that it is inventoried,
-  internally link-consistent, and externally-URL-registry-covered.
+**Update (issues #7/#17 integration merge): the three bullets below
+about issues #10/#11/#13 described the original, pre-merge state
+recorded by this audit and are now superseded -- those three issues
+merged into `master` with final, documented public interfaces before
+this remediation (see the "Post-merge integration update" section
+above and the "Update" bullet in
+`reports/issue7_documentation_foundation.md`). Corrected, current
+facts:**
+
+- **Issue #10** -- merged, not open, and not undocumented. The
+  DEFAULT/ACTIVE typed-ID contract, its per-domain caps/budgets, and the
+  consumer census are documented in
+  [`docs/id_space.md`](../docs/id_space.md); see the "Explicit
+  non-goals (unchanged)" and "Known gaps / risks handed to the
+  verifier" sections of `reports/issue10_closure.md` for the few
+  narrow, deliberate items still out of scope (no
+  class/chapter/unit/character ID widening; no save-migration tooling
+  -- the item-cap raise this closure covers needed none).
+- **Issue #11** -- merged, not limited to "slices 1-2". A
+  release-safe config gate, a fixed-capacity action-registration API,
+  title/map/prep hotkey hub entry points, five bounded validated
+  tools, and structured diagnostics are the current, documented,
+  supported surface -- see
+  [`docs/debugtools.md`](../docs/debugtools.md#registration-api),
+  whose own
+  ["Remaining #11 scope"](../docs/debugtools.md#remaining-11-scope-issue-11-closure)
+  section is authoritative for the few narrow, deliberate non-goals (a
+  full `mgba_printf`/AGB debug-print protocol, an interactive
+  debugger, and an arbitrary memory editor are never attempted).
+- **Issue #13** -- merged, not "single-scenario". `tools/gba-playtest`
+  now provides a full deterministic multi-scenario harness -- boot,
+  title, new-game, chapter/map arrival, combat, suspend/resume,
+  save/load, and the issue #11 debug-tools hub/tools scenarios -- see
+  its own
+  [`README.md`](../tools/gba-playtest/README.md#deterministic-runtime-scenario-coverage-issue-13)
+  "Deterministic runtime scenario coverage" table, a host-only vs.
+  normal run mode, and the Ubuntu + `arm-none-eabi`
+  [CI host matrix](../tools/gba-playtest/README.md#supported-ci-host-matrix);
+  macOS/Homebrew local-only support (not CI-exercised) is the one
+  documented, narrow gap.
+- **Issues #6, #9, and #18 remain open/active -- this is the real
+  remaining scope of this bullet list.** No public starter-feature
+  hook registry (#6), release/versioning tooling (#9), or
+  language-selection config API (#18) exists in this baseline yet;
+  see
+  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
+  and
+  [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13)
+  for the current merged-vs-active boundary.
+- This audit does not re-verify the factual accuracy of every
+  historical/archival document against `master` -- only that it is
+  inventoried, internally link-consistent, and
+  externally-URL-registry-covered.
