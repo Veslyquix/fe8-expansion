@@ -3,6 +3,7 @@
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -161,6 +162,56 @@ class ExactFilesystemAllowlistTests(unittest.TestCase):
             with tarfile.open(dest, "r") as tar:
                 names = sorted(m.name for m in tar.getmembers())
             self.assertEqual(names, ["src/known.c"])
+
+
+class NonGitMissingMemberRefusalTests(unittest.TestCase):
+    """issue #9 verifier remediation: a non-git candidate tree (a
+    genuine extracted archive) must refuse to build an archive at all
+    -- a controlled `ArchiveRehearsalError`, never a silent partial
+    archive -- when a declared allowlist member has *no* on-disk
+    representation whatsoever (neither a file nor a directory). This is
+    distinct from, and does not change, the pre-existing "extra
+    unlisted file is silently excluded" behavior proven by
+    `ExactFilesystemAllowlistTests` above."""
+
+    def test_missing_allowlisted_member_refused_not_silently_dropped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            (root / "present.c").write_text("int x;")
+            dest = Path(tmp) / "out.tar"
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.build_deterministic_archive(root, {"present.c", "missing.c"}, dest)
+            self.assertIn("missing.c", str(ctx.exception))
+
+    def test_missing_gitlink_style_directory_member_refused(self):
+        """A gitlink-style entry (e.g. "mgfembp") absent even as an
+        empty directory -- not merely lacking blob content, which is
+        normal -- is exactly the "missing/unrepresented gitlink"
+        blocker this module must report."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            (root / "present.c").write_text("int x;")
+            dest = Path(tmp) / "out.tar"
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.build_deterministic_archive(root, {"present.c", "mgfembp"}, dest)
+            self.assertIn("mgfembp", str(ctx.exception))
+
+    def test_present_gitlink_style_directory_member_is_not_refused(self):
+        """The mirror-image positive control: a genuinely-present
+        (even if empty) gitlink-style directory must never be refused
+        -- only a *missing* one is a blocker."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            (root / "present.c").write_text("int x;")
+            (root / "mgfembp").mkdir()
+            dest = Path(tmp) / "out.tar"
+            ar.build_deterministic_archive(root, {"present.c", "mgfembp"}, dest)
+            with tarfile.open(dest, "r") as tar:
+                names = [m.name for m in tar.getmembers()]
+            self.assertEqual(names, ["present.c"])
 
 
 class GitBackedArchiveTests(unittest.TestCase):
@@ -358,6 +409,39 @@ class RehearseArchiveTwiceTests(unittest.TestCase):
                 root_b, {"src/main.c", "docs/readme.md", "src/extra.c"}
             )
             self.assertNotEqual(report_a["hash1"], report_b["hash1"])
+
+
+class NonGitTargetShaBindingTests(unittest.TestCase):
+    """issue #9 verifier remediation: the documented non-git/extracted
+    candidate path's exact --target-sha override must be bound into the
+    archive report as an external identity *assertion* -- never
+    silently discarded to None, and never verified against git (there
+    is no git metadata to verify it against in a non-git tree)."""
+
+    def test_asserted_target_sha_is_bound_into_the_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _make_source_tree(root)
+            asserted_sha = "a" * 40
+            report = ar.rehearse_archive_twice(
+                root, {"src/main.c", "docs/readme.md"}, target_sha=asserted_sha,
+            )
+            self.assertEqual(report["target_sha"], asserted_sha)
+            self.assertTrue(report["match"])
+
+    def test_omitted_target_sha_is_still_none_not_fabricated(self):
+        """The flip side: never *invent* an identity either -- omitting
+        --target-sha for a non-git tree still reports `target_sha: None`
+        here (the CLI layer is what makes it a mandatory, actionable
+        error before ever reaching this point -- see
+        scripts/release_rehearsal/cli.py's cmd_rehearse)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _make_source_tree(root)
+            report = ar.rehearse_archive_twice(root, {"src/main.c", "docs/readme.md"})
+            self.assertIsNone(report["target_sha"])
 
 
 class RebuildEligibilityTests(unittest.TestCase):
@@ -600,6 +684,57 @@ class RebuildRehearsalBlockerTests(unittest.TestCase):
         never mutate its submodule state (no fetch/init/approve)."""
         before = _git("submodule", "status", cwd=ROOT)
         ar.rebuild_rehearsal_blocker(ROOT)
+        after = _git("submodule", "status", cwd=ROOT)
+        self.assertEqual(before, after)
+
+
+class NonGitRebuildEligibilityTests(unittest.TestCase):
+    """issue #9 verifier remediation: the literal reproduced defect --
+    `rebuild_rehearsal_blocker()`/`evaluate_rebuild_eligibility()` must
+    never invoke `git submodule status` (or any other git command)
+    against a non-git `repo_root` (a genuine extracted archive/non-git
+    candidate tree). Proven by nesting the fixture directly inside this
+    real, git-tracked worktree (ROOT): if any git command leaked through
+    with the fixture as its cwd, git's own upward directory discovery
+    would find ROOT's real `.git` and silently report ROOT's own actual
+    submodule state (which does mention "mgfembp") instead of failing
+    closed for the extracted tree -- these assertions would then fail."""
+
+    def _make_nested_non_git_fixture(self, name: str) -> Path:
+        nested = ROOT / "scripts" / "release_rehearsal" / "tests" / name
+        self.addCleanup(shutil.rmtree, nested, True)
+        nested.mkdir(exist_ok=True)
+        return nested
+
+    def test_evaluate_rebuild_eligibility_is_ineligible_without_invoking_git(self):
+        nested = self._make_nested_non_git_fixture(".issue9-rebuild-fixture-tmp-1")
+        eligible, report = ar.evaluate_rebuild_eligibility(nested)
+        self.assertFalse(eligible)
+        self.assertEqual(report["submodule_status_output"], "")
+        self.assertIsNone(report["submodule_checked_out_sha"])
+        self.assertIsNone(report["provenance_pinned_commit"])
+        self.assertFalse(report["provenance_redistribution_approved"])
+        self.assertFalse(report["identity_matches_pinned"])
+        self.assertTrue(any(".git" in reason for reason in report["reasons"]))
+        # The real repository's own "mgfembp" submodule-status line must
+        # never leak into a non-git candidate's report.
+        self.assertNotIn("mgfembp", report["submodule_status_output"])
+
+    def test_rebuild_rehearsal_blocker_non_git_repo_root_is_blocked_not_traceback(self):
+        nested = self._make_nested_non_git_fixture(".issue9-rebuild-fixture-tmp-2")
+        report = ar.rebuild_rehearsal_blocker(nested)
+        self.assertEqual(report["status"], ar.REBUILD_STATUS_BLOCKED)
+        self.assertIn("github_autoarchive_submodule_contradiction", report)
+        self.assertTrue(any(".git" in reason for reason in report["reasons"]))
+
+    def test_non_git_repo_root_never_mutates_or_queries_the_enclosing_repos_submodule_state(self):
+        """A stronger positive control than the reason text alone: the
+        real, enclosing repository's actual `git submodule status`
+        output is completely unaffected by (and never consulted by)
+        evaluating a nested non-git fixture."""
+        before = _git("submodule", "status", cwd=ROOT)
+        nested = self._make_nested_non_git_fixture(".issue9-rebuild-fixture-tmp-3")
+        ar.rebuild_rehearsal_blocker(nested)
         after = _git("submodule", "status", cwd=ROOT)
         self.assertEqual(before, after)
 

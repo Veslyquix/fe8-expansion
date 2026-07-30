@@ -199,7 +199,21 @@ def check_allowlist_exact(repo_root: Path, target_sha: str) -> Dict:
     every entry must still correspond to something actually tracked --
     see scripts/release_rehearsal/allowlist.py. A brand-new tracked file
     with no allowlist entry is exactly the "unlisted tracked file" issue
-    #9 requires to fail, not silently be omitted from the archive."""
+    #9 requires to fail, not silently be omitted from the archive.
+
+    `al.check()` itself dispatches on whether `repo_root` is a real git
+    repository: for a non-git candidate tree (a genuine extracted
+    archive), it closed-world-validates actual on-disk membership
+    instead (never invoking git plumbing against it), reporting a
+    present-but-unlisted file or an allowlisted member with no on-disk
+    representation at all (e.g. a missing "mgfembp" gitlink mountpoint)
+    exactly as actionably as the git-tracked-bijection case. A
+    well-formed 40-lowercase-hex `target_sha` that does not resolve to a
+    real object in an actual git repository raises
+    `git_source.GitSourceError` here (propagated, never swallowed) --
+    scripts/release_rehearsal/cli.py's single top-level exception
+    boundary is what converts that into `EXIT_TOOLING_ERROR`, not this
+    function papering over it as a soft business reason."""
     allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
     errors = al.check(repo_root, allowlist_path, target_sha)
     return {"ok": not errors, "errors": errors}

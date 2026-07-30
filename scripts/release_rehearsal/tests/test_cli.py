@@ -3,8 +3,10 @@
 machine-distinct status/exit contract (issue #9 verifier remediation)."""
 
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -12,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 from scripts.release_rehearsal import cli as rc  # noqa: E402
+
+NONEXISTENT_SHA = "0123456789abcdef0123456789abcdef01234567"
 
 
 def run_cli(*args):
@@ -21,6 +25,63 @@ def run_cli(*args):
         capture_output=True,
         text=True,
     )
+
+
+def _real_head_sha() -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True,
+    ).stdout.strip()
+
+
+def _extract_head_archive(head_sha: str) -> Path:
+    """A real `git archive` extraction of this repository's own actual
+    HEAD into a fresh temp directory with **no** `.git` at all -- a
+    genuine non-git candidate tree exactly like a downloaded, extracted
+    GitHub source archive (never a hand-authored fake; "mgfembp"
+    naturally lands as a real empty directory here, exactly as GitHub's
+    own auto-generated archive produces it). Caller owns cleanup."""
+    tmp = Path(tempfile.mkdtemp(prefix="fe8-issue9-cli-extracted-"))
+    archive = subprocess.run(["git", "archive", head_sha], cwd=str(ROOT), capture_output=True)
+    assert archive.returncode == 0, archive.stderr
+    extract = subprocess.run(["tar", "-x"], input=archive.stdout, cwd=str(tmp))
+    assert extract.returncode == 0
+    assert not (tmp / ".git").exists(), "fixture must be a genuine non-git tree"
+    return tmp
+
+
+# Module-level cache: at most one real `git archive HEAD | tar -x` for
+# this entire test module (several test classes below each need their
+# own genuine non-git extracted tree of the same, current HEAD; re-
+# running the extraction once per class/test would be correct but
+# needlessly slow for a ~9000-tracked-file repository). Read-only
+# consumers use `_shared_head_tree()` directly; anything that mutates
+# its own copy calls `_copy_of_shared_head_tree()` instead (a local
+# filesystem copy, no repeated git/tar subprocess spawn).
+_shared_head_sha = None
+_shared_head_tree_path = None
+
+
+def _shared_head_sha_and_tree():
+    global _shared_head_sha, _shared_head_tree_path
+    if _shared_head_tree_path is None:
+        _shared_head_sha = _real_head_sha()
+        _shared_head_tree_path = _extract_head_archive(_shared_head_sha)
+    return _shared_head_sha, _shared_head_tree_path
+
+
+def _copy_of_shared_head_tree() -> Path:
+    _, template = _shared_head_sha_and_tree()
+    dest = Path(tempfile.mkdtemp(prefix="fe8-issue9-cli-extracted-copy-"))
+    shutil.rmtree(dest)  # copytree requires the destination not to exist yet
+    shutil.copytree(template, dest)
+    return dest
+
+
+def tearDownModule():
+    global _shared_head_tree_path
+    if _shared_head_tree_path is not None:
+        shutil.rmtree(_shared_head_tree_path, ignore_errors=True)
+        _shared_head_tree_path = None
 
 
 class CheckSubcommandTests(unittest.TestCase):
@@ -246,6 +307,276 @@ class RenderMarkdownSummaryTests(unittest.TestCase):
         workflow_text = (ROOT / ".github" / "workflows" / "release-rehearsal.yml").read_text()
         self.assertIn("scripts.release_rehearsal.cli summary", workflow_text)
         self.assertIn("GITHUB_STEP_SUMMARY", workflow_text)
+
+
+class NonexistentTargetShaExitContractTests(unittest.TestCase):
+    """issue #9 fresh-verifier reproduction (defect class 1): a
+    well-formed (40-lowercase-hex) but nonexistent --target-sha in this
+    *actual* git repository must never traceback -- it is an actionable
+    tooling error (exit 2), never confusable with EXIT_NOT_ELIGIBLE (1,
+    which is coincidentally also Python's own unhandled-exception exit
+    code -- exactly the collision this remediation closes)."""
+
+    def _assert_no_traceback(self, result):
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertNotIn("Traceback (most recent call last)", result.stdout)
+
+    def test_check_nonexistent_sha_exits_2_not_traceback(self):
+        result = run_cli("check", "--target-sha", NONEXISTENT_SHA)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("error:", result.stderr)
+
+    def test_summary_nonexistent_sha_exits_2_not_traceback(self):
+        result = run_cli("summary", "--target-sha", NONEXISTENT_SHA)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("error:", result.stderr)
+
+    def test_rehearse_nonexistent_sha_exits_2_not_traceback(self):
+        result = run_cli("rehearse", "--target-sha", NONEXISTENT_SHA)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("error:", result.stderr)
+
+    def test_nonexistent_sha_with_require_eligible_is_still_exit_2_not_1(self):
+        """The tooling error must take precedence over --require-
+        eligible's own exit 1 -- a crash is never allowed to masquerade
+        as (or be conflated with) "not eligible"."""
+        result = run_cli("check", "--target-sha", NONEXISTENT_SHA, "--require-eligible")
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+
+class ExtractedNonGitTreeEndToEndTests(unittest.TestCase):
+    """issue #9 fresh-verifier reproduction (defect class 2): the
+    documented non-git/extracted candidate path, with a required exact
+    40-lowercase-hex --target-sha override, must genuinely work
+    end-to-end -- canonical JSON, a truthful BLOCKED status (this
+    extraction is real, current, and license/provenance-unresolved,
+    exactly like the live repository -- never a fabricated eligible
+    result), and the exact same machine-distinct exit contract as a
+    real git worktree. The fixture is a real `git archive` extraction of
+    this repository's own actual HEAD (see `_extract_head_archive`)."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Read-only for every test in this class -- safe to share the
+        # single module-level extraction directly (see
+        # `_shared_head_sha_and_tree`); `tearDownModule` owns its cleanup.
+        cls.head_sha, cls.tree = _shared_head_sha_and_tree()
+
+    def _assert_no_traceback(self, result):
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertNotIn("Traceback (most recent call last)", result.stdout)
+
+    def test_check_with_exact_sha_is_canonical_blocked_json_no_traceback(self):
+        result = run_cli("check", "--repo-root", str(self.tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "blocked")
+        self.assertEqual(data["target_sha"], self.head_sha)
+        self.assertTrue(data["allowlist"]["ok"], data["allowlist"]["errors"])
+        self.assertEqual(data["source_guard"]["status"], "pass")
+
+    def test_check_expect_status_blocked_exits_zero(self):
+        result = run_cli(
+            "check", "--repo-root", str(self.tree), "--target-sha", self.head_sha,
+            "--expect-status", "blocked",
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_check_require_eligible_exits_exactly_1(self):
+        result = run_cli(
+            "check", "--repo-root", str(self.tree), "--target-sha", self.head_sha,
+            "--require-eligible",
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 1)
+
+    def test_check_missing_target_sha_is_actionable_exit_2(self):
+        result = run_cli("check", "--repo-root", str(self.tree))
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--target-sha", result.stderr)
+
+    def test_rehearse_with_exact_sha_is_canonical_blocked_json_no_traceback(self):
+        result = run_cli("rehearse", "--repo-root", str(self.tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "blocked")
+        self.assertTrue(data["archive"]["match"])
+        self.assertEqual(data["archive"]["target_sha"], self.head_sha)
+        self.assertEqual(data["rebuild"]["status"], "blocked")
+        self.assertTrue(any(".git" in reason for reason in data["rebuild"]["reasons"]))
+
+    def test_rehearse_expect_status_blocked_exits_zero(self):
+        result = run_cli(
+            "rehearse", "--repo-root", str(self.tree), "--target-sha", self.head_sha,
+            "--expect-status", "blocked",
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rehearse_require_eligible_exits_exactly_1(self):
+        result = run_cli(
+            "rehearse", "--repo-root", str(self.tree), "--target-sha", self.head_sha,
+            "--require-eligible",
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 1)
+
+    def test_rehearse_missing_target_sha_is_actionable_exit_2_not_traceback(self):
+        """The literal reproduced defect: previously tracebacked (exit
+        1) via rebuild_rehearsal_blocker's unconditional 'git submodule
+        status' call; now fails fast and actionably before any git
+        invocation is attempted at all."""
+        result = run_cli("rehearse", "--repo-root", str(self.tree))
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--target-sha", result.stderr)
+
+    def test_summary_with_exact_sha_no_traceback(self):
+        result = run_cli("summary", "--repo-root", str(self.tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("`blocked`", result.stdout)
+
+    def test_summary_missing_target_sha_is_actionable_exit_2(self):
+        result = run_cli("summary", "--repo-root", str(self.tree))
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+
+class MalformedExtractedTreeTests(unittest.TestCase):
+    """issue #9 verifier remediation (DONE criterion): missing/extra/
+    unsafe member fixtures against a real extracted candidate tree.
+    Never fabricates an eligible legal fact -- every fixture here is
+    still, honestly, license/provenance-BLOCKED; the only question
+    tested is the *mechanical* exit-code/traceback contract."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.head_sha, _ = _shared_head_sha_and_tree()
+
+    def _extract(self) -> Path:
+        """Each test here needs its *own* independently-mutable tree
+        (one deletes a file, one overwrites one, one adds one) -- copied
+        locally from the shared read-only template rather than re-
+        running `git archive` again for every single fixture."""
+        tree = _copy_of_shared_head_tree()
+        self.addCleanup(shutil.rmtree, tree, True)
+        return tree
+
+    def _assert_no_traceback(self, result):
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertNotIn("Traceback (most recent call last)", result.stdout)
+
+    def test_unsafe_member_content_is_controlled_exit_2_via_rehearse(self):
+        """An allowlisted, otherwise-harmless text file overwritten with
+        content that fails the hard-deny magic-byte check (ELF magic),
+        independent of its unchanged, harmless ".md" extension -- a
+        structurally malformed candidate `rehearse` must refuse to
+        archive, not traceback and not silently accept."""
+        tree = self._extract()
+        (tree / "README.md").write_bytes(b"\x7fELF" + b"\x00" * 32)
+        result = run_cli("rehearse", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("error:", result.stderr)
+
+    def test_missing_allowlisted_member_is_controlled_exit_2_via_rehearse(self):
+        """A declared allowlist member entirely absent from the
+        extraction (not merely untracked -- genuinely never extracted)
+        must refuse to archive with a controlled, actionable exit 2."""
+        tree = self._extract()
+        (tree / "README.md").unlink()
+        result = run_cli("rehearse", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("README.md", result.stderr)
+
+    def test_missing_allowlisted_member_is_reported_blocked_via_check(self):
+        """`check` (report-only; never attempts to build archive bytes)
+        instead reports this as an honestly-blocked business fact --
+        never a crash, and consistent with `rehearse`'s exit 2 above:
+        both mechanically detect and report the exact same underlying
+        gap, at their respective layers."""
+        tree = self._extract()
+        (tree / "README.md").unlink()
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "blocked")
+        self.assertFalse(data["allowlist"]["ok"])
+        self.assertTrue(any("README.md" in e for e in data["allowlist"]["errors"]))
+
+    def test_extra_unlisted_member_is_reported_blocked_not_exit_2(self):
+        """An extra, never-allowlisted file present in an extracted tree
+        is excluded from the archive and flagged as a `not-allowlisted`
+        source_guard violation -- a normal, well-formed BLOCKED business
+        result (see docs/release_process.md), never a tooling crash;
+        this is pre-existing, intentional behavior (mirrors how a live
+        git worktree's untracked byproducts are handled), regression-
+        guarded here at the CLI layer for a genuine extracted tree."""
+        tree = self._extract()
+        (tree / "unreviewed_extra_file.c").write_text("int extra;\n")
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "blocked")
+        self.assertTrue(
+            any("unreviewed_extra_file.c" in v and "not-allowlisted" in v
+                for v in data["source_guard"]["violations"])
+        )
+        # And `rehearse` still succeeds (the extra file is silently
+        # excluded from the archive bytes, never causing a refusal).
+        rehearse_result = run_cli("rehearse", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(rehearse_result)
+        self.assertEqual(rehearse_result.returncode, 0, rehearse_result.stderr)
+
+
+class Issue9LiteralReproductionCommandsTests(unittest.TestCase):
+    """The four literal issue #9 reproduction commands (see the issue's
+    own "Reproduce all verifier commands before changing" step), run
+    verbatim -- asserted to never leak a Python traceback on stdout or
+    stderr, regardless of the resulting exit code."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Also read-only -- reuses the same shared extraction as
+        # `ExtractedNonGitTreeEndToEndTests` above (never a second
+        # `git archive` invocation for this module).
+        cls.head_sha, cls.tree = _shared_head_sha_and_tree()
+
+    def _assert_no_traceback(self, result):
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertNotIn("Traceback (most recent call last)", result.stdout)
+
+    def test_repro_1_check_nonexistent_target_sha(self):
+        result = run_cli("check", "--target-sha", NONEXISTENT_SHA)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+    def test_repro_2_summary_nonexistent_target_sha(self):
+        result = run_cli("summary", "--target-sha", NONEXISTENT_SHA)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+    def test_repro_3_check_extracted_tree_exact_target_sha(self):
+        result = run_cli("check", "--repo-root", str(self.tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_repro_4_rehearse_extracted_tree_exact_target_sha(self):
+        result = run_cli("rehearse", "--repo-root", str(self.tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

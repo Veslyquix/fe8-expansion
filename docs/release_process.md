@@ -85,11 +85,37 @@ non-zero value).
   `include/expansion_config.h` C-fallback-vs-`config.mk` mismatch, an
   unreachable migration-registry epoch, a broken release-doc link, a
   migration registry inconsistency, a source-release guard hard-deny hit
-  (symlink, device, traversal path, prohibited nested magic/extension), or
-  an archive-rehearsal hash mismatch. These represent tooling/input
+  (symlink, device, traversal path, prohibited nested magic/extension),
+  an archive-rehearsal hash mismatch, a well-formed (40-lowercase-hex)
+  `--target-sha` that simply does not resolve to a real object in an
+  actual git repository, or a non-git `--repo-root` (a genuine extracted
+  archive/non-git candidate tree) whose declared allowlist member(s) have
+  no on-disk representation at all. These represent tooling/input
   defects to fix, distinct from an honestly-recorded unresolved business
   fact. Checked **before** either status gate below, since a gate cannot
   be meaningfully evaluated against a broken report.
+
+  All three subcommands (`check`, `summary`, `rehearse`) route through
+  one **single, shared top-level exception boundary**
+  (`cli.py`'s `_run_guarded`/`EXPECTED_TOOLING_ERRORS`): every expected
+  tool/input/repository exception class raised anywhere in the call
+  graph below them --
+  `git_source.GitSourceError`, `archive_rehearsal.ArchiveRehearsalError`,
+  `source_guard.SourceGuardError`, `allowlist.AllowlistError`,
+  `provenance.ProvenanceError`, `manifest.ManifestError`,
+  `expansion_config.ConfigError`, or `OSError` -- is always converted
+  here into exit `2` with an actionable message, **never** an unhandled
+  Python traceback. This matters specifically because an *unhandled*
+  exception's own process exit code is `1`, which would otherwise be
+  silently indistinguishable from the deliberate, documented
+  `EXIT_NOT_ELIGIBLE` (a fresh, independent review reproduced exactly
+  this collision: a well-formed but nonexistent `--target-sha`, and the
+  documented non-git/extracted-tree path, both used to traceback as exit
+  `1` instead of failing actionably as exit `2` -- see "The documented
+  non-git/extracted candidate path" below). Anything *not* in that
+  exception tuple still tracebacks, on purpose -- this is deliberately
+  not a blanket `except Exception`, so a genuine programming bug in this
+  tooling is never silently absorbed alongside an expected input error.
 * **Exit `3`** (`EXIT_STATUS_MISMATCH`) -- **only** reachable via
   `--expect-status {blocked,mechanically-eligible}`: the actual status is
   not exactly the one the caller named. There is no default/implicit
@@ -361,19 +387,74 @@ disk, or even `git add`ed, without being committed therefore cannot
 change a single byte of the archive: the archive is bound to the commit
 object, not the checkout or the index. `rehearse_archive_twice()` resolves
 that commit SHA **once**, before either of the two builds runs, so both
-builds target the exact same immutable commit. Only for a genuine
-already-extracted archive/non-git candidate tree (no `.git` at all -- the
-tree *is* the candidate) does this fall back to a raw filesystem walk of
-exactly the allowlisted entries; that path never claims a Git-derived
-identity without an explicit, exact 40-lowercase-hex `--target-sha`
-override bound into the manifest (see `resolve_target_sha` in
-`scripts/release_rehearsal/manifest.py`).
+builds target the exact same immutable commit.
 `scripts/release_rehearsal/tests/test_archive_rehearsal.py`'s
 `GitBackedArchiveTests` mutate a tracked file directly on disk (unstaged),
 then stage it (`git add`, still uncommitted), and prove the archive
 hash is unaffected either way -- and that an actual commit *does* change
 it, and that an unsafe Git mode (a tracked symlink) or a gitlink (no blob
 content at all) are handled correctly even though fully committed.
+
+### The documented non-git/extracted candidate path
+
+Only for a genuine already-extracted archive/non-git candidate tree (no
+`.git` at all -- the tree *is* the candidate, e.g. a downloaded and
+extracted GitHub source archive) does the above fall back to a raw
+filesystem walk of exactly the allowlisted entries. This path is fully
+end-to-end tested (`scripts/release_rehearsal/tests/test_cli.py`'s
+`ExtractedNonGitTreeEndToEndTests`, against a real `git archive HEAD |
+tar -x` extraction of this repository's own current HEAD) and:
+
+* **requires** an explicit, exact 40-lowercase-hex `--target-sha`
+  override (`resolve_target_sha` in
+  `scripts/release_rehearsal/manifest.py`, shared by `check`, `summary`,
+  and `rehearse` alike) -- a missing override is an actionable exit `2`,
+  never a silent `"unknown"` identity and never a traceback;
+* **never invokes any git command** against the extracted tree -- not
+  `git ls-tree` (`scripts/release_rehearsal/allowlist.py`'s
+  `check_allowlist_completeness_non_git`), and not `git submodule status`
+  (`scripts/release_rehearsal/archive_rehearsal.py`'s
+  `evaluate_rebuild_eligibility`, unconditionally `"blocked"` for a
+  non-git `repo_root` -- see "Rebuild rehearsal" below). This is not
+  merely a style preference: git's own upward directory discovery could
+  otherwise silently find an unrelated *enclosing* repository (if the
+  extracted tree happens to sit inside one) and report *that*
+  repository's tracked files/submodule state as if they belonged to the
+  extracted tree -- exactly the "pretend the override proves Git content
+  identity" failure this remediation forbids;
+* **binds** the supplied `--target-sha` into both the manifest and the
+  archive report as an **externally-asserted identity** -- recorded
+  verbatim, never independently verified (there is no git metadata in a
+  non-git tree to verify it against);
+* **closed-world-validates exact membership**: a file physically present
+  in the tree with no allowlist entry is reported (`check`'s
+  `allowlist.errors`, folded into `"reasons"` -- a normal, well-formed
+  `"blocked"` business fact, not an error) exactly like
+  `source_guard`'s existing `"not-allowlisted"` finding; an allowlist
+  member with **no on-disk representation at all** (neither a file nor a
+  directory -- e.g. a missing `"mgfembp"` gitlink mountpoint, which a
+  real extracted GitHub archive always materializes as an empty
+  directory) is instead a `rehearse`-time refusal
+  (`ArchiveRehearsalError`, actionable exit `2`): you cannot build
+  trustworthy archive bytes when declared content is simply absent.
+  `check` (report-only; never attempts to build archive bytes) still
+  reports the same gap as a `"blocked"` reason rather than a crash.
+* still returns a well-formed, current, honest `"blocked"` result (never
+  a fabricated `"mechanically eligible"`) for a structurally sound
+  extraction -- `--expect-status blocked` on it exits `0`, exactly like
+  the live git worktree.
+
+A fresh, independent review reproduced the previous defect exactly: a
+well-formed but nonexistent `--target-sha` in an actual git repository,
+and this documented non-git/extracted path (both with and without the
+required override), all tracebacked as an unhandled Python exception
+(process exit `1`) instead of failing actionably as `EXIT_TOOLING_ERROR`
+(`2`) -- see "Exit code contract" above for the fix (a single, shared
+top-level exception boundary in `cli.py`) and
+`scripts/release_rehearsal/tests/test_cli.py`'s
+`NonexistentTargetShaExitContractTests`,
+`ExtractedNonGitTreeEndToEndTests`, `MalformedExtractedTreeTests`, and
+`Issue9LiteralReproductionCommandsTests` for the regression coverage.
 
 ### Rebuild rehearsal
 
@@ -387,7 +468,12 @@ machine-distinct states:
   commit. This never fetches, initializes, or approves anything --
   `evaluate_rebuild_eligibility()` only ever *reads* `git submodule
   status` and `docs/release_data/provenance/submodules.json`. **This is
-  this repository's real, current, expected state.**
+  this repository's real, current, expected state.** A non-git
+  `repo_root` (a genuine extracted archive/non-git candidate tree, see
+  above) is unconditionally `"blocked"` too, for a distinct, precisely
+  reported reason -- `evaluate_rebuild_eligibility()` never invokes `git
+  submodule status` (or any other git command) against such a tree at
+  all.
 * **`"not_run"`** -- eligible, but no actual build was attempted (the
   caller passed `attempt_build=False`, or omitted an explicit
   `--build-command`/`--output-paths` for the real pinned rebuild). Kept

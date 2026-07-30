@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -130,14 +131,128 @@ def check_allowlist_completeness(
     return missing, stale
 
 
+def _present_regular_files(repo_root: Path) -> List[str]:
+    """Every ordinary, non-symlink regular file's repo-relative posix
+    path actually present on disk under `repo_root` -- the non-git
+    equivalent of a tracked-file listing, used **only** when `repo_root`
+    has no `.git` metadata at all (`git_source.is_git_repo` is False; a
+    genuine extracted archive/non-git candidate tree). Never invokes git
+    -- issue #9 verifier remediation: a non-git candidate tree must never
+    have git plumbing invoked against it (which could otherwise silently
+    walk *upward* to an unrelated enclosing repository and report *that*
+    repository's tracked files instead of failing closed). Mirrors
+    scripts/release_rehearsal/source_guard.py's own tree-walk convention
+    (skip a root-level ".git", never follow symlinks)."""
+    repo_root = Path(repo_root)
+    present: List[str] = []
+    for dirpath, dirnames, filenames in os.walk(repo_root, followlinks=False):
+        dirpath_path = Path(dirpath)
+        if dirpath_path == repo_root:
+            dirnames[:] = [d for d in dirnames if d != ".git"]
+        for name in filenames:
+            full = dirpath_path / name
+            if full.is_symlink():
+                continue
+            present.append(full.relative_to(repo_root).as_posix())
+    return present
+
+
+def _entry_has_on_disk_representation(repo_root: Path, entry: str) -> bool:
+    """True if allowlist entry `entry` corresponds to *some* real,
+    non-symlink file or directory in a non-git candidate tree. A
+    directory match covers a gitlink-style mountpoint (e.g. the
+    "mgfembp" submodule path): a real git-tracked tree always records
+    that path as its own tree entry with no blob content at all (see
+    git_source.py's MODE_GITLINK), and a genuine extracted archive
+    (e.g. GitHub's auto-generated source archive) materializes it as an
+    empty directory -- it is never itself required to contain
+    anything, exactly like a real gitlink. A symlink at `entry` never
+    counts as a representation (consistent with
+    `_filesystem_allowlisted_files`, which also never treats a symlink
+    as safe content)."""
+    candidate = Path(repo_root) / entry
+    if candidate.is_symlink():
+        return False
+    return candidate.is_file() or candidate.is_dir()
+
+
+def check_allowlist_completeness_non_git(
+    repo_root: Path, allowlist_paths: List[str]
+) -> Tuple[List[str], List[str]]:
+    """The non-git analogue of `check_allowlist_completeness`, used
+    **only** when `repo_root` has no `.git` at all (a genuine extracted
+    archive/non-git candidate tree -- see `git_source.is_git_repo`).
+    There is no git-tracked-file notion to consult here at all -- issue
+    #9 verifier remediation requires this to closed-world-validate the
+    *actual on-disk membership* of the extracted tree against the
+    checked-in allowlist instead, and to never invoke git plumbing
+    against such a tree (there is nothing to invoke it against, and
+    doing so anyway could silently produce a result bound to an
+    unrelated enclosing repository rather than this tree). Returns
+    `(missing, unrepresented)`:
+
+    * `missing` -- an ordinary regular file physically present in the
+      extracted tree whose own exact path has no allowlist entry at all
+      (the non-git analogue of "a new/unlisted tracked file").
+    * `unrepresented` -- an allowlist entry with **no** on-disk
+      representation whatsoever in this extracted tree -- neither as a
+      regular file nor (for a gitlink-style entry such as the "mgfembp"
+      submodule mountpoint) as a directory. This is the precise
+      "missing/unrepresented gitlink/mgfembp" blocker a genuine
+      extracted candidate must report rather than silently ignore.
+
+    A directory is never itself required to have its *contents*
+    individually re-validated here (mirrors
+    scripts/release_rehearsal/source_guard.py's "structural parent
+    only, never an authorization prefix" rule) -- only whether the
+    allowlisted path itself has *some* real, non-symlink on-disk form.
+    """
+    present_files = set(_present_regular_files(repo_root))
+    allowlist_set = set(allowlist_paths)
+    missing = sorted(present_files - allowlist_set)
+    unrepresented = sorted(
+        entry for entry in allowlist_set
+        if not _entry_has_on_disk_representation(repo_root, entry)
+    )
+    return missing, unrepresented
+
+
 def check(repo_root: Path, allowlist_path: Path, target_sha: str = "HEAD") -> List[str]:
     """Convenience wrapper returning a flat, human-readable error list
     (empty means fully consistent); used by both the CLI and
-    scripts/release_rehearsal/manifest.py."""
+    scripts/release_rehearsal/manifest.py.
+
+    Dispatches on whether `repo_root` actually is a git repository
+    (`git_source.is_git_repo`) -- issue #9 verifier remediation: a
+    non-git candidate tree (a genuine extracted archive) is
+    closed-world-validated against on-disk membership
+    (`check_allowlist_completeness_non_git`) and never causes a `git`
+    invocation at all; only a real git working tree uses
+    `check_allowlist_completeness`'s git-tracked-file bijection. A
+    well-formed 40-lowercase-hex `target_sha` that does not resolve to a
+    real object in an actual git repository still raises
+    `git_source.GitSourceError` here (propagated, never swallowed into a
+    soft warning): that is an actionable input defect for the CLI's
+    single top-level exception boundary to convert into
+    `EXIT_TOOLING_ERROR`, not an honestly-recorded business fact."""
     try:
         allowlist_paths = load_allowlist_paths(allowlist_path)
     except AllowlistError as error:
         return [str(error)]
+    repo_root = Path(repo_root)
+    if not gs.is_git_repo(repo_root):
+        missing, unrepresented = check_allowlist_completeness_non_git(repo_root, allowlist_paths)
+        errors = [
+            f"file present in extracted tree but missing from allowlist: {path}"
+            for path in missing
+        ]
+        errors += [
+            "allowlisted member has no on-disk representation in this extracted tree "
+            f"(missing/unrepresented -- e.g. an absent gitlink mountpoint such as "
+            f"'mgfembp', or a removed/never-extracted file): {path}"
+            for path in unrepresented
+        ]
+        return errors
     missing, stale = check_allowlist_completeness(repo_root, allowlist_paths, target_sha)
     errors = [f"tracked file missing from allowlist: {path}" for path in missing]
     errors += [f"stale allowlist entry (no longer tracked): {path}" for path in stale]

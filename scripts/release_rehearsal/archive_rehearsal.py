@@ -46,6 +46,7 @@ import tempfile
 from pathlib import Path
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple
 
+from scripts.release_rehearsal import allowlist as al
 from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import provenance as prov
 from scripts.release_rehearsal import source_guard as sg
@@ -176,9 +177,17 @@ def _iter_archive_contents(
     Returns `(contents, resolved_target_sha)` -- `resolved_target_sha` is
     the exact commit this content is bound to when `root` is a real git
     repository (always non-None in that case, even if the caller did not
-    pass one explicitly -- HEAD is resolved once, here), or None for a
-    non-git candidate tree (see module docstring's "Immutable, HEAD-bound
-    archive inputs")."""
+    pass one explicitly -- HEAD is resolved once, here). For a non-git
+    candidate tree, `resolved_target_sha` is simply the caller's own
+    `target_sha` argument bound through unchanged (an *externally
+    asserted* identity, e.g. the exact 40-lowercase-hex `--target-sha`
+    the documented non-git/extracted candidate path requires -- never
+    itself verified against git, since there is no git metadata to
+    verify it against); it is None only if the caller did not supply one
+    (see module docstring's "Immutable, HEAD-bound archive inputs").
+    Also raises `ArchiveRehearsalError` for a non-git `root` if any
+    allowlist entry has no on-disk representation at all (missing/
+    unrepresented -- e.g. an absent 'mgfembp' gitlink mountpoint)."""
     root = Path(root)
     allowlist_set = set(allowlist)
     map_hex_exceptions = _resolve_map_hex_exceptions(root, map_hex_exceptions)
@@ -205,6 +214,22 @@ def _iter_archive_contents(
         if not violations:
             contents = [(entry.path, data) for entry, data in fetched]
     else:
+        # issue #9 verifier remediation: `target_sha` is never verified
+        # against git here (there is no git metadata in a non-git
+        # candidate tree to verify it against) -- it is bound into the
+        # report/return value as-is, as an *externally-asserted* identity,
+        # never a Git-plumbing-derived one. This never invokes any git
+        # command for a non-git `root` (see module docstring's "Immutable,
+        # HEAD-bound archive inputs").
+        resolved_target_sha = target_sha
+        _missing_unused, unrepresented = al.check_allowlist_completeness_non_git(root, sorted(allowlist_set))
+        if unrepresented:
+            raise ArchiveRehearsalError(
+                "refusing to archive: allowlisted member(s) have no on-disk representation "
+                "in this extracted tree (missing/unrepresented -- e.g. an absent gitlink "
+                "mountpoint such as 'mgfembp', or a removed/never-extracted file): "
+                + "; ".join(unrepresented)
+            )
         paths = _filesystem_allowlisted_files(root, allowlist_set)
         for path in paths:
             sg._hard_deny_check_file(root, path, violations, map_hex_exceptions)
@@ -280,6 +305,12 @@ def rehearse_archive_twice(
             resolved_target_sha = target_sha if target_sha is not None else gs.resolve_sha(root, "HEAD")
         except gs.GitSourceError as error:
             raise ArchiveRehearsalError(str(error)) from error
+    else:
+        # issue #9 verifier remediation: bind the caller's asserted
+        # target_sha into the report even in non-git mode (previously
+        # silently dropped to None here) -- never verified against git
+        # (there is none to verify against), but no longer discarded.
+        resolved_target_sha = target_sha
 
     with tempfile.TemporaryDirectory(prefix="fe8-release-rehearsal-1-") as tmp1, \
          tempfile.TemporaryDirectory(prefix="fe8-release-rehearsal-2-") as tmp2:
@@ -340,9 +371,41 @@ def evaluate_rebuild_eligibility(
     with `redistribution_approved: true`. All three must hold -- this
     function only ever *reads* `docs/release_data/provenance/*.json` and
     `git submodule status`; it never writes, fetches, or flips any of
-    them itself."""
+    them itself.
+
+    issue #9 verifier remediation: when `repo_root` has no `.git` at all
+    (a genuine extracted archive/non-git candidate tree), this returns
+    unconditionally ineligible **without ever invoking `git submodule
+    status`** -- there is no git submodule mechanism to evaluate for a
+    non-git tree, and invoking it anyway is actively unsafe: `git`'s own
+    upward directory discovery could silently find an unrelated
+    *enclosing* repository (if `repo_root` happens to sit inside one) and
+    report *that* repository's submodule state as if it belonged to this
+    extracted tree -- exactly the "pretend the override proves Git
+    content identity" failure this remediation forbids. `submodule_path`
+    is never fetched/initialized/approved in this branch either, exactly
+    like the real-git-repo path below."""
     repo_root = Path(repo_root)
     provenance_dir = Path(provenance_dir) if provenance_dir else repo_root / "docs" / "release_data" / "provenance"
+
+    if not gs.is_git_repo(repo_root):
+        reason = (
+            f"'{repo_root}' has no .git metadata (a genuine extracted archive/non-git "
+            f"candidate tree); a clean recursive rebuild requiring the '{submodule_path}' git "
+            "submodule is therefore always ineligible here -- there is no git submodule "
+            "mechanism to initialize or verify against an extracted tree, and this rehearsal "
+            "never invokes git plumbing (e.g. 'git submodule status') against one"
+        )
+        return False, {
+            "submodule_status_output": "",
+            "submodule_initialized": False,
+            "submodule_checked_out_sha": None,
+            "provenance_pinned_commit": None,
+            "provenance_redistribution_approved": False,
+            "identity_matches_pinned": False,
+            "reasons": [reason],
+        }
+
     status_output = _submodule_status_output(repo_root)
     checked_out_sha, indicator = _parse_submodule_status(status_output, submodule_path)
     initialized = indicator == " " or indicator == "+"
@@ -462,7 +525,12 @@ def rebuild_rehearsal_blocker(
     * `"blocked"` -- not even eligible to attempt (submodule uninitialized
       and/or unapproved and/or identity mismatch) -- today's real result
       for this repository, and expected to remain so until a human
-      resolves `docs/release_data/provenance/submodules.json`.
+      resolves `docs/release_data/provenance/submodules.json`. A non-git
+      `repo_root` (a genuine extracted archive/non-git candidate tree)
+      is unconditionally `"blocked"` too, for a distinct, precisely
+      reported reason -- see `evaluate_rebuild_eligibility`'s non-git
+      short-circuit, which never invokes `git submodule status` (or any
+      other git command) against such a tree.
     * `"not_run"` -- eligible, but no actual build was executed (either
       the caller passed `attempt_build=False`, or did not supply the
       `build_command`/`output_relpaths` a real attempt requires) --

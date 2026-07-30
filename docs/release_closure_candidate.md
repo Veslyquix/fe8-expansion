@@ -109,7 +109,23 @@ is not `"mechanically eligible"`.
   a real, executable eligible-path double-compile-and-compare mechanism
   (`run_build_twice`), exercised end-to-end against a hermetic synthetic
   fixture; and the documented GitHub auto-generated-archive/submodule
-  contradiction.
+  contradiction. The documented non-git/extracted candidate path (a
+  genuine extracted archive, with a required exact 40-lowercase-hex
+  `--target-sha` override) is now fully working end-to-end: a fresh,
+  independent review reproduced it (and a well-formed-but-nonexistent
+  `--target-sha` against a real git repository) tracebacking as an
+  unhandled exception instead of the documented `EXIT_TOOLING_ERROR`
+  (`2`) -- `check`/`summary`/`rehearse` now route through one single,
+  shared top-level exception boundary (`cli.py`'s `_run_guarded`/
+  `EXPECTED_TOOLING_ERRORS`), `evaluate_rebuild_eligibility()` never
+  invokes `git submodule status` (or any other git command) against a
+  non-git `repo_root`, and a declared allowlist member with no on-disk
+  representation at all (e.g. an absent `mgfembp` gitlink mountpoint) is
+  a controlled `rehearse`-time refusal rather than a silent omission --
+  see `docs/release_process.md`'s "The documented non-git/extracted
+  candidate path" and `scripts/release_rehearsal/tests/test_cli.py`'s
+  `ExtractedNonGitTreeEndToEndTests`/`MalformedExtractedTreeTests`/
+  `Issue9LiteralReproductionCommandsTests`.
 * Release-doc relative-link validator
   (`scripts/release_rehearsal/doc_links.py`) -- the three broken
   `docs/release/...` links the independent verifier found (they should
@@ -188,6 +204,18 @@ make release-check-expect-blocked
 # Deterministic archive + rebuild rehearsal (always exits 0 for a
 # well-formed report; "rebuild".status is truthfully "blocked" today).
 make release-rehearse
+
+# The documented non-git/extracted candidate path, reproduced directly
+# against a real extraction of this repository's own current HEAD (never
+# a hand-authored fake) -- requires the exact 40-lowercase-hex
+# --target-sha override; genuinely works end-to-end (no traceback, a
+# truthful "blocked" JSON report, exit 0):
+HEAD_SHA="$(git rev-parse HEAD)"
+EXTRACTED="$(mktemp -d)"
+git archive "$HEAD_SHA" | tar -x -C "$EXTRACTED"
+python3 -m scripts.release_rehearsal.cli check --repo-root "$EXTRACTED" --target-sha "$HEAD_SHA"
+python3 -m scripts.release_rehearsal.cli rehearse --repo-root "$EXTRACTED" --target-sha "$HEAD_SHA"
+rm -rf "$EXTRACTED"
 
 # Dynamic workflow guard (machine JSON).
 make release-workflow-guard
