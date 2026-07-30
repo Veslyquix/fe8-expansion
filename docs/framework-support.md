@@ -134,7 +134,7 @@ open/aspirational. Closure evidence: `reports/issue10_closure.md`,
   [`docs/id_space.md`](id_space.md) for the full DEFAULT-vs-ACTIVE contract,
   domain-by-domain caps/budgets, and the consumer census. Item IDs are
   raised and CI-gated at cap `0xCE`/207 records
-  (`expansion-modern-itemexpansion-check`, gates 11-12 of
+  (`expansion-modern-itemexpansion-check`, gates 9-10 of
   [`docs/upstream-porting.md`](upstream-porting.md)). **Explicit non-goals
   (still true, not silently dropped):** no class/chapter/unit/character ID
   widening; no save-layout/epoch change (`EXPANSION_SAVE_COMPAT_EPOCH`

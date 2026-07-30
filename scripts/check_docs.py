@@ -212,6 +212,50 @@ STALE_PHRASE_RULES = [
         "requires MODERN_ABI=aapcs and fails fast otherwise; apcs-gnu is compile-only "
         "(expansion-modern-cohort/-all layout comparison only)",
     ),
+    # Issues #7/#17 independent-verifier finding: docs/generated_data.md and
+    # reports/generated_data_issue5_closure.md previously asserted GitHub
+    # issue #5 was still OPEN with no merged state. #5 is now CLOSED, with
+    # completion commit ac0ee5d7f17eb8e70175576cb46d9f320d8013cd merged into
+    # master (see docs/generated_data.md, "Issue #5 completion boundary and
+    # status"). These narrow, literal OPEN-status phrases must never
+    # reappear verbatim -- deliberately narrow enough to not flag the
+    # historical, batch-scoped technical boundary wording (e.g. "Issue #5
+    # itself is not closed by Batch A/B"), which is preserved prose, not a
+    # live current-status claim.
+    (
+        re.compile(r"GitHub issue #5 is still \*{0,2}OPEN\*{0,2}"),
+        "stale claim: GitHub issue #5 is CLOSED (closed 2026-07-25), with "
+        "completion commit ac0ee5d7f17eb8e70175576cb46d9f320d8013cd merged "
+        "into master -- see docs/generated_data.md's \"Issue #5 completion "
+        "boundary and status\" section, not a still-OPEN claim",
+    ),
+    (
+        re.compile(re.escape("#5 is OPEN at time of writing")),
+        "stale claim: GitHub issue #5 is CLOSED (closed 2026-07-25), with "
+        "completion commit ac0ee5d7f17eb8e70175576cb46d9f320d8013cd merged "
+        "into master -- see reports/generated_data_issue5_closure.md's "
+        "opening status paragraph",
+    ),
+    (
+        re.compile(re.escape("Does not close GitHub issue #5 (OPEN)")),
+        "stale claim: GitHub issue #5 is CLOSED (closed 2026-07-25); this "
+        "report itself does not perform issue-state changes, but #5 is not "
+        "still OPEN -- see reports/generated_data_issue5_closure.md's "
+        "\"What this closure explicitly does NOT claim\" section",
+    ),
+    # Issues #7/#17 independent-verifier finding: docs/framework-support.md
+    # said the item-ID-expansion checks were "gates 11-12" of the upstream
+    # verify gate set. The actual, current scripts/upstream_port/verify.py
+    # gates() ordering (mirrored by docs/upstream-porting.md) puts the two
+    # item-expansion gates (modern-itemexpansion-check-debug/-release) at
+    # indexes 9-10 of exactly 10 gates, not 11-12. This exact stale gate
+    # numbering must never reappear verbatim.
+    (
+        re.compile(re.escape("gates 11-12")),
+        "stale claim: the item-ID-expansion checks are gates 9-10 of the "
+        "exact 10-gate scripts/upstream_port/verify.py gates() set, not "
+        "gates 11-12 -- see docs/upstream-porting.md",
+    ),
 ]
 
 # ---------------------------------------------------------------------------

@@ -936,6 +936,142 @@ class StaleFrameworkSupportABIRegressionTests(unittest.TestCase):
             self.assertEqual(findings, [])
 
 
+# ---------------------------------------------------------------------------
+# Issues #7/#17 independent-verifier finding: two stale current-facts
+# reintroduced after the #7/#17 docs integration --
+#
+#   1. docs/generated_data.md and reports/generated_data_issue5_closure.md
+#      asserted GitHub issue #5 was still OPEN with no merged state. #5 is
+#      now CLOSED (closed 2026-07-25), with completion commit
+#      ac0ee5d7f17eb8e70175576cb46d9f320d8013cd merged into master.
+#   2. docs/framework-support.md said the item-ID-expansion checks were
+#      "gates 11-12" of the upstream verify gate set; the real, current
+#      scripts/upstream_port/verify.py gates() puts them at indexes 9-10
+#      of exactly 10.
+#
+# These tests prove: (a) every old phrase is flagged stale if it reappears,
+# (b) the current live doc/report text is stale-clean, (c) the historical,
+# batch-scoped technical boundary wording (which looks similar but is not a
+# live current-status claim) is NOT flagged, (d) the current docs/report
+# state #5 CLOSED with the real completion commit as merged evidence, and
+# (e) the "gates 9-10" claim is source-backed against the real
+# scripts/upstream_port/verify.py gates() ordering -- never a hardcoded
+# fake substitute.
+# ---------------------------------------------------------------------------
+
+class StaleIssue5StatusAndGateNumberRegressionTests(unittest.TestCase):
+    OLD_STALE_PHRASES = [
+        "GitHub issue #5 is still **OPEN** (this repository does not close it),",
+        "#5 is OPEN at time of writing",
+        "Does not close GitHub issue #5 (OPEN).",
+        "gates 11-12 of",
+    ]
+
+    def test_each_old_phrase_is_flagged_stale(self):
+        for phrase in self.OLD_STALE_PHRASES:
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_stale_phrases(["doc.md"], root)
+                self.assertTrue(findings, "expected a finding for: %r" % phrase)
+
+    def test_batch_scoped_non_goal_wording_not_flagged(self):
+        # These look superficially similar (mention Issue #5 + "not
+        # closed"/"open") but are historical, batch-scoped technical
+        # boundary statements, not a live current-status claim -- they
+        # must stay clean.
+        preserved_phrases = [
+            "Issue #5 itself is **not closed** by Batch A/B.",
+            "but this still does **not** close Issue #5.",
+            "does not close Issue #5's mechanics scope, nor Issue #5 overall.",
+            "remains open scope for a future batch, if ever appropriate",
+        ]
+        for phrase in preserved_phrases:
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                root = repo.root
+                write(root, "doc.md", phrase + "\n")
+                findings = check_docs.check_stale_phrases(["doc.md"], root)
+                self.assertEqual(findings, [], "unexpected finding for: %r" % phrase)
+
+    def test_current_generated_data_doc_has_no_stale_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "generated_data.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "docs", "generated_data.md")
+            ))
+            findings = check_docs.check_stale_phrases(["generated_data.md"], root)
+            self.assertEqual(findings, [])
+
+    def test_current_framework_support_doc_has_no_stale_findings_for_gate_numbers(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "framework-support.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "docs", "framework-support.md")
+            ))
+            findings = check_docs.check_stale_phrases(["framework-support.md"], root)
+            self.assertEqual(findings, [])
+
+    def test_current_issue5_closure_report_has_no_stale_findings(self):
+        with TempRepo() as repo:
+            root = repo.root
+            write(root, "generated_data_issue5_closure.md", check_docs.read_text(
+                os.path.join(REAL_REPO_ROOT, "reports", "generated_data_issue5_closure.md")
+            ))
+            findings = check_docs.check_stale_phrases(
+                ["generated_data_issue5_closure.md"], root
+            )
+            self.assertEqual(findings, [])
+
+    def test_current_docs_state_issue5_closed_with_merged_commit_evidence(self):
+        completion_commit = "ac0ee5d7f17eb8e70175576cb46d9f320d8013cd"
+        generated_data_text = check_docs.read_text(
+            os.path.join(REAL_REPO_ROOT, "docs", "generated_data.md")
+        )
+        closure_report_text = check_docs.read_text(
+            os.path.join(REAL_REPO_ROOT, "reports", "generated_data_issue5_closure.md")
+        )
+        self.assertIn("GitHub issue #5 is **CLOSED**", generated_data_text)
+        self.assertIn(completion_commit, generated_data_text)
+        self.assertIn("#5 is CLOSED", closure_report_text)
+        self.assertIn(completion_commit, closure_report_text)
+        self.assertNotIn("is still **OPEN**", generated_data_text)
+        self.assertNotIn("OPEN at time of writing", closure_report_text)
+
+    def test_framework_support_states_item_expansion_gates_9_10(self):
+        framework_support_text = check_docs.read_text(
+            os.path.join(REAL_REPO_ROOT, "docs", "framework-support.md")
+        )
+        self.assertIn("gates 9-10 of", framework_support_text)
+        self.assertNotIn("gates 11-12", framework_support_text)
+
+    def test_verify_gates_item_expansion_entries_are_indexes_9_and_10_of_10(self):
+        # Safe, standalone, no-network import of the live verify module
+        # straight off disk -- proves "gates 9-10" against the real,
+        # current scripts/upstream_port/verify.py gates() ordering rather
+        # than a hardcoded fake substitute.
+        verify_path = os.path.join(
+            REAL_REPO_ROOT, "scripts", "upstream_port", "verify.py"
+        )
+        spec = importlib.util.spec_from_file_location(
+            "issue5_gate_regression_verify_standalone", verify_path
+        )
+        verify_mod = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = verify_mod
+        try:
+            spec.loader.exec_module(verify_mod)
+            all_gates = verify_mod.gates(jobs=2)
+        finally:
+            sys.modules.pop(spec.name, None)
+
+        self.assertEqual(len(all_gates), 10)
+        # Gates are 1-indexed in the docs ("gates 9-10"); Python lists are
+        # 0-indexed, so that's positions [8] and [9].
+        self.assertIn("itemexpansion", all_gates[8].name)
+        self.assertIn("itemexpansion", all_gates[9].name)
+        for gate in all_gates[:8]:
+            self.assertNotIn("itemexpansion", gate.name)
+
+
 class ABIFactualDocContractTests(unittest.TestCase):
     """Focused ABI factual tests: read the real, live doc files off disk
     (never a copy/paraphrase) and assert the linked-output-vs-compile-only

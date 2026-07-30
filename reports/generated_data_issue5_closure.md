@@ -1,10 +1,12 @@
 # Issue #5 closure evidence -- "Phase 3: schema-driven generated data authoring"
 
-Status: candidate closure evidence for reviewer/verifier. **GitHub issue
-#5 is OPEN at time of writing; this report does not close it, and does not
-claim any CI run URL or merged state.** It maps every item of the issue's
-own scope checklist and acceptance criteria to concrete code, tests, docs,
-and explicit non-goals so a reviewer can verify closure claim-by-claim.
+Status: final closure-evidence status as of 2026-07-25. **GitHub issue
+#5 is CLOSED; the completion commit
+`ac0ee5d7f17eb8e70175576cb46d9f320d8013cd` is in the merged master
+history. This report does not itself claim any CI run URL.** It maps
+every item of the issue's own scope checklist and acceptance criteria
+to concrete code, tests, docs, and explicit non-goals so a reviewer can
+verify closure claim-by-claim.
 
 Run the evidence locally:
 
@@ -130,7 +132,9 @@ make generated-data-test     # full stdlib unittest suite
 - Tests: `tests/test_*_roundtrip.py`.
 
 ## What this closure explicitly does NOT claim
-- Does not close GitHub issue #5 (OPEN).
+- This report does not itself perform issue-state changes; #5 was
+  closed after this merged completion evidence (commit
+  `ac0ee5d7f17eb8e70175576cb46d9f320d8013cd`, closed 2026-07-25).
 - Does not assert any CI run URL, green pipeline badge, or merged PR.
 - Does not migrate chapters beyond Chapter 2, model procedural
   combat/growth/AI formulas, the 7 unknown terrain arrays, graphics

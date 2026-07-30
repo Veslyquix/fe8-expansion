@@ -3605,10 +3605,13 @@ check, not a three-in-a-row cluster like `movecost`'s).
 
 ## Issue #5 completion boundary and status
 
-GitHub issue #5 is still **OPEN** (this repository does not close it),
-but every clause of the issue's own scope checklist and acceptance
-criteria now has code + tests + docs evidence -- mapped claim-by-claim
-in `reports/generated_data_issue5_closure.md`. Contributors add or
+GitHub issue #5 is **CLOSED** (closed 2026-07-25), with merged
+completion evidence: completion commit
+`ac0ee5d7f17eb8e70175576cb46d9f320d8013cd` is an ancestor of the
+merged master history, and every clause of the issue's own scope
+checklist and acceptance criteria has code + tests + docs evidence --
+mapped claim-by-claim in `reports/generated_data_issue5_closure.md`.
+Contributors add or
 modify any supported input type via the walkthrough in
 `docs/generated_data_tutorial.md`; the discoverable registry of every
 registered table + record count + capacity + dependency order lives in
