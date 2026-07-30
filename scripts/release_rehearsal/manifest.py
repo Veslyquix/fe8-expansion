@@ -136,7 +136,17 @@ def check_changelog(repo_root: Path) -> Dict:
     return {"ok": ok, "errors": errors, "aggregate_impact": impact}
 
 
-def check_provenance(repo_root: Path) -> Dict:
+def check_provenance(repo_root: Path, target_sha: str) -> Dict:
+    """Folds three independent provenance defect classes into one report:
+    (1) each entry's own resolved-fact status (`prov.evaluate`); (2) exact,
+    one-record-per-member coverage against the exact source allowlist --
+    no directory-prefix/category-inheritance credit any more
+    (`prov.evaluate_coverage`); and (3) for any "submodule"-category
+    entry, a cross-check that its declared `pinned_commit` actually
+    matches the real gitlink object id Git's own tree records at
+    `target_sha` (`prov.check_gitlink_pins`) -- skipped only when
+    `repo_root` is not a git repository at all (nothing to cross-check
+    against)."""
     try:
         entries = prov.load_all(repo_root / "docs" / "release_data" / "provenance")
     except prov.ProvenanceError as error:
@@ -149,6 +159,10 @@ def check_provenance(repo_root: Path) -> Dict:
         if coverage_reasons:
             status = "blocked"
             reasons = sorted(set(reasons) | set(coverage_reasons))
+    pin_reasons = prov.check_gitlink_pins(entries, repo_root, target_sha)
+    if pin_reasons:
+        status = "blocked"
+        reasons = sorted(set(reasons) | set(pin_reasons))
     return {"status": status, "reasons": reasons}
 
 
@@ -290,7 +304,7 @@ def build_manifest(
     candidate_tag = build_candidate_tag(identity.version_string)
     missing_docs = check_required_docs(repo_root)
     changelog_report = check_changelog(repo_root)
-    provenance_report = check_provenance(repo_root)
+    provenance_report = check_provenance(repo_root, target_sha)
     source_guard_report = check_source_guard(repo_root)
     migrations_report = check_migrations()
     allowlist_report = check_allowlist(repo_root, target_sha)
