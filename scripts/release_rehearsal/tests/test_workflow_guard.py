@@ -165,6 +165,107 @@ class JobAndNestedPermissionEscalationTests(unittest.TestCase):
         self.assertTrue(any("contents: write" in v for v in violations))
 
 
+class AnyScopeWritePermissionTests(unittest.TestCase):
+    """issue #9 fresh-review remediation: a workflow permissions guard
+    must reject *any* permission scope with value 'write', not merely
+    'contents: write'. One adversarial probe per reproduced scope, plus
+    inline/flow mappings, quoted keys/values, odd indentation/case, and a
+    scope this module's authors have never heard of."""
+
+    def _scope_write_rejected(self, snippet: str) -> None:
+        text = GOOD_WORKFLOW + "\n" + snippet + "\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("write" in v.lower() for v in violations),
+            f"expected a write-scope violation for {snippet!r}, got {violations!r}",
+        )
+
+    def test_id_token_write_job_level_rejected(self):
+        self._scope_write_rejected("      id-token: write")
+
+    def test_packages_write_rejected(self):
+        self._scope_write_rejected("      packages: write")
+
+    def test_pull_requests_write_rejected(self):
+        self._scope_write_rejected("      pull-requests: write")
+
+    def test_issues_write_rejected(self):
+        self._scope_write_rejected("      issues: write")
+
+    def test_actions_write_rejected(self):
+        self._scope_write_rejected("      actions: write")
+
+    def test_checks_write_rejected(self):
+        self._scope_write_rejected("      checks: write")
+
+    def test_deployments_write_rejected(self):
+        self._scope_write_rejected("      deployments: write")
+
+    def test_statuses_write_rejected(self):
+        self._scope_write_rejected("      statuses: write")
+
+    def test_future_unknown_scope_write_rejected(self):
+        """A scope this module's authors have never heard of must still
+        be rejected -- this is a generalized rule, never a fixed
+        enumeration of "known" scope names (see
+        `_DANGEROUS_ACTION_NAME_SUBSTRINGS`'s analogous design for
+        `uses:` action names)."""
+        self._scope_write_rejected("      something-new: write")
+
+    def test_inline_flow_mapping_write_rejected(self):
+        text = GOOD_WORKFLOW.replace(
+            "permissions:\n  contents: read",
+            "permissions: {contents: read, id-token: write}",
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("write" in v for v in violations))
+
+    def test_inline_flow_mapping_with_unknown_scope_rejected(self):
+        text = GOOD_WORKFLOW + "\n      permissions: {contents: read, something-new: write}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("write" in v for v in violations))
+
+    def test_quoted_scope_key_write_rejected(self):
+        self._scope_write_rejected('      "id-token": write')
+
+    def test_single_quoted_scope_key_write_rejected(self):
+        self._scope_write_rejected("      'id-token': write")
+
+    def test_quoted_write_value_rejected(self):
+        self._scope_write_rejected('      id-token: "write"')
+
+    def test_single_quoted_write_value_rejected(self):
+        self._scope_write_rejected("      id-token: 'write'")
+
+    def test_uppercase_scope_and_value_rejected(self):
+        self._scope_write_rejected("      ID-TOKEN: WRITE")
+
+    def test_mixed_case_scope_and_value_rejected(self):
+        self._scope_write_rejected("      Id-Token: Write")
+
+    def test_no_space_after_colon_rejected(self):
+        self._scope_write_rejected("      id-token:write")
+
+    def test_extra_spacing_around_colon_rejected(self):
+        self._scope_write_rejected("      id-token   :    write")
+
+    def test_odd_deep_indentation_rejected(self):
+        self._scope_write_rejected("                                id-token: write")
+
+    def test_write_all_shorthand_for_unknown_scope_rejected(self):
+        self._scope_write_rejected("      something-new: write-all")
+
+    def test_legitimate_workflow_with_only_top_level_contents_read_remains_accepted(self):
+        """Hardening this check must never produce a false positive
+        against the real, legitimate, read-only workflow shape."""
+        self.assertEqual(wg.validate_workflow_text(GOOD_WORKFLOW), [])
+
+    def test_real_workflow_file_has_no_write_scope_anywhere(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.check_no_write_anywhere(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+
 class ShorthandPermissionTests(unittest.TestCase):
     def test_scalar_write_all_shorthand_rejected(self):
         text = GOOD_WORKFLOW.replace("permissions:\n  contents: read", "permissions: write-all")

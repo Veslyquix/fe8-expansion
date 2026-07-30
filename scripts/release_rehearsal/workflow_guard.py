@@ -143,17 +143,56 @@ def check_top_level_permissions(text: str) -> List[str]:
     return violations
 
 
+# Any GitHub Actions permission *scope* name (`contents`, `id-token`,
+# `packages`, `pull-requests`, `issues`, `actions`, `checks`,
+# `deployments`, `statuses`, `pages`, `security-events`, `discussions`,
+# `attestations`, `models`, and any future scope GitHub ever adds) is a
+# lowercase-with-hyphens identifier. Rather than enumerate a fixed,
+# ever-growing list of "known" scope names (issue #9 verifier
+# remediation: the independent reviewer found the previous check only
+# ever matched the literal word `contents`), this matches *any*
+# identifier-shaped mapping key -- quoted or not, any case, any amount of
+# surrounding whitespace, whether it appears at top level, job level,
+# deeply nested, or inside a `{ "flow", "mapping" }` -- immediately
+# followed by a `write`/`write-all` value. A single, general rule instead
+# of a fixed enumeration is exactly the same "generalized heuristic over
+# an ever-growing specific list" design `_DANGEROUS_ACTION_NAME_SUBSTRINGS`
+# already uses for `uses:` action names below.
+_ANY_SCOPE_WRITE_RE = re.compile(
+    r"""['"]?(?P<scope>[a-zA-Z][a-zA-Z0-9_-]*)['"]?\s*:\s*['"]?(?P<value>write(?:-all)?)['"]?\b""",
+    re.IGNORECASE,
+)
+
+
 def check_no_write_anywhere(text: str) -> List[str]:
-    """Detects `contents: write` (job-level or nested, any indentation,
-    any amount/kind of whitespace around the colon, optionally
-    single/double-quoted) anywhere outside the validated top-level
-    `permissions:` block -- i.e. everywhere, since this function scans the
-    *entire* text; `check_top_level_permissions` above separately allows
-    (indeed requires) `contents: read` there. Also flags a bare
-    `permissions: write-all`/`write` shorthand scalar wherever it occurs."""
+    """Detects **any** `<scope>: write` permission grant -- `contents`,
+    `id-token`, `packages`, `pull-requests`, `issues`, `actions`,
+    `checks`, `deployments`, `statuses`, or any scope this module's
+    authors have never heard of -- job-level or nested, any indentation,
+    any amount/kind of whitespace around the colon, any case, optionally
+    single/double-quoted (key and/or value), and whether it sits in
+    block style or an inline/flow mapping (e.g.
+    `permissions: {contents: read, id-token: write}`) -- anywhere outside
+    the validated top-level `permissions:` block -- i.e. everywhere,
+    since this function scans the *entire* text; `check_top_level_
+    permissions` above separately allows (indeed requires) `contents:
+    read` there, and never itself grants any scope `write`. Also flags a
+    bare `permissions: write-all`/`write` shorthand scalar wherever it
+    occurs, and a bare, ambiguous `write`/`write-all` shorthand for any
+    other scope-shaped key."""
     violations = []
-    for match in re.finditer(r"contents\s*:\s*['\"]?write\b", text, re.IGNORECASE):
-        violations.append(f"found 'contents: write' outside the top-level permissions block: {match.group(0)!r}")
+    for match in _ANY_SCOPE_WRITE_RE.finditer(text):
+        scope, value = match.group("scope"), match.group("value")
+        # The message always includes the *canonical*, whitespace/quote-
+        # normalized "scope: value" rendering (reconstructed from the
+        # named groups, e.g. always exactly "contents: write" -- never
+        # "contents:      write" or "'contents': write" verbatim) so a
+        # consumer/test can match on it regardless of the original
+        # formatting quirk that was actually used, plus the raw matched
+        # text for full transparency.
+        violations.append(
+            f"found permission scope grant {scope}: {value} (raw: {match.group(0)!r})"
+        )
     for match in re.finditer(r"permissions\s*:\s*['\"]?write(-all)?\b", text, re.IGNORECASE):
         violations.append(f"found a 'permissions: write...' shorthand grant: {match.group(0)!r}")
     return violations
