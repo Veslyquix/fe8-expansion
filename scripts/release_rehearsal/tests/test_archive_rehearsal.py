@@ -50,14 +50,18 @@ def _make_git_source_tree_committed(root: Path, allowlist=("src/main.c", "docs/r
 class BuildDeterministicArchiveTests(unittest.TestCase):
     """Non-git trees (a genuine extracted archive/non-git candidate)
     still use the raw-filesystem fallback path -- these tests are
-    unaffected by the issue #9 git-blob immutability rework."""
+    unaffected by the issue #9 git-blob immutability rework. issue #9
+    verifier remediation: every allowlist below is now the exact
+    per-file shape (a bare directory name like "src" no longer expands
+    to "every file underneath it" -- see `_filesystem_allowlisted_files`
+    and `ExactFilesystemAllowlistTests` below)."""
 
     def test_two_builds_are_byte_identical(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "root"
             root.mkdir()
             _make_source_tree(root)
-            allowlist = {"src", "docs"}
+            allowlist = {"src/main.c", "docs/readme.md"}
             dest1 = Path(tmp) / "one.tar"
             dest2 = Path(tmp) / "two.tar"
             ar.build_deterministic_archive(root, allowlist, dest1)
@@ -70,7 +74,7 @@ class BuildDeterministicArchiveTests(unittest.TestCase):
             root.mkdir()
             _make_source_tree(root)
             dest = Path(tmp) / "out.tar"
-            ar.build_deterministic_archive(root, {"src", "docs"}, dest)
+            ar.build_deterministic_archive(root, {"src/main.c", "docs/readme.md"}, dest)
             with tarfile.open(dest, "r") as tar:
                 for member in tar.getmembers():
                     self.assertEqual(member.mtime, 0)
@@ -89,7 +93,7 @@ class BuildDeterministicArchiveTests(unittest.TestCase):
             (root / "a").mkdir()
             (root / "a" / "a.c").write_text("int a;")
             dest = Path(tmp) / "out.tar"
-            ar.build_deterministic_archive(root, {"z", "a"}, dest)
+            ar.build_deterministic_archive(root, {"z/z.c", "a/a.c"}, dest)
             with tarfile.open(dest, "r") as tar:
                 names = [m.name for m in tar.getmembers()]
             self.assertEqual(names, sorted(names))
@@ -102,7 +106,61 @@ class BuildDeterministicArchiveTests(unittest.TestCase):
             (root / "src" / "bad.gba").write_bytes(b"\x00" * 16)
             dest = Path(tmp) / "out.tar"
             with self.assertRaises(ar.ArchiveRehearsalError):
-                ar.build_deterministic_archive(root, {"src"}, dest)
+                ar.build_deterministic_archive(root, {"src/bad.gba"}, dest)
+
+
+class ExactFilesystemAllowlistTests(unittest.TestCase):
+    """issue #9 verifier remediation: `_filesystem_allowlisted_files` (the
+    non-git archive-content fallback) now matches the allowlist exactly
+    -- a bare directory-shaped entry no longer expands to every file
+    nested underneath it."""
+
+    def test_bare_directory_entry_no_longer_expands_to_its_contents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
+            files = ar._filesystem_allowlisted_files(root, {"src"})
+            self.assertEqual(files, [])
+
+    def test_known_file_included_unlisted_sibling_excluded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "known.c").write_text("int known;")
+            (root / "src" / "unlisted.c").write_text("int unlisted;")
+            files = ar._filesystem_allowlisted_files(root, {"src/known.c"})
+            relpaths = sorted(p.relative_to(root).as_posix() for p in files)
+            self.assertEqual(relpaths, ["src/known.c"])
+
+    def test_a_directory_that_shares_an_allowlisted_gitlink_style_name_contributes_nothing(self):
+        """A directory on disk that happens to share its name with an
+        allowlist entry (e.g. an uninitialized/initialized `mgfembp`
+        submodule mountpoint) is a structural parent only -- it never
+        implicitly authorizes whatever files might be sitting inside it,
+        matching the git-backed path's own "gitlink contents are never
+        enumerated" invariant (see `GitBackedArchiveTests.
+        test_gitlink_member_never_archived_even_if_allowlisted`)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "mgfembp").mkdir()
+            (root / "mgfembp" / "some_submodule_file.py").write_text("x = 1\n")
+            files = ar._filesystem_allowlisted_files(root, {"mgfembp"})
+            self.assertEqual(files, [])
+
+    def test_nested_unlisted_file_never_silently_archived(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "known.c").write_text("int known;")
+            (root / "src" / "known.c").chmod(0o644)
+            (root / "src" / "deep").mkdir()
+            (root / "src" / "deep" / "unlisted.c").write_text("int unlisted;")
+            dest = Path(tmp) / "out.tar"
+            ar.build_deterministic_archive(root, {"src/known.c"}, dest)
+            with tarfile.open(dest, "r") as tar:
+                names = sorted(m.name for m in tar.getmembers())
+            self.assertEqual(names, ["src/known.c"])
 
 
 class GitBackedArchiveTests(unittest.TestCase):
@@ -252,12 +310,15 @@ class GitBackedArchiveTests(unittest.TestCase):
 
 
 class RehearseArchiveTwiceTests(unittest.TestCase):
+    """issue #9 verifier remediation: every allowlist below is the exact
+    per-file shape -- see `ExactFilesystemAllowlistTests` above."""
+
     def test_match_true_for_clean_tree(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "root"
             root.mkdir()
             _make_source_tree(root)
-            report = ar.rehearse_archive_twice(root, {"src", "docs"})
+            report = ar.rehearse_archive_twice(root, {"src/main.c", "docs/readme.md"})
             self.assertTrue(report["match"])
             self.assertEqual(report["hash1"], report["hash2"])
 
@@ -267,7 +328,7 @@ class RehearseArchiveTwiceTests(unittest.TestCase):
             root = Path(tmp) / "root"
             root.mkdir()
             _make_source_tree(root)
-            ar.rehearse_archive_twice(root, {"src", "docs"})
+            ar.rehearse_archive_twice(root, {"src/main.c", "docs/readme.md"})
         after = set(glob.glob(os.path.join(tempfile.gettempdir(), "fe8-release-rehearsal-*")))
         self.assertEqual(before, after)
 
@@ -279,7 +340,7 @@ class RehearseArchiveTwiceTests(unittest.TestCase):
             (root / "src").mkdir()
             (root / "src" / "bad.gba").write_bytes(b"\x00" * 16)
             with self.assertRaises(ar.ArchiveRehearsalError):
-                ar.rehearse_archive_twice(root, {"src"})
+                ar.rehearse_archive_twice(root, {"src/bad.gba"})
         after = set(glob.glob(os.path.join(tempfile.gettempdir(), "fe8-release-rehearsal-*")))
         self.assertEqual(before, after)
 
@@ -292,8 +353,10 @@ class RehearseArchiveTwiceTests(unittest.TestCase):
             root_b.mkdir()
             _make_source_tree(root_b)
             (root_b / "src" / "extra.c").write_text("int extra;")
-            report_a = ar.rehearse_archive_twice(root_a, {"src", "docs"})
-            report_b = ar.rehearse_archive_twice(root_b, {"src", "docs"})
+            report_a = ar.rehearse_archive_twice(root_a, {"src/main.c", "docs/readme.md"})
+            report_b = ar.rehearse_archive_twice(
+                root_b, {"src/main.c", "docs/readme.md", "src/extra.c"}
+            )
             self.assertNotEqual(report_a["hash1"], report_b["hash1"])
 
 

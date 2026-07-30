@@ -147,17 +147,24 @@ class CheckSourceGuardTests(unittest.TestCase):
             self.assertTrue(any("bad.gba" in v for v in report["violations"]))
 
     def test_non_git_tree_closed_world_still_rejects_extra_content(self):
+        """issue #9 exact-provenance/source-guard remediation: the
+        allowlist is exact per-file -- a bare directory-shaped entry
+        ("src") no longer authorizes anything nested under it, and an
+        entirely foreign file (not a bare, otherwise-harmless empty
+        directory, which contributes nothing to any archive) must still
+        fail closed."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_allowlist(root, ["src"])
+            self._write_allowlist(root, ["src/main.c"])
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
             (root / "evil").mkdir()
+            (root / "evil" / "payload.c").write_text("int payload;")
 
             report = rm.check_source_guard(root)
             self.assertEqual(report["status"], "blocked")
             self.assertTrue(
-                any("evil" in v and "not-allowlisted" in v for v in report["violations"])
+                any("evil/payload.c" in v and "not-allowlisted" in v for v in report["violations"])
             )
 
     def test_non_git_tree_closed_world_still_rejects_unsafe_nested_content(self):

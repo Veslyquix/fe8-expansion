@@ -14,19 +14,23 @@ governs ordinary tracked-Git content review, not release-archive safety)
 
 ``scan_tree(..., closed_world=True)`` is the fail-closed check for an
 actual, already-materialized release candidate (a genuine extracted
-archive/non-git tree): every top-level entry must be covered by the
-allowlist and everything is walked. A *live git development worktree* is
-not that -- it routinely contains gitignored/untracked build byproducts
-alongside the real source -- so ``scan_source_release_candidate()``
-instead evaluates exactly the git-tracked-intersect-allowlist candidate
-set that ``scripts/release_rehearsal/archive_rehearsal.py`` itself would
-archive (``git_tracked_allowlisted_files()``), applying every hard-deny
-rule to that exact set, and transparently falls back to the closed-world
-``scan_tree`` check when there is no ``.git`` at all. This is what
-``scripts/release_rehearsal/manifest.py``'s source_guard check uses, so a
-manifest built against the live worktree is deterministic and
-host-state-independent while a manifest built against a genuine extracted
-archive still fails closed.
+archive/non-git tree): **every individual file is checked against the
+exact per-member allowlist** (issue #9 verifier remediation -- there is
+no directory/top-level-prefix membership any more: a directory may only
+ever be a structural parent to walk through, never something whose mere
+presence in the allowlist authorizes every file nested under it). A
+*live git development worktree* is not that -- it routinely contains
+gitignored/untracked build byproducts alongside the real source -- so
+``scan_source_release_candidate()`` instead evaluates exactly the
+git-tracked-intersect-allowlist candidate set that
+``scripts/release_rehearsal/archive_rehearsal.py`` itself would archive
+(``git_tracked_allowlisted_files()``, itself exact-per-path), applying
+every hard-deny rule to that exact set, and transparently falls back to
+the closed-world ``scan_tree`` check when there is no ``.git`` at all.
+This is what ``scripts/release_rehearsal/manifest.py``'s source_guard
+check uses, so a manifest built against the live worktree is
+deterministic and host-state-independent while a manifest built against a
+genuine extracted archive still fails closed.
 
 Hard-deny coverage (path/extension and file-magic, independent of each
 other -- a misleading extension never hides prohibited content, and a
@@ -305,10 +309,6 @@ def load_map_hex_exceptions(path: Path) -> FrozenSet[str]:
     return frozenset(exact_paths)
 
 
-def _top_level_component(relpath: str) -> str:
-    return relpath.split("/", 1)[0]
-
-
 def _hard_deny_check_file(
     root: Path,
     full: Path,
@@ -347,6 +347,27 @@ def _hard_deny_check_file(
         violations.append((rel, magic_rule))
 
 
+def _allowlist_ancestor_dirs(allowlist: Iterable[str]) -> FrozenSet[str]:
+    """Every proper ancestor directory path of every entry in `allowlist`
+    (e.g. for `"src/lib/x.c"`: `"src"` and `"src/lib"`) -- **traversal
+    pruning only, never an authorization/coverage relationship**: used
+    exclusively by `scan_tree(..., closed_world=False)` to decide which
+    subtrees of a live, possibly-messy development worktree are even
+    worth descending into at all (so a huge gitignored `build/`/`.dep/`/
+    host-tool-binary directory tree is never even visited), never to
+    decide whether any individual file found there is authorized -- that
+    is always a separate, exact per-file `allowlist` membership check
+    (see `scan_tree`). A directory is a structural parent only; it is
+    never itself an allowlist member, and being an ancestor of one never
+    authorizes anything found under it."""
+    ancestors = set()
+    for entry in allowlist:
+        parts = entry.split("/")
+        for i in range(1, len(parts)):
+            ancestors.add("/".join(parts[:i]))
+    return frozenset(ancestors)
+
+
 def scan_tree(
     root: Path,
     allowlist: Iterable[str],
@@ -357,44 +378,69 @@ def scan_tree(
     rehearsal archive) for hard-deny violations. Never follows symlinks;
     any symlink, device, FIFO, or socket is itself a violation.
 
-    `allowlist` may be either the historical top-level-directory-name set
-    (each entry a bare top-level path component) or an exact per-member
-    (file-level) allowlist -- top-level-entry membership is checked
-    against `{entry.split("/", 1)[0] for entry in allowlist}` either way,
-    so both shapes keep working for the closed-world top-level check.
+    `allowlist` is matched **exactly**: a file's own repo-relative path
+    must itself be an entry in `allowlist` (issue #9 verifier remediation
+    -- there is no directory/top-level-prefix membership any more, in
+    either mode below). A directory is never itself required to be an
+    allowlist entry -- it may exist only as a structural parent to walk
+    through, never as an authorization prefix for whatever is nested
+    under it (a real Git blob path is a leaf; only leaves are ever exact
+    allowlist members).
 
     When `closed_world` is True (the default; used to validate an actual
     release candidate tree, which is expected to contain *exactly* the
-    allowlisted top-level entries and nothing else), any top-level entry
-    not covered by `allowlist` is itself reported as a "not-allowlisted"
-    violation. When False (used internally by scripts/release_rehearsal/archive_rehearsal.py to
+    allowlisted files and nothing else), every file anywhere in the tree
+    is walked, and any file whose own exact path is not in `allowlist` is
+    itself reported as a "not-allowlisted" violation -- regardless of how
+    deeply nested it is or what its parent directory is named. When False
+    (used internally by scripts/release_rehearsal/archive_rehearsal.py to
     build an archive out of a live, possibly-messy development worktree
     that may contain gitignored build output alongside the real source),
-    only the allowlisted top-level entries -- and their descendants -- are
-    walked and hard-deny-checked at all; anything else present in `root`
-    is silently irrelevant, since it is never going to be added to the
-    archive in the first place."""
+    no "not-allowlisted" violation is ever reported (anything present in
+    `root` that is not eventually one of the exact allowlisted files is
+    silently irrelevant, since it is never going to be added to the
+    archive in the first place); `_allowlist_ancestor_dirs` is used
+    *purely to prune traversal* so an irrelevant subtree is never even
+    visited -- it never grants membership to anything found there."""
     root = Path(root)
-    allowlist = set(allowlist)
-    top_level_allowlist = {entry.split("/", 1)[0] for entry in allowlist}
+    allowlist_set = set(allowlist)
     violations: List[Violation] = []
+    ancestor_dirs = None if closed_world else _allowlist_ancestor_dirs(allowlist_set)
 
-    if closed_world:
-        top_entries = sorted(p.name for p in root.iterdir())
-        for name in top_entries:
-            if name == ".git":
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        dirpath_path = Path(dirpath)
+        if dirpath_path == root:
+            dirnames[:] = [d for d in dirnames if d != ".git"]
+        if ancestor_dirs is not None:
+            kept = []
+            for name in dirnames:
+                rel_dir = (dirpath_path / name).relative_to(root).as_posix()
+                if rel_dir in ancestor_dirs or rel_dir in allowlist_set:
+                    kept.append(name)
+            dirnames[:] = kept
+        dirnames.sort()
+
+        for name in sorted(dirnames) + sorted(filenames):
+            full = dirpath_path / name
+            _hard_deny_check_file(root, full, violations, map_hex_exceptions)
+            if not closed_world:
                 continue
-            if name not in top_level_allowlist:
-                violations.append((name, "not-allowlisted"))
-        walk_roots = [root]
-    else:
-        walk_roots = [root / name for name in sorted(top_level_allowlist) if (root / name).exists()]
-
-    for walk_root in walk_roots:
-        for dirpath, dirnames, filenames in os.walk(walk_root, followlinks=False):
-            dirnames[:] = [d for d in sorted(dirnames) if not (Path(dirpath) == root and d == ".git")]
-            for name in sorted(dirnames) + sorted(filenames):
-                _hard_deny_check_file(root, Path(dirpath) / name, violations, map_hex_exceptions)
+            rel = full.relative_to(root).as_posix()
+            try:
+                is_real_dir = full.is_dir() and not full.is_symlink()
+            except OSError:
+                is_real_dir = False
+            if is_real_dir:
+                # A genuine directory is a structural parent only -- it is
+                # never itself required to be an exact allowlist entry
+                # (only actual tracked files/gitlinks ever are). A
+                # symlink-to-directory is NOT a "real" directory here, so
+                # it still falls through to the exact-membership check
+                # below (in addition to already having been flagged
+                # "prohibited-symlink" by _hard_deny_check_file above).
+                continue
+            if rel not in allowlist_set:
+                violations.append((rel, "not-allowlisted"))
 
     return sorted(set(violations))
 
@@ -492,9 +538,10 @@ def scan_source_release_candidate(
     or other non-git candidate tree -- the tree *is* the actual candidate,
     not a development worktree with byproducts alongside it), this falls
     back to the original fail-closed `scan_tree(root, allowlist,
-    closed_world=True)` check: every top-level entry must be covered by
-    the allowlist and nothing else, and every file anywhere in the tree is
-    walked and hard-deny-checked."""
+    closed_world=True)` check: every file anywhere in the tree is walked,
+    and every single one is checked against the **exact** allowlist (no
+    directory/top-level-prefix credit -- a directory is walked through as
+    a structural parent only) and hard-deny-checked."""
     root = Path(root)
     tracked = git_tracked_allowlisted_files(root, allowlist)
     if tracked is None:
@@ -516,9 +563,17 @@ def scan_archive_members(
     filesystem scan does -- a member's *content* is always inspected,
     regardless of its declared name/extension, so a nested archive smuggled
     under an innocuous filename cannot evade detection just because it is
-    already inside another archive rather than sitting in a checkout."""
+    already inside another archive rather than sitting in a checkout.
+
+    `allowlist` is matched **exactly** (issue #9 verifier remediation):
+    a regular-file member's own exact `name` must itself be an entry in
+    `allowlist` -- there is no top-level/directory-prefix membership any
+    more. A directory member is a structural parent only, never itself
+    required to be an allowlist entry and never something whose presence
+    authorizes any member nested under it; every non-directory member is
+    still individually checked by exact path regardless of how deeply
+    nested it is or what its parent directory is named."""
     allowlist = set(allowlist)
-    top_level_allowlist = {entry.split("/", 1)[0] for entry in allowlist}
     violations: List[Violation] = []
     for member in tar.getmembers():
         name = member.name
@@ -534,11 +589,13 @@ def scan_archive_members(
         if not (member.isreg() or member.isdir()):
             violations.append((name, "prohibited-non-regular-member"))
             continue
-        top = _top_level_component(name)
-        if top not in top_level_allowlist:
-            violations.append((name, "not-allowlisted"))
         if member.isdir():
+            # A directory member is a structural parent only -- it is
+            # never itself required to be an exact allowlist entry, and
+            # its presence never authorizes any member nested under it.
             continue
+        if name not in allowlist:
+            violations.append((name, "not-allowlisted"))
         for rule in classify_path_segments(name, map_hex_exceptions):
             violations.append((name, rule))
         handle = tar.extractfile(member)

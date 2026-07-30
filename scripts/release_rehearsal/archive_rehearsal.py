@@ -96,19 +96,20 @@ def _filesystem_allowlisted_files(root: Path, allowlist: Iterable[str]) -> List[
     archive rehearsal or other genuine non-git candidate), after running
     the same hard-deny checks scripts/release_rehearsal/source_guard.py
     applies to a release candidate. Every entry in `allowlist` is matched
-    exactly (a file) or as a directory whose full contents are walked."""
+    **exactly** (issue #9 verifier remediation): only a real, ordinary
+    file whose own path is itself an allowlist entry is ever included --
+    there is no directory-entry-expands-to-its-full-contents rule any
+    more. A directory that happens to share its name with an allowlist
+    entry (e.g. the `mgfembp` submodule mountpoint, whose *contents* are
+    never enumerated -- see docs/release_process.md's submodule/
+    provenance boundary) contributes nothing here; it is a structural
+    parent only, never an authorization prefix for whatever might be
+    sitting inside it on disk."""
     files: List[Path] = []
     for entry in sorted(allowlist):
         entry_path = root / entry
-        if not entry_path.exists():
-            continue
         if entry_path.is_file() and not entry_path.is_symlink():
             files.append(entry_path)
-            continue
-        if entry_path.is_dir():
-            for path in sorted(entry_path.rglob("*")):
-                if path.is_file() and not path.is_symlink():
-                    files.append(path)
     return files
 
 

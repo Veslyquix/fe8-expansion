@@ -282,14 +282,60 @@ class LoadMapHexExceptionsTests(unittest.TestCase):
 
 
 class ScanTreeTests(unittest.TestCase):
+    """issue #9 verifier remediation: `allowlist` is matched *exactly* --
+    a bare top-level/directory name like `"src"` no longer authorizes
+    anything nested under it. Every fixture below uses an exact per-file
+    allowlist, matching the real docs/release_data/source_allowlist.json
+    shape."""
+
     def test_not_allowlisted_top_level_closed_world(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
             (root / "extra").mkdir()
+            (root / "extra" / "payload.c").write_text("int payload;")
+            violations = sg.scan_tree(root, {"src/main.c"})
+            self.assertIn(("extra/payload.c", "not-allowlisted"), violations)
+
+    def test_bare_directory_name_no_longer_authorizes_nested_files(self):
+        """The pre-remediation defect, reproduced directly: `"src"` (a
+        bare directory name, never itself a real tracked file) must NOT
+        cover `"src/main.c"` any more -- both a ghost-style allowlist
+        entry and a real "not-allowlisted" finding for the nested file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}")
             violations = sg.scan_tree(root, {"src"})
-            self.assertIn(("extra", "not-allowlisted"), violations)
+            self.assertIn(("src/main.c", "not-allowlisted"), violations)
+
+    def test_known_file_allowed_unlisted_sibling_fails_closed_world(self):
+        """`src/known.c` is allowlisted and produces no "not-allowlisted"
+        finding; `src/unlisted.c`, sitting right next to it under the
+        very same parent directory, is not allowlisted and must fail
+        closed regardless."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "known.c").write_text("int known;")
+            (root / "src" / "unlisted.c").write_text("int unlisted;")
+            violations = sg.scan_tree(root, {"src/known.c"})
+            self.assertNotIn(("src/known.c", "not-allowlisted"), violations)
+            self.assertIn(("src/unlisted.c", "not-allowlisted"), violations)
+
+    def test_deeply_nested_unlisted_file_fails_closed(self):
+        """A new, unlisted member nested arbitrarily deep under an
+        otherwise-allowlisted tree must still fail closed -- nesting
+        depth is never a mitigating factor."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src" / "known").mkdir(parents=True)
+            (root / "src" / "known" / "main.c").write_text("int main(void){return 0;}")
+            (root / "src" / "known" / "deep").mkdir()
+            (root / "src" / "known" / "deep" / "unlisted.c").write_text("int unlisted;")
+            violations = sg.scan_tree(root, {"src/known/main.c"})
+            self.assertIn(("src/known/deep/unlisted.c", "not-allowlisted"), violations)
 
     def test_open_world_ignores_non_allowlisted(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -298,7 +344,21 @@ class ScanTreeTests(unittest.TestCase):
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
             (root / "build").mkdir()
             (root / "build" / "out.o").write_bytes(b"junk")
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/main.c"}, closed_world=False)
+            self.assertEqual(violations, [])
+
+    def test_open_world_never_reports_not_allowlisted_even_for_unlisted_sibling(self):
+        """`closed_world=False` never reports "not-allowlisted" at all (it
+        is only used to build archive content out of a live worktree,
+        where anything not exactly allowlisted is simply irrelevant, not
+        itself a violation) -- but every visited file is still fully
+        hard-deny-checked."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "known.c").write_text("int known;")
+            (root / "src" / "unlisted.c").write_text("int unlisted;")
+            violations = sg.scan_tree(root, {"src/known.c"}, closed_world=False)
             self.assertEqual(violations, [])
 
     def test_nested_prohibited_extension_flagged(self):
@@ -306,7 +366,7 @@ class ScanTreeTests(unittest.TestCase):
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "sneaky.gba").write_bytes(b"\x00" * 32)
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/sneaky.gba"}, closed_world=False)
             self.assertIn(("src/sneaky.gba", "prohibited-extension"), violations)
 
     def test_nested_prohibited_magic_flagged_even_with_safe_extension(self):
@@ -314,7 +374,7 @@ class ScanTreeTests(unittest.TestCase):
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "innocuous.c").write_bytes(b"\x7fELF" + b"\x00" * 32)
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/innocuous.c"}, closed_world=False)
             self.assertIn(("src/innocuous.c", "prohibited-magic-elf"), violations)
 
     def test_nested_zip_flagged_under_innocuous_name(self):
@@ -322,7 +382,7 @@ class ScanTreeTests(unittest.TestCase):
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "notes.txt").write_bytes(b"PK\x03\x04" + b"\x00" * 32)
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/notes.txt"}, closed_world=False)
             self.assertIn(("src/notes.txt", "prohibited-magic-zip-archive"), violations)
 
     def test_double_slash_path_rejected_defense_in_depth(self):
@@ -340,8 +400,30 @@ class ScanTreeTests(unittest.TestCase):
             real.write_text("int x;")
             link = root / "src" / "link.c"
             link.symlink_to(real)
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/real.c", "src/link.c"}, closed_world=False)
             self.assertIn(("src/link.c", "prohibited-symlink"), violations)
+
+    def test_symlink_to_directory_flagged_even_though_dirnames_are_structural_only(self):
+        """A directory is a structural parent only and is never itself
+        required to be an allowlist entry -- but a *symlink* to a
+        directory is not a real directory, and must still be rejected as
+        "prohibited-symlink" (os.walk(followlinks=False) lists it in
+        `dirnames` without descending into it, so this exercises that
+        exact code path). Uses `closed_world=True` (the "everything is
+        walked" mode) -- `closed_world=False` deliberately never even
+        visits a top-level entry with no relation to the allowlist at all
+        (see its own docstring: "anything else present in root is
+        silently irrelevant"), which is pre-existing, intentional
+        behavior, not something this test is about."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            real_dir = root / "realdir"
+            real_dir.mkdir()
+            (real_dir / "main.c").write_text("int main(void){return 0;}")
+            link_dir = root / "linkdir"
+            link_dir.symlink_to(real_dir, target_is_directory=True)
+            violations = sg.scan_tree(root, {"realdir/main.c"}, closed_world=True)
+            self.assertIn(("linkdir", "prohibited-symlink"), violations)
 
     def test_hardlink_flagged(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -351,7 +433,7 @@ class ScanTreeTests(unittest.TestCase):
             real.write_text("int x;")
             hardlink = root / "src" / "hard.c"
             os.link(real, hardlink)
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/real.c", "src/hard.c"}, closed_world=False)
             self.assertIn(("src/real.c", "prohibited-hardlink"), violations)
             self.assertIn(("src/hard.c", "prohibited-hardlink"), violations)
 
@@ -362,7 +444,7 @@ class ScanTreeTests(unittest.TestCase):
             (root / "src").mkdir()
             fifo_path = root / "src" / "pipe"
             os.mkfifo(fifo_path)
-            violations = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations = sg.scan_tree(root, {"src/pipe"}, closed_world=False)
             self.assertIn(("src/pipe", "prohibited-non-regular-file"), violations)
 
     def test_clean_tree_no_violations(self):
@@ -370,17 +452,28 @@ class ScanTreeTests(unittest.TestCase):
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
-            self.assertEqual(sg.scan_tree(root, {"src"}), [])
+            self.assertEqual(sg.scan_tree(root, {"src/main.c"}), [])
+
+    def test_directories_are_never_flagged_themselves_only_files_are(self):
+        """A real, non-symlink directory is walked through purely as a
+        structural parent -- it is never itself checked for exact
+        allowlist membership (only actual files ever are)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src" / "nested").mkdir(parents=True)
+            (root / "src" / "nested" / "main.c").write_text("int main(void){return 0;}")
+            violations = sg.scan_tree(root, {"src/nested/main.c"})
+            self.assertEqual(violations, [])
 
     def test_map_hex_exception_threaded_through_scan_tree(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "fixture.map").write_text("Memory Configuration\n")
-            violations_denied = sg.scan_tree(root, {"src"}, closed_world=False)
+            violations_denied = sg.scan_tree(root, {"src/fixture.map"}, closed_world=False)
             self.assertIn(("src/fixture.map", "prohibited-extension"), violations_denied)
             violations_allowed = sg.scan_tree(
-                root, {"src"}, closed_world=False, map_hex_exceptions=frozenset({"src/fixture.map"})
+                root, {"src/fixture.map"}, closed_world=False, map_hex_exceptions=frozenset({"src/fixture.map"})
             )
             self.assertEqual(violations_allowed, [])
 
@@ -437,12 +530,51 @@ class ScanArchiveMembersTests(unittest.TestCase):
 
     def test_not_allowlisted_top_level_flagged(self):
         tar = self._make_tar([("evil/payload.c", b"int x;", tarfile.REGTYPE)])
-        violations = sg.scan_archive_members(tar, {"src"})
+        violations = sg.scan_archive_members(tar, {"src/main.c"})
         self.assertIn(("evil/payload.c", "not-allowlisted"), violations)
+
+    def test_bare_directory_name_no_longer_authorizes_nested_members(self):
+        """The pre-remediation defect, reproduced directly against archive
+        members: `"src"` (a bare directory-shaped allowlist entry) must
+        NOT cover `"src/main.c"` any more."""
+        tar = self._make_tar([("src/main.c", b"int main(void){return 0;}", tarfile.REGTYPE)])
+        violations = sg.scan_archive_members(tar, {"src"})
+        self.assertIn(("src/main.c", "not-allowlisted"), violations)
+
+    def test_known_member_allowed_unlisted_sibling_fails(self):
+        """`src/known.c` is allowlisted and produces no "not-allowlisted"
+        finding; `src/unlisted.c`, sitting right next to it in the same
+        archive directory, is not allowlisted and must fail closed."""
+        tar = self._make_tar([
+            ("src/known.c", b"int known;", tarfile.REGTYPE),
+            ("src/unlisted.c", b"int unlisted;", tarfile.REGTYPE),
+        ])
+        violations = sg.scan_archive_members(tar, {"src/known.c"})
+        self.assertNotIn(("src/known.c", "not-allowlisted"), violations)
+        self.assertIn(("src/unlisted.c", "not-allowlisted"), violations)
+
+    def test_deeply_nested_unlisted_member_fails_closed(self):
+        """A new, unlisted member nested arbitrarily deep inside an
+        otherwise-allowlisted archive directory must still fail closed."""
+        tar = self._make_tar([
+            ("src/known/main.c", b"int main(void){return 0;}", tarfile.REGTYPE),
+            ("src/known/deep/unlisted.c", b"int unlisted;", tarfile.REGTYPE),
+        ])
+        violations = sg.scan_archive_members(tar, {"src/known/main.c"})
+        self.assertIn(("src/known/deep/unlisted.c", "not-allowlisted"), violations)
+
+    def test_directory_members_are_never_flagged_themselves(self):
+        """A directory member is a structural parent only -- it is never
+        itself required to be an exact allowlist entry."""
+        tar = self._make_tar([("src/known.c", b"int known;", tarfile.REGTYPE)])
+        # tarfile auto-adds no implicit directory members here, but the
+        # scan must still never require "src" itself to be allowlisted.
+        violations = sg.scan_archive_members(tar, {"src/known.c"})
+        self.assertEqual(violations, [])
 
     def test_prohibited_content_flagged_without_extraction_to_disk(self):
         tar = self._make_tar([("src/sneaky.c", b"\x7fELF" + b"\x00" * 20, tarfile.REGTYPE)])
-        violations = sg.scan_archive_members(tar, {"src"})
+        violations = sg.scan_archive_members(tar, {"src/sneaky.c"})
         self.assertIn(("src/sneaky.c", "prohibited-magic-elf"), violations)
 
     def test_nested_zip_content_flagged_regardless_of_name(self):
@@ -450,22 +582,24 @@ class ScanArchiveMembersTests(unittest.TestCase):
         innocuous name, must still be rejected by content -- nested
         archives are rejected as content, not just by filename."""
         tar = self._make_tar([("src/innocent.c", b"PK\x03\x04" + b"\x00" * 20, tarfile.REGTYPE)])
-        violations = sg.scan_archive_members(tar, {"src"})
+        violations = sg.scan_archive_members(tar, {"src/innocent.c"})
         self.assertIn(("src/innocent.c", "prohibited-magic-zip-archive"), violations)
 
     def test_map_hex_default_denied_in_archive_member(self):
         tar = self._make_tar([("src/fireemblem8.map", b"Memory Configuration\n", tarfile.REGTYPE)])
-        violations = sg.scan_archive_members(tar, {"src"})
+        violations = sg.scan_archive_members(tar, {"src/fireemblem8.map"})
         self.assertIn(("src/fireemblem8.map", "prohibited-extension"), violations)
 
     def test_map_hex_exact_exception_allowed_in_archive_member(self):
         tar = self._make_tar([("src/fixture.map", b"Memory Configuration\n", tarfile.REGTYPE)])
-        violations = sg.scan_archive_members(tar, {"src"}, map_hex_exceptions=frozenset({"src/fixture.map"}))
+        violations = sg.scan_archive_members(
+            tar, {"src/fixture.map"}, map_hex_exceptions=frozenset({"src/fixture.map"})
+        )
         self.assertEqual(violations, [])
 
     def test_clean_archive_no_violations(self):
         tar = self._make_tar([("src/main.c", b"int main(void){return 0;}", tarfile.REGTYPE)])
-        self.assertEqual(sg.scan_archive_members(tar, {"src"}), [])
+        self.assertEqual(sg.scan_archive_members(tar, {"src/main.c"}), [])
 
 
 class GitTrackedAllowlistedFilesTests(unittest.TestCase):
@@ -635,23 +769,39 @@ class ScanSourceReleaseCandidateTests(unittest.TestCase):
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
             (root / "extra").mkdir()
+            (root / "extra" / "payload.c").write_text("int payload;")
             violations = sg.scan_source_release_candidate(root, {"src/main.c"})
-            self.assertIn(("extra", "not-allowlisted"), violations)
+            self.assertIn(("extra/payload.c", "not-allowlisted"), violations)
 
     def test_non_git_tree_closed_world_rejects_nested_unsafe_content(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "sneaky.gba").write_bytes(b"\x00" * 32)
-            violations = sg.scan_source_release_candidate(root, {"src"})
+            violations = sg.scan_source_release_candidate(root, {"src/sneaky.gba"})
             self.assertIn(("src/sneaky.gba", "prohibited-extension"), violations)
+
+    def test_non_git_tree_closed_world_rejects_unlisted_sibling_of_known_file(self):
+        """issue #9 exact-provenance/source-guard remediation, reproduced
+        against the actual `scan_source_release_candidate` entry point: a
+        bare directory-shaped allowlist entry (`"src"`) must not silently
+        authorize a new, unlisted sibling file placed right next to a
+        genuinely allowlisted one."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "known.c").write_text("int known;")
+            (root / "src" / "unlisted.c").write_text("int unlisted;")
+            violations = sg.scan_source_release_candidate(root, {"src/known.c"})
+            self.assertNotIn(("src/known.c", "not-allowlisted"), violations)
+            self.assertIn(("src/unlisted.c", "not-allowlisted"), violations)
 
     def test_non_git_tree_clean_candidate_has_no_violations(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "src").mkdir()
             (root / "src" / "main.c").write_text("int main(void){return 0;}")
-            violations = sg.scan_source_release_candidate(root, {"src"})
+            violations = sg.scan_source_release_candidate(root, {"src/main.c"})
             self.assertEqual(violations, [])
 
     def test_map_hex_exceptions_threaded_through_git_worktree_candidate(self):
