@@ -4,8 +4,15 @@
 issue #7's state is not asserted or changed by this document, and no CI
 run URL or merged state is claimed here.** This report maps issue #7's
 own scope checklist to concrete, current-scope files, code, and tests in
-this repository, and calls out exactly what remains open (issues #10,
-#11, #13 follow-up work) rather than claiming full closure.
+this repository. Issues #10, #11, and #13 are already merged into
+`master` with final, supported public/support contracts documented in
+[`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13)
+and [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
+(see the "What this explicitly does not claim" section below for each
+issue's own narrow non-goals, which are not open/deferred scope); the
+genuinely active/unmerged work outside this report's own closure scope
+is issues #6, #9, and #18. This report does not itself claim full
+closure of issue #7.
 
 ## Scope recap
 
