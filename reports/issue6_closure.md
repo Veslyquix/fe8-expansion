@@ -22,6 +22,7 @@ published.
 | config | `EXPANSION_STARTER_CONTENT` / `FE8_EXPANSION_STARTER_CONTENT`, default `0` (`config.mk`, `include/expansion_config.h`, `scripts/modernize/expansion_config.py`, `modern.mk`) |
 | data | `ITEM_EXPANSION_CE` authored in `src/data/items_expansion.json`; **no shared message is added** (`texts/texts.txt` and `include/constants/msg.h` are byte-identical to the merge parent) |
 | schema | symbolic `MSG_*` text IDs remain available for records that point at an existing message (`scripts/generated_data/items/schema.py`, `scripts/generated_data/validators.py`); the content record uses none |
+| text | `authoringName` in the same authored record -> `scripts/generated_data/items/content_text.py` -> a build-local, content-profile-only text table -> the typed accessor `ExpansionStarterContentItemName()` -> the unmodified production `GetItemName()` (`src/bmitem.c`, `#if FE8_EXPANSION_STARTER_CONTENT`) |
 | hook | `include/expansion_starter_content.h`, `src/expansion_starter_content.c`, installed from the one existing `ExpansionMechanicsInstallBuiltins()` |
 | evidence | extended `include/expansion_itemtest.h` / `src/expansion_itemtest.c` probe + `tools/gba-playtest/run_item_expansion_checks.py` |
 
@@ -59,6 +60,28 @@ published.
   framework-authored record must not consume a slot in the shared message
   table (see "Policy remediation" below). The 206 vanilla records keep their
   numeric form and still round-trip byte-for-byte against `src/data_items.c`.
+* **Config-gated content text.** The original display name lives in the same
+  authored record (`"authoringName": "Sample Charm"`, schema-validated:
+  expansion records only, printable 7-bit ASCII, trimmed, bounded, never
+  combined with a `nameTextId`). `scripts/generated_data/items/content_text.py`
+  emits it -- only at `EXPANSION_STARTER_CONTENT=1`, and only into
+  `build/generated/data/` -- as a typed, `ItemId`-keyed C89 table plus an
+  audit catalog. At flag `0` the generator writes nothing and removes any
+  artifact a previous content build left behind. `gItemData[]` is
+  byte-identical with or without the authoring fields.
+* **One narrow production seam.** `src/bmitem.c`'s `GetItemName()` -- the one
+  function every item-name consumer (menu, trade, shop, stat screen, popups,
+  `[Item]` substitution) already goes through -- consults the typed public
+  accessor `ExpansionStarterContentItemName(ItemId)` inside
+  `#if FE8_EXPANSION_STARTER_CONTENT` and falls through unchanged on `NULL`.
+  A default build has no declaration, no call, no data and no include-path
+  entry for the generated header: the object is the vanilla one.
+* **Honest boundary.** The vanilla description/help UI is addressed only by
+  message ID, and this framework adds no messages, so the item's
+  `descTextId`/`useDescTextId` stay `0` and its help box shows no text. No
+  vanilla description is borrowed to fake one; the authored descriptions are
+  emitted into the generated audit catalog and labelled there as not shown in
+  game.
 * **Round trip / counts.** Default cap `0xCD`: 206 records, no expansion
   record, committed manifest and inventory unchanged. Opt-in cap `0xCE`: 207
   records, the `[ITEM_EXPANSION_CE]` record emitted with
@@ -121,25 +144,38 @@ published.
 
 Host:
 
-* `scripts/generated_data/tests/test_items_expansion.py` (20 tests):
-  default-206/no-expansion, opt-in-207, un-opted rejection, and the new
-  authored-content class -- symbolic-only text IDs, framework-original
-  `MSG_EXPANSION_*` messages, resolved values matching the header, messages
-  beyond every vanilla index, meaningful+bounded item fields, an existing
-  icon slot, every authored field present in the generated C, and the
-  `uses<<8|id` packing. Plus the symbolic-text-ID form itself
+* `scripts/generated_data/tests/test_items_expansion.py` (29 tests):
+  default-206/no-expansion, opt-in-207, un-opted rejection; the authored
+  record class -- **no shared message slot consumed** (the three `*TextId`
+  keys are absent and resolve to `0`), no vanilla message index reused, a
+  direct `MSG_COUNT == 0x0D56` guard, meaningful+bounded item fields, an
+  existing icon slot, no text field emitted into the generated C, and the
+  `uses<<8|id` packing; the authoring-text class -- the literal is carried,
+  never reaches `gItemData[]` (generated C compared with and without the
+  fields), is rejected on a vanilla record, is rejected alongside a
+  `nameTextId`, and is bounded/printable-ASCII/trimmed; and the content-text
+  generator itself -- only authored expansion records collected, nothing at
+  the default cap, the exact literal and capacity in the header, an honest
+  catalog, and hard flag/cap errors. Plus the symbolic-text-ID form
   (unknown symbol rejected actionably, numeric form still accepted,
   `MSG_COUNT` not usable as a text ID).
 * `scripts/modernize/tests/test_expansion_config.py` (102 tests): the new
   flag's default, both dependencies, invalid values, fingerprint impact,
   epoch independence, metadata JSON, idspace constant agreement, and the
   compile-time contract's presence in the headers and `modern.mk`.
-* `tools/gba-playtest/tests/test_expansion_starter_content.py` (15 tests):
+* `tools/gba-playtest/tests/test_expansion_starter_content.py` (26 tests):
   no raw numeric content ID, no `//` comments, public-API-only registration,
   a single install point, a content-free `bmbattle.c`, a bounded effect, a
   distinct stat, probe field order matching the C struct, u32-scalar-only
-  probe fields, **zero data/bss in the disabled TU**, and both compile-time
-  dependency errors.
+  probe fields, **zero data/bss in the disabled TU**, both compile-time
+  dependency errors -- plus the config-gated text half: the default profile
+  generates nothing and deletes a stale artifact, the content profile emits
+  the exact authored literal with a capacity that fits the module buffer,
+  output is deterministic and path-independent, no committed C hand-holds the
+  authored text, `texts/texts.txt`/`msg.h` carry no `MSG_EXPANSION_*` at all,
+  a default-compiled `bmitem.o`/content object has no content symbol and no
+  authored bytes, the content-profile objects have both, and over-long
+  authoring text fails the static assert.
 * `tools/gba-playtest/tests/test_expansion_mechanics.py`: now links the real
   `src/expansion_starter_content.c` into its drivers, so the registry host
   tests still execute the real, unmodified sources.
@@ -147,11 +183,15 @@ Host:
 Runtime (semantic scalars only -- no pointer, no framebuffer oracle):
 
 * debug, content profile: `stagesCompleted=0x7f`, `configuredCap=0xce`,
-  `dataNumber=0xce`, `dataNameTextId=0xd56`, `dataDescTextId=0xd57`,
-  `dataIconId=0xde`, `dataWeaponType=0x9`, `dataMaxUses=3`,
+  `dataNumber=0xce`, `dataNameTextId=0`, `dataDescTextId=0` (no shared
+  message bound), `dataIconId=0xde`, `dataWeaponType=0x9`, `dataMaxUses=3`,
   `dataAttributes=0x10`, `madeItem/eventItem/arenaItem/gameSaveItem/
   suspendItem/gameSavePackedField/suspendPackedField=0x03ce`,
-  `legacyDataNumber=0xcd`, `uiDescId=0xd57`, `uiIconId=0xde`,
+  `legacyDataNumber=0xcd`, `uiDescId=0`, `uiIconId=0xde`,
+  **`uiNameLen=0xc` and `uiNameHash=0xc357f410`** -- the exact length and
+  FNV-1a 32 of what the production `GetItemName()` returned, recomputed by
+  the runner from `authoringName` (`'Sample Charm'`), i.e. the original
+  authored text really is what the UI reads,
   `contentEnabled=1`, `contentItemId=0xce`, `contentMechanicsCount=2`,
   `contentSampleIndex=0`, `contentMechanicIndex=1`, `contentRegisterOk=2`,
   `contentRegisterErr=0`, `contentLastResult=0`, `contentBearerPid=1`,
@@ -161,14 +201,29 @@ Runtime (semantic scalars only -- no pointer, no framebuffer oracle):
   `contentControlDefenseDelta=1`, `contentApplyCount=2`,
   `contentSampleTriggerCount=2`, and the build-local active contract
   cross-check `cap 0xCE, 207 record(s)`.
-* release, content profile: the same boot-half values
-  (`configuredCap=0xce`, the whole authored record, `contentEnabled=1`,
-  `contentItemId=0xce`, `contentMechanicsCount=2`, `contentRegisterOk=2`).
-* default-disabled negatives: the probe is not linked at all in a default
-  build (`FE8_EXPANSION_ITEMTEST=0` compiles the TU to an empty object), the
-  default ROM stays at cap `0xCD` with 206 records and no expansion record,
-  and the Sprint 1 `starter-hook-*-negative` scenarios still show every
-  mechanics counter at zero on the default ROM in both configs.
+* release, content profile: the boot-half values only -- `configuredCap=0xce`
+  with the build-local active contract `cap 0xCE, 207 record(s)`, the whole
+  authored record as `GetItemData()` returns it, `contentEnabled=1`,
+  `contentItemId=0xce`, `contentMechanicsCount=2`, `contentRegisterOk=2`,
+  `contentRegisterErr=0`. It deliberately claims **no** live-map chain in
+  release: that limitation predates this work (`docs/id_space.md`,
+  "Release-configuration limitation"), and the frozen mechanics/QoL runtime
+  proof in a real release ROM stays with the starter runtime scenarios.
+* content-DISABLED negatives, at three levels and with no extra ROM build:
+  * registry counts -- the `starter-hook-*` scenarios assert
+    `registerOkCount=1` on the flags-on starter profile ROM (exactly one
+    built-in) against `contentMechanicsCount=2`/`contentRegisterOk=2` in the
+    content profile, in both configs;
+  * artifacts -- `expansion-modern-starter-hook-check` now also asserts, on
+    that same already-built profile ELF/ROM, that neither the content
+    callback nor the content name accessor is linked, that the authored text
+    appears **nowhere** in the ROM image, and that `gItemData` is still the
+    vanilla-cap table (`Content-disabled artifact negative passed`, debug and
+    release);
+  * default build -- the probe TU is not linked at all
+    (`FE8_EXPANSION_ITEMTEST=0`), the default ROM stays at cap `0xCD` with
+    206 records, and the `starter-hook-*-negative` scenarios still show every
+    mechanics counter at zero on it in both configs.
 
 ### E. CI / Make non-redundancy
 
@@ -226,53 +281,61 @@ did **not** drift and were not touched.
 
 ## Validation run (this branch, this tree)
 
-Clean build: `build/expansion-modern`, `build/expansion-modern-starter`,
-`build/generated` and `build/shiftcheck` were deleted before the four ROM
-gates below, which then ran in CI order.
+Re-run in full after the policy remediation, in CI order, on this tree.
 
 | Gate (CI order) | Result |
 | --- | --- |
-| 1. `GBA_PLAYTEST_HOST_ONLY=1 ... tools/gba-playtest/tests` | 339 tests, OK (11 skipped) |
+| 1. `GBA_PLAYTEST_HOST_ONLY=1 ... tools/gba-playtest/tests` | 350 tests, OK (11 skipped) |
 | 2. `... tests/upstream_port` | 144 tests, OK |
-| 3. `scripts/artifact_guard.py --revision HEAD` | pass (silent) |
+| 3. `scripts/artifact_guard.py --revision HEAD` | pass (silent, rc=0) |
 | 4. `test_build_default_lane.py` | 15 tests, OK |
 | 5. `test_quickstart.py` | 15 tests, OK |
-| 6. `make generated-data-check` | 13 tables, 722 records, no manifest drift; census clean (1076 hits, 1051 audited, 25 reviewed exclusions); id-space + active contract up to date (cap 0xCD, 206 records) |
-| 7. `expansion-modern-linker-check MODERN_CONFIG=debug` | pass (budget, overlay audit, starter runtime matrix, boot/title/debugtools/newgame/combat/saveload/savefmt/shifted, shift+offset scan, raw-pointer audit) |
-| 8. `expansion-modern-linker-check MODERN_CONFIG=release` | pass |
-| 9. item-expansion + content gate, debug | pass, `stages=all content=1`, active contract `cap 0xCE, 207 record(s)` |
+| 6. `make generated-data-check` | 13 tables, 722 records, no manifest drift; census clean (1077 hits, 1052 audited, 25 reviewed exclusions); id-space + active contract up to date (cap 0xCD, 206 records) |
+| 7. `expansion-modern-linker-check MODERN_CONFIG=debug` | pass (budget, overlay audit, starter runtime matrix incl. the new content-disabled artifact negative, boot/title/debugtools/newgame/combat/saveload/savefmt/shifted, shift+offset scan, raw-pointer audit) |
+| 8. `expansion-modern-linker-check MODERN_CONFIG=release` | pass (same, release variants) |
+| 9. item-expansion + content gate, debug | pass, `stages=all content=1`, active contract `cap 0xCE, 207 record(s)`, `uiNameLen=0xc`/`uiNameHash=0xc357f410` |
 | 10. item-expansion + content gate, release | pass, `stages=boot content=1`, active contract `cap 0xCE, 207 record(s)` |
 
 Additional (not CI commands):
 
 | Check | Result |
 | --- | --- |
-| `make generated-data-test` | 624 tests, OK (613 before this work; +11 authored-content/symbolic-text-ID tests) |
-| `scripts/modernize/tests` (full) | 439 tests, OK (1 skipped) |
-| `test_archival_lane_item_cap_guard.py` | 26 tests, OK |
-| `test_idspace_active_check_gate_hermetic.py` | 6 tests, OK |
-| `make expansion-modern-idspace-active-check` | pass, including the stale-ACTIVE-header self-heal and the cap/count divergence negative |
-| `gba_playtest.py backend-check` | libMGBA backend available |
+| `make generated-data-test` | 633 tests, OK (613 before issue #6; +20 net authoring/content-text/policy tests) |
+| `make expansion-modern-savefmt-check` (debug + release) | all 9/8 save-format runtime scenarios pass against the **restored** `bdd9add3` fingerprints |
+| `make expansion-modern-starter-hook-check` (debug + release) | positive `registerOk=1/apply=2/sampleTrigger=2` on the profile ROM, all-zero negative on the default ROM, plus `Content-disabled artifact negative passed` |
 | `python3 -m scripts.upstream_port verify --dry-run` | exactly 10 gates, in order, argv-identical to `build.yml` |
 
-**Isolated build roots and determinism.** The bundled-content ROM was rebuilt
-into a separate root (`MODERN_BUILD_ROOT=build/iso-content`) and is
-**byte-identical** to the one the CI-order gate produced in the default root
-(`sha1 866c3f9a3c5a318e5715ac6440863174737bd2f2`). The default (cap `0xCD`,
-all flags off) ROM built into its own root is a distinct ROM
-(`sha1 f44b46b10a3469c3a5c882a7e04db275dd966a31`), so there is no
-cross-profile build-root contamination.
+**Default text-blob identity, proven by isolated regeneration.**
+`texts/texts.txt` and `include/constants/msg.h` are byte-identical to the
+merge parent (`git diff bdd9add3 -- texts include/constants/msg.h` is empty).
+Regenerating the message table from a **pristine `bdd9add3` extraction**
+(`git archive bdd9add3 texts scripts/texttools include/constants/msg.h` into a
+scratch tree, then `scripts/texttools/textprocess.py`) produces a
+`msg_data.c` with sha256
+`529ecdaf268d8ff091de489fdf580505921d5afe97fcaac397ba4144a1125180` -- exactly
+the sha256 of this tree's regenerated `src/msg_data.c`. The Huffman-compressed
+text blob is therefore bit-identical to the pre-content baseline, and
+`MSG_COUNT` is back to `0x0D56`.
 
-**Artifact-level record counts**, read from the linked ELFs:
+**Baseline files: restored, not re-captured.** `git diff bdd9add3 --
+tools/gba-playtest/fingerprints/` is empty for all 14 `savecompat-*` files.
+They were restored with `git checkout bdd9add3 -- <path>`; no capture was run
+and no hash was substituted. Gates 7 and 8 then verified a freshly built
+default ROM against those restored fingerprints in both configs -- the default
+ROM behaves exactly like the pre-content baseline again.
 
-| Build | `gItemData` | Records | Probe symbol |
-| --- | --- | --- | --- |
-| default (cap `0xCD`, flags off) | 7416 bytes | 206 | `gItemExpansionProbe` absent (TU compiled out) |
-| content (cap `0xCE`, content on) | 7452 bytes | 207 | present |
+**Isolated build roots and determinism** (`MODERN_CONFIG=debug`):
 
-The content module's symbols exist in both ROMs, but the default build links
-only the three stubs -- `ExpansionStarterContentCharmEvade` exists **only** in
-the content build.
+| Build | Root | sha1 | `gItemData` | Content symbols | `"Sample Charm"` in ROM |
+| --- | --- | --- | --- | --- | --- |
+| content (`cap 0xCE`, content on) | `build/iso-content` | `6662959fcf9bd588f4ec51b658e48a67426047b5` | 0x1d1c = 7452 B = **207** | `ExpansionStarterContentItemName` + `...CharmEvade` linked | 1 occurrence |
+| default (`cap 0xCD`, all flags off) | `build/iso-default` | `6d2d67396a712de6e5104726b115519d0685f635` | 0x1cf8 = 7416 B = **206** | only the 3 disabled stubs; no name accessor, no callback | **0 occurrences** |
+
+The content ROM built in the isolated root is **byte-identical** (same sha1)
+to the one the CI-order gate produced in the default root, so the
+content profile is deterministic and the roots do not contaminate each other.
+The default ROM is a distinct artifact that contains none of the authored
+content text and no probe symbol (`gItemExpansionProbe` absent).
 
 ## Non-goals (explicitly not delivered)
 
@@ -286,4 +349,17 @@ the content build.
   names/assets and no new graphics asset.
 * Exactly one content example: one item and one mechanic. No new chapters,
   units, classes, scripted events or further items.
+* **No message is added to the shared text table**, by design -- so the
+  content item's in-game description/help box shows no text, because that UI
+  is addressed by message ID only. Building a config-specific message table
+  for one bundled example is explicitly out of scope; no vanilla description
+  is borrowed in its place, and the authored descriptions stay in the
+  generated audit catalog.
+* No committed baseline, fingerprint or oracle was re-captured, relaxed or
+  refreshed by this work. The 14 that a previous revision had moved are
+  restored to `bdd9add3`.
+* No claim that the release configuration exercises a live battle map: the
+  release item/content gate proves the boot half only, and the release
+  runtime proof for the frozen mechanics/QoL behaviour stays with the starter
+  runtime scenarios.
 * This report does not close the issue; it is candidate evidence for review.

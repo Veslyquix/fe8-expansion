@@ -752,12 +752,17 @@ def main(argv: list[str] | None = None) -> int:
             )
             if content:
                 print(
-                    f"  issue #6 content example passed: the authored record's "
-                    f"original name/description/uses/type/attributes/icon match the "
-                    f"running ROM, and the bundled mechanic registered through the "
-                    f"public API granted its bounded +{contract.avoid_bonus} avoid to "
-                    f"the item's bearer only (control unit +0), with the content-free "
-                    f"sample's +{contract.defense_bonus} defence unchanged for both"
+                    f"  issue #6 content example passed: the authored record "
+                    f"(uses/type/attributes/icon, and no shared message bound) "
+                    f"matches the running ROM, the production GetItemName() "
+                    f"returned exactly the authored original name "
+                    f"{authored.authoring_name!r} (len={authored.name_len}, "
+                    f"fnv1a32=0x{authored.name_hash:08x}) from the generated "
+                    f"content text table, and the bundled mechanic registered "
+                    f"through the public API granted its bounded "
+                    f"+{contract.avoid_bonus} avoid to the item's bearer only "
+                    f"(control unit +0), with the content-free sample's "
+                    f"+{contract.defense_bonus} defence unchanged for both"
                 )
         else:
             print(
