@@ -124,7 +124,7 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
 
 /* Sentinel stashed in a locale-row MenuItemDef's otherwise-unused
  * helpMsgId field (u16) to mark the settings submenu's own reserved Back
- * row -- never a real ExpansionLocaleId (those are always < 
+ * row -- never a real ExpansionLocaleId (those are always <
  * EXPANSION_LOCALE_COUNT, i.e. < 8). */
 #define EXPANSION_LANGUAGE_MENU_ROW_BACK EXPANSION_LOCALE_INVALID
 
