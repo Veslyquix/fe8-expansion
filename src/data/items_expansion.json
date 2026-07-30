@@ -1,0 +1,11 @@
+{
+  "$schema": "fe8.items.v1",
+  "items": [
+    {
+      "item": "ITEM_EXPANSION_CE",
+      "weaponType": "ITYPE_ITEM",
+      "maxUses": 1,
+      "iconId": 0
+    }
+  ]
+}

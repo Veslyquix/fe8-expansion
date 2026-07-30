@@ -188,36 +188,57 @@ workflow splits them across two jobs — a fast, host-only `host-tests` job
 `build` job (full modern ROM/ELF/linker) — and `verify` mirrors that exact
 argv-and-order sequence across both jobs:
 
-1. `python3 -m unittest discover -s tools/gba-playtest/tests -v`
-   (issue #13: the full host-only tools/gba-playtest suite — host job,
-   never rebuilds the ROM)
+1. `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`
+   (issue #13: the full tools/gba-playtest suite in explicit host-only mode
+   — host job, never rebuilds the ROM. `GBA_PLAYTEST_HOST_ONLY=1` is a
+   leading inline environment assignment, mirrored verbatim from `build.yml`
+   and applied to that one child process only, so the ROM/runtime gates
+   below never inherit it and keep owning live coverage. It makes this gate
+   independent of whether a git-ignored ROM happens to exist in the worktree
+   while gates 8-11 rebuild it — see `tools/gba-playtest/README.md`,
+   “Host-only test mode”.)
 2. `python3 -m unittest discover -s tests/upstream_port -v`
-   (issue #12/#15: the 139 pure-stdlib upstream-port review tooling tests,
+   (issue #12/#15: the 144 pure-stdlib upstream-port review tooling tests,
    including this `verify.gates()` <-> `build.yml` mirror — host job, links
    no C and never rebuilds the ROM)
-3. `python3 scripts/artifact_guard.py --revision HEAD`
-4. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
+3. `python3 -m unittest discover -s scripts/localization/tests -p test_*.py`
+   (issue #18: the scripts/localization package's own pure-stdlib unit test
+   suite — schema/pseudo/catalog/generate/CLI/determinism plus the
+   host-native resolver-behavior and vanilla-isolation source-audit tests,
+   which self-skip without a host `cc` — host job, never rebuilds the ROM;
+   the localization-runtime-*-check scenarios that actually boot a ROM are
+   reached through gates 8-9's `expansion-modern-linker-check` dependency
+   chain instead, see `localization.mk`'s `localization-test` target)
+4. `python3 scripts/artifact_guard.py --revision HEAD`
+5. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
    (issue #15: bare `make`/`make all` always resolves to the modern
    release AAPCS lane)
-5. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
+6. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
    (issue #15: quickstart.sh only reaches the archival agbcc lane via
    explicit `make legacy`/`make fireemblem8.gba`)
-6. `make generated-data-check`
-7. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+7. `make generated-data-check`
+8. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
    (aggregates the full modern debug ROM/runtime + linker suite off one
    reused object/ELF build — boot/title/new-game/debugtools-hub/timer/map/
    tools/prep/ch4-prep/combat/save-load/suspend/save-format-migration,
-   budget, shift/offset, raw-pointer, relocation and cross-overlay — so the
-   runtime scenarios are covered here, not re-run individually; see
-   `modern.mk`'s `expansion-modern-linker-check` dependency chain)
-8. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+   budget, shift/offset, raw-pointer, relocation, cross-overlay, and (issue
+   #18) the localization-runtime-*-check scenarios — so the runtime
+   scenarios are covered here, not re-run individually; see `modern.mk`'s
+   `expansion-modern-linker-check` dependency chain)
+9. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
    (release-config counterpart, incl. the release debugtools-disabled
    negative scenarios)
+10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+    (issue #10: boots the real modern debug ROM at an expanded item cap and
+    runs the item-ID-expansion runtime probe, immediately after the two
+    default-cap linker-check gates above and against the same build output)
+11. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+    (release-config counterpart of gate 10, and the final gate)
 
-None of these existing gates are weakened, reordered, or skipped; the two
-host-lane gates were added by the issues #11/#13 <-> #12/#15 integration and
-run before the ROM build so a host-tooling regression fails in well under a
-minute.
+None of these existing gates are weakened, reordered, or skipped; the three
+host-lane gates were added by the issues #11/#13 <-> #12/#15 <-> #18
+integrations and run before the ROM build so a host-tooling regression fails
+in well under a minute.
 
 **There is no gate subset/selection flag, on the CLI or in the internal
 `verify.run_gates` API.** `verify` (with or without `--dry-run`) always

@@ -38,7 +38,6 @@ FINGERPRINTS_DIR = PLAYTEST_DIR / "fingerprints"
 NAME = "debugtools-ch4-prep-positive-modern-debug"
 SCENARIO_PATH = SCENARIOS_DIR / f"{NAME}.json"
 FINGERPRINT_PATH = FINGERPRINTS_DIR / f"{NAME}.json"
-DEBUG_ROM = REPO_ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.gba"
 
 PREP_STATE = 0x020210B2      # gPlaySt prep-screen state byte
 PREP_FLAG = 0x020210B8       # gPlaySt.chapterStateBits (PLAY_FLAG_PREPSCREEN=0x10)
@@ -55,15 +54,11 @@ _POINTER_RANGES = (
 )
 
 sys.path.insert(0, str(PLAYTEST_DIR))
+sys.path.insert(0, str(PLAYTEST_DIR / "tests"))
 import gba_playtest  # noqa: E402
+import host_mode  # noqa: E402
 
-_UNAVAILABLE_MARKERS = (
-    "C compiler ",
-    "mgba/core/core.h: No such file",
-    "'mgba/core/core.h' file not found",
-    "cannot find -lmgba",
-    "library not found for -lmgba",
-)
+DEBUG_ROM = host_mode.modern_rom("debug")
 
 
 class PrepPositiveScenarioFilesTests(unittest.TestCase):
@@ -151,20 +146,20 @@ class PrepPositiveScenarioFilesTests(unittest.TestCase):
         self.assertEqual(len(fp["checkpoints"]), 4)
 
 
+@host_mode.live_artifact_testcase("prep-positive runtime coverage")
 class PrepPositiveRuntimeTests(unittest.TestCase):
+    """Category B (tests/host_mode.py): host-only mode skips this class
+    before the ROM is touched; normal mode is unchanged."""
+
     def test_debug_rom_matches_committed_fingerprint(self):
-        if not DEBUG_ROM.exists():
-            raise unittest.SkipTest(f"modern debug ROM not built: {DEBUG_ROM}")
+        host_mode.require_built_rom(DEBUG_ROM, "modern debug ROM")
         scenario = gba_playtest.load_scenario(SCENARIO_PATH)
         expected = gba_playtest.validate_fingerprint(
             json.loads(FINGERPRINT_PATH.read_text(encoding="utf-8")), str(FINGERPRINT_PATH)
         )
-        try:
-            actual = gba_playtest.capture(DEBUG_ROM, scenario)  # blank SRAM
-        except gba_playtest.PlaytestError as exc:
-            if any(m in str(exc) for m in _UNAVAILABLE_MARKERS):
-                raise unittest.SkipTest(f"libmGBA integration skipped: {exc}") from exc
-            raise
+        actual = host_mode.capture_live_or_skip(  # blank SRAM
+            DEBUG_ROM, scenario, label="prep-positive runtime coverage"
+        )
         differences = gba_playtest.compare_fingerprints(expected, actual, policy="behavior")
         self.assertEqual(differences, [], f"prep-positive: {differences}")
 

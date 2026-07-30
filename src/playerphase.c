@@ -27,6 +27,7 @@
 #include "bmsave.h"
 #include "eventinfo.h"
 #include "expansion_debugtools.h"
+#include "expansion_itemtest.h"
 
 #include "playerphase.h"
 
@@ -223,6 +224,14 @@ void PlayerPhase_Suspend(void)
      * writing normally. */
     if (DebugTools_IsBootstrapSuppressionActive())
         return;
+
+#if FE8_EXPANSION_ITEMTEST_ENABLED
+    /* Same one-shot boot window for the issue #10 runtime item-expansion
+     * probe build (see include/expansion_itemtest.h). Absent from every
+     * ordinary build. */
+    if (ItemExpansionTest_IsBootSuppressionActive())
+        return;
+#endif
 
     gActionData.suspendPointType = SUSPEND_POINT_PLAYERIDLE;
     WriteSuspendSave(SAVE_ID_SUSPEND);

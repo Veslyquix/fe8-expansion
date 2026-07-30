@@ -48,8 +48,6 @@ DEBUG_SCENARIO = SCENARIOS_DIR / f"{DEBUG_NAME}.json"
 DEBUG_FINGERPRINT = FINGERPRINTS_DIR / f"{DEBUG_NAME}.json"
 RELEASE_SCENARIO = SCENARIOS_DIR / f"{RELEASE_NAME}.json"
 RELEASE_FINGERPRINT = FINGERPRINTS_DIR / f"{RELEASE_NAME}.json"
-DEBUG_ROM = REPO_ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.gba"
-RELEASE_ROM = REPO_ROOT / "build" / "expansion-modern" / "release" / "aapcs" / "fireemblem8.gba"
 
 # debug gDebugToolsProbe (0x02031818) fields + registry sHubActive + gBmSt cursor
 HUB_OPEN = 0x02031818
@@ -78,15 +76,12 @@ _POINTER_RANGES = (
 )
 
 sys.path.insert(0, str(PLAYTEST_DIR))
+sys.path.insert(0, str(PLAYTEST_DIR / "tests"))
 import gba_playtest  # noqa: E402
+import host_mode  # noqa: E402
 
-_UNAVAILABLE_MARKERS = (
-    "C compiler ",
-    "mgba/core/core.h: No such file",
-    "'mgba/core/core.h' file not found",
-    "cannot find -lmgba",
-    "library not found for -lmgba",
-)
+DEBUG_ROM = host_mode.modern_rom("debug")
+RELEASE_ROM = host_mode.modern_rom("release")
 
 
 class ToolsScenarioFilesTests(unittest.TestCase):
@@ -215,20 +210,20 @@ class ToolsReleaseNegativeFilesTests(unittest.TestCase):
         self.assertTrue(any_probe, "release sibling must carry all-zero probes")
 
 
+@host_mode.live_artifact_testcase("debugtools-tools runtime coverage")
 class ToolsRuntimeTests(unittest.TestCase):
+    """Category B (tests/host_mode.py): host-only mode skips this class
+    before either ROM is touched; normal mode is unchanged."""
+
     def _run(self, rom, scenario_path, fingerprint_path, name):
-        if not rom.exists():
-            raise unittest.SkipTest(f"modern ROM not built: {rom}")
+        host_mode.require_built_rom(rom, f"modern ROM for {name}")
         scenario = gba_playtest.load_scenario(scenario_path)
         expected = gba_playtest.validate_fingerprint(
             json.loads(fingerprint_path.read_text(encoding="utf-8")), str(fingerprint_path)
         )
-        try:
-            actual = gba_playtest.capture(rom, scenario)  # blank SRAM
-        except gba_playtest.PlaytestError as exc:
-            if any(m in str(exc) for m in _UNAVAILABLE_MARKERS):
-                raise unittest.SkipTest(f"libmGBA integration skipped: {exc}") from exc
-            raise
+        actual = host_mode.capture_live_or_skip(  # blank SRAM
+            rom, scenario, label=f"debugtools-tools runtime coverage ({name})"
+        )
         differences = gba_playtest.compare_fingerprints(expected, actual, policy="behavior")
         self.assertEqual(differences, [], f"{name}: {differences}")
 

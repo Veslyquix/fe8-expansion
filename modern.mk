@@ -8,6 +8,7 @@ MODERN_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -32,6 +33,7 @@ MODERN_GOALS := \
 	expansion-modern-localization-runtime-prefs-check \
 	expansion-modern-localization-runtime-save-check \
 	expansion-modern-localization-runtime-shifted-check \
+	expansion-modern-idspace-active-check \
 	expansion-modern-clean
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
@@ -118,6 +120,27 @@ MODERN_LAYOUT_FLAGS := \
 	-fno-function-sections -fno-data-sections \
 	-fno-merge-constants -fno-merge-all-constants
 MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1
+
+# Issue #10: the item ID cap is a single build input shared by the data
+# generator (scripts/generated_data/idspace.py resolve_item_id_cap, via the
+# FE8_ITEM_ID_CAP env var) and the compiled item consumer
+# (include/id_space.h -> ITEM_ID_CONFIGURED_CAP, consumed by src/bmitem.c).
+# Flow the same value into the compile so the generated (up to 207-record)
+# gItemData[] table and bmitem.c's compile-time cap contract resolve one
+# identical cap. Unset leaves id_space.h's built-in 0xCD default in force.
+ifneq ($(FE8_ITEM_ID_CAP),)
+MODERN_DEFINE_FLAGS += -DFE8_ITEM_ID_CAP=$(FE8_ITEM_ID_CAP)
+endif
+
+# Issue #10: opt-in runtime item-expansion probe (src/expansion_itemtest.c,
+# include/expansion_itemtest.h). Explicitly separate from the debug/release
+# preset and from FE8_EXPANSION_DEBUG, so the identical probe runs in a real
+# debug ROM and a real release ROM; unset (the default) compiles that
+# translation unit to an empty object and reaches no hook at all. The header
+# itself #errors when it is enabled without an expanded FE8_ITEM_ID_CAP.
+ifeq ($(FE8_EXPANSION_ITEMTEST),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXPANSION_ITEMTEST_ENABLED=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 MODERN_WARNING_FLAGS := \
 	-Wall -Wextra \
@@ -150,6 +173,25 @@ MODERN_CFLAGS := \
 	$(MODERN_WARNING_FLAGS) \
 	$(MODERN_CONFIG_FLAGS) \
 	$(MODERN_ABI_FLAGS)
+
+# Issue #10 (expansion-modern-idspace-active-check hermeticity): MODERN_CFLAGS
+# bakes in whatever FE8_ITEM_ID_CAP happened to be resolved when *this*
+# running instance of make parsed modern.mk (an ambient shell environment
+# variable, or a `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment
+# for this very invocation) via MODERN_DEFINE_FLAGS above -- MODERN_CFLAGS
+# itself is a plain `:=` snapshot, taken once, not re-evaluated per recipe
+# line. expansion-modern-idspace-active-check needs to compile three
+# DIFFERENT, explicit cap states (no cap define at all, -DFE8_ITEM_ID_CAP=0xCE,
+# and "the 0xCE-record table with no cap define") in the course of ONE gate
+# run, regardless of whatever ambient value the *caller* happened to invoke
+# it under. Reusing $(MODERN_CFLAGS) as-is for any of those three compiles
+# would silently fold the caller's ambient cap into all of them instead
+# (e.g. an ambient/CLI FE8_ITEM_ID_CAP=0xCE would make the "no cap flag"
+# steps compile with the flag anyway, turning the gate's own default and
+# negative-mismatch assertions into false failures/false passes). Strip any
+# existing -DFE8_ITEM_ID_CAP=... word so the gate can supply its own,
+# explicit, per-step cap define (or none) on top of this instead.
+MODERN_CFLAGS_NOCAP := $(filter-out -DFE8_ITEM_ID_CAP=%,$(MODERN_CFLAGS))
 
 MODERN_BUILD_ROOT := build/expansion-modern
 MODERN_OUTPUT_DIR := $(MODERN_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
@@ -539,6 +581,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -1139,6 +1182,7 @@ MODERN_LINKED_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -1453,6 +1497,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'enabled_locale_mask=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)'; \
 		printf '%s\n' 'default_locale_id=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID)'; \
 		printf '%s\n' 'pseudo_locale_enabled=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)'; \
+		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
+		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"
@@ -2219,6 +2265,80 @@ expansion-modern-newgame-check: expansion-modern-boot-preflight expansion-modern
 MODERN_SAVEFMT_CHECKS := tools/gba-playtest/run_save_compat_checks.py
 MODERN_SAVEFMT_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/savefmt-fixtures
 
+# ---------------------------------------------------------------------------
+# Issue #10: the ACTIVE id-space contract must be COMPILED, not just generated
+# ---------------------------------------------------------------------------
+# The generated item table (build/generated/data/data_items.c) includes the
+# build-local ACTIVE header and compile-time asserts that the compiler cap
+# (-DFE8_ITEM_ID_CAP / include/id_space.h default) and the generated record
+# count are the same build input. This gate proves all three directions with
+# the real modern toolchain:
+#   * default    -> 0xCD / 206 records compiles;
+#   * configured -> 0xCE / 207 records compiles with -DFE8_ITEM_ID_CAP=0xCE;
+#   * mismatched -> the 0xCE table compiled WITHOUT the flag must fail, which
+#     is exactly the silent 206-vs-207 divergence this contract exists to stop.
+# Compile-only (no link/ROM), so it is fast and needs no emulator; it restores
+# the default-cap generated table on the way out.
+#
+# Hermeticity (this gate must pass identically regardless of how the CALLER
+# invoked it -- ambient shell environment unset, ambient FE8_ITEM_ID_CAP=0xCE,
+# or a `make ... FE8_ITEM_ID_CAP=0xCE` command-line assignment on the gate
+# itself): two independent leaks had to be closed, both stemming from the same
+# root cause -- FE8_ITEM_ID_CAP is resolved ONCE per make process, not
+# per-recipe-line, so a plain env-var prefix on a recipe command is not enough
+# to force a particular state:
+#   1. $(MODERN_CFLAGS) bakes in whatever FE8_ITEM_ID_CAP this gate's OWN
+#      make process resolved at parse time (see MODERN_CFLAGS_NOCAP above).
+#      Every compile below therefore uses $(MODERN_CFLAGS_NOCAP) plus its own
+#      explicit -DFE8_ITEM_ID_CAP (or none), never the ambient $(MODERN_CFLAGS).
+#   2. Each $(MAKE) recursion that regenerates $$C re-resolves FE8_ITEM_ID_CAP
+#      for that CHILD process. A `FE8_ITEM_ID_CAP=... $(MAKE) ...` shell env
+#      prefix is silently ignored by that child whenever the gate itself was
+#      invoked with a `make ... FE8_ITEM_ID_CAP=...` command-line assignment,
+#      because GNU Make auto-forwards command-line-origin variables to every
+#      recursive $(MAKE) via MAKEFLAGS, and command-line origin outranks a
+#      plain environment-variable prefix in the child too. The fix is GNU
+#      Make's own documented escape hatch: pass FE8_ITEM_ID_CAP as an explicit
+#      argument on the recursive make's OWN command line (`$(MAKE)
+#      FE8_ITEM_ID_CAP=... $$C`, including the empty `FE8_ITEM_ID_CAP=` to
+#      force the unset default) -- that always wins, in every ambient/CLI
+#      combination, because it is that child's own command line.
+.PHONY: expansion-modern-idspace-active-check
+expansion-modern-idspace-active-check: expansion-modern-toolchain-check
+	@set -e; \
+	OUT="$(MODERN_OUTPUT_DIR)/idspace-active-check"; mkdir -p "$$OUT"; \
+	C=$(GENERATED_DATA_OUT_DIR)/data_items.c; H=$(GENERATED_DATA_ACTIVE_HEADER); \
+	echo "--- default cap: generated table and ACTIVE header must both say 0xCD / 206 ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: ACTIVE header is not at the default cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: ACTIVE header record count is not 206" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_default.o"; \
+	echo "OK: default-cap generated table compiles against the ACTIVE contract (0xCD / 206)"; \
+	echo "--- configured cap: FE8_ITEM_ID_CAP=0xCE must move both to 0xCE / 207 ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: ACTIVE header did not follow the configured cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 207" $$H || { echo "FAIL: ACTIVE header record count is not 207" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -DFE8_ITEM_ID_CAP=0xCE -c "$$C" -o "$$OUT/items_active.o"; \
+	echo "OK: configured generated table compiles against the ACTIVE contract (0xCE / 207)"; \
+	echo "--- negative: the 0xCE table compiled without the cap flag must FAIL ---"; \
+	if "$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_mismatch.o" >/dev/null 2>&1; then \
+		echo "FAIL: a 207-record table compiled at the 0xCD compiler cap -- the contract assert is dead" >&2; exit 1; \
+	fi; \
+	echo "OK: cap/count divergence is a hard compile error, not a silent truncation"; \
+	echo "--- desync recovery: a stale ACTIVE header left by an out-of-band, differently-capped generated-data-check must self-heal on the FIRST plain default build, before this consumer compiles ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: could not stage the stale-0xCE ACTIVE header desync" >&2; exit 1; }; \
+	grep -q "item_id_cap=0xCD" $(GENERATED_DATA_OUT_DIR)/.item_id_cap.stamp || { echo "FAIL: desync setup expected the cap stamp to still record the default cap" >&2; exit 1; }; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: the stale 0xCE ACTIVE header did not self-heal to the default cap on the first plain build" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: the self-healed ACTIVE header record count is not 206" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_healed.o"; \
+	echo "OK: a single plain default build healed the out-of-band stale ACTIVE header and the generated table compiles clean -- no manual generated-data-check, no negative static assert"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap state was not restored" >&2; exit 1; }; \
+	echo "PASS: expansion-modern-idspace-active-check"
+
 expansion-modern-savefmt-check: expansion-modern-boot-preflight expansion-modern-rom
 	"$(PYTHON)" "$(MODERN_SAVEFMT_CHECKS)" \
 		--rom "$(MODERN_ROM)" \
@@ -2625,6 +2745,46 @@ endif
 	expansion-modern-localization-runtime-prefs-check \
 	expansion-modern-localization-runtime-save-check \
 	expansion-modern-localization-runtime-shifted-check
+# ---------------------------------------------------------------------------
+# Issue #10: opt-in runtime item-ID-expansion probe
+# ---------------------------------------------------------------------------
+# Runs the real, booted expansion ROM and asserts what its own production
+# paths recorded for the expanded item ID: the runtime GetItemData() record,
+# the event engine's EV_CMD_GIVEITEM decoder placing it in a real unit
+# inventory, the item menu/stat-screen draw, and the MultiArena/link, game
+# save and suspend/resume roundtrips -- with the legacy 0xCD and empty
+# (0x0000) item values unchanged next to it.
+#
+# Requires a probe build: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1.
+# The probe's EWRAM address is resolved from the linked ELF at check time,
+# so this gate pins no ROM layout and needs no committed frame oracle.
+#
+# MODERN_CONFIG=release runs the boot-reachable stage set: a modern release
+# ROM does not reach a battle map in this headless harness at all (a plain
+# release ROM with no probe code, driven through the ordinary New Game route
+# with full navigation input, stalls on the world map exactly the same way),
+# so the map-dependent stages are proven against the debug configuration.
+# See docs/id_space.md, "Runtime probe".
+MODERN_ITEMEXPANSION_SCRIPT := tools/gba-playtest/run_item_expansion_checks.py
+MODERN_ITEMEXPANSION_DIR := $(MODERN_OUTPUT_DIR)/itemexpansion
+MODERN_ITEMEXPANSION_STAGES := $(if $(filter release,$(MODERN_CONFIG)),boot,all)
+
+expansion-modern-itemexpansion-check: expansion-modern-rom
+	@if [ "$(FE8_EXPANSION_ITEMTEST)" != "1" ] || [ -z "$(FE8_ITEM_ID_CAP)" ]; then \
+		printf 'error: %s needs a probe build\n' 'expansion-modern-itemexpansion-check' >&2; \
+		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s\n' \
+			'expansion-modern-itemexpansion-check' '$(MODERN_CONFIG)' '$(MODERN_ABI)' >&2; \
+		exit 1; \
+	fi
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_ITEMEXPANSION_SCRIPT)" \
+		--rom "$(MODERN_ROM)" \
+		--elf "$(MODERN_ELF)" \
+		--config "$(MODERN_CONFIG)" \
+		--cap "$(FE8_ITEM_ID_CAP)" \
+		--require-stages "$(MODERN_ITEMEXPANSION_STAGES)" \
+		--out-dir "$(MODERN_ITEMEXPANSION_DIR)"
+	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)'
 
 expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-overlay-audit \
@@ -2668,6 +2828,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-combat-check \
 	expansion-modern-saveload-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \

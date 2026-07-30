@@ -910,6 +910,14 @@ Run the playtest suite (includes the save-compat gate/scenario tests):
 python3 -m unittest discover -s tools/gba-playtest/tests -p "test_*.py"
 ```
 
+That is normal mode: the live save-compat scenarios run against whichever
+ROMs are present in the worktree (legacy, modern debug, modern release) and
+skip explicitly for the ones that are not built. CI runs the same suite with
+`GBA_PLAYTEST_HOST_ONLY=1`, which skips those live scenarios by mode instead
+of by artifact presence -- their runtime coverage lives in
+`make expansion-modern-savefmt-check` / `expansion-modern-linker-check`. See
+`tools/gba-playtest/README.md`, “Host-only test mode”.
+
 Run the full modern CI-equivalent check (build + fixtures + host migration
 check + runtime scenarios, both debug and release):
 

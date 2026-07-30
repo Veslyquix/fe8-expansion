@@ -23,6 +23,7 @@
 #include "constants/songs.h"
 #include "expansion_debugtools.h"
 #include "expansion_language_menu.h"
+#include "expansion_itemtest.h"
 
 /* Reused verbatim from AgbMain's own clean-boot RNG seed (src/main.c) --
  * reseeding to this exact constant immediately before the debug hub's
@@ -431,6 +432,28 @@ void GameControl_PostIntro(struct GameCtrlProc * proc)
         break;
 
     case GAME_ACTION_EVENT_RETURN:
+#if FE8_EXPANSION_ITEMTEST_ENABLED
+        /* Issue #10 opt-in runtime item-expansion probe (compiled out, and
+         * this whole block absent, in every ordinary build -- see
+         * include/expansion_itemtest.h). Consumed at most once, before the
+         * debug-hub handoff and the ordinary StartSaveMenu branch below;
+         * the bootstrap itself is the ordinary production new-game
+         * sequence and this proc continues its own normal lifecycle
+         * straight into the ordinary LGAMECTRL_EXEC_BM transition. */
+        if (ItemExpansionTest_ConsumeChapterBootRequest())
+        {
+            ItemExpansionTest_PrepareChapterBoot();
+            proc->nextChapter = CHAPTER_L_2;
+
+            /* The ordinary chapter-start state: the world map and the
+             * chapter's own unit loading/beginning event all run completely
+             * unmodified from here, exactly as they do for the debug hub's
+             * Chapter 2 launcher. */
+            Proc_Goto(proc, LGAMECTRL_EXEC_BM);
+            break;
+        }
+#endif
+
         /* Debug hub "Fast Boot: Chapter 2" handoff (see
          * src/debugtools_launcher.c, include/expansion_debugtools.h):
          * consumed at most once per armed request, and only here, before

@@ -136,6 +136,16 @@ class TableSchema:
         """Return the committed inventory/summary report text."""
         raise NotImplementedError
 
+    def manifest_record_count(self, records):
+        """Record count reported in the committed platform manifest.
+
+        Defaults to the full loaded set. Expandable tables override this so
+        opt-in overlay records (validated + generated into the ROM table
+        separately, and audited in reports/id_space_audit.md) do not drift
+        the committed archival manifest between default and opt-in builds.
+        """
+        return len(records)
+
     def round_trip_errors(self, records, hand_source):
         """Compare ``records`` against a hand-written C file at
         ``hand_source``. Returns a list of :class:`GeneratedDataError`
