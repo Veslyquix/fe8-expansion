@@ -304,14 +304,29 @@ def build_manifest(
     rebuild_output_relpaths: Optional[List[str]] = None,
 ) -> Dict:
     repo_root = Path(repo_root)
+    # Resolve the exact, immutable target SHA *first* (this is the single
+    # source of truth for this candidate's identity: an explicit
+    # `--target-sha` override in non-git/archive mode, or the actual
+    # repository's own resolved HEAD when `repo_root` is a real git root
+    # -- see resolve_target_sha). It is then threaded into
+    # ec.load_identity() as the build-id override so the embedded
+    # `identity.build_commit` is always bound to this exact, already-
+    # validated value: never a second, independent `git rev-parse` call
+    # against `repo_root` (which -- for a non-git extracted tree nested
+    # inside an unrelated outer repository -- could otherwise silently
+    # adopt that outer repository's HEAD via git's own upward directory
+    # discovery), and never the "unknown" sentinel, which would discard
+    # the exact identity the non-git/archive path specifically requires
+    # (issue #9 remediation).
+    target_sha = resolve_target_sha(repo_root, target_sha_override)
     identity = ec.load_identity(
         config_mk_path=repo_root / "config.mk",
         config_preset=config_preset,
         abi=abi,
         rom_size=rom_size,
         repo_root=repo_root,
+        build_id_override=target_sha,
     )
-    target_sha = resolve_target_sha(repo_root, target_sha_override)
     if embedded_short_sha is not None:
         verify_short_sha(target_sha, embedded_short_sha)
 

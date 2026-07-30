@@ -3,6 +3,7 @@
 machine-distinct status/exit contract (issue #9 verifier remediation)."""
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -540,6 +541,137 @@ class MalformedExtractedTreeTests(unittest.TestCase):
         self._assert_no_traceback(rehearse_result)
         self.assertEqual(rehearse_result.returncode, 0, rehearse_result.stderr)
 
+
+class NestedOuterRepositoryZeroGitCallsTests(unittest.TestCase):
+    """issue #9 fresh-review remediation regression: a genuine non-git
+    extracted candidate nested *inside* an unrelated outer Git
+    repository (a distinct HEAD of its own) must never leak that outer
+    HEAD into any internal identity/manifest/archive/output field, and
+    `check`/`summary`/`rehearse` must make **zero** git subprocess
+    invocations at all when run against it with the required exact
+    --target-sha override -- proven empirically with a logging git
+    shim placed first on PATH (never merely inferred from the observed
+    result)."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Reuses the already-extracted, cached non-git tree (see
+        # `_shared_head_sha_and_tree`) -- no second `git archive`
+        # invocation for this module -- then relocates a private copy of
+        # it underneath a *freshly created outer Git repository* with its
+        # own, deliberately different, HEAD.
+        cls.source_sha, _template = _shared_head_sha_and_tree()
+
+        cls.outer_root = Path(tempfile.mkdtemp(prefix="fe8-issue9-nested-outer-"))
+        subprocess.run(["git", "init", "-q"], cwd=str(cls.outer_root), check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "outer@example.invalid"], cwd=str(cls.outer_root), check=True
+        )
+        subprocess.run(["git", "config", "user.name", "outer"], cwd=str(cls.outer_root), check=True)
+        (cls.outer_root / "outer-file.txt").write_text("unrelated outer repository content\n")
+        subprocess.run(["git", "add", "outer-file.txt"], cwd=str(cls.outer_root), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "outer commit"], cwd=str(cls.outer_root), check=True)
+        cls.outer_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=str(cls.outer_root), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        assert cls.outer_head != cls.source_sha, "fixture invariant: outer/source SHAs must genuinely differ"
+
+        candidate_parent = cls.outer_root / "nested"
+        candidate_parent.mkdir()
+        copy_src = _copy_of_shared_head_tree()
+        cls.candidate = candidate_parent / "candidate"
+        shutil.move(str(copy_src), str(cls.candidate))
+        assert not (cls.candidate / ".git").exists(), "candidate must remain a genuine non-git tree"
+
+        # A logging git shim: every invocation (if any) is appended to a
+        # log file before delegating to the real git -- "zero git calls"
+        # is proven empirically, never merely assumed from the result.
+        cls.shim_dir = Path(tempfile.mkdtemp(prefix="fe8-issue9-git-shim-"))
+        cls.git_log = cls.shim_dir / "git_calls.log"
+        real_git = shutil.which("git")
+        shim_path = cls.shim_dir / "git"
+        shim_lines = [
+            "#!/usr/bin/env bash",
+            'echo "cwd=$(pwd) args=$*" >> "%s"' % cls.git_log,
+            'exec "%s" "$@"' % real_git,
+            "",
+        ]
+        shim_path.write_text("\n".join(shim_lines), encoding="utf-8")
+        shim_path.chmod(0o755)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.outer_root, ignore_errors=True)
+        shutil.rmtree(cls.shim_dir, ignore_errors=True)
+
+    def setUp(self):
+        if self.git_log.exists():
+            self.git_log.unlink()
+
+    def _run_cli_with_shim(self, *args):
+        env = dict(os.environ)
+        env["PATH"] = str(self.shim_dir) + os.pathsep + env.get("PATH", "")
+        return subprocess.run(
+            [sys.executable, "-m", "scripts.release_rehearsal.cli", *args],
+            cwd=str(ROOT), capture_output=True, text=True, env=env,
+        )
+
+    def _assert_zero_git_calls(self):
+        logged = self.git_log.read_text() if self.git_log.exists() else ""
+        self.assertEqual(logged.strip(), "", "expected zero git subprocess calls, got: %r" % logged)
+
+    def _assert_no_traceback(self, result):
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertNotIn("Traceback (most recent call last)", result.stdout)
+
+    def test_check_never_adopts_outer_head_and_makes_no_git_calls(self):
+        result = self._run_cli_with_shim(
+            "check", "--repo-root", str(self.candidate), "--target-sha", self.source_sha,
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["target_sha"], self.source_sha)
+        self.assertNotEqual(data["target_sha"], self.outer_head)
+        self.assertNotIn(self.outer_head, result.stdout)
+        self._assert_zero_git_calls()
+
+    def test_summary_never_adopts_outer_head_and_makes_no_git_calls(self):
+        result = self._run_cli_with_shim(
+            "summary", "--repo-root", str(self.candidate), "--target-sha", self.source_sha,
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("`blocked`", result.stdout)
+        self.assertNotIn(self.outer_head, result.stdout)
+        self._assert_zero_git_calls()
+
+    def test_rehearse_never_adopts_outer_head_and_makes_no_git_calls(self):
+        result = self._run_cli_with_shim(
+            "rehearse", "--repo-root", str(self.candidate), "--target-sha", self.source_sha,
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["archive"]["target_sha"], self.source_sha)
+        self.assertNotEqual(data["archive"]["target_sha"], self.outer_head)
+        self.assertNotIn(self.outer_head, result.stdout)
+        self._assert_zero_git_calls()
+
+    def test_embedded_short_sha_from_supplied_override_is_consistent(self):
+        """DONE criterion: the supplied exact target SHA drives the
+        embedded short-SHA derivation/verification consistently in
+        non-git mode -- never rejected as an "unknown"-sentinel
+        mismatch."""
+        result = self._run_cli_with_shim(
+            "check", "--repo-root", str(self.candidate), "--target-sha", self.source_sha,
+            "--embedded-short-sha", self.source_sha[:8],
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["target_sha_short"], self.source_sha[:8])
+        self._assert_zero_git_calls()
 
 class Issue9LiteralReproductionCommandsTests(unittest.TestCase):
     """The four literal issue #9 reproduction commands (see the issue's

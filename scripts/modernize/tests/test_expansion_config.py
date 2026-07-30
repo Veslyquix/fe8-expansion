@@ -18,6 +18,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "scripts" / "modernize"))
@@ -282,6 +283,53 @@ class ResolveBuildCommitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             commit = ec.resolve_build_commit(None, Path(tmp))
         self.assertEqual(commit, "unknown")
+
+    def test_nested_non_git_tree_never_adopts_outer_repo_head(self):
+        """issue #9 remediation regression: a non-git candidate tree
+        nested *inside* an unrelated outer Git repository (with its own,
+        different HEAD) must resolve to the fixed "unknown" sentinel --
+        never git's own upward-directory-discovery-found outer HEAD."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp) / "outer"
+            outer.mkdir()
+            subprocess.run(["git", "init", "-q"], cwd=str(outer), check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "outer@example.invalid"], cwd=str(outer), check=True
+            )
+            subprocess.run(["git", "config", "user.name", "outer"], cwd=str(outer), check=True)
+            (outer / "outer-file.txt").write_text("unrelated outer repository content\n")
+            subprocess.run(["git", "add", "outer-file.txt"], cwd=str(outer), check=True)
+            subprocess.run(["git", "commit", "-q", "-m", "outer commit"], cwd=str(outer), check=True)
+            outer_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=str(outer), capture_output=True, text=True, check=True,
+            ).stdout.strip()
+
+            candidate = outer / "nested" / "candidate"
+            candidate.mkdir(parents=True)
+            self.assertFalse((candidate / ".git").exists())
+
+            commit = ec.resolve_build_commit(None, candidate)
+            self.assertEqual(commit, "unknown")
+            self.assertNotEqual(commit, outer_head)
+
+    def test_nested_non_git_tree_makes_no_git_subprocess_call_at_all(self):
+        """The fix must never even *invoke* git for a candidate root with
+        no `.git` of its own -- not merely "invoke it, but discard/ignore
+        an unwanted result". A patched `subprocess.run` that raises on
+        any call proves this empirically."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp) / "outer"
+            outer.mkdir()
+            subprocess.run(["git", "init", "-q"], cwd=str(outer), check=True)
+            candidate = outer / "nested" / "candidate"
+            candidate.mkdir(parents=True)
+
+            def _forbidden_run(*args, **kwargs):
+                raise AssertionError(f"unexpected subprocess.run call: {args!r} {kwargs!r}")
+
+            with mock.patch.object(ec.subprocess, "run", _forbidden_run):
+                commit = ec.resolve_build_commit(None, candidate)
+            self.assertEqual(commit, "unknown")
 
 
 class FingerprintDeterminismTests(unittest.TestCase):

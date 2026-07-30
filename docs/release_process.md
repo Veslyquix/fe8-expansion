@@ -412,16 +412,23 @@ tar -x` extraction of this repository's own current HEAD) and:
   never a silent `"unknown"` identity and never a traceback;
 * **never invokes any git command** against the extracted tree -- not
   `git ls-tree` (`scripts/release_rehearsal/allowlist.py`'s
-  `check_allowlist_completeness_non_git`), and not `git submodule status`
+  `check_allowlist_completeness_non_git`), not `git submodule status`
   (`scripts/release_rehearsal/archive_rehearsal.py`'s
   `evaluate_rebuild_eligibility`, unconditionally `"blocked"` for a
-  non-git `repo_root` -- see "Rebuild rehearsal" below). This is not
-  merely a style preference: git's own upward directory discovery could
-  otherwise silently find an unrelated *enclosing* repository (if the
-  extracted tree happens to sit inside one) and report *that*
-  repository's tracked files/submodule state as if they belonged to the
-  extracted tree -- exactly the "pretend the override proves Git content
-  identity" failure this remediation forbids;
+  non-git `repo_root` -- see "Rebuild rehearsal" below), and not `git
+  rev-parse HEAD` (`scripts/modernize/expansion_config.py`'s
+  `resolve_build_commit`, which now only ever runs when `repo_root` is
+  itself bound to its own `.git` metadata, never as an upward-discovery
+  fallback). This is not merely a style preference: git's own upward
+  directory discovery could otherwise silently find an unrelated
+  *enclosing* repository (if the extracted tree happens to sit inside
+  one) and report *that* repository's tracked files/submodule
+  state/HEAD as if they belonged to the extracted tree -- exactly the
+  "pretend the override proves Git content identity" failure this
+  remediation forbids (a fresh-review regression covering this exact
+  nested-inside-an-outer-repository scenario lives in
+  `NestedOuterRepositoryZeroGitCallsTests` in
+  `scripts/release_rehearsal/tests/test_cli.py`);
 * **binds** the supplied `--target-sha` into both the manifest and the
   archive report as an **externally-asserted identity** -- recorded
   verbatim, never independently verified (there is no git metadata in a

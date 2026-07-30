@@ -1,6 +1,7 @@
 """Tests for scripts/release_rehearsal/manifest.py (issue #9)."""
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -348,6 +349,88 @@ class RebuildStatusGatesEligibilityTests(unittest.TestCase):
         # Confirm no reason string originates from the rebuild dimension:
         for reason in manifest["reasons"]:
             self.assertNotIn("rebuild rehearsal status is", reason)
+
+
+class NestedOuterRepositoryIdentityTests(unittest.TestCase):
+    """issue #9 fresh-review remediation regression: build_manifest()'s
+    own identity resolution (ec.load_identity -> resolve_build_commit)
+    must never silently adopt an unrelated *outer* repository's HEAD as
+    this candidate's build identity when repo_root is a non-git tree
+    nested inside one -- the supplied exact --target-sha override must
+    be the sole external build-identity source, threaded consistently
+    into both `target_sha` and the (unpublished but internally-computed)
+    embedded build-commit identity."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        outer = Path(cls.tmp.name) / "outer"
+        outer.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=str(outer), check=True)
+        subprocess.run(["git", "config", "user.email", "outer@example.invalid"], cwd=str(outer), check=True)
+        subprocess.run(["git", "config", "user.name", "outer"], cwd=str(outer), check=True)
+        (outer / "outer-file.txt").write_text("unrelated outer repository content\n")
+        subprocess.run(["git", "add", "outer-file.txt"], cwd=str(outer), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "outer commit"], cwd=str(outer), check=True)
+        cls.outer_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=str(outer), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+        cls.candidate = outer / "nested" / "candidate"
+        cls.candidate.mkdir(parents=True)
+        shutil.copy(ROOT / "config.mk", cls.candidate / "config.mk")
+        cls.source_sha = "c717da36c51f94bc6051ec8954bed4ccec2b76fd"
+        assert cls.outer_head != cls.source_sha
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_target_sha_is_the_supplied_override_never_the_outer_head(self):
+        """resolve_target_sha() -- the single source of truth build_manifest()
+        itself uses for `target_sha` -- must bind to the supplied exact
+        override, never to `.git` upward-discovered from this non-git
+        candidate's outer repository."""
+        target_sha = rm.resolve_target_sha(self.candidate, self.source_sha)
+        self.assertEqual(target_sha, self.source_sha)
+        self.assertNotEqual(target_sha, self.outer_head)
+        self.assertEqual(rm.derive_short_sha(target_sha), self.source_sha[:8])
+
+    def test_target_sha_without_override_is_actionable_never_outer_head(self):
+        """Without an override, this non-git nested candidate must raise
+        the documented actionable --target-sha-required error -- never
+        silently resolve (and adopt) the outer repository's HEAD."""
+        with self.assertRaises(rm.ManifestError) as ctx:
+            rm.resolve_target_sha(self.candidate, None)
+        self.assertIn("--target-sha", str(ctx.exception))
+        self.assertNotIn(self.outer_head, str(ctx.exception))
+
+    def test_identity_build_commit_is_bound_to_the_supplied_override_not_outer_head(self):
+        """The internally-resolved ExpansionIdentity used by
+        build_manifest() must itself be bound to the exact supplied
+        target SHA -- never independently re-derived via a second,
+        unguarded `git rev-parse HEAD` call against `repo_root` (which,
+        nested inside this outer repository, would otherwise adopt
+        `outer_head` here)."""
+        identity = ec.load_identity(
+            config_mk_path=self.candidate / "config.mk",
+            config_preset="release",
+            abi="aapcs",
+            rom_size="16M",
+            repo_root=self.candidate,
+            build_id_override=self.source_sha,
+        )
+        self.assertEqual(identity.build_commit, self.source_sha)
+        self.assertNotEqual(identity.build_commit, self.outer_head)
+
+    def test_no_git_call_leaks_outer_head_when_override_absent(self):
+        """Defense-in-depth: even without any override threaded in,
+        resolve_build_commit() itself must never adopt the outer
+        repository's HEAD for this non-git candidate (see
+        scripts/modernize/expansion_config.py's own guard)."""
+        commit = ec.resolve_build_commit(None, self.candidate)
+        self.assertEqual(commit, "unknown")
+        self.assertNotEqual(commit, self.outer_head)
 
 
 if __name__ == "__main__":

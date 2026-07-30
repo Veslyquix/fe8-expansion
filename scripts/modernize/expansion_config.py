@@ -280,13 +280,24 @@ def resolve_build_commit(override: Optional[str], repo_root: Path) -> str:
     validate_build_id_override first). Otherwise, fall back to `git
     rev-parse HEAD` run from repo_root, which resolves identically for a
     normal branch checkout or a detached HEAD (e.g. a CI checkout of a
-    tag/PR merge commit). If no git metadata is available at all (a source
-    archive with no .git directory, or git itself missing), fall back to
-    the fixed deterministic sentinel "unknown" -- never a timestamp,
-    branch name, or host path.
+    tag/PR merge commit) -- but *only* when `repo_root` is itself bound to
+    its own `.git` metadata (a real repository root). `git rev-parse` is
+    never invoked otherwise: git's own upward directory discovery would
+    silently walk up to and adopt an unrelated *outer* repository's HEAD
+    as this candidate's build identity when `repo_root` is a non-git tree
+    (e.g. an extracted release archive) nested inside someone else's
+    checkout -- a latent identity-confusion bug (issue #9 remediation).
+    If no git metadata is bound to `repo_root` at all (a source archive
+    with no .git entry of its own, or git itself missing/failing), fall
+    back to the fixed deterministic sentinel "unknown" -- never a
+    timestamp, branch name, host path, or an outer/ancestor repository's
+    identity.
     """
     if override:
         return override
+    repo_root = Path(repo_root)
+    if not (repo_root / ".git").exists():
+        return "unknown"
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],

@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "internal",
+  "summary": "Close a latent identity-confusion defect found in fresh review: a genuine non-git extracted release candidate nested inside an unrelated outer Git repository could have scripts/modernize/expansion_config.py's resolve_build_commit() silently adopt that outer repository's HEAD (via git's own upward directory discovery) as this candidate's internal build-commit identity, even though that field is not currently published. resolve_build_commit() now only ever invokes git when repo_root is itself bound to its own .git metadata; the release manifest (check/summary/rehearse) now threads the already-validated, exact target SHA (an explicit --target-sha override in non-git/archive mode, or the real repository's own resolved HEAD) into the embedded build identity as its single source of truth, so a nested non-git candidate never makes any git subprocess call and never substitutes the unresolved 'unknown' sentinel where the exact override is required. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}
