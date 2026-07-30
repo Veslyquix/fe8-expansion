@@ -115,12 +115,39 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
 #include "uiutils.h"
 #include "bm.h"
 
-/* One row per stable locale slot, plus one reserved Back row (settings
- * submenu only), plus one implicit all-zero MenuItemsEnd terminator --
- * mirrors DEBUGTOOLS_HUB_MENU_SLOTS' own sizing contract
- * (src/debugtools_registry.c). 8 (EXPANSION_LOCALE_COUNT) + 2 = 10,
- * comfortably under MENU_ITEM_MAX (11, include/uimenu.h). */
-#define EXPANSION_LANGUAGE_MENU_MAX_ROWS (EXPANSION_LOCALE_COUNT + 2)
+/* One row per BUILD-ENABLED locale slot, plus one reserved Back row
+ * (settings submenu only) -- mirrors DEBUGTOOLS_HUB_MENU_SLOTS' own
+ * sizing contract (src/debugtools_registry.c), but bounded by the
+ * compile-time FE8_EXPANSION_ENABLED_LOCALE_MASK popcount rather than
+ * the full EXPANSION_LOCALE_COUNT identifier-space size: which locales
+ * ExpansionLocale_IsEnabled() ever reports enabled is itself fixed
+ * entirely by that same build-time mask (src/expansion_locale.c), never
+ * by SRAM/runtime state, so BuildLocaleRows below can never write more
+ * than popcount(mask) locale rows + one Back row regardless of
+ * EXPANSION_LOCALE_COUNT's own (much larger, future-reserved) size.
+ * Sizing against the mask instead of the full identifier space matters:
+ * EWRAM is at a premium once issue #6's starter runtime coexists with
+ * issue #18's locale runtime (see expansion-modern-itemexpansion-check's
+ * FE8_ITEM_ID_CAP=0xCE debug probe build), and every build today ships
+ * exactly one enabled locale, so the full 8-slot reservation this used
+ * to carry was ten times more than any real build ever needed. No extra
+ * cushion row is added beyond the exact popcount(mask)+1 (locale rows +
+ * one Back row) bound proven above: BuildLocaleRows can never write
+ * more than that, by construction, and every byte here is now
+ * accounted for (see the same itemexpansion-check comment). Growing to
+ * a multi-locale build simply grows this same expression -- it is not
+ * a fixed constant to maintain by hand. */
+#define EXPANSION_LANGUAGE_MENU_ENABLED_LOCALE_COUNT \
+    (((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 0) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 1) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 2) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 3) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 4) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 5) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 6) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 7) & 1))
+#define EXPANSION_LANGUAGE_MENU_MAX_ROWS \
+    (EXPANSION_LANGUAGE_MENU_ENABLED_LOCALE_COUNT + 1)
 
 /* Sentinel stashed in a locale-row MenuItemDef's otherwise-unused
  * helpMsgId field (u16) to mark the settings submenu's own reserved Back
@@ -148,12 +175,19 @@ static const ExpansionMsgId sLocaleNameMsgIds[EXPANSION_LOCALE_COUNT] =
     EXP_MSG_FRAMEWORK_LOCALE_NAME_QPS_PLOC, /* EXPANSION_LOCALE_QPS_PLOC */
 };
 
-/* RAM-resident MenuItemDef adapters, rebuilt every time the corresponding
- * MenuDef is (re)shown -- same "contributor/runtime code never edits an
+/* RAM-resident MenuItemDef adapter, rebuilt every time either MenuDef
+ * below is (re)shown -- same "contributor/runtime code never edits an
  * engine-owned const MenuItemDef table" idiom as
- * src/debugtools_registry.c's sHubMenuItemDefs. */
-EWRAM_DATA static struct MenuItemDef sSelectorMenuItemDefs[EXPANSION_LANGUAGE_MENU_MAX_ROWS] = {0};
-EWRAM_DATA static struct MenuItemDef sSettingsMenuItemDefs[EXPANSION_LANGUAGE_MENU_MAX_ROWS] = {0};
+ * src/debugtools_registry.c's sHubMenuItemDefs. A SINGLE array shared by
+ * both the first-start selector and the later settings submenu: the two
+ * are never simultaneously live (the selector is a blocking child of
+ * early boot -- src/gamecontrol.c -- that always finishes before the
+ * title/gameplay this settings submenu is only ever reachable from --
+ * src/uiconfig.c -- can begin), and each menu's own
+ * ExpansionLanguageMenu_BuildLocaleRows call fully rewrites every row
+ * (memset then repopulate) immediately before its StartMenu, so neither
+ * ever depends on whatever the other last left behind. */
+EWRAM_DATA static struct MenuItemDef sLanguageMenuItemDefs[EXPANSION_LANGUAGE_MENU_MAX_ROWS] = {0};
 
 struct ExpansionLanguageSelectorProc
 {
@@ -325,7 +359,7 @@ CONST_DATA struct MenuDef gExpansionLanguageSelectorMenuDef =
 {
     {6, 6, 18, 0},
     0,
-    sSelectorMenuItemDefs,
+    sLanguageMenuItemDefs,
     0,
     ExpansionLanguageMenu_SelectorOnEnd,
     0,
@@ -348,7 +382,7 @@ CONST_DATA struct MenuDef gExpansionLanguageSettingsMenuDef =
 {
     {6, 6, 18, 0},
     0,
-    sSettingsMenuItemDefs,
+    sLanguageMenuItemDefs,
     0,
     ExpansionLanguageMenu_SettingsOnEnd,
     0,
@@ -430,7 +464,7 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
 static void ExpansionLanguageMenu_ShowSelector(ProcPtr procPtr)
 {
     ExpansionLanguageMenu_PrepareScreen();
-    ExpansionLanguageMenu_BuildLocaleRows(sSelectorMenuItemDefs, FALSE);
+    ExpansionLanguageMenu_BuildLocaleRows(sLanguageMenuItemDefs, FALSE);
 
     gExpansionLanguageMenuProbe.active = TRUE;
 
@@ -456,7 +490,7 @@ PROC_LABEL(LBL_EXPANSION_LANGUAGE_SELECTOR_DONE),
 
 void ExpansionLanguageMenu_OpenSettings(ProcPtr parent)
 {
-    ExpansionLanguageMenu_BuildLocaleRows(sSettingsMenuItemDefs, TRUE);
+    ExpansionLanguageMenu_BuildLocaleRows(sLanguageMenuItemDefs, TRUE);
 
     gExpansionLanguageMenuProbe.settingsActive = TRUE;
     gExpansionLanguageMenuProbe.settingsOpenCount++;

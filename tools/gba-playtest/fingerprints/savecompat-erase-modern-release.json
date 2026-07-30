@@ -5,27 +5,27 @@
       "framebuffer_hash": "fnv1a64-rgb24:5ef03183babb8c8e",
       "name": "erase-selected",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:df7a3264d4ef32f3"
+      "sram_hash": "fnv1a64-sram-normalized:a645f102708b3044"
     },
     {
       "frame": 1200,
       "framebuffer_hash": "fnv1a64-rgb24:0ef4f599cf9c0122",
       "name": "confirm-shown",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:df7a3264d4ef32f3"
+      "sram_hash": "fnv1a64-sram-normalized:a645f102708b3044"
     },
     {
       "frame": 1400,
       "framebuffer_hash": "fnv1a64-rgb24:723dfbe0cebe0522",
       "name": "erased",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:c44da4727cc92f41"
+      "sram_hash": "fnv1a64-sram-normalized:01b9d5292279388e"
     }
   ],
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "fb177619e4f80a2f4fd67a42c69ea1d5badbfdcd",
+    "sha1": "2be359e6755c2db5622a50de51f749bbe638109e",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

@@ -226,6 +226,9 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "expansion-modern-itemexpansion-check",
                 "MODERN_CONFIG=debug",
                 "MODERN_ABI=aapcs",
+                "EXPANSION_STARTER_CONTENT=1",
+                "EXPANSION_MECHANICS_HOOKS=1",
+                "EXPANSION_MECHANICS_SAMPLE=1",
                 f"-j{jobs}",
             ],
             applicable_note=(
@@ -233,7 +236,11 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "default-cap modern-linker gates above -- never the host lane): "
                 "boots the real modern debug ROM at an expanded item cap (0xCE, "
                 "FE8_EXPANSION_ITEMTEST=1) and runs the item-ID-expansion runtime "
-                "probe (expansion-modern-itemexpansion-check)"
+                "probe (expansion-modern-itemexpansion-check). The same single "
+                "ROM build also carries the issue #6 bundled-content profile "
+                "(EXPANSION_STARTER_CONTENT=1 + hooks + sample), so the authored "
+                "content record and its public-registry mechanic are asserted by "
+                "this same probe run -- no extra gate and no extra ROM build"
             ),
         ),
         Gate(
@@ -245,6 +252,9 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "expansion-modern-itemexpansion-check",
                 "MODERN_CONFIG=release",
                 "MODERN_ABI=aapcs",
+                "EXPANSION_STARTER_CONTENT=1",
+                "EXPANSION_MECHANICS_HOOKS=1",
+                "EXPANSION_MECHANICS_SAMPLE=1",
                 f"-j{jobs}",
             ],
             applicable_note=(

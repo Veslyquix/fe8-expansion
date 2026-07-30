@@ -1,7 +1,7 @@
 {
     "schema_version": 1,
     "name": "debugtools-hub-modern-release",
-    "description": "Release counterpart of debugtools-hub-modern-debug.json: identical frame-for-frame input script (same intro-advance taps, the same repeated SELECT+R hotkey pulse at 600-606/650-656, the same would-be launcher-select A press at 700-706, and the same extended tap sequence that drives the real Chapter 2 flow in a debug build) is replayed against a modern release build. In release, FE8_EXPANSION_DEBUGTOOLS_ENABLED is compiled out: DebugTools_TitleHotkeyCheck/OpenHub/IsChapter2LaunchPending/ConsumePendingChapter2Launch/ArmBootstrapSuppression all compile to inert stubs (see include/expansion_debugtools.h and docs/debugtools.md) -- the hub menu table, the 'Fast Boot: Chapter 2' action body, the pending-request state, and the bootstrap observer proc do not exist in the link at all. Title_IDLE's own vanilla A/START-to-gameplay handling (the ordinary SaveMenu path) is therefore never intercepted or redirected by any debugtools code -- the SELECT+R hotkey (single or repeated) can never open a hub, and no pending Chapter 2 launch request can ever be armed or consumed. gDebugToolsProbe remains a harmless all-zero BSS struct that is never written. Every probe therefore reads 0x00000000 at every checkpoint, proving the entire debugtools subsystem is compiled out, not merely unreached.",
+    "description": "Release counterpart of debugtools-hub-modern-debug.json: the identical frame-for-frame input script (same intro-advance START/A taps, the same repeated SELECT+R hotkey pulses at 600-606/650-656, the would-be launcher-select A press at 700-706, and the extended A/L/RIGHT/DOWN tail that drives the real Chapter 2 fast-boot in a debug build) is replayed against a modern -O2 release build. In release FE8_EXPANSION_DEBUGTOOLS_ENABLED is compiled out: DebugTools_TitleHotkeyCheck/OpenHub/IsChapter2LaunchPending/ConsumePendingChapter2Launch/ArmBootstrapSuppression are inert stubs (see include/expansion_debugtools.h and docs/debugtools.md); the hub menu, the 'Fast Boot: Chapter 2' action, the pending-launch state and the bootstrap observer proc do not exist in the link. The SELECT+R hotkey can never open a hub and no launch request can ever be armed or consumed, so gDebugToolsProbe stays an all-zero BSS struct (every relevant hub/title/launcher field reads 0x00000000 at every checkpoint -- the compiled-out proof). Because the debug hotkeys are inert, the plain START/A tap script drives the vanilla title->new-game path into the game's live opening world-map sequence: gPlaySt.chapterIndex advances from 0x00 (title, frames 300-950) to a real non-title value 0x10 with faction 0x40 (NPC phase) and the map cursor initialised to 0x0e by frames 14000-14900, and the screen animates frame-to-frame. That world-map sequence is exactly what the Proc_FindNext NULL-guard fix (src/worldmap_rm.c / worldmap_automu.c) unfroze; the pre-fix -O2 build locked here on a static screen with chapterIndex stuck at 0x00. The former frozen-framebuffer-hash oracle was deleted because a frozen screen vacuously satisfied a frozen-screen hash regardless of whether debugtools was compiled out; it is replaced by these relocation-independent semantic progress/liveness scalars plus the all-zero gDebugToolsProbe compiled-out proof. See docs/debugtools.md.",
     "frames": [
         {
             "start": 90,
@@ -1821,10 +1821,35 @@
     ],
     "checkpoints": [
         {
+            "name": "title-idle-preboot-inert",
             "frame": 300,
-            "framebuffer": true,
-            "name": "hub-closed-before-hotkey",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x0000"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -1844,14 +1869,54 @@
                     "address": "0x02031510",
                     "size": 4,
                     "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
+                    "size": 4,
+                    "expected": "0x00000000"
                 }
             ]
         },
         {
+            "name": "title-hotkey-pulse1-inert",
             "frame": 630,
-            "framebuffer": true,
-            "name": "hub-opened-after-first-pulse",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x0000"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -1871,14 +1936,54 @@
                     "address": "0x02031510",
                     "size": 4,
                     "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
+                    "size": 4,
+                    "expected": "0x00000000"
                 }
             ]
         },
         {
+            "name": "title-hotkey-pulse2-inert",
             "frame": 680,
-            "framebuffer": true,
-            "name": "hub-still-single-after-repeated-pulse",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x0000"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -1898,14 +2003,54 @@
                     "address": "0x02031510",
                     "size": 4,
                     "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
+                    "size": 4,
+                    "expected": "0x00000000"
                 }
             ]
         },
         {
+            "name": "title-a-press-inert",
             "frame": 706,
-            "framebuffer": true,
-            "name": "pre-launch",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x0000"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -1925,14 +2070,54 @@
                     "address": "0x02031510",
                     "size": 4,
                     "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
+                    "size": 4,
+                    "expected": "0x00000000"
                 }
             ]
         },
         {
+            "name": "newgame-intro-pre-worldmap-inert",
             "frame": 950,
-            "framebuffer": true,
-            "name": "gamecontrol-consumed-launch",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x00"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x0000"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -1952,14 +2137,54 @@
                     "address": "0x02031510",
                     "size": 4,
                     "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
+                    "size": 4,
+                    "expected": "0x00000000"
                 }
             ]
         },
         {
+            "name": "worldmap-intro-live-progress",
             "frame": 14000,
-            "framebuffer": true,
-            "name": "chapter2-interactive-stable",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x10"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x40"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x000e"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -1977,16 +2202,56 @@
                 },
                 {
                     "address": "0x02031510",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
                     "size": 4,
                     "expected": "0x00000000"
                 }
             ]
         },
         {
+            "name": "worldmap-intro-live-progress-sustained",
             "frame": 14900,
-            "framebuffer": true,
-            "name": "post-interactive-cursor-response",
+            "framebuffer": false,
             "probes": [
+                {
+                    "address": "0x020210ae",
+                    "size": 1,
+                    "expected": "0x10"
+                },
+                {
+                    "address": "0x020210af",
+                    "size": 1,
+                    "expected": "0x40"
+                },
+                {
+                    "address": "0x020210bb",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x020210ec",
+                    "size": 1,
+                    "expected": "0x01"
+                },
+                {
+                    "address": "0x02021100",
+                    "size": 2,
+                    "expected": "0x000e"
+                },
                 {
                     "address": "0x02031504",
                     "size": 4,
@@ -2004,6 +2269,21 @@
                 },
                 {
                     "address": "0x02031510",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031514",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x02031518",
+                    "size": 4,
+                    "expected": "0x00000000"
+                },
+                {
+                    "address": "0x0203151c",
                     "size": 4,
                     "expected": "0x00000000"
                 }

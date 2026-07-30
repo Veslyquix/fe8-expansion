@@ -5,13 +5,13 @@
       "framebuffer_hash": "fnv1a64-rgb24:fd5b926ec2fb1e7d",
       "name": "no-dialog-normal-savemenu",
       "probes": [],
-      "sram_hash": "fnv1a64-sram-normalized:b60f07fffd277a59"
+      "sram_hash": "fnv1a64-sram-normalized:8ee280ecd66bffcc"
     }
   ],
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "985dca39aeee065bdefd8a32b561c4b8cbcaddc4",
+    "sha1": "f82190c2f3ccd7089cae2b9c040c1e3c0124817b",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

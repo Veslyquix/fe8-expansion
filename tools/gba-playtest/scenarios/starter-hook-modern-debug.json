@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "name": "starter-hook-modern-debug",
+  "description": "Issue #6 mechanics-hook runtime proof (starter-foundation profile: EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1). Reuses the issue #13 combat navigation to Chapter 4's scripted FIGHT so a REAL ComputeBattleUnitStats runs, then reads gExpansionMechanicsProbe's semantic counters (never a pointer): the sample registered once through the public API (registerOkCount=1), the seam applied once per combatant (applyCount=2), each apply iterated exactly the one registered mechanic (lastAppliedCount=1), the net battleDefense delta of the last apply was the sample's bounded +1 (lastDefenseDelta=1), and the full-HP guard actually fired for both full-HP combatants (sampleTriggerCount=2), with no rejected registrations (registerErrCount=0, lastResult=0 OK). The enemy unit's maxHP/curHP at gUnitArrayRed[0] (0x0202eba6/0x0202eba7) is 15/15 alive before the FIGHT and 15/0 dead after the resolving hit, proving the counters come from a genuine battle the engine resolved -- not a faked direct write. Semantic scalars only; NOT framebuffer or timing.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 150,
+      "end": 155,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 270,
+      "end": 275,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 330,
+      "end": 335,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 390,
+      "end": 395,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 450,
+      "end": 455,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 600,
+      "end": 606,
+      "keys": [
+        "SELECT",
+        "R"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 770,
+      "end": 776,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 830,
+      "end": 836,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 904,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1300,
+      "end": 1306,
+      "keys": [
+        "L"
+      ]
+    },
+    {
+      "start": 1360,
+      "end": 1366,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1650,
+      "end": 1655,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1760,
+      "end": 1765,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1870,
+      "end": 1875,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1980,
+      "end": 1985,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2090,
+      "end": 2095,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2200,
+      "end": 2205,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2310,
+      "end": 2315,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2420,
+      "end": 2425,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2530,
+      "end": 2535,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2640,
+      "end": 2645,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2750,
+      "end": 2755,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2860,
+      "end": 2865,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2970,
+      "end": 2975,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3080,
+      "end": 3085,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3250,
+      "end": 3255,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 3285,
+      "framebuffer": false,
+      "name": "enemy-alive-before-fight",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x0f"
+        }
+      ]
+    },
+    {
+      "frame": 3296,
+      "framebuffer": false,
+      "name": "enemy-dead-after-real-hit",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3320,
+      "framebuffer": false,
+      "name": "mechanics-probe-semantic-counters",
+      "probes": [
+        {
+          "address": "0x02031afc",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x02031b00",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031b04",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x02031b08",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x02031b0c",
+          "size": 4,
+          "expected": "0x00000001"
+        },
+        {
+          "address": "0x02031b10",
+          "size": 4,
+          "expected": "0x00000002"
+        },
+        {
+          "address": "0x02031b14",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    }
+  ]
+}

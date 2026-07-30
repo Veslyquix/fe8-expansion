@@ -33,6 +33,9 @@ MODERN_GOALS := \
 	expansion-modern-localization-runtime-prefs-check \
 	expansion-modern-localization-runtime-save-check \
 	expansion-modern-localization-runtime-shifted-check \
+	expansion-modern-starter-hook-check \
+	expansion-modern-starter-qol-check \
+	expansion-modern-starter-runtime-check \
 	expansion-modern-idspace-active-check \
 	expansion-modern-clean
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
@@ -142,6 +145,17 @@ ifeq ($(FE8_EXPANSION_ITEMTEST),1)
 MODERN_DEFINE_FLAGS += -DFE8_EXPANSION_ITEMTEST_ENABLED=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
+
+# Issue #6 bundled content example: its ORIGINAL display text is authored in
+# src/data/items_expansion.json and generated into a BUILD-LOCAL header
+# (build/generated/data/items_expansion_content_text.h, see generated_data.mk)
+# rather than added to the shared, Huffman-compressed message table, which
+# would re-encode a DEFAULT build's text blob. Only the content profile puts
+# that directory on the include path, so a default build cannot even see the
+# header -- and its compile flags, and therefore its objects, are unchanged.
+ifeq ($(EXPANSION_STARTER_CONTENT),1)
+MODERN_INCLUDE_FLAGS += -I$(GENERATED_DATA_OUT_DIR)
+endif
 MODERN_WARNING_FLAGS := \
 	-Wall -Wextra \
 	-Werror=strict-prototypes \
@@ -697,6 +711,16 @@ $(MODERN_OUTPUT_DIR)/src/data_$(1).o: $(GENERATED_DATA_OUT_DIR)/data_$(1).c
 endef
 
 $(foreach t,$(GENERATED_DATA_LINKED_TABLES),$(eval $(call GENERATED_DATA_MODERN_OVERRIDE_RULES,$(t))))
+
+# Issue #6: in the content profile the bundled content module compiles the
+# BUILD-LOCAL generated authored-text header, so make it an explicit
+# prerequisite -- the generic -MM -MG header scan only learns about it after
+# a first successful compile, and this must work on a clean tree too. Only
+# declared when the flag is on: a default build neither generates nor
+# consumes that header.
+ifeq ($(EXPANSION_STARTER_CONTENT),1)
+$(MODERN_OUTPUT_DIR)/src/expansion_starter_content.o: $(GENERATED_DATA_CONTENT_TEXT_HEADER)
+endif
 
 # Issue #5 Batch 3a: explicit (non-pattern) compile rule for the `units`
 # table's synthetic slot object (see the MODERN_ALL_C_OBJECTS +=
@@ -1331,6 +1355,11 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--enabled-locales "$(EXPANSION_ENABLED_LOCALES)" \
 		--default-locale "$(EXPANSION_DEFAULT_LOCALE)" \
 		--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" \
+		--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
+		--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
+		--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
+		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
+		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
@@ -1383,10 +1412,15 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 	--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 	--revision "$(EXPANSION_ROM_REVISION)" \
-	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" \
 	--enabled-locales "$(EXPANSION_ENABLED_LOCALES)" \
 	--default-locale "$(EXPANSION_DEFAULT_LOCALE)" \
-	--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" 2>&1)
+	--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" \
+	--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
+	--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
+	--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
+	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
+	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
+	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
     $(error $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
@@ -1443,7 +1477,19 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
 	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)u \
 	-DFE8_EXPANSION_DEFAULT_LOCALE_ID=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID) \
-	-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)
+	-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED) \
+	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
+	-DFE8_EXPANSION_MECHANICS_SAMPLE=$(EXPANSION_MECHANICS_SAMPLE) \
+	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU) \
+	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT)
+
+  # Internal modern-build provenance discriminator (NOT a user feature flag,
+  # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
+  # every modern translation unit so always-linked negative-control state
+  # (e.g. the issue #6 danger/range overlay probe in src/playerphase.c) stays
+  # present in every modern build, while the legacy build keeps
+  # include/expansion_config.h's 0 fallback and emits no orphan ewram_data.
+  MODERN_CFLAGS += -DFE8_EXPANSION_MODERN_BUILD=1
  endif
 endif
 
@@ -1497,6 +1543,11 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'enabled_locale_mask=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)'; \
 		printf '%s\n' 'default_locale_id=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID)'; \
 		printf '%s\n' 'pseudo_locale_enabled=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)'; \
+		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
+		printf '%s\n' 'mechanics_sample=$(EXPANSION_MECHANICS_SAMPLE)'; \
+		printf '%s\n' 'danger_overlay_menu=$(EXPANSION_DANGER_OVERLAY_MENU)'; \
+		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
+		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
 	} > "$@.tmp"
@@ -2382,6 +2433,185 @@ expansion-modern-combat-check:
 		'$(MODERN_CONFIG)'
 endif
 
+# Issue #6 starter-foundation runtime gate. The positive scenarios need a ROM
+# built with the starter features ON, so this gate builds ONE dedicated
+# starter-foundation profile ROM per (config, abi) -- all EXPANSION_MECHANICS_*
+# and EXPANSION_DANGER_OVERLAY_MENU on -- into its OWN build root, so it never
+# overwrites the default flags-off baseline ROM the linker/budget gates check.
+# That single profile ROM is then reused by every positive scenario below,
+# while each default-disabled negative control runs against the ordinary
+# MODERN_ROM: same route, opposite semantic probe outcomes. Reuses the issue
+# #13 gba-playtest harness (no new framework).
+MODERN_STARTER_PROFILE_ROOT := build/expansion-modern-starter
+MODERN_STARTER_PROFILE_ROM := $(MODERN_STARTER_PROFILE_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
+
+# Mechanics-hook scenarios. The debug pair navigates Chapter 4 through the
+# debug-only Fast Boot launcher (issue #13's proven combat route), so it is
+# legitimately debug-only. The release pair instead uses the ORDINARY
+# clean-boot Normal-difficulty route shared with the QoL scenarios: the
+# Prologue's opening event contains a real scripted bout, so
+# ComputeBattleUnitStats() genuinely runs with no launcher, no debug tools and
+# no save fixture.
+MODERN_STARTER_HOOK_SCENARIO := tools/gba-playtest/scenarios/starter-hook-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-hook-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_SCENARIO := tools/gba-playtest/scenarios/starter-hook-clean-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-clean-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-hook-clean-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-clean-negative-modern-$(MODERN_CONFIG).json
+
+# Player QoL danger/range overlay scenarios. Both configs use the same
+# ordinary clean-boot Normal-difficulty route to the real Prologue map.
+MODERN_STARTER_QOL_SCENARIO := tools/gba-playtest/scenarios/starter-danger-overlay-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_QOL_FINGERPRINT := tools/gba-playtest/fingerprints/starter-danger-overlay-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_QOL_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-danger-overlay-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_QOL_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-danger-overlay-negative-modern-$(MODERN_CONFIG).json
+
+expansion-modern-starter-profile-rom:
+	$(MAKE) expansion-modern-rom \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_BUILD_ROOT=$(MODERN_STARTER_PROFILE_ROOT) \
+		EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 \
+		EXPANSION_DANGER_OVERLAY_MENU=1
+
+MODERN_STARTER_PROFILE_ELF := $(MODERN_STARTER_PROFILE_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.elf
+
+# sizeof(struct ItemData) (include/bmitem.h). Used only to turn the linked
+# gItemData symbol size into a record count for the negative below; a future
+# struct-layout change fails that check loudly instead of silently.
+MODERN_ITEM_DATA_RECORD_BYTES := 36
+
+# Issue #6 content-DISABLED artifact negative, run against the SAME starter
+# profile ROM/ELF the scenarios above already built (no extra ROM build, no
+# second harness). The starter profile is the strongest possible negative:
+# every other issue #6 flag is ON (hooks, sample, overlay) and the item cap is
+# the vanilla default, so anything it still lacks is attributable to
+# EXPANSION_STARTER_CONTENT=0 alone.
+#
+# It asserts three semantic facts a scenario cannot see:
+#   1. the content mechanic's callback is not even compiled in, so it cannot
+#      have been registered -- which is what the scenarios' registerOkCount=1
+#      (sample only, versus 2 in the content profile) means at the artifact
+#      level;
+#   2. the content name accessor -- the only production seam that can read
+#      authored content text -- is absent, so src/bmitem.c's GetItemName() is
+#      the vanilla one; and
+#   3. the authored display text itself appears NOWHERE in the ROM image, and
+#      gItemData is still the 206-record vanilla table.
+# The authored string is read from the authoring source of truth, so renaming
+# the content item cannot make this negative vacuous.
+define modern_starter_content_disabled_negative
+	@set -eu; \
+	elf='$(MODERN_STARTER_PROFILE_ELF)'; \
+	rom='$(MODERN_STARTER_PROFILE_ROM)'; \
+	for symbol in ExpansionStarterContentCharmEvade ExpansionStarterContentItemName; do \
+		if "$(MODERN_NM)" "$$elf" | grep -q " $$symbol$$"; then \
+			printf 'error: %s is linked into the content-DISABLED starter profile ROM\n' "$$symbol" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	name=$$("$(PYTHON)" -c "import json; print(json.load(open('src/data/items_expansion.json'))['items'][0]['authoringName'])"); \
+	if LC_ALL=C grep -a -q -F "$$name" "$$rom"; then \
+		printf 'error: authored content text "%s" is present in the content-DISABLED ROM\n' "$$name" >&2; \
+		exit 1; \
+	fi; \
+	size=$$("$(MODERN_NM)" -S "$$elf" | awk '$$4 == "gItemData" { print $$2 }'); \
+	if [ -z "$$size" ]; then \
+		printf 'error: gItemData has no linked size in %s\n' "$$elf" >&2; \
+		exit 1; \
+	fi; \
+	expected=$$("$(PYTHON)" -c "from scripts.generated_data.items import schema; print(len(schema.load_records('src/data/items.json', item_cap=0xCD)) * $(MODERN_ITEM_DATA_RECORD_BYTES))"); \
+	if [ $$(( 0x$$size )) -ne "$$expected" ]; then \
+		printf 'error: content-disabled gItemData is 0x%s bytes, expected %s (the vanilla-cap table)\n' "$$size" "$$expected" >&2; \
+		exit 1; \
+	fi; \
+	printf 'Content-disabled artifact negative passed (no content callback/accessor symbol, no authored text in the ROM, vanilla-cap gItemData): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endef
+
+# Fail loudly rather than silently skipping when a scenario/fingerprint pair
+# named by the matrix above is missing.
+define modern_starter_require_pair
+	@if [ ! -f "$(1)" ] || [ ! -f "$(2)" ]; then \
+		printf '%s\n' "error: missing starter scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(1)" >&2; \
+		printf '  fingerprint: %s\n' "$(2)" >&2; \
+		exit 1; \
+	fi
+endef
+
+ifeq ($(MODERN_CONFIG),debug)
+expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_SCENARIO),$(MODERN_STARTER_HOOK_FINGERPRINT))
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_NEG_SCENARIO),$(MODERN_STARTER_HOOK_NEG_FINGERPRINT))
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_NEG_FINGERPRINT)" \
+		--policy behavior
+	$(modern_starter_content_disabled_negative)
+	@printf 'Modern ROM starter-hook-check passed (positive registerOk=1/apply=2/sampleTrigger=2 on profile ROM; negative all-zero on default ROM; content-disabled artifact negative): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+else
+expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_CLEAN_SCENARIO),$(MODERN_STARTER_HOOK_CLEAN_FINGERPRINT))
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO),$(MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT))
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_CLEAN_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_CLEAN_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT)" \
+		--policy behavior
+	$(modern_starter_content_disabled_negative)
+	@printf 'Modern ROM starter-hook-check passed (clean-boot Prologue bout: positive registerOk=1/apply=2/sampleTrigger=2/delta=+1 on profile ROM; negative all-zero on default ROM, same resolved battle; content-disabled artifact negative): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endif
+
+# Player QoL danger/range overlay runtime gate. Runs in BOTH configs against
+# the same ordinary clean-boot route (no launcher, no debug tools, no save
+# fixture): the positive proves menuSelect/dangerDisplay 0->1->2, an exact
+# 39-tile danger range, rangeGraphicsActive toggling 1->0 and
+# cancelReturnCount 0->1->2 on a real, interactive Prologue map; the negative
+# proves the always-linked probe stays all-zero on the default flags-off ROM
+# reached by the same route.
+expansion-modern-starter-qol-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	$(call modern_starter_require_pair,$(MODERN_STARTER_QOL_SCENARIO),$(MODERN_STARTER_QOL_FINGERPRINT))
+	$(call modern_starter_require_pair,$(MODERN_STARTER_QOL_NEG_SCENARIO),$(MODERN_STARTER_QOL_NEG_FINGERPRINT))
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_QOL_SCENARIO)" \
+		--expected "$(MODERN_STARTER_QOL_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_QOL_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_QOL_NEG_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM starter-qol-check passed (positive menuSelect/display 0->1->2, 39 danger tiles, cancel 0->1->2 on profile ROM; negative all-zero on default ROM): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
+# One entry point for the whole issue #6 starter runtime matrix. Both member
+# checks depend on the same expansion-modern-starter-profile-rom, so a single
+# make invocation builds that profile ROM once and reuses it for every
+# scenario.
+expansion-modern-starter-runtime-check: expansion-modern-starter-hook-check \
+		expansion-modern-starter-qol-check
+	@printf 'Modern ROM starter runtime matrix passed (mechanics hook + player QoL overlay, positive and default-disabled negative): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
 # Normal save/load runtime scenario (issue #13 closure). Reuses new-game.json's
 # clean-boot SaveMenu New Game -> slot 0 write, then a real A+B+SELECT+START
 # soft reset (RAM reinitialized), then the top-level SaveMenu RESTART item ->
@@ -2765,15 +2995,33 @@ endif
 # with full navigation input, stalls on the world map exactly the same way),
 # so the map-dependent stages are proven against the debug configuration.
 # See docs/id_space.md, "Runtime probe".
+#
+# Issue #6 (Sprint 2) rides this SAME gate and this SAME single ROM build
+# rather than adding a second harness or a second ROM: when the caller also
+# supplies the bundled-content profile (EXPANSION_STARTER_CONTENT=1, which
+# itself requires EXPANSION_MECHANICS_HOOKS=1, plus EXPANSION_MECHANICS_SAMPLE=1
+# so both the content mechanic and the pre-existing content-free sample are
+# registered), the runner additionally asserts the authored content record's
+# original name/description/uses/type/attributes/icon and the content
+# mechanic's bounded, item-gated bonus. Requiring them here (instead of
+# silently skipping) keeps the gate's contract explicit and its ROM one build.
 MODERN_ITEMEXPANSION_SCRIPT := tools/gba-playtest/run_item_expansion_checks.py
 MODERN_ITEMEXPANSION_DIR := $(MODERN_OUTPUT_DIR)/itemexpansion
 MODERN_ITEMEXPANSION_STAGES := $(if $(filter release,$(MODERN_CONFIG)),boot,all)
+MODERN_ITEMEXPANSION_ACTIVE_HEADER := $(GENERATED_DATA_ACTIVE_HEADER)
 
 expansion-modern-itemexpansion-check: expansion-modern-rom
 	@if [ "$(FE8_EXPANSION_ITEMTEST)" != "1" ] || [ -z "$(FE8_ITEM_ID_CAP)" ]; then \
 		printf 'error: %s needs a probe build\n' 'expansion-modern-itemexpansion-check' >&2; \
-		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s\n' \
+		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1\n' \
 			'expansion-modern-itemexpansion-check' '$(MODERN_CONFIG)' '$(MODERN_ABI)' >&2; \
+		exit 1; \
+	fi
+	@if [ "$(EXPANSION_STARTER_CONTENT)" = "1" ] && \
+		{ [ "$(EXPANSION_MECHANICS_HOOKS)" != "1" ] || [ "$(EXPANSION_MECHANICS_SAMPLE)" != "1" ]; }; then \
+		printf 'error: %s with EXPANSION_STARTER_CONTENT=1 needs the full content profile\n' \
+			'expansion-modern-itemexpansion-check' >&2; \
+		printf '  add: EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1\n' >&2; \
 		exit 1; \
 	fi
 	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_ITEMEXPANSION_SCRIPT)" \
@@ -2781,13 +3029,16 @@ expansion-modern-itemexpansion-check: expansion-modern-rom
 		--elf "$(MODERN_ELF)" \
 		--config "$(MODERN_CONFIG)" \
 		--cap "$(FE8_ITEM_ID_CAP)" \
+		--content "$(EXPANSION_STARTER_CONTENT)" \
+		--active-header "$(MODERN_ITEMEXPANSION_ACTIVE_HEADER)" \
 		--require-stages "$(MODERN_ITEMEXPANSION_STAGES)" \
 		--out-dir "$(MODERN_ITEMEXPANSION_DIR)"
-	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s)\n' \
-		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)'
+	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s content=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)' '$(EXPANSION_STARTER_CONTENT)'
 
 expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-overlay-audit \
+		expansion-modern-starter-runtime-check \
 		expansion-modern-boot-check \
 		expansion-modern-title-check \
 		expansion-modern-debugtools-check \
@@ -2834,6 +3085,10 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-relocs \
 	expansion-modern-overlay-audit \
 	expansion-modern-shifted-check \
-	expansion-modern-linker-check
+	expansion-modern-linker-check \
+	expansion-modern-starter-profile-rom \
+	expansion-modern-starter-hook-check \
+	expansion-modern-starter-qol-check \
+	expansion-modern-starter-runtime-check
 
 -include $(wildcard $(sort $(MODERN_COHORT_DEPS) $(MODERN_ALL_DEPS) $(MODERN_FE6SIO_OBJ:.o=.d)))

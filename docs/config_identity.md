@@ -25,6 +25,10 @@ defaults (see "Legacy build path" below).
 | `EXPANSION_ROM_REVISION` | integer, `[0, 255]` | `0` | ROM header "software version" byte (fingerprint) |
 | `EXPANSION_BUILD_ID` | empty, or 4-40 hex characters | empty | embedded build commit override |
 | `EXPANSION_SAVE_COMPAT_EPOCH` | integer, `[0, 65535]` | `1` | save-format compatibility gate (see `docs/save_format.md`); **not** part of the fingerprint above |
+| `EXPANSION_MECHANICS_HOOKS` | `0` or `1` | `0` | issue #6 starter feature (fingerprint) -- link the public battle-stat mechanics hook registry |
+| `EXPANSION_MECHANICS_SAMPLE` | `0` or `1` | `0` | issue #6 starter feature (fingerprint) -- register the content-free sample mechanic; requires `EXPANSION_MECHANICS_HOOKS=1` |
+| `EXPANSION_DANGER_OVERLAY_MENU` | `0` or `1` | `0` | issue #6 starter feature (fingerprint) -- expose the player danger/range overlay map-menu surface |
+| `EXPANSION_STARTER_CONTENT` | `0` or `1` | `0` | issue #6 starter feature (fingerprint) -- link the bundled generated-data content example; requires `EXPANSION_MECHANICS_HOOKS=1` **and** an item ID cap reaching `ITEM_EXPANSION_CE` (`FE8_ITEM_ID_CAP=0xCE` or higher) |
 
 Every value has a `?=` default, so overriding on the `make` command line
 (e.g. `make expansion-modern-rom EXPANSION_ROM_TITLE=MYHACK`) or via the
@@ -113,6 +117,7 @@ compatibility-relevant setting changes.
 | `rom_size_bytes` | affects ROM data layout/padding |
 | `text_shift` | affects link-time ROM layout |
 | `rom_title`, `rom_game_code`, `rom_maker_code`, `rom_revision` | ROM identity; changing these produces a distinguishable ROM (e.g. for emulator save matching, patch tooling) |
+| `features.mechanics_hooks`, `features.mechanics_sample`, `features.danger_overlay_menu`, `features.starter_content` | issue #6 starter-feature opt-ins; each links different code and/or data, so two builds that differ in any of them are behaviourally distinguishable. Diagnostic identity only -- see `docs/starter_features.md`; none of them touches the save format |
 
 Settings that are **not** folded into the fingerprint (e.g. the resolved
 `build_commit`) are informational only: two builds from different commits

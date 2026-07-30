@@ -3,9 +3,13 @@
   "items": [
     {
       "item": "ITEM_EXPANSION_CE",
+      "authoringName": "Sample Charm",
+      "authoringDescription": "Bundled sample item.",
+      "authoringUseDescription": "A framework example item. Its bearer evades better.",
       "weaponType": "ITYPE_ITEM",
-      "maxUses": 1,
-      "iconId": 0
+      "attributes": ["IA_UNSELLABLE"],
+      "maxUses": 3,
+      "iconId": 222
     }
   ]
 }

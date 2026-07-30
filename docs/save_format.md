@@ -556,25 +556,46 @@ name embedded in the hash text itself (never ambiguous downstream):
   no-dialog checkpoint, `savecompat-erase.json`'s post-erase checkpoints,
   and the migrated-v1-load reuse of `savecompat-current.json`) whose SRAM
   legitimately contains intentionally build-variable diagnostic bytes:
-  `ExpansionSaveMeta.buildCommitShort` (9 bytes, absolute SRAM offset
-  29640) and its dependent metadata `checksum` (2 bytes, absolute SRAM
-  offset 29650) -- see "`struct ExpansionSaveMeta` layout" above. Without
-  normalization, a committed fingerprint for one of these checkpoints
-  would break on every legitimate follow-up commit, since
-  `buildCommitShort` embeds this build's live `FE8_EXPANSION_BUILD_COMMIT`
-  (and the checksum's domain covers it).
+  `ExpansionSaveMeta.configFingerprint` (17 bytes, absolute SRAM offset
+  29620 / `0x73B4`), `ExpansionSaveMeta.buildCommitShort` (9 bytes,
+  absolute SRAM offset 29640 / `0x73C8`) and its dependent metadata
+  `checksum` (2 bytes, absolute SRAM offset 29650 / `0x73D2`) -- see
+  "`struct ExpansionSaveMeta` layout" above. The three ordered,
+  non-overlapping ranges are `{29620, 17}`, `{29640, 9}`, `{29650, 2}`.
+  Without normalization, a committed fingerprint for one of these
+  checkpoints would break on every legitimate follow-up commit
+  (`buildCommitShort` embeds this build's live `FE8_EXPANSION_BUILD_COMMIT`,
+  and the checksum's domain covers it) or on any config-schema change
+  (`configFingerprint`; see below).
 
-**Why every other field stays covered.** `configFingerprint` and
-`frameworkVersionPacked` are diagnostic fields too, but neither is
-excluded: `configFingerprint` is derived only from compatibility-relevant
-config settings (`scripts/modernize/expansion_config.py`'s
-`fingerprint_fields()`), so -- unlike `buildCommitShort` -- it does not
-vary per-commit in ordinary development, and a normalized hash that still
-covers it retains detection of any unexpected drift there. `magic`,
-`formatVersion`, and `compatEpoch` (the three fields that actually gate
-compatibility -- see "Compatibility vs. diagnostic fields" above) are
-never excluded either; a normalized hash must still change if any of
-those is corrupted, exactly as the exact hash does.
+**Why `configFingerprint` is excluded (issue #6 sprint-1 remediation).**
+`configFingerprint` is a purely diagnostic field: it records which
+compatibility-relevant config settings
+(`scripts/modernize/expansion_config.py`'s `fingerprint_fields()`) a build
+was compiled with, but it **never** gates classification (see
+"Compatibility vs. diagnostic fields" above) and, critically, config
+feature flags change runtime **behaviour/identity without changing the
+save layout or `compatEpoch`**. An earlier revision deliberately left it
+*in* the normalized hash on the assumption it "does not vary per-commit".
+Issue #6 disproved that: adding a config feature flag -- even one
+defaulting to OFF -- changes the config-schema fingerprint (which is also
+preset-derived, so debug and release already differ: `2295d6fc2407d1be`
+vs `89415b300f350ce6`). That drifted the "same persisted save" normalized
+hash and produced a false gate failure with **zero** change to the actual
+save bytes. Because a behaviour-comparison fingerprint asks "is this the
+same *persisted save*", not "was this the same *build config*",
+`configFingerprint` is now normalized out alongside
+`buildCommitShort`/`checksum`; doing so converges the debug and release
+normalized hashes onto a single build-independent value (proven in
+`tools/gba-playtest/tests/test_sram_hash_normalization.py`). This does not
+weaken the oracle: exact ROM identity is still verified by the fingerprint
+`rom` provenance/ROM fields, and savecompat semantics are still proven by
+the classifier probes, the `SaveCompatState`, and every other SRAM byte.
+`magic`, `formatVersion`, and `compatEpoch` (the three fields that
+actually gate compatibility) and `frameworkVersionPacked` are **never**
+excluded; a normalized hash must still change if any of those, or any
+save-payload byte, is corrupted -- exactly as the exact hash does, and as
+that test suite asserts.
 
 **Excluding the checksum bytes from the hash does not weaken corruption
 detection.** `save_format_tool.py`'s `classify_image()` independently

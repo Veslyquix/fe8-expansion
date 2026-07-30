@@ -244,10 +244,18 @@ class CharactersSchemaReferenceTests(unittest.TestCase):
 
 class CharactersSchemaRangeTests(unittest.TestCase):
     def test_bad_text_id_detected(self):
+        # The upper bound is MSG_COUNT - 1, read live from
+        # include/constants/msg.h -- never a copied literal, which would go
+        # stale (and silently stop asserting the real bound) the moment the
+        # text pipeline emits another message.
+        from scripts.generated_data.items.schema import read_msg_count
+
+        upper = read_msg_count() - 1
         _, diagnostics = _validate("bad_text_id.json")
         self.assertFalse(diagnostics.ok)
         messages = [str(e) for e in diagnostics.errors]
-        self.assertTrue(any("nameTextId 999999 out of range [0, 3413]" in m for m in messages), messages)
+        expected = "nameTextId 999999 out of range [0, {}]".format(upper)
+        self.assertTrue(any(expected in m for m in messages), messages)
 
     def test_bad_portrait_detected(self):
         _, diagnostics = _validate("bad_portrait.json")

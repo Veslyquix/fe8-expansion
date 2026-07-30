@@ -52,17 +52,28 @@ from sram_hash_mirror import compute_sram_hash  # noqa: E402
 from test_save_format_tool import make_header, make_image, make_meta  # noqa: E402
 
 # The exact byte ranges committed in scenarios/savecompat-current.json and
-# scenarios/savecompat-erase.json: (buildCommitShort, 9 bytes) and
-# (checksum, 2 bytes), both meta-relative offsets translated to absolute
-# SRAM offsets via sft.META_OFFSET. Re-derived from save_format_tool.py's
-# own constants here (rather than hardcoded a second time) so this test
-# fails loudly if the struct layout ever moves.
-BUILD_COMMIT_META_OFFSET = 0x24  # magic(4)+ver(1)+pad(1)+epoch(2)+abi(1)+pad(3)+fwver(4)+cfgfp(17)+pad(3)
+# scenarios/savecompat-erase.json: (configFingerprint, 17 bytes),
+# (buildCommitShort, 9 bytes) and (checksum, 2 bytes), all meta-relative
+# offsets translated to absolute SRAM offsets via sft.META_OFFSET.
+# Re-derived from save_format_tool.py's own constants here (rather than
+# hardcoded a second time) so this test fails loudly if the struct layout
+# ever moves. configFingerprint was added to the exclusion set in the
+# issue #6 sprint-1 gate remediation: it is a purely diagnostic field
+# (config feature flags change behaviour/identity but NOT save
+# layout/epoch), and it is preset-derived (debug vs release fingerprints
+# differ), so a build-to-build config-schema change would otherwise drift
+# the "same persisted save" normalized hash -- exactly the drift this
+# remediation removes. Ordered ascending and non-overlapping, matching the
+# scenario/backend requirement.
+CONFIG_FINGERPRINT_META_OFFSET = 0x10  # magic(4)+ver(1)+pad(1)+epoch(2)+abi(1)+pad(3)+fwver(4) -> cfgfp
+CONFIG_FINGERPRINT_LENGTH = 17          # 16 hex chars + NUL
+BUILD_COMMIT_META_OFFSET = 0x24  # ... +cfgfp(17)+pad(3) -> buildCommitShort
 BUILD_COMMIT_LENGTH = 9
 CHECKSUM_META_OFFSET = 0x2E
 CHECKSUM_LENGTH = 2
 
 EXCLUDE_RANGES = (
+    (sft.META_OFFSET + CONFIG_FINGERPRINT_META_OFFSET, CONFIG_FINGERPRINT_LENGTH),
     (sft.META_OFFSET + BUILD_COMMIT_META_OFFSET, BUILD_COMMIT_LENGTH),
     (sft.META_OFFSET + CHECKSUM_META_OFFSET, CHECKSUM_LENGTH),
 )
@@ -116,26 +127,34 @@ class BuildCommitDiagnosticStabilityTests(unittest.TestCase):
             "fixtures must actually differ, or the normalization test above is vacuous",
         )
 
-    def test_config_fingerprint_difference_is_not_excluded(self):
-        # config_fingerprint is a separate diagnostic field, but (unlike
-        # buildCommitShort) it does not vary per-commit in practice -- it
-        # is derived only from compatibility-relevant config settings
+    def test_config_fingerprint_difference_is_excluded(self):
+        # Issue #6 sprint-1 gate remediation (INVERTS the prior
+        # "..._is_not_excluded" assertion): config_fingerprint IS now in
+        # EXCLUDE_RANGES. The earlier code assumed it "does not vary per
+        # commit"; that was wrong -- it is preset/config-schema derived
         # (scripts/modernize/expansion_config.py's fingerprint_fields()),
-        # so it is deliberately *not* included in EXCLUDE_RANGES. This
-        # test proves the normalized hash still retains coverage of it
-        # (requirement 2's "retaining meaningful persisted-layout
-        # coverage") -- i.e. the fix does not exclude more than
-        # necessary.
+        # so adding a config feature flag (even one defaulting to OFF, as
+        # issue #6 did) changes it and drifted the normalized "same
+        # persisted save" hash. Two images differing ONLY in
+        # config_fingerprint must now normalize to the SAME hash -- that is
+        # the whole point of excluding this diagnostic field.
         image_a = _current_image(b"cafef00d\x00", config_fingerprint=b"deadbeefcafebabe\x00")
         image_b = _current_image(b"cafef00d\x00", config_fingerprint=b"0000000000000000\x00")
 
-        self.assertNotEqual(
+        self.assertEqual(
             compute_sram_hash(image_a, EXCLUDE_RANGES),
             compute_sram_hash(image_b, EXCLUDE_RANGES),
-            "normalized hash must still catch a config_fingerprint difference",
+            "normalized hash must be invariant to the diagnostic config_fingerprint",
         )
-        # But classification is unaffected either way -- config_fingerprint
-        # is diagnostic-only and never gates compatibility.
+        # Sanity: they really do differ in raw bytes (otherwise vacuous),
+        # so the exact whole-image hash still separates them.
+        self.assertNotEqual(
+            compute_sram_hash(image_a, ()),
+            compute_sram_hash(image_b, ()),
+            "fixtures must actually differ, or the normalization test is vacuous",
+        )
+        # Classification is unaffected either way -- config_fingerprint is
+        # diagnostic-only and never gates compatibility.
         epoch = sf.resolve_epoch(REPO_ROOT)
         self.assertEqual(sft.classify_image(image_a, epoch), sf.STATE_CURRENT)
         self.assertEqual(sft.classify_image(image_b, epoch), sf.STATE_CURRENT)
@@ -178,7 +197,8 @@ class ChecksumAndCompatibilityFieldIntegrityTests(unittest.TestCase):
         # format_version/compat_epoch are NOT excluded -- corrupting them
         # must still change the normalized hash (in addition to changing
         # classification), proving the exclusion is narrowly scoped to
-        # only the two genuinely build-variable fields.
+        # only the three genuinely build/diagnostic-variable fields
+        # (configFingerprint, buildCommitShort, checksum) and no further.
         epoch = sf.resolve_epoch(REPO_ROOT)
         header = make_header(valid=True)
         current_meta = make_meta(compat_epoch=epoch)
@@ -198,6 +218,37 @@ class ChecksumAndCompatibilityFieldIntegrityTests(unittest.TestCase):
         )
         self.assertEqual(sft.classify_image(current_image, epoch), sf.STATE_CURRENT)
         self.assertEqual(sft.classify_image(older_image, epoch), sf.STATE_OLDER)
+
+    def test_metadata_magic_and_save_payload_changes_change_normalized_hash(self):
+        # Issue #6 remediation coverage: excluding configFingerprint must
+        # not weaken the hash's sensitivity to anything else. A change to
+        # the metadata magic (offset META_OFFSET, NOT excluded) or to an
+        # ordinary save-payload byte well outside the metadata record must
+        # still change the normalized hash -- the exclusion is the 46-byte
+        # ExpansionSaveMeta diagnostic window only, never the save payload.
+        epoch = sf.resolve_epoch(REPO_ROOT)
+        base = bytearray(_current_image(b"cafef00d\x00"))
+        base_hash = compute_sram_hash(bytes(base), EXCLUDE_RANGES)
+
+        # (a) flip a metadata magic byte (meta offset 0x00 -> absolute
+        # META_OFFSET), which is outside every exclude range.
+        magic_mutated = bytearray(base)
+        magic_mutated[sft.META_OFFSET] ^= 0xFF
+        self.assertNotEqual(
+            compute_sram_hash(bytes(magic_mutated), EXCLUDE_RANGES),
+            base_hash,
+            "metadata magic is not excluded -- corrupting it must change the hash",
+        )
+
+        # (b) flip an ordinary save-payload byte far from the metadata
+        # record (offset 0x100 is in the global save header/payload region).
+        payload_mutated = bytearray(base)
+        payload_mutated[0x100] ^= 0xFF
+        self.assertNotEqual(
+            compute_sram_hash(bytes(payload_mutated), EXCLUDE_RANGES),
+            base_hash,
+            "an actual save-payload byte change must still change the normalized hash",
+        )
 
 
 class BackScenarioExactHashTests(unittest.TestCase):

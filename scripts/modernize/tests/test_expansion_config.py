@@ -39,8 +39,23 @@ def write_config_mk(
     enabled_locales="en",
     default_locale="en",
     pseudo_locale="0",
+    mechanics_hooks=None,
+    mechanics_sample=None,
+    danger_overlay_menu=None,
 ) -> Path:
     path = directory / "config.mk"
+    # The issue #6 starter-feature flags are optional config.mk keys: a
+    # fixture omits them (they default to 0, exercising the absent path)
+    # unless a test passes an explicit value.
+    feature_lines = []
+    if mechanics_hooks is not None:
+        feature_lines.append(f"EXPANSION_MECHANICS_HOOKS := {mechanics_hooks}")
+    if mechanics_sample is not None:
+        feature_lines.append(f"EXPANSION_MECHANICS_SAMPLE := {mechanics_sample}")
+    if danger_overlay_menu is not None:
+        feature_lines.append(
+            f"EXPANSION_DANGER_OVERLAY_MENU := {danger_overlay_menu}"
+        )
     path.write_text(
         "\n".join(
             [
@@ -56,6 +71,7 @@ def write_config_mk(
                 f"EXPANSION_ENABLED_LOCALES := {enabled_locales}",
                 f"EXPANSION_DEFAULT_LOCALE := {default_locale}",
                 f"EXPANSION_PSEUDO_LOCALE := {pseudo_locale}",
+                *feature_lines,
                 "",
             ]
         ),
@@ -966,6 +982,338 @@ class CliTests(unittest.TestCase):
             )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("config.mk", result.stderr)
+
+
+class ValidateFeatureFlagTests(unittest.TestCase):
+    """Issue #6: each starter-feature flag is a strict 0/1 build switch."""
+
+    def test_zero_and_one_pass_through(self):
+        self.assertEqual(ec.validate_feature_flag("EXPANSION_MECHANICS_HOOKS", "0"), 0)
+        self.assertEqual(ec.validate_feature_flag("EXPANSION_MECHANICS_HOOKS", "1"), 1)
+        self.assertEqual(ec.validate_feature_flag("EXPANSION_MECHANICS_HOOKS", 1), 1)
+
+    def test_negative_one_rejected(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            ec.validate_feature_flag("EXPANSION_MECHANICS_HOOKS", "-1")
+        self.assertIn("EXPANSION_MECHANICS_HOOKS", str(ctx.exception))
+
+    def test_two_rejected(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            ec.validate_feature_flag("EXPANSION_DANGER_OVERLAY_MENU", "2")
+        self.assertIn("out of range", str(ctx.exception))
+
+    def test_text_rejected(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            ec.validate_feature_flag("EXPANSION_MECHANICS_SAMPLE", "yes")
+        self.assertIn("not an integer", str(ctx.exception))
+
+
+class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
+    """Issue #6: the sample mechanic can only exist with the hook registry."""
+
+    def test_sample_requires_hooks(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            ec.validate_feature_flags("0", "1", "0")
+        message = str(ctx.exception)
+        self.assertIn("EXPANSION_MECHANICS_SAMPLE=1", message)
+        self.assertIn("EXPANSION_MECHANICS_HOOKS=1", message)
+
+    def test_sample_with_hooks_is_ok(self):
+        self.assertEqual(ec.validate_feature_flags("1", "1", "0"), (1, 1, 0, 0))
+
+    def test_all_off_is_ok(self):
+        self.assertEqual(ec.validate_feature_flags("0", "0", "0"), (0, 0, 0, 0))
+
+    def test_hooks_without_sample_is_ok(self):
+        self.assertEqual(ec.validate_feature_flags("1", "0", "1"), (1, 0, 1, 0))
+
+    def test_content_defaults_off_for_legacy_three_argument_callers(self):
+        """The issue #6 Sprint 2 content flag is an OPTIONAL fourth switch:
+        an existing three-argument call keeps its exact previous meaning and
+        simply resolves the content flag to 0."""
+        self.assertEqual(ec.validate_feature_flags("1", "1", "1"), (1, 1, 1, 0))
+
+
+class LoadIdentityFeatureFlagTests(unittest.TestCase):
+    """Issue #6: flags flow into the identity/JSON and the fingerprint, but
+    never into the independent save-compatibility epoch/key."""
+
+    def _identity(self, tmp, **kwargs):
+        config_mk = write_config_mk(Path(tmp))
+        return ec.load_identity(
+            config_mk_path=config_mk,
+            config_preset="debug",
+            abi="aapcs",
+            rom_size="16M",
+            repo_root=Path(tmp),
+            **kwargs,
+        )
+
+    def test_absent_flags_default_to_zero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            identity = self._identity(tmp)
+        self.assertEqual(identity.mechanics_hooks, 0)
+        self.assertEqual(identity.mechanics_sample, 0)
+        self.assertEqual(identity.danger_overlay_menu, 0)
+
+    def test_flags_appear_in_json_dict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            identity = self._identity(tmp, mechanics_hooks="1", danger_overlay_menu="1")
+        data = identity.to_dict()
+        self.assertEqual(data["mechanics_hooks"], 1)
+        self.assertEqual(data["mechanics_sample"], 0)
+        self.assertEqual(data["danger_overlay_menu"], 1)
+
+    def test_flag_change_changes_fingerprint_but_not_epoch_or_layout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = self._identity(tmp)
+            hooks = self._identity(tmp, mechanics_hooks="1")
+            sample = self._identity(tmp, mechanics_hooks="1", mechanics_sample="1")
+            danger = self._identity(tmp, danger_overlay_menu="1")
+        # Every flag toggle changes the config fingerprint...
+        self.assertNotEqual(base.config_fingerprint, hooks.config_fingerprint)
+        self.assertNotEqual(hooks.config_fingerprint, sample.config_fingerprint)
+        self.assertNotEqual(base.config_fingerprint, danger.config_fingerprint)
+        # ...while the save-compatibility epoch/key is untouched by all of them.
+        for identity in (base, hooks, sample, danger):
+            self.assertEqual(identity.save_compat_epoch, 1)
+
+    def test_feature_flags_are_not_in_save_compat_key(self):
+        """The save-compatibility gate is the epoch alone; flags live only in
+        the diagnostic fingerprint, so they can never make an existing save
+        look incompatible."""
+        with tempfile.TemporaryDirectory() as tmp:
+            base = self._identity(tmp)
+            hooks = self._identity(tmp, mechanics_hooks="1")
+        self.assertEqual(base.save_compat_epoch, hooks.save_compat_epoch)
+        self.assertIn("features", base.fingerprint_fields())
+        self.assertNotIn("save_compat_epoch", base.fingerprint_fields())
+
+    def test_sample_without_hooks_rejected_in_load_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ec.ConfigError):
+                self._identity(tmp, mechanics_sample="1")
+
+
+class FeatureFlagCliTests(unittest.TestCase):
+    SCRIPT = ROOT / "scripts" / "modernize" / "expansion_config.py"
+
+    def run_cli(self, *args):
+        return subprocess.run(
+            [sys.executable, str(self.SCRIPT), *args],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+    def _resolve(self, tmp, *extra):
+        config_mk = write_config_mk(Path(tmp))
+        return self.run_cli(
+            "resolve",
+            "--config-mk", str(config_mk),
+            "--config", "debug",
+            "--abi", "aapcs",
+            "--rom-size", "16M",
+            "--repo-root", tmp,
+            *extra,
+        )
+
+    @staticmethod
+    def _fingerprint_of(stdout):
+        for token in stdout.split():
+            if token.startswith("MODERN_CONFIG_FINGERPRINT="):
+                return token
+        raise AssertionError(f"no fingerprint token in: {stdout}")
+
+    def test_hooks_flag_changes_fingerprint_token(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._resolve(tmp)
+            hooks = self._resolve(tmp, "--mechanics-hooks", "1")
+        self.assertEqual(baseline.returncode, 0, baseline.stderr)
+        self.assertEqual(hooks.returncode, 0, hooks.stderr)
+        self.assertNotEqual(
+            self._fingerprint_of(baseline.stdout), self._fingerprint_of(hooks.stdout)
+        )
+        # The epoch token is unchanged by a feature-flag toggle.
+        self.assertIn("MODERN_SAVE_COMPAT_EPOCH=1", baseline.stdout)
+        self.assertIn("MODERN_SAVE_COMPAT_EPOCH=1", hooks.stdout)
+
+    def test_sample_without_hooks_fails_at_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._resolve(tmp, "--mechanics-sample", "1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("EXPANSION_MECHANICS_SAMPLE=1", result.stderr)
+
+    def test_invalid_flag_value_fails_at_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._resolve(tmp, "--danger-overlay-menu", "2")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("out of range", result.stderr)
+
+    def test_generate_json_contains_feature_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            out_dir = Path(tmp) / "generated"
+            result = self.run_cli(
+                "generate",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "16M",
+                "--repo-root", tmp,
+                "--mechanics-hooks", "1",
+                "--danger-overlay-menu", "1",
+                "--output-dir", str(out_dir),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = json.loads(
+                (out_dir / "expansion_build_metadata.json").read_text(encoding="utf-8")
+            )
+        self.assertEqual(data["mechanics_hooks"], 1)
+        self.assertEqual(data["mechanics_sample"], 0)
+        self.assertEqual(data["danger_overlay_menu"], 1)
+
+
+class StarterContentFlagTests(unittest.TestCase):
+    """Issue #6 Sprint 2: the EXPANSION_STARTER_CONTENT opt-in flag.
+
+    An independent 0/1 identity flag with two hard dependencies -- the
+    mechanics hook registry, and an item ID cap that actually reaches
+    ITEM_EXPANSION_CE -- folded into the config fingerprint and the
+    generated metadata, and deliberately NOT part of the save format.
+    """
+
+    def _identity(self, **kwargs):
+        params = dict(
+            config_mk_path=ROOT / "config.mk",
+            config_preset="release",
+            abi="aapcs",
+            rom_size="16M",
+            build_id_override="abcdef12",
+        )
+        params.update(kwargs)
+        return ec.load_identity(**params)
+
+    def test_default_is_off(self):
+        identity = self._identity()
+        self.assertEqual(identity.starter_content, 0)
+        self.assertEqual(
+            identity.fingerprint_fields()["features"]["starter_content"], 0)
+
+    def test_config_mk_default_is_zero(self):
+        cfg = ec.parse_config_mk(ROOT / "config.mk")
+        self.assertEqual(cfg["EXPANSION_STARTER_CONTENT"], "0")
+
+    def test_enabled_requires_mechanics_hooks(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            self._identity(starter_content=1, mechanics_hooks=0,
+                           item_id_cap="0xCE")
+        message = str(ctx.exception)
+        self.assertIn("EXPANSION_STARTER_CONTENT=1", message)
+        self.assertIn("EXPANSION_MECHANICS_HOOKS=1", message)
+
+    def test_enabled_requires_expanded_item_cap(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            self._identity(starter_content=1, mechanics_hooks=1)
+        message = str(ctx.exception)
+        self.assertIn("EXPANSION_STARTER_CONTENT=1", message)
+        self.assertIn("FE8_ITEM_ID_CAP", message)
+        self.assertIn("ITEM_EXPANSION_CE", message)
+
+    def test_enabled_with_both_dependencies_resolves(self):
+        identity = self._identity(starter_content=1, mechanics_hooks=1,
+                                  item_id_cap="0xCE")
+        self.assertEqual(identity.starter_content, 1)
+
+    def test_invalid_values_rejected_actionably(self):
+        for bad in ("2", "-1", "yes", ""):
+            if bad == "":
+                continue
+            with self.assertRaises(ec.ConfigError) as ctx:
+                self._identity(starter_content=bad, mechanics_hooks=1,
+                               item_id_cap="0xCE")
+            self.assertIn("EXPANSION_STARTER_CONTENT", str(ctx.exception))
+
+    def test_platform_stays_testable_at_any_cap_with_content_off(self):
+        """The dependency is one-way: raising the cap alone must never
+        require the content flag, so the issue #10 ID-space platform stays
+        independently testable."""
+        for cap in (None, "0xCD", "0xCE", "0xFF"):
+            identity = self._identity(starter_content=0, item_id_cap=cap)
+            self.assertEqual(identity.starter_content, 0)
+
+    def test_flag_changes_the_config_fingerprint(self):
+        off = self._identity(starter_content=0, mechanics_hooks=1,
+                             item_id_cap="0xCE")
+        on = self._identity(starter_content=1, mechanics_hooks=1,
+                            item_id_cap="0xCE")
+        self.assertNotEqual(off.config_fingerprint, on.config_fingerprint)
+
+    def test_flag_never_changes_the_save_compat_epoch(self):
+        off = self._identity(starter_content=0, mechanics_hooks=1,
+                             item_id_cap="0xCE")
+        on = self._identity(starter_content=1, mechanics_hooks=1,
+                            item_id_cap="0xCE")
+        self.assertEqual(off.save_compat_epoch, on.save_compat_epoch)
+        # Compared against the real, committed config.mk's current epoch
+        # (issue #18 sprint 2 bumped it 1 -> 2) rather than a hardcoded
+        # literal, so this test never silently drifts from that file again.
+        cfg = ec.parse_config_mk(ROOT / "config.mk")
+        self.assertEqual(
+            on.save_compat_epoch, int(cfg["EXPANSION_SAVE_COMPAT_EPOCH"])
+        )
+
+    def test_flag_appears_in_generated_metadata_json(self):
+        identity = self._identity(starter_content=1, mechanics_hooks=1,
+                                  item_id_cap="0xCE")
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = ec.generate_metadata_files(Path(tmp), identity)
+            data = json.loads(paths["json"].read_text(encoding="utf-8"))
+        self.assertEqual(data["starter_content"], 1)
+
+    def test_item_cap_constants_match_the_idspace_source_of_truth(self):
+        """expansion_config.py restates the item cap boundary because it runs
+        as a bare script; it must never drift from idspace.py, which owns it."""
+        sys.path.insert(0, str(ROOT))
+        from scripts.generated_data import idspace
+
+        self.assertEqual(ec.ITEM_ID_EXPANSION_FIRST, idspace.ITEM_EXPANSION_FIRST)
+        self.assertEqual(ec.ITEM_ID_DEFAULT_CAP, idspace.ITEM_DEFAULT_CAP)
+        self.assertEqual(ec.ITEM_ID_DEFAULT_CAP,
+                         idspace.domain_by_key("item").configured_cap)
+
+    def test_invalid_item_cap_rejected(self):
+        with self.assertRaises(ec.ConfigError):
+            self._identity(item_id_cap="not-a-number")
+        with self.assertRaises(ec.ConfigError):
+            self._identity(item_id_cap="0x100")
+
+
+class StarterContentCompileTimeContractTests(unittest.TestCase):
+    """The same two dependencies must also be hard C compile errors."""
+
+    def test_config_header_defaults_the_flag_off(self):
+        text = (ROOT / "include" / "expansion_config.h").read_text(encoding="utf-8")
+        self.assertIn("#ifndef FE8_EXPANSION_STARTER_CONTENT", text)
+        self.assertIn("#define FE8_EXPANSION_STARTER_CONTENT 0", text)
+
+    def test_config_header_errors_without_hooks(self):
+        text = (ROOT / "include" / "expansion_config.h").read_text(encoding="utf-8")
+        self.assertIn(
+            "#if FE8_EXPANSION_STARTER_CONTENT && !FE8_EXPANSION_MECHANICS_HOOKS", text)
+
+    def test_content_header_errors_below_the_expansion_cap(self):
+        text = (ROOT / "include" / "expansion_starter_content.h").read_text(
+            encoding="utf-8")
+        self.assertIn("#if ITEM_ID_CONFIGURED_CAP < ITEM_ID_EXPANSION_FIRST", text)
+
+    def test_modern_mk_flows_the_flag_and_cap(self):
+        text = (ROOT / "modern.mk").read_text(encoding="utf-8")
+        self.assertIn("-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT)", text)
+        self.assertIn('--starter-content "$(EXPANSION_STARTER_CONTENT)"', text)
+        self.assertIn('--item-id-cap "$(FE8_ITEM_ID_CAP)"', text)
+        self.assertIn("starter_content=$(EXPANSION_STARTER_CONTENT)", text)
 
 
 if __name__ == "__main__":

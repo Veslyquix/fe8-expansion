@@ -2,9 +2,33 @@
   "checkpoints": [
     {
       "frame": 14796,
-      "framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "pre-prep-hotkey",
+      "name": "worldmap-intro-pre-prephotkey-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -22,6 +46,26 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
           "size": 4,
           "value": "0x00000000"
         }
@@ -29,9 +73,33 @@
     },
     {
       "frame": 14856,
-      "framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-prep-pulse1",
+      "name": "worldmap-intro-prephotkey-pulse1-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -49,6 +117,26 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
           "size": 4,
           "value": "0x00000000"
         }
@@ -56,9 +144,33 @@
     },
     {
       "frame": 14916,
-      "framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-prep-pulse2",
+      "name": "worldmap-intro-prephotkey-pulse2-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -76,6 +188,26 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
           "size": 4,
           "value": "0x00000000"
         }
@@ -83,9 +215,33 @@
     },
     {
       "frame": 15476,
-      "framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-full-input-mirror",
+      "name": "worldmap-intro-after-prephotkey-tail-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -103,6 +259,26 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031534",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031538",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203153c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031540",
           "size": 4,
           "value": "0x00000000"
         }
@@ -112,7 +288,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "7330a6de429d4f8dd137e8b71e930161e5d6d7f6",
+    "sha1": "5dd100ab142f8ff354abaa54d5f0dad6a4e32850",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

@@ -22,8 +22,8 @@
   "regions_headroom": {
     "ewram": {
       "capacity_bytes": 262144,
-      "free_bytes": 1260,
-      "occupied_bytes": 260884,
+      "free_bytes": 1860,
+      "occupied_bytes": 260284,
       "overflow": false
     },
     "iwram": {
