@@ -79,9 +79,28 @@ def _normalize_for_scanning(text: str) -> str:
     replaced with a space), so a dangerous command split across two YAML
     lines, at *any* point including mid-token (a simple, common evasion
     of a naive single-line substring/regex check), cannot slip past
-    `FORBIDDEN_PATTERNS`/checkout-pin checks. This is intentionally still
-    just conservative text normalization, not a shell parser."""
-    return re.sub(r"\\[ \t]*\n", "", text)
+    `FORBIDDEN_PATTERNS`/checkout-pin checks.
+
+    This also consumes (discards) any leading indentation -- spaces or
+    tabs -- at the start of the continuation line itself. That mirrors
+    the two layers of real semantics that actually apply to a `run: |`
+    step: (1) a YAML block-scalar strips every line's *common* leading
+    indentation before the shell ever sees the script text, so an
+    equally-indented continuation line (the realistic, common-looking
+    shape an author -- or an adversary -- actually writes) reaches the
+    shell with *no* leading whitespace of its own, and (2) POSIX shell
+    backslash-newline splicing then joins the (now-dedented) lines with
+    no separator inserted. Skipping the indentation-consumption step
+    would leave the continuation line's raw *YAML source* indentation
+    sitting literally inside the joined line -- e.g. `gh rel\\` followed
+    by an indented `ease create ...` would normalize to `gh rel
+    ease create ...` (still two separate whitespace-separated words, so
+    `\\bgh\\s+release\\b` never matches) instead of the actual executed
+    `gh release create ...` (a single, dangerous `gh release`
+    invocation). Handles CRLF line endings the same way. This is
+    intentionally still just conservative text normalization, not a
+    shell parser."""
+    return re.sub(r"\\[ \t]*\r?\n[ \t]*", "", text)
 
 
 def _extract_block(text: str, key: str) -> str:

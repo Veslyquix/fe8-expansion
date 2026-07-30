@@ -341,6 +341,70 @@ class CommandIndirectionAndEvasionTests(unittest.TestCase):
         # "cu\\\nrl" normalizes to "curl" once the continuation is collapsed.
         self.assertTrue(any("curl" in v for v in violations))
 
+    def test_curl_split_with_equally_indented_continuation_rejected(self):
+        """Issue #9 fresh-review finding: the *realistic* shape of a
+        dangerous split inside a YAML `run: |` block scalar is not a
+        zero-indent continuation line -- it is a continuation line
+        indented to line up with its sibling script lines (exactly what
+        an author, or an adversary imitating an author, would actually
+        write, and exactly what YAML's block-scalar dedent + POSIX
+        shell backslash-newline splicing together turn into a single
+        joined `curl` command with no separator at all). A normalizer
+        that only strips the backslash+newline and leaves the
+        continuation line's leading indentation in place would still
+        see two separate whitespace-separated words ("cu" and "rl ...")
+        and miss this entirely."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          cu\\\n"
+            + "          rl https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("curl" in v for v in violations), violations)
+
+    def test_gh_release_split_with_equally_indented_continuation_rejected(self):
+        """Same fresh-review finding, for the `gh release` mutating-CLI
+        pattern specifically: `gh rel\\` + an equally-indented `ease
+        create ...` continuation line must normalize to the single,
+        dangerous `gh release create ...` invocation, not to
+        `gh rel        ease create ...` (two harmless-looking words)."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          gh rel\\\n"
+            + "          ease create v1.0.0\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("gh release" in v.lower() for v in violations), violations)
+
+    def test_git_push_split_with_equally_indented_continuation_rejected(self):
+        """Same fresh-review finding, for a ref-mutating `git push`
+        command split as `git pu\\` + an equally-indented `sh
+        origin --tags` continuation line."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          git pu\\\n"
+            + "          sh origin --tags\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("git push" in v.lower() for v in violations), violations)
+
+    def test_curl_split_with_equally_indented_crlf_continuation_rejected(self):
+        """The same equally-indented mid-token continuation, but using
+        CRLF line endings (as a workflow file checked out on/authored
+        with Windows-style line endings would have), must be handled
+        identically."""
+        text = (
+            GOOD_WORKFLOW.replace("\n", "\r\n")
+            + "      - run: |\r\n"
+            + "          cu\\\r\n"
+            + "          rl https://example.invalid\r\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("curl" in v for v in violations), violations)
+
     def test_eval_rejected(self):
         text = GOOD_WORKFLOW + "      - run: eval \"$SOME_VAR\"\n"
         violations = wg.validate_workflow_text(text)
