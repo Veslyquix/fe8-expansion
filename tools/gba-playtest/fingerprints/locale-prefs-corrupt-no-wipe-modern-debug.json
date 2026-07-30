@@ -47,12 +47,12 @@
         {
           "address": "0x0e0073d2",
           "size": 1,
-          "value": "0x34"
+          "value": "0xd2"
         },
         {
           "address": "0x0e0073d3",
           "size": 1,
-          "value": "0x61"
+          "value": "0xf0"
         },
         {
           "address": "0x0e007400",
@@ -105,7 +105,7 @@
           "value": "0x00"
         }
       ],
-      "sram_hash": "fnv1a64-sram-normalized:8b38955c0a1ad0c7"
+      "sram_hash": "fnv1a64-sram-normalized:6295eed6a6ecee64"
     },
     {
       "frame": 600,
@@ -210,12 +210,12 @@
         {
           "address": "0x0e0073d2",
           "size": 1,
-          "value": "0x34"
+          "value": "0xd2"
         },
         {
           "address": "0x0e0073d3",
           "size": 1,
-          "value": "0x61"
+          "value": "0xf0"
         },
         {
           "address": "0x0e007400",
@@ -268,13 +268,13 @@
           "value": "0x00"
         }
       ],
-      "sram_hash": "fnv1a64-sram-normalized:8b38955c0a1ad0c7"
+      "sram_hash": "fnv1a64-sram-normalized:6295eed6a6ecee64"
     }
   ],
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "80c5e26debbc67fa3c93a9cdc4e8e9f634ca574b",
+    "sha1": "4707e6baeea471547009ef7df099b4b19f85f606",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

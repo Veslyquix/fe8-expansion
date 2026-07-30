@@ -2411,24 +2411,46 @@ MODERN_LOCALE_FP := tools/gba-playtest/fingerprints
 MODERN_LOCALE_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/locale-fixtures
 MODERN_LOCALE_PREFS_FIXTURE_PY := tools/gba-playtest/tests/locale_prefs_fixture.py
 MODERN_LOCALE_SRAM_FIXTURE_PY := tools/gba-playtest/tests/sram_fixture.py
+MODERN_SAVE_FORMAT_TOOL_PY := scripts/modernize/save_format_tool.py
+MODERN_EXPANSION_CONFIG_PY := scripts/modernize/expansion_config.py
 
-$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav:
+# Issue #18 sprint 6 verifier-blocker fix: every fixture below is
+# regenerated from config.mk (via save_format_tool.py's
+# build_current_expansion_save_meta()/resolve_*() helpers) at *this*
+# invocation's own live state, never a stale cached .sav left over from a
+# previous config.mk/generator-script revision -- these real prerequisites
+# (rather than none) are what make that true instead of merely asserted:
+# without them, a change to config.mk or either generator script left an
+# already-built build/ tree's *.sav byte-for-byte stale, silently
+# reproducing whatever fixture the *previous* revision would have built.
+# (The remaining source of non-determinism -- ExpansionSaveMeta.
+# buildCommitShort's dependence on live `git rev-parse HEAD` -- is fixed
+# directly in locale_prefs_fixture.py itself: see its own docstring and
+# _freeze_diagnostic_build_commit().)
+MODERN_LOCALE_FIXTURE_DEPS := \
+	$(MODERN_LOCALE_PREFS_FIXTURE_PY) \
+	$(MODERN_LOCALE_SRAM_FIXTURE_PY) \
+	$(MODERN_SAVE_FORMAT_TOOL_PY) \
+	$(MODERN_EXPANSION_CONFIG_PY) \
+	config.mk
+
+$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
 	@mkdir -p "$(@D)"
 	"$(PYTHON)" "$(MODERN_LOCALE_SRAM_FIXTURE_PY)" write-state SAVE_COMPAT_EMPTY "$@"
 
-$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav:
+$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
 	@mkdir -p "$(@D)"
 	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_UNSET "$@"
 
-$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav:
+$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
 	@mkdir -p "$(@D)"
 	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_CORRUPT "$@"
 
-$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav:
+$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
 	@mkdir -p "$(@D)"
 	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_UNKNOWN_LOCALE "$@"
 
-$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav:
+$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
 	@mkdir -p "$(@D)"
 	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
 		--disabled-locale-id 7

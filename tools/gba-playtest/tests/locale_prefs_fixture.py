@@ -25,6 +25,32 @@ ExpansionSaveMeta machinery mirrors byte-for-byte.
 All fixtures are generated at test/capture time under caller-supplied,
 ignored build/temp paths -- never committed as binaries, exactly like
 sram_fixture.py's own contract.
+
+Verifier-blocker fix (issue #18 sprint 6): sft.build_current_expansion_
+save_meta() stamps ExpansionSaveMeta.buildCommitShort from this host's
+*live* `git rev-parse HEAD` (scripts/modernize/expansion_config.py's
+resolve_build_commit()) -- correct for a real ROM's own runtime-stamped
+SRAM, but these no-wipe fixtures' outer ExpansionSaveMeta is never
+re-stamped by the runtime (that is the whole point of "no-wipe"), so its
+bytes are never actually build-variable at boot; only this *host-side
+generator* made them look that way, by re-resolving the checked-out
+commit every time the fixture is (re)built. That silently invalidated
+every committed fingerprint asserting the magic/checksum probes at this
+region on the very next commit -- reproducible in the default build root
+just as much as any isolated one, since both resolve the same live git
+HEAD.
+
+Fixed the same already-reviewed way sram_fixture.py's own
+build_deterministic_current_image() freezes this exact field for the
+debugtools-hub scenarios: after building the real meta, overwrite
+buildCommitShort with sram_fixture.DETERMINISTIC_BUILD_COMMIT_SHORT (a
+fixed, honestly-labeled sentinel -- never a hand-picked hash) and
+recompute the checksum. Every compatibility-gating field (magic,
+formatVersion, compatEpoch) and the real config-derived reserved-tail
+prefs bytes are untouched; only the diagnostic, never-compared
+buildCommitShort (and its dependent checksum) become commit- and
+build-root-invariant, matching docs/save_format.md's own "why every
+other field stays covered" contract for configFingerprint.
 """
 
 from __future__ import annotations
@@ -32,15 +58,32 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_THIS_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _THIS_DIR.parents[2]
 _MODERNIZE_DIR = _REPO_ROOT / "scripts" / "modernize"
 _MODERNIZE_TESTS_DIR = _MODERNIZE_DIR / "tests"
-for _extra_path in (str(_MODERNIZE_DIR), str(_MODERNIZE_TESTS_DIR)):
+for _extra_path in (str(_THIS_DIR), str(_MODERNIZE_DIR), str(_MODERNIZE_TESTS_DIR)):
     if _extra_path not in sys.path:
         sys.path.insert(0, _extra_path)
 
 import save_format_tool as sft  # noqa: E402
+import sram_fixture  # noqa: E402
 from test_save_format_tool import make_header, make_image  # noqa: E402
+
+
+def _freeze_diagnostic_build_commit(meta: sft.ExpansionSaveMeta) -> sft.ExpansionSaveMeta:
+    """Overwrites `meta.build_commit_short` with sram_fixture.py's own
+    DETERMINISTIC_BUILD_COMMIT_SHORT sentinel and recomputes the
+    checksum -- the same, already-reviewed technique
+    build_deterministic_current_image() uses to make a host-crafted
+    SAVE_COMPAT_CURRENT fixture's diagnostic bytes commit-invariant (see
+    this module's own docstring). Mutates and returns `meta` for
+    convenient chaining; every other field (including the real
+    config-derived `reserved` tail) is left untouched."""
+    meta.build_commit_short = sram_fixture.DETERMINISTIC_BUILD_COMMIT_SHORT
+    meta.checksum = 0
+    meta.checksum = meta.computed_checksum()
+    return meta
 
 
 # Fixture state names -- reuse the real classifier's own
@@ -112,7 +155,9 @@ def build_prefs_fixture_image(
     ExpansionUserPrefs_Load()/_ValidateRaw(), never a duplicated Python
     classifier standing in for it."""
     reserved = build_prefs_reserved_bytes(state, disabled_locale_id=disabled_locale_id)
-    meta = sft.build_current_expansion_save_meta(repo_root, reserved=reserved)
+    meta = _freeze_diagnostic_build_commit(
+        sft.build_current_expansion_save_meta(repo_root, reserved=reserved)
+    )
     header = make_header(valid=True)
     return bytes(make_image(header, meta.pack()))
 
@@ -134,7 +179,9 @@ def build_valid_explicit_prefs_fixture_image(repo_root: Path, locale_id: int) ->
     """Byte-exact 0x8000 SRAM image: outer ExpansionSaveMeta CURRENT,
     inner ExpansionUserPrefs VALID/explicit for `locale_id`."""
     reserved = build_valid_explicit_prefs_reserved_bytes(locale_id)
-    meta = sft.build_current_expansion_save_meta(repo_root, reserved=reserved)
+    meta = _freeze_diagnostic_build_commit(
+        sft.build_current_expansion_save_meta(repo_root, reserved=reserved)
+    )
     header = make_header(valid=True)
     return bytes(make_image(header, meta.pack()))
 

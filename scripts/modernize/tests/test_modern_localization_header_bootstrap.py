@@ -586,5 +586,175 @@ class ModernLocalizationGenerationParallelSafetyTests(unittest.TestCase):
         )
 
 
+
+class ModernLocalizationPrefsCheckColdIsolatedRootTests(unittest.TestCase):
+    """Issue #18 sprint 6 verifier-blocker regression.
+
+    ``expansion-modern-localization-runtime-prefs-check``'s three
+    no-wipe scenarios (corrupt/unknown-locale/disabled-locale
+    ``ExpansionUserPrefs``) used to fail to reproduce their own committed
+    fingerprints under *any* freshly (re)built ``MODERN_BUILD_ROOT`` --
+    the default/canonical one included -- because
+    ``tools/gba-playtest/tests/locale_prefs_fixture.py``'s host-crafted
+    outer ``ExpansionSaveMeta.buildCommitShort`` was stamped from this
+    host's *live* ``git rev-parse HEAD`` (via
+    ``save_format_tool.py``'s ``build_current_expansion_save_meta()``),
+    which silently changes on every commit and invalidates the
+    committed fingerprint's checksum-derived probe bytes the very next
+    commit, independent of which build root ran it. Fixed by freezing
+    that diagnostic-only field to sram_fixture.py's own
+    ``DETERMINISTIC_BUILD_COMMIT_SHORT`` sentinel (see
+    ``locale_prefs_fixture.py``'s own docstring and
+    ``_freeze_diagnostic_build_commit()``), and by making every
+    ``*.sav`` fixture target in modern.mk depend on its real generator
+    scripts and ``config.mk`` so a stale cached ``.sav`` from a previous
+    revision is never silently reused.
+
+    These tests run the *real* ``expansion-modern-localization-runtime-
+    prefs-check`` target end to end (real toolchain + real libmGBA),
+    twice, against two distinct, throwaway ``MODERN_BUILD_ROOT``
+    directories that share nothing with each other or with any
+    repository-tracked ``build/`` cache -- proving the fix holds for a
+    genuinely isolated build root, not merely the canonical default one.
+    """
+
+    def _run_cold_prefs_check(self, config, build_root):
+        result = subprocess.run(
+            [
+                "make", "--no-print-directory",
+                "expansion-modern-localization-runtime-prefs-check",
+                f"MODERN_CONFIG={config}",
+                "MODERN_ABI=aapcs",
+                f"MODERN_BUILD_ROOT={build_root}",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout[-6000:])
+        self.assertNotIn(
+            "No rule to make target", result.stdout,
+            "cold expansion-modern-localization-runtime-prefs-check must "
+            "never hit an unresolvable generated-header prerequisite",
+        )
+        self.assertIn(
+            "localization-runtime prefs-check passed", result.stdout,
+        )
+        return result
+
+    def test_debug_two_distinct_isolated_roots_both_pass_with_deterministic_fixtures(self):
+        if not _toolchain_available():
+            self.skipTest("modern toolchain not available")
+        if not _libmgba_available():
+            self.skipTest("libmGBA (pkg-config mgba) not available")
+
+        fixture_names = ("corrupt.sav", "unknown.sav", "disabled_on_default.sav")
+
+        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+            root_a = Path(tmp_a) / "iso-build-a"
+            root_b = Path(tmp_b) / "iso-build-b"
+            self.assertNotEqual(
+                root_a, root_b,
+                "the two isolated build roots must be genuinely distinct",
+            )
+
+            self._run_cold_prefs_check("debug", root_a)
+            self._run_cold_prefs_check("debug", root_b)
+
+            fixtures_a = root_a / "debug" / "aapcs" / "locale-fixtures"
+            fixtures_b = root_b / "debug" / "aapcs" / "locale-fixtures"
+            for name in fixture_names:
+                path_a = fixtures_a / name
+                path_b = fixtures_b / name
+                self.assertTrue(path_a.is_file(), f"{path_a} was not generated")
+                self.assertTrue(path_b.is_file(), f"{path_b} was not generated")
+                self.assertEqual(
+                    path_a.read_bytes(), path_b.read_bytes(),
+                    f"{name} must be byte-identical across independent "
+                    f"isolated MODERN_BUILD_ROOT invocations -- any "
+                    f"difference means fixture generation still depends "
+                    f"on something other than this repository's own "
+                    f"config.mk/generator scripts (e.g. live git history "
+                    f"or a canonical-build-only cache)",
+                )
+
+
+class ModernLocalizationPrefsFixtureStaticDeterminismTests(unittest.TestCase):
+    """Static, fast, supplementary guards (never the sole coverage --
+    see ``ModernLocalizationPrefsCheckColdIsolatedRootTests`` above for
+    the real end-to-end regression) against reintroducing either half of
+    this sprint's verifier-blocker fix:
+
+    1. ``locale_prefs_fixture.py`` must never go back to stamping
+       ``ExpansionSaveMeta.buildCommitShort`` straight from
+       ``save_format_tool.py``'s live-git-derived
+       ``build_current_expansion_save_meta()`` result without freezing
+       it first.
+    2. modern.mk's ``*.sav`` fixture targets must never hardcode the
+       canonical default build root's literal on-disk path
+       (``build/expansion-modern/...``) in place of the
+       ``MODERN_BUILD_ROOT``-derived ``$(MODERN_LOCALE_FIXTURE_DIR)``
+       variable -- doing so would silently make every fixture always
+       land under (and be read back from) the one repository-tracked
+       canonical build tree regardless of a caller's own
+       ``MODERN_BUILD_ROOT`` override, defeating the whole point of the
+       isolated-root regression above.
+    """
+
+    REPO_ROOT = Path(__file__).resolve().parents[3]
+    LOCALE_PREFS_FIXTURE_PY = (
+        REPO_ROOT / "tools" / "gba-playtest" / "tests" / "locale_prefs_fixture.py"
+    ).read_text(encoding="utf-8")
+    MODERN_MK = (REPO_ROOT / "modern.mk").read_text(encoding="utf-8")
+
+    def test_prefs_fixture_freezes_diagnostic_build_commit(self):
+        self.assertIn(
+            "_freeze_diagnostic_build_commit", self.LOCALE_PREFS_FIXTURE_PY,
+            "locale_prefs_fixture.py must freeze ExpansionSaveMeta."
+            "buildCommitShort to a fixed sentinel instead of stamping "
+            "this host's live git commit into a fixture whose checksum "
+            "gets baked into a committed fingerprint",
+        )
+        self.assertIn(
+            "sram_fixture.DETERMINISTIC_BUILD_COMMIT_SHORT",
+            self.LOCALE_PREFS_FIXTURE_PY,
+            "the frozen sentinel must be sram_fixture.py's own "
+            "already-reviewed DETERMINISTIC_BUILD_COMMIT_SHORT constant, "
+            "never a new hand-written/duplicated placeholder value",
+        )
+
+    # Matches a modern.mk fixture-target *rule* line building one of the
+    # three no-wipe fixtures with a hardcoded "build/expansion-modern"
+    # literal instead of the MODERN_BUILD_ROOT-derived
+    # $(MODERN_LOCALE_FIXTURE_DIR) variable. Deliberately anchored on the
+    # actual rule header (target followed by ':') so it can never
+    # false-positive on this file's own prose/comments mentioning the
+    # canonical default path elsewhere.
+    _HARDCODED_CANONICAL_FIXTURE_RULE_RE = re.compile(
+        r"^build/expansion-modern/\S*\.sav\s*:", re.MULTILINE
+    )
+
+    def test_fixture_rules_never_hardcode_canonical_build_root(self):
+        match = self._HARDCODED_CANONICAL_FIXTURE_RULE_RE.search(self.MODERN_MK)
+        self.assertIsNone(
+            match,
+            "a modern.mk fixture rule hardcodes the canonical default "
+            f"build root ({match.group(0) if match else ''!r}) instead of "
+            "the MODERN_BUILD_ROOT-derived $(MODERN_LOCALE_FIXTURE_DIR) "
+            "-- this would make the fixture always resolve to the one "
+            "repository-tracked build tree regardless of a caller's own "
+            "MODERN_BUILD_ROOT override",
+        )
+        for name in ("blank.sav", "unset.sav", "corrupt.sav", "unknown.sav",
+                     "disabled_on_default.sav"):
+            self.assertIn(
+                f"$(MODERN_LOCALE_FIXTURE_DIR)/{name}", self.MODERN_MK,
+                f"{name}'s fixture rule must be keyed off the "
+                f"MODERN_BUILD_ROOT-derived $(MODERN_LOCALE_FIXTURE_DIR)",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
