@@ -5,9 +5,27 @@
 # existing host/build/generated/upstream/default/runtime gate; they are
 # fully standalone, exactly like generated-data-check (generated_data.mk).
 # See docs/release_process.md for the full contract, including the exit
-# code contract these targets rely on (0/1/2/3 -- see
+# code contract the underlying CLI itself defines (0/1/2/3 -- see
 # scripts/release_rehearsal/cli.py's own module docstring for the exact
 # meaning of each code).
+#
+# IMPORTANT -- Make does not preserve/forward that granular exit code.
+# That 0/1/2/3 contract belongs to a *direct* CLI invocation (e.g.
+# `python3 -m scripts.release_rehearsal.cli check --require-eligible`).
+# GNU Make itself, when any recipe in a target exits non-zero, always
+# reports the *target*'s own exit status as exit code 2 (a fixed "Error
+# N" message is printed naming the recipe's real code, but `make`'s own
+# process exit status to its caller is 2 regardless of whether the
+# recipe actually exited 1, 2, 3, or any other non-zero value --
+# reproduce with e.g. `printf 't:\n\texit 1\n' | make -f - t; echo $?`,
+# which prints `2`, never `1`). So every comment below that says a target
+# "exits N" while invoked via `make <target>` means the *underlying CLI*
+# exits N; `make <target>` itself only ever distinguishes exit 0 (the
+# recipe succeeded) from exit 2 (the recipe failed for *some* reason --
+# the granular 1-vs-2-vs-3 distinction is not visible at the `make`
+# process-exit-status layer, only in the recipe's own stdout/stderr/JSON
+# report). Invoke the CLI directly (never through `make`) when the exact
+# 1-vs-3 distinction itself must be observed as a process exit code.
 #
 # release-test                    : stdlib unittest suites for
 #                                    scripts/release_rehearsal and
@@ -38,17 +56,24 @@
 # reading prose.
 #
 # release-check-require-eligible  : `cli check --require-eligible`.
-#                                    Exits 1 (not 0) while BLOCKED.
+#                                    The CLI itself exits 1 while
+#                                    BLOCKED; `make` itself reports this
+#                                    (like any failed recipe) as exit 2,
+#                                    not 1 -- see the IMPORTANT note above.
 # release-rehearse-require-eligible : `cli rehearse --require-eligible`.
-#                                    Exits 1 (not 0) while BLOCKED.
+#                                    Same CLI-exits-1/make-itself-exits-2
+#                                    contract as the target above.
 #
 # The two targets below are the complementary "expected-blocked health
-# check" targets: they exit 0 ONLY if the candidate's status is exactly
-# "blocked" (today's real, expected state) and exit 3 the moment it ever
-# stops being exactly that -- e.g. useful in CI to mechanically assert
-# "still blocked, as expected" without ever papering over a status this
-# repository has not been told (via a real, reviewed change to this
-# Makefile/workflow) to expect instead.
+# check" targets: the underlying CLI exits 0 ONLY if the candidate's
+# status is exactly "blocked" (today's real, expected state) and exits 3
+# the moment it ever stops being exactly that -- e.g. useful in CI to
+# mechanically assert "still blocked, as expected" without ever papering
+# over a status this repository has not been told (via a real, reviewed
+# change to this Makefile/workflow) to expect instead. Through `make`,
+# the healthy (still-blocked) case is exit 0 exactly as the CLI reports;
+# the moment that ever stops being true, `make` itself reports exit 2
+# (not 3) for the same reason as `*-require-eligible` above.
 #
 # release-check-expect-blocked    : `cli check --expect-status blocked`.
 # release-rehearse-expect-blocked : `cli rehearse --expect-status blocked`.

@@ -36,13 +36,13 @@ document does **not** close issue #9.
 | Release manifest | `scripts/release_rehearsal/manifest.py` | Ties together `config.mk` SemVer, embedded C metadata, a candidate tag string, changelog, docs, save format/migrations, previous/next supported versions, the exact allowlist, version-ledger topology, C-fallback-metadata consistency, migration-epoch reachability, doc-link validity, and the rebuild rehearsal into one report. |
 | Manifest consistency validators | `scripts/release_rehearsal/consistency.py` | Version-ledger topology/candidate-agreement, changelog-declared-SemVer-impact-vs-actual-delta (pre-/post-1.0 aware), `include/expansion_config.h` C-fallback-vs-`config.mk` cross-check, and save-format migration-registry epoch reachability. |
 | Migration registry | `scripts/modernize/migrations/registry.py` | Declares mechanical vs. manual save-format epoch transitions; see [`docs/migration_registry.md`](migration_registry.md). |
-| Provenance manifests | `scripts/release_rehearsal/provenance.py`, `docs/release_data/provenance/*.json` | Factual, hand-seeded code/asset/submodule provenance records, bound to the exact allowlist by exact-or-directory-prefix coverage (no gap, no ghost entry, no ambiguous/duplicate coverage). |
+| Provenance manifests | `scripts/release_rehearsal/provenance.py`, `docs/release_data/provenance/*.json` | Factual, generated code/asset/submodule provenance records: one exact record per exact allowlisted path (never directory-prefix/category credit), bound to the exact allowlist by a literal exact-path bijection (no gap, no ghost entry, no duplicate/leftover-category-style entry), plus a submodule gitlink-pin cross-check. |
 | Exact source allowlist | `scripts/release_rehearsal/allowlist.py`, `docs/release_data/source_allowlist.json` | Exact, deterministic, generated **per-member** (per tracked file, plus the single `mgfembp` gitlink) allowlist -- no directory-level/prefix grant. `check_allowlist_completeness()` fails actionably the moment a tracked file and the checked-in allowlist ever disagree in either direction. |
 | Source-release guard | `scripts/release_rehearsal/source_guard.py`, `docs/release_data/map_hex_exceptions.json` | Recursive hard-deny rules (path/extension **and** file-magic) for a release candidate tree/archive, including default-deny `.map`/`.hex` with an exact, factual, file-level exception list. Separate from, and does not modify, `scripts/artifact_guard.py`. |
 | Immutable Git-object source | `scripts/release_rehearsal/git_source.py` | `git ls-tree`/`git cat-file --batch` plumbing wrappers so archive content is always read from an immutable commit object, never the mutable worktree/index. |
 | Archive/rebuild rehearsal | `scripts/release_rehearsal/archive_rehearsal.py` | Deterministic double-build archive hash comparison (git-blob-bound); rebuild-eligibility evaluation plus (when eligible) an actually-executed double-compile-and-compare, with four machine-distinct states (`not_run`/`blocked`/`failed`/`verified_success`). |
 | Release-doc link validator | `scripts/release_rehearsal/doc_links.py` | Verifies every relative Markdown link in the release-process doc set resolves to a real file. |
-| Workflow guard | `scripts/release_rehearsal/workflow_guard.py` | Validates `.github/workflows/release-rehearsal.yml`'s own permission/safety contract: top-level/job-level/nested `contents: write`, shorthand `write-all` permissions, token/secrets interpolation, network/upload/publish/deploy/release commands and actions, ref mutation, and common shell-indirection evasions (line continuations, `eval`, `base64 -d`, `sh -c`/`bash -c`). |
+| Workflow guard | `scripts/release_rehearsal/workflow_guard.py` | Validates `.github/workflows/release-rehearsal.yml`'s own permission/safety contract: **any** permission scope (`contents`, `id-token`, `packages`, `pull-requests`, `issues`, `actions`, `checks`, `deployments`, `statuses`, or any future scope) granted `write`, at top level/job level/nested/inline-mapping, any quoting/case/spacing, shorthand `write-all` permissions, token/secrets interpolation, network/upload/publish/deploy/release commands and actions, ref mutation, and common shell-indirection evasions (line continuations, `eval`, `base64 -d`, `sh -c`/`bash -c`). |
 | CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`, plus the machine-distinct `*-require-eligible`/`*-expect-blocked` gate targets and `release-workflow-guard`/dynamic `cli summary`. |
 | CI | `.github/workflows/release-rehearsal.yml` | Runs all of the above read-only, on `pull_request`/`workflow_dispatch` only, and renders `$GITHUB_STEP_SUMMARY` dynamically from the tool's own canonical JSON. |
 
@@ -50,7 +50,15 @@ document does **not** close issue #9.
 
 This is the "documented, mechanically tested blocked/eligible contract"
 referenced by issue #9's acceptance criteria. `scripts/release_rehearsal/cli.py`'s
-own module docstring is the normative source; summarized here:
+own module docstring is the normative source; summarized here. **This
+0/1/2/3 contract describes a *direct* CLI invocation** (e.g. `python3 -m
+scripts.release_rehearsal.cli check --require-eligible`) -- see the
+"Workflow and Make integration" section below for what actually happens
+to these codes when the same commands are run through `make <target>`
+instead (GNU Make does not preserve/forward a recipe's specific
+non-zero exit code; it always reports the target itself as exit `2`
+regardless of whether the recipe exited `1`, `2`, `3`, or any other
+non-zero value).
 
 * **Exit `0`** -- either (a) plain report mode: the tool ran correctly and
   produced a well-formed report (the report's own `"status"` field says
@@ -96,12 +104,19 @@ introduced -- this is intentional so this rehearsal can run in CI as an
 ordinary, informative, always-green (until something is actually broken)
 job without ever being misread as "ready to publish". The **separate**
 `make release-check-require-eligible` / `make release-rehearse-require-
-eligible` targets are the ones **intentionally** expected to fail (exit
-`1`) while the candidate is `"blocked"`; `make release-check-expect-
-blocked` / `make release-rehearse-expect-blocked` are the complementary
-health-check targets that exit `0` only while truly `"blocked"` and exit
-`3` the moment that ever silently stops being true. See "Workflow and Make
-integration" below.
+eligible` targets wrap a CLI invocation that is **intentionally** expected
+to fail (the underlying CLI itself exits `1`) while the candidate is
+`"blocked"`; `make release-check-expect-blocked` / `make release-rehearse-
+expect-blocked` wrap the complementary health-check CLI invocation that
+exits `0` only while truly `"blocked"` and exits `3` the moment that ever
+silently stops being true. **Observed through `make` itself** (rather than
+the CLI directly), only the exit-`0`-vs-non-zero distinction survives:
+GNU Make reports *any* failed recipe -- whether the underlying CLI exited
+`1`, `2`, or `3` -- as the target's own exit code `2`, never the recipe's
+original code (this is standard, unconfigurable GNU Make behavior, not
+specific to this repository's tooling). See "Workflow and Make
+integration" below for the exact, per-target breakdown of what `make
+<target>` itself reports.
 
 ## Release manifest and identity checks
 
@@ -203,21 +218,65 @@ reality in either direction. Regenerate it with:
 python3 -m scripts.release_rehearsal.allowlist generate --target-sha HEAD --write
 ```
 
-`docs/release_data/provenance/{code,assets,submodules}.json` still record
-one entry per reviewable *category* (a top-level directory or file, e.g.
-`"src"`, `"graphics"`, `"mgfembp"`) rather than one near-duplicate record
-per individual file -- hand-authoring ~9,000 identical `NOASSERTION`
-records would add no legal information and would itself be a maintenance
-hazard. Instead, `scripts/release_rehearsal/provenance.py`'s
-`evaluate_coverage()` proves this is an **equally strong** binding to the
-exact allowlist: every entry's `path` covers every allowlisted path it is
-an exact match or directory-prefix ancestor of; `find_ghost_entries()`
-requires every entry to cover *something* real; `find_ambiguous_entries()`
-(and `find_duplicate_entry_paths()`) require no two entries' coverage to
-overlap. Together these guarantee no missing included member, no
-provenance-only ghost entry, and no duplicate/ambiguous coverage -- a real
-bijection at the *category* granularity, mechanically checked against the
-*exact* per-file allowlist.
+**Provenance coverage is now a literal, exact, one-record-per-member
+bijection -- never directory-prefix/category credit.** A fresh,
+independent review found the previous design let a single category-level
+provenance entry (e.g. `"src"`) "cover" every allowlisted path nested
+under it by directory prefix, which meant a brand-new tracked file, once
+added to the allowlist, could silently inherit an ancestor directory's
+provenance record with no dedicated review decision of its own. That is
+fixed: `docs/release_data/provenance/{code,assets,submodules}.json` now
+contain one exact provenance record **per exact allowlisted path** (as
+many records as there are allowlist entries -- currently in the
+thousands, one for every tracked file plus the single `mgfembp` gitlink),
+and `scripts/release_rehearsal/provenance.py`'s coverage functions
+(`coverage_gaps`, `find_ghost_entries`, `find_duplicate_entry_paths`,
+`evaluate_coverage`) are now pure **exact-path set operations**: an
+entry's `path` covers *only* that literal path, never a descendant. A new
+allowlisted file with no exact same-path provenance entry is an actionable
+`missing provenance entry for ...` finding, exactly like a brand-new
+tracked file with no allowlist entry is an actionable allowlist finding --
+there is no auto-granting at validation time in either case.
+`find_ambiguous_entries()` is kept as a defense-in-depth hygiene guard
+(it can never legitimately fire against a genuine one-record-per-tracked-
+file data set, since no real Git blob path can be a directory-prefix
+ancestor of another) that catches a leftover category/directory-style
+entry mixed in with exact ones.
+
+Hand-authoring thousands of otherwise-identical `NOASSERTION` records by
+hand would itself be an unreviewable maintenance hazard, so
+`scripts/release_rehearsal/provenance.py` also provides a small,
+deterministic **generator**: `PROVENANCE_ROOT_SEED` is the single,
+human-curated input (one entry per reviewable top-level root -- the same
+roots this repository already reviewed at category granularity before
+this fix), and `generate_exact_entries()` mechanically fans each root's
+`category`/`notes` out to every exact allowlisted path nested under (or
+equal to) it, preserving every already-recorded fact
+(`author`/`rightsholder`/`license` stay `"NOASSERTION"`,
+`redistribution_approved` stays `false`, `reviewer` stays absent/`null`;
+`mgfembp`'s exact path and its
+`c87e74dcd6c8878b809e013cd8ff0c52baa75332` pin are unchanged) -- it never
+invents a new fact for any path, however it was assigned a root. This
+directory-prefix fan-out is **exclusively a generator-time convenience**;
+it plays no role in, and is never invoked by, the runtime `check`/
+`evaluate_coverage` validation path, which only ever reads whatever exact
+records are actually committed to disk. Regenerate (after adding a new
+root to `PROVENANCE_ROOT_SEED` for a genuinely new top-level location, or
+whenever the allowlist changes) with:
+
+```sh
+python3 -m scripts.release_rehearsal.provenance generate --write
+```
+
+`scripts/release_rehearsal/provenance.py`'s `check_gitlink_pins()` is an
+additional cross-check specific to the `"submodule"`-category entry: it
+compares the provenance record's declared `pinned_commit` against the
+actual gitlink object id Git's own tree records for that exact path (via
+`git ls-tree`), independent of whether the submodule is actually
+initialized/checked out locally -- a provenance record that merely
+*claims* a pin is exactly as much an honesty gap as an unresolved
+NOASSERTION fact if the superproject's own tree does not actually record
+that commit.
 
 ## Source-release guard
 
@@ -402,12 +461,24 @@ Make targets (`release.mk`, included from the top-level `Makefile`):
 * `make release-check-require-eligible` / `make
   release-rehearse-require-eligible` -- the machine-distinct
   publication-eligibility gates (`cli ... --require-eligible`).
-  **These are intentionally expected to, and currently do, exit non-zero
-  (`1`) while the candidate is `blocked`.**
+  **The underlying CLI is intentionally expected to, and currently does,
+  exit non-zero (`1`, `EXIT_NOT_ELIGIBLE`) while the candidate is
+  `blocked`. `make` itself, however, reports *any* failed recipe as exit
+  `2` -- not the recipe's own code -- so running these specific targets
+  through `make` (rather than invoking
+  `python3 -m scripts.release_rehearsal.cli check --require-eligible`
+  directly) currently and correctly exits `2`, never `1`; this is GNU
+  Make's own universal recipe-failure convention, not a defect in this
+  Makefile.**
 * `make release-check-expect-blocked` / `make
   release-rehearse-expect-blocked` -- the complementary expected-status
-  health-check targets (`cli ... --expect-status blocked`); exit `0` only
-  while truly `blocked`, exit `3` the moment that ever stops being true.
+  health-check targets (`cli ... --expect-status blocked`); the
+  underlying CLI exits `0` only while truly `blocked`, and exits `3`
+  (`EXIT_STATUS_MISMATCH`) the moment that ever stops being true. Through
+  `make`, the healthy (still-`blocked`) case is exit `0` exactly as the
+  CLI reports; the moment that ever stops being true, `make` itself
+  reports exit `2` (never `3`), for the identical GNU-Make-recipe-failure
+  reason as the paragraph above.
 * `make release-workflow-guard` -- the dynamic machine-JSON workflow
   guard invocation.
 

@@ -73,14 +73,31 @@ is not `"mechanically eligible"`.
   generic archive/compression containers including Java/JVM variants,
   content-based magic detection for nested archives/executables under any
   extension, default-deny `.map`/`.hex` with an exact, factual, file-level
-  exception list in `docs/release_data/map_hex_exceptions.json`) plus
-  provenance manifests
+  exception list in `docs/release_data/map_hex_exceptions.json`).
+  **Every candidate file/member -- filesystem closed-world scan
+  (`scan_tree`), archive members (`scan_archive_members`), and the
+  non-git/extracted-archive-candidate and archive-build fallback paths
+  (`archive_rehearsal._filesystem_allowlisted_files`) alike -- is now
+  matched against the exact allowlist; a directory is walked through only
+  as a structural parent and never itself authorizes anything nested
+  under it** (a fresh, independent review found a residual top-level/
+  directory-prefix membership check in these paths; `src/unlisted.c` now
+  fails even when `src/known.c` is allowlisted, in both filesystem and
+  archive-member modes).
+  Provenance manifests
   (`scripts/release_rehearsal/provenance.py`,
-  `docs/release_data/provenance/*.json`), seeded factually from the
-  current tree with exact-or-directory-prefix coverage of the allowlist
-  (no gap, no ghost entry, no ambiguous/duplicate coverage), with
-  `mgfembp` pinned to `c87e74dcd6c8878b809e013cd8ff0c52baa75332` and
-  `redistribution_approved: false`.
+  `docs/release_data/provenance/*.json`) are, likewise, now **one exact
+  record per exact allowlisted path** (never a directory-prefix/category-
+  level grant): a small, human-curated `PROVENANCE_ROOT_SEED` plus
+  `generate_exact_entries()` mechanically fan every already-recorded fact
+  out to its own exact record per file, but runtime validation
+  (`evaluate_coverage`) only ever reads the exact records actually
+  committed to disk -- a new allowlisted file with no dedicated exact
+  provenance entry fails, exactly like an unlisted tracked file fails
+  allowlist completeness. `mgfembp` keeps its exact path, its
+  `c87e74dcd6c8878b809e013cd8ff0c52baa75332` pin (now also cross-checked
+  against the real gitlink object id Git's own tree records via
+  `check_gitlink_pins()`), and `redistribution_approved: false`.
 * Immutable, Git-blob-bound archive/rebuild rehearsal
   (`scripts/release_rehearsal/git_source.py`,
   `scripts/release_rehearsal/archive_rehearsal.py`): archive content is
@@ -99,13 +116,22 @@ is not `"mechanically eligible"`.
   have pointed at `docs/release_data/...`) are fixed and mechanically
   regression-guarded.
 * Hardened, dynamic-JSON workflow guard
-  (`scripts/release_rehearsal/workflow_guard.py`): job-level/nested
-  `contents: write` (any quoting/whitespace/indentation), shorthand
-  `permissions: write-all`, `github.token`/`secrets.*`/`GITHUB_TOKEN`
-  interpolation, network tools (`curl`/`wget`), a generalized
-  upload/release/publish/deploy `uses:` action-name heuristic, ref
-  mutation (`git tag`/`git push`), and common shell-indirection evasions
-  (line continuations, `eval`, `base64 -d`, `sh -c`/`bash -c`).
+  (`scripts/release_rehearsal/workflow_guard.py`): **any** permission
+  scope (`contents`, `id-token`, `packages`, `pull-requests`, `issues`,
+  `actions`, `checks`, `deployments`, `statuses`, or any scope this
+  module's authors have never heard of) granted `write`, at top level,
+  job level, deeply nested, or inside an inline/flow mapping (any
+  quoting/whitespace/indentation/case), shorthand `permissions:
+  write-all`, `github.token`/`secrets.*`/`GITHUB_TOKEN` interpolation,
+  network tools (`curl`/`wget`), a generalized upload/release/publish/
+  deploy `uses:` action-name heuristic, ref mutation (`git tag`/`git
+  push`), and common shell-indirection evasions (line continuations,
+  `eval`, `base64 -d`, `sh -c`/`bash -c`). A fresh, independent review
+  found the previous check only ever matched the literal scope name
+  `contents`; every other scope (and any future, unknown one) is now
+  rejected identically, and the real, legitimate
+  `.github/workflows/release-rehearsal.yml` still passes with zero
+  findings.
 * `.github/workflows/release-rehearsal.yml` -- `pull_request`/
   `workflow_dispatch` only, top-level `permissions: contents: read`,
   `persist-credentials: false`, no secrets, no artifact upload, no tag/
@@ -144,9 +170,16 @@ make release-changelog-check
 # Full manifest report (always exits 0 for a well-formed report).
 make release-check
 
-# The machine-distinct publication-eligibility gate: EXPECTED to exit
-# non-zero (1) while the candidate is blocked -- this is not a failure of
-# this change, it is the gate doing its job.
+# The machine-distinct publication-eligibility gate. The underlying CLI
+# itself is EXPECTED to exit non-zero (1, EXIT_NOT_ELIGIBLE) while the
+# candidate is blocked -- this is not a failure of this change, it is the
+# gate doing its job. Run *through* `make` as below, GNU Make reports any
+# failed recipe as exit 2 (never the recipe's own code -- this is
+# standard, unconfigurable `make` behavior, not specific to this
+# repository), so the command below currently and correctly prints
+# "exit=2", not "exit=1"; invoke
+# `python3 -m scripts.release_rehearsal.cli check --require-eligible`
+# directly (never through `make`) to observe the CLI's own literal `1`.
 make release-check-require-eligible; echo "exit=$?"
 
 # The expected-status health check: exits 0 only while truly blocked.
