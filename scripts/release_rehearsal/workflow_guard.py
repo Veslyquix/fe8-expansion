@@ -123,19 +123,49 @@ _STATEMENT_SEP = r"(?:;|&&|\|\||\|)"
 # `>`, a fold/chomp indicator) never satisfy the identifier/`$`
 # patterns below anyway, so no separate carve-out is needed for them.
 _RUN_SCALAR_PREFIX = r"\brun:[ \t]*"
+# The opening of a POSIX command-substitution subshell (`$(` -- the
+# *only* command-substitution spelling this module recognizes; legacy
+# backtick substitution is out of scope, matching every other heuristic
+# in this module's deliberately-narrow, high-confidence design). Issue
+# #9 residual hardening: a fresh, independent verifier reproduced a
+# dangerous command executed *inside* `$( ... )` -- `echo $($X$Y
+# https://example.invalid)`, `echo $(${X}${Y} ...)`, and a direct
+# `echo $($CMD ...)` where `CMD` was locally assigned elsewhere -- as
+# unrejected, since the text immediately following `$(` is exactly as
+# much "command position" as the start of a `run:` script line or the
+# text right after a `;`/`&&`/`||`/`|` separator, yet none of those
+# already-recognized command-position starts include it. Adding `$(`
+# here is the single, minimal change that lets the *existing*
+# concatenated-fragment and locally-assigned-single-variable checks
+# below cover a command executed inside a subshell for free, with no
+# separate detection logic duplicated. This never turns an *ordinary*,
+# safe `$(...)` (e.g. a literal `$(date)`, or one whose result is
+# merely assigned/interpolated as data) into a violation by itself --
+# only a variable/fragment-assembled command actually invoked at that
+# position still triggers the same narrow rules as everywhere else.
+_COMMAND_SUBSTITUTION_OPEN = r"\$\("
 # The start of a `run:` script line (any line -- real line-continuations
 # are already collapsed by `_normalize_for_scanning` before this ever
 # runs), the inline start of a `run:` scalar's value on the same text
-# line, or, on the same line, immediately after a shell command
-# separator (`;`, `&&`, `||`, or a pipe `|`). Deliberately line/
-# separator-aware rather than a full parser -- see module docstring.
-_COMMAND_POSITION_PREFIX = rf"(?:^|{_STATEMENT_SEP}|{_RUN_SCALAR_PREFIX})[ \t]*"
+# line, immediately after a shell command separator (`;`, `&&`, `||`, or
+# a pipe `|`), or immediately inside an opened `$( ... )` command
+# substitution. Deliberately line/separator/subshell-aware rather than a
+# full parser -- see module docstring.
+_COMMAND_POSITION_PREFIX = (
+    rf"(?:^|{_STATEMENT_SEP}|{_RUN_SCALAR_PREFIX}|{_COMMAND_SUBSTITUTION_OPEN})[ \t]*"
+)
 # A statement boundary: another separator, or a genuine end-of-line/
 # end-of-text -- `\r` and `\n` are both matched directly (rather than
 # relying solely on MULTILINE `$`, which sits *before* a bare `\n` and
 # would otherwise miss a CRLF file's trailing `\r`).
 _STATEMENT_END = rf"(?:{_STATEMENT_SEP}|[\r\n]|$)"
-_BOUNDARY_AFTER = r"(?:[ \t\r\n]|$)"
+# A command-position token's trailing boundary: ordinary whitespace/
+# end-of-line/end-of-text, or a closing `)` -- the latter added for
+# issue #9's command-substitution coverage above, so a variable invoked
+# directly as the *entire* body of a subshell with no trailing argument
+# (`$($CMD)`, no space before the closing paren) still has a real
+# boundary to match against.
+_BOUNDARY_AFTER = r"(?:[ \t\r\n)]|$)"
 
 _CONCATENATED_VAR_REFS_RE = re.compile(
     rf"{_COMMAND_POSITION_PREFIX}(?:{_VAR_REF}){{2,}}", re.MULTILINE
@@ -144,15 +174,35 @@ _COMMAND_POSITION_SINGLE_VAR_RE = re.compile(
     rf"{_COMMAND_POSITION_PREFIX}({_VAR_REF})(?={_BOUNDARY_AFTER})", re.MULTILINE
 )
 # A "pure" local shell-variable assignment statement: exactly
-# `NAME=value` occupying an entire command position by itself (no
-# attached command afterward on the same statement -- so the common,
-# legitimate `FOO=bar some-command args` inline-env-var-prefix idiom is
-# deliberately *not* matched/recorded here). Never tries to resolve/
-# interpret `value` itself (no shell parser); merely recording *that*
-# `NAME` was locally assigned anything at all is enough to make a later
-# bare `$NAME`/`${NAME}` command-position invocation of it suspicious.
+# `NAME=value` (optionally `export NAME=value` -- issue #9 residual
+# hardening: a fresh, independent verifier reproduced `export NAME=...`
+# followed by a later direct `$NAME`/`${NAME}` command-position
+# invocation as unrejected, since the plain `NAME=value` shape below
+# never matched the `export` keyword prefix) occupying an entire command
+# position by itself (no attached command afterward on the same
+# statement -- so the common, legitimate `FOO=bar some-command args`
+# inline-env-var-prefix idiom is deliberately *not* matched/recorded
+# here, `export` prefix or not). Never tries to resolve/interpret
+# `value` itself (no shell parser); merely recording *that* `NAME` was
+# locally assigned anything at all is enough to make a later bare
+# `$NAME`/`${NAME}` command-position invocation of it suspicious.
 _PURE_ASSIGNMENT_RE = re.compile(
-    rf"{_COMMAND_POSITION_PREFIX}([A-Za-z_][A-Za-z0-9_]*)=[^\s;&|]*[ \t]*(?={_STATEMENT_END})",
+    rf"{_COMMAND_POSITION_PREFIX}(?:export[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)=[^\s;&|]*[ \t]*(?={_STATEMENT_END})",
+    re.MULTILINE,
+)
+# `read`/`read -r`/`read -r -s ...` (any number of simple single-token
+# `-x` flags; a real shell's `read -p prompt NAME` etc. is out of scope,
+# matching this module's narrow, high-confidence design) populating a
+# shell variable from runtime input rather than a literal RHS value --
+# issue #9 residual hardening: a fresh, independent verifier reproduced
+# `read NAME` followed by a later direct `$NAME`/`${NAME}` command-
+# position invocation as unrejected, since `_PURE_ASSIGNMENT_RE` above
+# only ever recognizes the `NAME=value` shape, never `read NAME`. Only
+# the *first* named variable is tracked (this module's minimal,
+# documented scope: the issue's own example is a single target
+# variable); a multi-variable `read A B` is out of scope.
+_READ_ASSIGNMENT_RE = re.compile(
+    rf"{_COMMAND_POSITION_PREFIX}read\b(?:[ \t]+-[A-Za-z]+)*[ \t]+([A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
 )
 _SINGLE_VAR_NAME_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
@@ -161,33 +211,50 @@ _SINGLE_VAR_NAME_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 def check_variable_command_assembly(text: str) -> List[str]:
     """Rejects (1) two or more shell variable expansions concatenated
     with zero intervening whitespace in command position (`$X$Y`,
-    `${X}${Y}`, and any bare/braced mix) -- a command name assembled at
-    runtime from separately-innocuous fragments -- and (2) a single
-    shell variable, previously assigned a literal value elsewhere in the
-    very same script, later invoked directly in command position (e.g.
-    `CMD=curl` ... `$CMD https://...`). Both are high-confidence,
-    command-position-aware evasions of every literal-command-name check
-    in `FORBIDDEN_PATTERNS` above; neither ever fires against ordinary
-    tail-position interpolation (e.g. this repository's own real
-    `>> "$GITHUB_STEP_SUMMARY"`) or plain data interpolation, since
-    those never sit in command position."""
+    `${X}${Y}`, and any bare/braced mix), including inside a `$( ... )`
+    command substitution (e.g. `$($X$Y ...)`, `$(${X}${Y} ...)`) -- a
+    command name assembled at runtime from separately-innocuous
+    fragments -- and (2) a single shell variable, previously assigned a
+    value elsewhere in the very same script via a plain `NAME=value`
+    assignment, an `export NAME=value` assignment, or a `read`/`read -r`
+    statement, later invoked directly in command position, including
+    directly inside a command substitution (e.g. `CMD=curl` ...
+    `$CMD https://...`, or `... $($CMD ...)`). All of these are
+    high-confidence, command-position-aware evasions of every literal-
+    command-name check in `FORBIDDEN_PATTERNS` above; none of them ever
+    fire against ordinary tail-position interpolation (e.g. this
+    repository's own real `>> "$GITHUB_STEP_SUMMARY"`), plain data
+    interpolation, or an *ordinary*, non-assembled `$(...)` command
+    substitution (e.g. `$(date)`), since none of those ever sit at a
+    recognized command position."""
     violations: List[str] = []
     for match in _CONCATENATED_VAR_REFS_RE.finditer(text):
-        shown = re.sub(r"^[ \t;&|]+", "", match.group(0))
+        shown = re.sub(r"^[ \t;&|(]+", "", match.group(0))
         violations.append(
             "command position invokes a name assembled by concatenating 2+ shell variable "
             f"expansions with no separator (evades literal-command-name detection): {shown!r}"
         )
-    assigned_names = {match.group(1) for match in _PURE_ASSIGNMENT_RE.finditer(text)}
+    assigned_by_value = {match.group(1) for match in _PURE_ASSIGNMENT_RE.finditer(text)}
+    assigned_by_read = {match.group(1) for match in _READ_ASSIGNMENT_RE.finditer(text)}
+    assigned_names = assigned_by_value | assigned_by_read
     if assigned_names:
         for match in _COMMAND_POSITION_SINGLE_VAR_RE.finditer(text):
             name_match = _SINGLE_VAR_NAME_RE.fullmatch(match.group(1))
-            if name_match and name_match.group(1) in assigned_names:
-                shown = re.sub(r"^[ \t;&|]+", "", match.group(0))
+            if not name_match:
+                continue
+            name = name_match.group(1)
+            shown = re.sub(r"^[ \t;&|(]+", "", match.group(0))
+            if name in assigned_by_value:
                 violations.append(
                     "command position directly invokes shell variable "
-                    f"{match.group(1)!r}, which was locally assigned a literal value earlier "
+                    f"{name!r}, which was locally assigned a literal value earlier "
                     f"in this same script (evades literal-command-name detection): {shown!r}"
+                )
+            elif name in assigned_by_read:
+                violations.append(
+                    "command position directly invokes shell variable "
+                    f"{name!r}, which was populated by a 'read' statement earlier in this "
+                    f"same script (evades literal-command-name detection): {shown!r}"
                 )
     return violations
 

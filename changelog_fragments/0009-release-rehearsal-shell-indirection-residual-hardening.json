@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "internal",
+  "summary": "Close three further residual shell-indirection gaps a fresh, independent verifier reproduced against the read-only release/publication rehearsal system's workflow guard: a variable/fragment-assembled command executed inside a `$( ... )` command substitution (e.g. `echo $($X$Y ...)`, `echo $(${X}${Y} ...)`, and a direct `echo $($CMD ...)` where `CMD` was locally assigned elsewhere), a variable assigned via `export NAME=value` and later invoked directly as a command, and a variable populated via `read`/`read -r NAME` and later invoked directly as a command -- all without ever flagging this repository's own safe dynamic job-summary redirection, an ordinary literal `$(date)`-style command substitution, or ordinary `export`/`read` usage that is only ever read back as data. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

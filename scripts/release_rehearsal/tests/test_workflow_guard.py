@@ -788,5 +788,292 @@ class VariableCommandAssemblyTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
+class CommandSubstitutionAndTrackedAssignmentTests(unittest.TestCase):
+    """Issue #9 residual hardening: a fresh, independent verifier
+    reproduced three further high-confidence shell-indirection shapes
+    still unrejected after the previous round: (1) a variable/fragment-
+    assembled command executed *inside* a `$( ... )` command
+    substitution, (2) a variable assigned via `export NAME=value` and
+    later invoked directly as a command, and (3) a variable populated
+    via `read NAME`/`read -r NAME` and later invoked directly as a
+    command. Each is exercised inline, in a block (`run: |`) scalar,
+    with braced/bare and mixed forms, case variants, extra spacing, and
+    (for command substitution) a line continuation splitting the
+    assembled fragments -- plus safe negative controls that must never
+    be flagged."""
+
+    # --- (1) command substitution executing an assembled/tracked command ---
+
+    def test_command_substitution_bare_concatenation_rejected(self):
+        text = GOOD_WORKFLOW + (
+            "\n      - run: X=cur; Y=l; echo $($X$Y https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_command_substitution_braced_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur\n"
+            + "          Y=l\n"
+            + "          echo $(${X}${Y} https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_command_substitution_mixed_brace_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur\n"
+            + "          Y=l\n"
+            + "          echo $($X${Y} https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_command_substitution_extra_spacing_after_open_paren_rejected(self):
+        text = GOOD_WORKFLOW + (
+            "\n      - run: X=cur; Y=l; echo $(   $X$Y https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_command_substitution_uppercase_value_variant_rejected(self):
+        text = GOOD_WORKFLOW + (
+            "\n      - run: X=CUR; Y=L; echo $($X$Y https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_command_substitution_concatenation_split_across_continuation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur; Y=l; echo $($X\\\n"
+            + "          $Y https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_command_substitution_direct_single_var_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          CMD=curl\n"
+            + "          echo $($CMD https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_command_substitution_direct_single_var_braced_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          CMD=curl\n"
+            + "          echo $(${CMD} https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_command_substitution_direct_single_var_no_trailing_args_rejected(self):
+        """`$($CMD)` -- the variable is the entire subshell body, with no
+        space before the closing paren -- must still be caught."""
+        text = GOOD_WORKFLOW + "\n      - run: CMD=curl; echo $($CMD)\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_command_substitution_inline_one_line_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: CMD=curl; echo $($CMD https://example.invalid)\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    # --- (2) export NAME=value then a later direct invocation ---
+
+    def test_export_then_direct_invocation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export CMD=curl\n"
+            + "          $CMD https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_export_then_direct_invocation_braced_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export CMD=curl\n"
+            + "          ${CMD} https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_export_then_direct_invocation_inline_one_line_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: export CMD=curl; $CMD https://example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_export_extra_spacing_variant_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export   CMD=curl\n"
+            + "          $CMD https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_export_then_command_substitution_invocation_rejected(self):
+        """Both residual gaps combined: `export` assignment, then
+        invoked directly inside a `$( ... )` command substitution."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export CMD=curl\n"
+            + "          echo $($CMD https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    # --- (3) read/read -r NAME then a later direct invocation ---
+
+    def test_read_then_direct_invocation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read CMD\n"
+            + "          $CMD https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_dash_r_then_direct_invocation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read -r CMD\n"
+            + "          $CMD https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_then_direct_invocation_braced_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read CMD\n"
+            + "          ${CMD} https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_then_direct_invocation_inline_one_line_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: read CMD; $CMD https://example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_mixed_case_variable_name_variant_rejected(self):
+        """A mixed-case tracked variable name (`read`'s own keyword is
+        always lowercase in a real POSIX shell -- only the *variable
+        name* itself may vary in case) is still tracked and rejected."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read CmdName\n"
+            + "          $CmdName https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_then_command_substitution_invocation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read -r CMD\n"
+            + "          echo $($CMD https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    # --- negative controls: safe shapes must never be flagged ---
+
+    def test_ordinary_literal_command_substitution_not_flagged(self):
+        """A plain, non-assembled `$(...)` command substitution
+        (e.g. `$(date)`) is never itself flagged -- only an assembled
+        or tracked-variable command executed inside it is."""
+        text = GOOD_WORKFLOW + '\n      - run: echo "today is $(date)"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_export_used_only_as_data_not_flagged(self):
+        """`export`ing a variable and only ever reading it back as
+        *data* (never invoking it as a command) must not be flagged."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export FOO=bar\n"
+            + '          echo "$FOO"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_read_used_only_as_data_not_flagged(self):
+        """`read`ing a variable and only ever using it as *data* (never
+        invoking it as a command) must not be flagged."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read FOO\n"
+            + '          echo "$FOO"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_env_prefixed_command_with_export_elsewhere_not_misclassified(self):
+        """The legitimate `FOO=bar some-command args` inline-env-var-
+        prefix idiom is still not mistaken for a tracked assignment,
+        even in a script that also happens to `export` an unrelated
+        variable."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export UNRELATED=value\n"
+            + "          FOO=bar make release-check\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_safe_dynamic_summary_redirection_still_not_flagged(self):
+        text = (
+            GOOD_WORKFLOW
+            + '      - run: python3 -m scripts.release_rehearsal.cli summary >> "$GITHUB_STEP_SUMMARY"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_read_data_use_and_literal_command_substitution_combined_not_flagged(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read FOO\n"
+            + '          echo "value=$(date) $FOO"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.check_variable_command_assembly(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_full_validation_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.validate_workflow_text(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+
 if __name__ == "__main__":
     unittest.main()
