@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -531,6 +532,9 @@ class RebuildEligibilityTests(unittest.TestCase):
                 "rightsholder": "NOASSERTION", "license": "NOASSERTION",
                 "redistribution_approved": approved, "reviewer": ("Jane" if approved else None),
                 "notes": "synthetic fixture", "pinned_commit": pinned_commit,
+                # issue #9 mandatory correction #4: every "submodule"-category
+                # provenance entry now also requires a non-empty 'url'.
+                "url": "https://example.invalid/vendor.git",
             }
         ]), encoding="utf-8")
         return root, provenance_dir
@@ -641,6 +645,169 @@ class RunBuildTwiceTests(unittest.TestCase):
             ar.run_build_twice(build_command, source_dir, ["out.bin"])
             self.assertEqual((source_dir / "input.txt").read_text(), "original\n")
             self.assertFalse((source_dir / "out.bin").exists())
+
+
+class MaterializeImmutableSourceTreeTests(unittest.TestCase):
+    """issue #9 mandatory correction #7: `materialize_immutable_source_tree`
+    must extract the exact *committed* tree at `target_sha` -- never the
+    live, potentially-mutable worktree."""
+
+    def test_extraction_matches_committed_content_not_worktree_edits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _init_repo(root)
+            (root / "a.txt").write_text("committed\n")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = _git("rev-parse", "HEAD", cwd=root).strip()
+
+            # Mutate the live worktree *after* resolving the target SHA --
+            # the materialization must be completely unaffected by this.
+            (root / "a.txt").write_text("mutated-after-sha-resolved\n")
+
+            dest = Path(tmp) / "materialized"
+            dest.mkdir()
+            ar.materialize_immutable_source_tree(root, sha, dest)
+            self.assertEqual((dest / "a.txt").read_text(), "committed\n")
+
+    def test_nonexistent_sha_is_actionable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _init_repo(root)
+            (root / "a.txt").write_text("x")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            dest = Path(tmp) / "materialized"
+            dest.mkdir()
+            with self.assertRaises(ar.ArchiveRehearsalError):
+                ar.materialize_immutable_source_tree(root, "0" * 40, dest)
+
+
+class RunBuildTwiceFromImmutableSourceTests(unittest.TestCase):
+    """issue #9 mandatory correction #7: the independent-immutable-
+    materialization double-build -- two separate source trees,
+    materialized independently from the same immutable `target_sha`
+    (never a copy of the live worktree), each in its own build/output
+    directory, with each materialization's own input files verified
+    unchanged after the build runs."""
+
+    def _make_repo(self, tmp) -> tuple:
+        root = Path(tmp) / "root"
+        root.mkdir()
+        _init_repo(root)
+        (root / "input.txt").write_text("hello\n")
+        _git("add", "-A", cwd=root)
+        _git("commit", "-q", "-m", "init", cwd=root)
+        sha = _git("rev-parse", "HEAD", cwd=root).strip()
+        return root, sha
+
+    def test_deterministic_build_reports_verified_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "open('out.bin', 'wb').write(open('input.txt', 'rb').read())",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertTrue(result["match"], result)
+            self.assertEqual(result["input_tree_mutation_problems1"], [])
+            self.assertEqual(result["input_tree_mutation_problems2"], [])
+
+    def test_live_worktree_mutation_after_sha_resolution_never_affects_the_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            (root / "input.txt").write_text("MUTATED-LIVE-WORKTREE-BYTES\n")
+            build_command = [
+                sys.executable, "-c",
+                "open('out.bin', 'wb').write(open('input.txt', 'rb').read())",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertTrue(result["match"], result)
+            # both materializations reflect the *committed* "hello\n",
+            # never the mutated live worktree bytes -- if they had leaked
+            # through, the two hashes would still match each other (both
+            # runs would see the same mutation), so this is checked via
+            # the mutation-detector as an independent, additional proof:
+            # the committed input.txt itself was never touched by the
+            # build (it only ever wrote a *new* out.bin).
+            self.assertEqual(result["input_tree_mutation_problems1"], [])
+
+    def test_build_that_mutates_its_declared_input_is_reported_as_a_failure(self):
+        """The literal issue #9 requirement: mutating one materialization
+        must fail -- never silently "match": True."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "open('input.txt', 'w').write('mutated-by-the-build-script'); "
+                "open('out.bin', 'wb').write(b'output')",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertFalse(result["match"])
+            self.assertTrue(result["input_tree_mutation_problems1"])
+            self.assertTrue(any("mutated" in p for p in result["input_tree_mutation_problems1"]))
+
+    def test_build_that_deletes_its_declared_input_is_reported_as_a_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import os; os.remove('input.txt'); open('out.bin', 'wb').write(b'output')",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertFalse(result["match"])
+            self.assertTrue(any("disappeared" in p for p in result["input_tree_mutation_problems1"]))
+
+    def test_nondeterministic_build_reports_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import os; open('out.bin', 'wb').write(os.urandom(32))",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertFalse(result["match"])
+            self.assertNotEqual(result["hashes1"], result["hashes2"])
+
+    def test_extra_materialize_callback_runs_independently_for_each_run(self):
+        """`extra_materialize` is invoked once per independent
+        materialization -- proven by having it write a marker file whose
+        *content* the build command echoes into its declared output;
+        both runs must independently reproduce the identical marker
+        content (never share state)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+
+            def _add_marker(run_root: Path) -> None:
+                (run_root / "marker.txt").write_text("shared-marker-content\n")
+
+            build_command = [
+                sys.executable, "-c",
+                "open('out.bin', 'wb').write(open('marker.txt', 'rb').read())",
+            ]
+            result = ar.run_build_twice_from_immutable_source(
+                root, sha, build_command, ["out.bin"], extra_materialize=_add_marker,
+            )
+            self.assertTrue(result["match"], result)
+
+    def test_sharing_a_materialization_directory_between_runs_is_rejected(self):
+        """The literal issue #9 requirement: sharing a source/build dir
+        between the two runs must fail -- simulated here by forcing
+        `tempfile.mkdtemp` to return the *same* path both times (the only
+        way this could ever happen, since real `mkdtemp()` calls are
+        always unique) and confirming the explicit collision guard
+        rejects it rather than silently reporting a result."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            shared_dir = Path(tmp) / "forced-shared-run-dir"
+            shared_dir.mkdir()
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with mock.patch("tempfile.mkdtemp", return_value=str(shared_dir)):
+                with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                    ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertIn("same directory", str(ctx.exception))
 
 
 class RebuildRehearsalBlockerTests(unittest.TestCase):

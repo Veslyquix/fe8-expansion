@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Add external/human attestation as a permanent, non-bypassable overall-status dimension (check_external_attestation always reports missing, folded into build_manifest -- proven even with every other sub-check mocked to pass); document workflow-guard/action-pins as advisory, never authorization; and rebuild the verified-success path on two independently-materialized immutable git-archive source trees (never a copy of the live worktree), verifying neither materialization is mutated during the build.",
+  "semver_impact": "none"
+}

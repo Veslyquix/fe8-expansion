@@ -234,6 +234,53 @@ entry has `NOASSERTION`, `redistribution_approved: false`, or no
 `reviewer` -- which is every entry, today. Resolving this is a human legal
 decision; no amount of running this tooling changes that.
 
+## External attestation is outside candidate control
+
+Issue #9 mandatory correction #5. Everything above -- provenance
+records, the exact allowlist/tree-coverage partition, the submodule
+binding, the workflow guard, the rebuild rehearsal -- is a *mechanical*
+check this in-repo tooling can run and truthfully report on its own.
+Real-world publication additionally requires a **protected external
+human attestation**: an accountable human reviewer's legal/provenance
+approval decision, made *outside* this repository's own tooling. That
+attestation is deliberately, structurally **outside this candidate's
+control**:
+
+* `scripts/release_rehearsal/manifest.py`'s `check_external_attestation()`
+  takes **no arguments at all** and always returns the same fixed
+  substatus (`"missing"`) -- there is no in-repo attestation file,
+  secret, public key, environment variable, CLI flag, or any other
+  candidate-writable path anywhere in this repository that could ever
+  change it to `"present"`.
+* No in-repo reviewer string recorded in
+  `docs/release_data/provenance/*.json`, no `redistribution_approved`
+  boolean there, no clean `workflow_guard`/`action_pins`/
+  `tree_coverage`/`submodule_binding` result, no CI job output, and no
+  `--require-eligible`/`--expect-status` CLI argument is ever *sufficient*
+  to produce an overall `"mechanically eligible"` status -- this
+  substatus is unconditionally folded into the overall candidate status
+  in `build_manifest()`, exactly like every other sub-check, and it can
+  never itself report anything other than `"missing"`.
+  `scripts/release_rehearsal/tests/test_manifest.py`'s
+  `ExternalAttestationCannotBeSatisfiedByInRepoDataTests` proves this
+  directly: even with **every other** sub-check mocked to a fully-
+  passing, synthetic shape, the overall candidate status still comes
+  back `"blocked"`, solely because of this one substatus.
+* The **only** entity permitted to combine a genuine external protected
+  human attestation with this candidate's own mechanical evidence is a
+  **future, separate, out-of-repo human/harness gate** -- one that does
+  not exist in this repository and is not any part of this workflow.
+  Adding such a gate (an in-repo attestation file/secret/public key, a
+  bypass flag, or any candidate-writable path that could flip
+  eligibility) is explicitly out of scope for this change and remains
+  forbidden.
+
+This is the same "necessary, never sufficient" pattern the workflow
+guard already uses (see "Workflow guard is advisory, never
+authorization" under "Workflow and Make integration" below) -- applied
+one level up, to the *entire* in-repo mechanical result, not just its
+permission/safety contract.
+
 ## Exact per-member source allowlist and provenance coverage
 
 `docs/release_data/source_allowlist.json` is **not** a top-level-directory
@@ -603,24 +650,66 @@ machine-distinct states:
   strictly distinct from `"blocked"` so a report can never conflate "we
   refused to even try" with "we tried and it worked".
 * **`"failed"`** -- a build was actually attempted
-  (`run_build_twice()`) and either run exited non-zero, a declared output
-  was missing, or the two runs' output hashes disagreed.
-* **`"verified_success"`** -- both runs actually executed, both exited
-  `0`, and every declared output was present and byte-identical.
+  (`run_build_twice_from_immutable_source()`) and either run exited
+  non-zero, a declared output was missing, the two runs' output hashes
+  disagreed, or either run's own independent input materialization was
+  mutated during the build.
+* **`"verified_success"`** -- both runs actually executed -- each from
+  its own independent, immutable-`target_sha`-bound materialization, in
+  its own separate temp/build directory, with neither run's input tree
+  mutated during the build -- both exited `0`, and every declared output
+  was present and byte-identical.
 
-`run_build_twice()` is the actual, executable "run a build command twice
-and hash its outputs" mechanism -- never a mocked boolean: each run copies
-the source into its own fresh temporary directory and invokes the given
-command via `subprocess.run`.
+**Independent immutable rebuild materialization (issue #9 mandatory
+correction #7).** `run_build_twice_from_immutable_source()` is what
+actually produces `"verified_success"` now -- never a build copied twice
+from the same, potentially-mutable live worktree. For each of the two
+runs, it:
+
+1. materializes a completely separate, fresh source tree via `git
+   archive <target_sha> | tar -x` (`materialize_immutable_source_tree()`)
+   -- an independent extraction bound to the exact same immutable commit,
+   never a copy of the live worktree (which could have been edited after
+   `target_sha` was resolved, and is never read for this purpose at all);
+2. places any already-eligibility-verified submodule content
+   `git archive` itself never includes (`_copy_verified_submodule_content()`
+   -- the one, narrow, explicitly-gated exception; see the "GitHub
+   auto-generated source archive contradiction" below) into that same
+   independent materialization;
+3. snapshots every file in that materialization (`_hash_tree_snapshot()`)
+   *before* running `build_command` in it, via `subprocess.run` with a
+   small, explicit, controlled environment (`_controlled_build_environment()`
+   -- fixed `LANG`/`LC_ALL`/`TZ`/private `HOME`, never a blind passthrough
+   of this process's own full ambient environment);
+4. verifies every one of those originally-materialized files is still
+   present and byte-identical *after* the build runs
+   (`_verify_input_tree_unchanged()`) -- a build script that mutates or
+   deletes any of its own declared input files (instead of only ever
+   writing new, genuinely separate output paths) is reported as a
+   failure, never silently `"match": True`;
+5. hashes every declared output path.
+
+The two runs can never share a source or build directory: each is rooted
+at its own `tempfile.mkdtemp()` path, and an explicit guard rejects the
+(otherwise-impossible) case of both runs resolving to the same directory
+rather than silently trusting that they never could.
 `scripts/release_rehearsal/tests/test_archive_rehearsal.py`'s
-`RunBuildTwiceTests` exercise this directly with real (trivial,
-hermetic, synthetic) build commands, proving both the match and the
-mismatch/failure paths genuinely execute; `RebuildRehearsalBlockerTests`
-additionally construct a fully synthetic eligible (initialized/approved/
-identity-matched) submodule fixture and run the pinned double-build path
-against it end-to-end. The manifest's overall `"status"` is never
-`"mechanically eligible"` while this reports anything other than
-`"verified_success"` (see "Release manifest and identity checks" above).
+`RunBuildTwiceFromImmutableSourceTests` exercises all of this directly
+(deterministic match, nondeterministic mismatch, a build that mutates or
+deletes its own input reported as a failure, live-worktree edits after
+SHA resolution never affecting the build, and -- via dependency
+injection -- the shared-directory guard actually firing);
+`RebuildRehearsalBlockerTests`' `test_hermetic_eligible_rebuild_runs_
+twice_and_verifies_success` additionally constructs a fully synthetic
+eligible (initialized/approved/identity-matched) submodule fixture and
+runs the real pinned double-build path against it end-to-end via
+`rebuild_rehearsal_blocker()` itself (not merely the lower-level
+function in isolation). The older, copy-based `run_build_twice()`
+remains as a separate, still-tested, general-purpose utility -- it is no
+longer part of the path that ever produces `"verified_success"`. The
+manifest's overall `"status"` is never `"mechanically eligible"` while
+this reports anything other than `"verified_success"` (see "Release
+manifest and identity checks" above).
 
 Also explicitly documents, in both the report JSON and this document, the
 **GitHub auto-generated source archive contradiction**: GitHub's
@@ -697,6 +786,27 @@ alone could never prove the eligible branch is not secretly hardcoded).
 If a future, separately-authorized change ever makes the candidate
 `"mechanically eligible"`, the summary renders that truthfully with no
 workflow edit required.
+
+### Workflow guard is advisory, never authorization
+
+`workflow_guard.py`/`action_pins.py` (together, "the workflow guard")
+mechanically prove this workflow's own permission/network/safety
+contract is intact, and that its Action pins are exact and documented.
+That is **necessary, but never sufficient**, for anything: passing the
+workflow guard is a self-check *of the CI workflow file itself* -- it
+says nothing about license/provenance approval, submodule redistribution
+approval, rebuild verification, or (see "External attestation is outside
+candidate control" above) the separate, protected external human
+attestation real publication additionally requires. A clean
+`workflow-guard`/`action_pins` result is exactly one advisory,
+defense-in-depth signal among many in this system, never itself an
+authorization to publish, and never folded into the overall
+`"mechanically eligible"`/`"blocked"` candidate status computed by
+`manifest.py` (it is deliberately a separate, standalone check --
+`make release-workflow-guard`/`make release-action-pins-check` --
+reported on its own 0/1/2 exit contract, not inside `make release-check`).
+Protected external review -- not this repository's own tooling -- owns
+approval and final publication status.
 
 Make targets (`release.mk`, included from the top-level `Makefile`):
 

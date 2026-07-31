@@ -208,6 +208,85 @@ class RequiredDocsTests(unittest.TestCase):
             self.assertTrue(missing)
 
 
+class CheckExternalAttestationTests(unittest.TestCase):
+    """issue #9 mandatory correction #5: external/human attestation must
+    remain outside candidate control. `check_external_attestation()`
+    takes no arguments at all and always reports the same fixed
+    "missing" substatus -- there is no in-repo mechanism (file, secret,
+    flag, environment variable) that could ever change it."""
+
+    def test_always_reports_missing(self):
+        report = rm.check_external_attestation()
+        self.assertEqual(report["status"], "missing")
+        self.assertNotEqual(report["status"], "present")
+        self.assertNotEqual(report["status"], "mechanically eligible")
+
+    def test_always_reports_a_reason(self):
+        report = rm.check_external_attestation()
+        self.assertTrue(report["reasons"])
+        self.assertTrue(any("external" in r and "attestation" in r for r in report["reasons"]))
+
+    def test_takes_no_arguments(self):
+        """There is no parameter at all this in-repo caller could ever
+        supply to influence the result -- the function signature itself
+        proves there is no candidate-controlled input path."""
+        import inspect
+        signature = inspect.signature(rm.check_external_attestation)
+        self.assertEqual(len(signature.parameters), 0)
+
+    def test_deterministic_across_repeated_calls(self):
+        self.assertEqual(rm.check_external_attestation(), rm.check_external_attestation())
+
+
+class ExternalAttestationCannotBeSatisfiedByInRepoDataTests(unittest.TestCase):
+    """The strongest, most direct proof of issue #9 mandatory correction
+    #5: even when *every other* sub-check is mocked to a fully-passing,
+    synthetic "everything is fine" shape, the overall candidate status
+    must still be exactly "blocked" -- solely because of the missing
+    external attestation. No synthetic data, in-repo file, or candidate-
+    controlled flag can ever flip this."""
+
+    def _fully_passing_manifest(self):
+        with mock.patch.object(rm, "check_required_docs", return_value=[]), \
+             mock.patch.object(rm, "check_changelog", return_value={"ok": True, "errors": [], "aggregate_impact": "none"}), \
+             mock.patch.object(rm, "check_provenance", return_value={"status": "mechanically eligible", "reasons": []}), \
+             mock.patch.object(rm, "check_source_guard", return_value={"status": "pass", "violations": []}), \
+             mock.patch.object(rm, "check_migrations", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_allowlist", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_tree_coverage", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_submodule_binding", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_version_ledger_and_semver", return_value={"ok": True, "errors": [], "ledger": {}}), \
+             mock.patch.object(rm, "check_c_fallback", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_migration_reachability", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_doc_links", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_rebuild", return_value={"status": rm.ar.REBUILD_STATUS_VERIFIED_SUCCESS, "reasons": []}):
+            return rm.build_manifest(ROOT, "release", "aapcs", "16M")
+
+    def test_overall_status_remains_blocked_even_with_everything_else_synthetically_passing(self):
+        manifest = self._fully_passing_manifest()
+        self.assertEqual(manifest["status"], "blocked")
+        self.assertNotEqual(manifest["status"], "mechanically eligible")
+
+    def test_the_only_remaining_reason_is_the_external_attestation_one(self):
+        manifest = self._fully_passing_manifest()
+        self.assertTrue(any("external" in r and "attestation" in r for r in manifest["reasons"]))
+        # every OTHER dimension was mocked to a clean/passing shape, so no
+        # other reason should have leaked through
+        other_reasons = [r for r in manifest["reasons"] if "attestation" not in r]
+        self.assertEqual(other_reasons, [])
+
+    def test_external_attestation_substatus_is_missing_in_the_report(self):
+        manifest = self._fully_passing_manifest()
+        self.assertEqual(manifest["external_attestation"]["status"], "missing")
+
+    def test_require_eligible_still_exits_non_eligible_even_when_everything_else_passes(self):
+        """A pipeline demanding --require-eligible must still see this
+        candidate as not eligible -- exactly like `cli.py`'s own
+        `_apply_status_gates` reads `manifest["status"]` directly."""
+        manifest = self._fully_passing_manifest()
+        self.assertNotEqual(manifest["status"], "mechanically eligible")
+
+
 class BuildManifestTests(unittest.TestCase):
     def test_real_repo_is_blocked_not_falsely_eligible(self):
         manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")

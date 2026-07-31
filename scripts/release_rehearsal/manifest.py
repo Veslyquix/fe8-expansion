@@ -303,6 +303,53 @@ def check_submodule_binding(repo_root: Path, target_sha: str) -> Dict:
     return {"ok": not errors, "errors": errors}
 
 
+# --- External/human attestation (issue #9 mandatory correction #5) --------
+#
+# Publication eligibility for a real-world release additionally requires
+# a *protected external human attestation* -- a legal/provenance review
+# decision made by an accountable human reviewer, outside this
+# repository's own tooling, that this candidate's evidence is
+# sufficient. This in-repo tooling structurally cannot supply, compute,
+# accept, or verify that attestation itself: there is no in-repo
+# attestation file, secret, public key, environment variable, CLI flag,
+# or any other candidate-writable path anywhere in this module (or
+# anywhere in scripts/release_rehearsal/) that ever sets
+# `EXTERNAL_ATTESTATION_STATUS` to anything other than the fixed,
+# hardcoded literal below. No reviewer string recorded in
+# docs/release_data/provenance/*.json, no `redistribution_approved`
+# boolean there, no workflow_guard/action_pins/tree_coverage/
+# submodule_binding "clean" result, and no `--require-eligible`/
+# `--expect-status` CLI argument can ever change this value -- see
+# docs/release_process.md's "External attestation is outside candidate
+# control" section. The only entity permitted to combine a genuine
+# external protected human attestation with this candidate's evidence is
+# a future, separate, out-of-repo human/harness gate that does not exist
+# in this repository and is not any part of this workflow.
+EXTERNAL_ATTESTATION_STATUS = "missing"
+
+
+def check_external_attestation() -> Dict:
+    """Always, unconditionally returns the fixed `"missing"` substatus
+    above (never `"present"`, never anything computed from candidate-
+    controlled input) -- this alone is sufficient to keep the overall
+    candidate status `"blocked"` forever, regardless of how many *other*
+    sub-checks pass. Deliberately takes no arguments at all: there is no
+    parameter this in-repo caller could ever supply to change the
+    result."""
+    return {
+        "status": EXTERNAL_ATTESTATION_STATUS,
+        "reasons": [
+            "external protected human attestation is missing/not_supplied: this in-repo "
+            "tooling has no mechanism to supply, accept, or verify one (no attestation file, "
+            "secret, public key, environment variable, CLI flag, or other candidate-writable "
+            "path exists for this purpose anywhere in this repository); only a future, "
+            "separate, out-of-repo human/harness gate may combine a genuine external "
+            "attestation with this candidate's evidence -- this substatus can never become "
+            "anything other than 'missing' from inside this repository or this workflow",
+        ],
+    }
+
+
 def check_migrations() -> Dict:
     errors = migrations_registry.check_registry()
     return {"ok": not errors, "errors": errors}
@@ -423,6 +470,7 @@ def build_manifest(
     allowlist_report = check_allowlist(repo_root, target_sha)
     tree_coverage_report = check_tree_coverage(repo_root, target_sha)
     submodule_binding_report = check_submodule_binding(repo_root, target_sha)
+    external_attestation_report = check_external_attestation()
     ledger_report = check_version_ledger_and_semver(repo_root, identity, changelog_report)
     c_fallback_report = check_c_fallback(repo_root)
     migration_reachability_report = check_migration_reachability(identity.save_compat_epoch)
@@ -451,6 +499,8 @@ def build_manifest(
         reasons.extend(tree_coverage_report["errors"])
     if not submodule_binding_report["ok"]:
         reasons.extend(submodule_binding_report["errors"])
+    if external_attestation_report["status"] != "present":
+        reasons.extend(external_attestation_report["reasons"])
     if not ledger_report["ok"]:
         reasons.extend(ledger_report["errors"])
     if not c_fallback_report["ok"]:
@@ -485,6 +535,7 @@ def build_manifest(
         "allowlist": allowlist_report,
         "tree_coverage": tree_coverage_report,
         "submodule_binding": submodule_binding_report,
+        "external_attestation": external_attestation_report,
         "version_ledger": ledger_report,
         "c_fallback_metadata": c_fallback_report,
         "migration_reachability": migration_reachability_report,

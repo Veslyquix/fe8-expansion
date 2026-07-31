@@ -38,13 +38,14 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 from pathlib import Path
-from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
 
 from scripts.release_rehearsal import allowlist as al
 from scripts.release_rehearsal import git_source as gs
@@ -62,9 +63,12 @@ CANONICAL_DIR_MODE = 0o755
 
 # Rebuild rehearsal machine states (issue #9 verifier remediation): every
 # one of these is a *distinct*, never-conflated outcome -- in particular,
-# "verified_success" is only ever returned after `run_build_twice` has
-# genuinely executed a build command twice and compared its outputs; nothing
-# in this module ever reports success for a rebuild that was not run.
+# "verified_success" is only ever returned after
+# `run_build_twice_from_immutable_source` has genuinely, independently
+# materialized two separate immutable source trees and executed a build
+# command against each, verified neither materialization was mutated,
+# and compared their outputs; nothing in this module ever reports
+# success for a rebuild that was not run.
 REBUILD_STATUS_NOT_RUN = "not_run"
 REBUILD_STATUS_BLOCKED = "blocked"
 REBUILD_STATUS_FAILED = "failed"
@@ -532,11 +536,242 @@ def run_build_twice(
     }
 
 
+# --- Independent immutable-source rebuild materialization (issue #9 ------
+# mandatory correction #7) --------------------------------------------
+#
+# `run_build_twice()` above already proves each run gets its own fresh
+# copy of `source_dir` and never mutates the caller's original directory
+# -- but that original `source_dir` is itself whatever the caller
+# passed in, which for a live git worktree is *mutable* (worktree/index
+# state, not a specific immutable commit). The functions below are the
+# stronger, independent-materialization variant issue #9 requires for
+# any *future* verified-success path: each of the two runs materializes
+# its own source tree completely independently (a fresh `git archive
+# <target_sha> | tar -x` extraction into its own fresh temp directory --
+# never a copy of the live worktree, and never sharing a directory with
+# the other run), and this module additionally verifies that every file
+# present in a run's own materialization *before* the build executes is
+# still present, byte-identical, *after* it -- a build script that
+# mutates or deletes any of its declared input files (instead of only
+# ever writing new, genuinely separate output paths) is reported as a
+# failure, never silently "matched".
+
+
+def _hash_tree_snapshot(root: Path) -> Dict[str, str]:
+    """A deterministic `{relpath: sha256}` snapshot of every regular,
+    non-symlink file currently present under `root`. Used only to detect
+    whether a build step mutated (changed the content of, or deleted)
+    any file that was already part of its own declared input
+    materialization -- never to police newly-created output files, which
+    are expected and never flagged by comparing two snapshots against
+    only the *original* key set (see `_verify_input_tree_unchanged`)."""
+    root = Path(root)
+    snapshot: Dict[str, str] = {}
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        dirpath_path = Path(dirpath)
+        for name in filenames:
+            full = dirpath_path / name
+            if full.is_symlink():
+                continue
+            snapshot[full.relative_to(root).as_posix()] = hash_file(full)
+    return snapshot
+
+
+def _verify_input_tree_unchanged(root: Path, before: Dict[str, str]) -> List[str]:
+    """Returns a list of human-readable problems (empty means clean): any
+    path present in `before` that is now missing, or whose content hash
+    changed, under `root`. A build that only ever adds new output files
+    elsewhere in the tree produces no findings here at all -- this is
+    strictly about the *originally materialized* input set."""
+    problems: List[str] = []
+    for relpath, original_hash in sorted(before.items()):
+        full = root / relpath
+        if not full.is_file() or full.is_symlink():
+            problems.append(f"input file disappeared during the build: {relpath}")
+            continue
+        current_hash = hash_file(full)
+        if current_hash != original_hash:
+            problems.append(f"input file was mutated during the build: {relpath}")
+    return problems
+
+
+def materialize_immutable_source_tree(repo_root: Path, target_sha: str, dest_dir: Path) -> None:
+    """Materializes `target_sha`'s exact tracked tree content into the
+    already-created, empty `dest_dir` via `git archive <target_sha> |
+    tar -x` -- a real, independent extraction bound to that exact
+    immutable commit, never a copy of the live (potentially mutable)
+    worktree. Raises `ArchiveRehearsalError` on any failure."""
+    archive_proc = subprocess.run(
+        ["git", "archive", target_sha], cwd=str(repo_root), capture_output=True,
+    )
+    if archive_proc.returncode != 0:
+        raise ArchiveRehearsalError(
+            f"git archive {target_sha!r} failed: {archive_proc.stderr.decode(errors='replace').strip()}"
+        )
+    extract_proc = subprocess.run(["tar", "-x"], input=archive_proc.stdout, cwd=str(dest_dir))
+    if extract_proc.returncode != 0:
+        raise ArchiveRehearsalError(f"tar extraction of the {target_sha!r} archive into {dest_dir} failed")
+
+
+def _controlled_build_environment(run_dir: Path) -> Dict[str, str]:
+    """A small, explicit, deterministic environment -- never a blind
+    passthrough of this process's own full ambient environment (which
+    can vary run-to-run, host-to-host, and is exactly the kind of
+    uncontrolled variable a reproducibility rehearsal must not depend
+    on). Only the handful of variables a real build genuinely needs
+    (`PATH` to find its own toolchain) are carried through; everything
+    else affecting output determinism (locale, timezone, a private
+    `HOME`) is pinned to a fixed value."""
+    return {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": str(run_dir),
+        "LANG": "C",
+        "LC_ALL": "C",
+        "TZ": "UTC",
+    }
+
+
+def run_build_twice_from_immutable_source(
+    repo_root: Path,
+    target_sha: str,
+    build_command: List[str],
+    output_relpaths: List[str],
+    extra_materialize: Optional[Callable[[Path], None]] = None,
+    env: Optional[Dict[str, str]] = None,
+) -> Dict:
+    """The independent-materialization double-build: each of the two
+    runs gets its own source tree, materialized *separately* and
+    *independently* from the exact same immutable `target_sha` (never a
+    copy of the live worktree), in its own fresh temporary directory that
+    also serves as that run's own build/output directory (so the two
+    runs can never share a source or build directory -- each is rooted
+    at a distinct `tempfile.mkdtemp()` path, asserted distinct below).
+
+    `extra_materialize(run_root)`, if given, is called once per
+    independent materialization immediately after the `git archive`
+    extraction (e.g. to additionally place already-eligibility-verified
+    submodule content that `git archive` itself never includes -- see
+    `rebuild_rehearsal_blocker`) -- so that content, too, is placed
+    twice, independently, never shared between the two runs.
+
+    Verifies, for each run, that every file present in its own
+    materialization *before* `build_command` executes is still present
+    with byte-identical content *after* it (`_verify_input_tree_
+    unchanged`) -- `match` is only ever `True` when both runs exit `0`,
+    every declared output is present and byte-identical between the two
+    runs, AND neither run's own input materialization was mutated."""
+    resolved_env = env if env is not None else None  # per-run HOME still varies; see below
+    seen_run_dirs: set = set()
+
+    def _one_run() -> Dict:
+        run_dir = Path(tempfile.mkdtemp(prefix="fe8-rebuild-immutable-run-"))
+        # Explicit, direct "never share a source/build directory between
+        # the two runs" guard -- checked *before* anything is
+        # materialized into it, independent of any later mutation/
+        # cleanup timing. `tempfile.mkdtemp()` itself always returns a
+        # unique path in real operation; this only ever fires if that
+        # invariant is somehow violated (e.g. a test forcing it).
+        if run_dir in seen_run_dirs:
+            raise ArchiveRehearsalError(
+                f"refusing to run an independent materialization: {run_dir} is the same directory "
+                "already used by the other run -- a shared source/build directory can never be trusted"
+            )
+        seen_run_dirs.add(run_dir)
+        run_root = run_dir / "src"
+        run_root.mkdir()
+        materialize_immutable_source_tree(repo_root, target_sha, run_root)
+        if extra_materialize is not None:
+            extra_materialize(run_root)
+        before = _hash_tree_snapshot(run_root)
+        run_env = resolved_env if resolved_env is not None else _controlled_build_environment(run_dir)
+        result = subprocess.run(
+            build_command, cwd=str(run_root), capture_output=True, text=True, env=run_env,
+        )
+        mutation_problems = _verify_input_tree_unchanged(run_root, before)
+        hashes: Dict[str, Optional[str]] = {}
+        for relpath in output_relpaths:
+            out_path = run_root / relpath
+            hashes[relpath] = hash_file(out_path) if out_path.is_file() and not out_path.is_symlink() else None
+        shutil.rmtree(run_dir, ignore_errors=True)
+        return {
+            "returncode": result.returncode,
+            "stderr_tail": result.stderr[-2000:],
+            "hashes": hashes,
+            "mutation_problems": mutation_problems,
+            "run_root": str(run_root),
+        }
+
+    run1 = _one_run()
+    run2 = _one_run()
+
+    # Defense-in-depth structural check: the two independent
+    # materializations must never be the same directory (they cannot be,
+    # given `tempfile.mkdtemp()`'s own uniqueness guarantee -- this
+    # assertion documents and enforces that invariant explicitly rather
+    # than trusting it silently).
+    if run1["run_root"] == run2["run_root"]:
+        raise ArchiveRehearsalError(
+            "refusing to report a rebuild result: both independent materializations resolved to "
+            "the same directory -- a shared source/build directory can never be trusted"
+        )
+
+    outputs_present = (
+        bool(output_relpaths)
+        and all(value is not None for value in run1["hashes"].values())
+        and all(value is not None for value in run2["hashes"].values())
+    )
+    no_mutation = not run1["mutation_problems"] and not run2["mutation_problems"]
+    match = (
+        run1["returncode"] == 0 and run2["returncode"] == 0
+        and outputs_present and run1["hashes"] == run2["hashes"] and no_mutation
+    )
+    return {
+        "returncode1": run1["returncode"],
+        "returncode2": run2["returncode"],
+        "hashes1": run1["hashes"],
+        "hashes2": run2["hashes"],
+        "outputs_present": outputs_present,
+        "input_tree_mutation_problems1": run1["mutation_problems"],
+        "input_tree_mutation_problems2": run2["mutation_problems"],
+        "match": match,
+        "stderr1_tail": run1["stderr_tail"],
+        "stderr2_tail": run2["stderr_tail"],
+    }
+
+
+def _copy_verified_submodule_content(repo_root: Path, submodule_path: str) -> Callable[[Path], None]:
+    """Returns an `extra_materialize` callback (see
+    `run_build_twice_from_immutable_source`) that copies `submodule_path`'s
+    *already-eligibility-verified* on-disk content (initialized,
+    identity-matched to the pinned commit, and provenance-approved --
+    `evaluate_rebuild_eligibility` confirmed all three before this is
+    ever called) into each independent materialization. `git archive`
+    never includes submodule content at all (see
+    `GITHUB_AUTOARCHIVE_SUBMODULE_CONTRADICTION`), so this is the one,
+    narrow, explicitly-gated exception to "everything comes from `git
+    archive`" -- the submodule's own nested `.git` (a gitdir-pointer file
+    in a real checkout) is deliberately never copied, since it would
+    point at a path that does not exist inside the isolated copy and is
+    not needed to read the submodule's already-verified file content."""
+    submodule_src = repo_root / submodule_path
+
+    def _materialize(run_root: Path) -> None:
+        submodule_dest = run_root / submodule_path
+        if submodule_dest.exists():
+            shutil.rmtree(submodule_dest)
+        shutil.copytree(submodule_src, submodule_dest, ignore=shutil.ignore_patterns(".git"))
+
+    return _materialize
+
+
 def rebuild_rehearsal_blocker(
     repo_root: Path,
     attempt_build: bool = True,
     build_command: Optional[List[str]] = None,
     output_relpaths: Optional[List[str]] = None,
+    submodule_path: str = "mgfembp",
+    target_sha: Optional[str] = None,
+    provenance_dir: Optional[Path] = None,
 ) -> Dict:
     """Truthful, machine-distinct rebuild rehearsal report. `status` is
     always exactly one of `ALL_REBUILD_STATUSES`:
@@ -549,22 +784,38 @@ def rebuild_rehearsal_blocker(
       is unconditionally `"blocked"` too, for a distinct, precisely
       reported reason -- see `evaluate_rebuild_eligibility`'s non-git
       short-circuit, which never invokes `git submodule status` (or any
-      other git command) against such a tree.
+      other git command) against such a tree. This never merely
+      *implies* a rebuild was skipped -- the returned `"reasons"` state
+      exactly and only that a complete clean recursive rebuild was NOT
+      executed because the pinned submodule is uninitialized/unapproved/
+      excluded (see `evaluate_rebuild_eligibility`'s own reasons); this
+      function never claims a clean rebuild was proved.
     * `"not_run"` -- eligible, but no actual build was executed (either
       the caller passed `attempt_build=False`, or did not supply the
       `build_command`/`output_relpaths` a real attempt requires) --
       distinct from `"blocked"` so a report can never conflate "we
       refused to even try" with "we tried and it worked".
-    * `"failed"` -- a build was actually attempted (`run_build_twice`) and
-      either run exited non-zero, an output was missing, or the two runs'
-      output hashes disagreed.
-    * `"verified_success"` -- both runs actually executed, both exited 0,
-      and every declared output was present and byte-identical.
+    * `"failed"` -- a build was actually attempted
+      (`run_build_twice_from_immutable_source`) and either run exited
+      non-zero, an output was missing, the two runs' output hashes
+      disagreed, or either run's own independent input materialization
+      was mutated during the build.
+    * `"verified_success"` -- both runs actually executed -- each from
+      its own independent, immutable-`target_sha`-bound materialization,
+      in its own separate temp/build directory, with neither run's input
+      tree mutated -- both exited 0, and every declared output was
+      present and byte-identical.
 
     Never fetches/initializes/approves the submodule itself; see
-    `evaluate_rebuild_eligibility`."""
+    `evaluate_rebuild_eligibility`. When eligible and an actual rebuild is
+    attempted, this never reads a single byte from the live, potentially-
+    mutable worktree for the superproject's own tracked content -- only
+    `git archive`'s immutable extraction (see
+    `run_build_twice_from_immutable_source`); the already-verified
+    submodule content is the one, explicit, narrow exception (`git
+    archive` itself never includes it at all)."""
     repo_root = Path(repo_root)
-    eligible, eligibility_report = evaluate_rebuild_eligibility(repo_root)
+    eligible, eligibility_report = evaluate_rebuild_eligibility(repo_root, submodule_path, provenance_dir)
     base_report = {
         "submodule_status_output": eligibility_report["submodule_status_output"],
         "eligibility": eligibility_report,
@@ -589,7 +840,19 @@ def rebuild_rehearsal_blocker(
             **base_report,
         }
 
-    build_result = run_build_twice(build_command, repo_root, output_relpaths)
+    try:
+        resolved_target_sha = target_sha if target_sha is not None else gs.resolve_sha(repo_root, "HEAD")
+    except gs.GitSourceError as error:
+        return {
+            "status": REBUILD_STATUS_BLOCKED,
+            "reasons": [f"could not resolve an immutable target SHA for rebuild materialization: {error}"],
+            **base_report,
+        }
+
+    build_result = run_build_twice_from_immutable_source(
+        repo_root, resolved_target_sha, build_command, output_relpaths,
+        extra_materialize=_copy_verified_submodule_content(repo_root, submodule_path),
+    )
     status = REBUILD_STATUS_VERIFIED_SUCCESS if build_result["match"] else REBUILD_STATUS_FAILED
     reasons = [] if status == REBUILD_STATUS_VERIFIED_SUCCESS else [
         "the pinned recursive rebuild was executed but did not reproduce verified-identical "
