@@ -317,6 +317,29 @@ $(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
 	@# validation/drift gate, so real drift is reported there, not here.
 	@$(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null || true
 
+# --- Issue #18: close the literal Make-DAG/state gap for the gate itself ---
+# `generated-data-check` (the CI gate above) never referenced this stamp: its
+# own recipe heals the ACTIVE surfaces + the items table via *direct* python
+# calls (`idspace active-check`, `check --table items`), which are correct on
+# their own merits -- both resolve THIS invocation's own env cap and rewrite
+# write-if-changed, independent of the stamp's mtime -- but that means the
+# gate's own recipe never touched the one real, Make-tracked file every other
+# cap-aware target (the grouped ACTIVE_OUTPUTS rule, every linked table's .c
+# rule) keys its own staleness on. That is a structural asymmetry between
+# what the gate's recipe actually (already correctly) does and what the Make
+# dependency graph believes happened -- "cap missing from Make DAG/state".
+# Declaring the stamp as an ordinary prerequisite here closes that gap for
+# good: `generated-data-check` now always reconciles the SAME stamp every
+# other cap-aware rule relies on, so the graph and the on-disk cap state can
+# never observably diverge, at the cost of one extra (idempotent, sub-second,
+# write-if-changed) stamp-recipe invocation. Declared as a second prerequisite
+# line (not folded into the target's own line above) because
+# $(GENERATED_DATA_ITEM_CAP_STAMP) is only defined below this point in the
+# file -- GNU Make happily accumulates a target's prerequisites across
+# multiple appearances, so this reaches the same `generated-data-check`
+# target defined near the top of this file with no reordering required.
+generated-data-check: $(GENERATED_DATA_ITEM_CAP_STAMP)
+
 GENERATED_DATA_CONFIG_INPUTS_items += \
 	include/constants/items_expansion.h \
 	src/data/items_expansion.json \
