@@ -75,6 +75,21 @@ FORBIDDEN_PATTERNS = (
     (r"\bpnpm\s+publish\b", "'pnpm publish' (package registry publish command)"),
     (r"\bdocker(\s+image)?\s+push\b", "'docker push' (container image publish command)"),
     (r"\bdocker\s+login\b", "'docker login' (container registry credential command)"),
+    # Shell process substitution (issue #9 final hardening): `<(...)` and
+    # `>(...)` are real POSIX/bash command-position constructs -- their
+    # body is executed as a command exactly like `$(...)` or a backtick
+    # substitution is, so the same variable/fragment-assembly bypass
+    # this module already closes for `$(...)`/backticks would apply
+    # equally here. This real workflow has no legitimate use for either
+    # spelling anywhere (confirmed: neither appears in
+    # `.github/workflows/release-rehearsal.yml`), so -- following this
+    # module's conservative, fail-closed design and the Musk-algorithm
+    # instinct to delete rather than grow speculative complexity -- both
+    # are rejected outright wherever they appear, rather than adding a
+    # third parallel command-position-tracking implementation for a
+    # construct the real workflow never needs.
+    (r"<\(", "shell process substitution ('<(...)', unused by this real workflow; rejected fail-closed)"),
+    (r">\(", "shell process substitution ('>(...)', unused by this real workflow; rejected fail-closed)"),
     (r"write-all", "GitHub Actions 'write-all' permissions shorthand"),
 )
 _COMPILED_FORBIDDEN_PATTERNS = [(re.compile(pattern, re.IGNORECASE), label) for pattern, label in FORBIDDEN_PATTERNS]
@@ -123,34 +138,55 @@ _STATEMENT_SEP = r"(?:;|&&|\|\||\|)"
 # `>`, a fold/chomp indicator) never satisfy the identifier/`$`
 # patterns below anyway, so no separate carve-out is needed for them.
 _RUN_SCALAR_PREFIX = r"\brun:[ \t]*"
-# The opening of a POSIX command-substitution subshell (`$(` -- the
-# *only* command-substitution spelling this module recognizes; legacy
-# backtick substitution is out of scope, matching every other heuristic
-# in this module's deliberately-narrow, high-confidence design). Issue
-# #9 residual hardening: a fresh, independent verifier reproduced a
-# dangerous command executed *inside* `$( ... )` -- `echo $($X$Y
-# https://example.invalid)`, `echo $(${X}${Y} ...)`, and a direct
-# `echo $($CMD ...)` where `CMD` was locally assigned elsewhere -- as
-# unrejected, since the text immediately following `$(` is exactly as
-# much "command position" as the start of a `run:` script line or the
-# text right after a `;`/`&&`/`||`/`|` separator, yet none of those
-# already-recognized command-position starts include it. Adding `$(`
-# here is the single, minimal change that lets the *existing*
-# concatenated-fragment and locally-assigned-single-variable checks
-# below cover a command executed inside a subshell for free, with no
-# separate detection logic duplicated. This never turns an *ordinary*,
-# safe `$(...)` (e.g. a literal `$(date)`, or one whose result is
-# merely assigned/interpolated as data) into a violation by itself --
-# only a variable/fragment-assembled command actually invoked at that
-# position still triggers the same narrow rules as everywhere else.
-_COMMAND_SUBSTITUTION_OPEN = r"\$\("
+# The opening of a POSIX command-substitution subshell: either the
+# modern `$(` spelling, or the legacy backtick (`` ` ``) spelling --
+# both are real POSIX command-substitution syntax, and a fresh,
+# independent final review confirmed the previous `$(`-only recognition
+# let a variable/fragment-assembled command hide inside a backtick pair
+# instead (e.g. a backtick-wrapped `$X$Y https://example.invalid`, or a
+# backtick-wrapped `$CMD ...` where `CMD` was locally assigned/exported/
+# `read` elsewhere) and go completely unrejected -- exactly the same
+# "command name assembled/indirected at runtime, so no literal
+# substring ever appears" evasion `$(` closes below, just spelled with
+# backticks instead of `$(...)`. This module still never treats an
+# *ordinary* backtick pair as dangerous by itself: a literal,
+# non-assembled backtick command substitution, and -- critically --
+# backticks used only as prose/markdown formatting punctuation (this
+# very file's own header comments, and this real workflow's own
+# top-of-file comments, both use backtick-wrapped words this way) are
+# never flagged, because neither ever sits at a recognized command
+# position (start of a `run:` line/scalar, right after a `;`/`&&`/
+# `||`/`|` separator, or immediately inside an already-opened `$(`/
+# backtick) in the first place -- only a variable/fragment-assembled or
+# previously-tracked-variable command actually invoked *there* still
+# triggers the same narrow rules as everywhere else.
+#
+# Issue #9 residual hardening (previous round): a fresh, independent
+# verifier reproduced a dangerous command executed *inside* `$( ... )`
+# -- `echo $($X$Y https://example.invalid)`, `echo $(${X}${Y} ...)`,
+# and a direct `echo $($CMD ...)` where `CMD` was locally assigned
+# elsewhere -- as unrejected, since the text immediately following `$(`
+# is exactly as much "command position" as the start of a `run:` script
+# line or the text right after a `;`/`&&`/`||`/`|` separator, yet none
+# of those already-recognized command-position starts include it.
+# Adding `$(` (and now the backtick) here is the single, minimal change
+# that lets the *existing* concatenated-fragment and locally-assigned-
+# single-variable checks below cover a command executed inside either
+# subshell spelling for free, with no separate detection logic
+# duplicated. This never turns an *ordinary*, safe `$(...)` (e.g. a
+# literal `$(date)`, or one whose result is merely assigned/
+# interpolated as data) into a violation by itself -- only a variable/
+# fragment-assembled command actually invoked at that position still
+# triggers the same narrow rules as everywhere else.
+_COMMAND_SUBSTITUTION_OPEN = r"(?:\$\(|`)"
 # The start of a `run:` script line (any line -- real line-continuations
 # are already collapsed by `_normalize_for_scanning` before this ever
 # runs), the inline start of a `run:` scalar's value on the same text
 # line, immediately after a shell command separator (`;`, `&&`, `||`, or
 # a pipe `|`), or immediately inside an opened `$( ... )` command
-# substitution. Deliberately line/separator/subshell-aware rather than a
-# full parser -- see module docstring.
+# substitution *or* an opened legacy backtick command substitution.
+# Deliberately line/separator/subshell-aware rather than a full parser
+# -- see module docstring.
 _COMMAND_POSITION_PREFIX = (
     rf"(?:^|{_STATEMENT_SEP}|{_RUN_SCALAR_PREFIX}|{_COMMAND_SUBSTITUTION_OPEN})[ \t]*"
 )
@@ -160,12 +196,15 @@ _COMMAND_POSITION_PREFIX = (
 # would otherwise miss a CRLF file's trailing `\r`).
 _STATEMENT_END = rf"(?:{_STATEMENT_SEP}|[\r\n]|$)"
 # A command-position token's trailing boundary: ordinary whitespace/
-# end-of-line/end-of-text, or a closing `)` -- the latter added for
-# issue #9's command-substitution coverage above, so a variable invoked
-# directly as the *entire* body of a subshell with no trailing argument
-# (`$($CMD)`, no space before the closing paren) still has a real
-# boundary to match against.
-_BOUNDARY_AFTER = r"(?:[ \t\r\n)]|$)"
+# end-of-line/end-of-text, a closing `)` -- added for issue #9's `$(...)`
+# command-substitution coverage above, so a variable invoked directly as
+# the *entire* body of a subshell with no trailing argument (`$($CMD)`,
+# no space before the closing paren) still has a real boundary to match
+# against -- or a closing backtick, for the same reason applied to the
+# legacy backtick command-substitution spelling (a backtick-wrapped
+# `$CMD` with no trailing argument and no space before the closing
+# backtick).
+_BOUNDARY_AFTER = r"(?:[ \t\r\n)`]|$)"
 
 _CONCATENATED_VAR_REFS_RE = re.compile(
     rf"{_COMMAND_POSITION_PREFIX}(?:{_VAR_REF}){{2,}}", re.MULTILINE
@@ -191,20 +230,32 @@ _PURE_ASSIGNMENT_RE = re.compile(
     re.MULTILINE,
 )
 # `read`/`read -r`/`read -r -s ...` (any number of simple single-token
-# `-x` flags; a real shell's `read -p prompt NAME` etc. is out of scope,
-# matching this module's narrow, high-confidence design) populating a
-# shell variable from runtime input rather than a literal RHS value --
+# `-x` flags with no attached argument -- e.g. `-r`, `-s`, `-e`; a real
+# shell's `read -p prompt NAME` etc., where a flag itself consumes a
+# separate argument token, is out of scope, matching this module's
+# narrow, high-confidence design) populating one **or more** shell
+# variables from runtime input rather than a literal RHS value --
 # issue #9 residual hardening: a fresh, independent verifier reproduced
 # `read NAME` followed by a later direct `$NAME`/`${NAME}` command-
 # position invocation as unrejected, since `_PURE_ASSIGNMENT_RE` above
-# only ever recognizes the `NAME=value` shape, never `read NAME`. Only
-# the *first* named variable is tracked (this module's minimal,
-# documented scope: the issue's own example is a single target
-# variable); a multi-variable `read A B` is out of scope.
+# only ever recognizes the `NAME=value` shape, never `read NAME`.
+#
+# Final-round hardening: a fresh, independent verifier further confirmed
+# only the *first* named variable was tracked, so a multi-variable
+# `read A B` left `B` (and any further name) completely untracked -- a
+# later direct `$B`/`${B}` command-position invocation of it went
+# unrejected even though `A` would have been caught. Every
+# whitespace-separated identifier-shaped name after `read` and its
+# leading flags is now captured in a single group and split out below,
+# so `read A B C` tracks `A`, `B`, *and* `C` alike.
 _READ_ASSIGNMENT_RE = re.compile(
-    rf"{_COMMAND_POSITION_PREFIX}read\b(?:[ \t]+-[A-Za-z]+)*[ \t]+([A-Za-z_][A-Za-z0-9_]*)",
+    rf"{_COMMAND_POSITION_PREFIX}read\b(?:[ \t]+-[A-Za-z]+)*((?:[ \t]+[A-Za-z_][A-Za-z0-9_]*)+)",
     re.MULTILINE,
 )
+# Splits a `_READ_ASSIGNMENT_RE` match's captured name-list group (e.g.
+# `" A B C"`) into its individual identifier-shaped variable names
+# (`["A", "B", "C"]`).
+_READ_NAME_LIST_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _SINGLE_VAR_NAME_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 
 
@@ -212,30 +263,37 @@ def check_variable_command_assembly(text: str) -> List[str]:
     """Rejects (1) two or more shell variable expansions concatenated
     with zero intervening whitespace in command position (`$X$Y`,
     `${X}${Y}`, and any bare/braced mix), including inside a `$( ... )`
-    command substitution (e.g. `$($X$Y ...)`, `$(${X}${Y} ...)`) -- a
-    command name assembled at runtime from separately-innocuous
-    fragments -- and (2) a single shell variable, previously assigned a
-    value elsewhere in the very same script via a plain `NAME=value`
-    assignment, an `export NAME=value` assignment, or a `read`/`read -r`
-    statement, later invoked directly in command position, including
-    directly inside a command substitution (e.g. `CMD=curl` ...
-    `$CMD https://...`, or `... $($CMD ...)`). All of these are
-    high-confidence, command-position-aware evasions of every literal-
-    command-name check in `FORBIDDEN_PATTERNS` above; none of them ever
-    fire against ordinary tail-position interpolation (e.g. this
-    repository's own real `>> "$GITHUB_STEP_SUMMARY"`), plain data
-    interpolation, or an *ordinary*, non-assembled `$(...)` command
-    substitution (e.g. `$(date)`), since none of those ever sit at a
-    recognized command position."""
+    command substitution or a legacy backtick command substitution
+    (e.g. `$($X$Y ...)`, `$(${X}${Y} ...)`, or the same shapes wrapped
+    in backticks instead) -- a command name assembled at runtime from
+    separately-innocuous fragments -- and (2) a single shell variable,
+    previously assigned a value elsewhere in the very same script via a
+    plain `NAME=value` assignment, an `export NAME=value` assignment, or
+    a `read`/`read -r` statement (every variable name `read` populates
+    is tracked, not only the first), later invoked directly in command
+    position, including directly inside a `$( ... )` *or* backtick
+    command substitution (e.g. `CMD=curl` ... `$CMD https://...`, or
+    `... $($CMD ...)`, or the backtick-wrapped equivalent). All of these
+    are high-confidence, command-position-aware evasions of every
+    literal-command-name check in `FORBIDDEN_PATTERNS` above; none of
+    them ever fire against ordinary tail-position interpolation (e.g.
+    this repository's own real `>> "$GITHUB_STEP_SUMMARY"`), plain data
+    interpolation, or an *ordinary*, non-assembled `$(...)`/backtick
+    command substitution (e.g. `$(date)`), since none of those ever sit
+    at a recognized command position."""
     violations: List[str] = []
     for match in _CONCATENATED_VAR_REFS_RE.finditer(text):
-        shown = re.sub(r"^[ \t;&|(]+", "", match.group(0))
+        shown = re.sub(r"^[ \t;&|(`]+", "", match.group(0))
         violations.append(
             "command position invokes a name assembled by concatenating 2+ shell variable "
             f"expansions with no separator (evades literal-command-name detection): {shown!r}"
         )
     assigned_by_value = {match.group(1) for match in _PURE_ASSIGNMENT_RE.finditer(text)}
-    assigned_by_read = {match.group(1) for match in _READ_ASSIGNMENT_RE.finditer(text)}
+    assigned_by_read = {
+        name
+        for match in _READ_ASSIGNMENT_RE.finditer(text)
+        for name in _READ_NAME_LIST_RE.findall(match.group(1))
+    }
     assigned_names = assigned_by_value | assigned_by_read
     if assigned_names:
         for match in _COMMAND_POSITION_SINGLE_VAR_RE.finditer(text):
@@ -243,7 +301,7 @@ def check_variable_command_assembly(text: str) -> List[str]:
             if not name_match:
                 continue
             name = name_match.group(1)
-            shown = re.sub(r"^[ \t;&|(]+", "", match.group(0))
+            shown = re.sub(r"^[ \t;&|(`]+", "", match.group(0))
             if name in assigned_by_value:
                 violations.append(
                     "command position directly invokes shell variable "

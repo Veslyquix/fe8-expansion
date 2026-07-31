@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "internal",
+  "summary": "Close the final focused-review shell-indirection gaps in the read-only release/publication rehearsal system's workflow guard: legacy backtick command substitution (`` ` ... ` ``) is now recognized as a command position exactly like `$( ... )`, so a variable/fragment-assembled or previously-tracked-variable command hidden inside a backtick pair (instead of `$( ... )`) is rejected the same way; `read`/`read -r` now tracks every variable name a multi-variable `read A B` populates, not only the first; and shell process substitution (`<(...)`/`>(...)`, unused by the real workflow) is now conservatively rejected outright. Ordinary/prose backtick usage (including this real workflow's own markdown-style comment backticks), literal/escaped backticks, and safe `read`/data-only usage remain unflagged. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

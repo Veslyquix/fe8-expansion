@@ -1075,5 +1075,255 @@ class CommandSubstitutionAndTrackedAssignmentTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
+class BacktickCommandSubstitutionTests(unittest.TestCase):
+    """Final focused-review closure: a fresh, independent verifier
+    confirmed legacy backtick (`` ` ... ` ``) command substitution was
+    entirely unrecognized as a command position, so every
+    variable/fragment-assembly and tracked-variable evasion already
+    closed for `$( ... )` could still hide inside a backtick pair
+    instead and go completely unrejected. Each probe below mirrors an
+    already-covered `$( ... )` shape, spelled with backticks instead,
+    plus negative controls proving ordinary/prose backtick usage --
+    including this real workflow's own markdown-style comment
+    backticks -- is never mistakenly flagged."""
+
+    def test_backtick_bare_concatenation_rejected(self):
+        text = GOOD_WORKFLOW + (
+            "\n      - run: X=cur; Y=l; echo `$X$Y https://example.invalid`\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_backtick_braced_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur\n"
+            + "          Y=l\n"
+            + "          echo `${X}${Y} https://example.invalid`\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_backtick_direct_single_var_assigned_rejected(self):
+        """Deliberately not curl-shaped here (`CMD=nc`, not a literal
+        network-command substring): the single-tracked-variable rule
+        alone -- independent of any literal-command-name check -- must
+        still fire."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          CMD=nc\n"
+            + "          echo `$CMD example.invalid 4444`\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_backtick_direct_single_var_no_trailing_args_rejected(self):
+        """A backtick-wrapped `$CMD` with no trailing argument and no
+        space before the closing backtick must still be caught."""
+        text = GOOD_WORKFLOW + "\n      - run: CMD=curl; echo `$CMD`\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_backtick_export_then_direct_invocation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          export CMD=curl\n"
+            + "          echo `$CMD https://example.invalid`\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_backtick_read_then_direct_invocation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read CMD\n"
+            + "          echo `$CMD https://example.invalid`\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_backtick_inline_one_line_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: CMD=curl; echo `$CMD https://example.invalid`\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    # --- negative controls ---
+
+    def test_ordinary_literal_backtick_command_substitution_not_flagged(self):
+        """A plain, non-assembled backtick command substitution (e.g.
+        `` `date` ``) is never itself flagged -- only an assembled or
+        tracked-variable command executed inside it is."""
+        text = GOOD_WORKFLOW + '\n      - run: echo "today is `date`"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_markdown_style_comment_backticks_not_flagged(self):
+        """Backticks used purely as prose/markdown code-span punctuation
+        in a YAML comment (this real workflow's own top-of-file comments
+        use exactly this idiom) must never be mistaken for command
+        substitution: they never sit at a recognized command position."""
+        text = (
+            "# See `docs/release_process.md` and run `make release-check`\n"
+            "# before touching `scripts/release_rehearsal/workflow_guard.py`.\n"
+        ) + GOOD_WORKFLOW
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_escaped_literal_backtick_not_flagged(self):
+        """A shell-escaped, literal backtick character (a backslash
+        immediately before a backtick, meant to print a literal backtick
+        rather than open a substitution) is not itself dangerous and
+        must not be flagged by this narrow, command-position-aware
+        heuristic."""
+        text = GOOD_WORKFLOW + '\n      - run: echo "a literal \\` backtick"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.validate_workflow_text(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+
+class MultiVariableReadTrackingTests(unittest.TestCase):
+    """Final focused-review closure: a fresh, independent verifier
+    confirmed `read A B` (and any further multi-variable `read`) tracked
+    only the first named variable, so a later direct invocation of any
+    subsequent name went completely unrejected."""
+
+    def test_read_two_variables_second_invoked_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read A B\n"
+            + "          $B https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_two_variables_first_invoked_still_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read A B\n"
+            + "          $A https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_three_variables_third_invoked_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read A B C\n"
+            + "          $C https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_dash_r_multiple_variables_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read -r A B\n"
+            + "          $B https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_multiple_variables_invoked_inside_command_substitution_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read A B\n"
+            + "          echo $($B https://example.invalid)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    def test_read_two_variables_inline_one_line_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: read A B; $B https://example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("populated by a 'read' statement" in v for v in violations), violations)
+
+    # --- negative controls ---
+
+    def test_read_multiple_variables_used_only_as_data_not_flagged(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          read A B C\n"
+            + '          echo "$A $B $C"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.validate_workflow_text(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+
+class ProcessSubstitutionTests(unittest.TestCase):
+    """Final focused-review closure: `<(...)` and `>(...)` (shell
+    process substitution) execute their body as a command exactly like
+    `$(...)` or a backtick substitution does, so the same
+    variable/fragment-assembly bypass would apply equally there. This
+    real workflow has no legitimate use for either spelling, so both are
+    conservatively rejected outright wherever they appear (fail-closed),
+    rather than duplicating a third parallel command-position tracker
+    for a construct the real workflow never needs."""
+
+    def test_input_process_substitution_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: diff <(cmd1) <(cmd2)\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("process substitution" in v for v in violations), violations)
+
+    def test_output_process_substitution_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: cmd1 > >(cmd2)\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("process substitution" in v for v in violations), violations)
+
+    def test_input_process_substitution_in_block_scalar_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          diff <(cmd1 --flag) <(cmd2 --flag)\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("process substitution" in v for v in violations), violations)
+
+    # --- negative controls ---
+
+    def test_block_scalar_chomp_indicator_not_falsely_rejected(self):
+        """The YAML folded-block-scalar chomp indicator (`run: >-`,
+        followed by a newline, never a `(`) must never be mistaken for
+        output process substitution."""
+        text = GOOD_WORKFLOW + "      - run: >-\n          make release-check\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_append_redirection_not_falsely_rejected(self):
+        """Ordinary `>>` append redirection (this repository's own real
+        `>> "$GITHUB_STEP_SUMMARY"` idiom), with no `(` immediately
+        after either `>`, must never be mistaken for process
+        substitution."""
+        text = (
+            GOOD_WORKFLOW
+            + '      - run: python3 -m scripts.release_rehearsal.cli summary >> "$GITHUB_STEP_SUMMARY"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.validate_workflow_text(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+
 if __name__ == "__main__":
     unittest.main()
