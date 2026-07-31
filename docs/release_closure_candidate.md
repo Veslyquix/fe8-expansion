@@ -94,10 +94,15 @@ is not `"mechanically eligible"`.
   (`evaluate_coverage`) only ever reads the exact records actually
   committed to disk -- a new allowlisted file with no dedicated exact
   provenance entry fails, exactly like an unlisted tracked file fails
-  allowlist completeness. `mgfembp` keeps its exact path, its
-  `c87e74dcd6c8878b809e013cd8ff0c52baa75332` pin (now also cross-checked
-  against the real gitlink object id Git's own tree records via
-  `check_gitlink_pins()`), and `redistribution_approved: false`.
+  allowlist completeness. **Update (mandatory-correction round, see below):**
+  `mgfembp` no longer sits *inside* the included allowlist at all -- it is now
+  its own explicit export-exclusion record
+  (`docs/release_data/export_exclusions.json`,
+  `scripts/release_rehearsal/tree_coverage.py`); its provenance record keeps
+  its exact path, its `c87e74dcd6c8878b809e013cd8ff0c52baa75332` pin (cross-
+  checked against the real gitlink object id via `check_gitlink_pins()`), a
+  `url` matching `.gitmodules` (`submodule_binding.py`'s three-way binding),
+  and `redistribution_approved: false`.
 * Immutable, Git-blob-bound archive/rebuild rehearsal
   (`scripts/release_rehearsal/git_source.py`,
   `scripts/release_rehearsal/archive_rehearsal.py`): archive content is
@@ -302,3 +307,75 @@ python3 scripts/artifact_guard.py --revision HEAD
   not be, exercised against the real, still-unapproved `mgfembp`).
 
 Issue #9 is **not closed** by this report or by any command it describes.
+
+## Mandatory-correction round (policy guardian, post-verifier)
+
+A subsequent policy-guardian review required additional corrections
+beyond the independent-verifier round documented above, all implemented
+in the `agent/issue9-release-process` branch on top of it -- **the
+candidate remains mechanically BLOCKED; this section is evidence, not a
+closure claim**:
+
+1. **Immutable Actions pins** -- every external `uses:` reference in
+   `.github/workflows/release-rehearsal.yml` is now pinned to an exact,
+   independently-verified 40-lowercase-hex commit SHA (no mutable tag,
+   not even a major-version tag); `docs/release_data/action_pins.json` +
+   `scripts/release_rehearsal/action_pins.py` record and cross-check the
+   upstream source/version/verification/update procedure.
+2. **Exact immutable HEAD tree coverage** -- `scripts/release_rehearsal/
+   tree_coverage.py` + `docs/release_data/export_exclusions.json` prove
+   the included allowlist and the explicit export exclusions (the
+   `mgfembp` gitlink, with its exact mode/OID and a factual reason) are
+   an exact, disjoint partition of the complete tree; wired into the
+   archive build itself (refuses to build on any mismatch) and into a
+   non-git closed-world missing/extra/unsafe check.
+3. **Per-blob provenance identity** -- every included `"code"`/`"asset"`
+   provenance record now also carries the exact Git blob `oid` and a
+   deterministic SHA-256 `sha256`, cross-checked against the live
+   tree/blob content (`check_blob_identity`); a changed/new blob
+   invalidates its old record instead of silently passing on path match.
+4. **mgfembp three-way binding** -- `scripts/release_rehearsal/
+   submodule_binding.py` (+ the new minimal `.gitmodules` parser,
+   `gitmodules.py`) cross-checks `.gitmodules`, the HEAD tree gitlink,
+   the export-exclusion record, and the provenance record all agree
+   exactly (path, URL, pinned OID); rejects a non-`https://` submodule
+   URL scheme and any allowlist/exclusion contradiction. Never
+   fetches/initializes the submodule.
+5. **External attestation outside candidate control** --
+   `manifest.py check_external_attestation()` is a zero-argument
+   function that always reports substatus `"missing"`, folded into the
+   overall status unconditionally -- proven (even with *every other*
+   sub-check mocked to a fully-passing synthetic shape) that the overall
+   candidate still cannot become `"mechanically eligible"` from inside
+   this repository. Only a future, separate, out-of-repo human/harness
+   gate may combine a real external attestation with this candidate's
+   evidence.
+6. **Guard remains advisory** -- documented explicitly (`docs/
+   release_process.md`'s "Workflow guard is advisory, never
+   authorization" and "External attestation is outside candidate
+   control" sections) that a clean workflow-guard/action-pins/tree-
+   coverage/submodule-binding result is necessary, never sufficient, for
+   authorization or publication.
+7. **Independent immutable rebuild materialization** --
+   `run_build_twice_from_immutable_source()` replaces the copy-of-the-
+   live-worktree double-build as what actually produces
+   `"verified_success"`: each run materializes its own source tree
+   independently via `git archive <target_sha>` (never the live
+   worktree), verifies its own input files are unchanged after the
+   build, and the two runs can never share a directory. A real
+   regression this same round introduced (a missing `is_git_repo` guard
+   in the new `.gitmodules`/submodule-binding code, which could have let
+   git's own upward-directory-discovery adopt an unrelated enclosing
+   repository for a non-git candidate tree) was caught by re-running
+   this worktree's own existing regression-test pattern and fixed in the
+   same branch.
+
+Every item above is additionally covered by dedicated, adversarial
+stdlib-unittest coverage (`scripts/release_rehearsal/tests/
+test_action_pins.py`, `test_tree_coverage.py`, `test_gitmodules.py`,
+`test_submodule_binding.py`, plus extensions to `test_provenance.py`,
+`test_manifest.py`, `test_archive_rehearsal.py`, and
+`test_workflow_guard.py`), and the full `scripts/release_rehearsal` +
+`scripts/modernize/migrations` stdlib test suites were reverified green
+after every commit in this round. `make release-check`'s live status
+remains, correctly and exactly, `"blocked"`.

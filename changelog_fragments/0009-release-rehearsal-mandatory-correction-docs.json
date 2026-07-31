@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "docs",
+  "summary": "Document the full policy-guardian mandatory-correction round (immutable Action pins, exact tree coverage/export exclusions, per-blob provenance identity, mgfembp three-way binding, external attestation outside candidate control, advisory workflow guard, and independent immutable rebuild materialization) in docs/release_process.md and docs/release_closure_candidate.md; the candidate remains mechanically BLOCKED.",
+  "semver_impact": "none"
+}

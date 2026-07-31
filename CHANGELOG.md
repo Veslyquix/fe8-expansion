@@ -27,6 +27,10 @@ Do not hand-edit the text between the two HTML comment markers below --
 - Bind every included source-release provenance record to its exact Git blob OID and a deterministic SHA-256 of the raw blob content; a changed or new blob now invalidates its old provenance record (missing/stale) instead of silently passing on path match alone, and the deterministic generator never carries over approval/reviewer facts across a blob change. (#9)
 - Pin every external GitHub Actions reference in the release-rehearsal workflow to an exact, independently-verified immutable 40-character commit SHA (no mutable tag/branch of any kind), and add a committed action-pin inventory + cross-check tool. (#9)
 
+### Docs
+
+- Document the full policy-guardian mandatory-correction round (immutable Action pins, exact tree coverage/export exclusions, per-blob provenance identity, mgfembp three-way binding, external attestation outside candidate control, advisory workflow guard, and independent immutable rebuild materialization) in docs/release_process.md and docs/release_closure_candidate.md; the candidate remains mechanically BLOCKED. (#9)
+
 ### Internal
 
 - Add a read-only release/publication rehearsal system (policy, changelog fragments, release manifest, migration registry, source-release guard/provenance, deterministic archive rehearsal, and a read-only CI workflow); publication remains mechanically BLOCKED pending human license/provenance approval. (#9)

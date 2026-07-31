@@ -128,8 +128,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
-    "oid": "efac0ef104eba005431d856de164e1fa3836f88a",
-    "sha256": "76bb390787c8a5f8687aa7ef0cd42fa40608970f080e3818eb3eb755c563bb7e"
+    "oid": "53b15992a5a6cb20d24263fe00d45e40d8778243",
+    "sha256": "d566c1dda05f2889ab5080fc13fb57747964dad0f1c4f70871a6a01a9da884f2"
   },
   {
     "path": "CLAUDE.md",
@@ -298,6 +298,18 @@
     "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
     "oid": "47bf76b11c2669d4b8541adaa39e6368eb8d85eb",
     "sha256": "7561623773c9f0e3c9f0170c36fcdb9ec416839ee8a90db947a603ca3e37d309"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-mandatory-correction-docs.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "a00cfeac36a66b07336ccbbe4db270c60cd75b1b",
+    "sha256": "5afe3ec4b053b26970a4d215b40273cf2a22714d356b56e6cdac89d24fdccc7a"
   },
   {
     "path": "changelog_fragments/0009-release-rehearsal-nested-outer-repo-identity-fix.json",
@@ -596,8 +608,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "cb32458e20179e37a63c672c4d03330c4f62af48",
-    "sha256": "5848f70f34b10268464382b7ecedd03214c6b3622e187729a1c920add9000312"
+    "oid": "964dbda4a0f8af3f0872b38524781e92f49f338d",
+    "sha256": "4ffed69c5205fc717537c5c4bcc4fa222be1b62d8925c58d96c773bc89738f41"
   },
   {
     "path": "docs/release_data/action_pins.json",
@@ -620,8 +632,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "f54bdb989ab523313c938c31a2d80719148e1092",
-    "sha256": "683306c3607426c4cfe6952ca9786b31c5631914e343990220a8786c8e67b384"
+    "oid": "71133f9fffc172e3ea5d41100e3dd95a7f8c00d7",
+    "sha256": "f3a20be2c7b0d81dcf31756197a5cdbfb45480b58e571cce7f6dfa41480fdb74"
   },
   {
     "path": "docs/release_data/map_hex_exceptions.json",
@@ -656,8 +668,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "b9d71f0ac1a79509a6b4ba60c454eb314c437eaa",
-    "sha256": "e80504594ad25e11dd02e5b72d37bec1bd1c3be34225adf77645d8b2e10df18e"
+    "oid": "774755c0eec4b459e3b5a5b0245c7e92a5dd1189",
+    "sha256": "5299a48091203fca64839151cb72e290e3192f79337f1d784538d7eb9d62b82a"
   },
   {
     "path": "docs/release_data/provenance/submodules.json",
@@ -680,8 +692,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "3a4c1a52bec2eb45c208df69682ecdb5617cf2dc",
-    "sha256": "e752832717910de330a1f4efb43988ea811ffa41e6df66def5410fdaff86984f"
+    "oid": "08dfcd2e6d6bfeebe7a19ce5e00f304fe8d1dfe3",
+    "sha256": "e5151634dc8f2d773c210237697619a500876a6f9bea4752c474813619fa1546"
   },
   {
     "path": "docs/release_data/version_ledger.json",
