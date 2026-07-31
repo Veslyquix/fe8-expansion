@@ -1822,7 +1822,38 @@ expansion-modern-link-prepare: $(MODERN_ELF_FE6SIO) \
 
 # Link the modern ELF with the clean, section-oriented expansion linker.
 # Legacy objects and banim are owned by expansion-modern-link-prepare.
-$(MODERN_ELF): expansion-modern-link-prepare $(MODERN_ELF_LINK_SETTINGS)
+#
+# $(MODERN_ALL_OBJECTS)/$(MODERN_COMPILE_SETTINGS) are listed here as
+# EXPLICIT, real (non-phony) prerequisites, in addition to
+# expansion-modern-link-prepare above (which already transitively pulls
+# them in via $(MODERN_ELF_OBJECTS_LST)). Diagnosed while investigating a
+# reported intermittent "gItemExpansionProbe not found" failure at
+# expansion-modern-itemexpansion-check-debug when it runs, in the same
+# build root, right after expansion-modern-linker-check (which compiles
+# without FE8_EXPANSION_ITEMTEST/FE8_ITEM_ID_CAP=0xCE): every C/data
+# object already depends on $(MODERN_COMPILE_SETTINGS) (which folds in
+# both flags -- see that stamp's own comment), so a real, isolated,
+# repeated `-j2`/`-j16` reproduction of that exact gate order never
+# reproduced a stale link locally. But this rule's ONLY prior link to
+# "objects must be current" was implicit: expansion-modern-link-prepare
+# is `.PHONY`, so GNU Make always reruns it and therefore always reruns
+# THIS rule's own recipe too (relying on that "phony prerequisite forces
+# the whole chain" side effect, not on a real file-staleness comparison
+# against the objects/compile-settings themselves). That made the "no
+# stale object ever reaches the linker" guarantee for this specific rule
+# real but non-obvious -- easy to silently break by a future change that
+# converts expansion-modern-link-prepare's aggregation into anything less
+# than an always-rerun phony (e.g. trimming it for build-speed). Listing
+# the objects and the compile-settings stamp directly here turns "the
+# link must observe the current cap/itemtest/compile flags" into an
+# ordinary, explicit, self-enforcing Make dependency edge instead of a
+# side effect of another rule's phoniness -- a pure hardening (no
+# observable behavior change: the link already always reruns; see
+# docs/upstream-porting.md and this sprint's diagnosis report,
+# reports/itemexpansion_gate_order_race_diagnosis.md, for the full
+# reproduction log and regression coverage added alongside this).
+$(MODERN_ELF): expansion-modern-link-prepare $(MODERN_ELF_LINK_SETTINGS) \
+		$(MODERN_ALL_OBJECTS) $(MODERN_COMPILE_SETTINGS)
 	@set -eu; \
 	libgcc_dir="$(MODERN_LIBGCC_DIR)"; \
 	libc_dir="$(MODERN_LIBC_DIR)"; \
@@ -2704,6 +2735,31 @@ MODERN_OVERLAY_SCRIPT := scripts/linker_report/overlay_audit.py
 MODERN_SHIFTED_SCRIPT := scripts/shiftcheck/modern_shifted_boot.sh
 MODERN_SHIFT_AMOUNT ?= 0x40000
 MODERN_SHIFTED_OUTDIR := $(MODERN_SHIFTCHECK_DIR)/shift-$(MODERN_SHIFT_AMOUNT)
+# Sprint 6 (issue #18 gate-order race diagnosis): expansion-modern-shifted-check
+# and expansion-modern-localization-runtime-shifted-check are undeclared-order
+# SIBLING prerequisites of expansion-modern-linker-check (see that target's own
+# prerequisite list below) -- under `make -jN` with N>1 (exactly what
+# `python3 -m scripts.upstream_port verify --jobs N` passes through per gate),
+# GNU Make is free to run sibling prerequisites concurrently. Both targets
+# used to pass the SAME literal $(MODERN_SHIFTED_OUTDIR) as SHIFTCHECK_OUTDIR
+# to scripts/shiftcheck/modern_shifted_boot.sh, which links straight to a
+# fixed "$OUTDIR/shifted.elf" path with no temp-file-plus-rename step. Two
+# concurrent invocations therefore raced two `arm-none-eabi-ld` processes
+# writing the same shifted.elf, producing a torn ELF and an intermittent
+# "nm failed ... file format not recognized" failure inside
+# expansion-modern-linker-check (reproduced locally under -j16 while
+# investigating the reported intermittent modern-itemexpansion-check-debug
+# gItemExpansionProbe failure -- see
+# reports/itemexpansion_gate_order_race_diagnosis.md). This is the exact
+# same *class* of bug as commit 92ed1b6b (a shared, non-isolated output path
+# torn by concurrent sibling recipes), just on a different pair of targets --
+# so it is fixed the same way that precedent used elsewhere in this file:
+# give each sibling its own, non-shared output directory, instead of trying
+# to serialize two otherwise-independent checks via an artificial ordering
+# edge (which would only re-hide the same class of bug behind a fragile,
+# easy-to-lose dependency the next time either target is touched).
+MODERN_SHIFTED_OUTDIR_BOOT := $(MODERN_SHIFTED_OUTDIR)/boot-check
+MODERN_SHIFTED_OUTDIR_LOCALE := $(MODERN_SHIFTED_OUTDIR)/localization-runtime-check
 
 $(MODERN_RELOCS_ELF): $(MODERN_ELF) $(MODERN_ELF_OBJECTS_LST) \
 		$(MODERN_RELINK_SCRIPT) scripts/shiftcheck/modern_toolchain.sh
@@ -2736,7 +2792,7 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
 	MODERN_NM="$(MODERN_NM)" \
 	MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
-	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR_BOOT)" \
 	SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" \
 	SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
@@ -2943,7 +2999,7 @@ expansion-modern-localization-runtime-shifted-check: expansion-modern-boot-prefl
 ifeq ($(MODERN_CONFIG),debug)
 	MODERN_CC="$(MODERN_CC)" MODERN_LD="$(MODERN_LD)" MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
 	MODERN_NM="$(MODERN_NM)" MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
-	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR_LOCALE)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
@@ -2953,7 +3009,7 @@ ifeq ($(MODERN_CONFIG),debug)
 		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
 	MODERN_CC="$(MODERN_CC)" MODERN_LD="$(MODERN_LD)" MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
 	MODERN_NM="$(MODERN_NM)" MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
-	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR_LOCALE)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
@@ -2961,7 +3017,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
 	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \
 		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
-	@printf 'Modern ROM localization-runtime shifted-check passed (locale resolver/selector probes unaffected by __text_shift), shifted output: %s\n' "$(MODERN_SHIFTED_OUTDIR)"
+	@printf 'Modern ROM localization-runtime shifted-check passed (locale resolver/selector probes unaffected by __text_shift), shifted output: %s\n' "$(MODERN_SHIFTED_OUTDIR_LOCALE)"
 else
 	@printf 'Modern ROM localization-runtime shifted-check skipped for config=%s (debug-only boot-timing calibration, matches expansion-modern-shifted-check)\n' '$(MODERN_CONFIG)'
 endif
