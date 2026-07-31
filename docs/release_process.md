@@ -39,13 +39,15 @@ document does **not** close issue #9.
 | Provenance manifests | `scripts/release_rehearsal/provenance.py`, `docs/release_data/provenance/*.json` | Factual, generated code/asset/submodule provenance records: one exact record per exact allowlisted path (never directory-prefix/category credit), bound to the exact allowlist by a literal exact-path bijection (no gap, no ghost entry, no duplicate/leftover-category-style entry), plus a submodule gitlink-pin cross-check. |
 | Exact source allowlist | `scripts/release_rehearsal/allowlist.py`, `docs/release_data/source_allowlist.json` | Exact, deterministic, generated **per-member** (every tracked blob -- regular file, executable, or symlink) allowlist -- no directory-level/prefix grant, and a gitlink is never a member here (see Tree coverage below). `check_allowlist_completeness()` fails actionably the moment a tracked blob and the checked-in allowlist ever disagree in either direction. |
 | Exact tree coverage / export exclusions | `scripts/release_rehearsal/tree_coverage.py`, `docs/release_data/export_exclusions.json` | Proves the included allowlist and an explicit, factual export-exclusions file (every gitlink's exact path, kind, immutable mode/OID, and reason) are an exact, disjoint partition of the *complete* immutable HEAD tree -- a new tracked path (of any kind) absent from both fails coverage outright; a changed/stale gitlink pin is reported, never silently trusted. Also proves the actually-built archive's members equal the included set exactly, and closed-world-validates a genuine non-git extracted candidate tree's missing/extra/unsafe paths against this same contract. |
+| `.gitmodules` parser | `scripts/release_rehearsal/gitmodules.py` | Minimal, dependency-free parser for Git's `[submodule "name"]` INI dialect, reading the blob's exact content at an immutable target SHA (never the worktree path). |
+| mgfembp submodule three-way binding | `scripts/release_rehearsal/submodule_binding.py` | Cross-checks `.gitmodules`'s exact section/path/URL, the immutable HEAD tree gitlink's exact mode/OID, the export-exclusion record, and the submodule provenance record all agree exactly -- a missing/duplicate/malformed `.gitmodules` section, a path/URL mismatch, a non-`https://` URL scheme, a wrong gitlink mode/OID, a wrong provenance/exclusion URL/OID, or the submodule path appearing in the *included* allowlist (an allowlist/exclusion contradiction) are all reported. Never fetches/initializes the submodule. |
 | Source-release guard | `scripts/release_rehearsal/source_guard.py`, `docs/release_data/map_hex_exceptions.json` | Recursive hard-deny rules (path/extension **and** file-magic) for a release candidate tree/archive, including default-deny `.map`/`.hex` with an exact, factual, file-level exception list. Separate from, and does not modify, `scripts/artifact_guard.py`. |
 | Immutable Git-object source | `scripts/release_rehearsal/git_source.py` | `git ls-tree`/`git cat-file --batch` plumbing wrappers so archive content is always read from an immutable commit object, never the mutable worktree/index. |
 | Archive/rebuild rehearsal | `scripts/release_rehearsal/archive_rehearsal.py` | Deterministic double-build archive hash comparison (git-blob-bound); rebuild-eligibility evaluation plus (when eligible) an actually-executed double-compile-and-compare, with four machine-distinct states (`not_run`/`blocked`/`failed`/`verified_success`). |
 | Release-doc link validator | `scripts/release_rehearsal/doc_links.py` | Verifies every relative Markdown link in the release-process doc set resolves to a real file. |
 | Workflow guard | `scripts/release_rehearsal/workflow_guard.py` | Validates `.github/workflows/release-rehearsal.yml`'s own permission/safety contract: **any** permission scope (`contents`, `id-token`, `packages`, `pull-requests`, `issues`, `actions`, `checks`, `deployments`, `statuses`, or any future scope) granted `write`, at top level/job level/nested/inline-mapping, any quoting/case/spacing, shorthand `write-all` permissions, token/secrets interpolation, network/upload/publish/deploy/release commands and actions, ref mutation, and common shell-indirection evasions (line continuations, `eval`, `base64 -d`, `sh -c`/`bash -c`, command-position shell-variable/fragment assembly -- including inside a `$( ... )` command substitution *or* a legacy backtick command substitution, and including every variable tracked from a prior `export NAME=value` or `read`/`read -r NAME` statement (every name a multi-variable `read A B` populates, not only the first), not only a plain `NAME=value` assignment -- plus outright rejection of shell process substitution (`<(...)`/`>(...)`, unused by the real workflow)). |
 | Action pin inventory | `scripts/release_rehearsal/action_pins.py`, `docs/release_data/action_pins.json` | `workflow_guard.py`'s `check_uses_pins` rejects any external `uses:` reference not pinned to an exact 40-lowercase-hex commit SHA (no version tag -- not even a major-version tag like `v7` -- branch, or short/malformed/wrong-case SHA is ever accepted; a local `./`-prefixed action is the one explicit exemption). `action_pins.py` separately cross-checks that pin against a committed, machine-readable inventory recording the action repository, the pinned SHA, its human-readable upstream version, the official source URL/reference used to establish that correspondence, and the update procedure -- evidence/documentation only, never itself an authorization. |
-| CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`, plus the machine-distinct `*-require-eligible`/`*-expect-blocked` gate targets, `release-workflow-guard` (now folding in the action-pin inventory cross-check), `release-action-pins-check`, and dynamic `cli summary`. |
+| CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`, plus the machine-distinct `*-require-eligible`/`*-expect-blocked` gate targets, `release-workflow-guard` (now folding in the action-pin inventory cross-check), `release-action-pins-check`, `release-tree-coverage-check`, `release-submodule-binding-check`, and dynamic `cli summary`. |
 | CI | `.github/workflows/release-rehearsal.yml` | Runs all of the above read-only, on `pull_request`/`workflow_dispatch` only, and renders `$GITHUB_STEP_SUMMARY` dynamically from the tool's own canonical JSON. |
 
 ## Exit code contract
@@ -380,6 +382,43 @@ Regenerate with:
 ```sh
 python3 -m scripts.release_rehearsal.tree_coverage generate-exclusions --target-sha HEAD --write
 ```
+
+## mgfembp submodule three-way binding
+
+Issue #9 mandatory correction #4: `scripts/release_rehearsal/
+submodule_binding.py` proves the `mgfembp` submodule is consistently
+described across every immutable source this repository records about
+it -- never merely "the JSON files happen to look similar":
+
+1. `.gitmodules`'s blob content at the target SHA (parsed by the new,
+   minimal, dependency-free `scripts/release_rehearsal/gitmodules.py` --
+   never the worktree path): the exact `[submodule "mgfembp"]` section's
+   `path` and `url`. A missing section, more than one section declaring
+   the same path, a path mismatch, a missing/empty `url`, or a `url` not
+   using the `https://` scheme (this module's explicit, minimal URL-
+   scheme policy) are all reported.
+2. The immutable HEAD tree's own gitlink entry for that exact path
+   (mode `160000`, an exact pinned commit OID).
+3. `docs/release_data/export_exclusions.json`'s exact exclusion record
+   (same path, `kind: "gitlink"`, and OID -- cross-checked against the
+   live gitlink OID, exactly like `tree_coverage.py`'s own check).
+4. `docs/release_data/provenance/submodules.json`'s exact provenance
+   record (same path, `url`, `pinned_commit`) -- `provenance.py`'s
+   schema now requires every `"submodule"`-category entry to also
+   record a non-empty `url`, cross-checked against `.gitmodules`'s own
+   URL; the deterministic generator (`generate_exact_entries`) reads
+   this URL fresh from `.gitmodules` every run, never hardcoding it.
+
+A `mgfembp` path present in the *included* source allowlist (rather than
+only the export exclusions) is reported as an explicit allowlist/
+exclusion contradiction. This module never fetches, initializes, or
+clones the submodule -- every check reads only already-committed,
+immutable blob/tree content and the already-checked-in JSON data files.
+Folded into the overall candidate status
+(`scripts/release_rehearsal/manifest.py`'s `check_submodule_binding`,
+`"submodule_binding"`) exactly like every other sub-check -- any finding
+here forces `"blocked"`. Also directly runnable standalone via
+`make release-submodule-binding-check`.
 
 ## Source-release guard
 

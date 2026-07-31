@@ -37,6 +37,7 @@ from scripts.release_rehearsal import doc_links as dl  # noqa: E402
 from scripts.release_rehearsal import git_source as gs  # noqa: E402
 from scripts.release_rehearsal import provenance as prov  # noqa: E402
 from scripts.release_rehearsal import source_guard as sg  # noqa: E402
+from scripts.release_rehearsal import submodule_binding as sb  # noqa: E402
 from scripts.release_rehearsal import tree_coverage as tc  # noqa: E402
 from scripts.modernize.migrations import registry as migrations_registry  # noqa: E402
 
@@ -282,6 +283,26 @@ def check_allowlist_exact(repo_root: Path, target_sha: str) -> Dict:
     return {"ok": not errors, "errors": errors}
 
 
+def check_submodule_binding(repo_root: Path, target_sha: str) -> Dict:
+    """mgfembp submodule three-way binding (issue #9 mandatory
+    correction #4): cross-checks `.gitmodules`, the immutable HEAD tree
+    gitlink, the export-exclusion record, and the submodule provenance
+    record all agree exactly on path/URL/pinned-commit -- see
+    `scripts/release_rehearsal/submodule_binding.py`. Any finding here
+    forces the overall candidate status to "blocked", exactly like every
+    other sub-check."""
+    try:
+        errors = sb.check_submodule_binding(
+            repo_root, target_sha,
+            allowlist_path=repo_root / "docs" / "release_data" / "source_allowlist.json",
+            exclusions_path=repo_root / "docs" / "release_data" / "export_exclusions.json",
+            provenance_dir=repo_root / "docs" / "release_data" / "provenance",
+        )
+    except sb.SubmoduleBindingError as error:
+        raise ManifestError(str(error)) from error
+    return {"ok": not errors, "errors": errors}
+
+
 def check_migrations() -> Dict:
     errors = migrations_registry.check_registry()
     return {"ok": not errors, "errors": errors}
@@ -401,6 +422,7 @@ def build_manifest(
     migrations_report = check_migrations()
     allowlist_report = check_allowlist(repo_root, target_sha)
     tree_coverage_report = check_tree_coverage(repo_root, target_sha)
+    submodule_binding_report = check_submodule_binding(repo_root, target_sha)
     ledger_report = check_version_ledger_and_semver(repo_root, identity, changelog_report)
     c_fallback_report = check_c_fallback(repo_root)
     migration_reachability_report = check_migration_reachability(identity.save_compat_epoch)
@@ -427,6 +449,8 @@ def build_manifest(
         reasons.extend(allowlist_report["errors"])
     if not tree_coverage_report["ok"]:
         reasons.extend(tree_coverage_report["errors"])
+    if not submodule_binding_report["ok"]:
+        reasons.extend(submodule_binding_report["errors"])
     if not ledger_report["ok"]:
         reasons.extend(ledger_report["errors"])
     if not c_fallback_report["ok"]:
@@ -460,6 +484,7 @@ def build_manifest(
         "migrations": migrations_report,
         "allowlist": allowlist_report,
         "tree_coverage": tree_coverage_report,
+        "submodule_binding": submodule_binding_report,
         "version_ledger": ledger_report,
         "c_fallback_metadata": c_fallback_report,
         "migration_reachability": migration_reachability_report,

@@ -96,12 +96,28 @@
 #                                    action_pins.json's committed inventory.
 #                                    This is documentation/evidence only --
 #                                    never itself a publication authorization.
+# release-tree-coverage-check     : standalone direct invocation of
+#                                    scripts/release_rehearsal/tree_coverage.py
+#                                    (issue #9 mandatory correction #2) --
+#                                    the included allowlist and the export
+#                                    exclusions must be an exact, disjoint
+#                                    partition of the complete immutable
+#                                    HEAD tree.
+# release-submodule-binding-check : standalone direct invocation of
+#                                    scripts/release_rehearsal/submodule_binding.py
+#                                    (issue #9 mandatory correction #4) --
+#                                    the mgfembp submodule's .gitmodules
+#                                    section, HEAD tree gitlink, export
+#                                    exclusion, and provenance record must
+#                                    all agree exactly. Never fetches/
+#                                    initializes the submodule.
 
 .PHONY: release-test release-migrations-check release-rehearse release-check \
         release-changelog-check release-check-require-eligible \
         release-rehearse-require-eligible release-check-expect-blocked \
         release-rehearse-expect-blocked release-workflow-guard \
-        release-action-pins-check
+        release-action-pins-check release-tree-coverage-check \
+        release-submodule-binding-check
 
 release-test:
 	$(PYTHON) -m unittest discover -s scripts/release_rehearsal/tests -v
@@ -136,3 +152,9 @@ release-workflow-guard:
 
 release-action-pins-check:
 	$(PYTHON) -m scripts.release_rehearsal.action_pins .github/workflows/release-rehearsal.yml
+
+release-tree-coverage-check:
+	$(PYTHON) -m scripts.release_rehearsal.tree_coverage check
+
+release-submodule-binding-check:
+	$(PYTHON) -m scripts.release_rehearsal.submodule_binding

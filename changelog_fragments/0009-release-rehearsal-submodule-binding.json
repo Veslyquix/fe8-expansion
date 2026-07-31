@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Add a three-way immutable binding validator for the mgfembp git submodule (.gitmodules section, HEAD tree gitlink, export-exclusion record, and provenance record must all agree exactly on path/URL/pinned commit); reject a non-https submodule URL scheme and any allowlist/exclusion contradiction. Never fetches or initializes the submodule.",
+  "semver_impact": "none"
+}

@@ -21,6 +21,7 @@ Do not hand-edit the text between the two HTML comment markers below --
 
 ### Security
 
+- Add a three-way immutable binding validator for the mgfembp git submodule (.gitmodules section, HEAD tree gitlink, export-exclusion record, and provenance record must all agree exactly on path/URL/pinned commit); reject a non-https submodule URL scheme and any allowlist/exclusion contradiction. Never fetches or initializes the submodule. (#9)
 - Add explicit, factual export exclusions (docs/release_data/export_exclusions.json) and prove the included source allowlist and export exclusions are an exact, disjoint partition of the complete immutable HEAD tree; wire exact archive-member equality and non-git closed-world coverage into the rehearsal. (#9)
 - Bind every included source-release provenance record to its exact Git blob OID and a deterministic SHA-256 of the raw blob content; a changed or new blob now invalidates its old provenance record (missing/stale) instead of silently passing on path match alone, and the deterministic generator never carries over approval/reviewer facts across a blob change. (#9)
 - Pin every external GitHub Actions reference in the release-rehearsal workflow to an exact, independently-verified immutable 40-character commit SHA (no mutable tag/branch of any kind), and add a committed action-pin inventory + cross-check tool. (#9)

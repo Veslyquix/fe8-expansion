@@ -90,6 +90,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
 from scripts.release_rehearsal import git_source as gs
+from scripts.release_rehearsal import gitmodules as gm
 
 CATEGORIES = ("code", "asset", "submodule")
 UNRESOLVED_MARKERS = ("NOASSERTION", "", None)
@@ -163,6 +164,12 @@ def load_manifest(path: Path) -> List[Dict]:
                     f"{path}[{index}] ({entry['path']}): submodule (gitlink) entries must never "
                     "record a 'sha256' (a gitlink has no blob content) -- found "
                     f"{entry.get('sha256')!r}"
+                )
+            if not isinstance(entry.get("url"), str) or not entry.get("url"):
+                raise ProvenanceError(
+                    f"{path}[{index}] ({entry['path']}): submodule entries must record a non-empty "
+                    "'url' (issue #9 mandatory correction #4: the three-way .gitmodules/gitlink/"
+                    "provenance binding needs a URL to cross-check)"
                 )
         else:
             oid = entry.get("oid")
@@ -604,6 +611,39 @@ def _assign_root(path: str, seed: Sequence[RootSeed]) -> RootSeed:
     return matches[0]
 
 
+def _find_gitmodules_url_for_path(repo_root: Path, target_sha: str, path: str) -> str:
+    """Reads `.gitmodules` fresh at `target_sha` (never cached/hardcoded --
+    issue #9 mandatory correction #4) and returns the exact `url` of the
+    single section whose recorded `path` equals `path`. An unresolvable
+    URL (no matching section, more than one section claiming the same
+    path, or a section missing its own `url`/`path` key) is an
+    actionable `ProvenanceError` -- this generator never fabricates or
+    guesses a submodule URL."""
+    try:
+        sections = gm.load_gitmodules_sections(repo_root, target_sha)
+    except gm.GitmodulesError as error:
+        raise ProvenanceError(f"generate: {error}") from error
+    matches = [
+        (name, section) for name, section in sections.items()
+        if section.get("path") == path
+    ]
+    if not matches:
+        raise ProvenanceError(
+            f"generate: {path!r} is assigned the 'submodule' category but no .gitmodules "
+            f"section at {target_sha!r} declares this exact path"
+        )
+    if len(matches) > 1:
+        raise ProvenanceError(
+            f"generate: {path!r} is declared by more than one .gitmodules section: "
+            f"{sorted(name for name, _ in matches)}"
+        )
+    _name, section = matches[0]
+    url = section.get("url")
+    if not url:
+        raise ProvenanceError(f"generate: .gitmodules section for {path!r} has no 'url'")
+    return url
+
+
 def generate_exact_entries(
     repo_root: Path,
     target_sha: str,
@@ -679,6 +719,7 @@ def generate_exact_entries(
                     f"generate: {path!r} is assigned the 'submodule' category by seed root "
                     f"{root_seed.root!r} but is not a live gitlink in the tree at {target_sha!r}"
                 )
+            url = _find_gitmodules_url_for_path(repo_root, target_sha, path)
             entries.append({
                 "path": path,
                 "category": "submodule",
@@ -689,6 +730,7 @@ def generate_exact_entries(
                 "reviewer": None,
                 "notes": root_seed.notes,
                 "pinned_commit": tree_entry.object_id,
+                "url": url,
             })
         else:
             if tree_entry is None or not tree_entry.is_safe_blob:

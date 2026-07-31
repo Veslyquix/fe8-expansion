@@ -43,6 +43,8 @@ def _base_entry(**overrides):
             entry["sha256"] = None
         if "oid" not in overrides:
             entry.pop("oid", None)
+        if "url" not in overrides:
+            entry["url"] = "https://example.invalid/mgfembp.git"
     return entry
 
 
@@ -462,6 +464,9 @@ class GenerateExactEntriesTests(unittest.TestCase):
         (root / "src" / "lib" / "helper.c").write_text("int helper(void){return 1;}")
         (root / "docs").mkdir()
         (root / "docs" / "readme.md").write_text("hi\n")
+        (root / ".gitmodules").write_text(
+            '[submodule "mgfembp"]\n\tpath = mgfembp\n\turl = https://example.invalid/mgfembp.git\n'
+        )
         _git("add", "-A", cwd=root)
         _git("update-index", "--add", "--cacheinfo", f"160000,{self.GITLINK_SHA},mgfembp", cwd=root)
         _git("commit", "-q", "-m", "init", cwd=root)
