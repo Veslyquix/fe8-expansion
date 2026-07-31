@@ -254,7 +254,7 @@ matching `verify.py`/`verify --dry-run` gate and
 `docs/upstream-porting.md` gate list were updated in the same commit so
 CI and the local `verify` mirror stay in lockstep (see that commit's
 message and `git diff master...HEAD -- .github/workflows/build.yml` for
-the exact, additive-only three-line diff).
+one additive localization-host-suite step; no existing step modified/reordered/removed).
 
 **Shifted-layout check**: `expansion-modern-localization-runtime-shifted-
 check` reruns `blank-sram-no-selector-default` and `auto-select-single-
