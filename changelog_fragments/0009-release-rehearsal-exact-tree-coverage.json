@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Add explicit, factual export exclusions (docs/release_data/export_exclusions.json) and prove the included source allowlist and export exclusions are an exact, disjoint partition of the complete immutable HEAD tree; wire exact archive-member equality and non-git closed-world coverage into the rehearsal.",
+  "semver_impact": "none"
+}

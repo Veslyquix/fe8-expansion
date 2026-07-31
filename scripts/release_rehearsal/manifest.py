@@ -34,8 +34,10 @@ from scripts.release_rehearsal import archive_rehearsal as ar  # noqa: E402
 from scripts.release_rehearsal import changelog as cl  # noqa: E402
 from scripts.release_rehearsal import consistency as cc  # noqa: E402
 from scripts.release_rehearsal import doc_links as dl  # noqa: E402
+from scripts.release_rehearsal import git_source as gs  # noqa: E402
 from scripts.release_rehearsal import provenance as prov  # noqa: E402
 from scripts.release_rehearsal import source_guard as sg  # noqa: E402
+from scripts.release_rehearsal import tree_coverage as tc  # noqa: E402
 from scripts.modernize.migrations import registry as migrations_registry  # noqa: E402
 
 FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -49,6 +51,7 @@ REQUIRED_DOCS = (
     "docs/save_format.md",
     "docs/release_data/version_ledger.json",
     "docs/release_data/source_allowlist.json",
+    "docs/release_data/export_exclusions.json",
 )
 
 
@@ -137,25 +140,48 @@ def check_changelog(repo_root: Path) -> Dict:
 
 
 def check_provenance(repo_root: Path, target_sha: str) -> Dict:
-    """Folds three independent provenance defect classes into one report:
+    """Folds four independent provenance defect classes into one report:
     (1) each entry's own resolved-fact status (`prov.evaluate`); (2) exact,
-    one-record-per-member coverage against the exact source allowlist --
-    no directory-prefix/category-inheritance credit any more
-    (`prov.evaluate_coverage`); and (3) for any "submodule"-category
-    entry, a cross-check that its declared `pinned_commit` actually
-    matches the real gitlink object id Git's own tree records at
-    `target_sha` (`prov.check_gitlink_pins`) -- skipped only when
-    `repo_root` is not a git repository at all (nothing to cross-check
-    against)."""
+    one-record-per-member coverage against the combined included allowlist
+    + excluded export-exclusions path set -- no directory-prefix/
+    category-inheritance credit any more (`prov.evaluate_coverage`); (3)
+    for any "submodule"-category entry, a cross-check that its declared
+    `pinned_commit` actually matches the real gitlink object id Git's own
+    tree records at `target_sha` (`prov.check_gitlink_pins`); and (4) for
+    every "code"/"asset"-category entry, a cross-check that its declared
+    `oid`/`sha256` actually match the real, live blob Git's own tree
+    records at `target_sha` (`prov.check_blob_identity` -- issue #9
+    mandatory correction #3: a changed/new blob whose provenance record
+    was not regenerated is a "stale provenance" failure, never silently
+    passed through on path-match alone). Both cross-checks are skipped
+    only when `repo_root` is not a git repository at all (nothing to
+    cross-check against)."""
     try:
         entries = prov.load_all(repo_root / "docs" / "release_data" / "provenance")
     except prov.ProvenanceError as error:
         raise ManifestError(str(error)) from error
     status, reasons = prov.evaluate(entries)
     allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
+    exclusions_path = repo_root / "docs" / "release_data" / "export_exclusions.json"
     if allowlist_path.is_file():
         allowlist = json.loads(allowlist_path.read_text(encoding="utf-8")).get("paths", [])
-        coverage_reasons = prov.evaluate_coverage(entries, allowlist)
+        # issue #9 mandatory correction #2: the required-coverage set is
+        # now the *combined* included (allowlist) + excluded
+        # (export-exclusions) path set -- the `mgfembp` gitlink's own
+        # provenance/exclusion record must never be misreported as a
+        # "ghost" entry (its path is not in the allowlist any more) nor
+        # leave the allowlist itself short a "gap" for it (it was never
+        # supposed to be there in the first place). See
+        # scripts/release_rehearsal/tree_coverage.py.
+        required_paths = list(allowlist)
+        if exclusions_path.is_file():
+            try:
+                required_paths = tc.combined_required_paths(
+                    allowlist, tc.load_exclusion_paths(exclusions_path)
+                )
+            except tc.TreeCoverageError as error:
+                raise ManifestError(str(error)) from error
+        coverage_reasons = prov.evaluate_coverage(entries, required_paths)
         if coverage_reasons:
             status = "blocked"
             reasons = sorted(set(reasons) | set(coverage_reasons))
@@ -163,7 +189,44 @@ def check_provenance(repo_root: Path, target_sha: str) -> Dict:
     if pin_reasons:
         status = "blocked"
         reasons = sorted(set(reasons) | set(pin_reasons))
+    identity_reasons = prov.check_blob_identity(entries, repo_root, target_sha)
+    if identity_reasons:
+        status = "blocked"
+        reasons = sorted(set(reasons) | set(identity_reasons))
     return {"status": status, "reasons": reasons}
+
+
+def check_tree_coverage(repo_root: Path, target_sha: str) -> Dict:
+    """Exact immutable HEAD tree coverage (issue #9 mandatory correction
+    #2): the checked-in included allowlist
+    (`docs/release_data/source_allowlist.json`) and the checked-in
+    explicit export exclusions (`docs/release_data/export_exclusions.json`)
+    must together account for *every* tracked path exactly once -- no
+    gap, no overlap, no stale/mismatched exclusion record. Dispatches on
+    whether `repo_root` is an actual git repository, exactly like
+    `check_allowlist_exact`/`check_source_guard` above: a genuine
+    non-git extracted candidate tree is closed-world-validated against
+    on-disk membership instead (`tree_coverage.check_non_git_tree`),
+    never causing a git invocation."""
+    allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
+    exclusions_path = repo_root / "docs" / "release_data" / "export_exclusions.json"
+    try:
+        allowlist_paths = al.load_allowlist_paths(allowlist_path)
+    except al.AllowlistError as error:
+        raise ManifestError(str(error)) from error
+    try:
+        exclusion_entries = tc.load_exclusions(exclusions_path)
+    except tc.TreeCoverageError as error:
+        raise ManifestError(str(error)) from error
+
+    if not gs.is_git_repo(repo_root):
+        result = tc.check_non_git_tree(repo_root, allowlist_paths, exclusion_entries)
+        errors = result.reasons()
+        return {"ok": not errors, "errors": errors}
+
+    result = tc.check_partition(repo_root, allowlist_paths, exclusion_entries, target_sha)
+    errors = result.reasons()
+    return {"ok": not errors, "errors": errors}
 
 
 def check_source_guard(repo_root: Path) -> Dict:
@@ -337,6 +400,7 @@ def build_manifest(
     source_guard_report = check_source_guard(repo_root)
     migrations_report = check_migrations()
     allowlist_report = check_allowlist(repo_root, target_sha)
+    tree_coverage_report = check_tree_coverage(repo_root, target_sha)
     ledger_report = check_version_ledger_and_semver(repo_root, identity, changelog_report)
     c_fallback_report = check_c_fallback(repo_root)
     migration_reachability_report = check_migration_reachability(identity.save_compat_epoch)
@@ -361,6 +425,8 @@ def build_manifest(
         reasons.extend(migrations_report["errors"])
     if not allowlist_report["ok"]:
         reasons.extend(allowlist_report["errors"])
+    if not tree_coverage_report["ok"]:
+        reasons.extend(tree_coverage_report["errors"])
     if not ledger_report["ok"]:
         reasons.extend(ledger_report["errors"])
     if not c_fallback_report["ok"]:
@@ -393,6 +459,7 @@ def build_manifest(
         "source_guard": source_guard_report,
         "migrations": migrations_report,
         "allowlist": allowlist_report,
+        "tree_coverage": tree_coverage_report,
         "version_ledger": ledger_report,
         "c_fallback_metadata": c_fallback_report,
         "migration_reachability": migration_reachability_report,

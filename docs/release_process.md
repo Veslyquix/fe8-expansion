@@ -37,7 +37,8 @@ document does **not** close issue #9.
 | Manifest consistency validators | `scripts/release_rehearsal/consistency.py` | Version-ledger topology/candidate-agreement, changelog-declared-SemVer-impact-vs-actual-delta (pre-/post-1.0 aware), `include/expansion_config.h` C-fallback-vs-`config.mk` cross-check, and save-format migration-registry epoch reachability. |
 | Migration registry | `scripts/modernize/migrations/registry.py` | Declares mechanical vs. manual save-format epoch transitions; see [`docs/migration_registry.md`](migration_registry.md). |
 | Provenance manifests | `scripts/release_rehearsal/provenance.py`, `docs/release_data/provenance/*.json` | Factual, generated code/asset/submodule provenance records: one exact record per exact allowlisted path (never directory-prefix/category credit), bound to the exact allowlist by a literal exact-path bijection (no gap, no ghost entry, no duplicate/leftover-category-style entry), plus a submodule gitlink-pin cross-check. |
-| Exact source allowlist | `scripts/release_rehearsal/allowlist.py`, `docs/release_data/source_allowlist.json` | Exact, deterministic, generated **per-member** (per tracked file, plus the single `mgfembp` gitlink) allowlist -- no directory-level/prefix grant. `check_allowlist_completeness()` fails actionably the moment a tracked file and the checked-in allowlist ever disagree in either direction. |
+| Exact source allowlist | `scripts/release_rehearsal/allowlist.py`, `docs/release_data/source_allowlist.json` | Exact, deterministic, generated **per-member** (every tracked blob -- regular file, executable, or symlink) allowlist -- no directory-level/prefix grant, and a gitlink is never a member here (see Tree coverage below). `check_allowlist_completeness()` fails actionably the moment a tracked blob and the checked-in allowlist ever disagree in either direction. |
+| Exact tree coverage / export exclusions | `scripts/release_rehearsal/tree_coverage.py`, `docs/release_data/export_exclusions.json` | Proves the included allowlist and an explicit, factual export-exclusions file (every gitlink's exact path, kind, immutable mode/OID, and reason) are an exact, disjoint partition of the *complete* immutable HEAD tree -- a new tracked path (of any kind) absent from both fails coverage outright; a changed/stale gitlink pin is reported, never silently trusted. Also proves the actually-built archive's members equal the included set exactly, and closed-world-validates a genuine non-git extracted candidate tree's missing/extra/unsafe paths against this same contract. |
 | Source-release guard | `scripts/release_rehearsal/source_guard.py`, `docs/release_data/map_hex_exceptions.json` | Recursive hard-deny rules (path/extension **and** file-magic) for a release candidate tree/archive, including default-deny `.map`/`.hex` with an exact, factual, file-level exception list. Separate from, and does not modify, `scripts/artifact_guard.py`. |
 | Immutable Git-object source | `scripts/release_rehearsal/git_source.py` | `git ls-tree`/`git cat-file --batch` plumbing wrappers so archive content is always read from an immutable commit object, never the mutable worktree/index. |
 | Archive/rebuild rehearsal | `scripts/release_rehearsal/archive_rehearsal.py` | Deterministic double-build archive hash comparison (git-blob-bound); rebuild-eligibility evaluation plus (when eligible) an actually-executed double-compile-and-compare, with four machine-distinct states (`not_run`/`blocked`/`failed`/`verified_success`). |
@@ -308,6 +309,77 @@ initialized/checked out locally -- a provenance record that merely
 *claims* a pin is exactly as much an honesty gap as an unresolved
 NOASSERTION fact if the superproject's own tree does not actually record
 that commit.
+
+## Exact immutable HEAD tree coverage and explicit export exclusions
+
+Issue #9 mandatory correction #2 closes a residual gap the exact
+per-member allowlist above, on its own, still left open: the `mgfembp`
+submodule **gitlink** used to sit *inside* that same allowlist file as an
+ordinary-looking entry (`archive_rehearsal.py` has always silently
+skipped it via `not entry.is_gitlink` when building archive bytes, since
+a gitlink has no blob content at all -- but nothing forced that skip to
+be an explicit, separately reviewed, checked-in decision).
+
+`scripts/release_rehearsal/tree_coverage.py` defines two canonical sets
+directly from an immutable `git ls-tree -r <target_sha>`:
+
+* **included** -- `docs/release_data/source_allowlist.json`'s exact
+  per-blob paths (regular file, executable, or symlink -- never a
+  gitlink any more; `allowlist.py`'s generator schema_version bumped to
+  `3` to reflect this);
+* **excluded** -- `docs/release_data/export_exclusions.json`'s exact,
+  factual records: for every currently-excluded member, its exact path,
+  `kind` (today, only `"gitlink"` is a modeled kind -- a brand-new kind
+  is deliberately rejected fail-closed rather than silently accepted),
+  immutable `mode`/`oid` (cross-checked against the live tree -- a
+  changed/stale pin is reported, never silently trusted), and a factual
+  `reason`. Today this contains exactly one entry: `mgfembp`, excluded
+  because no approved submodule content is present (see "Legal and
+  provenance boundary" above).
+
+`check_partition()` proves these two checked-in sets, **together**,
+account for *every* tracked path in the complete tree **exactly once**:
+a brand-new tracked path of any kind (blob or gitlink) that is not
+already in one of these two sets fails coverage outright -- it is never
+silently absorbed into either side, and it never merely disappears from
+the archive. It also rejects any overlap (a path listed in both), any
+stale entry (an included/excluded record that no longer matches a real
+tracked path of the expected kind), and any export-exclusion path that
+is a directory-prefix ancestor of another tracked path (broad-prefix
+directory exclusions are forbidden -- every exclusion must be an exact
+leaf, exactly like every allowlist entry already is).
+
+Two further checks close the loop end-to-end:
+
+* **Archive-member exact equality** (`check_archive_membership_exact`) --
+  wired directly into `archive_rehearsal.py`'s own archive-building path
+  (not merely a separate, possibly-skipped report): the actually-built
+  archive's members must equal the included set exactly, or the archive
+  build itself refuses (`ArchiveRehearsalError`) rather than silently
+  producing a subset/superset.
+* **Non-git closed-world coverage** (`check_non_git_tree`) -- for a
+  genuine already-extracted candidate tree (no `.git` at all), reports
+  three independent, actionable buckets: `missing` (an included path with
+  no on-disk file, or an excluded gitlink path with no on-disk
+  directory), `extra` (a present file accounted for by neither set), and
+  `unsafe` (a path present with the wrong *shape* -- e.g. an included
+  path materialized as a symlink, or an excluded gitlink path
+  materialized as a plain file instead of a directory). Never invokes
+  any git command.
+
+`scripts/release_rehearsal/manifest.py`'s `check_tree_coverage()` folds
+this into the overall candidate report (`"tree_coverage"`) exactly like
+every other sub-check -- any finding here forces the overall status to
+`"blocked"`. Provenance coverage (below) now spans **both** the included
+allowlist **and** the export exclusions (`tree_coverage.
+combined_required_paths`), so `mgfembp`'s own provenance/exclusion record
+is neither a false "ghost" nor a false "gap".
+
+Regenerate with:
+
+```sh
+python3 -m scripts.release_rehearsal.tree_coverage generate-exclusions --target-sha HEAD --write
+```
 
 ## Source-release guard
 

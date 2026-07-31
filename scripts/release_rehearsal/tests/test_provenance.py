@@ -1,5 +1,6 @@
 """Tests for scripts/release_rehearsal/provenance.py (issue #9; exact-provenance remediation)."""
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -10,10 +11,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
+from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import provenance as prov
 
 
 def _base_entry(**overrides):
+    """issue #9 mandatory correction #3: every "code"/"asset" entry now
+    also needs a well-formed (schema-valid, not necessarily *live*-
+    cross-checked -- that is `CheckBlobIdentityTests`' job below) 'oid'/
+    'sha256'; a "submodule" entry must never carry a non-null 'sha256' at
+    all (a gitlink has no blob content). This helper supplies harmless
+    placeholder defaults for the common "code"/"asset" case, and drops
+    them back out automatically for a "submodule"-category override so
+    every existing call site that only cares about the other fields
+    keeps working unchanged."""
     entry = {
         "path": "src/main.c",
         "category": "code",
@@ -23,8 +34,15 @@ def _base_entry(**overrides):
         "redistribution_approved": False,
         "reviewer": None,
         "notes": "seed",
+        "oid": "a" * 40,
+        "sha256": "b" * 64,
     }
     entry.update(overrides)
+    if entry["category"] == "submodule":
+        if "sha256" not in overrides:
+            entry["sha256"] = None
+        if "oid" not in overrides:
+            entry.pop("oid", None)
     return entry
 
 
@@ -372,76 +390,354 @@ class CheckGitlinkPinsTests(unittest.TestCase):
         self.assertEqual(prov.check_gitlink_pins(entries, ROOT), [])
 
 
-class GenerateExactEntriesTests(unittest.TestCase):
-    """Tests for the deterministic generator (`generate_exact_entries`)
-    that fans `PROVENANCE_ROOT_SEED`'s small, human-curated per-root
-    values out to one exact per-file record."""
+class AssignRootTests(unittest.TestCase):
+    """Pure (no git access) fan-out/ambiguity logic, split out of
+    `generate_exact_entries` specifically so it stays unit-testable
+    without a real git repository (`_assign_root`)."""
 
     SEED = (
-        prov.RootSeed("src", "code", "code note", None),
-        prov.RootSeed("docs", "code", "docs note", None),
-        prov.RootSeed("mgfembp", "submodule", "submodule note", "c87e74dcd6c8878b809e013cd8ff0c52baa75332"),
+        prov.RootSeed("src", "code", "code note"),
+        prov.RootSeed("docs", "code", "docs note"),
+        prov.RootSeed("mgfembp", "submodule", "submodule note"),
     )
 
-    def test_fans_out_one_exact_entry_per_path(self):
-        entries = prov.generate_exact_entries(
-            ["src/main.c", "src/lib/helper.c", "docs/readme.md", "mgfembp"], seed=self.SEED,
-        )
-        by_path = {entry["path"]: entry for entry in entries}
-        self.assertEqual(sorted(by_path), ["docs/readme.md", "mgfembp", "src/lib/helper.c", "src/main.c"])
-        self.assertEqual(by_path["src/main.c"]["category"], "code")
-        self.assertEqual(by_path["src/main.c"]["notes"], "code note")
-        self.assertEqual(by_path["mgfembp"]["pinned_commit"], "c87e74dcd6c8878b809e013cd8ff0c52baa75332")
+    def test_exact_root_path_assigned(self):
+        self.assertEqual(prov._assign_root("docs", self.SEED).root, "docs")
 
-    def test_generated_entries_never_invent_resolved_facts(self):
-        entries = prov.generate_exact_entries(["src/main.c"], seed=self.SEED)
-        entry = entries[0]
-        self.assertEqual(entry["author"], "NOASSERTION")
-        self.assertEqual(entry["rightsholder"], "NOASSERTION")
-        self.assertEqual(entry["license"], "NOASSERTION")
-        self.assertFalse(entry["redistribution_approved"])
-        self.assertIsNone(entry["reviewer"])
+    def test_nested_path_assigned_to_covering_root(self):
+        self.assertEqual(prov._assign_root("src/lib/helper.c", self.SEED).root, "src")
 
     def test_unassigned_path_is_actionable(self):
         with self.assertRaises(prov.ProvenanceError) as ctx:
-            prov.generate_exact_entries(["totally/unrooted/path.c"], seed=self.SEED)
+            prov._assign_root("totally/unrooted/path.c", self.SEED)
         self.assertIn("matches no seed root", str(ctx.exception))
 
     def test_ambiguous_seed_roots_are_actionable(self):
-        overlapping_seed = self.SEED + (prov.RootSeed("src/lib", "code", "nested root", None),)
+        overlapping_seed = self.SEED + (prov.RootSeed("src/lib", "code", "nested root"),)
         with self.assertRaises(prov.ProvenanceError) as ctx:
-            prov.generate_exact_entries(["src/lib/helper.c"], seed=overlapping_seed)
+            prov._assign_root("src/lib/helper.c", overlapping_seed)
         self.assertIn("matches more than one seed root", str(ctx.exception))
+
+    def test_real_seed_covers_the_real_exact_allowlist_and_exclusions_with_no_errors(self):
+        """`PROVENANCE_ROOT_SEED` (the real, checked-in 46-root seed) must
+        assign every single real, checked-in exact allowlist/exclusion
+        path to exactly one root -- this is exactly the invariant that
+        lets this repository regenerate its provenance data
+        deterministically instead of requiring ~9,000 hand-authored
+        records."""
+        allowlist = json.loads(
+            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
+        )["paths"]
+        exclusions = json.loads(
+            (ROOT / "docs" / "release_data" / "export_exclusions.json").read_text(encoding="utf-8")
+        )["exclusions"]
+        all_paths = list(allowlist) + [entry["path"] for entry in exclusions]
+        for path in all_paths:
+            prov._assign_root(path, prov.PROVENANCE_ROOT_SEED)  # raises on any real defect
+
+
+class GenerateExactEntriesTests(unittest.TestCase):
+    """Tests for the deterministic generator (`generate_exact_entries`)
+    that fans `PROVENANCE_ROOT_SEED`'s small, human-curated per-root
+    values out to one exact per-file record -- issue #9 mandatory
+    correction #3: every generated "code"/"asset" entry is now bound to
+    its exact, live Git blob identity (`oid`/`sha256`), and every
+    generated "submodule" entry's `pinned_commit` is read fresh from the
+    live gitlink -- never carried over/hand-supplied."""
+
+    SEED = (
+        prov.RootSeed("src", "code", "code note"),
+        prov.RootSeed("docs", "code", "docs note"),
+        prov.RootSeed("mgfembp", "submodule", "submodule note"),
+    )
+    GITLINK_SHA = "c87e74dcd6c8878b809e013cd8ff0c52baa75332"
+
+    def _make_repo(self, root: Path) -> str:
+        _git("init", "-q", cwd=root)
+        _git("config", "user.email", "t@example.com", cwd=root)
+        _git("config", "user.name", "Tester", cwd=root)
+        (root / "src").mkdir()
+        (root / "src" / "main.c").write_text("int main(void){return 0;}")
+        (root / "src" / "lib").mkdir()
+        (root / "src" / "lib" / "helper.c").write_text("int helper(void){return 1;}")
+        (root / "docs").mkdir()
+        (root / "docs" / "readme.md").write_text("hi\n")
+        _git("add", "-A", cwd=root)
+        _git("update-index", "--add", "--cacheinfo", f"160000,{self.GITLINK_SHA},mgfembp", cwd=root)
+        _git("commit", "-q", "-m", "init", cwd=root)
+        return gs.resolve_sha(root, "HEAD")
+
+    def test_fans_out_one_exact_entry_per_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            entries = prov.generate_exact_entries(
+                root, sha,
+                ["src/main.c", "src/lib/helper.c", "docs/readme.md"], ["mgfembp"],
+                seed=self.SEED,
+            )
+            by_path = {entry["path"]: entry for entry in entries}
+            self.assertEqual(sorted(by_path), ["docs/readme.md", "mgfembp", "src/lib/helper.c", "src/main.c"])
+            self.assertEqual(by_path["src/main.c"]["category"], "code")
+            self.assertEqual(by_path["src/main.c"]["notes"], "code note")
+            self.assertEqual(by_path["mgfembp"]["pinned_commit"], self.GITLINK_SHA)
+            self.assertEqual(by_path["mgfembp"]["category"], "submodule")
+            self.assertIsNone(by_path["mgfembp"].get("sha256"))
+
+    def test_generated_blob_entries_have_real_oid_and_sha256(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            entries = prov.generate_exact_entries(root, sha, ["src/main.c"], [], seed=self.SEED)
+            entry = entries[0]
+            tree_entry = {e.path: e for e in gs.list_tree(root, sha)}["src/main.c"]
+            self.assertEqual(entry["oid"], tree_entry.object_id)
+            expected_sha256 = hashlib.sha256(b"int main(void){return 0;}").hexdigest()
+            self.assertEqual(entry["sha256"], expected_sha256)
+
+    def test_generated_entries_never_invent_resolved_facts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            entries = prov.generate_exact_entries(root, sha, ["src/main.c"], [], seed=self.SEED)
+            entry = entries[0]
+            self.assertEqual(entry["author"], "NOASSERTION")
+            self.assertEqual(entry["rightsholder"], "NOASSERTION")
+            self.assertEqual(entry["license"], "NOASSERTION")
+            self.assertFalse(entry["redistribution_approved"])
+            self.assertIsNone(entry["reviewer"])
+
+    def test_changed_blob_gets_a_fresh_oid_and_sha256_not_the_old_one(self):
+        """The literal issue #9 requirement: regenerating after a blob's
+        content changes must produce the *new* identity, never
+        preserve/re-emit the old one."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha1 = self._make_repo(root)
+            entries1 = prov.generate_exact_entries(root, sha1, ["src/main.c"], [], seed=self.SEED)
+
+            (root / "src" / "main.c").write_text("int main(void){return 42;}")
+            _git("commit", "-q", "-am", "change main.c", cwd=root)
+            sha2 = gs.resolve_sha(root, "HEAD")
+            entries2 = prov.generate_exact_entries(root, sha2, ["src/main.c"], [], seed=self.SEED)
+
+            self.assertNotEqual(entries1[0]["oid"], entries2[0]["oid"])
+            self.assertNotEqual(entries1[0]["sha256"], entries2[0]["sha256"])
+
+    def test_docs_path_declared_as_an_exclusion_is_actionable(self):
+        """A path whose seed root assigns it a non-"submodule" category
+        (here: "docs" -> "code") must be declared in `allowlist_paths`,
+        never smuggled in via `exclusion_paths` alone."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov.generate_exact_entries(root, sha, ["src/main.c"], ["docs/readme.md"], seed=self.SEED)
+            self.assertIn("was not declared in allowlist_paths", str(ctx.exception))
+
+    def test_mgfembp_declared_as_allowlisted_is_actionable(self):
+        """The mirror-image: a "submodule"-category path (mgfembp) must
+        be declared in `exclusion_paths`, never smuggled in via
+        `allowlist_paths` alone."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov.generate_exact_entries(root, sha, ["mgfembp"], [], seed=self.SEED)
+            self.assertIn("was not declared in exclusion_paths", str(ctx.exception))
+
+    def test_submodule_path_not_a_live_gitlink_is_actionable(self):
+        """Even when correctly declared via `exclusion_paths`, a path
+        that is not *actually* a live gitlink in the tree is still
+        rejected."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov.generate_exact_entries(root, sha, ["src/main.c"], ["mgfembp-does-not-exist"], seed=(
+                    self.SEED + (prov.RootSeed("mgfembp-does-not-exist", "submodule", "note"),)
+                ))
+            self.assertIn("not a live gitlink", str(ctx.exception))
+
+    def test_code_path_not_a_live_safe_blob_is_actionable(self):
+        """Even when correctly declared via `allowlist_paths`, a path
+        that is not *actually* a live safe blob in the tree is still
+        rejected."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov.generate_exact_entries(root, sha, ["docs/does-not-exist.md"], [], seed=self.SEED)
+            self.assertIn("not a live safe blob", str(ctx.exception))
+
+    def test_unassigned_path_is_actionable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov.generate_exact_entries(root, sha, ["totally/unrooted/path.c"], [], seed=self.SEED)
+            self.assertIn("matches no seed root", str(ctx.exception))
 
     def test_root_itself_is_a_valid_exact_path(self):
         """A root path that is *itself* one of the exact allowlisted
         paths (e.g. a root that is a real tracked file, not just a
         directory) gets its own exact entry too."""
-        entries = prov.generate_exact_entries(["docs"], seed=self.SEED)
-        self.assertEqual(entries[0]["path"], "docs")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._make_repo(root)
+            entries = prov.generate_exact_entries(root, sha, ["docs/readme.md"], [], seed=self.SEED)
+            self.assertEqual(entries[0]["path"], "docs/readme.md")
 
-    def test_real_seed_covers_the_real_exact_allowlist_with_no_errors(self):
-        """`PROVENANCE_ROOT_SEED` (the real, checked-in 46-root seed) must
-        assign every single real, checked-in exact allowlist path to
-        exactly one root -- this is exactly the invariant that let this
-        repository regenerate its provenance data deterministically
-        instead of requiring ~9,000 hand-authored records."""
+    def test_real_repo_generation_matches_the_real_allowlist_and_exclusions(self):
+        """End-to-end against this actual repository's own real HEAD:
+        `PROVENANCE_ROOT_SEED` must assign every real allowlist/exclusion
+        path with no error, and every generated entry's identity must
+        equal what `git ls-tree`/blob content actually says."""
         allowlist = json.loads(
             (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
         )["paths"]
-        entries = prov.generate_exact_entries(allowlist)
-        self.assertEqual(sorted(entry["path"] for entry in entries), sorted(allowlist))
+        exclusions = json.loads(
+            (ROOT / "docs" / "release_data" / "export_exclusions.json").read_text(encoding="utf-8")
+        )["exclusions"]
+        exclusion_paths = [entry["path"] for entry in exclusions]
+        sha = gs.resolve_sha(ROOT, "HEAD")
+        # A small, fast subset (the full ~9000-path generation is exercised
+        # by RepositoryStateTests against the actual committed data below;
+        # regenerating it here too would just needlessly re-hash ~70MB of
+        # blobs for a second time in the same test run).
+        sample = sorted(allowlist)[:25] + exclusion_paths
+        entries = prov.generate_exact_entries(ROOT, sha, sample, exclusion_paths, seed=prov.PROVENANCE_ROOT_SEED)
+        self.assertEqual(sorted(e["path"] for e in entries), sorted(sample))
+        mgfembp = next(e for e in entries if e["path"] == "mgfembp")
+        self.assertEqual(mgfembp["pinned_commit"], self.GITLINK_SHA)
 
     def test_write_generated_provenance_splits_by_category(self):
         with tempfile.TemporaryDirectory() as tmp:
-            provenance_dir = Path(tmp)
+            root = Path(tmp)
+            sha = self._make_repo(root)
             entries = prov.generate_exact_entries(
-                ["src/main.c", "docs/readme.md", "mgfembp"], seed=self.SEED,
+                root, sha, ["src/main.c", "docs/readme.md"], ["mgfembp"], seed=self.SEED,
             )
+            provenance_dir = Path(tempfile.mkdtemp())
             counts = prov.write_generated_provenance(provenance_dir, entries)
             self.assertEqual(counts, {"code.json": 2, "assets.json": 0, "submodules.json": 1})
             written = json.loads((provenance_dir / "code.json").read_text(encoding="utf-8"))
             self.assertEqual([e["path"] for e in written], ["docs/readme.md", "src/main.c"])
+
+
+class CheckBlobIdentityTests(unittest.TestCase):
+    """issue #9 mandatory correction #3: a "code"/"asset"-category
+    entry's declared `oid`/`sha256` must match the actual, live blob
+    Git's own tree records, not merely whatever the JSON itself claims."""
+
+    def _init_repo_with_file(self, root: Path, content: bytes = b"int x;") -> str:
+        _git("init", "-q", cwd=root)
+        _git("config", "user.email", "t@example.com", cwd=root)
+        _git("config", "user.name", "Tester", cwd=root)
+        (root / "main.c").write_bytes(content)
+        _git("add", "main.c", cwd=root)
+        _git("commit", "-q", "-m", "initial", cwd=root)
+        return gs.resolve_sha(root, "HEAD")
+
+    def _real_identity(self, root: Path, sha: str, path: str):
+        tree_entry = {e.path: e for e in gs.list_tree(root, sha)}[path]
+        data = gs.read_blobs(root, [tree_entry.object_id])[tree_entry.object_id]
+        return tree_entry.object_id, hashlib.sha256(data).hexdigest()
+
+    def test_matching_identity_has_no_reasons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._init_repo_with_file(root)
+            oid, sha256_value = self._real_identity(root, sha, "main.c")
+            entries = [_base_entry(path="main.c", oid=oid, sha256=sha256_value)]
+            self.assertEqual(prov.check_blob_identity(entries, root, sha), [])
+
+    def test_stale_oid_after_content_change_fails(self):
+        """The literal issue #9 requirement: a changed blob whose
+        provenance record was not regenerated must invalidate (never
+        silently pass) the old record."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha1 = self._init_repo_with_file(root, b"int x;")
+            oid1, sha256_1 = self._real_identity(root, sha1, "main.c")
+
+            (root / "main.c").write_bytes(b"int x; int y;")
+            _git("commit", "-q", "-am", "change", cwd=root)
+            sha2 = gs.resolve_sha(root, "HEAD")
+
+            stale_entries = [_base_entry(path="main.c", oid=oid1, sha256=sha256_1)]
+            reasons = prov.check_blob_identity(stale_entries, root, sha2)
+            self.assertTrue(any("does not match" in r and "main.c" in r for r in reasons))
+
+    def test_wrong_sha256_with_correct_oid_fails(self):
+        """oid and sha256 are independently cross-checked -- a correct
+        oid never excuses an incorrect sha256."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._init_repo_with_file(root)
+            oid, _real_sha256 = self._real_identity(root, sha, "main.c")
+            entries = [_base_entry(path="main.c", oid=oid, sha256="0" * 64)]
+            reasons = prov.check_blob_identity(entries, root, sha)
+            self.assertTrue(any("sha256" in r and "does not match" in r for r in reasons))
+
+    def test_missing_path_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._init_repo_with_file(root)
+            entries = [_base_entry(path="does-not-exist.c", oid="a" * 40, sha256="b" * 64)]
+            reasons = prov.check_blob_identity(entries, root, sha)
+            self.assertTrue(any("no safe blob is recorded" in r for r in reasons))
+
+    def test_gitlink_path_declared_as_code_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo_with_file(root)
+            _git("update-index", "--add", "--cacheinfo", "160000,c87e74dcd6c8878b809e013cd8ff0c52baa75332,link", cwd=root)
+            _git("commit", "-q", "-m", "add gitlink", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            entries = [_base_entry(path="link", oid="a" * 40, sha256="b" * 64)]
+            reasons = prov.check_blob_identity(entries, root, sha)
+            self.assertTrue(any("no safe blob is recorded" in r for r in reasons))
+
+    def test_no_code_or_asset_entries_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._init_repo_with_file(root)
+            entries = [_base_entry(path="mgfembp", category="submodule", pinned_commit="a" * 40)]
+            self.assertEqual(prov.check_blob_identity(entries, root, sha), [])
+
+    def test_non_git_root_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            entries = [_base_entry(path="main.c", oid="a" * 40, sha256="b" * 64)]
+            self.assertEqual(prov.check_blob_identity(entries, root, "HEAD"), [])
+
+    def test_self_referential_provenance_files_are_exempted(self):
+        """The three provenance-manifest files this module itself writes
+        are structurally self-referential (their own committed oid/
+        sha256 necessarily describes content *before* the very write
+        that embeds them -- there is no general fixed point for that) --
+        `check_blob_identity` must never flag them even with an obviously
+        wrong oid/sha256."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            root_dir = root / "docs" / "release_data" / "provenance"
+            root_dir.mkdir(parents=True)
+            (root_dir / "code.json").write_text("[]\n")
+            _git("init", "-q", cwd=root)
+            _git("config", "user.email", "t@example.com", cwd=root)
+            _git("config", "user.name", "Tester", cwd=root)
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            entries = [_base_entry(
+                path="docs/release_data/provenance/code.json", oid="0" * 40, sha256="0" * 64,
+            )]
+            self.assertEqual(prov.check_blob_identity(entries, root, sha), [])
+
+    def test_real_repo_blob_identity_matches(self):
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        self.assertEqual(prov.check_blob_identity(entries, ROOT), [])
 
 
 class RepositoryStateTests(unittest.TestCase):
@@ -450,6 +746,16 @@ class RepositoryStateTests(unittest.TestCase):
     eligible' (and this module must never emit the bare status token
     "approved" at all -- see EvaluateTests.
     test_fully_resolved_entry_is_mechanically_eligible)."""
+
+    @staticmethod
+    def _combined_required_paths():
+        allowlist = json.loads(
+            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
+        )["paths"]
+        exclusions = json.loads(
+            (ROOT / "docs" / "release_data" / "export_exclusions.json").read_text(encoding="utf-8")
+        )["exclusions"]
+        return sorted(set(allowlist) | {entry["path"] for entry in exclusions})
 
     def test_real_manifests_are_blocked(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
@@ -463,13 +769,14 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(len(mgfembp), 1)
         self.assertEqual(mgfembp[0]["pinned_commit"], "c87e74dcd6c8878b809e013cd8ff0c52baa75332")
         self.assertFalse(mgfembp[0]["redistribution_approved"])
+        self.assertIsNone(mgfembp[0].get("sha256"))
 
-    def test_full_allowlist_coverage(self):
+    def test_full_allowlist_and_exclusions_coverage(self):
+        """issue #9 mandatory correction #2/#3: coverage now spans the
+        *combined* included allowlist + excluded export-exclusions path
+        set -- mgfembp's own record must be neither a gap nor a ghost."""
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
-        allowlist = json.loads(
-            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
-        )["paths"]
-        gaps = prov.coverage_gaps(entries, allowlist)
+        gaps = prov.coverage_gaps(entries, self._combined_required_paths())
         self.assertEqual(gaps, [])
 
     def test_no_entry_invents_a_license_or_approval(self):
@@ -482,37 +789,45 @@ class RepositoryStateTests(unittest.TestCase):
             self.assertFalse(entry["redistribution_approved"])
             self.assertIsNone(entry["reviewer"])
 
-    def test_real_repo_provenance_is_a_clean_bijection_over_the_exact_allowlist(self):
+    def test_real_repo_provenance_is_a_clean_bijection_over_the_combined_set(self):
         """The real, checked-in provenance manifests must fully, cleanly,
-        unambiguously cover the real, checked-in exact allowlist -- no
-        gap, no ghost, no duplicate/ambiguous entry, and (issue #9
-        exact-provenance remediation) the exact *set* of provenance paths
-        must equal the exact *set* of allowlist paths one-for-one -- not
-        merely 46 category roots "covering" thousands of files by
-        prefix."""
+        unambiguously cover the real, checked-in exact allowlist +
+        export-exclusions set -- no gap, no ghost, no duplicate/ambiguous
+        entry, and the exact *set* of provenance paths must equal that
+        combined set one-for-one -- not merely 46 category roots
+        "covering" thousands of files by prefix."""
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
-        allowlist = json.loads(
-            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
-        )["paths"]
-        self.assertEqual(prov.evaluate_coverage(entries, allowlist), [])
+        required_paths = self._combined_required_paths()
+        self.assertEqual(prov.evaluate_coverage(entries, required_paths), [])
         entry_paths = [entry["path"] for entry in entries]
         self.assertEqual(len(entry_paths), len(set(entry_paths)), "no duplicate provenance paths")
-        self.assertEqual(sorted(entry_paths), sorted(allowlist), "exact one-record-per-member bijection")
+        self.assertEqual(sorted(entry_paths), required_paths, "exact one-record-per-member bijection")
 
-    def test_real_provenance_has_one_record_per_allowlist_member_not_one_per_category(self):
+    def test_real_provenance_has_one_record_per_member_not_one_per_category(self):
         """issue #9 exact-provenance remediation's headline fact: there
-        are as many provenance records as there are exact allowlisted
-        members (thousands), never merely a handful of category roots."""
+        are as many provenance records as there are exact allowlisted +
+        excluded members (thousands), never merely a handful of category
+        roots."""
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
-        allowlist = json.loads(
-            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
-        )["paths"]
-        self.assertEqual(len(entries), len(allowlist))
+        self.assertEqual(len(entries), len(self._combined_required_paths()))
         self.assertGreater(len(entries), 9000)
+
+    def test_every_code_and_asset_entry_has_well_formed_oid_and_sha256(self):
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        for entry in entries:
+            if entry["category"] == "submodule":
+                self.assertIsNone(entry.get("sha256"))
+                continue
+            self.assertRegex(entry["oid"], r"^[0-9a-f]{40}$", entry["path"])
+            self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$", entry["path"])
 
     def test_real_gitlink_pin_matches_the_actual_tree(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
         self.assertEqual(prov.check_gitlink_pins(entries, ROOT), [])
+
+    def test_real_blob_identity_matches_the_actual_tree(self):
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        self.assertEqual(prov.check_blob_identity(entries, ROOT), [])
 
 
 if __name__ == "__main__":

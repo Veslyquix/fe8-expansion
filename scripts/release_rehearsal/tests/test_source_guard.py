@@ -848,8 +848,16 @@ class LoadAllowlistTests(unittest.TestCase):
 class RepositoryStateTests(unittest.TestCase):
     def test_real_allowlist_loads(self):
         allowlist = sg.load_allowlist(ROOT / "docs" / "release_data" / "source_allowlist.json")
-        self.assertIn("mgfembp", allowlist)
         self.assertEqual(len(allowlist), len(set(allowlist)))
+
+    def test_real_allowlist_excludes_mgfembp_gitlink(self):
+        """schema_version 3 / issue #9 mandatory correction #2: the
+        `mgfembp` gitlink is now an explicit export-exclusion (see
+        docs/release_data/export_exclusions.json and
+        scripts/release_rehearsal/tests/test_tree_coverage.py), never an
+        allowlist ("included") entry."""
+        allowlist = sg.load_allowlist(ROOT / "docs" / "release_data" / "source_allowlist.json")
+        self.assertNotIn("mgfembp", allowlist)
 
     def test_real_allowlist_is_exact_per_file_not_top_level_directories(self):
         """issue #9 verifier remediation: the checked-in allowlist must be

@@ -28,7 +28,7 @@ def _init_repo(root: Path) -> None:
 
 
 class GenerateEntriesTests(unittest.TestCase):
-    def test_generates_every_tracked_file_and_gitlink(self):
+    def test_generates_every_tracked_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _init_repo(root)
@@ -41,6 +41,27 @@ class GenerateEntriesTests(unittest.TestCase):
             sha = gs.resolve_sha(root, "HEAD")
             entries = al.generate_entries(root, sha)
             self.assertEqual(entries, ["docs/readme.md", "src/main.c"])
+
+    def test_gitlink_excluded_from_generated_entries(self):
+        """schema_version 3 / issue #9 mandatory correction #2: a
+        gitlink (submodule mountpoint) is never included in the
+        generated allowlist -- it is a separate, explicit export
+        exclusion (see scripts/release_rehearsal/tree_coverage.py)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "regular.txt").write_text("hello\n")
+            _git("add", "regular.txt", cwd=root)
+            _git(
+                "update-index", "--add", "--cacheinfo",
+                "160000,c87e74dcd6c8878b809e013cd8ff0c52baa75332,a-submodule",
+                cwd=root,
+            )
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            entries = al.generate_entries(root, sha)
+            self.assertEqual(entries, ["regular.txt"])
+            self.assertNotIn("a-submodule", entries)
 
     def test_generated_document_has_required_shape(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,6 +125,47 @@ class CheckAllowlistCompletenessTests(unittest.TestCase):
 
             missing, stale = al.check_allowlist_completeness(root, ["a.txt"], new_sha)
             self.assertEqual(missing, ["new_unreviewed.txt"])
+
+
+class CheckAllowlistCompletenessGitlinkExclusionTests(unittest.TestCase):
+    """schema_version 3 / issue #9 mandatory correction #2: a tracked
+    gitlink is never expected to have its own allowlist entry -- it must
+    never be reported as "missing" here, and its presence in the
+    allowlist would itself be a "stale" (unexpected) entry."""
+
+    def test_gitlink_is_never_reported_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "regular.txt").write_text("hello\n")
+            _git("add", "regular.txt", cwd=root)
+            _git(
+                "update-index", "--add", "--cacheinfo",
+                "160000,c87e74dcd6c8878b809e013cd8ff0c52baa75332,a-submodule",
+                cwd=root,
+            )
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            missing, stale = al.check_allowlist_completeness(root, ["regular.txt"], sha)
+            self.assertEqual(missing, [])
+            self.assertEqual(stale, [])
+
+    def test_gitlink_erroneously_allowlisted_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "regular.txt").write_text("hello\n")
+            _git("add", "regular.txt", cwd=root)
+            _git(
+                "update-index", "--add", "--cacheinfo",
+                "160000,c87e74dcd6c8878b809e013cd8ff0c52baa75332,a-submodule",
+                cwd=root,
+            )
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            missing, stale = al.check_allowlist_completeness(root, ["regular.txt", "a-submodule"], sha)
+            self.assertEqual(missing, [])
+            self.assertEqual(stale, ["a-submodule"])
 
 
 class CheckFunctionTests(unittest.TestCase):
@@ -325,10 +387,22 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(missing, [], "tracked file(s) missing an allowlist entry")
         self.assertEqual(stale, [], "stale allowlist entrie(s) for something no longer tracked")
 
-    def test_real_allowlist_includes_mgfembp_gitlink(self):
+    def test_real_allowlist_excludes_mgfembp_gitlink(self):
+        """schema_version 3 / issue #9 mandatory correction #2: the
+        `mgfembp` gitlink is never an allowlist ("included") entry any
+        more -- it is instead its own explicit export-exclusion record
+        in docs/release_data/export_exclusions.json. See
+        scripts/release_rehearsal/tests/test_tree_coverage.py for the
+        exact, disjoint-partition proof that ties both files together."""
         allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
         paths = al.load_allowlist_paths(allowlist_path)
-        self.assertIn("mgfembp", paths)
+        self.assertNotIn("mgfembp", paths)
+
+    def test_real_allowlist_schema_version_is_3(self):
+        import json
+        allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
+        document = json.loads(allowlist_path.read_text(encoding="utf-8"))
+        self.assertEqual(document["schema_version"], 3)
 
 
 if __name__ == "__main__":

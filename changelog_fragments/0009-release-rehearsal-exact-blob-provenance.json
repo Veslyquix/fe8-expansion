@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Bind every included source-release provenance record to its exact Git blob OID and a deterministic SHA-256 of the raw blob content; a changed or new blob now invalidates its old provenance record (missing/stale) instead of silently passing on path match alone, and the deterministic generator never carries over approval/reviewer facts across a blob change.",
+  "semver_impact": "none"
+}

@@ -50,6 +50,7 @@ from scripts.release_rehearsal import allowlist as al
 from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import provenance as prov
 from scripts.release_rehearsal import source_guard as sg
+from scripts.release_rehearsal import tree_coverage as tc
 
 CANONICAL_MTIME = 0
 CANONICAL_UID = 0
@@ -213,6 +214,24 @@ def _iter_archive_contents(
             _hard_deny_check_git_entry(entry, data, violations, map_hex_exceptions)
         if not violations:
             contents = [(entry.path, data) for entry, data in fetched]
+            # issue #9 mandatory correction #2: candidate archive members
+            # MUST equal the included (allowlist) set exactly -- never a
+            # subset (a declared member silently missing) nor a superset
+            # (an undeclared member silently smuggled in, e.g. a gitlink
+            # that slipped past the `not entry.is_gitlink` filter above
+            # due to a future bug). This is a direct, load-bearing check
+            # inside the archive-building path itself -- it never merely
+            # relies on some *other*, possibly-skipped check
+            # (`allowlist.check_allowlist_completeness`) having already
+            # run first.
+            built_paths = {path for path, _ in contents}
+            missing_members, extra_members = tc.check_archive_membership_exact(built_paths, allowlist_set)
+            if missing_members or extra_members:
+                raise ArchiveRehearsalError(
+                    "refusing to archive: built archive members do not exactly equal the "
+                    "included allowlist set -- missing: "
+                    f"{missing_members or '(none)'}; extra: {extra_members or '(none)'}"
+                )
     else:
         # issue #9 verifier remediation: `target_sha` is never verified
         # against git here (there is no git metadata in a non-git

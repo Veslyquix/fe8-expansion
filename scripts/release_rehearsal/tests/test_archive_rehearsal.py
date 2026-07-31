@@ -329,11 +329,15 @@ class GitBackedArchiveTests(unittest.TestCase):
                 ar.rehearse_archive_twice(root, {"src/real.c", "src/link.c"})
             self.assertIn("prohibited-symlink", str(ctx.exception))
 
-    def test_gitlink_member_never_archived_even_if_allowlisted(self):
-        """A submodule gitlink path, even though it is an explicit,
-        legitimate allowlist entry (see docs/release_process.md's
-        submodule/provenance boundary), never contributes any content to
-        the archive -- there is no blob to read, by construction."""
+    def test_gitlink_member_never_silently_archived_even_if_allowlisted(self):
+        """issue #9 mandatory correction #2: a gitlink is never supposed
+        to be an "included" allowlist entry any more at all (it belongs
+        to the separate, explicit export-exclusions set instead -- see
+        scripts/release_rehearsal/tree_coverage.py). If one somehow ends
+        up allowlisted anyway (a hand-edited/corrupt allowlist), this
+        must now be a hard, fail-closed refusal (`ArchiveRehearsalError`,
+        via the archive-membership-exact check) -- never a silently
+        built partial archive that quietly drops it without saying so."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "root"
             root.mkdir()
@@ -353,11 +357,37 @@ class GitBackedArchiveTests(unittest.TestCase):
             _git("commit", "-q", "-m", "with gitlink", cwd=root)
 
             dest = Path(tmp) / "out.tar"
-            ar.build_deterministic_archive(root, {"src/main.c", "vendor"}, dest)
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.build_deterministic_archive(root, {"src/main.c", "vendor"}, dest)
+            self.assertIn("vendor", str(ctx.exception))
+            self.assertFalse(dest.exists())
+
+    def test_gitlink_correctly_omitted_from_allowlist_archives_cleanly(self):
+        """The correct, supported shape: a gitlink is never passed as an
+        allowlist member at all -- only the real, included blob is."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _init_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}\n")
+            _git("add", "-A", cwd=root)
+
+            nested = Path(tmp) / "nested"
+            nested.mkdir()
+            _init_repo(nested)
+            (nested / "f.txt").write_text("x")
+            _git("add", "-A", cwd=nested)
+            _git("commit", "-q", "-m", "nested", cwd=nested)
+            nested_sha = _git("rev-parse", "HEAD", cwd=nested).strip()
+            _git("update-index", "--add", "--cacheinfo", f"160000,{nested_sha},vendor", cwd=root)
+            _git("commit", "-q", "-m", "with gitlink", cwd=root)
+
+            dest = Path(tmp) / "out.tar"
+            ar.build_deterministic_archive(root, {"src/main.c"}, dest)
             with tarfile.open(dest, "r") as tar:
                 names = [m.name for m in tar.getmembers()]
             self.assertEqual(names, ["src/main.c"])
-            self.assertNotIn("vendor", names)
 
 
 class RehearseArchiveTwiceTests(unittest.TestCase):

@@ -51,10 +51,8 @@ Deliberately dependency-free (Python stdlib only, JSON only).
 Manifest entry schema::
 
     {
-      "path": "src/main.c",            # exact repo-relative tracked path
-                                        # (or the single "mgfembp" gitlink
-                                        # path) -- never a directory/
-                                        # category prefix
+      "path": "src/main.c",            # exact repo-relative tracked path --
+                                        # never a directory/category prefix
       "category": "code",               # "code" | "asset" | "submodule"
       "author": "NOASSERTION",         # or a real, human-recorded name
       "rightsholder": "NOASSERTION",
@@ -62,7 +60,15 @@ Manifest entry schema::
       "redistribution_approved": false,
       "reviewer": null,                # or a real human reviewer identity
       "notes": "free-form factual note",
-      "pinned_commit": null            # required, non-null for category "submodule"
+      "oid": "1f2e3d...",              # exact 40-lowercase-hex Git blob OID --
+                                        # required for "code"/"asset"; never
+                                        # present for "submodule"
+      "sha256": "9c8b7a...",           # exact 64-lowercase-hex SHA-256 of the
+                                        # raw blob content -- required for
+                                        # "code"/"asset"; never present (must
+                                        # be null) for "submodule"
+      "pinned_commit": null            # required, non-null for category "submodule";
+                                        # the gitlink's own commit OID
     }
 
 Exit codes (CLI): 0 well-formed report (status may be "blocked" or
@@ -76,10 +82,12 @@ fact).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, List, NamedTuple, Sequence, Tuple
+from typing import Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
 from scripts.release_rehearsal import git_source as gs
 
@@ -102,7 +110,27 @@ class ProvenanceError(ValueError):
     tooling defect, not an honestly-unresolved fact)."""
 
 
+_OID_RE = re.compile(r"^[0-9a-f]{40}$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
 def load_manifest(path: Path) -> List[Dict]:
+    """Loads and schema-validates one provenance manifest file.
+
+    issue #9 mandatory correction #3 (exact-blob-bound provenance): a
+    `"code"`/`"asset"`-category entry must now additionally record its
+    exact Git blob `oid` (40-lowercase-hex) and a deterministic SHA-256
+    `sha256` (64-lowercase-hex) of the raw blob content -- this binds the
+    record to one specific, immutable version of that path's content,
+    not merely to the path string. These two fields are schema-validated
+    for *shape* only here (well-formed hex, right length); cross-
+    checking them against the *actual* live tree/blob content is
+    `check_blob_identity()`'s separate job (schema validity is a
+    necessary precondition for that cross-check, not a substitute for
+    it). A `"submodule"`-category entry never carries `sha256` (a
+    gitlink has no blob content to hash at all) -- if present, it must
+    be exactly `None`, never a stray/leftover value from before a path
+    was reclassified."""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -125,10 +153,30 @@ def load_manifest(path: Path) -> List[Dict]:
                 f"{path}[{index}] ({entry['path']}): redistribution_approved must be a real boolean, "
                 "never a truthy string"
             )
-        if entry["category"] == "submodule" and not entry.get("pinned_commit"):
-            raise ProvenanceError(
-                f"{path}[{index}] ({entry['path']}): submodule entries must record pinned_commit"
-            )
+        if entry["category"] == "submodule":
+            if not entry.get("pinned_commit"):
+                raise ProvenanceError(
+                    f"{path}[{index}] ({entry['path']}): submodule entries must record pinned_commit"
+                )
+            if entry.get("sha256") is not None:
+                raise ProvenanceError(
+                    f"{path}[{index}] ({entry['path']}): submodule (gitlink) entries must never "
+                    "record a 'sha256' (a gitlink has no blob content) -- found "
+                    f"{entry.get('sha256')!r}"
+                )
+        else:
+            oid = entry.get("oid")
+            sha256_value = entry.get("sha256")
+            if not isinstance(oid, str) or not _OID_RE.fullmatch(oid):
+                raise ProvenanceError(
+                    f"{path}[{index}] ({entry['path']}): {entry['category']} entries must record an "
+                    f"exact 40-lowercase-hex 'oid', found {oid!r}"
+                )
+            if not isinstance(sha256_value, str) or not _SHA256_RE.fullmatch(sha256_value):
+                raise ProvenanceError(
+                    f"{path}[{index}] ({entry['path']}): {entry['category']} entries must record an "
+                    f"exact 64-lowercase-hex 'sha256', found {sha256_value!r}"
+                )
         entry.setdefault("source_manifest", str(path))
         entries.append(entry)
     return entries
@@ -310,6 +358,101 @@ def check_gitlink_pins(entries: List[Dict], repo_root: Path, target_sha: str = "
     return sorted(reasons)
 
 
+# The three provenance-manifest files this module itself writes
+# (`write_generated_provenance`) are structurally self-referential: each
+# is itself a tracked "code"-category blob that must have its own exact
+# provenance record, but that record's `oid`/`sha256` necessarily
+# describe the file's content *before* the very write that embeds them
+# -- there is no general fixed point for "a file's own hash of itself,
+# including a field holding that hash" (a "hash quine" is not achievable
+# by straightforward sequential regeneration, and searching for one
+# would be absurd for a human-reviewed provenance record). This is a
+# narrow, fully enumerated, mathematically-inherent exception -- not a
+# general "skip identity checking" escape hatch -- so `check_blob_
+# identity` below never live-cross-checks *these three exact paths*
+# (their schema shape -- well-formed oid/sha256 hex -- is still fully
+# validated by `load_manifest`; only the live-content cross-check is
+# exempted). Every other included blob, with no exception, is fully
+# cross-checked.
+SELF_REFERENTIAL_PROVENANCE_PATHS = frozenset({
+    "docs/release_data/provenance/code.json",
+    "docs/release_data/provenance/assets.json",
+    "docs/release_data/provenance/submodules.json",
+})
+
+
+def check_blob_identity(entries: List[Dict], repo_root: Path, target_sha: str = "HEAD") -> List[str]:
+    """Cross-checks every `"code"`/`"asset"`-category provenance entry's
+    declared `oid`/`sha256` against the actual, immutable blob Git's own
+    tree records for that exact path at `target_sha` -- issue #9
+    mandatory correction #3 (exact-blob-bound provenance). This never
+    trusts the JSON's own say-so: it re-reads `target_sha`'s tree
+    (`git_source.list_tree`) and every referenced blob's *actual* bytes
+    (`git_source.GitBatchBlobReader`), independently recomputing SHA-256,
+    exactly mirroring `check_gitlink_pins`' "never trust the record,
+    cross-check it against Git itself" discipline for gitlink pins.
+
+    A record whose path is not a currently-tracked safe blob at all (a
+    gitlink now, or simply gone), or whose `oid` and/or `sha256` no
+    longer match the live tree/blob content (the file was edited/
+    replaced without regenerating its provenance record), is reported --
+    this is precisely how a changed/new blob is required to invalidate
+    its old provenance record rather than silently keep "passing" under
+    stale identity data. Returns an empty list when there are no
+    `"code"`/`"asset"` entries at all, or when `repo_root` is not a git
+    repository (nothing to cross-check against; the caller decides
+    whether that is itself acceptable for a given candidate tree)."""
+    blob_entries = [entry for entry in entries if entry["category"] != "submodule"]
+    if not blob_entries:
+        return []
+    if not gs.is_git_repo(repo_root):
+        return []
+    try:
+        tree_entries = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
+    except gs.GitSourceError as error:
+        return [f"could not cross-check blob identity against the git tree at {target_sha!r}: {error}"]
+
+    reasons: List[str] = []
+    needed_object_ids: Dict[str, str] = {}
+    for entry in blob_entries:
+        if entry["path"] in SELF_REFERENTIAL_PROVENANCE_PATHS:
+            continue
+        tree_entry = tree_entries.get(entry["path"])
+        if tree_entry is None or not tree_entry.is_safe_blob:
+            reasons.append(
+                f"{entry['path']}: provenance declares category {entry['category']!r} but no safe "
+                f"blob is recorded at this exact path in the tree at {target_sha!r} (missing/stale "
+                "provenance -- e.g. the path was removed, renamed, or is no longer a regular blob)"
+            )
+            continue
+        if entry.get("oid") != tree_entry.object_id:
+            reasons.append(
+                f"{entry['path']}: provenance oid {entry.get('oid')!r} does not match the actual "
+                f"blob {tree_entry.object_id!r} Git's tree records at {target_sha!r} (the blob "
+                "changed since this provenance record was generated -- regenerate it)"
+            )
+            continue
+        needed_object_ids[entry["path"]] = tree_entry.object_id
+
+    if needed_object_ids:
+        try:
+            with gs.GitBatchBlobReader(repo_root) as reader:
+                for path, object_id in needed_object_ids.items():
+                    data = reader.read(object_id)
+                    actual_sha256 = hashlib.sha256(data).hexdigest()
+                    expected = next(e for e in blob_entries if e["path"] == path).get("sha256")
+                    if actual_sha256 != expected:
+                        reasons.append(
+                            f"{path}: provenance sha256 {expected!r} does not match the actual blob "
+                            f"content's SHA-256 {actual_sha256!r} at {target_sha!r} (stale/incorrect "
+                            "content hash -- regenerate this provenance record)"
+                        )
+        except gs.GitSourceError as error:
+            reasons.append(f"could not read blob content to verify sha256 at {target_sha!r}: {error}")
+
+    return sorted(reasons)
+
+
 # --- Exact per-file generator (issue #9 exact-provenance remediation) ------
 #
 # `PROVENANCE_ROOT_SEED` is the single, small, human-curated input: one
@@ -331,7 +474,6 @@ class RootSeed(NamedTuple):
     root: str
     category: str
     notes: str
-    pinned_commit: str | None
 
 
 _NOTE_CODE_BUILD_TOOLING = (
@@ -366,58 +508,61 @@ _NOTE_ASSET = (
 )
 _NOTE_SUBMODULE_MGFEMBP = (
     "Git submodule pointing at StanHash/mgfembp (FE6 multiboot payload "
-    "builder). Pinned to the exact commit this worktree's gitlink "
-    "records; not redistributable as part of a source archive until "
-    "upstream license/redistribution terms are reviewed and approved."
+    "builder). An explicit export exclusion (see "
+    "docs/release_data/export_exclusions.json and "
+    "scripts/release_rehearsal/tree_coverage.py) -- not redistributable as "
+    "part of a source archive until upstream license/redistribution terms "
+    "are reviewed and approved. `pinned_commit` is always read fresh from "
+    "the live gitlink at generation time, never hardcoded here."
 )
 
 PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
-    RootSeed(".clang-format", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed(".gitattributes", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed(".github", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed(".gitignore", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed(".gitmodules", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("CHANGELOG.md", "code", _NOTE_CODE_RELEASE_TOOLING_IO, None),
-    RootSeed("CLAUDE.md", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("CONTRIBUTING.md", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("Makefile", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("README.md", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("asmdiff.sh", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("buddy.yml", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("build_tools.sh", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("changelog_fragments", "code", _NOTE_CODE_RELEASE_TOOLING_IO, None),
-    RootSeed("clean_tools.sh", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("compile_flags.txt", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("config", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("config.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("docs", "code", _NOTE_CODE_DOCUMENTATION, None),
-    RootSeed("generated_data.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("githooks", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("graphics_file_rules.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("include", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("json_data_rules.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("ldscript.txt", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("linker", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("linker_script_banim.txt", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("linker_script_sound.txt", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("make_tools.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("modern.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("release.mk", "code", _NOTE_CODE_RELEASE_MAKE_TARGETS, None),
-    RootSeed("scripts", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("songs.mk", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("src", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("sym_iwram.txt", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("tests", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("tools", "code", _NOTE_CODE_BUILD_TOOLING, None),
-    RootSeed("_site", "asset", _NOTE_ASSET, None),
-    RootSeed("asm", "asset", _NOTE_ASSET, None),
-    RootSeed("banim", "asset", _NOTE_ASSET, None),
-    RootSeed("graphics", "asset", _NOTE_ASSET, None),
-    RootSeed("preview", "asset", _NOTE_ASSET, None),
-    RootSeed("reports", "asset", _NOTE_ASSET, None),
-    RootSeed("sound", "asset", _NOTE_ASSET, None),
-    RootSeed("texts", "asset", _NOTE_ASSET, None),
-    RootSeed("mgfembp", "submodule", _NOTE_SUBMODULE_MGFEMBP, "c87e74dcd6c8878b809e013cd8ff0c52baa75332"),
+    RootSeed(".clang-format", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed(".gitattributes", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed(".github", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed(".gitignore", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed(".gitmodules", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("CHANGELOG.md", "code", _NOTE_CODE_RELEASE_TOOLING_IO),
+    RootSeed("CLAUDE.md", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("CONTRIBUTING.md", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("Makefile", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("README.md", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("asmdiff.sh", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("buddy.yml", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("build_tools.sh", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("changelog_fragments", "code", _NOTE_CODE_RELEASE_TOOLING_IO),
+    RootSeed("clean_tools.sh", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("compile_flags.txt", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("config", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("config.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("docs", "code", _NOTE_CODE_DOCUMENTATION),
+    RootSeed("generated_data.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("githooks", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("graphics_file_rules.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("include", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("json_data_rules.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("ldscript.txt", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("linker", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("linker_script_banim.txt", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("linker_script_sound.txt", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("make_tools.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("modern.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("release.mk", "code", _NOTE_CODE_RELEASE_MAKE_TARGETS),
+    RootSeed("scripts", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("songs.mk", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("src", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("sym_iwram.txt", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("tests", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("tools", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("_site", "asset", _NOTE_ASSET),
+    RootSeed("asm", "asset", _NOTE_ASSET),
+    RootSeed("banim", "asset", _NOTE_ASSET),
+    RootSeed("graphics", "asset", _NOTE_ASSET),
+    RootSeed("preview", "asset", _NOTE_ASSET),
+    RootSeed("reports", "asset", _NOTE_ASSET),
+    RootSeed("sound", "asset", _NOTE_ASSET),
+    RootSeed("texts", "asset", _NOTE_ASSET),
+    RootSeed("mgfembp", "submodule", _NOTE_SUBMODULE_MGFEMBP),
 )
 
 _CATEGORY_FILENAMES = {
@@ -432,55 +577,147 @@ def _root_covers_path(root: str, candidate_path: str) -> bool:
     or nested under it (`candidate_path` starts with `root + "/"`).
     **Never** used by any validation/coverage function above -- those are
     all pure exact-path set operations. Used exclusively by
-    `generate_exact_entries()` to fan `PROVENANCE_ROOT_SEED`'s small,
-    human-curated per-root values out to every exact allowlisted path;
-    the generated output is a fully materialized, one-record-per-exact-
-    path artifact that is never re-interpreted by directory prefix again
-    once committed."""
+    `_assign_root()`/`generate_exact_entries()` to fan
+    `PROVENANCE_ROOT_SEED`'s small, human-curated per-root values out to
+    every exact allowlisted/excluded path; the generated output is a
+    fully materialized, one-record-per-exact-path artifact that is never
+    re-interpreted by directory prefix again once committed."""
     return candidate_path == root or candidate_path.startswith(root + "/")
 
 
+def _assign_root(path: str, seed: Sequence[RootSeed]) -> RootSeed:
+    """Pure (no git access) root-assignment lookup: `path` must match
+    **exactly one** root in `seed`. An unassigned path (no root covers
+    it) or an ambiguous path (more than one root covers it) is an
+    actionable `ProvenanceError` -- this never silently skips a path or
+    arbitrarily picks a root when more than one matches. Split out from
+    `generate_exact_entries()` so the fan-out/ambiguity logic itself
+    stays fully unit-testable without any git repository at all."""
+    matches = [root_seed for root_seed in seed if _root_covers_path(root_seed.root, path)]
+    if not matches:
+        raise ProvenanceError(f"generate: {path!r} matches no seed root in PROVENANCE_ROOT_SEED")
+    if len(matches) > 1:
+        raise ProvenanceError(
+            f"generate: {path!r} matches more than one seed root: "
+            f"{sorted(root_seed.root for root_seed in matches)}"
+        )
+    return matches[0]
+
+
 def generate_exact_entries(
-    allowlist_paths: Iterable[str], seed: Sequence[RootSeed] = PROVENANCE_ROOT_SEED
+    repo_root: Path,
+    target_sha: str,
+    allowlist_paths: Iterable[str],
+    exclusion_paths: Iterable[str] = (),
+    seed: Sequence[RootSeed] = PROVENANCE_ROOT_SEED,
 ) -> List[Dict]:
-    """Fans `seed`'s small, human-curated per-root category/notes/
-    pinned_commit values out to one exact, fully-materialized provenance
-    dict per path in `allowlist_paths`. Every path must match **exactly
-    one** seed root: an unassigned path (no root covers it) or an
-    ambiguous path (more than one root covers it) is an actionable
-    `ProvenanceError` -- this generator never silently skips a path or
-    arbitrarily picks a root when more than one matches.
+    """Fans `seed`'s small, human-curated per-root category/notes values
+    out to one exact, fully-materialized provenance dict per path in
+    `allowlist_paths` (the included set) **and** `exclusion_paths` (the
+    explicit export exclusions -- issue #9 mandatory correction #2/#3).
+    Every path must match **exactly one** seed root (`_assign_root`).
+
+    Every generated `"code"`/`"asset"` entry is bound to its *exact, live*
+    Git blob identity: `oid` is the blob object id and `sha256` is a
+    freshly computed SHA-256 of that blob's actual content, both read
+    from `target_sha`'s tree via `scripts/release_rehearsal/git_source.py`
+    -- never carried over from any previously-committed record. Every
+    generated `"submodule"` entry's `pinned_commit` is likewise read
+    fresh from the live gitlink, never hardcoded in `seed`. A path
+    assigned a `"submodule"`-category root that is not actually a live
+    gitlink (or a non-`"submodule"` path that is not actually a live safe
+    blob) is an actionable `ProvenanceError` -- this generator never
+    fabricates an identity for a path Git's own tree does not actually
+    back up.
 
     `author`/`rightsholder`/`license` are always `"NOASSERTION"`,
     `redistribution_approved` is always `False`, and `reviewer` is always
     `None` for every generated entry: this generator only ever proposes
-    the same honest, unresolved starting point issue #9 already recorded
-    at category granularity -- it never invents a license, an approval,
-    or a reviewer for any path, however it was assigned a root."""
-    entries: List[Dict] = []
-    for path in sorted(set(allowlist_paths)):
-        matches = [root_seed for root_seed in seed if _root_covers_path(root_seed.root, path)]
-        if not matches:
-            raise ProvenanceError(f"generate: {path!r} matches no seed root in PROVENANCE_ROOT_SEED")
-        if len(matches) > 1:
+    the same honest, unresolved starting point -- it never invents a
+    license, an approval, or a reviewer for any path, however it was
+    assigned a root, and it never preserves a previous approval/reviewer
+    fact across a changed or brand-new blob (there is nothing to
+    "preserve" -- every field this generator itself controls is always
+    freshly and independently recomputed, every single run)."""
+    tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
+
+    allowlist_set = set(allowlist_paths)
+    exclusion_set = set(exclusion_paths)
+    all_paths = sorted(allowlist_set | exclusion_set)
+    assignments: Dict[str, RootSeed] = {path: _assign_root(path, seed) for path in all_paths}
+
+    # Defensive cross-check (issue #9 mandatory correction #2/#3
+    # consistency): a path's seed-assigned category must agree with
+    # *which* canonical set it was actually declared in -- a
+    # "submodule"-category path must come from `exclusion_paths` (it is
+    # never a member of the included allowlist), and every other
+    # category must come from `allowlist_paths` (it is never a member of
+    # the export exclusions). This never trusts seed/category alone
+    # without also confirming the caller declared the path in the
+    # matching canonical set.
+    for path in all_paths:
+        category = assignments[path].category
+        if category == "submodule" and path not in exclusion_set:
             raise ProvenanceError(
-                f"generate: {path!r} matches more than one seed root: "
-                f"{sorted(root_seed.root for root_seed in matches)}"
+                f"generate: {path!r} is assigned the 'submodule' category by seed root "
+                f"{assignments[path].root!r} but was not declared in exclusion_paths"
             )
-        root_seed = matches[0]
-        entry: Dict = {
-            "path": path,
-            "category": root_seed.category,
-            "author": "NOASSERTION",
-            "rightsholder": "NOASSERTION",
-            "license": "NOASSERTION",
-            "redistribution_approved": False,
-            "reviewer": None,
-            "notes": root_seed.notes,
-        }
+        if category != "submodule" and path not in allowlist_set:
+            raise ProvenanceError(
+                f"generate: {path!r} is assigned category {category!r} by seed root "
+                f"{assignments[path].root!r} but was not declared in allowlist_paths"
+            )
+
+    entries: List[Dict] = []
+    blob_paths: List[str] = []
+    for path in all_paths:
+        root_seed = assignments[path]
+        tree_entry = tree.get(path)
         if root_seed.category == "submodule":
-            entry["pinned_commit"] = root_seed.pinned_commit
-        entries.append(entry)
+            if tree_entry is None or not tree_entry.is_gitlink:
+                raise ProvenanceError(
+                    f"generate: {path!r} is assigned the 'submodule' category by seed root "
+                    f"{root_seed.root!r} but is not a live gitlink in the tree at {target_sha!r}"
+                )
+            entries.append({
+                "path": path,
+                "category": "submodule",
+                "author": "NOASSERTION",
+                "rightsholder": "NOASSERTION",
+                "license": "NOASSERTION",
+                "redistribution_approved": False,
+                "reviewer": None,
+                "notes": root_seed.notes,
+                "pinned_commit": tree_entry.object_id,
+            })
+        else:
+            if tree_entry is None or not tree_entry.is_safe_blob:
+                raise ProvenanceError(
+                    f"generate: {path!r} is assigned category {root_seed.category!r} by seed root "
+                    f"{root_seed.root!r} but is not a live safe blob in the tree at {target_sha!r}"
+                )
+            entries.append({
+                "path": path,
+                "category": root_seed.category,
+                "author": "NOASSERTION",
+                "rightsholder": "NOASSERTION",
+                "license": "NOASSERTION",
+                "redistribution_approved": False,
+                "reviewer": None,
+                "notes": root_seed.notes,
+                "oid": tree_entry.object_id,
+                "sha256": None,  # filled in below, in one shared blob-reading pass
+            })
+            blob_paths.append(path)
+
+    if blob_paths:
+        by_path = {entry["path"]: entry for entry in entries}
+        with gs.GitBatchBlobReader(repo_root) as reader:
+            for path in blob_paths:
+                object_id = tree[path].object_id
+                data = reader.read(object_id)
+                by_path[path]["sha256"] = hashlib.sha256(data).hexdigest()
+
     return entries
 
 
@@ -514,29 +751,71 @@ def _load_allowlist_paths(allowlist_path: Path) -> List[str]:
     return paths
 
 
+def _load_exclusion_paths(exclusions_path: Path) -> List[str]:
+    """Local, dependency-light JSON read of just the exact paths in an
+    export-exclusions document (mirrors `_load_allowlist_paths` above) --
+    deliberately does not import `tree_coverage.py`'s full schema
+    validation here (that belongs to `tree_coverage.py`/`manifest.py`'s
+    own dedicated checks); this generator only ever needs the bare path
+    list to know which paths to assign the `"submodule"` category to."""
+    try:
+        data = json.loads(Path(exclusions_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ProvenanceError(f"{exclusions_path}: not valid JSON: {error}") from error
+    exclusions = data.get("exclusions")
+    if not isinstance(exclusions, list) or not exclusions:
+        raise ProvenanceError(f"{exclusions_path}: must contain a non-empty 'exclusions' array")
+    paths = []
+    for entry in exclusions:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            raise ProvenanceError(f"{exclusions_path}: every exclusion entry must have a string 'path'")
+        paths.append(entry["path"])
+    return paths
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--repo-root", type=Path, default=Path("."))
     common.add_argument("--provenance-dir", type=Path, default=Path("docs/release_data/provenance"))
     common.add_argument("--allowlist", type=Path, default=Path("docs/release_data/source_allowlist.json"))
+    common.add_argument("--exclusions", type=Path, default=Path("docs/release_data/export_exclusions.json"))
+    common.add_argument(
+        "--target-sha", default="HEAD",
+        help="a commit-ish (default HEAD), or the literal 'index' to use the "
+             "current staged index (via 'git write-tree') -- a development-time "
+             "convenience for checking/generating provenance for an in-progress "
+             "change before committing (mirrors allowlist.py/tree_coverage.py's "
+             "identical convenience)",
+    )
 
-    sub.add_parser("check", parents=[common], help="report provenance status + exact allowlist coverage")
+    sub.add_parser("check", parents=[common], help="report provenance status + exact allowlist/exclusions coverage")
 
     gen = sub.add_parser(
         "generate", parents=[common],
-        help="fan PROVENANCE_ROOT_SEED out to one exact entry per allowlisted path",
+        help="fan PROVENANCE_ROOT_SEED out to one exact, blob-identity-bound entry per allowlisted/excluded path",
     )
     gen.add_argument("--write", action="store_true", help="write the result into --provenance-dir instead of stdout")
 
     args = parser.parse_args(argv)
 
+    try:
+        if args.target_sha == "index":
+            target_sha = gs.write_index_tree(args.repo_root)
+        else:
+            target_sha = gs.resolve_sha(args.repo_root, args.target_sha)
+    except gs.GitSourceError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
     if args.command == "generate":
         try:
             allowlist_paths = _load_allowlist_paths(args.allowlist)
-            entries = generate_exact_entries(allowlist_paths)
-        except ProvenanceError as error:
+            exclusion_paths = _load_exclusion_paths(args.exclusions) if args.exclusions.is_file() else []
+            entries = generate_exact_entries(args.repo_root, target_sha, allowlist_paths, exclusion_paths)
+        except (ProvenanceError, gs.GitSourceError) as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
         if args.write:
@@ -558,13 +837,27 @@ def main(argv=None) -> int:
     if args.allowlist.is_file():
         try:
             allowlist_paths = _load_allowlist_paths(args.allowlist)
+            required_paths = list(allowlist_paths)
+            if args.exclusions.is_file():
+                exclusion_paths = _load_exclusion_paths(args.exclusions)
+                required_paths = sorted(set(allowlist_paths) | set(exclusion_paths))
         except ProvenanceError as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
-        coverage_reasons = evaluate_coverage(entries, allowlist_paths)
+        coverage_reasons = evaluate_coverage(entries, required_paths)
         if coverage_reasons:
             status = "blocked"
             reasons = sorted(set(reasons) | set(coverage_reasons))
+
+    pin_reasons = check_gitlink_pins(entries, args.repo_root, target_sha)
+    if pin_reasons:
+        status = "blocked"
+        reasons = sorted(set(reasons) | set(pin_reasons))
+
+    identity_reasons = check_blob_identity(entries, args.repo_root, target_sha)
+    if identity_reasons:
+        status = "blocked"
+        reasons = sorted(set(reasons) | set(identity_reasons))
 
     print(f"provenance status: {status}")
     for reason in reasons:

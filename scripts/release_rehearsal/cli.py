@@ -196,6 +196,7 @@ _SUB_REPORT_OK_RULES = {
     "changelog": lambda value: value.get("ok"),
     "migrations": lambda value: value.get("ok"),
     "allowlist": lambda value: value.get("ok"),
+    "tree_coverage": lambda value: value.get("ok"),
     "version_ledger": lambda value: value.get("ok"),
     "c_fallback_metadata": lambda value: value.get("ok"),
     "migration_reachability": lambda value: value.get("ok"),
@@ -208,7 +209,7 @@ _SUB_REPORT_OK_RULES = {
 # Rendered in this fixed order when present, for a byte-stable summary
 # given the same input report.
 _SUB_REPORT_ORDER = (
-    "allowlist", "changelog", "version_ledger", "c_fallback_metadata",
+    "allowlist", "tree_coverage", "changelog", "version_ledger", "c_fallback_metadata",
     "migration_reachability", "doc_links", "migrations", "provenance", "source_guard",
     "archive", "rebuild",
 )
@@ -367,6 +368,7 @@ def cmd_rehearse(args) -> int:
         "provenance": manifest["provenance"],
         "source_guard": manifest["source_guard"],
         "allowlist": manifest["allowlist"],
+        "tree_coverage": manifest["tree_coverage"],
         "version_ledger": manifest["version_ledger"],
         "status": manifest["status"],
         "reasons": manifest["reasons"],
