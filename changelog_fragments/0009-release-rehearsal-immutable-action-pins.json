@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Pin every external GitHub Actions reference in the release-rehearsal workflow to an exact, independently-verified immutable 40-character commit SHA (no mutable tag/branch of any kind), and add a committed action-pin inventory + cross-check tool.",
+  "semver_impact": "none"
+}

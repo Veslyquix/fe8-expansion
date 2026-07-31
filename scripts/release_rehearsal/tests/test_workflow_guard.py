@@ -23,7 +23,7 @@ jobs:
   release-rehearsal:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         with:
           persist-credentials: false
       - run: make release-check
@@ -36,7 +36,7 @@ class GoodWorkflowTests(unittest.TestCase):
 
     def test_immutable_sha_checkout_ref_accepted(self):
         text = GOOD_WORKFLOW.replace(
-            "actions/checkout@v7", "actions/checkout@" + "a" * 40
+            "actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "actions/checkout@" + "b" * 40
         )
         self.assertEqual(wg.validate_workflow_text(text), [])
 
@@ -70,14 +70,87 @@ class PermissionViolationTests(unittest.TestCase):
 
 class CheckoutViolationTests(unittest.TestCase):
     def test_unpinned_checkout_ref_rejected(self):
-        text = GOOD_WORKFLOW.replace("actions/checkout@v7", "actions/checkout@main")
+        text = GOOD_WORKFLOW.replace("actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "actions/checkout@main")
         violations = wg.validate_workflow_text(text)
-        self.assertTrue(any("not an accepted version" in v for v in violations))
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations))
 
     def test_missing_persist_credentials_false_rejected(self):
         text = GOOD_WORKFLOW.replace("          persist-credentials: false\n", "")
         violations = wg.validate_workflow_text(text)
         self.assertTrue(any("persist-credentials" in v for v in violations))
+
+
+class GeneralizedActionPinTests(unittest.TestCase):
+    """issue #9 mandatory correction #1: EVERY external `uses:` reference
+    -- not only `actions/checkout` -- must be pinned to an exact,
+    immutable 40-lowercase-hex commit SHA; there is no mutable-tag
+    allowlist (not even a major-version tag like `v7`/`v4`) any more."""
+
+    SHA_A = "a" * 40
+    SHA_B = "b" * 40
+
+    def test_mutable_major_version_tag_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - uses: actions/upload-artifact-totally-unrelated@v4\n"
+        # (upload-artifact* is separately/additionally rejected by the
+        # dangerous-action-name heuristic; use a name-neutral action here
+        # so only the pin-shape rule is exercised)
+        text = GOOD_WORKFLOW + "\n      - uses: actions/setup-python@v5\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("actions/setup-python@v5" in v and "not pinned to an immutable" in v for v in violations))
+
+    def test_semver_tag_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - uses: actions/setup-python@v5.1.0\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("v5.1.0" in v and "not pinned to an immutable" in v for v in violations))
+
+    def test_branch_name_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - uses: actions/setup-python@main\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("actions/setup-python@main" in v for v in violations))
+
+    def test_short_sha_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - uses: actions/setup-python@0123abc\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("0123abc" in v for v in violations))
+
+    def test_uppercase_sha_rejected(self):
+        """A full 40-character hex string is still rejected if it is not
+        all-lowercase -- this repository's own canonical SHA rendering
+        (and every other exact-SHA check in this release-rehearsal
+        system) is always lowercase; an uppercase/mixed-case ref is
+        never silently treated as equivalent."""
+        text = GOOD_WORKFLOW + "\n      - uses: actions/setup-python@" + ("A" * 40) + "\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("actions/setup-python@" in v for v in violations))
+
+    def test_malformed_reference_with_no_at_all_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - uses: actions/setup-python\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("has no '@ref' pin at all" in v for v in violations))
+
+    def test_valid_40_hex_sha_for_a_second_action_accepted(self):
+        text = GOOD_WORKFLOW + f"\n      - uses: actions/setup-python@{self.SHA_B}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+
+    def test_local_action_reference_exempt_from_sha_pin(self):
+        """The single, explicit, narrow safe-local-action rule: a
+        `./`-prefixed reference needs no separate SHA (it is implicitly
+        pinned to the workflow's own commit)."""
+        text = GOOD_WORKFLOW + "\n      - uses: ./.github/actions/local-thing\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "local-thing" in v], [])
+
+    def test_parent_relative_local_action_reference_exempt(self):
+        text = GOOD_WORKFLOW + "\n      - uses: ../shared-actions/thing\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "shared-actions" in v], [])
+
+    def test_is_local_action_reference_helper(self):
+        self.assertTrue(wg.is_local_action_reference("./.github/actions/foo"))
+        self.assertTrue(wg.is_local_action_reference("../shared/foo"))
+        self.assertFalse(wg.is_local_action_reference("actions/checkout"))
+        self.assertFalse(wg.is_local_action_reference("docker://alpine:3"))
 
 
 class ForbiddenSubstringTests(unittest.TestCase):
@@ -513,7 +586,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         with:
           persist-credentials: false
       - name: Run release eligibility check

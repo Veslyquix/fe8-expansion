@@ -73,6 +73,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.release_rehearsal import action_pins as ap  # noqa: E402
 from scripts.release_rehearsal import allowlist as al  # noqa: E402
 from scripts.release_rehearsal import archive_rehearsal as ar  # noqa: E402
 from scripts.release_rehearsal import git_source as gs  # noqa: E402
@@ -387,12 +388,34 @@ def cmd_rehearse(args) -> int:
 
 
 def cmd_workflow_guard(args) -> int:
+    """Validates `args.workflow`'s own permission/network/safety contract
+    (`workflow_guard.validate_workflow_text`, which now includes the
+    generalized `check_uses_pins` exact-40-hex-SHA pin requirement for
+    every external action) **and** the separate, committed action-pin
+    inventory cross-check (`action_pins.check` -- issue #9 mandatory
+    correction #1: the workflow's pins and
+    `docs/release_data/action_pins.json` must agree exactly, in both
+    directions). Both are folded into one JSON report and one shared
+    0/1/2 exit contract, since both are the same underlying "is this
+    workflow's own safety/pin contract intact" question `make
+    release-workflow-guard` answers -- see docs/release_process.md's
+    "Workflow guard is advisory, not authorization" section: a clean
+    result here is necessary, never sufficient, for eligibility."""
     try:
         text = args.workflow.read_text(encoding="utf-8")
     except OSError as error:
         print(f"error: {error}", file=sys.stderr)
         return EXIT_TOOLING_ERROR
-    violations = wg.validate_workflow_text(text)
+    violations = list(wg.validate_workflow_text(text))
+    action_pin_inventory_path = REPO_ROOT / ap.DEFAULT_INVENTORY_PATH
+    try:
+        action_pin_violations = ap.check(
+            args.workflow, action_pin_inventory_path, workflow_key=args.workflow.as_posix(),
+        )
+    except ap.ActionPinError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return EXIT_TOOLING_ERROR
+    violations = sorted(set(violations) | set(action_pin_violations))
     print(json.dumps({"workflow": str(args.workflow), "violations": violations}, indent=2, sort_keys=True))
     if violations:
         print(f"workflow-guard: {len(violations)} finding(s) -- exit 1", file=sys.stderr)

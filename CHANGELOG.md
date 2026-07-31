@@ -19,6 +19,10 @@ Do not hand-edit the text between the two HTML comment markers below --
 
 - Fix a fresh, independent verifier-reproduced defect in the read-only release/publication rehearsal: `check`/`summary`/`rehearse` now route through one single, shared top-level exception boundary so a well-formed-but-nonexistent --target-sha (in a real git repository) and the documented non-git/extracted-candidate path (with or without its required exact 40-lowercase-hex --target-sha override) never traceback as an unhandled exception (which collided with EXIT_NOT_ELIGIBLE); both now fail actionably as EXIT_TOOLING_ERROR (2), while a well-formed extracted candidate genuinely produces canonical BLOCKED JSON end-to-end. `evaluate_rebuild_eligibility()` never invokes `git submodule status` (or any other git command) against a non-git repo-root, and a declared allowlist member with no on-disk representation at all is now a controlled, actionable refusal instead of a silent omission. Publication remains mechanically BLOCKED throughout; no new capability or eligibility change. (#9)
 
+### Security
+
+- Pin every external GitHub Actions reference in the release-rehearsal workflow to an exact, independently-verified immutable 40-character commit SHA (no mutable tag/branch of any kind), and add a committed action-pin inventory + cross-check tool. (#9)
+
 ### Internal
 
 - Add a read-only release/publication rehearsal system (policy, changelog fragments, release manifest, migration registry, source-release guard/provenance, deterministic archive rehearsal, and a read-only CI workflow); publication remains mechanically BLOCKED pending human license/provenance approval. (#9)

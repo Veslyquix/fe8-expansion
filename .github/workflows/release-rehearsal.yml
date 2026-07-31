@@ -29,7 +29,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v7
+      # Pinned to an immutable, independently-verified 40-lowercase-hex commit SHA
+      # (issue #9 mandatory correction #1) -- never a mutable tag/branch. See
+      # docs/release_data/action_pins.json for the exact upstream source/version
+      # this SHA corresponds to, how that was verified, and the update procedure;
+      # scripts/release_rehearsal/action_pins.py mechanically cross-checks this
+      # line against that inventory (via `make release-workflow-guard`).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
           persist-credentials: false

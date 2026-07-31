@@ -81,12 +81,27 @@
 # release-workflow-guard          : dynamic machine-JSON check of
 #                                    .github/workflows/release-rehearsal.yml's
 #                                    own permission/safety contract
-#                                    (`cli workflow-guard`).
+#                                    (`cli workflow-guard`) -- this now also
+#                                    includes the action-pin inventory
+#                                    cross-check below (folded into the same
+#                                    JSON report/exit contract).
+# release-action-pins-check       : standalone direct invocation of
+#                                    scripts/release_rehearsal/action_pins.py
+#                                    (issue #9 mandatory correction #1) --
+#                                    every external `uses:` reference in
+#                                    .github/workflows/release-rehearsal.yml
+#                                    must be pinned to an exact 40-lowercase-
+#                                    hex commit SHA, and that pin must
+#                                    exactly match docs/release_data/
+#                                    action_pins.json's committed inventory.
+#                                    This is documentation/evidence only --
+#                                    never itself a publication authorization.
 
 .PHONY: release-test release-migrations-check release-rehearse release-check \
         release-changelog-check release-check-require-eligible \
         release-rehearse-require-eligible release-check-expect-blocked \
-        release-rehearse-expect-blocked release-workflow-guard
+        release-rehearse-expect-blocked release-workflow-guard \
+        release-action-pins-check
 
 release-test:
 	$(PYTHON) -m unittest discover -s scripts/release_rehearsal/tests -v
@@ -118,3 +133,6 @@ release-rehearse-expect-blocked:
 
 release-workflow-guard:
 	$(PYTHON) -m scripts.release_rehearsal.cli workflow-guard .github/workflows/release-rehearsal.yml
+
+release-action-pins-check:
+	$(PYTHON) -m scripts.release_rehearsal.action_pins .github/workflows/release-rehearsal.yml

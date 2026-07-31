@@ -43,7 +43,8 @@ document does **not** close issue #9.
 | Archive/rebuild rehearsal | `scripts/release_rehearsal/archive_rehearsal.py` | Deterministic double-build archive hash comparison (git-blob-bound); rebuild-eligibility evaluation plus (when eligible) an actually-executed double-compile-and-compare, with four machine-distinct states (`not_run`/`blocked`/`failed`/`verified_success`). |
 | Release-doc link validator | `scripts/release_rehearsal/doc_links.py` | Verifies every relative Markdown link in the release-process doc set resolves to a real file. |
 | Workflow guard | `scripts/release_rehearsal/workflow_guard.py` | Validates `.github/workflows/release-rehearsal.yml`'s own permission/safety contract: **any** permission scope (`contents`, `id-token`, `packages`, `pull-requests`, `issues`, `actions`, `checks`, `deployments`, `statuses`, or any future scope) granted `write`, at top level/job level/nested/inline-mapping, any quoting/case/spacing, shorthand `write-all` permissions, token/secrets interpolation, network/upload/publish/deploy/release commands and actions, ref mutation, and common shell-indirection evasions (line continuations, `eval`, `base64 -d`, `sh -c`/`bash -c`, command-position shell-variable/fragment assembly -- including inside a `$( ... )` command substitution *or* a legacy backtick command substitution, and including every variable tracked from a prior `export NAME=value` or `read`/`read -r NAME` statement (every name a multi-variable `read A B` populates, not only the first), not only a plain `NAME=value` assignment -- plus outright rejection of shell process substitution (`<(...)`/`>(...)`, unused by the real workflow)). |
-| CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`, plus the machine-distinct `*-require-eligible`/`*-expect-blocked` gate targets and `release-workflow-guard`/dynamic `cli summary`. |
+| Action pin inventory | `scripts/release_rehearsal/action_pins.py`, `docs/release_data/action_pins.json` | `workflow_guard.py`'s `check_uses_pins` rejects any external `uses:` reference not pinned to an exact 40-lowercase-hex commit SHA (no version tag -- not even a major-version tag like `v7` -- branch, or short/malformed/wrong-case SHA is ever accepted; a local `./`-prefixed action is the one explicit exemption). `action_pins.py` separately cross-checks that pin against a committed, machine-readable inventory recording the action repository, the pinned SHA, its human-readable upstream version, the official source URL/reference used to establish that correspondence, and the update procedure -- evidence/documentation only, never itself an authorization. |
+| CLI / Make targets | `scripts/release_rehearsal/cli.py`, `release.mk` | `make release-check`, `make release-rehearse`, `make release-migrations-check`, plus the machine-distinct `*-require-eligible`/`*-expect-blocked` gate targets, `release-workflow-guard` (now folding in the action-pin inventory cross-check), `release-action-pins-check`, and dynamic `cli summary`. |
 | CI | `.github/workflows/release-rehearsal.yml` | Runs all of the above read-only, on `pull_request`/`workflow_dispatch` only, and renders `$GITHUB_STEP_SUMMARY` dynamically from the tool's own canonical JSON. |
 
 ## Exit code contract
@@ -516,6 +517,49 @@ Also explicitly documents, in both the report JSON and this document, the
 and never include submodule contents, so that archive can never be this
 repository's supported, complete source artifact while `mgfembp` is a
 submodule.
+
+## Immutable Actions pin inventory
+
+Every external `uses:` reference in `.github/workflows/release-rehearsal.yml`
+is pinned to an exact, immutable **40-lowercase-hex commit SHA** -- never a
+version tag (not even a major-version tag like `v7`), a branch name, or a
+short/malformed/wrong-case SHA. `scripts/release_rehearsal/workflow_guard.py`'s
+`check_uses_pins()` mechanically enforces this for **every** external
+action the workflow references, not merely `actions/checkout` -- a single,
+explicit, narrow exemption (`is_local_action_reference()`) allows a
+`./`-prefixed (or `../`-prefixed) local, in-repository action, which is
+implicitly pinned to the workflow file's own commit and has no separate
+external SHA to record.
+
+A pin's mere *shape* being a well-formed 40-hex string says nothing about
+*which* upstream release it actually corresponds to. That fact is
+recorded separately, as committed, machine-readable evidence, in
+`docs/release_data/action_pins.json`: for every external action pinned in
+the workflow, the exact action repository, the pinned commit SHA, the
+human-readable upstream version (e.g. `v7.0.1`) that SHA corresponds to,
+the official source URL/reference, the exact read-only verification
+method used to establish the correspondence (a `git ls-remote --tags`
+lookup against the official action repository, cross-checked against that
+repository's own published release metadata -- never a `git fetch`/
+`clone` of the upstream action repository, never an authenticated/
+mutating GitHub API call), the date verified, and the update procedure a
+future maintainer follows to move the pin forward.
+`scripts/release_rehearsal/action_pins.py`'s `check()` cross-checks the
+real workflow file against this inventory in both directions: a workflow
+pin with no matching inventory row, an inventory row whose `pinned_sha`
+disagrees with what the workflow actually pins, and a stale inventory row
+left behind for an action no longer referenced are all reported.
+
+**This inventory is documentation/evidence only -- it is never itself an
+authorization.** `make release-workflow-guard` (via
+`scripts/release_rehearsal/cli.py`'s `workflow-guard` subcommand) folds
+both the generalized pin-format check and the inventory cross-check into
+one JSON report and exit-code contract; `make release-action-pins-check`
+additionally runs `scripts/release_rehearsal/action_pins.py` standalone,
+directly against the real workflow and inventory. Passing either is
+necessary, but never sufficient, for eligibility -- exactly like every
+other guard in this system (see "Workflow guard is advisory, never
+authorization" below).
 
 ## Workflow and Make integration
 

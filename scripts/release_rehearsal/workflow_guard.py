@@ -28,7 +28,10 @@ from pathlib import Path
 from typing import List
 
 ALLOWED_TRIGGERS = {"pull_request", "workflow_dispatch"}
-ALLOWED_CHECKOUT_REFS = {"v7"}
+# issue #9 mandatory correction #1: there is no mutable-ref allowance any
+# more (no version tag, branch, or short SHA of any external action is
+# ever accepted -- see `check_uses_pins` below). `FULL_SHA_RE` is the one
+# and only accepted shape for an external `uses:` reference's pin.
 FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 # Forbidden regardless of case/whitespace (each compiled with re.IGNORECASE
@@ -464,18 +467,77 @@ def check_no_write_anywhere(text: str) -> List[str]:
 
 
 def check_checkout_pin(text: str) -> List[str]:
+    """`actions/checkout` itself must be present at least once, and every
+    checkout step must disable credential persistence. The *pin format*
+    for `actions/checkout` (and every other external action) is validated
+    generically by `check_uses_pins` below -- this function is
+    deliberately narrow now (checkout-specific presence/credential
+    hygiene only), so there is exactly one place (`check_uses_pins`) that
+    knows what an acceptable action pin looks like."""
     violations = []
     refs = re.findall(r"uses:\s*actions/checkout@([^\s]+)", text, re.IGNORECASE)
     if not refs:
         violations.append("no 'actions/checkout' step found")
-    for ref in refs:
-        if ref not in ALLOWED_CHECKOUT_REFS and not FULL_SHA_RE.fullmatch(ref):
-            violations.append(
-                f"actions/checkout@{ref} is not an accepted version tag "
-                f"({sorted(ALLOWED_CHECKOUT_REFS)}) or an immutable 40-hex commit SHA"
-            )
     if "persist-credentials: false" not in text:
         violations.append("no checkout step sets 'persist-credentials: false'")
+    return violations
+
+
+# `owner/repo[/subpath]@ref`: captures the action reference up to (but
+# excluding) the final `@ref` segment, and the ref itself, in one shot --
+# reused by both `check_uses_pins` (pin-format enforcement) and
+# `scripts/release_rehearsal/action_pins.py` (the separate committed
+# inventory cross-check), so there is exactly one definition of "what an
+# external `uses:` action reference looks like".
+_USES_REF_SPLIT_RE = re.compile(r"^(?P<action>[^@\s]+)@(?P<ref>[^\s]+)$")
+
+
+def is_local_action_reference(action_ref: str) -> bool:
+    """The single, explicit, narrow "safe local action" rule (issue #9
+    mandatory correction #1): a reference to an action *inside this same
+    repository* (`./path/to/action` or `../path/to/action`) is implicitly
+    pinned to the exact same immutable commit as the workflow file that
+    references it -- there is no separate external SHA to pin, and no
+    separate upstream source to independently validate. Nothing else is
+    ever exempted: any `owner/repo[/subpath]@ref` reference (a real
+    external action, on GitHub or any other host) and a Docker
+    `docker://...` reference (never used by this repository's real
+    workflow, so deliberately not carved out at all -- see module
+    docstring's fail-closed design) are always treated as external and
+    must be pinned to an exact 40-lowercase-hex commit SHA."""
+    return action_ref.startswith("./") or action_ref.startswith("../")
+
+
+def check_uses_pins(text: str) -> List[str]:
+    """Every external `uses:` reference (i.e. every reference that is not
+    a local action -- see `is_local_action_reference`) must be pinned to
+    an exact, immutable, 40-lowercase-hex commit SHA. A mutable version
+    tag (`v7`, `v7.0.1`, `main`, any other branch name), a short SHA, a
+    malformed reference, or a wrong-case (uppercase/mixed-case) SHA are
+    all rejected alike -- there is no accepted-tag allowlist any more.
+    A reference with no `@ref` segment at all (an entirely unpinned
+    `owner/repo` -- implicitly whatever the default branch currently
+    is) is exactly as rejected as a mutable tag."""
+    violations = []
+    for match in _USES_LINE_RE.finditer(text):
+        action_ref = match.group(1)
+        if is_local_action_reference(action_ref):
+            continue
+        split = _USES_REF_SPLIT_RE.match(action_ref)
+        if split is None:
+            violations.append(
+                f"'uses: {action_ref}' has no '@ref' pin at all -- every external action must be "
+                "pinned to an exact 40-lowercase-hex commit SHA"
+            )
+            continue
+        ref = split.group("ref")
+        if not FULL_SHA_RE.fullmatch(ref):
+            violations.append(
+                f"'uses: {action_ref}' is not pinned to an immutable 40-lowercase-hex commit SHA "
+                f"(found {ref!r} -- a version tag, branch name, short SHA, or wrong-case SHA is "
+                "never accepted; see docs/release_data/action_pins.json for the exact pinned SHA "
+                "and its documented upstream source/version)"
+            )
     return violations
 
 
@@ -514,6 +576,7 @@ def validate_workflow_text(text: str) -> List[str]:
     violations.extend(check_top_level_permissions(normalized))
     violations.extend(check_no_write_anywhere(normalized))
     violations.extend(check_checkout_pin(normalized))
+    violations.extend(check_uses_pins(normalized))
     violations.extend(check_forbidden_patterns(normalized))
     violations.extend(check_dangerous_uses_actions(normalized))
     violations.extend(check_variable_command_assembly(normalized))
