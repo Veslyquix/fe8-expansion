@@ -210,6 +210,16 @@
     "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new."
   },
   {
+    "path": "changelog_fragments/0009-release-rehearsal-residual-hardening.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new."
+  },
+  {
     "path": "changelog_fragments/0009-release-rehearsal-verifier-remediation.json",
     "category": "code",
     "author": "NOASSERTION",

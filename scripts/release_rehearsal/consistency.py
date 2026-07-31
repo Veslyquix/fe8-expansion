@@ -39,6 +39,20 @@ from typing import Dict, List, Optional, Tuple
 VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 VALID_LEDGER_STATUS = ("current", "supported", "eol")
+
+# A `previous_supported_version`/`next_supported_version` reference
+# (issue #9 residual-hardening) must resolve to its own real "supported"
+# ledger entry whose status is compatible with what that reference
+# actually means: a previous version has already been superseded (it may
+# still be actively "supported" -- e.g. an overlapping maintenance
+# window -- or already "eol"), so either status is compatible, but never
+# "current" (that status is exclusively the current_version's). A next
+# version, by definition, has not superseded (or ended support for)
+# anything yet, so only "supported" is compatible -- neither "current"
+# (reserved for current_version) nor "eol" (a not-yet-current version
+# cannot already be end-of-life).
+_PREVIOUS_COMPATIBLE_STATUSES = ("supported", "eol")
+_NEXT_COMPATIBLE_STATUSES = ("supported",)
 REQUIRED_LEDGER_KEYS = (
     "current_version", "previous_supported_version", "next_supported_version", "supported",
 )
@@ -54,6 +68,44 @@ _DEFINE_LINE_RE = re.compile(r'^\s*#define\s+(FE8_EXPANSION_[A-Z0-9_]+)\s+(.+?)\
 class ConsistencyError(ValueError):
     """An input is too malformed to even classify (e.g. an unparseable
     version string) -- distinct from an ordinary list-of-reasons finding."""
+
+
+def _check_reference_topology(
+    supported, label: str, version: Optional[str], compatible_statuses: Tuple[str, ...]
+) -> List[str]:
+    """Validates one non-null `previous_supported_version`/
+    `next_supported_version` reference against the actual `supported`
+    array: it must exist there (exactly once -- never zero, never more
+    than one), and that one entry's `status` must be one of
+    `compatible_statuses`. Returns an empty list for a `None` reference
+    (nothing to validate) or an already-malformed version string (the
+    caller's own MAJOR.MINOR.PATCH format check already reports that
+    distinctly; piling on here would be noise, not a new fact)."""
+    if version is None or not VERSION_RE.fullmatch(str(version)):
+        return []
+    matches = [
+        entry for entry in supported
+        if isinstance(entry, dict) and entry.get("version") == version
+    ]
+    if not matches:
+        return [
+            f"version ledger {label} {version!r} does not appear as its own entry in the "
+            "'supported' array -- every non-null previous/next supported version must be "
+            "listed there"
+        ]
+    errors = []
+    if len(matches) > 1:
+        errors.append(
+            f"version ledger {label} {version!r} matches {len(matches)} 'supported' entries; "
+            "it must be exactly one unique ledger entry"
+        )
+    status = matches[0].get("status")
+    if status not in compatible_statuses:
+        errors.append(
+            f"version ledger {label} {version!r}'s 'supported' entry has status {status!r}, "
+            f"which is not a compatible status for {label} (expected one of {compatible_statuses!r})"
+        )
+    return errors
 
 
 def parse_version(version: str) -> Tuple[int, int, int]:
@@ -106,8 +158,22 @@ def check_version_ledger(ledger: Dict, candidate_version: str) -> List[str]:
             errors.append(f"version ledger supported[{index}].version {version!r} is not a valid version")
         if status not in VALID_LEDGER_STATUS:
             errors.append(f"version ledger supported[{index}].status {status!r} not in {VALID_LEDGER_STATUS}")
-        elif status == "current" and isinstance(version, str):
-            current_status_versions.append(version)
+        elif status == "current":
+            if isinstance(version, str):
+                current_status_versions.append(version)
+            # issue #9 residual-hardening: a fresh, independent verifier
+            # reproduced a `status:"current"` entry that also carried a
+            # non-null EOL date being silently accepted. The version
+            # actually being rehearsed right now cannot simultaneously be
+            # end-of-life -- see docs/public_api_policy.md's "Support,
+            # EOL, and urgent-fix policy" ("until [a maintainer ends
+            # support] it stays null").
+            if eol is not None:
+                errors.append(
+                    f"version ledger supported[{index}] has status:'current' but a non-null "
+                    f"eol {eol!r} -- a status:'current' entry must not also be marked "
+                    "end-of-life (eol must be null while a version is current)"
+                )
         if eol is not None and not ISO_DATE_RE.fullmatch(str(eol)):
             errors.append(f"version ledger supported[{index}].eol {eol!r} is not null or an ISO-8601 date")
 
@@ -151,6 +217,20 @@ def check_version_ledger(ledger: Dict, candidate_version: str) -> List[str]:
             errors.append("version ledger next_supported_version must be greater than current_version")
     if previous_t is not None and next_t is not None and previous_t == next_t:
         errors.append("version ledger previous_supported_version and next_supported_version must not be equal")
+
+    # issue #9 residual-hardening: a fresh, independent verifier
+    # reproduced `previous_supported_version` (and, symmetrically,
+    # `next_supported_version`) accepted even when absent from the
+    # `supported` array entirely. Every non-null previous/next reference
+    # must resolve to its own real, unique, status-compatible ledger
+    # entry -- never a dangling version string with no backing record.
+    for label, referenced_version, compatible_statuses in (
+        ("previous_supported_version", previous, _PREVIOUS_COMPATIBLE_STATUSES),
+        ("next_supported_version", nxt, _NEXT_COMPATIBLE_STATUSES),
+    ):
+        errors.extend(
+            _check_reference_topology(supported, label, referenced_version, compatible_statuses)
+        )
 
     return errors
 

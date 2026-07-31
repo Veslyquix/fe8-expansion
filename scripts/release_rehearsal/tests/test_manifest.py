@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -297,6 +298,127 @@ class BuildManifestTests(unittest.TestCase):
         manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
         self.assertIn("doc_links", manifest)
         self.assertTrue(manifest["doc_links"]["ok"], manifest["doc_links"]["errors"])
+
+
+class VersionLedgerManifestWiringTests(unittest.TestCase):
+    """issue #9 residual-hardening: a fresh, independent verifier
+    reproduced the version-ledger topology gaps directly against the
+    *live manifest path* (`scripts/release_rehearsal/manifest.py`'s own
+    `check_version_ledger_and_semver`, exactly what `build_manifest` --
+    and therefore `make release-check`/`make release-rehearse` -- calls),
+    not merely `consistency.check_version_ledger()` in isolation (see
+    scripts/release_rehearsal/tests/test_consistency.py's
+    `VersionLedgerTests` for that isolated coverage). These tests call
+    the actual manifest-layer function so a regression that only wires
+    `consistency.py` back up to some *other*, unused helper would still
+    be caught here."""
+
+    @staticmethod
+    def _identity(version_string="0.1.0"):
+        major = int(version_string.split(".")[0])
+        return SimpleNamespace(version_string=version_string, version_major=major)
+
+    @staticmethod
+    def _write_ledger(repo_root: Path, ledger: dict) -> None:
+        release_data = repo_root / "docs" / "release_data"
+        release_data.mkdir(parents=True, exist_ok=True)
+        (release_data / "version_ledger.json").write_text(json.dumps(ledger), encoding="utf-8")
+
+    def test_live_manifest_path_rejects_current_entry_with_eol(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_ledger(root, {
+                "current_version": "0.1.0",
+                "previous_supported_version": None,
+                "next_supported_version": None,
+                "supported": [{"version": "0.1.0", "status": "current", "eol": "2024-01-01"}],
+            })
+            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            self.assertFalse(report["ok"])
+            self.assertTrue(
+                any("status:'current'" in error and "eol" in error.lower() for error in report["errors"]),
+                report["errors"],
+            )
+
+    def test_live_manifest_path_rejects_previous_supported_version_absent_from_supported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_ledger(root, {
+                "current_version": "0.1.0",
+                "previous_supported_version": "0.0.9",
+                "next_supported_version": None,
+                "supported": [{"version": "0.1.0", "status": "current", "eol": None}],
+            })
+            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            self.assertFalse(report["ok"])
+            self.assertTrue(
+                any("previous_supported_version" in error and "0.0.9" in error and "does not appear" in error
+                    for error in report["errors"]),
+                report["errors"],
+            )
+
+    def test_live_manifest_path_rejects_next_supported_version_absent_from_supported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_ledger(root, {
+                "current_version": "0.1.0",
+                "previous_supported_version": None,
+                "next_supported_version": "0.2.0",
+                "supported": [{"version": "0.1.0", "status": "current", "eol": None}],
+            })
+            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            self.assertFalse(report["ok"])
+            self.assertTrue(
+                any("next_supported_version" in error and "0.2.0" in error and "does not appear" in error
+                    for error in report["errors"]),
+                report["errors"],
+            )
+
+    def test_live_manifest_path_rejects_next_supported_version_status_eol(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_ledger(root, {
+                "current_version": "0.1.0",
+                "previous_supported_version": None,
+                "next_supported_version": "0.2.0",
+                "supported": [
+                    {"version": "0.1.0", "status": "current", "eol": None},
+                    {"version": "0.2.0", "status": "eol", "eol": "2024-01-01"},
+                ],
+            })
+            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            self.assertFalse(report["ok"])
+            self.assertTrue(
+                any("next_supported_version" in error and "not a compatible status" in error
+                    for error in report["errors"]),
+                report["errors"],
+            )
+
+    def test_live_manifest_path_accepts_valid_full_topology(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_ledger(root, {
+                "current_version": "0.1.0",
+                "previous_supported_version": "0.0.9",
+                "next_supported_version": "0.2.0",
+                "supported": [
+                    {"version": "0.0.9", "status": "eol", "eol": "2024-01-01"},
+                    {"version": "0.1.0", "status": "current", "eol": None},
+                    {"version": "0.2.0", "status": "supported", "eol": None},
+                ],
+            })
+            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            self.assertEqual(report["errors"], [])
+            self.assertTrue(report["ok"])
+
+    def test_real_repo_ledger_passes_through_the_live_manifest_path(self):
+        """The real, live docs/release_data/version_ledger.json (today:
+        previous/next both null) must still cleanly pass through this
+        exact manifest-layer function -- hardening must never turn into
+        a false positive against this repository's own honest ledger."""
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertEqual(manifest["version_ledger"]["errors"], [])
+        self.assertTrue(manifest["version_ledger"]["ok"])
 
 
 class RebuildStatusGatesEligibilityTests(unittest.TestCase):

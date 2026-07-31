@@ -101,11 +101,158 @@ class VersionLedgerTests(unittest.TestCase):
         self.assertTrue(any("must not be equal" in error for error in errors))
 
     def test_valid_full_topology(self):
+        """issue #9 residual-hardening: a genuinely valid full topology
+        now also requires both the previous *and* the next supported
+        version to have their own real, status-compatible 'supported'
+        entry -- not merely satisfy the ordering (</>) comparisons."""
         ledger = _valid_ledger(
             previous_supported_version="0.0.9", current_version="0.1.0", next_supported_version="0.2.0",
             supported=[
                 {"version": "0.0.9", "status": "eol", "eol": "2024-01-01"},
                 {"version": "0.1.0", "status": "current", "eol": None},
+                {"version": "0.2.0", "status": "supported", "eol": None},
+            ],
+        )
+        self.assertEqual(cc.check_version_ledger(ledger, "0.1.0"), [])
+
+    def test_valid_full_topology_with_previous_still_supported(self):
+        """The previous version does not have to already be 'eol' --
+        an overlapping/extended-support previous version is equally
+        valid, so long as it is not (re-)marked 'current'."""
+        ledger = _valid_ledger(
+            previous_supported_version="0.0.9", current_version="0.1.0", next_supported_version=None,
+            supported=[
+                {"version": "0.0.9", "status": "supported", "eol": None},
+                {"version": "0.1.0", "status": "current", "eol": None},
+            ],
+        )
+        self.assertEqual(cc.check_version_ledger(ledger, "0.1.0"), [])
+
+    # --- issue #9 residual-hardening: fresh-verifier-reproduced gaps ----
+    # A fresh, independent verifier reproduced two concrete acceptance
+    # gaps against `check_version_ledger` (and, unwired before this
+    # change, the live `scripts/release_rehearsal/manifest.py` path that
+    # calls it -- see test_manifest.py's `VersionLedgerManifestWiringTests`
+    # for the corresponding through-the-manifest reproduction): (1) a
+    # `status:"current"` entry that also carries a non-null EOL date, and
+    # (2) `previous_supported_version` absent from `supported[]` entirely.
+    # `next_supported_version` is hardened symmetrically even though the
+    # verifier did not name it explicitly, per issue #9's own instruction
+    # to validate it "if the schema exposes it" (it does).
+
+    def test_current_status_entry_with_non_null_eol_rejected(self):
+        ledger = _valid_ledger(supported=[{"version": "0.1.0", "status": "current", "eol": "2025-06-01"}])
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("status:'current'" in error and "eol" in error.lower() for error in errors), errors
+        )
+
+    def test_current_status_entry_with_null_eol_is_accepted(self):
+        ledger = _valid_ledger(supported=[{"version": "0.1.0", "status": "current", "eol": None}])
+        self.assertEqual(cc.check_version_ledger(ledger, "0.1.0"), [])
+
+    def test_previous_supported_version_absent_from_supported_rejected(self):
+        """`previous_supported_version` names a real MAJOR.MINOR.PATCH
+        version, correctly ordered below `current_version`, but with no
+        corresponding entry anywhere in 'supported' at all -- the exact
+        gap the fresh verifier reproduced."""
+        ledger = _valid_ledger(previous_supported_version="0.0.9")
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("previous_supported_version" in error and "0.0.9" in error and "does not appear" in error
+                for error in errors),
+            errors,
+        )
+
+    def test_next_supported_version_absent_from_supported_rejected(self):
+        ledger = _valid_ledger(next_supported_version="0.2.0")
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("next_supported_version" in error and "0.2.0" in error and "does not appear" in error
+                for error in errors),
+            errors,
+        )
+
+    def test_previous_supported_version_status_current_rejected(self):
+        """A version referenced by `previous_supported_version` must not
+        itself carry status:'current' -- that status is exclusively
+        `current_version`'s."""
+        ledger = _valid_ledger(
+            previous_supported_version="0.0.9",
+            supported=[
+                {"version": "0.0.9", "status": "current", "eol": None},
+                {"version": "0.1.0", "status": "current", "eol": None},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("previous_supported_version" in error and "0.0.9" in error and "not a compatible status" in error
+                for error in errors),
+            errors,
+        )
+
+    def test_previous_supported_version_status_supported_is_compatible(self):
+        ledger = _valid_ledger(
+            previous_supported_version="0.0.9",
+            supported=[
+                {"version": "0.0.9", "status": "supported", "eol": None},
+                {"version": "0.1.0", "status": "current", "eol": None},
+            ],
+        )
+        self.assertEqual(cc.check_version_ledger(ledger, "0.1.0"), [])
+
+    def test_previous_supported_version_duplicate_entry_rejected(self):
+        ledger = _valid_ledger(
+            previous_supported_version="0.0.9",
+            supported=[
+                {"version": "0.0.9", "status": "eol", "eol": "2020-01-01"},
+                {"version": "0.0.9", "status": "eol", "eol": "2020-01-01"},
+                {"version": "0.1.0", "status": "current", "eol": None},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("previous_supported_version" in error and "matches 2" in error for error in errors), errors
+        )
+
+    def test_next_supported_version_status_eol_rejected(self):
+        """A version referenced by `next_supported_version` cannot
+        already be 'eol' -- it has not even become current yet."""
+        ledger = _valid_ledger(
+            next_supported_version="0.2.0",
+            supported=[
+                {"version": "0.1.0", "status": "current", "eol": None},
+                {"version": "0.2.0", "status": "eol", "eol": "2024-01-01"},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("next_supported_version" in error and "0.2.0" in error and "not a compatible status" in error
+                for error in errors),
+            errors,
+        )
+
+    def test_next_supported_version_status_current_rejected(self):
+        ledger = _valid_ledger(
+            next_supported_version="0.2.0",
+            supported=[
+                {"version": "0.1.0", "status": "current", "eol": None},
+                {"version": "0.2.0", "status": "current", "eol": None},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any("next_supported_version" in error and "0.2.0" in error and "not a compatible status" in error
+                for error in errors),
+            errors,
+        )
+
+    def test_next_supported_version_status_supported_is_compatible(self):
+        ledger = _valid_ledger(
+            next_supported_version="0.2.0",
+            supported=[
+                {"version": "0.1.0", "status": "current", "eol": None},
+                {"version": "0.2.0", "status": "supported", "eol": None},
             ],
         )
         self.assertEqual(cc.check_version_ledger(ledger, "0.1.0"), [])

