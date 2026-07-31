@@ -124,19 +124,37 @@ def check_submodule_binding(
                 )
 
     # --- 2. HEAD tree gitlink -------------------------------------------
-    try:
-        tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
-    except gs.GitSourceError as error:
-        raise SubmoduleBindingError(str(error)) from error
-    tree_entry = tree.get(submodule_path)
-    if tree_entry is None or not tree_entry.is_gitlink:
+    # issue #9 verifier-pattern regression guard: never invoke git
+    # plumbing at all when `repo_root` has no `.git` of its own (a
+    # genuine extracted archive/non-git candidate tree) -- doing so
+    # anyway would let git's own upward-directory-discovery silently
+    # find an unrelated *enclosing* repository (if `repo_root` happens
+    # to sit inside one) and report *that* repository's tree/gitlink
+    # instead of failing closed for the extracted tree. There is no
+    # git-tree gitlink concept to cross-check for a non-git candidate at
+    # all; `tree_coverage.check_non_git_tree`/`check_archive_membership_
+    # exact` already closed-world-validate its on-disk shape separately.
+    if not gs.is_git_repo(repo_root):
         reasons.append(
-            f"no gitlink (mode {gs.MODE_GITLINK}) is recorded at {submodule_path!r} in the tree "
-            f"at {target_sha!r}"
+            f"{repo_root} has no .git metadata (a genuine extracted archive/non-git candidate "
+            f"tree); the HEAD tree gitlink for {submodule_path!r} cannot be cross-checked via git "
+            "plumbing from it -- this never invokes git against such a tree at all"
         )
         gitlink_oid = None
     else:
-        gitlink_oid = tree_entry.object_id
+        try:
+            tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
+        except gs.GitSourceError as error:
+            raise SubmoduleBindingError(str(error)) from error
+        tree_entry = tree.get(submodule_path)
+        if tree_entry is None or not tree_entry.is_gitlink:
+            reasons.append(
+                f"no gitlink (mode {gs.MODE_GITLINK}) is recorded at {submodule_path!r} in the tree "
+                f"at {target_sha!r}"
+            )
+            gitlink_oid = None
+        else:
+            gitlink_oid = tree_entry.object_id
 
     # --- 3. export_exclusions.json --------------------------------------
     try:

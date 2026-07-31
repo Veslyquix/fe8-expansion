@@ -85,7 +85,25 @@ def load_gitmodules_sections(repo_root: Path, target_sha: str = "HEAD") -> Dict[
     (via ``git_source.list_tree``/``read_blobs`` -- never the worktree
     path) and parses it. Raises `GitmodulesError` if ``.gitmodules`` is
     not a tracked safe blob at `target_sha` at all, or if its content is
-    malformed."""
+    malformed.
+
+    Deliberately, explicitly refuses to invoke any git plumbing at all
+    when `repo_root` has no `.git` of its own (a genuine extracted
+    archive/non-git candidate tree) -- see `git_source.is_git_repo`.
+    Invoking `git` with such a directory as `cwd` anyway would let
+    git's own upward-directory-discovery silently find an unrelated
+    *enclosing* repository (if `repo_root` happens to sit inside one)
+    and read `target_sha`'s tree from *that* repository's object
+    database instead -- exactly the "pretend the override proves Git
+    content identity" failure this module must never reproduce (see
+    `scripts/release_rehearsal/tests/test_gitmodules.py`'s
+    `NeverInvokesGitForNonGitRepoRootTests`)."""
+    if not gs.is_git_repo(repo_root):
+        raise GitmodulesError(
+            f"{repo_root} has no .git metadata (a genuine extracted archive/non-git candidate "
+            "tree); .gitmodules cannot be read via git plumbing from it -- this never invokes git "
+            "against such a tree at all"
+        )
     try:
         tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
     except gs.GitSourceError as error:

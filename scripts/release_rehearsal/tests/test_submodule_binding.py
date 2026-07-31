@@ -227,6 +227,65 @@ class AllowlistExclusionContradictionTests(unittest.TestCase):
             self.assertTrue(any("allowlist/exclusion contradiction" in r for r in reasons))
 
 
+class NeverInvokesGitForNonGitRepoRootTests(unittest.TestCase):
+    """Regression coverage for a real defect this candidate itself
+    reproduced: `check_submodule_binding` must never invoke any git
+    command at all when `repo_root` has no `.git` of its own (a genuine
+    extracted archive/non-git candidate tree) -- doing so anyway (via
+    either `gitmodules.load_gitmodules_sections` or a direct
+    `git_source.list_tree` call for the HEAD-tree-gitlink check) lets
+    git's own upward-directory-discovery silently find an unrelated
+    *enclosing* repository and read `target_sha`'s tree from *that*
+    repository's object database instead of failing closed for the
+    extracted tree. Proven by nesting a non-git fixture directly inside
+    this real, git-tracked worktree (ROOT): if any git command leaked
+    through, it would either traceback (`SubmoduleBindingError`
+    wrapping a `GitSourceError` for an unrelated SHA) or -- worse --
+    silently "succeed" against ROOT's own real tree; neither happens
+    here."""
+
+    def test_reports_soft_findings_without_invoking_git(self):
+        import json
+        import shutil
+        import tempfile
+
+        nested = ROOT / "scripts" / "release_rehearsal" / "tests" / ".issue9-submodule-binding-fixture-tmp"
+        self.addCleanup(shutil.rmtree, nested, True)
+        nested.mkdir(exist_ok=True)
+        (nested / "only.txt").write_text("x")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            allowlist_path = tmp_path / "source_allowlist.json"
+            allowlist_path.write_text(json.dumps({"paths": ["only.txt"]}), encoding="utf-8")
+            exclusions_path = tmp_path / "export_exclusions.json"
+            exclusions_path.write_text(json.dumps({"exclusions": [
+                {"path": "mgfembp", "kind": "gitlink", "mode": "160000", "oid": GITLINK_SHA, "reason": "x"}
+            ]}), encoding="utf-8")
+            provenance_dir = tmp_path / "provenance"
+            provenance_dir.mkdir()
+            (provenance_dir / "submodules.json").write_text(json.dumps([
+                {
+                    "path": "mgfembp", "category": "submodule", "author": "NOASSERTION",
+                    "rightsholder": "NOASSERTION", "license": "NOASSERTION",
+                    "redistribution_approved": False, "reviewer": None, "notes": "x",
+                    "pinned_commit": GITLINK_SHA, "url": URL,
+                }
+            ]), encoding="utf-8")
+
+            # A real, nonexistent-in-any-repo SHA -- if git plumbing ever
+            # leaked through against the nested (non-git) fixture and
+            # found ROOT's own real .git via upward discovery, this
+            # would either traceback with a *different* message (ROOT's
+            # own git complaining about an unknown/ambiguous object) or,
+            # worse, silently resolve against ROOT's real tree instead.
+            reasons = sb.check_submodule_binding(
+                nested, "0" * 40, "mgfembp", allowlist_path, exclusions_path, provenance_dir,
+            )
+            self.assertTrue(any("no .git metadata" in r for r in reasons))
+            self.assertTrue(any("never invokes git" in r for r in reasons))
+
+
 class RepositoryStateTests(unittest.TestCase):
     """The real, checked-in mgfembp submodule binding must be fully
     consistent across .gitmodules, the HEAD tree gitlink, the export

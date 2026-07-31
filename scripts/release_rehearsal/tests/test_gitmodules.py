@@ -12,6 +12,10 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.release_rehearsal import gitmodules as gm
 
+ROOT_HEAD_SHA = subprocess.run(
+    ["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True,
+).stdout.strip()
+
 
 def _git(*args, cwd):
     result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
@@ -119,6 +123,34 @@ class LoadGitmodulesSectionsTests(unittest.TestCase):
         sections = gm.load_gitmodules_sections(ROOT, "HEAD")
         self.assertEqual(sections["mgfembp"]["path"], "mgfembp")
         self.assertEqual(sections["mgfembp"]["url"], "https://github.com/StanHash/mgfembp.git")
+
+
+class NeverInvokesGitForNonGitRepoRootTests(unittest.TestCase):
+    """Regression coverage for a real defect this candidate itself
+    reproduced: `load_gitmodules_sections` must never invoke any git
+    command at all when `repo_root` has no `.git` of its own (a genuine
+    extracted archive/non-git candidate tree) -- doing so anyway lets
+    git's own upward-directory-discovery silently find an unrelated
+    *enclosing* repository (if `repo_root` happens to sit inside one)
+    and read `target_sha`'s tree from *that* repository's object
+    database instead of failing closed for the extracted tree. Proven
+    by nesting a non-git fixture directly inside this real, git-tracked
+    worktree (ROOT): if any git command leaked through with the fixture
+    as its cwd, git's own upward discovery would find ROOT's real
+    `.git` and silently attempt to resolve HEAD's real SHA against it
+    -- these assertions would then behave completely differently (no
+    actionable `GitmodulesError` at all)."""
+
+    def test_raises_actionable_error_without_invoking_git(self):
+        import shutil
+        nested = ROOT / "scripts" / "release_rehearsal" / "tests" / ".issue9-gitmodules-fixture-tmp"
+        self.addCleanup(shutil.rmtree, nested, True)
+        nested.mkdir(exist_ok=True)
+        (nested / "only.txt").write_text("x")
+        with self.assertRaises(gm.GitmodulesError) as ctx:
+            gm.load_gitmodules_sections(nested, ROOT_HEAD_SHA)
+        self.assertIn("no .git metadata", str(ctx.exception))
+        self.assertIn("never invokes git", str(ctx.exception))
 
 
 if __name__ == "__main__":
