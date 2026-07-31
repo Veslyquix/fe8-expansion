@@ -236,8 +236,25 @@ single-locale build's own budget/metadata numbers.**
 All six (plus the pre-existing `expansion-modern-localization-budget-
 check`) are now dependencies of `expansion-modern-linker-check`, so the
 existing upstream CI/verify path (which already invokes that target)
-picks them up automatically with no CI workflow file edit -- as the
-contract allows.
+picks these six runtime-check targets up automatically -- no `build.yml`
+change was needed for *this* wiring specifically, since
+`expansion-modern-linker-check` was already a CI/verify gate before this
+sprint.
+
+That said, this branch's merge history (`14df9ec3`, merging
+`origin/master` in) does contain a separate, explicitly-authorized,
+purely additive edit to `.github/workflows/build.yml`: a new
+`localization-host-suite` step (`Run localization host test suite (issue
+#18)`) appended to the host-tests job, running
+`scripts/localization/tests`' own pure-stdlib suite
+(`python3 -m unittest discover -s scripts/localization/tests -p
+"test_*.py"`). It only appends a new step -- no existing `build.yml` step
+was modified, reordered, or removed, and no gate was weakened. The
+matching `verify.py`/`verify --dry-run` gate and
+`docs/upstream-porting.md` gate list were updated in the same commit so
+CI and the local `verify` mirror stay in lockstep (see that commit's
+message and `git diff master...HEAD -- .github/workflows/build.yml` for
+the exact, additive-only three-line diff).
 
 **Shifted-layout check**: `expansion-modern-localization-runtime-shifted-
 check` reruns `blank-sram-no-selector-default` and `auto-select-single-
@@ -407,7 +424,11 @@ and the sprint 5 addendum below). The one remaining item from that list:
 
 - No edits to `baseline.json`, any TAS file, the pointer allowlist,
   content assets, vanilla message tables, `GetLang`/`SetLang`/
-  `gLanguageMode`, XMAP region/magic definitions, or any CI workflow file.
+  `gLanguageMode`, or XMAP region/magic definitions. `.github/workflows/
+  build.yml` *was* edited on this branch (see "New Make targets" above)
+  -- one explicitly-authorized, purely additive `localization-host-suite`
+  step, with the matching `verify.py` gate and doc update in the same
+  commit; no existing CI gate was weakened, reordered, or removed.
 - No `#6`/`#10` manual-copy of foreign-language content; no foreign
   content authored anywhere in this diff (`docs/localization.md`'s own
   legal/non-goals section documents this explicitly).
