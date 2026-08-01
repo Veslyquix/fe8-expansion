@@ -4,6 +4,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -1140,6 +1141,214 @@ class SubmoduleDirtyWorktreeReproducerTests(unittest.TestCase):
                 self.assertEqual((run_root / "vendor" / "f.txt").read_text(), "x")
 
 
+class SubmoduleUrlAndPinnedObjectFailClosedTests(unittest.TestCase):
+    """issue #9 R3: the reviewer-reproduced remaining fail-open gaps in
+    `evaluate_rebuild_eligibility` -- a missing/mismatched submodule
+    origin URL (against *either* independent immutable declared source:
+    .gitmodules or the provenance record), an inaccessible or wrong-type
+    pinned commit object, and a genuine 'git status'/'git config'
+    command failure (as opposed to their own ordinary not-clean/unset
+    outcomes) -- must all make a rebuild non-eligible, each with its own
+    actionable reason, never a silent pass. Every test here starts from
+    the exact same fully-matching, genuinely eligible baseline fixture
+    as `RebuildEligibilityTests`/`SubmoduleDirtyWorktreeReproducerTests`
+    (`_make_repo_with_submodule(..., initialized=True, approved=True)`),
+    mutating exactly one fact away from it."""
+
+    def _make_eligible_repo(self, tmp):
+        return RebuildEligibilityTests()._make_repo_with_submodule(tmp, initialized=True, approved=True)
+
+    def test_clean_matching_baseline_is_eligible(self):
+        """Positive control: the shared baseline fixture itself is
+        genuinely, fully eligible -- with all three URL sources actually
+        agreeing -- before any test below mutates exactly one fact away
+        from it. If this ever fails, every other test in this class is
+        meaningless."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertTrue(eligible, report["reasons"])
+            self.assertEqual(report["reasons"], [])
+            self.assertTrue(report["submodule_configured_url"])
+            self.assertEqual(report["submodule_configured_url"], report["submodule_declared_url"])
+            self.assertEqual(report["submodule_configured_url"], report["submodule_provenance_url"])
+
+    def test_missing_origin_remote_is_ineligible(self):
+        """issue #9 R3 literal reproducer: a submodule checkout with no
+        configured 'origin' remote at all previously left the URL check
+        vacuously passing (never actually evaluated at all, since the
+        old condition required both sides to be known first); it must
+        now be non-eligible with an actionable reason."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            _git("remote", "remove", "origin", cwd=root / "vendor")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertIsNone(report["submodule_configured_url"])
+            self.assertTrue(
+                any("no configured 'remote.origin.url'" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+    def test_configured_url_mismatch_against_gitmodules_is_ineligible(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            _git("remote", "set-url", "origin", "https://example.invalid/TAMPERED.git", cwd=root / "vendor")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertTrue(
+                any("does not match .gitmodules's declared URL" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+    def test_configured_url_mismatch_against_provenance_is_ineligible(self):
+        """The mirror-image: .gitmodules still agrees with the live
+        configured origin, but the *separate*, independent provenance
+        record's own 'url' has drifted -- also non-eligible. Proves the
+        three-way check is not merely a two-way .gitmodules check with
+        provenance along for the ride."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            submodules_json = provenance_dir / "submodules.json"
+            entries = json.loads(submodules_json.read_text(encoding="utf-8"))
+            entries[0]["url"] = "https://example.invalid/DRIFTED-PROVENANCE.git"
+            submodules_json.write_text(json.dumps(entries), encoding="utf-8")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertTrue(
+                any("does not match the provenance-recorded URL" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+    def test_missing_provenance_url_is_ineligible(self):
+        """`provenance.py`'s own file-loading schema already hard-fails
+        an on-disk 'submodule'-category entry with no non-empty 'url'
+        (issue #9 mandatory correction #4) -- this defensive branch in
+        `evaluate_rebuild_eligibility` itself (never assuming that
+        upstream schema enforcement is the only thing standing between
+        a missing url and a false pass) is proven directly via a mocked
+        `prov.load_all`, exactly like `_submodule_declared_url`'s own
+        'no url' case is a plain, honestly-reported fact rather than an
+        assumed impossibility."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            fake_entries = [{
+                "path": "vendor", "pinned_commit": _git("rev-parse", "HEAD", cwd=root / "vendor").strip(),
+                "redistribution_approved": True,
+            }]
+            with mock.patch(
+                "scripts.release_rehearsal.archive_rehearsal.prov.load_all", return_value=fake_entries,
+            ):
+                eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertIsNone(report["submodule_provenance_url"])
+            self.assertTrue(
+                any("has no 'url' recorded" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+    def test_missing_gitmodules_declared_url_is_ineligible(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            (root / ".gitmodules").write_text('[submodule "vendor"]\n\tpath = vendor\n')
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "drop gitmodules url", cwd=root)
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertIsNone(report["submodule_declared_url"])
+            self.assertTrue(
+                any("declares no readable 'url'" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+    def test_pinned_object_wrong_type_blob_is_ineligible(self):
+        """issue #9 R3: a `pinned_commit` that resolves to a real object
+        of the *wrong type* (e.g. a blob, from a transcription mistake)
+        must never be treated as an accessible commit -- `git cat-file
+        -e <sha>^{commit}` itself already rejects this by object type,
+        this proves `evaluate_rebuild_eligibility` actually surfaces
+        that as a non-eligible finding."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            blob_sha = _git("hash-object", "f.txt", cwd=root / "vendor").strip()
+            submodules_json = provenance_dir / "submodules.json"
+            entries = json.loads(submodules_json.read_text(encoding="utf-8"))
+            entries[0]["pinned_commit"] = blob_sha
+            submodules_json.write_text(json.dumps(entries), encoding="utf-8")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertFalse(report["submodule_pinned_object_accessible"])
+            self.assertTrue(
+                any(
+                    "not accessible as a real, locally-present commit object" in reason
+                    for reason in report["reasons"]
+                ),
+                report["reasons"],
+            )
+
+    def test_pinned_object_nonexistent_sha_is_ineligible(self):
+        """A syntactically-plausible but entirely nonexistent commit SHA
+        (never fetched/present in the submodule's own object database --
+        e.g. a shallow clone) must also be reported not-accessible,
+        never merely 'unverified'."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            submodules_json = provenance_dir / "submodules.json"
+            entries = json.loads(submodules_json.read_text(encoding="utf-8"))
+            entries[0]["pinned_commit"] = "f" * 40
+            submodules_json.write_text(json.dumps(entries), encoding="utf-8")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertFalse(report["submodule_pinned_object_accessible"])
+
+    def test_git_status_command_failure_inside_submodule_is_ineligible(self):
+        """issue #9 R3: a genuine 'git status' *command* failure inside
+        the submodule worktree (as opposed to an ordinary dirty/clean
+        result) must be caught and reported as its own actionable,
+        non-eligible finding -- never silently swallowed into either a
+        false 'clean' or an unrelated traceback."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            real_run = subprocess.run
+
+            def _fake_run(cmd, *args, **kwargs):
+                if cmd[:2] == ["git", "status"]:
+                    return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal: injected status failure")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch("scripts.release_rehearsal.archive_rehearsal.subprocess.run", side_effect=_fake_run):
+                eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertFalse(report["submodule_worktree_clean"])
+            self.assertTrue(
+                any("git status failed inside" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+    def test_git_config_command_failure_is_ineligible(self):
+        """The 'remote' side of the same guard: a genuine 'git config'
+        command failure (as opposed to the entirely ordinary 'no origin
+        set' exit code 1) must also be its own actionable, non-eligible
+        finding, never folded into the same 'just unset' None."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            real_run = subprocess.run
+
+            def _fake_run(cmd, *args, **kwargs):
+                if cmd[:2] == ["git", "config"]:
+                    return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal: injected config failure")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch("scripts.release_rehearsal.archive_rehearsal.subprocess.run", side_effect=_fake_run):
+                eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertIsNone(report["submodule_configured_url"])
+            self.assertTrue(
+                any("git config --get remote.origin.url failed" in reason for reason in report["reasons"]),
+                report["reasons"],
+            )
+
+
 class NonGitRebuildEligibilityTests(unittest.TestCase):
     """issue #9 verifier remediation: the literal reproduced defect --
     `rebuild_rehearsal_blocker()`/`evaluate_rebuild_eligibility()` must
@@ -1203,6 +1412,49 @@ class RepositoryStateTests(unittest.TestCase):
         allowlist = sg.load_allowlist(ROOT / "docs" / "release_data" / "source_allowlist.json")
         report = ar.rehearse_archive_twice(ROOT, allowlist)
         self.assertEqual(report["target_sha"], gs.resolve_sha(ROOT, "HEAD"))
+
+
+class SourceCommentTestClassReferenceTests(unittest.TestCase):
+    """issue #9 R4: a cheap, mechanical guard against the literal
+    reproduced defect -- a source comment naming a nonexistent test
+    class (this repository's own former `archive_rehearsal.py` comment
+    pointing at a `RebuildRehearsalBlockerEndToEndVerifiedSuccessTests`
+    that had never actually existed anywhere in this test suite). Every
+    backtick-quoted `SomeIdentifierTests`-shaped reference appearing
+    anywhere in `scripts/release_rehearsal/*.py`'s own source text
+    (docstrings/comments) must name a real class actually defined
+    somewhere under `scripts/release_rehearsal/tests/`. This is a plain
+    static-text scan (no import/execution of the referencing module
+    beyond what importing it for its own tests already does) -- it
+    cannot by itself prove a reference describes the right *behavior*,
+    only that the name is not simply stale/typo'd/deleted-out-from-under
+    the comment."""
+
+    _REFERENCE_RE = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*Tests)`")
+    _CLASS_DEF_RE = re.compile(r"^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", re.MULTILINE)
+
+    def test_every_backtick_quoted_tests_class_reference_actually_exists(self):
+        rehearsal_dir = Path(ar.__file__).resolve().parent
+        tests_dir = rehearsal_dir / "tests"
+
+        defined_classes = set()
+        for test_file in sorted(tests_dir.glob("test_*.py")):
+            defined_classes.update(self._CLASS_DEF_RE.findall(test_file.read_text(encoding="utf-8")))
+        self.assertTrue(defined_classes, f"found no test classes at all under {tests_dir}")
+
+        dangling = []
+        for source_file in sorted(rehearsal_dir.glob("*.py")):
+            referenced = sorted(set(self._REFERENCE_RE.findall(source_file.read_text(encoding="utf-8"))))
+            for name in referenced:
+                if name not in defined_classes:
+                    dangling.append(f"{source_file.name}: `{name}`")
+
+        self.assertEqual(
+            dangling, [],
+            "the following source comment(s) reference a `...Tests`-shaped class name that does "
+            f"not actually exist as a real 'class NAME(...):' definition anywhere under {tests_dir} "
+            f"-- fix the stale comment or the renamed/deleted test class: {dangling}",
+        )
 
 
 if __name__ == "__main__":

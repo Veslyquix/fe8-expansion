@@ -423,14 +423,26 @@ def _submodule_worktree_status_output(submodule_dir: Path) -> str:
 def _submodule_configured_url(submodule_dir: Path) -> Optional[str]:
     """The submodule's own configured `remote.origin.url`, read directly
     from *inside* its own git config (never from the superproject's
-    `.gitmodules`) -- `None` if unset/unreadable (e.g. no `origin` remote
-    configured at all), which is reported as a distinct, honestly-
-    unresolved fact rather than fabricated as a match or a mismatch."""
+    `.gitmodules`) -- `None` for the entirely ordinary "no `origin`
+    remote configured at all" case (git's own exit code 1 for a missing
+    key), reported as a distinct, honestly-unresolved fact rather than
+    fabricated as a match or a mismatch. issue #9 R3 fix: any *other*
+    nonzero exit (e.g. a corrupt/unreadable git config, or `submodule_dir`
+    not actually being a readable git worktree at all) is a genuine
+    tooling failure, never silently folded into the same "just unset"
+    `None` -- raises `ArchiveRehearsalError` with the real stderr instead,
+    exactly like `_submodule_worktree_status_output`'s own command-error
+    handling."""
     result = subprocess.run(
         ["git", "config", "--get", "remote.origin.url"], cwd=str(submodule_dir), capture_output=True, text=True,
     )
-    if result.returncode != 0:
+    if result.returncode == 1:
         return None
+    if result.returncode != 0:
+        raise ArchiveRehearsalError(
+            f"git config --get remote.origin.url failed inside the '{submodule_dir}' submodule "
+            f"worktree: {result.stderr.strip()}"
+        )
     url = result.stdout.strip()
     return url or None
 
@@ -488,12 +500,28 @@ def evaluate_rebuild_eligibility(
     4. a genuinely clean submodule worktree/index -- `git status
        --porcelain` run *inside* the submodule itself reports nothing at
        all (no modified, staged, or untracked path);
-    5. the submodule's own configured `remote.origin.url` agrees with
-       `.gitmodules`'s declared `url` for this path (when both are
-       actually known/set); and
+    5. issue #9 R3 fix: a *live, non-empty* configured
+       `remote.origin.url` exists at all (a missing/unset origin is
+       always non-eligible, never a vacuous pass), and it agrees
+       *exactly* with both of the two independent immutable declared
+       sources this repository records for it -- `.gitmodules`'s own
+       declared `url` for this path, and `docs/release_data/provenance/
+       submodules.json`'s own recorded `url` -- a missing declaration in
+       *either* immutable source, or a mismatch against *either* of
+       them, is equally non-eligible (never only checked "when known");
+       and
     6. the provenance-pinned commit is a real, locally-accessible commit
-       object inside the submodule's own object database (`git cat-file
-       -e <sha>^{commit}`).
+       object of the correct type inside the submodule's own object
+       database (`git cat-file -e <sha>^{commit}`; a blob/tree SHA, a
+       shallow clone missing the object, or any other unresolvable value
+       all report not-accessible here, never merely "not verified").
+
+    Every underlying `git status`/`git config`/`git cat-file` command is
+    itself required to actually succeed (beyond its own pass/fail
+    semantics above) -- a genuine command/tooling failure (as opposed to
+    an ordinary "not clean"/"no origin set"/"object absent" outcome) is
+    caught and reported as its own actionable, non-eligible finding here,
+    never silently swallowed into a false pass.
 
     This function only ever *reads* `docs/release_data/provenance/*.json`,
     `git submodule status`, and (once initialized) the submodule's own
@@ -535,6 +563,7 @@ def evaluate_rebuild_eligibility(
             "submodule_worktree_clean": False,
             "submodule_configured_url": None,
             "submodule_declared_url": None,
+            "submodule_provenance_url": None,
             "submodule_pinned_object_accessible": False,
             "provenance_pinned_commit": None,
             "provenance_redistribution_approved": False,
@@ -554,6 +583,40 @@ def evaluate_rebuild_eligibility(
             "pull unreviewed third-party content into a rehearsal that must remain read-only "
             "and provenance-blocked, so this rehearsal does not fetch it"
         )
+
+    # issue #9 R3 fix: the provenance lookup (previously computed *after*
+    # the URL-matching block below) is moved up here so its own `url`
+    # field is available as a third, independent, immutable source for
+    # that block's three-way cross-check (alongside the live configured
+    # origin and .gitmodules's declared url) -- purely a reordering, the
+    # pinned_commit/approved semantics used later are unchanged.
+    pinned_commit: Optional[str] = None
+    approved = False
+    provenance_url: Optional[str] = None
+    try:
+        entries = prov.load_all(provenance_dir)
+    except prov.ProvenanceError:
+        entries = []
+    matches = [entry for entry in entries if entry.get("path") == submodule_path]
+    if not matches:
+        reasons.append(f"no provenance entry recorded for '{submodule_path}' in {provenance_dir}")
+    else:
+        pinned_commit = matches[0].get("pinned_commit")
+        approved = bool(matches[0].get("redistribution_approved"))
+        provenance_url = matches[0].get("url") or None
+        if not approved:
+            reasons.append(
+                f"provenance for the '{submodule_path}' submodule content is recorded as "
+                "unresolved/unapproved (redistribution_approved: false); a clean recursive "
+                "rebuild that includes it cannot be certified complete-and-clear until that is "
+                "resolved by a human reviewer"
+            )
+        if provenance_url is None:
+            reasons.append(
+                f"provenance entry for '{submodule_path}' in {provenance_dir} has no 'url' "
+                "recorded -- there is no immutable provenance url to cross-check the live "
+                "configured origin against"
+            )
 
     # issue #9 guardian-correction remediation (D3): "initialized and at
     # the pinned commit" (above) is necessary but never sufficient -- a
@@ -582,36 +645,61 @@ def evaluate_rebuild_eligibility(
                     f"content, even when its own HEAD commit matches the pinned gitlink: "
                     f"{worktree_status.strip()!r}"
                 )
-        configured_url = _submodule_configured_url(submodule_dir)
+        try:
+            configured_url = _submodule_configured_url(submodule_dir)
+        except ArchiveRehearsalError as error:
+            reasons.append(str(error))
+            configured_url = None
 
     declared_url = _submodule_declared_url(repo_root, submodule_path)
-    url_matches = True
-    if initialized and configured_url is not None and declared_url is not None and configured_url != declared_url:
-        url_matches = False
-        reasons.append(
-            f"the '{submodule_path}' submodule's configured remote URL {configured_url!r} does "
-            f"not match .gitmodules's declared URL {declared_url!r}"
-        )
 
-    pinned_commit: Optional[str] = None
-    approved = False
-    try:
-        entries = prov.load_all(provenance_dir)
-    except prov.ProvenanceError:
-        entries = []
-    matches = [entry for entry in entries if entry.get("path") == submodule_path]
-    if not matches:
-        reasons.append(f"no provenance entry recorded for '{submodule_path}' in {provenance_dir}")
-    else:
-        pinned_commit = matches[0].get("pinned_commit")
-        approved = bool(matches[0].get("redistribution_approved"))
-        if not approved:
+    # issue #9 R3 fix: a *missing* origin previously left `url_matches`
+    # at its vacuous default `True` (never actually checked at all,
+    # since every branch of the old condition required both sides to be
+    # `is not None` first) -- a submodule with no configured origin (or
+    # whose remote does not exactly match .gitmodules's declared url
+    # and/or the immutable provenance record's own declared url) is now
+    # unconditionally non-eligible, with an exact, actionable reason for
+    # each specific way this can fail. `url_matches` defaults `False`
+    # even when not yet `initialized` -- meaningless either way there,
+    # since `eligible` below always also requires `initialized`, but
+    # never a silent fail-open reading of this flag on its own.
+    url_matches = False
+    if initialized:
+        if configured_url is None:
             reasons.append(
-                f"provenance for the '{submodule_path}' submodule content is recorded as "
-                "unresolved/unapproved (redistribution_approved: false); a clean recursive "
-                "rebuild that includes it cannot be certified complete-and-clear until that is "
-                "resolved by a human reviewer"
+                f"the '{submodule_path}' submodule has no configured 'remote.origin.url' at all "
+                "(no origin remote configured, or it is otherwise unset) -- a rebuild can never "
+                "be certified eligible without a live, checkable origin to cross-check against "
+                "the immutable .gitmodules/provenance url record"
             )
+        elif declared_url is None:
+            reasons.append(
+                f".gitmodules declares no readable 'url' for '{submodule_path}' at HEAD -- the "
+                "live configured origin cannot be cross-checked against a missing immutable "
+                "declaration"
+            )
+        elif provenance_url is None:
+            # Already reported as its own actionable finding in the
+            # provenance block above ("...has no 'url' recorded") --
+            # never a second, redundant reason here, but `url_matches`
+            # still correctly stays `False`: a missing immutable
+            # provenance url is exactly as fail-closed as a missing
+            # .gitmodules url, never silently skipped as "not this
+            # check's problem".
+            pass
+        elif configured_url != declared_url:
+            reasons.append(
+                f"the '{submodule_path}' submodule's configured remote URL {configured_url!r} does "
+                f"not match .gitmodules's declared URL {declared_url!r}"
+            )
+        elif configured_url != provenance_url:
+            reasons.append(
+                f"the '{submodule_path}' submodule's configured remote URL {configured_url!r} does "
+                f"not match the provenance-recorded URL {provenance_url!r} in {provenance_dir}"
+            )
+        else:
+            url_matches = True
 
     identity_ok = True
     if initialized and pinned_commit and checked_out_sha and checked_out_sha != pinned_commit:
@@ -651,6 +739,7 @@ def evaluate_rebuild_eligibility(
         "submodule_worktree_clean": worktree_clean,
         "submodule_configured_url": configured_url,
         "submodule_declared_url": declared_url,
+        "submodule_provenance_url": provenance_url,
         "submodule_pinned_object_accessible": pinned_object_accessible,
         "provenance_pinned_commit": pinned_commit,
         "provenance_redistribution_approved": approved,
@@ -677,10 +766,13 @@ def evaluate_rebuild_eligibility(
 # sitting around for some *future* doc/test to misattribute the same way
 # again, it is deleted outright here -- see
 # `scripts/release_rehearsal/tests/test_archive_rehearsal.py`'s
-# `RebuildRehearsalBlockerEndToEndVerifiedSuccessTests` for the real,
-# corrected end-to-end replacement (which drives `rebuild_rehearsal_
-# blocker()` itself, through a synthetic fully-eligible submodule
-# fixture, to `REBUILD_STATUS_VERIFIED_SUCCESS`).
+# `RebuildRehearsalBlockerEndToEndBuildTests` (issue #9 R4 fix: the
+# previous comment here named a test class that has never actually
+# existed in that file -- this is the real, corrected end-to-end
+# replacement, whose own `test_verified_success_end_to_end` drives
+# `rebuild_rehearsal_blocker()` itself, through a synthetic
+# fully-eligible submodule fixture, to `REBUILD_STATUS_VERIFIED_
+# SUCCESS`).
 #
 # `run_build_twice_from_immutable_source()` below already proves each run gets its own fresh
 # copy of `source_dir` and never mutates the caller's original directory
