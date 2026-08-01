@@ -372,6 +372,26 @@ class ExtractedNonGitTreeEndToEndTests(unittest.TestCase):
         self.assertNotIn("Traceback (most recent call last)", result.stdout)
 
     def test_check_with_exact_sha_is_canonical_blocked_json_no_traceback(self):
+        """Guardian-correction remediation (D2) note: `source_guard`'s
+        status is `"blocked"` here (not `"pass"`), and is expected to
+        remain so for this specific fixture -- a genuine, unmodified
+        `git archive` extraction necessarily still contains
+        `docs/release_data/provenance/code.json` (git itself has no
+        notion of this repository's own additional, structural export-
+        exclusion system), even though that path is now correctly
+        excluded from `source_allowlist.json` (it can never be part of
+        *this* repository's own defined, distributed candidate archive
+        any more -- see `tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE`).
+        `source_guard`'s closed-world scan has no notion of `export_
+        exclusions.json` either, so it correctly, consistently reports
+        that one extra, unaccounted-for path as `"not-allowlisted"`
+        (`tree_coverage`'s own closed-world check agrees: `"unsafe
+        on-disk shape for a contract path: docs/release_data/
+        provenance/code.json"`) -- this is accurate, desired fail-closed
+        behavior for a raw/unmodified extraction, not a defect; the
+        `allowlist` sub-check remains clean (`ok: true`) because it is
+        the one sub-check that *is* wired with the export-exclusions
+        path list (see `manifest.check_allowlist_exact`)."""
         result = run_cli("check", "--repo-root", str(self.tree), "--target-sha", self.head_sha)
         self._assert_no_traceback(result)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -379,7 +399,11 @@ class ExtractedNonGitTreeEndToEndTests(unittest.TestCase):
         self.assertEqual(data["status"], "blocked")
         self.assertEqual(data["target_sha"], self.head_sha)
         self.assertTrue(data["allowlist"]["ok"], data["allowlist"]["errors"])
-        self.assertEqual(data["source_guard"]["status"], "pass")
+        self.assertEqual(data["source_guard"]["status"], "blocked")
+        self.assertEqual(
+            data["source_guard"]["violations"],
+            ["docs/release_data/provenance/code.json: not-allowlisted"],
+        )
 
     def test_check_expect_status_blocked_exits_zero(self):
         result = run_cli(
