@@ -49,15 +49,52 @@ def legacy_image() -> bytes:
 
 
 def current_image() -> bytes:
-    """A real 'current' (epoch 1) image, built the same way
+    """A real 'current' (today: epoch 2) image, built the same way
     scripts/modernize/save_format_tool.py's own tests build one."""
     meta = sft.build_current_expansion_save_meta(ROOT)
+    return bytes(make_image(make_header(valid=True), meta.pack()))
+
+
+def older_migratable_image() -> bytes:
+    """A real 'migratable older' image: valid header, an ExpansionSaveMeta
+    record whose formatVersion is one behind sft.SAVE_FORMAT_VERSION_CURRENT
+    -- classifies SAVE_COMPAT_MIGRATABLE_OLDER, mirroring a real save
+    written before the formatVersion/EXPANSION_SAVE_COMPAT_EPOCH 1 -> 2
+    bump this module's `reg.find_step(1, 2)` entry migrates forward from
+    (issue #9 release-branch/origin-master merge; issue #18 sprint 2 is
+    the actual bump's own origin -- see docs/save_format.md/
+    docs/migration_registry.md). Same hand-built-then-checksummed idiom
+    scripts/modernize/tests/test_save_format_tool.py's own
+    `test_older_format_version_is_migratable_older` fixture uses."""
+    meta = sft.ExpansionSaveMeta(
+        magic=sft.META_MAGIC,
+        format_version=sft.SAVE_FORMAT_VERSION_CURRENT - 1,
+        compat_epoch=1,
+        abi_id=sft.SAVE_ABI_ID_AAPCS,
+        framework_version_packed=0x000100,
+        config_fingerprint=b"deadbeefcafebabe\x00",
+        build_commit_short=b"cafef00d\x00",
+        checksum=0,
+        reserved=b"\x00" * (sft.META_SIZE - sft.META_CHECKSUM_DOMAIN - 2),
+    )
+    meta.checksum = meta.computed_checksum()
     return bytes(make_image(make_header(valid=True), meta.pack()))
 
 
 class RegistryStructureTests(unittest.TestCase):
     def test_registry_has_v0_to_1_mechanical_entry(self):
         step = reg.find_step(None, 1)
+        self.assertIsNotNone(step)
+        self.assertEqual(step.kind, reg.MECHANICAL)
+
+    def test_registry_has_1_to_2_mechanical_entry(self):
+        """issue #9 release-branch/origin-master merge: origin/master's
+        issue #18 sprint 2 bumped EXPANSION_SAVE_COMPAT_EPOCH 1 -> 2; this
+        registry must declare the corresponding transition (see
+        check_migration_epoch_reachability() in
+        scripts/release_rehearsal/consistency.py, which fails the whole
+        release manifest until this entry exists)."""
+        step = reg.find_step(1, 2)
         self.assertIsNotNone(step)
         self.assertEqual(step.kind, reg.MECHANICAL)
 
@@ -124,6 +161,33 @@ class DryRunTests(unittest.TestCase):
             self.assertNotEqual(code, 0)
             self.assertIn("NOT eligible", message)
 
+    def test_dry_run_eligible_older_format_version_source(self):
+        """The 1 -> 2 entry's dry-run must accept a real
+        SAVE_COMPAT_MIGRATABLE_OLDER source -- *not* 'SAVE_COMPAT_CURRENT'
+        (a bare `is None` ternary would wrongly demand that; fixed
+        alongside this registry's first real numbered-epoch_from entry)."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "older.sav"
+            source.write_bytes(older_migratable_image())
+            code, message = reg.dry_run(step, source)
+            self.assertEqual(code, 0, message)
+            self.assertIn("eligible", message)
+
+    def test_dry_run_not_eligible_for_already_current_source_at_1_to_2(self):
+        """A source already at the live current epoch is NOT what the
+        1 -> 2 step's dry-run should call eligible (it is not a
+        SAVE_COMPAT_MIGRATABLE_OLDER source) -- this is the exact case
+        the previous hardcoded 'SAVE_COMPAT_CURRENT' expectation got
+        backwards for a numbered epoch_from."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "current.sav"
+            source.write_bytes(current_image())
+            code, message = reg.dry_run(step, source)
+            self.assertNotEqual(code, 0)
+            self.assertIn("NOT eligible", message)
+
     def test_dry_run_manual_step_refuses_without_reading_source(self):
         manual_step = reg.MigrationStep(
             epoch_from=1, epoch_to=2, kind=reg.MANUAL, description="future epoch bump",
@@ -155,6 +219,27 @@ class RunTests(unittest.TestCase):
             code, message = reg.run(step, source, source)
             self.assertEqual(code, 6)
             self.assertIn("out-of-place", message)
+
+    def test_run_migrates_older_format_version_source_to_current(self):
+        """The real 1 -> 2 registry entry, end to end: a genuine
+        SAVE_COMPAT_MIGRATABLE_OLDER source (formatVersion one behind
+        current) migrates out-of-place to a destination that re-classifies
+        SAVE_COMPAT_CURRENT -- proving this registry's wiring (not just
+        save_format_tool.py's own, separately-tested migrate command)
+        actually reaches the real tool for a numbered epoch_from."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "older.sav"
+            source.write_bytes(older_migratable_image())
+            dest = Path(tmp) / "migrated.sav"
+            code, message = reg.run(step, source, dest)
+            self.assertEqual(code, 0, message)
+            self.assertTrue(dest.is_file())
+            # Source must be untouched (out-of-place only).
+            self.assertEqual(source.read_bytes(), older_migratable_image())
+            save_compat_epoch = sft.resolve_save_compat_epoch(ROOT)
+            dest_state = sft.classify_image(dest.read_bytes(), save_compat_epoch)
+            self.assertEqual(dest_state, sft.SAVE_COMPAT_CURRENT)
 
     def test_run_manual_step_refuses(self):
         manual_step = reg.MigrationStep(

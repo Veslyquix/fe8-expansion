@@ -14,9 +14,23 @@ rather than duplicating.
 | From epoch | To epoch | Kind | Mechanism |
 |---|---|---|---|
 | *(none -- no `ExpansionSaveMeta` record at all, i.e. legacy/vanilla save)* | `1` | mechanical | `scripts/modernize/save_format_tool.py migrate SOURCE DEST` |
+| `1` | `2` | mechanical | `scripts/modernize/save_format_tool.py migrate SOURCE DEST` |
 
-No `EXPANSION_SAVE_COMPAT_EPOCH` bump beyond `1` has ever shipped from this
-repository (see `config.mk` and
+`EXPANSION_SAVE_COMPAT_EPOCH` has been bumped once, from `1` to `2`
+(`config.mk`; issue #18 sprint 2 -- `struct ExpansionUserPrefs`,
+[`include/expansion_save_prefs.h`](../include/expansion_save_prefs.h), now
+occupies part of `struct ExpansionSaveMeta`'s `reserved` tail; see
+[`docs/save_format.md`](save_format.md)). This registry entry was added
+during the issue #9 release-branch/origin-master merge that first brought
+that bump into this branch (origin/master's own issue #18 work never had
+this registry module to update, since it did not exist on that branch);
+the underlying mechanical capability itself (accepting a
+`SAVE_COMPAT_MIGRATABLE_OLDER` source, preserving any bytes already
+present in `reserved`) was already implemented and documented directly on
+`scripts/modernize/save_format_tool.py`/`docs/save_format.md` before this
+registry entry was added -- this is a registry-bookkeeping addition, not a
+new migration mechanism. No `EXPANSION_SAVE_COMPAT_EPOCH` bump beyond `2`
+has ever shipped from this repository (see `config.mk` and
 [`docs/release_data/version_ledger.json`](release_data/version_ledger.json)), so no
 further transition is registered yet. Any future epoch bump **must** add
 its own registry entry before that bump lands -- `make release-check`
@@ -68,6 +82,8 @@ python3 -m scripts.modernize.migrations.cli list
 python3 -m scripts.modernize.migrations.cli check
 python3 -m scripts.modernize.migrations.cli dry-run --to-epoch 1 --source SRAM.bin
 python3 -m scripts.modernize.migrations.cli run --to-epoch 1 --source SRAM.bin --dest OUT.bin
+python3 -m scripts.modernize.migrations.cli dry-run --from-epoch 1 --to-epoch 2 --source SRAM.bin
+python3 -m scripts.modernize.migrations.cli run --from-epoch 1 --to-epoch 2 --source SRAM.bin --dest OUT.bin
 ```
 
 `make release-migrations-check` runs `check` (the registry consistency

@@ -48,10 +48,19 @@ class MigrationStep:
             raise ValueError("a mechanical migration step must not declare manual steps")
 
 
-# The only mechanical transition scripts/modernize/save_format_tool.py's
-# migrate command implements today: "v0" (no ExpansionSaveMeta record at
-# all, i.e. SAVE_COMPAT_VALID_LEGACY_OR_VANILLA) -> epoch 1
-# (SAVE_COMPAT_CURRENT). Any future EXPANSION_SAVE_COMPAT_EPOCH bump needs
+# Two mechanical transitions scripts/modernize/save_format_tool.py's
+# migrate command implements today (both via the same 'migrate'
+# subcommand -- it always targets whatever config.mk's real, live
+# EXPANSION_SAVE_COMPAT_EPOCH/SAVE_FORMAT_VERSION_CURRENT currently are,
+# never a value parameterized by this registry's own epoch_to): "v0" (no
+# ExpansionSaveMeta record at all, i.e. SAVE_COMPAT_VALID_LEGACY_OR_
+# VANILLA) -> epoch 1, and epoch 1 (SAVE_COMPAT_MIGRATABLE_OLDER once a
+# newer epoch is current) -> epoch 2, added for the origin/master merge
+# (issue #9 release-branch integration) that brought in issue #18 sprint
+# 2's real EXPANSION_SAVE_COMPAT_EPOCH/SAVE_FORMAT_VERSION_CURRENT 1 -> 2
+# bump (struct ExpansionUserPrefs, include/expansion_save_prefs.h, now
+# occupies part of ExpansionSaveMeta's reserved tail -- see
+# docs/save_format.md). Any future EXPANSION_SAVE_COMPAT_EPOCH bump needs
 # its own registry entry, added deliberately -- this registry never
 # infers a mechanical path that save_format_tool.py does not actually
 # implement.
@@ -62,8 +71,24 @@ REGISTRY: Tuple[MigrationStep, ...] = (
         kind=MECHANICAL,
         description=(
             "No on-media ExpansionSaveMeta record (legacy/vanilla save) -> "
-            "epoch 1 (current). Implemented by "
+            "epoch 1. Implemented by "
             "scripts/modernize/save_format_tool.py's 'migrate' subcommand."
+        ),
+    ),
+    MigrationStep(
+        epoch_from=1,
+        epoch_to=2,
+        kind=MECHANICAL,
+        description=(
+            "formatVersion 1 (epoch 1) -> formatVersion 2 (epoch 2, current): "
+            "struct ExpansionUserPrefs (include/expansion_save_prefs.h) now "
+            "occupies part of ExpansionSaveMeta's reserved tail (issue #18 "
+            "sprint 2). Classifies SAVE_COMPAT_MIGRATABLE_OLDER (formatVersion "
+            "< current) and is implemented by the same "
+            "scripts/modernize/save_format_tool.py 'migrate' subcommand, which "
+            "now accepts SAVE_COMPAT_MIGRATABLE_OLDER as a migratable source "
+            "state and carries forward any bytes already in `reserved` "
+            "verbatim rather than overwriting them with a fresh default."
         ),
     ),
 )
@@ -103,6 +128,31 @@ def check_registry() -> List[str]:
     return errors
 
 
+def _expected_pre_migration_state(step: MigrationStep) -> str:
+    """The save_format_tool.py classification a source must already have
+    *before* `step` runs, mirroring classify_save_compat_raw()'s own
+    precedence (magic -> formatVersion -> compatEpoch) rather than
+    guessing: `epoch_from is None` means no on-media ExpansionSaveMeta
+    record at all (SAVE_COMPAT_VALID_LEGACY_OR_VANILLA -- no magic).
+    Any real, numbered `epoch_from` means a valid record whose
+    formatVersion is older than SAVE_FORMAT_VERSION_CURRENT (
+    SAVE_COMPAT_MIGRATABLE_OLDER) -- classify_save_compat_raw() resolves
+    that from formatVersion alone, strictly before it ever looks at
+    compatEpoch, so this holds for *any* numbered epoch_from, not only
+    the one immediately below today's live current epoch (see
+    docs/save_format.md's "Raw-byte compatibility classifier" and its
+    epoch-1-vs-2 worked example). A previous version of this helper
+    hardcoded 'SAVE_COMPAT_CURRENT' for every non-None epoch_from -- that
+    was only ever exercised while the registry had exactly one, `None`-
+    sourced entry; it was never correct for a real numbered epoch_from,
+    and is fixed here alongside this registry's first such entry
+    (`epoch_from=1, epoch_to=2`, issue #9 release-branch/origin-master
+    merge)."""
+    if step.epoch_from is None:
+        return "SAVE_COMPAT_VALID_LEGACY_OR_VANILLA"
+    return "SAVE_COMPAT_MIGRATABLE_OLDER"
+
+
 def dry_run(step: MigrationStep, source: Path) -> Tuple[int, str]:
     """Deterministic, read-only eligibility check: classifies `source`
     (via save_format_tool.py's 'validate') without writing anything,
@@ -112,7 +162,7 @@ def dry_run(step: MigrationStep, source: Path) -> Tuple[int, str]:
         steps = "; ".join(step.manual_steps)
         return 4, f"manual migration required, no mechanical dry-run possible: {steps}"
 
-    expect = "SAVE_COMPAT_VALID_LEGACY_OR_VANILLA" if step.epoch_from is None else "SAVE_COMPAT_CURRENT"
+    expect = _expected_pre_migration_state(step)
     result = subprocess.run(
         [sys.executable, str(SAVE_FORMAT_TOOL), "validate", str(source), "--expect", expect],
         capture_output=True,
