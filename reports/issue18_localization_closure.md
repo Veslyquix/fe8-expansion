@@ -502,3 +502,82 @@ is what the renamed scenario now covers on its own). All six
 `expansion-modern-localization-runtime-*-check` targets (prefs, save,
 shifted, debug, release, multi -- both configs where applicable) were
 rerun end-to-end after these fixes and pass.
+
+## Addendum: issue #18 sprint 7 -- real multi-locale repair matrix (UNSET/CORRUPT/UNKNOWN/DISABLED x debug/release)
+
+Sprint 6 above fixed the two runtime blockers that let a real
+multi-locale first-start prompt/repair be shown and committed at all.
+It did not, however, add scenario coverage that actually *drives* that
+real prompt for the CORRUPT/UNKNOWN_LOCALE/DISABLED_LOCALE/UNSET
+sub-states: the three `-no-wipe-modern-debug` scenarios (table above,
+sprint 4) still only run against the **single-locale** build, where the
+same repair path silently collapses to `AUTO_SELECT` because there is
+nothing to prompt over. This addendum closes that specific gap with a
+genuine 4 (prefs sub-state) x 2 (`MODERN_CONFIG`) = 8-scenario matrix,
+named `locale-repair-<state>-multi-modern-{debug,release}`:
+
+| Scenario | Config | Proves |
+|---|---|---|
+| `locale-repair-unset-multi-modern-{debug,release}` | debug, release | Blank/`UNSET` `ExpansionUserPrefs` on the `en,qps-ploc` build: real blocking selector shown (`active=1`, `autoSelected=0`, `needsPreferenceRepair=1`, `promptReason=UNSET`), explicit navigate-away-and-back-to-`en` choice, `Store()` fires, whole-SRAM no-wipe, real `A+B+SELECT+START` soft reset, `prefsState=VALID` + selector suppressed on reboot. |
+| `locale-repair-corrupt-multi-modern-{debug,release}` | debug, release | Same real prompt/choose-default/no-wipe/reboot proof for a `CORRUPT` record (bad checksum). |
+| `locale-repair-unknown-multi-modern-{debug,release}` | debug, release | Same, for an `UNKNOWN_LOCALE` record (a syntactically valid but out-of-range locale id). |
+| `locale-repair-disabled-multi-modern-{debug,release}` | debug, release | Same, for a `DISABLED_LOCALE` record naming `ja` (locale id 1) -- a real, in-range `ExpansionLocaleId` that this multi-locale build genuinely does not enable (unlike the single-locale no-wipe fixture's own disabled id, 7/`qps-ploc`, which IS enabled here and therefore can no longer name a disabled locale on this build). A new fixture, `disabled_on_multi.sav`, was added to `modern.mk` for exactly this reason. |
+
+All 8 are real libmGBA captures (never host-only input replay), matched
+by real `tools/gba-playtest/fingerprints/locale-repair-*.json` files and
+independently re-verified via `gba_playtest.py verify --policy behavior`
+(7 checkpoints each, zero mismatches). The release half of the matrix is
+mandatory, not skipped: unlike the sprint-4 no-wipe trio (debug-only,
+justified there by `ExpansionUserPrefs_Normalize`'s config-independence
+at the pure-function level), this matrix's whole point is to prove the
+*runtime UI* path end-to-end, which is exactly the kind of behavior a
+debug-only check cannot stand in for.
+
+**Why "choose the default" is non-trivial evidence, not busywork**: every
+scenario explicitly navigates the cursor away from `en` (down to
+`qps-ploc`) and back before confirming `en` -- proving a real cursor
+round-trip (framebuffer-hash self-check between the original prompt
+checkpoint and the post-round-trip checkpoint) rather than a single
+scripted keypress that happens to land on row 0. Confirming the row that
+already equals the runtime's own current fallback value is exactly the
+case the sprint-6 `mustRepair` fix in `ExpansionLanguageMenu_RowSelected`
+(`src/expansion_language_menu.c`) exists for: without it, this exact
+input sequence would look like a redundant no-op reselection and the
+corrupt/unset/unknown/disabled record would never actually be repaired.
+
+**Modern.mk wiring**: `expansion-modern-localization-runtime-multi-check`
+gained the 3 new fixture prerequisites (`corrupt.sav`, `unknown.sav`,
+`disabled_on_multi.sav` -- `unset.sav` was already a prerequisite) and 4
+new `verify` invocations, wired **unconditionally** (both
+`MODERN_CONFIG=debug` and `=release`, never inside the `ifeq
+($(MODERN_CONFIG),debug)` guard that scopes the pre-existing debug-only
+scenarios in this same target). Both configs were rerun end-to-end for
+real (`make expansion-modern-localization-runtime-multi-check
+MODERN_CONFIG={debug,release} ...`) and pass, including every
+pre-existing scenario in the target alongside the 4 new ones per config.
+The pre-existing `expansion-modern-localization-runtime-prefs-check`
+target (the three single-locale/debug-only no-wipe scenarios) is
+unchanged and remains in the gate on its own honest merits; its
+docstring/comment in `modern.mk` was updated to state plainly that it is
+not, and never was, a substitute for this matrix.
+
+**New host tests**: `scripts/modernize/tests/
+test_modern_localization_header_bootstrap.py`'s
+`ModernLocalizationRepairMatrixTests` statically enumerates the exact
+4x2 matrix and fails if: any of the 8 scenario/fingerprint file pairs is
+missing (including a release pair); any scenario's prompt checkpoint
+lacks the real blocking-selector invariants or ever encodes
+`autoSelected=1` (i.e. silently regresses to `AUTO_SELECT`); the required
+checkpoint sequence or the literal `A+B+SELECT+START` soft-reset input is
+missing; the commit/final checkpoints don't prove `Store()`-fired/
+no-wipe/`VALID`-after-reboot; the fixture mapping (including
+`disabled_on_multi.sav`'s `--disabled-locale-id 1`) is wrong; or
+`modern.mk` fails to wire all 8 pairs into
+`expansion-modern-localization-runtime-multi-check` unconditionally.
+Mutation-tested during development (deleting a release scenario file,
+and flipping an `autoSelected` expected value) to confirm each failure
+mode is actually caught, not merely a vacuously-passing assertion.
+
+`docs/localization.md` gained a matching scenario-table row and a new
+"The real multi-locale repair matrix (issue #18 sprint 7)" subsection
+with the same checkpoint-by-checkpoint evidence summary.

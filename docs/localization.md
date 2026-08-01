@@ -139,6 +139,7 @@ fingerprints in the matching `tools/gba-playtest/fingerprints/` file):
 | `locale-prefs-corrupt-no-wipe-modern-debug` | Corrupt `ExpansionUserPrefs` -> re-prompt; full-SRAM hash (minus three justified exclusions below) is unchanged frame-5 to frame-600: no wipe. |
 | `locale-prefs-unknown-locale-no-wipe-modern-debug` | Same, for an unknown-locale-id prefs record. |
 | `locale-prefs-disabled-locale-no-wipe-modern-debug` | Same, for a prefs record naming a locale not compiled into this build. |
+| `locale-repair-{unset,corrupt,unknown,disabled}-multi-modern-{debug,release}` | Issue #18 sprint 7: the real 4x2 repair matrix. Unlike the three `-no-wipe-modern-debug` rows above (single-locale build, debug-only, repair collapses to silent `AUTO_SELECT`), these 8 scenarios boot the same `en,qps-ploc` multi-locale ROM as the rest of this table, in **both** debug and release, so the real blocking selector (`active=1`, `autoSelected=0`, `needsPreferenceRepair=1`, per-state `promptReason`/`prefsState`) is what actually gets exercised and repaired. Each scenario: hashes the whole SRAM image at boot; shows the prompt; explicitly navigates down to `qps-ploc` and back up to `en` (proving a real cursor round-trip, not a scripted single keypress) before confirming the *default* English row -- the sprint-6 `mustRepair` fix (`src/expansion_language_menu.c`) is what makes `ExpansionUserPrefs_Store()` fire even though the chosen locale equals the runtime own current fallback; re-hashes the whole SRAM image (minus the same three exclusions as the no-wipe rows) to prove no-wipe across the repair; then sends a real `A+B+SELECT+START` soft reset and, on the resulting genuine second boot, proves the persisted record now classifies `VALID` and the selector/prompt stay suppressed. Superseding claim: the pre-existing `-no-wipe-modern-debug` scenarios remain honestly named (they still real-capture their own single-locale/debug/no-wipe claim) but are not, and never were, a substitute for this matrix. |
 | `locale-settings-real-navigation-multi-modern-debug` | **Real** navigation from a live Prep Map -> Options -> Configuration screen (never a direct `ExpansionLanguageMenu_OpenSettings()` call/fixture) to the Language row, opening the real settings submenu (`settingsActive` 0->1), selecting `qps-ploc` (locale/cache-generation/change-count all move), and proving a `B`-cancel (no selection) leaves `currentLocale`/`cacheGeneration`/`settingsChangeCount` and all 6 persisted `ExpansionUserPrefs` SRAM bytes byte-identical while `settingsOpenCount` still increments -- real proof that Back never mutates prefs. Also carries the visible pseudo-marker region/pixel checkpoints below. |
 | `locale-softreset-persistence-multi-modern-debug` | Real first-run selector chooses `qps-ploc`, then a genuine A+B+SELECT+START soft-reset key combo (held ~20-24 frames through libmGBA's own HLE BIOS -- a real hardware reboot, not a fixture swap) reboots the ROM; continuous, never-swapped SRAM: selector is skipped post-reset (`promptShown`/`active` stay 0) and `currentLocale` is `qps-ploc` again without re-selection. |
 
@@ -184,6 +185,73 @@ No other byte anywhere in the 0x8000-byte SRAM image differs between the
 pre- and post-boot checkpoints for any of the three fixtures -- this is
 the real, capture-verified evidence for the "corrupt/unknown/disabled
 prefs never wipe SRAM" contract item, not an assumption.
+
+### The real multi-locale repair matrix (issue #18 sprint 7)
+
+The three `-no-wipe-modern-debug` scenarios above are real, but they only
+ever run the single-locale (default `en`-only) build: with exactly one
+enabled locale, `ExpansionLanguageMenu_RuntimeInit()`'s own selector logic
+has nothing to prompt over, so a corrupt/unknown/disabled prefs record is
+"repaired" by silent `AUTO_SELECT` -- the blocking selector itself is
+never actually shown or driven. That leaves the contract's real
+multi-locale prompt/choose-default repair path (and its release-build
+counterpart) unproven. `tools/gba-playtest/scenarios/locale-repair-
+{unset,corrupt,unknown,disabled}-multi-modern-{debug,release}.json` (8
+files, all real-captured, `fingerprints/` matched, `--policy behavior`
+verified) close that gap:
+
+- **Same `en,qps-ploc` ROM as the rest of this table**, in both `debug`
+  and `release` -- the release half is mandatory, never skipped.
+- **Baseline**: whole-SRAM hash (minus the same three "no-wipe" exclusion
+  ranges documented above -- `0x7224`/`0x24`, `0x73A0`/`0x04`,
+  `0x73D4`/`0x0C`) taken before `RuntimeInit()` even runs, from the
+  state-specific fixture (`unset.sav`/`corrupt.sav`/`unknown.sav`/
+  `disabled_on_multi.sav` -- the last one is new this sprint, built with
+  `--disabled-locale-id 1` since `qps-ploc`'s own id, 7, is *enabled* on
+  this multi-locale build and therefore can no longer name a disabled
+  locale here).
+- **Prompt checkpoint**: `active=1`, `autoSelected=0` (never
+  `AUTO_SELECT` -- this is the exact silent-repair collapse this sprint
+  closes), `needsPreferenceRepair=1`, and a `promptReason`/`prefsState`
+  pair matching the fixture's own real classification (`UNSET`/`CORRUPT`/
+  `UNKNOWN_LOCALE`/`DISABLED_LOCALE`).
+- **Real cursor round-trip**: navigates `DOWN` to `qps-ploc` (framebuffer-
+  hashed) then back `UP` to `en` (framebuffer hash byte-identical to the
+  original prompt checkpoint's -- proof this is a real second keypress
+  landing back on the same row, not a scripted single confirm) before
+  pressing `A`.
+- **Explicit default-choice repair**: confirming `en` here is the
+  runtime's own current fallback locale, so this exercises the sprint-6
+  `mustRepair = active && needsPreferenceRepair` fix in
+  `ExpansionLanguageMenu_RowSelected()` (`src/expansion_language_menu.c`)
+  -- without it, choosing the row that already equals the fallback would
+  short-circuit and never call `ExpansionUserPrefs_Store()`.
+- **Commit checkpoint**: `active=0`, `needsPreferenceRepair=0`,
+  `cacheGeneration=1` (proving `Store()` fired), the persisted record
+  reads `magic=0xA5`/`version=0x01`/`localeId=0x00`(`en`)/`flags=0x01`
+  (`EXPLICIT`), and the whole-SRAM hash (same three exclusions) is
+  byte-identical to the baseline hash -- no wipe across the repair.
+- **Real soft reset, not a fixture swap**: the literal `A+B+SELECT+START`
+  combo is held on the same, never-replaced SRAM image, exactly like
+  `locale-softreset-persistence-multi-modern-debug` above.
+- **Post-reset checkpoints**: a fresh-EWRAM checkpoint immediately after
+  reboot, then a settled checkpoint proving `active=0`, `promptShown=0`
+  (selector/prompt genuinely absent, not merely unchecked) and
+  `prefsState=0x05` (`VALID`) -- only a genuine second boot's own
+  `Load()`+`Normalize()` can produce this classification, since the probe
+  field is set once per boot and never refreshed mid-boot after
+  `Store()`.
+
+`scripts/modernize/tests/test_modern_localization_header_bootstrap.py`'s
+`ModernLocalizationRepairMatrixTests` enumerates this exact 4x2 matrix as
+a static host test (file/fingerprint existence, required checkpoint
+names, the `A+B+SELECT+START` input, the `autoSelected=0`/prompt-reason/
+prefs-state/no-wipe/VALID-after-reboot invariants above, the fixture
+mapping, and that `modern.mk` wires all 8 pairs into
+`expansion-modern-localization-runtime-multi-check` unconditionally,
+never inside the `ifeq ($(MODERN_CONFIG),debug)` guard) -- it fails if a
+release pair goes missing or a scenario silently regresses to
+`AUTO_SELECT`.
 
 ### Real settings navigation, real soft-reset persistence, visible pseudo marker
 
@@ -273,9 +341,23 @@ behavior was introduced by this feature.
   LOCALES`/`EXPANSION_PSEUDO_LOCALE` overrides -- a real, separate ROM
   build/fingerprint set, never conflated with the single-locale metadata/
   budget numbers) and verifies the multi-locale blank-SRAM + selector-
-  switch-to-qps scenarios.
-- `expansion-modern-localization-runtime-prefs-check`: the three
-  corrupt/unknown/disabled-locale no-wipe scenarios.
+  switch-to-qps scenarios *and* -- unconditionally, for both
+  `MODERN_CONFIG=debug` and `=release`, never inside the debug-only
+  `ifeq` guard that scopes the other per-config-only scenarios below --
+  all 8 `locale-repair-{unset,corrupt,unknown,disabled}-multi-modern-
+  {debug,release}` real repair-matrix scenarios (issue #18 sprint 7; see
+  "The real multi-locale repair matrix" above). The 4 new fixture
+  prerequisites (`unset.sav`/`corrupt.sav`/`unknown.sav`/
+  `disabled_on_multi.sav`) are declared alongside the pre-existing
+  fixtures in this same file.
+- `expansion-modern-localization-runtime-prefs-check`: the three,
+  honestly-named, single-locale/debug-only corrupt/unknown/disabled-locale
+  no-wipe scenarios. These still real-capture their own single-locale
+  no-wipe claim and remain in the gate on their own merits, but they are
+  **not**, and never were, a substitute for the multi-locale repair
+  matrix wired into `-multi-check` above (single enabled locale means
+  their repair collapses to silent `AUTO_SELECT`, never the real
+  blocking selector).
 - `expansion-modern-localization-runtime-save-check`: depends on the
   existing `expansion-modern-saveload-check` + `expansion-modern-
   savefmt-check` (regression coverage only, no new save-format scenarios).

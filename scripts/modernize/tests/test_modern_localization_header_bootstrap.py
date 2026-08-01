@@ -37,6 +37,7 @@ synthetic fixture tree), because the bug is specifically about how those
 two interact through modern.mk's own generated-header wiring.
 """
 
+import json
 import os
 import re
 import shutil
@@ -753,6 +754,341 @@ class ModernLocalizationPrefsFixtureStaticDeterminismTests(unittest.TestCase):
                 f"$(MODERN_LOCALE_FIXTURE_DIR)/{name}", self.MODERN_MK,
                 f"{name}'s fixture rule must be keyed off the "
                 f"MODERN_BUILD_ROOT-derived $(MODERN_LOCALE_FIXTURE_DIR)",
+            )
+
+
+
+SCENARIOS_DIR = ROOT / "tools" / "gba-playtest" / "scenarios"
+FINGERPRINTS_DIR = ROOT / "tools" / "gba-playtest" / "fingerprints"
+
+# Issue #18 sprint 7 real repair matrix: 4 ExpansionUserPrefs sub-states
+# that require a re-prompt (never VALID/MIGRATED) x 2 MODERN_CONFIG
+# values = 8 mandatory real libmGBA scenarios -- see docs/localization.md
+# and modern.mk's expansion-modern-localization-runtime-multi-check.
+REPAIR_STATES = ("unset", "corrupt", "unknown", "disabled")
+REPAIR_CONFIGS = ("debug", "release")
+
+# Mirrors include/expansion_language_menu.h's
+# enum ExpansionLanguageMenuPromptReason / src/bmsave-lib.c's
+# enum ExpansionUserPrefsState ordinal values -- never re-derived, always
+# cross-checked against the real, unmodified header by
+# tools/gba-playtest/tests/test_locale_probe_schema.py's own
+# offsetof()/sizeof() compiler-driven layout (this module only needs the
+# *values*, not the byte layout, which that other suite already locks
+# in).
+REPAIR_PROMPT_REASON = {"unset": 0x01, "corrupt": 0x02, "unknown": 0x03, "disabled": 0x04}
+REPAIR_PREFS_STATE = {"unset": 0x00, "corrupt": 0x01, "unknown": 0x02, "disabled": 0x03}
+REPAIR_PREFS_STATE_VALID = 0x05
+
+REPAIR_FIXTURE_FOR_STATE = {
+    "unset": "unset.sav",
+    "corrupt": "corrupt.sav",
+    "unknown": "unknown.sav",
+    "disabled": "disabled_on_multi.sav",
+}
+
+# gExpansionLanguageMenuProbe's own EWRAM base address per config -- see
+# tools/gba-playtest/scenarios/locale-blank-sram-selector-multi-modern-
+# {debug,release}.json's own probe addresses (this module never invents
+# these; they are the same literal bases every other locale-*.json
+# scenario in this repository already uses).
+REPAIR_EWRAM_BASE = {"debug": 0x02031A94, "release": 0x02031588}
+
+# struct ExpansionLanguageMenuProbe field byte offsets -- see include/
+# expansion_language_menu.h's field declaration order, independently
+# compiler-verified against every locale-*.json scenario (including this
+# sprint's) by test_locale_probe_schema.py.
+REPAIR_FIELD_OFFSET = {
+    "active": 0, "settingsActive": 1, "promptShown": 2, "autoSelected": 3,
+    "promptReason": 4, "prefsState": 5, "selectedLocale": 6, "currentLocale": 7,
+    "enabledLocaleCount": 8, "cacheGeneration": 10, "startupRunCount": 12,
+    "settingsOpenCount": 14, "settingsChangeCount": 16, "needsPreferenceRepair": 18,
+}
+
+REQUIRED_REPAIR_CHECKPOINT_NAMES = (
+    "pre-runtimeinit-sram-baseline",
+    "pre-repair-selector-shown",
+    "selector-after-navigate-down",
+    "selector-after-navigate-back-to-en",
+    "post-repair-committed",
+    "post-reset-ewram-fresh",
+    "post-reset-selector-skipped-en-restored",
+)
+
+
+class ModernLocalizationRepairMatrixTests(unittest.TestCase):
+    """Issue #18 sprint 7: host tests enumerating the exact 4 (prefs
+    sub-state) x 2 (MODERN_CONFIG) = 8 real repair-matrix scenario/
+    fingerprint pairs (``locale-repair-<state>-multi-modern-
+    <config>.json``), their required checkpoint/probe/input semantics,
+    their fixture mapping, and their modern.mk target wiring.
+
+    These are static/structural checks (no libmGBA/toolchain
+    dependency -- always run) that fail loudly if:
+
+    * any of the 8 scenario or fingerprint files is missing (including a
+      release pair -- these are never debug-only/skipped, unlike the
+      single-locale AUTO_SELECT no-wipe checks);
+    * a scenario ever encodes ``autoSelected`` as anything but ``0x00``
+      (i.e. never collapses to AUTO_SELECT -- that would silently
+      readopt the single-locale gap this sprint closes) or fails to show
+      the real blocking selector (``active``/``promptShown``/
+      ``needsPreferenceRepair`` all 1) with the correct per-state
+      ``promptReason``/``prefsState`` pair;
+    * the required checkpoint sequence (prompt shown -> real navigate ->
+      commit -> soft-reset -> post-reset settle) is not present, or the
+      literal ``A``+``B``+``SELECT``+``START`` soft-reset combo is
+      missing from the input timeline;
+    * the persisted-record/no-wipe/VALID-after-reboot proof bytes are
+      not asserted;
+    * modern.mk's ``expansion-modern-localization-runtime-multi-check``
+      does not wire every one of the 8 pairs, or wires them inside the
+      ``ifeq ($(MODERN_CONFIG),debug)`` guard that gates the debug-only
+      scenarios (which would silently skip the release half of the
+      matrix).
+    """
+
+    MODERN_MK = (ROOT / "modern.mk").read_text(encoding="utf-8")
+
+    @staticmethod
+    def _scenario_path(state, config):
+        return SCENARIOS_DIR / f"locale-repair-{state}-multi-modern-{config}.json"
+
+    @staticmethod
+    def _fingerprint_path(state, config):
+        return FINGERPRINTS_DIR / f"locale-repair-{state}-multi-modern-{config}.json"
+
+    def _load_scenario(self, state, config):
+        path = self._scenario_path(state, config)
+        self.assertTrue(path.is_file(), f"missing scenario file: {path}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def _checkpoint_by_name(self, data, name):
+        for checkpoint in data["checkpoints"]:
+            if checkpoint["name"] == name:
+                return checkpoint
+        self.fail(f"{data['name']}: missing required checkpoint {name!r}")
+
+    def _probe_value(self, checkpoint, base, field):
+        address = "0x%08x" % (base + REPAIR_FIELD_OFFSET[field])
+        for probe in checkpoint["probes"]:
+            if probe["address"] == address:
+                return probe.get("expected")
+        self.fail(
+            f"{checkpoint['name']}: missing probe for field {field!r} "
+            f"(address {address})"
+        )
+
+    def test_all_8_scenario_and_fingerprint_files_exist(self):
+        missing = []
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                if not self._scenario_path(state, config).is_file():
+                    missing.append(f"scenario locale-repair-{state}-multi-modern-{config}.json")
+                if not self._fingerprint_path(state, config).is_file():
+                    missing.append(f"fingerprint locale-repair-{state}-multi-modern-{config}.json")
+        self.assertEqual(
+            missing, [],
+            f"the real repair matrix must cover all 4 states x 2 configs "
+            f"(release pairs are mandatory, never skipped); missing: {missing}",
+        )
+
+    def test_every_scenario_has_the_required_checkpoint_sequence(self):
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                data = self._load_scenario(state, config)
+                names = {c["name"] for c in data["checkpoints"]}
+                for required in REQUIRED_REPAIR_CHECKPOINT_NAMES:
+                    self.assertIn(
+                        required, names,
+                        f"locale-repair-{state}-multi-modern-{config}.json is "
+                        f"missing required checkpoint {required!r}",
+                    )
+
+    def test_every_scenario_sends_the_literal_soft_reset_combo(self):
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                data = self._load_scenario(state, config)
+                combos = [set(f["keys"]) for f in data["frames"]]
+                self.assertIn(
+                    {"A", "B", "SELECT", "START"}, combos,
+                    f"locale-repair-{state}-multi-modern-{config}.json must "
+                    "send the literal A+B+SELECT+START soft-reset combo, "
+                    "never a host-side reset call",
+                )
+
+    def test_prompt_checkpoint_never_uses_auto_select_and_matches_its_own_state(self):
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                data = self._load_scenario(state, config)
+                base = REPAIR_EWRAM_BASE[config]
+                cp = self._checkpoint_by_name(data, "pre-repair-selector-shown")
+                self.assertEqual(self._probe_value(cp, base, "active"), "0x01")
+                self.assertEqual(
+                    self._probe_value(cp, base, "autoSelected"), "0x00",
+                    f"locale-repair-{state}-multi-modern-{config}.json's prompt "
+                    "checkpoint must never show autoSelected=1 -- this build "
+                    "enables 2 locales, so the real blocking selector (never "
+                    "AUTO_SELECT) must be the one exercised here",
+                )
+                self.assertEqual(self._probe_value(cp, base, "needsPreferenceRepair"), "0x01")
+                self.assertEqual(
+                    self._probe_value(cp, base, "promptReason"),
+                    "0x%02x" % REPAIR_PROMPT_REASON[state],
+                )
+                self.assertEqual(
+                    self._probe_value(cp, base, "prefsState"),
+                    "0x%02x" % REPAIR_PREFS_STATE[state],
+                )
+
+    def test_commit_checkpoint_proves_store_and_clears_repair_flag(self):
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                data = self._load_scenario(state, config)
+                base = REPAIR_EWRAM_BASE[config]
+                cp = self._checkpoint_by_name(data, "post-repair-committed")
+                self.assertEqual(self._probe_value(cp, base, "active"), "0x00")
+                self.assertEqual(self._probe_value(cp, base, "needsPreferenceRepair"), "0x00")
+                self.assertEqual(self._probe_value(cp, base, "cacheGeneration"), "0x0001")
+                self.assertTrue(
+                    cp.get("sram_hash"),
+                    f"locale-repair-{state}-multi-modern-{config}.json's commit "
+                    "checkpoint must hash the whole SRAM image (minus the "
+                    "documented exclusions) to prove no-wipe",
+                )
+                addresses = {p["address"]: p.get("expected") for p in cp["probes"]}
+                self.assertEqual(addresses.get("0x0e0073d4"), "0xa5")
+                self.assertEqual(addresses.get("0x0e0073d5"), "0x01")
+                self.assertEqual(
+                    addresses.get("0x0e0073d6"), "0x00",
+                    "the persisted localeId byte must read English (0x00) -- "
+                    "the explicit choose-default-en repair",
+                )
+                self.assertEqual(addresses.get("0x0e0073d7"), "0x01")
+
+    def test_final_checkpoint_proves_valid_classification_and_no_reprompt(self):
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                data = self._load_scenario(state, config)
+                base = REPAIR_EWRAM_BASE[config]
+                cp = self._checkpoint_by_name(data, "post-reset-selector-skipped-en-restored")
+                self.assertEqual(self._probe_value(cp, base, "active"), "0x00")
+                self.assertEqual(
+                    self._probe_value(cp, base, "promptShown"), "0x00",
+                    f"locale-repair-{state}-multi-modern-{config}.json must "
+                    "prove the selector/prompt is absent after reboot",
+                )
+                self.assertEqual(
+                    self._probe_value(cp, base, "prefsState"),
+                    "0x%02x" % REPAIR_PREFS_STATE_VALID,
+                    "the second real boot's own Normalize() must classify the "
+                    "repaired record VALID",
+                )
+                self.assertEqual(self._probe_value(cp, base, "currentLocale"), "0x00")
+
+    def test_baseline_and_commit_sram_hash_exclude_only_documented_ranges(self):
+        expected_ranges = [
+            {"offset": 29220, "length": 36},
+            {"offset": 29600, "length": 4},
+            {"offset": 29652, "length": 12},
+        ]
+        for state in REPAIR_STATES:
+            for config in REPAIR_CONFIGS:
+                data = self._load_scenario(state, config)
+                for name in ("pre-runtimeinit-sram-baseline", "post-repair-committed"):
+                    cp = self._checkpoint_by_name(data, name)
+                    self.assertEqual(
+                        cp.get("sram_hash_exclude_ranges"), expected_ranges,
+                        f"locale-repair-{state}-multi-modern-{config}.json's "
+                        f"{name!r} checkpoint must exclude exactly the "
+                        "SoundRoomSaveData/SramInit-pad/ExpansionUserPrefs "
+                        "ranges -- never widen the blind spot",
+                    )
+
+    def test_fixture_mapping_matches_locale_prefs_fixture_states(self):
+        # Cross-checked against the real fixture-state constants (never a
+        # re-typed literal) -- see tools/gba-playtest/tests/
+        # locale_prefs_fixture.py.
+        sys.path.insert(0, str(ROOT / "tools" / "gba-playtest" / "tests"))
+        import locale_prefs_fixture as lpf  # noqa: PLC0415
+
+        state_const = {
+            "unset": lpf.PREFS_STATE_UNSET,
+            "corrupt": lpf.PREFS_STATE_CORRUPT,
+            "unknown": lpf.PREFS_STATE_UNKNOWN_LOCALE,
+            "disabled": lpf.PREFS_STATE_DISABLED_LOCALE,
+        }
+        self.assertEqual(set(state_const.values()), set(lpf.ALL_PREFS_FIXTURE_STATES))
+        for state, fixture_name in REPAIR_FIXTURE_FOR_STATE.items():
+            expected_line = f"$(MODERN_LOCALE_FIXTURE_DIR)/{fixture_name}"
+            self.assertIn(
+                expected_line, self.MODERN_MK,
+                f"modern.mk must define a fixture rule for {fixture_name} "
+                f"(state {state_const[state]!r})",
+            )
+
+    def test_disabled_multi_fixture_uses_a_supported_but_not_enabled_locale_id(self):
+        # The multi-locale build enables en(0)+qps-ploc(7); the disabled-
+        # locale fixture for it must use a different, real, in-range
+        # ExpansionLocaleId (JA=1) that is genuinely not enabled by that
+        # build -- never reusing the single-locale build's own id=7
+        # (which IS enabled on the multi-locale build, so it would no
+        # longer classify DISABLED_LOCALE there).
+        match = re.search(
+            r"\$\(MODERN_LOCALE_FIXTURE_DIR\)/disabled_on_multi\.sav:.*?"
+            r"--disabled-locale-id\s+(\d+)",
+            self.MODERN_MK, re.DOTALL,
+        )
+        self.assertIsNotNone(match, "disabled_on_multi.sav fixture rule not found in modern.mk")
+        self.assertEqual(
+            match.group(1), "1",
+            "disabled_on_multi.sav must use --disabled-locale-id 1 (JA), "
+            "distinct from disabled_on_default.sav's id 7 (qps-ploc, which "
+            "IS enabled on the multi-locale build)",
+        )
+
+    def test_multi_check_target_wires_all_8_pairs_unconditionally(self):
+        target_start = self.MODERN_MK.index(
+            "expansion-modern-localization-runtime-multi-check:"
+        )
+        # Bound the search to this target's own recipe body (up to the
+        # next top-level target definition) so a match elsewhere in the
+        # file can never produce a false pass.
+        next_target = re.search(
+            r"\n\S[^\n:]*:", self.MODERN_MK[target_start + 1:]
+        )
+        target_end = (
+            target_start + 1 + next_target.start() if next_target else len(self.MODERN_MK)
+        )
+        target_body = self.MODERN_MK[target_start:target_end]
+
+        debug_guard_idx = target_body.find("ifeq ($(MODERN_CONFIG),debug)")
+        self.assertNotEqual(
+            debug_guard_idx, -1,
+            "expansion-modern-localization-runtime-multi-check must still "
+            "guard its debug-only scenarios (locale-selector-multi-switch-qps "
+            "etc.) behind ifeq ($(MODERN_CONFIG),debug)",
+        )
+
+        for state in REPAIR_STATES:
+            scenario_ref = f"locale-repair-{state}-multi-modern-$(MODERN_CONFIG).json"
+            fixture_ref = f"$(MODERN_LOCALE_FIXTURE_DIR)/{REPAIR_FIXTURE_FOR_STATE[state]}"
+            self.assertIn(
+                scenario_ref, target_body,
+                f"expansion-modern-localization-runtime-multi-check must "
+                f"invoke {scenario_ref} for both configs (via $(MODERN_CONFIG))",
+            )
+            self.assertIn(
+                fixture_ref, target_body,
+                f"expansion-modern-localization-runtime-multi-check must "
+                f"feed {state} its own fixture ({fixture_ref})",
+            )
+            scenario_idx = target_body.index(scenario_ref)
+            self.assertLess(
+                scenario_idx, debug_guard_idx,
+                f"{scenario_ref} must be wired OUTSIDE the "
+                "ifeq ($(MODERN_CONFIG),debug) guard -- the repair matrix is "
+                "mandatory for every config, never debug-only/skipped",
             )
 
 

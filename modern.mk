@@ -2861,6 +2861,20 @@ $(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav: $(MODERN_LOCALE_FIXTURE_DE
 	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
 		--disabled-locale-id 7
 
+# Issue #18 sprint 7: a second disabled-locale fixture for the multi-locale
+# (en, qps-ploc) repair-matrix scenarios below. disabled_on_default.sav
+# above uses localeId=7 (qps-ploc) because the *single*-locale default
+# build only enables en, making qps-ploc the supported-but-not-enabled id
+# for THAT build; the multi-locale build enables both en and qps-ploc, so
+# qps-ploc is no longer disabled there -- this fixture instead uses
+# localeId=1 (EXPANSION_LOCALE_JA, include/expansion_locale.h), a real,
+# in-range, ExpansionLocale_IsSupported()-true id that is genuinely not
+# enabled by EXPANSION_ENABLED_LOCALES=en,qps-ploc.
+$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_multi.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
+		--disabled-locale-id 1
+
 # Issue #18 sprint 6 (runtime blocker fix): a real "already
 # first-start-selected + persisted" fixture -- state VALID, locale en --
 # needed by locale-settings-real-navigation-multi-modern-debug once blank
@@ -2950,6 +2964,9 @@ MODERN_LOCALE_MULTI_ROM := $(MODERN_LOCALE_MULTI_BUILD_ROOT)/$(MODERN_CONFIG)/$(
 expansion-modern-localization-runtime-multi-check: expansion-modern-boot-preflight \
 		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
 		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_multi.sav \
 		$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav
 	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) \
 		MODERN_BUILD_ROOT=$(MODERN_LOCALE_MULTI_BUILD_ROOT) \
@@ -2958,6 +2975,34 @@ expansion-modern-localization-runtime-multi-check: expansion-modern-boot-preflig
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-selector-multi-modern-$(MODERN_CONFIG).json" \
 		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-selector-multi-modern-$(MODERN_CONFIG).json" \
 		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+	# Issue #18 sprint 7: real multi-locale prompt/choose-default REPAIR
+	# matrix (4 ExpansionUserPrefs sub-states that require a re-prompt x
+	# both configs = 8 real scenarios, mandatory for every config -- never
+	# gated to debug-only, unlike the single-locale AUTO_SELECT-collapsed
+	# no-wipe checks in expansion-modern-localization-runtime-prefs-check
+	# below, which this section does not replace/skip). Each scenario
+	# shows the real blocking selector (never AUTO_SELECT -- this build
+	# enables 2 locales), navigates it, explicitly confirms the English
+	# row, proves the whole-SRAM-minus-prefs-record hash is unchanged, and
+	# proves persistence + re-prompt suppression across a real
+	# A+B+SELECT+START soft reset. See tools/gba-playtest/scenarios/
+	# locale-repair-*-multi-modern-*.json and docs/localization.md.
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-unset-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-unset-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-corrupt-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-corrupt-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-unknown-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-unknown-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-disabled-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-disabled-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_multi.sav" --policy behavior
 ifeq ($(MODERN_CONFIG),debug)
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-selector-multi-switch-qps-modern-debug.json" \
@@ -2975,12 +3020,20 @@ endif
 	@printf 'Modern ROM localization-runtime multi-check passed (config=%s): %s\n' '$(MODERN_CONFIG)' "$(MODERN_LOCALE_MULTI_ROM)"
 
 # 4. Corrupt/unknown-locale/disabled-locale ExpansionUserPrefs sub-states
-#    all re-prompt (collapsing to AUTO_SELECT on this single-locale build)
-#    and provably never wipe SRAM outside (a) the 12-byte prefs record
-#    itself and (b) the pre-existing, locale-unrelated vanilla
-#    SoundRoomSaveData struct (include/bmsave.h) that ordinary boot-time
-#    bookkeeping legitimately rewrites on every boot regardless of prefs
-#    state (see reports/issue18_localization_closure.md).
+#    all re-prompt (collapsing to AUTO_SELECT on this single-locale
+#    default build, debug-only boot-timing calibration) and provably
+#    never wipe SRAM outside (a) the 12-byte prefs record itself and (b)
+#    the pre-existing, locale-unrelated vanilla SoundRoomSaveData struct
+#    (include/bmsave.h) that ordinary boot-time bookkeeping legitimately
+#    rewrites on every boot regardless of prefs state (see reports/
+#    issue18_localization_closure.md). Issue #18 sprint 7: this single-
+#    locale/AUTO_SELECT check is a real, honestly-named scenario in its
+#    own right (a single-enabled-locale build genuinely collapses to
+#    AUTO_SELECT -- that is not a gap), but it is NOT a substitute for the
+#    real multi-locale PROMPT/choose-default repair matrix -- see the 8
+#    locale-repair-*-multi-modern-{debug,release}.json scenarios wired
+#    into expansion-modern-localization-runtime-multi-check above, which
+#    close that previously-missing coverage for both configs.
 expansion-modern-localization-runtime-prefs-check: expansion-modern-boot-preflight \
 		expansion-modern-rom \
 		$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav \
