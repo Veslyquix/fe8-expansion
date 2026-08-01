@@ -623,13 +623,19 @@ mechanically BLOCKED; this section is evidence, not a closure claim**:
    `"gitlink"` exclusion (`mgfembp`) is unaffected and still requires
    and strictly cross-checks its own exact, immutable OID exactly as
    before -- only the one, single, curated, self-referential path's OID
-   semantics changed. New tests cover: injecting an arbitrary second
-   blob under this kind, a bogus/stale/non-null `oid` on the legitimate
-   curated entry, an extra uncurated row alongside the legitimate one, a
-   missing curated exclusion (the path silently resurfacing as neither
-   included nor excluded), and an actual content change to
-   `code.json`'s own live blob -- via both `test_tree_coverage.py` and a
-   dedicated `Makefile`-driven end-to-end reproduction.
+   semantics changed. `test_tree_coverage.py`'s
+   `ArbitraryPathSelfReferentialEvidenceExclusionRejectionTests` covers, at
+   both the `load_exclusions` JSON-schema-gate layer and the
+   `check_partition` validator-invariant layer: injecting an arbitrary
+   second blob under this kind -- using two different real tracked paths as
+   the example across the two layers (`src/main.c` and the repository's own
+   top-level `Makefile`) to show the rejection is path-agnostic, not a
+   special case keyed to one hard-coded name -- a bogus/stale/non-null `oid`
+   on the legitimate curated entry, an extra uncurated row alongside the
+   legitimate one, a missing curated exclusion (the path silently
+   resurfacing as neither included nor excluded), and an actual content
+   change to `code.json`'s own live blob that a stale `oid` could otherwise
+   have masked.
 3. **R3 -- submodule future rebuild-eligibility fails closed on origin
    URL and command failure, not just on the checks it already
    performed.** `evaluate_rebuild_eligibility()`'s prior URL check only
