@@ -75,6 +75,26 @@ class GenerateEntriesTests(unittest.TestCase):
             self.assertEqual(document["schema_version"], al.SCHEMA_VERSION)
             self.assertEqual(document["generated_from_sha"], sha)
             self.assertEqual(document["paths"], ["f.txt"])
+            self.assertEqual(document["modes"], {"f.txt": "100644"})
+
+    def test_excluded_blob_paths_removed_from_generated_entries_and_modes(self):
+        """issue #9 guardian-correction remediation (D2): an ordinary
+        tracked blob explicitly declared its own non-gitlink export
+        exclusion (e.g. the self-referential-evidence provenance
+        manifest) is removed from the generated allowlist exactly like a
+        gitlink already is."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "included.txt").write_text("x")
+            (root / "excluded.txt").write_text("y")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            entries = al.generate_entries(root, sha, excluded_blob_paths=["excluded.txt"])
+            self.assertEqual(entries, ["included.txt"])
+            modes = al.generate_modes(root, sha, excluded_blob_paths=["excluded.txt"])
+            self.assertEqual(modes, {"included.txt": "100644"})
 
 
 class CheckAllowlistCompletenessTests(unittest.TestCase):
@@ -166,6 +186,132 @@ class CheckAllowlistCompletenessGitlinkExclusionTests(unittest.TestCase):
             missing, stale = al.check_allowlist_completeness(root, ["regular.txt", "a-submodule"], sha)
             self.assertEqual(missing, [])
             self.assertEqual(stale, ["a-submodule"])
+
+
+class ModeBindingTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D4): an included path's
+    exact Git mode is bound alongside its mere path string, and cross-
+    checked against the live tree -- a committed executable-bit/mode
+    change must make this canonical data stale/fail until regenerated."""
+
+    def _commit(self, root: Path, mode_str: str) -> str:
+        _init_repo(root)
+        (root / "f.txt").write_text("x")
+        _git("add", "-A", cwd=root)
+        if mode_str == "100755":
+            (root / "f.txt").chmod(0o755)
+            _git("update-index", "--chmod=+x", "f.txt", cwd=root)
+        _git("commit", "-q", "-m", "init", cwd=root)
+        return gs.resolve_sha(root, "HEAD")
+
+    def test_load_allowlist_modes_returns_none_when_key_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(json.dumps({"paths": ["a.txt"]}), encoding="utf-8")
+            self.assertIsNone(al.load_allowlist_modes(path))
+
+    def test_load_allowlist_modes_rejects_unsupported_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(
+                json.dumps({"paths": ["a.txt"], "modes": {"a.txt": "040000"}}), encoding="utf-8"
+            )
+            with self.assertRaises(al.AllowlistError):
+                al.load_allowlist_modes(path)
+
+    def test_load_allowlist_modes_accepts_every_valid_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(json.dumps({
+                "paths": ["a.txt", "b.sh", "c.lnk"],
+                "modes": {"a.txt": "100644", "b.sh": "100755", "c.lnk": "120000"},
+            }), encoding="utf-8")
+            modes = al.load_allowlist_modes(path)
+            self.assertEqual(modes, {"a.txt": "100644", "b.sh": "100755", "c.lnk": "120000"})
+
+    def test_mode_bijection_detects_missing_and_extra(self):
+        missing, extra = al.check_mode_bijection(["a.txt", "b.txt"], {"a.txt": "100644", "c.txt": "100644"})
+        self.assertEqual(missing, ["b.txt"])
+        self.assertEqual(extra, ["c.txt"])
+
+    def test_mode_identity_matches_for_a_regular_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._commit(root, "100644")
+            reasons = al.check_mode_identity(root, {"f.txt": "100644"}, sha)
+            self.assertEqual(reasons, [])
+
+    def test_committed_executable_bit_change_makes_mode_data_stale(self):
+        """The literal issue #9 D4 requirement: a committed chmod
+        (100644 -> 100755, or vice versa) must be detected as stale mode
+        data, not silently ignored."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha1 = self._commit(root, "100644")
+            declared_modes = {"f.txt": "100644"}
+            self.assertEqual(al.check_mode_identity(root, declared_modes, sha1), [])
+
+            (root / "f.txt").chmod(0o755)
+            _git("update-index", "--chmod=+x", "f.txt", cwd=root)
+            _git("commit", "-q", "-am", "chmod +x", cwd=root)
+            sha2 = gs.resolve_sha(root, "HEAD")
+
+            reasons = al.check_mode_identity(root, declared_modes, sha2)
+            self.assertTrue(any("f.txt" in r and "100755" in r for r in reasons), reasons)
+
+    def test_mode_identity_reports_missing_tracked_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._commit(root, "100644")
+            reasons = al.check_mode_identity(root, {"does-not-exist.txt": "100644"}, sha)
+            self.assertTrue(reasons)
+
+    def test_check_end_to_end_detects_stale_mode(self):
+        """Wired end-to-end through al.check(): a committed mode change
+        must surface as an actionable finding, exactly like a content or
+        path change already does."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha1 = self._commit(root, "100644")
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(json.dumps({
+                "paths": ["f.txt"], "modes": {"f.txt": "100644"},
+            }), encoding="utf-8")
+            self.assertEqual(al.check(root, allowlist_path, sha1), [])
+
+            (root / "f.txt").chmod(0o755)
+            _git("update-index", "--chmod=+x", "f.txt", cwd=root)
+            _git("commit", "-q", "-am", "chmod +x", cwd=root)
+            sha2 = gs.resolve_sha(root, "HEAD")
+
+            errors = al.check(root, allowlist_path, sha2)
+            self.assertTrue(any("f.txt" in e for e in errors), errors)
+
+
+class ClosedWorldSymlinkNeverSkippedTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D5): `_present_paths`
+    (formerly `_present_regular_files`, which `continue`d straight past
+    any symlink) must never skip a filesystem entry by kind -- a stray,
+    unlisted symlink at any path is now reported as "missing from
+    allowlist", never silently invisible."""
+
+    def test_stray_symlink_is_reported_missing_from_allowlist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "a.txt").write_text("a")
+            (root / "real.txt").write_text("real")
+            (root / "stray-link.txt").symlink_to("real.txt")
+            missing, unrepresented = al.check_allowlist_completeness_non_git(root, ["a.txt", "real.txt"])
+            self.assertIn("stray-link.txt", missing)
+
+    def test_present_paths_includes_symlinks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "real.txt").write_text("real")
+            (root / "link.txt").symlink_to("real.txt")
+            present = al._present_paths(root)
+            self.assertIn("link.txt", present)
+            self.assertIn("real.txt", present)
 
 
 class CheckFunctionTests(unittest.TestCase):
@@ -380,10 +526,17 @@ class RepositoryStateTests(unittest.TestCase):
     """The real, checked-in docs/release_data/source_allowlist.json must
     be exactly consistent with this repository's own tracked-file set."""
 
+    @staticmethod
+    def _real_excluded_blob_paths():
+        exclusions_path = ROOT / "docs" / "release_data" / "export_exclusions.json"
+        return al._load_non_gitlink_exclusion_paths(exclusions_path)
+
     def test_real_allowlist_is_exact_and_complete_at_head(self):
         allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
         paths = al.load_allowlist_paths(allowlist_path)
-        missing, stale = al.check_allowlist_completeness(ROOT, paths, "HEAD")
+        missing, stale = al.check_allowlist_completeness(
+            ROOT, paths, "HEAD", self._real_excluded_blob_paths()
+        )
         self.assertEqual(missing, [], "tracked file(s) missing an allowlist entry")
         self.assertEqual(stale, [], "stale allowlist entrie(s) for something no longer tracked")
 
@@ -398,11 +551,41 @@ class RepositoryStateTests(unittest.TestCase):
         paths = al.load_allowlist_paths(allowlist_path)
         self.assertNotIn("mgfembp", paths)
 
-    def test_real_allowlist_schema_version_is_3(self):
+    def test_real_allowlist_excludes_self_referential_evidence_code_json(self):
+        """issue #9 guardian-correction remediation (D2): the self-
+        referential-evidence provenance manifest is likewise never an
+        allowlist ("included") entry any more."""
+        allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
+        paths = al.load_allowlist_paths(allowlist_path)
+        self.assertNotIn("docs/release_data/provenance/code.json", paths)
+
+    def test_real_allowlist_schema_version_is_4(self):
         import json
         allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
         document = json.loads(allowlist_path.read_text(encoding="utf-8"))
-        self.assertEqual(document["schema_version"], 3)
+        self.assertEqual(document["schema_version"], 4)
+
+    def test_real_allowlist_modes_are_an_exact_bijection_and_match_head(self):
+        """issue #9 guardian-correction remediation (D4): every real,
+        committed allowlist path has its own recorded Git mode, bound
+        exactly (no gap, no orphan), and cross-checked against the live
+        tree."""
+        allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
+        paths = al.load_allowlist_paths(allowlist_path)
+        modes = al.load_allowlist_modes(allowlist_path)
+        self.assertIsNotNone(modes)
+        mode_missing, mode_extra = al.check_mode_bijection(paths, modes)
+        self.assertEqual(mode_missing, [])
+        self.assertEqual(mode_extra, [])
+        self.assertEqual(al.check_mode_identity(ROOT, modes, "HEAD"), [])
+
+    def test_real_check_end_to_end_is_clean(self):
+        """The full, wired al.check() (allowlist bijection + exclusions +
+        mode bijection/identity) against this repository's own real,
+        committed data must report no findings at all."""
+        allowlist_path = ROOT / "docs" / "release_data" / "source_allowlist.json"
+        exclusions_path = ROOT / "docs" / "release_data" / "export_exclusions.json"
+        self.assertEqual(al.check(ROOT, allowlist_path, "HEAD", exclusions_path), [])
 
 
 if __name__ == "__main__":

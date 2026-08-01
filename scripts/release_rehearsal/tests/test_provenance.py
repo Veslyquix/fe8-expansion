@@ -227,6 +227,25 @@ class FindGhostEntriesTests(unittest.TestCase):
         ghosts = prov.find_ghost_entries(entries, ["src/main.c", "src/lib/helper.c"])
         self.assertEqual(ghosts, ["src"])
 
+    def test_stray_self_entry_for_excluded_code_json_is_a_ghost(self):
+        """issue #9 guardian-correction remediation (D2), the "excluded
+        self-referential evidence path" tamper probe: docs/release_data/
+        provenance/code.json is now an explicit export exclusion (see
+        tree_coverage.py) and is never a required-coverage path -- a
+        stray, leftover self-record for it (e.g. left behind by a
+        generator that was not updated, or hand-added back in) is
+        reported as a ghost, never silently accepted as legitimate
+        coverage just because its path happens to name a real provenance
+        manifest file."""
+        required_paths = ["src/main.c", "mgfembp"]  # deliberately excludes code.json's own path
+        entries = [
+            _base_entry(path="src/main.c"),
+            _base_entry(path="mgfembp", category="submodule", pinned_commit="c" * 40),
+            _base_entry(path="docs/release_data/provenance/code.json"),
+        ]
+        ghosts = prov.find_ghost_entries(entries, required_paths)
+        self.assertIn("docs/release_data/provenance/code.json", ghosts)
+
 
 class FindDuplicateEntryPathsTests(unittest.TestCase):
     def test_exact_duplicate_path_detected(self):
@@ -604,7 +623,16 @@ class GenerateExactEntriesTests(unittest.TestCase):
         exclusions = json.loads(
             (ROOT / "docs" / "release_data" / "export_exclusions.json").read_text(encoding="utf-8")
         )["exclusions"]
-        exclusion_paths = [entry["path"] for entry in exclusions]
+        # issue #9 guardian-correction remediation (D2): only a
+        # *gitlink*-kind exclusion (mgfembp) is ever fanned into
+        # generation/required-coverage -- a `self_referential_evidence`-
+        # kind exclusion (docs/release_data/provenance/code.json) is
+        # deliberately never assigned any provenance category at all
+        # (see PROVENANCE_ROOT_SEED/`_assign_root`'s own category-vs-
+        # declared-set cross-check), exactly mirroring the real
+        # `provenance.py generate`/`check` CLI's own `_load_exclusion_
+        # paths` filtering.
+        exclusion_paths = [entry["path"] for entry in exclusions if entry["kind"] == "gitlink"]
         sha = gs.resolve_sha(ROOT, "HEAD")
         # A small, fast subset (the full ~9000-path generation is exercised
         # by RepositoryStateTests against the actual committed data below;
@@ -717,13 +745,21 @@ class CheckBlobIdentityTests(unittest.TestCase):
             entries = [_base_entry(path="main.c", oid="a" * 40, sha256="b" * 64)]
             self.assertEqual(prov.check_blob_identity(entries, root, "HEAD"), [])
 
-    def test_self_referential_provenance_files_are_exempted(self):
-        """The three provenance-manifest files this module itself writes
-        are structurally self-referential (their own committed oid/
-        sha256 necessarily describes content *before* the very write
-        that embeds them -- there is no general fixed point for that) --
-        `check_blob_identity` must never flag them even with an obviously
-        wrong oid/sha256."""
+    def test_no_path_is_exempted_from_blob_identity_any_more(self):
+        """issue #9 guardian-correction remediation (D2): a fresh,
+        independent review found the previous version of this module
+        exempted ALL THREE provenance-manifest files (code.json,
+        assets.json, submodules.json) from `check_blob_identity`, even
+        though only code.json's *own* self-record is genuinely
+        structurally self-referential (a record about code.json's own
+        content would have to live inside code.json itself). code.json
+        is now an explicit export exclusion (see
+        `tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE`) and is never
+        generated with a self-record at all any more -- so there is
+        nothing left to exempt here: an obviously wrong oid/sha256 for
+        *any* path, including one claiming to describe
+        docs/release_data/provenance/{code,assets,submodules}.json
+        itself, is now flagged with no exception whatsoever."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             root_dir = root / "docs" / "release_data" / "provenance"
@@ -738,7 +774,67 @@ class CheckBlobIdentityTests(unittest.TestCase):
             entries = [_base_entry(
                 path="docs/release_data/provenance/code.json", oid="0" * 40, sha256="0" * 64,
             )]
-            self.assertEqual(prov.check_blob_identity(entries, root, sha), [])
+            reasons = prov.check_blob_identity(entries, root, sha)
+            self.assertTrue(reasons)
+            self.assertTrue(any("does not match" in r for r in reasons), reasons)
+
+    def test_assets_and_submodules_manifest_tampering_is_detected(self):
+        """The literal issue #9 D2 requirement: assets.json and
+        submodules.json (unlike code.json -- see above) must be live-
+        bound to their immutable HEAD oid/sha256 with no exemption at
+        all; a committed change to either file's content must invalidate
+        its own provenance record (which lives inside code.json, a
+        *different* tracked file -- never itself) exactly like any other
+        ordinary tracked blob, and a correct, freshly-derived record for
+        either must still pass cleanly."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            provenance_dir = root / "docs" / "release_data" / "provenance"
+            provenance_dir.mkdir(parents=True)
+            (provenance_dir / "assets.json").write_text("[]\n")
+            (provenance_dir / "submodules.json").write_text("[]\n")
+            _git("init", "-q", cwd=root)
+            _git("config", "user.email", "t@example.com", cwd=root)
+            _git("config", "user.name", "Tester", cwd=root)
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+
+            for path in (
+                "docs/release_data/provenance/assets.json",
+                "docs/release_data/provenance/submodules.json",
+            ):
+                oid, sha256_value = self._real_identity(root, sha, path)
+                good_entries = [_base_entry(path=path, oid=oid, sha256=sha256_value)]
+                self.assertEqual(prov.check_blob_identity(good_entries, root, sha), [])
+
+                tampered_entries = [_base_entry(path=path, oid="0" * 40, sha256="0" * 64)]
+                reasons = prov.check_blob_identity(tampered_entries, root, sha)
+                self.assertTrue(reasons, f"{path} tampering must be detected, never exempted")
+                self.assertTrue(
+                    any(path in r and "does not match" in r for r in reasons), reasons
+                )
+
+    def test_changed_same_path_blob_invalidates_its_own_record(self):
+        """A committed content change at the exact same tracked path
+        (never a rename/new path) must invalidate its old provenance
+        record -- the direct, minimal reproduction of the literal issue
+        #9 mandatory correction #3 requirement, kept here alongside the
+        D2 assets/submodules/code-specific probes above for one
+        complete, self-contained tamper-probe suite."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha1 = self._init_repo_with_file(root, b"original content")
+            oid1, sha256_1 = self._real_identity(root, sha1, "main.c")
+            stale_entries = [_base_entry(path="main.c", oid=oid1, sha256=sha256_1)]
+            self.assertEqual(prov.check_blob_identity(stale_entries, root, sha1), [])
+
+            (root / "main.c").write_bytes(b"tampered content, same path")
+            _git("commit", "-q", "-am", "tamper", cwd=root)
+            sha2 = gs.resolve_sha(root, "HEAD")
+
+            reasons = prov.check_blob_identity(stale_entries, root, sha2)
+            self.assertTrue(any("main.c" in r and "does not match" in r for r in reasons), reasons)
 
     def test_real_repo_blob_identity_matches(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
@@ -754,13 +850,24 @@ class RepositoryStateTests(unittest.TestCase):
 
     @staticmethod
     def _combined_required_paths():
+        """issue #9 guardian-correction remediation (D2): the real,
+        production required-coverage set is the included allowlist plus
+        only the *gitlink*-kind export exclusions (today, just mgfembp)
+        -- never a `KIND_SELF_REFERENTIAL_EVIDENCE` exclusion (today,
+        docs/release_data/provenance/code.json), which deliberately
+        never receives its own provenance-manifest entry at all (see
+        `scripts/release_rehearsal/manifest.py`'s `check_provenance`,
+        which computes this exact same filtered set via
+        `tc.load_exclusion_paths(..., kinds=tc.
+        PROVENANCE_REQUIRED_EXCLUSION_KINDS)`)."""
         allowlist = json.loads(
             (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
         )["paths"]
         exclusions = json.loads(
             (ROOT / "docs" / "release_data" / "export_exclusions.json").read_text(encoding="utf-8")
         )["exclusions"]
-        return sorted(set(allowlist) | {entry["path"] for entry in exclusions})
+        gitlink_exclusion_paths = {entry["path"] for entry in exclusions if entry["kind"] == "gitlink"}
+        return sorted(set(allowlist) | gitlink_exclusion_paths)
 
     def test_real_manifests_are_blocked(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
@@ -829,6 +936,49 @@ class RepositoryStateTests(unittest.TestCase):
     def test_real_gitlink_pin_matches_the_actual_tree(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
         self.assertEqual(prov.check_gitlink_pins(entries, ROOT), [])
+
+    def test_code_json_itself_has_no_provenance_entry(self):
+        """issue #9 guardian-correction remediation (D2): the real,
+        committed docs/release_data/provenance/code.json must never
+        contain its own self-record any more -- it is an explicit export
+        exclusion (docs/release_data/export_exclusions.json), not an
+        included allowlist member, and never requires (or receives) its
+        own oid/sha256-bound provenance entry."""
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        self_paths = [
+            entry["path"] for entry in entries
+            if entry["path"] == "docs/release_data/provenance/code.json"
+        ]
+        self.assertEqual(self_paths, [])
+
+    def test_assets_and_submodules_json_still_have_exact_provenance_entries(self):
+        """The other half of the D2 fix: assets.json and submodules.json
+        remain fully *included* allowlist members with their own real,
+        live-bound oid/sha256 provenance entries (recorded inside
+        code.json) -- only code.json itself was ever exempted/excluded."""
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        by_path = {entry["path"]: entry for entry in entries}
+        for path in (
+            "docs/release_data/provenance/assets.json",
+            "docs/release_data/provenance/submodules.json",
+        ):
+            self.assertIn(path, by_path)
+            self.assertEqual(by_path[path]["category"], "code")
+            self.assertRegex(by_path[path]["oid"], r"^[0-9a-f]{40}$")
+            self.assertRegex(by_path[path]["sha256"], r"^[0-9a-f]{64}$")
+
+    def test_code_json_is_an_explicit_self_referential_evidence_exclusion(self):
+        entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")
+        allowlist = json.loads(
+            (ROOT / "docs" / "release_data" / "source_allowlist.json").read_text(encoding="utf-8")
+        )["paths"]
+        exclusions = json.loads(
+            (ROOT / "docs" / "release_data" / "export_exclusions.json").read_text(encoding="utf-8")
+        )["exclusions"]
+        self.assertNotIn("docs/release_data/provenance/code.json", allowlist)
+        matches = [e for e in exclusions if e["path"] == "docs/release_data/provenance/code.json"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["kind"], "self_referential_evidence")
 
     def test_real_blob_identity_matches_the_actual_tree(self):
         entries = prov.load_all(ROOT / "docs" / "release_data" / "provenance")

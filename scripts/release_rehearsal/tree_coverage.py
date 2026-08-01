@@ -59,13 +59,73 @@ SCHEMA_VERSION = 1
 DEFAULT_ALLOWLIST_PATH = Path("docs/release_data/source_allowlist.json")
 DEFAULT_EXCLUSIONS_PATH = Path("docs/release_data/export_exclusions.json")
 
-# The only export-exclusion "kind" this module currently models. Issue #9
-# mandatory correction #2 is scoped to the one real contradiction this
-# repository actually has (the `mgfembp` gitlink); a brand-new exclusion
-# kind is deliberately not pre-emptively invented here -- fail closed
-# (`ExclusionError`) rather than silently accept an unrecognized kind a
-# human has not actually reviewed the meaning of yet.
-VALID_EXCLUSION_KINDS = ("gitlink",)
+# The two export-exclusion "kind"s this module currently models. A
+# brand-new exclusion kind is deliberately not pre-emptively invented
+# here -- fail closed (`TreeCoverageError`) rather than silently accept
+# an unrecognized kind a human has not actually reviewed the meaning of
+# yet.
+#
+# * `KIND_GITLINK` -- a real Git gitlink (submodule mountpoint, mode
+#   `160000`) with no blob content in this repository's own tree at all;
+#   excluded because its content is unresolved/unapproved third-party
+#   content (see `docs/release_data/provenance/submodules.json`). A
+#   gitlink exclusion still requires its own dedicated legal-review
+#   provenance record elsewhere (its content is a separate, independent
+#   fact from this structural tree-partition decision) -- see
+#   `PROVENANCE_REQUIRED_EXCLUSION_KINDS` below.
+# * `KIND_SELF_REFERENTIAL_EVIDENCE` -- an ordinary tracked blob that is
+#   deliberately excluded from the archive because it is itself part of
+#   the provenance/evidence system and cannot record a live-content-
+#   bound identity fact about itself without an unsolvable circular
+#   dependency (a "hash quine": the file's own content would need to
+#   embed a hash of that same, not-yet-finalized content). Unlike a
+#   gitlink exclusion, a self-referential-evidence exclusion's own
+#   `reason` field here **is** its complete, sufficient, externally-owned
+#   evidence record -- it never requires (and must never receive) a
+#   *second*, separate provenance-manifest entry, which would either
+#   reproduce the same cycle (if recorded inside the excluded file
+#   itself) or merely relocate an empty formality to a different file
+#   with no reviewable content of its own. See
+#   `SELF_REFERENTIAL_EVIDENCE_PATHS` below for the exact, minimal,
+#   human-curated set of paths this applies to.
+KIND_GITLINK = "gitlink"
+KIND_SELF_REFERENTIAL_EVIDENCE = "self_referential_evidence"
+VALID_EXCLUSION_KINDS = (KIND_GITLINK, KIND_SELF_REFERENTIAL_EVIDENCE)
+
+# Exclusion kinds whose path still requires its own, separate, dedicated
+# provenance-manifest legal-review record (i.e. is still part of
+# `scripts/release_rehearsal/provenance.py`'s required-coverage set) --
+# used by `scripts/release_rehearsal/manifest.py`'s `check_provenance` to
+# compute the correct combined-required-paths set for provenance
+# coverage, which is deliberately **narrower** than the full tree-
+# partition's included+excluded set below (a `KIND_SELF_REFERENTIAL_
+# EVIDENCE` path is excluded from the archive, but -- unlike a gitlink --
+# never requires or receives its own provenance-manifest entry; see the
+# docstring above).
+PROVENANCE_REQUIRED_EXCLUSION_KINDS = (KIND_GITLINK,)
+
+# The exact, minimal, human-curated set of paths this repository has
+# reviewed and determined are genuinely, structurally self-referential
+# (see `KIND_SELF_REFERENTIAL_EVIDENCE` above) -- never mechanically
+# derived (unlike gitlinks, which `generate_exclusions_document` finds
+# directly from the live tree), since "is this file structurally self-
+# referential" is a human documentation/design decision, not something
+# Git's own tree data encodes. Currently exactly one path:
+# `docs/release_data/provenance/code.json` is `scripts/release_rehearsal/
+# provenance.py`'s own generated "code"-category manifest, which is what
+# *every other* included "code"/"asset" blob's own oid/sha256 provenance
+# record actually lives inside (including the record for `assets.json`
+# and `submodules.json` themselves) -- a record describing code.json
+# *inside* code.json would need to embed a hash of code.json's own
+# about-to-be-written content, which is not achievable by ordinary
+# regeneration (see the module-level docstring's "hash quine" note).
+# `assets.json` and `submodules.json` are themselves ordinary, fully
+# *included* blobs (their own oid/sha256 identity lives in code.json, not
+# in themselves) -- they carry no such cycle and are never exempted from
+# `provenance.check_blob_identity`.
+SELF_REFERENTIAL_EVIDENCE_PATHS: FrozenSet[str] = frozenset({
+    "docs/release_data/provenance/code.json",
+})
 
 # A small, human-curated seed for `generate_exclusions_document`: the
 # factual reason recorded for each known gitlink path. Mirrors
@@ -73,6 +133,40 @@ VALID_EXCLUSION_KINDS = ("gitlink",)
 # path with no seed entry here is an actionable generation-time error
 # (never a silently-invented reason), exactly like a new allowlisted path
 # matching no provenance root is.
+_SELF_REFERENTIAL_EVIDENCE_REASON_SEED: Dict[str, str] = {
+    "docs/release_data/provenance/code.json": (
+        "scripts/release_rehearsal/provenance.py's own generated 'code'-"
+        "category provenance manifest: every OTHER included blob's exact "
+        "oid/sha256 identity record (including the records describing "
+        "docs/release_data/provenance/assets.json and docs/release_data/"
+        "provenance/submodules.json themselves) lives inside this exact "
+        "file. A record describing this file's own oid/sha256, written "
+        "inside this same file, would necessarily describe this file's "
+        "content from *before* the very write that embeds that record -- "
+        "there is no ordinary regeneration process that reaches a fixed "
+        "point for a file recording a live hash of itself (a 'hash "
+        "quine'); searching for one would be absurd for a human-reviewed "
+        "provenance ledger. This file is therefore excluded from the "
+        "source release archive entirely, so it never requires -- and "
+        "must never receive -- its own included-blob oid/sha256 "
+        "provenance record. docs/release_data/provenance/assets.json and "
+        "docs/release_data/provenance/submodules.json remain fully "
+        "*included* (their own oid/sha256 identity, recorded inside this "
+        "excluded file, is cross-checked with no exemption at all) -- "
+        "only this one genuinely self-referential manifest is excluded. "
+        "This exclusion record (kind, mode, oid, and this reason) is "
+        "this path's own complete, sufficient, externally-owned evidence "
+        "-- authored and reviewed here, in export_exclusions.json, "
+        "exactly like every fact this repository records about the "
+        "excluded mgfembp gitlink lives in provenance/submodules.json "
+        "rather than inside mgfembp itself. This is a structural/self-"
+        "reference fix, not a legal determination: like every other "
+        "repository-authored file, this content has no human legal/"
+        "provenance review recorded, and this exclusion grants no "
+        "redistribution approval."
+    ),
+}
+
 _EXCLUSION_REASON_SEED: Dict[str, str] = {
     "mgfembp": (
         "Git submodule mountpoint (gitlink) for StanHash/mgfembp (FE6 multiboot "
@@ -128,10 +222,15 @@ def load_exclusions(path: Path) -> List[ExclusionEntry]:
             raise TreeCoverageError(
                 f"{path}[{index}] ({raw['path']}): kind {raw['kind']!r} not in {VALID_EXCLUSION_KINDS}"
             )
-        if raw["kind"] == "gitlink" and raw["mode"] != gs.MODE_GITLINK:
+        if raw["kind"] == KIND_GITLINK and raw["mode"] != gs.MODE_GITLINK:
             raise TreeCoverageError(
                 f"{path}[{index}] ({raw['path']}): kind 'gitlink' must record mode {gs.MODE_GITLINK!r}, "
                 f"found {raw['mode']!r}"
+            )
+        if raw["kind"] == KIND_SELF_REFERENTIAL_EVIDENCE and raw["mode"] not in gs.SAFE_BLOB_MODES:
+            raise TreeCoverageError(
+                f"{path}[{index}] ({raw['path']}): kind {KIND_SELF_REFERENTIAL_EVIDENCE!r} must "
+                f"record a safe blob mode {gs.SAFE_BLOB_MODES!r}, found {raw['mode']!r}"
             )
         if not isinstance(raw["oid"], str) or len(raw["oid"]) != 40 or raw["oid"].lower() != raw["oid"]:
             raise TreeCoverageError(
@@ -144,20 +243,41 @@ def load_exclusions(path: Path) -> List[ExclusionEntry]:
     return entries
 
 
-def load_exclusion_paths(path: Path) -> List[str]:
-    return sorted(entry.path for entry in load_exclusions(path))
+def load_exclusion_paths(path: Path, kinds: Optional[Iterable[str]] = None) -> List[str]:
+    """Every exact exclusion path, optionally filtered to only the given
+    `kinds` (default `None` means every kind). Used by
+    `scripts/release_rehearsal/manifest.py`'s `check_provenance` with
+    `kinds=PROVENANCE_REQUIRED_EXCLUSION_KINDS` to compute the narrower
+    "still needs its own separate provenance-manifest record" path set,
+    which deliberately excludes a `KIND_SELF_REFERENTIAL_EVIDENCE` path
+    (see that constant's docstring above) -- distinct from this tree-
+    coverage module's own, broader included+excluded partition (`check_
+    partition`/`check_non_git_tree` below), which always accounts for
+    every exclusion kind."""
+    entries = load_exclusions(path)
+    if kinds is not None:
+        kind_set = set(kinds)
+        entries = [entry for entry in entries if entry.kind in kind_set]
+    return sorted(entry.path for entry in entries)
 
 
 def generate_exclusions_document(repo_root: Path, target_sha: str) -> Dict:
     """Deterministically regenerates the export-exclusions document from
     the immutable tree at `target_sha`: every gitlink entry becomes one
-    exact exclusion row, with its `mode`/`oid` read directly from Git's
-    own tree and its `reason` drawn from the small, human-curated
-    `_EXCLUSION_REASON_SEED`. A gitlink path with no seed entry raises
-    `TreeCoverageError` -- this generator never invents a reason for a
-    submodule/gitlink a human has not actually documented yet."""
+    exact `KIND_GITLINK` exclusion row (mechanically discovered from the
+    live tree), and every path in the small, human-curated
+    `SELF_REFERENTIAL_EVIDENCE_PATHS` becomes one exact `KIND_SELF_
+    REFERENTIAL_EVIDENCE` exclusion row (never mechanically discovered --
+    see that constant's own docstring), each with its `mode`/`oid` read
+    directly from Git's own tree and its `reason` drawn from the
+    matching small, human-curated reason-seed dict. A gitlink path with
+    no seed entry, or a `SELF_REFERENTIAL_EVIDENCE_PATHS` path that is
+    not actually a live safe blob at `target_sha`, raises
+    `TreeCoverageError` -- this generator never invents a reason, nor
+    silently drops a path that no longer resolves, for either kind."""
     entries = []
-    for entry in gs.list_tree(repo_root, target_sha):
+    tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
+    for entry in tree.values():
         if not entry.is_gitlink:
             continue
         reason = _EXCLUSION_REASON_SEED.get(entry.path)
@@ -169,18 +289,55 @@ def generate_exclusions_document(repo_root: Path, target_sha: str) -> Dict:
             )
         entries.append({
             "path": entry.path,
-            "kind": "gitlink",
+            "kind": KIND_GITLINK,
             "mode": entry.mode,
             "oid": entry.object_id,
+            "reason": reason,
+        })
+    for path in sorted(SELF_REFERENTIAL_EVIDENCE_PATHS):
+        tree_entry = tree.get(path)
+        if tree_entry is None:
+            # This exact repository-specific path simply does not exist
+            # in *this* tree at all (e.g. a generic/synthetic fixture
+            # unrelated to this repository's own real layout, or -- in
+            # the real repository -- a path not yet created at some
+            # historical `target_sha`). Never an error on its own: this
+            # generator is reusable against any tree, and the always-run
+            # validation path (`check_partition`/`check_non_git_tree`,
+            # which reads the *already-committed* export-exclusions file
+            # directly rather than calling this generator) is what
+            # actually catches a genuine "this got renamed/deleted after
+            # being committed as an exclusion" regression (reported as
+            # `stale_excluded`) -- this generator only ever silently
+            # omits an inapplicable path, it never fabricates one.
+            continue
+        if not tree_entry.is_safe_blob:
+            raise TreeCoverageError(
+                f"generate: {path!r} is listed in SELF_REFERENTIAL_EVIDENCE_PATHS but is not a "
+                f"live safe blob in the tree at {target_sha!r} (e.g. it is now a gitlink/symlink) "
+                "-- a human must resolve this before this document can be regenerated"
+            )
+        reason = _SELF_REFERENTIAL_EVIDENCE_REASON_SEED.get(path)
+        if reason is None:
+            raise TreeCoverageError(
+                f"generate: {path!r} is listed in SELF_REFERENTIAL_EVIDENCE_PATHS but has no "
+                "curated reason in _SELF_REFERENTIAL_EVIDENCE_REASON_SEED"
+            )
+        entries.append({
+            "path": path,
+            "kind": KIND_SELF_REFERENTIAL_EVIDENCE,
+            "mode": tree_entry.mode,
+            "oid": tree_entry.object_id,
             "reason": reason,
         })
     entries.sort(key=lambda entry: entry["path"])
     if not entries:
         raise TreeCoverageError(
-            f"generate: no gitlink entries found at {target_sha!r} -- an export-exclusions "
+            f"generate: no exclusion entries found at {target_sha!r} -- an export-exclusions "
             "document with zero entries is not a well-formed schema (see load_exclusions); "
-            "if this repository genuinely has no more gitlinks, the schema/caller contract "
-            "itself needs a deliberate, reviewed change, not a silently-empty file"
+            "if this repository genuinely has no more gitlinks or self-referential-evidence "
+            "paths, the schema/caller contract itself needs a deliberate, reviewed change, "
+            "not a silently-empty file"
         )
     return {
         "_comment": (
@@ -268,10 +425,13 @@ def check_partition(
     account for it *exactly* -- disjointly. Every tracked path in the
     live tree must be in exactly one of the two sets; every entry in
     either checked-in set must still correspond to a live tracked path of
-    the expected kind (blob for included, gitlink for excluded, with the
-    excluded entry's own recorded mode/oid matching the live tree's
-    exactly -- a changed/stale gitlink pin is reported, never silently
-    trusted)."""
+    the expected kind (a `KIND_GITLINK` exclusion must be a live gitlink;
+    a `KIND_SELF_REFERENTIAL_EVIDENCE` -- or any other future non-gitlink
+    -- exclusion must be a live safe blob; every other tracked blob must
+    be included), with the excluded entry's own recorded mode/oid
+    matching the live tree's exactly -- a changed/stale pin, or a path
+    whose live kind no longer matches its exclusion's own declared kind,
+    is reported, never silently trusted."""
     tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
     all_paths = set(tree)
     blob_paths = {path for path, entry in tree.items() if not entry.is_gitlink}
@@ -280,20 +440,72 @@ def check_partition(
     allowlist_set = set(allowlist_paths)
     exclusion_by_path = {entry.path: entry for entry in exclusion_entries}
     exclusion_set = set(exclusion_by_path)
+    exclusion_gitlink_paths = {p for p, e in exclusion_by_path.items() if e.kind == KIND_GITLINK}
+    exclusion_blob_paths = exclusion_set - exclusion_gitlink_paths
 
     overlap = allowlist_set & exclusion_set
 
-    missing_included = blob_paths - allowlist_set
+    # A blob-kind exclusion (e.g. the self-referential-evidence
+    # provenance manifest) is never required to also be an included
+    # allowlist entry -- it is deliberately excluded instead; only a
+    # tracked blob that is in *neither* set at all is "missing_included".
+    missing_included = blob_paths - allowlist_set - exclusion_blob_paths
     stale_included = allowlist_set - blob_paths
 
-    missing_excluded = gitlink_paths - exclusion_set
-    stale_excluded = exclusion_set - gitlink_paths
+    # Only a *gitlink*-kind exclusion is required for every live gitlink
+    # (a blob-kind exclusion is never a substitute for one, and a live
+    # gitlink is never satisfied by anything except a `KIND_GITLINK`
+    # exclusion record).
+    missing_excluded = gitlink_paths - exclusion_gitlink_paths
 
+    # Every exclusion entry (of either kind) must still correspond to a
+    # live tracked path of its own declared kind -- checked per-entry so
+    # a kind-mismatch (e.g. a `KIND_GITLINK` exclusion whose path is now
+    # an ordinary blob, or vice versa) is caught as precisely as an
+    # outright-missing path, never conflated with a simple oid/mode
+    # mismatch.
+    stale_excluded = set()
     mismatched_excluded = set()
-    for path in exclusion_set & gitlink_paths:
-        entry = exclusion_by_path[path]
-        tree_entry = tree[path]
-        if entry.oid != tree_entry.object_id or entry.mode != tree_entry.mode:
+    for path, entry in exclusion_by_path.items():
+        tree_entry = tree.get(path)
+        expect_gitlink = entry.kind == KIND_GITLINK
+        if tree_entry is None or tree_entry.is_gitlink != expect_gitlink:
+            stale_excluded.add(path)
+            continue
+        if entry.mode != tree_entry.mode:
+            mismatched_excluded.add(path)
+            continue
+        # A KIND_GITLINK exclusion's `oid` is a genuinely *pinned*,
+        # human-reviewed fact (the submodule commit a human chose to
+        # point at) -- live drift there (the pin silently moved without
+        # this record being regenerated) is exactly the kind of thing
+        # that must be reported. A KIND_SELF_REFERENTIAL_EVIDENCE
+        # exclusion's `oid` is different in kind: it is this repository's
+        # *own* generated evidence-manifest content, which is expected
+        # to change on every regeneration cycle (whenever any other
+        # tracked path changes) and is never independently "pinned" by a
+        # human the way a submodule commit is. Recording and (a fresh,
+        # independent review found) *enforcing* an exact live-oid match
+        # for this specific field would recreate a two-file variant of
+        # the same "hash quine" the self-referential-evidence exclusion
+        # itself was designed to solve: this file
+        # (export_exclusions.json) is an ordinary *included* blob, so
+        # code.json (the provenance manifest) must record *its* own
+        # accurate oid for export_exclusions.json -- but export_
+        # exclusions.json's own exclusion record for code.json would
+        # then need to embed code.json's oid *after* that same write,
+        # which only exists once export_exclusions.json itself has
+        # already been written, an unresolvable ordering cycle between
+        # exactly these two files. The `oid` recorded for a
+        # KIND_SELF_REFERENTIAL_EVIDENCE exclusion is therefore
+        # documentary/best-effort only (still schema-shape-validated,
+        # still regenerated fresh every time, still visible for human
+        # review) -- never enforced for exact live-content equality here.
+        # `stale_excluded` above still fully, strictly enforces that the
+        # path is a live, correctly-kinded blob; only the fast-moving
+        # `oid` field's exact-match enforcement is relaxed, and only for
+        # this one exclusion kind.
+        if entry.kind == KIND_GITLINK and entry.oid != tree_entry.object_id:
             mismatched_excluded.add(path)
 
     unaccounted = all_paths - (allowlist_set | exclusion_set)
@@ -369,18 +581,38 @@ def check_archive_membership_exact(
 # correction #2) ------------------------------------------------------
 
 
-def _present_regular_files(root: Path) -> List[str]:
+def _present_paths(root: Path) -> List[str]:
+    """Every filesystem entry actually present under `root`, of **any**
+    kind (regular file, symlink, hardlink, device, FIFO, socket, or any
+    other non-regular node) -- a real, non-symlink directory is walked
+    through (never itself reported as a leaf) and is the *only* kind
+    ever skipped.
+
+    A previous version of this walk (`_present_regular_files`) `continue`d
+    straight past any symlink it found, which made a stray, unlisted
+    symlink at *any* path completely invisible to both `check_non_git_
+    tree`'s `extra`/`missing` accounting below -- neither reported as an
+    unaccounted-for "extra" file nor caught by any other check, a
+    silent closed-world gap an independent review found. Nothing is
+    skipped by kind any more; only a genuine, non-symlink directory is
+    ever excluded from the returned leaf list (it is walked through
+    instead)."""
     root = Path(root)
     present: List[str] = []
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-        dirpath_path = Path(dirpath)
-        if dirpath_path == root:
-            dirnames[:] = [d for d in dirnames if d != ".git"]
-        for name in filenames:
-            full = dirpath_path / name
-            if full.is_symlink():
+
+    def _walk(dirpath: Path) -> None:
+        with os.scandir(dirpath) as it:
+            entries = sorted(it, key=lambda e: e.name)
+        for entry in entries:
+            if dirpath == root and entry.name == ".git":
+                continue
+            full = Path(entry.path)
+            if entry.is_dir(follow_symlinks=False):
+                _walk(full)
                 continue
             present.append(full.relative_to(root).as_posix())
+
+    _walk(root)
     return present
 
 
@@ -407,24 +639,38 @@ def check_non_git_tree(
     """The non-git (genuine extracted archive/candidate tree) analogue of
     `check_partition`, used only when `root` has no `.git` at all. Never
     invokes any git command (there is nothing to invoke it against).
-    Reports three independent, actionable buckets:
+    Every present filesystem entry, of *any* kind -- regular file,
+    symlink, hardlink, device, FIFO, socket -- is enumerated by
+    `_present_paths` (never silently skipped by kind); this closes a
+    residual gap an independent review found: a stray symlink at a
+    path this contract says nothing about used to be invisible to both
+    buckets below (neither `extra` nor `unsafe`), because the previous
+    enumeration `continue`d straight past any symlink it found. Reports
+    three independent, actionable buckets:
 
     * `missing` -- an included path with no on-disk regular-file
-      representation, or an excluded (gitlink) path with no on-disk
+      representation, or a gitlink-kind excluded path with no on-disk
       directory representation at all;
-    * `extra` -- a present regular file whose path is in neither the
-      included nor the excluded set (the closed-world "new/unlisted
-      file" finding);
+    * `extra` -- a present entry of *any* kind whose path is in neither
+      the included nor the excluded set (the closed-world "new/unlisted
+      node" finding -- this now also catches a stray symlink/hardlink/
+      device/FIFO/socket at an otherwise-unaccounted-for path, never
+      only a stray regular file);
     * `unsafe` -- a present path whose on-disk *shape* contradicts the
-      contract: an included path materialized as a symlink instead of a
-      regular file, or an excluded (gitlink) path materialized as a
-      regular file or symlink instead of a plain directory.
+      contract: an included path materialized as anything other than a
+      regular file (symlink, or any other non-regular node), a
+      gitlink-kind excluded path materialized as anything other than a
+      plain directory, or a non-gitlink (e.g. self-referential-evidence)
+      excluded path present *at all* (it was never part of the archive
+      in the first place, so it must never be present as anything --
+      file, symlink, or directory -- in a genuine extracted candidate).
     """
     root = Path(root)
     allowlist_set = set(allowlist_paths)
-    exclusion_set = {entry.path for entry in exclusion_entries}
+    exclusion_by_path = {entry.path: entry for entry in exclusion_entries}
+    exclusion_set = set(exclusion_by_path)
 
-    present_files = set(_present_regular_files(root))
+    present_paths = set(_present_paths(root))
 
     missing: List[str] = []
     unsafe: List[str] = []
@@ -437,15 +683,26 @@ def check_non_git_tree(
             missing.append(path)
 
     for path in sorted(exclusion_set):
+        entry = exclusion_by_path[path]
         candidate = root / path
-        if candidate.is_symlink():
-            unsafe.append(path)
-        elif candidate.is_file():
-            unsafe.append(path)
-        elif not candidate.is_dir():
-            missing.append(path)
+        if entry.kind == KIND_GITLINK:
+            if candidate.is_symlink():
+                unsafe.append(path)
+            elif candidate.is_file():
+                unsafe.append(path)
+            elif not candidate.is_dir():
+                missing.append(path)
+        else:
+            # A non-gitlink (e.g. self-referential-evidence) exclusion
+            # was never included in the archive at all -- unlike a
+            # gitlink mountpoint, there is no "empty placeholder
+            # directory" convention for it either. Any on-disk presence
+            # whatsoever (file, symlink, or directory) contradicts the
+            # "excluded means absent" contract.
+            if candidate.is_symlink() or candidate.exists():
+                unsafe.append(path)
 
-    extra = sorted(present_files - allowlist_set - exclusion_set)
+    extra = sorted(present_paths - allowlist_set - exclusion_set)
 
     return NonGitCoverageResult(missing=sorted(missing), extra=extra, unsafe=sorted(unsafe))
 

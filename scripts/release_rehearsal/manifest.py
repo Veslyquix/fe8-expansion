@@ -177,8 +177,24 @@ def check_provenance(repo_root: Path, target_sha: str) -> Dict:
         required_paths = list(allowlist)
         if exclusions_path.is_file():
             try:
+                # issue #9 guardian-correction remediation: provenance
+                # coverage's required-path set is the included allowlist
+                # plus only the export exclusions that still need their
+                # own separate, dedicated provenance-manifest legal-
+                # review record (today, only the gitlink-kind mgfembp
+                # exclusion) -- a self-referential-evidence exclusion
+                # (e.g. docs/release_data/provenance/code.json) is
+                # deliberately excluded from this set: its own exclusion
+                # record (kind/mode/oid/reason in
+                # docs/release_data/export_exclusions.json) is its
+                # complete, sufficient, externally-owned evidence, and
+                # it must never receive a second, separate provenance
+                # entry (which could either reproduce the exact same
+                # hash-quine cycle, if recorded inside itself, or merely
+                # relocate an empty formality elsewhere).
                 required_paths = tc.combined_required_paths(
-                    allowlist, tc.load_exclusion_paths(exclusions_path)
+                    allowlist,
+                    tc.load_exclusion_paths(exclusions_path, kinds=tc.PROVENANCE_REQUIRED_EXCLUSION_KINDS),
                 )
             except tc.TreeCoverageError as error:
                 raise ManifestError(str(error)) from error
@@ -279,7 +295,8 @@ def check_allowlist_exact(repo_root: Path, target_sha: str) -> Dict:
     boundary is what converts that into `EXIT_TOOLING_ERROR`, not this
     function papering over it as a soft business reason."""
     allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
-    errors = al.check(repo_root, allowlist_path, target_sha)
+    exclusions_path = repo_root / "docs" / "release_data" / "export_exclusions.json"
+    errors = al.check(repo_root, allowlist_path, target_sha, exclusions_path)
     return {"ok": not errors, "errors": errors}
 
 

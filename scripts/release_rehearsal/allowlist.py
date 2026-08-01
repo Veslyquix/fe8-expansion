@@ -37,12 +37,21 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from scripts.release_rehearsal import git_source as gs
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 DEFAULT_ALLOWLIST_PATH = Path("docs/release_data/source_allowlist.json")
+DEFAULT_EXCLUSIONS_PATH = Path("docs/release_data/export_exclusions.json")
+
+# issue #9 guardian-correction remediation (mode binding): the only Git
+# blob modes an allowlist entry may ever declare -- a gitlink (`160000`)
+# is never a member here at all (see `generate_entries` below), so it is
+# deliberately absent from this tuple; an unrecognized/unsupported mode
+# (e.g. a raw `040000` tree entry, which should never surface from
+# `git ls-tree -r` at all) is a hard, actionable `AllowlistError`.
+VALID_ALLOWLIST_MODES = (gs.MODE_REGULAR, gs.MODE_EXECUTABLE, gs.MODE_SYMLINK)
 
 
 class AllowlistError(ValueError):
@@ -51,7 +60,9 @@ class AllowlistError(ValueError):
     which is reported as a list of strings, not raised)."""
 
 
-def generate_entries(repo_root: Path, target_sha: str) -> List[str]:
+def generate_entries(
+    repo_root: Path, target_sha: str, excluded_blob_paths: Iterable[str] = ()
+) -> List[str]:
     """Exact, deterministic (git-tree-ordered) list of every path that
     must appear in the allowlist for `target_sha`: every blob-mode tree
     entry (regular file or executable; a tracked *symlink*, if one is ever
@@ -69,30 +80,82 @@ def generate_entries(repo_root: Path, target_sha: str) -> List[str]:
     proves this allowlist's included paths and that file's excluded
     paths are an exact, disjoint partition of the complete tree (nothing
     is silently absorbed into either side, and nothing is silently
-    unaccounted for)."""
-    entries = [entry.path for entry in gs.list_tree(repo_root, target_sha) if not entry.is_gitlink]
+    unaccounted for).
+
+    `excluded_blob_paths` (guardian-correction remediation) additionally
+    excludes any ordinary tracked *blob* the caller has declared an
+    explicit, non-gitlink export exclusion for (today, exactly
+    `docs/release_data/provenance/code.json` -- see
+    `tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE`): such a path is a
+    real blob (not a gitlink), but is still never an included allowlist
+    member, for the same "this is recorded as its own explicit,
+    factual export-exclusion entry" reason as a gitlink -- never a
+    silent, unexplained gap."""
+    excluded = set(excluded_blob_paths)
+    entries = [
+        entry.path for entry in gs.list_tree(repo_root, target_sha)
+        if not entry.is_gitlink and entry.path not in excluded
+    ]
     return sorted(entries)
 
 
-def generate_allowlist_document(repo_root: Path, target_sha: str) -> Dict:
-    entries = generate_entries(repo_root, target_sha)
+def generate_modes(
+    repo_root: Path, target_sha: str, excluded_blob_paths: Iterable[str] = ()
+) -> Dict[str, str]:
+    """Exact `{path: git_mode}` map for every path `generate_entries`
+    would also return (the same included-blob set, same exclusions) --
+    guardian-correction remediation (mode binding): an included path's
+    exact Git mode (`100644`/`100755`/`120000`) is bound alongside its
+    mere path string, so a committed executable-bit (or other mode)
+    change is detected as staleness (see `check_mode_identity`) instead
+    of being invisible to this allowlist."""
+    excluded = set(excluded_blob_paths)
+    return {
+        entry.path: entry.mode
+        for entry in gs.list_tree(repo_root, target_sha)
+        if not entry.is_gitlink and entry.path not in excluded
+    }
+
+
+def generate_allowlist_document(
+    repo_root: Path, target_sha: str, excluded_blob_paths: Iterable[str] = ()
+) -> Dict:
+    entries = generate_entries(repo_root, target_sha, excluded_blob_paths)
+    modes = generate_modes(repo_root, target_sha, excluded_blob_paths)
     return {
         "_comment": (
             "Exact, deterministic, per-member source-release allowlist (issue #9 "
             "verifier remediation; schema_version 3 excludes gitlinks -- see "
-            "mandatory correction #2). Every entry is one exact repo-relative "
-            "tracked *blob* path (regular file, executable, or symlink) -- there is "
+            "mandatory correction #2; schema_version 4 adds the 'modes' exact-"
+            "Git-mode binding -- see guardian-correction remediation). Every "
+            "'paths' entry is one exact repo-relative tracked *blob* path "
+            "(regular file, executable, or symlink) -- there is "
             "no directory-level/prefix grant, and a gitlink (submodule mountpoint) "
             "is never included here at all; it is instead an explicit export "
             "exclusion -- see docs/release_data/export_exclusions.json and "
             "scripts/release_rehearsal/tree_coverage.py, which proves this "
             "allowlist and that exclusions file are an exact, disjoint partition "
-            "of the complete tree. Generated by "
+            "of the complete tree. An ordinary tracked blob that is itself "
+            "structurally self-referential (currently exactly "
+            "docs/release_data/provenance/code.json) is likewise never a 'paths' "
+            "member -- it too is an explicit, non-gitlink export exclusion (see "
+            "tree_coverage.py's KIND_SELF_REFERENTIAL_EVIDENCE). 'modes' records "
+            "every 'paths' entry's own exact Git mode (100644/100755/120000), "
+            "cross-checked against the live tree by check_mode_identity() -- a "
+            "committed executable-bit (or other mode) change makes this data "
+            "stale until regenerated, exactly like a content/path change already "
+            "does. The archive itself still always canonicalizes every member's "
+            "*written* tar mode to a fixed 0o644 regardless of this recorded Git "
+            "mode (see archive_rehearsal.py's CANONICAL_FILE_MODE and "
+            "docs/release_process.md's 'Archive member mode policy') -- this "
+            "field is a drift-detection/provenance-identity binding, not an "
+            "archive-fidelity guarantee. Generated by "
             "'python3 -m scripts.release_rehearsal.allowlist generate'; regenerate "
-            "and commit this file whenever a tracked file is added, renamed, or "
-            "removed (`make release-check` / `python3 -m "
-            "scripts.release_rehearsal.allowlist check` fails actionably if this "
-            "file and the actual tracked-file set ever disagree). This is a "
+            "and commit this file whenever a tracked file is added, renamed, "
+            "removed, or has its Git mode changed (`make release-check` / "
+            "`python3 -m scripts.release_rehearsal.allowlist check` fails "
+            "actionably if this file and the actual tracked-file/mode set ever "
+            "disagree). This is a "
             "structural membership allowlist only -- see "
             "docs/release_data/provenance/*.json and docs/release_process.md for "
             "the separate, currently-unresolved legal/provenance determination "
@@ -102,6 +165,7 @@ def generate_allowlist_document(repo_root: Path, target_sha: str) -> Dict:
         "generated_from_sha": target_sha,
         "generator": "python3 -m scripts.release_rehearsal.allowlist generate",
         "paths": entries,
+        "modes": modes,
     }
 
 
@@ -120,8 +184,76 @@ def load_allowlist_paths(path: Path) -> List[str]:
     return paths
 
 
+def load_allowlist_modes(path: Path) -> Optional[Dict[str, str]]:
+    """Loads the same allowlist document's optional `"modes"` mapping
+    (guardian-correction remediation: mode binding). Returns `None` when
+    the key is entirely absent (an older/ad-hoc allowlist document that
+    does not participate in mode-binding at all -- `check()` below then
+    skips mode validation cleanly, never treating absence itself as an
+    error). When present, it must be a non-empty JSON object mapping an
+    exact path to one of `VALID_ALLOWLIST_MODES` -- a malformed shape or
+    an unsupported mode value is a hard `AllowlistError`, exactly like a
+    malformed `"paths"` array."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if "modes" not in data:
+        return None
+    modes = data["modes"]
+    if not isinstance(modes, dict) or not modes:
+        raise AllowlistError(f"{path}: 'modes' must be a non-empty JSON object mapping path -> Git mode")
+    for entry_path, mode in modes.items():
+        if not isinstance(mode, str) or mode not in VALID_ALLOWLIST_MODES:
+            raise AllowlistError(
+                f"{path}: mode {mode!r} for {entry_path!r} is not a supported blob mode "
+                f"(expected one of {VALID_ALLOWLIST_MODES})"
+            )
+    return modes
+
+
+def check_mode_bijection(
+    allowlist_paths: Iterable[str], allowlist_modes: Dict[str, str]
+) -> Tuple[List[str], List[str]]:
+    """`(missing, extra)`: `missing` is an allowlist path with no
+    recorded mode at all; `extra` is a recorded mode for a path that is
+    not (or is no longer) an allowlist path. Both must be empty for a
+    well-formed, exactly-synchronized `"modes"` mapping."""
+    paths_set = set(allowlist_paths)
+    modes_set = set(allowlist_modes)
+    return sorted(paths_set - modes_set), sorted(modes_set - paths_set)
+
+
+def check_mode_identity(
+    repo_root: Path, allowlist_modes: Dict[str, str], target_sha: str = "HEAD"
+) -> List[str]:
+    """Cross-checks every declared mode in `allowlist_modes` against the
+    actual, live Git mode Git's own tree records for that exact path at
+    `target_sha` -- guardian-correction remediation (mode binding),
+    mirroring `provenance.check_blob_identity`'s "never trust the
+    record, cross-check it against Git itself" discipline. A committed
+    executable-bit (or other mode) change, or a path that is no longer a
+    live tracked blob at all, is reported -- never silently trusted."""
+    tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
+    reasons: List[str] = []
+    for path, declared_mode in sorted(allowlist_modes.items()):
+        tree_entry = tree.get(path)
+        if tree_entry is None or tree_entry.is_gitlink:
+            reasons.append(
+                f"{path}: no tracked blob at this exact path in the tree at {target_sha!r} to "
+                f"cross-check its declared mode {declared_mode!r} against (missing/stale -- "
+                "regenerate the allowlist)"
+            )
+            continue
+        if tree_entry.mode != declared_mode:
+            reasons.append(
+                f"{path}: declared mode {declared_mode!r} does not match the actual Git mode "
+                f"{tree_entry.mode!r} Git's tree records at {target_sha!r} (a committed "
+                "executable-bit/mode change -- regenerate the allowlist)"
+            )
+    return reasons
+
+
 def check_allowlist_completeness(
-    repo_root: Path, allowlist_paths: List[str], target_sha: str = "HEAD"
+    repo_root: Path, allowlist_paths: List[str], target_sha: str = "HEAD",
+    excluded_blob_paths: Iterable[str] = (),
 ) -> Tuple[List[str], List[str]]:
     """Full bijection check between the exact, resolved tracked-*blob*
     set at `target_sha` and `allowlist_paths`. Returns `(missing,
@@ -145,37 +277,57 @@ def check_allowlist_completeness(
     `scripts/release_rehearsal/tree_coverage.py`'s `check_partition`,
     which is what actually proves *every* tracked path -- blob or
     gitlink -- is accounted for exactly once between this allowlist and
-    that exclusions file)."""
-    tracked = {entry.path for entry in gs.list_tree(repo_root, target_sha) if not entry.is_gitlink}
+    that exclusions file). `excluded_blob_paths` (guardian-correction
+    remediation) additionally excludes any ordinary tracked *blob* the
+    caller has declared its own explicit, non-gitlink export exclusion
+    for (see `generate_entries`) from `tracked` the same way."""
+    excluded = set(excluded_blob_paths)
+    tracked = {
+        entry.path for entry in gs.list_tree(repo_root, target_sha)
+        if not entry.is_gitlink and entry.path not in excluded
+    }
     allowlist_set = set(allowlist_paths)
     missing = sorted(tracked - allowlist_set)
     stale = sorted(allowlist_set - tracked)
     return missing, stale
 
 
-def _present_regular_files(repo_root: Path) -> List[str]:
-    """Every ordinary, non-symlink regular file's repo-relative posix
-    path actually present on disk under `repo_root` -- the non-git
-    equivalent of a tracked-file listing, used **only** when `repo_root`
-    has no `.git` metadata at all (`git_source.is_git_repo` is False; a
-    genuine extracted archive/non-git candidate tree). Never invokes git
-    -- issue #9 verifier remediation: a non-git candidate tree must never
-    have git plumbing invoked against it (which could otherwise silently
-    walk *upward* to an unrelated enclosing repository and report *that*
-    repository's tracked files instead of failing closed). Mirrors
-    scripts/release_rehearsal/source_guard.py's own tree-walk convention
-    (skip a root-level ".git", never follow symlinks)."""
+def _present_paths(repo_root: Path) -> List[str]:
+    """Every filesystem entry actually present on disk under
+    `repo_root`, of **any** kind (regular file, symlink, hardlink,
+    device, FIFO, socket, or any other non-regular node; only a genuine,
+    non-symlink directory is ever walked through rather than reported)
+    -- the non-git equivalent of a tracked-file listing, used **only**
+    when `repo_root` has no `.git` metadata at all (`git_source.
+    is_git_repo` is False; a genuine extracted archive/non-git candidate
+    tree). Never invokes git -- issue #9 verifier remediation: a non-git
+    candidate tree must never have git plumbing invoked against it
+    (which could otherwise silently walk *upward* to an unrelated
+    enclosing repository and report *that* repository's tracked files
+    instead of failing closed).
+
+    Guardian-correction remediation (closed-world symlink fix): a
+    previous version of this walk (`_present_regular_files`) `continue`d
+    straight past any symlink it found, which made a stray, unlisted
+    symlink at *any* path completely invisible to `check_allowlist_
+    completeness_non_git`'s `missing` accounting below. Nothing is
+    skipped by kind any more."""
     repo_root = Path(repo_root)
     present: List[str] = []
-    for dirpath, dirnames, filenames in os.walk(repo_root, followlinks=False):
-        dirpath_path = Path(dirpath)
-        if dirpath_path == repo_root:
-            dirnames[:] = [d for d in dirnames if d != ".git"]
-        for name in filenames:
-            full = dirpath_path / name
-            if full.is_symlink():
+
+    def _walk(dirpath: Path) -> None:
+        with os.scandir(dirpath) as it:
+            entries = sorted(it, key=lambda e: e.name)
+        for entry in entries:
+            if dirpath == repo_root and entry.name == ".git":
+                continue
+            full = Path(entry.path)
+            if entry.is_dir(follow_symlinks=False):
+                _walk(full)
                 continue
             present.append(full.relative_to(repo_root).as_posix())
+
+    _walk(repo_root)
     return present
 
 
@@ -199,7 +351,7 @@ def _entry_has_on_disk_representation(repo_root: Path, entry: str) -> bool:
 
 
 def check_allowlist_completeness_non_git(
-    repo_root: Path, allowlist_paths: List[str]
+    repo_root: Path, allowlist_paths: List[str], excluded_blob_paths: Iterable[str] = (),
 ) -> Tuple[List[str], List[str]]:
     """The non-git analogue of `check_allowlist_completeness`, used
     **only** when `repo_root` has no `.git` at all (a genuine extracted
@@ -228,8 +380,17 @@ def check_allowlist_completeness_non_git(
     scripts/release_rehearsal/source_guard.py's "structural parent
     only, never an authorization prefix" rule) -- only whether the
     allowlisted path itself has *some* real, non-symlink on-disk form.
+
+    `excluded_blob_paths` (guardian-correction remediation) is removed
+    from consideration entirely here (neither required present nor ever
+    flagged "missing") -- a non-gitlink export exclusion (e.g. the
+    self-referential-evidence provenance manifest) is never part of this
+    allowlist-bijection contract at all;
+    `tree_coverage.check_non_git_tree` is what actually, precisely
+    validates such a path's on-disk shape (it must be genuinely absent).
     """
-    present_files = set(_present_regular_files(repo_root))
+    excluded = set(excluded_blob_paths)
+    present_files = set(_present_paths(repo_root)) - excluded
     allowlist_set = set(allowlist_paths)
     missing = sorted(present_files - allowlist_set)
     unrepresented = sorted(
@@ -239,7 +400,41 @@ def check_allowlist_completeness_non_git(
     return missing, unrepresented
 
 
-def check(repo_root: Path, allowlist_path: Path, target_sha: str = "HEAD") -> List[str]:
+def _load_non_gitlink_exclusion_paths(exclusions_path: Path) -> List[str]:
+    """A minimal, local, dependency-light JSON read of just the exact
+    paths in an export-exclusions document whose `kind` is *not*
+    `"gitlink"` (mirrors `provenance.py`'s own analogous `_load_
+    exclusion_paths` convention: deliberately does not import
+    `tree_coverage.py`'s full schema validation here). Returns `[]` if
+    `exclusions_path` does not exist at all -- this allowlist has always
+    worked standalone without one (a gitlink is already excluded via
+    pure Git-tree data alone; only a *non-gitlink* export exclusion,
+    e.g. the self-referential-evidence provenance manifest, needs this
+    extra, explicit path list, since nothing about its own tree entry
+    otherwise distinguishes it from an ordinary included blob)."""
+    path = Path(exclusions_path)
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise AllowlistError(f"{path}: not valid JSON: {error}") from error
+    exclusions = data.get("exclusions")
+    if not isinstance(exclusions, list):
+        raise AllowlistError(f"{path}: must contain an 'exclusions' array")
+    paths = []
+    for entry in exclusions:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            raise AllowlistError(f"{path}: every exclusion entry must have a string 'path'")
+        if entry.get("kind") != "gitlink":
+            paths.append(entry["path"])
+    return paths
+
+
+def check(
+    repo_root: Path, allowlist_path: Path, target_sha: str = "HEAD",
+    exclusions_path: Path = DEFAULT_EXCLUSIONS_PATH,
+) -> List[str]:
     """Convenience wrapper returning a flat, human-readable error list
     (empty means fully consistent); used by both the CLI and
     scripts/release_rehearsal/manifest.py.
@@ -256,14 +451,26 @@ def check(repo_root: Path, allowlist_path: Path, target_sha: str = "HEAD") -> Li
     `git_source.GitSourceError` here (propagated, never swallowed into a
     soft warning): that is an actionable input defect for the CLI's
     single top-level exception boundary to convert into
-    `EXIT_TOOLING_ERROR`, not an honestly-recorded business fact."""
+    `EXIT_TOOLING_ERROR`, not an honestly-recorded business fact.
+
+    Guardian-correction remediation: also cross-checks the allowlist
+    document's optional `"modes"` mapping (see `load_allowlist_modes`)
+    -- a bijection check always, plus a live Git-mode identity
+    cross-check (`check_mode_identity`) when `repo_root` is a real git
+    repository -- and excludes any non-gitlink export-exclusion path
+    (see `_load_non_gitlink_exclusion_paths`) from the tracked-blob
+    bijection, exactly like a gitlink has always been excluded."""
     try:
         allowlist_paths = load_allowlist_paths(allowlist_path)
+        allowlist_modes = load_allowlist_modes(allowlist_path)
+        excluded_blob_paths = _load_non_gitlink_exclusion_paths(exclusions_path)
     except AllowlistError as error:
         return [str(error)]
     repo_root = Path(repo_root)
     if not gs.is_git_repo(repo_root):
-        missing, unrepresented = check_allowlist_completeness_non_git(repo_root, allowlist_paths)
+        missing, unrepresented = check_allowlist_completeness_non_git(
+            repo_root, allowlist_paths, excluded_blob_paths
+        )
         errors = [
             f"file present in extracted tree but missing from allowlist: {path}"
             for path in missing
@@ -274,10 +481,25 @@ def check(repo_root: Path, allowlist_path: Path, target_sha: str = "HEAD") -> Li
             f"'mgfembp', or a removed/never-extracted file): {path}"
             for path in unrepresented
         ]
+        if allowlist_modes is not None:
+            mode_missing, mode_extra = check_mode_bijection(allowlist_paths, allowlist_modes)
+            errors += [f"allowlist path has no recorded 'modes' entry: {path}" for path in mode_missing]
+            errors += [
+                f"recorded 'modes' entry for a path that is not (or is no longer) an allowlist entry: {path}"
+                for path in mode_extra
+            ]
         return errors
-    missing, stale = check_allowlist_completeness(repo_root, allowlist_paths, target_sha)
+    missing, stale = check_allowlist_completeness(repo_root, allowlist_paths, target_sha, excluded_blob_paths)
     errors = [f"tracked file missing from allowlist: {path}" for path in missing]
     errors += [f"stale allowlist entry (no longer tracked): {path}" for path in stale]
+    if allowlist_modes is not None:
+        mode_missing, mode_extra = check_mode_bijection(allowlist_paths, allowlist_modes)
+        errors += [f"allowlist path has no recorded 'modes' entry: {path}" for path in mode_missing]
+        errors += [
+            f"recorded 'modes' entry for a path that is not (or is no longer) an allowlist entry: {path}"
+            for path in mode_extra
+        ]
+        errors += check_mode_identity(repo_root, allowlist_modes, target_sha)
     return errors
 
 
@@ -288,6 +510,7 @@ def main(argv=None) -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--repo-root", type=Path, default=Path("."))
     common.add_argument("--allowlist", type=Path, default=DEFAULT_ALLOWLIST_PATH)
+    common.add_argument("--exclusions", type=Path, default=DEFAULT_EXCLUSIONS_PATH)
     common.add_argument(
         "--target-sha", default="HEAD",
         help="a commit-ish (default HEAD), or the literal 'index' to use the "
@@ -311,7 +534,12 @@ def main(argv=None) -> int:
         return 2
 
     if args.command == "generate":
-        document = generate_allowlist_document(args.repo_root, target_sha)
+        try:
+            excluded_blob_paths = _load_non_gitlink_exclusion_paths(args.exclusions)
+        except AllowlistError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 2
+        document = generate_allowlist_document(args.repo_root, target_sha, excluded_blob_paths)
         text = json.dumps(document, indent=2, sort_keys=False) + "\n"
         if args.write:
             args.allowlist.write_text(text, encoding="utf-8")
@@ -320,7 +548,7 @@ def main(argv=None) -> int:
             sys.stdout.write(text)
         return 0
 
-    errors = check(args.repo_root, args.allowlist, target_sha)
+    errors = check(args.repo_root, args.allowlist, target_sha, args.exclusions)
     if errors:
         for error in errors:
             print(f"error: {error}", file=sys.stderr)

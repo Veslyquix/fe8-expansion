@@ -365,27 +365,41 @@ def check_gitlink_pins(entries: List[Dict], repo_root: Path, target_sha: str = "
     return sorted(reasons)
 
 
-# The three provenance-manifest files this module itself writes
-# (`write_generated_provenance`) are structurally self-referential: each
-# is itself a tracked "code"-category blob that must have its own exact
-# provenance record, but that record's `oid`/`sha256` necessarily
-# describe the file's content *before* the very write that embeds them
-# -- there is no general fixed point for "a file's own hash of itself,
-# including a field holding that hash" (a "hash quine" is not achievable
-# by straightforward sequential regeneration, and searching for one
-# would be absurd for a human-reviewed provenance record). This is a
-# narrow, fully enumerated, mathematically-inherent exception -- not a
-# general "skip identity checking" escape hatch -- so `check_blob_
-# identity` below never live-cross-checks *these three exact paths*
-# (their schema shape -- well-formed oid/sha256 hex -- is still fully
-# validated by `load_manifest`; only the live-content cross-check is
-# exempted). Every other included blob, with no exception, is fully
-# cross-checked.
-SELF_REFERENTIAL_PROVENANCE_PATHS = frozenset({
-    "docs/release_data/provenance/code.json",
-    "docs/release_data/provenance/assets.json",
-    "docs/release_data/provenance/submodules.json",
-})
+# Guardian-correction remediation (D2): a fresh, independent review found
+# that ALL THREE provenance-manifest files this module writes
+# (`write_generated_provenance`) were previously exempted from
+# `check_blob_identity` below, on the theory that each is itself a
+# tracked "code"-category blob that would need its own provenance
+# record. That is only actually true for `docs/release_data/provenance/
+# code.json` itself: it is the "code"-category manifest, so a record
+# describing code.json's own oid/sha256 would have to live *inside*
+# code.json -- a genuine, structural "hash quine" (the record's content
+# would need to embed a hash of code.json's own not-yet-finalized
+# content, including that very record). `assets.json` and
+# `submodules.json`, by contrast, are NOT self-referential at all: their
+# own oid/sha256 identity records live inside code.json (a *different*
+# file), so there is no cycle, and (before this fix) exempting them let
+# a committed, tampered assets.json/submodules.json silently evade
+# identity validation entirely -- exactly the defect this fix closes.
+#
+# The structural fix: `docs/release_data/provenance/code.json` is now an
+# explicit, exact export exclusion (`tree_coverage.
+# KIND_SELF_REFERENTIAL_EVIDENCE`, `tree_coverage.
+# SELF_REFERENTIAL_EVIDENCE_PATHS`) -- it is no longer an *included*
+# allowlist member at all, so it never has (and is never generated with)
+# its own provenance record in the first place (see `generate_exact_
+# entries`'s `all_paths = allowlist_set | exclusion_set` and
+# `scripts/release_rehearsal/manifest.py`'s narrower, gitlink-only
+# `PROVENANCE_REQUIRED_EXCLUSION_KINDS`-filtered required-coverage set).
+# There is therefore nothing left to exempt here at all: `check_blob_
+# identity` below cross-checks **every** `"code"`/`"asset"`-category
+# entry actually present in the loaded data, unconditionally --
+# including `assets.json` and `submodules.json` -- with no path-based
+# exemption of any kind. A stray, leftover self-entry for code.json
+# (there should never be one after regeneration) would simply be
+# reported like any other stale/tampered record by this function, and
+# separately flagged as a "ghost" entry by `evaluate_coverage` (its path
+# is no longer in the required-coverage set at all).
 
 
 def check_blob_identity(entries: List[Dict], repo_root: Path, target_sha: str = "HEAD") -> List[str]:
@@ -422,8 +436,6 @@ def check_blob_identity(entries: List[Dict], repo_root: Path, target_sha: str = 
     reasons: List[str] = []
     needed_object_ids: Dict[str, str] = {}
     for entry in blob_entries:
-        if entry["path"] in SELF_REFERENTIAL_PROVENANCE_PATHS:
-            continue
         tree_entry = tree_entries.get(entry["path"])
         if tree_entry is None or not tree_entry.is_safe_blob:
             reasons.append(
@@ -794,12 +806,25 @@ def _load_allowlist_paths(allowlist_path: Path) -> List[str]:
 
 
 def _load_exclusion_paths(exclusions_path: Path) -> List[str]:
-    """Local, dependency-light JSON read of just the exact paths in an
-    export-exclusions document (mirrors `_load_allowlist_paths` above) --
-    deliberately does not import `tree_coverage.py`'s full schema
-    validation here (that belongs to `tree_coverage.py`/`manifest.py`'s
-    own dedicated checks); this generator only ever needs the bare path
-    list to know which paths to assign the `"submodule"` category to."""
+    """Local, dependency-light JSON read of just the exact **gitlink-
+    kind** paths in an export-exclusions document (mirrors `_load_
+    allowlist_paths` above) -- deliberately does not import
+    `tree_coverage.py`'s full schema validation here (that belongs to
+    `tree_coverage.py`/`manifest.py`'s own dedicated checks); this
+    generator only ever needs the bare path list to know which paths to
+    assign the `"submodule"` category to.
+
+    Guardian-correction remediation (D2): a non-gitlink export exclusion
+    (`kind == "self_referential_evidence"`, e.g. `docs/release_data/
+    provenance/code.json`) is deliberately excluded here -- such a path
+    is never assigned any provenance category at all (it is excluded
+    from the archive precisely *because* it can never hold a live-
+    content-bound provenance record about itself; see
+    `tree_coverage.SELF_REFERENTIAL_EVIDENCE_PATHS`'s docstring), so it
+    must never be fanned into `generate_exact_entries`'s `all_paths`
+    (which would otherwise raise a category-assignment `ProvenanceError`
+    for it, since no `PROVENANCE_ROOT_SEED` root ever assigns it the
+    `"submodule"` category)."""
     try:
         data = json.loads(Path(exclusions_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -811,7 +836,8 @@ def _load_exclusion_paths(exclusions_path: Path) -> List[str]:
     for entry in exclusions:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
             raise ProvenanceError(f"{exclusions_path}: every exclusion entry must have a string 'path'")
-        paths.append(entry["path"])
+        if entry.get("kind") == "gitlink":
+            paths.append(entry["path"])
     return paths
 
 

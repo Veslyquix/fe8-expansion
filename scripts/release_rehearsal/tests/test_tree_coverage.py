@@ -44,6 +44,32 @@ def _exclusion(path=GITLINK_SHA and "mgfembp", kind="gitlink", mode="160000", oi
     return tc.ExclusionEntry(path=path, kind=kind, mode=mode, oid=oid, reason=reason)
 
 
+def _self_ref_exclusion(path="docs/evidence.json", mode="100644", oid=OTHER_SHA, reason="because"):
+    """issue #9 guardian-correction remediation (D2): a `KIND_SELF_
+    REFERENTIAL_EVIDENCE`-kind exclusion fixture builder, mirroring
+    `_exclusion` above for the gitlink kind."""
+    return tc.ExclusionEntry(path=path, kind=tc.KIND_SELF_REFERENTIAL_EVIDENCE, mode=mode, oid=oid, reason=reason)
+
+
+def _init_repo_with_gitlink_and_blob(root: Path) -> str:
+    """The same fixture as `_init_repo_with_gitlink`, plus one extra
+    tracked ordinary blob ("evidence.json") to exercise a
+    `KIND_SELF_REFERENTIAL_EVIDENCE` exclusion alongside the existing
+    `KIND_GITLINK` one."""
+    _git("init", "-q", cwd=root)
+    _git("config", "user.email", "t@example.com", cwd=root)
+    _git("config", "user.name", "Tester", cwd=root)
+    (root / "src").mkdir()
+    (root / "src" / "main.c").write_text("int x;")
+    (root / "docs").mkdir()
+    (root / "docs" / "readme.md").write_text("hi")
+    (root / "docs" / "evidence.json").write_text("[]")
+    _git("add", "-A", cwd=root)
+    _git("update-index", "--add", "--cacheinfo", f"160000,{GITLINK_SHA},mgfembp", cwd=root)
+    _git("commit", "-q", "-m", "init", cwd=root)
+    return gs.resolve_sha(root, "HEAD")
+
+
 def _write_exclusions(dir_path: Path, entries) -> Path:
     path = dir_path / "export_exclusions.json"
     path.write_text(json.dumps({"exclusions": [
@@ -112,6 +138,27 @@ class LoadExclusionsTests(unittest.TestCase):
             with self.assertRaises(tc.TreeCoverageError):
                 tc.load_exclusions(path)
 
+    def test_self_referential_evidence_kind_with_safe_blob_mode_loads(self):
+        """issue #9 guardian-correction remediation (D2): the second
+        exclusion kind, for an ordinary tracked blob (never a gitlink)
+        that is structurally self-referential."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_exclusions(Path(tmp), [_self_ref_exclusion(mode="100644")])
+            entries = tc.load_exclusions(path)
+            self.assertEqual(entries[0].kind, tc.KIND_SELF_REFERENTIAL_EVIDENCE)
+
+    def test_self_referential_evidence_kind_rejects_gitlink_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_exclusions(Path(tmp), [_self_ref_exclusion(mode="160000")])
+            with self.assertRaises(tc.TreeCoverageError):
+                tc.load_exclusions(path)
+
+    def test_self_referential_evidence_kind_accepts_executable_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_exclusions(Path(tmp), [_self_ref_exclusion(mode="100755")])
+            entries = tc.load_exclusions(path)
+            self.assertEqual(entries[0].mode, "100755")
+
 
 class GenerateExclusionsDocumentTests(unittest.TestCase):
     def test_generates_one_entry_per_gitlink(self):
@@ -144,6 +191,76 @@ class GenerateExclusionsDocumentTests(unittest.TestCase):
             sha = gs.resolve_sha(root, "HEAD")
             with self.assertRaises(tc.TreeCoverageError):
                 tc.generate_exclusions_document(root, sha)
+
+    def test_generates_both_gitlink_and_self_referential_evidence_entries(self):
+        """issue #9 guardian-correction remediation (D2): the real,
+        production `SELF_REFERENTIAL_EVIDENCE_PATHS` seed
+        (docs/release_data/provenance/code.json) is fanned out
+        alongside every mechanically-discovered gitlink."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _git("init", "-q", cwd=root)
+            _git("config", "user.email", "t@example.com", cwd=root)
+            _git("config", "user.name", "Tester", cwd=root)
+            provenance_dir = root / "docs" / "release_data" / "provenance"
+            provenance_dir.mkdir(parents=True)
+            (provenance_dir / "code.json").write_text("[]")
+            _git("add", "-A", cwd=root)
+            _git("update-index", "--add", "--cacheinfo", f"160000,{GITLINK_SHA},mgfembp", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            document = tc.generate_exclusions_document(root, sha)
+            by_path = {e["path"]: e for e in document["exclusions"]}
+            self.assertEqual(by_path["mgfembp"]["kind"], "gitlink")
+            self.assertEqual(
+                by_path["docs/release_data/provenance/code.json"]["kind"],
+                "self_referential_evidence",
+            )
+            self.assertEqual(by_path["docs/release_data/provenance/code.json"]["mode"], "100644")
+
+    def test_self_referential_evidence_seed_path_absent_from_a_generic_tree_is_silently_skipped(self):
+        """A generic/synthetic fixture unrelated to this repository's own
+        real layout (no docs/release_data/provenance/code.json at all)
+        must never fail generation just because it does not happen to
+        replicate this one repository's own specific file layout --
+        `SELF_REFERENTIAL_EVIDENCE_PATHS` is only ever a "generate this
+        extra entry if applicable" seed, never a "this exact path must
+        always exist in every tree ever passed to this function"
+        requirement. The always-run validation path
+        (`check_partition`/`check_non_git_tree`, exercised elsewhere in
+        this file) is what actually catches a genuine post-commit
+        rename/removal regression against the *committed*
+        export-exclusions file -- this generator only ever silently
+        omits an inapplicable path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink(root)
+            document = tc.generate_exclusions_document(root, sha)
+            self.assertEqual([e["path"] for e in document["exclusions"]], ["mgfembp"])
+
+    def test_self_referential_evidence_seed_path_present_but_wrong_kind_is_actionable(self):
+        """The narrower, actually-actionable case: the seed path *does*
+        exist in the tree, but is no longer a safe blob (e.g. it became
+        a gitlink) -- this must fail loudly, never silently produce a
+        malformed exclusion entry."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _git("init", "-q", cwd=root)
+            _git("config", "user.email", "t@example.com", cwd=root)
+            _git("config", "user.name", "Tester", cwd=root)
+            (root / "a.txt").write_text("a")
+            _git("add", "-A", cwd=root)
+            _git(
+                "update-index", "--add", "--cacheinfo",
+                f"160000,{GITLINK_SHA},docs/release_data/provenance/code.json",
+                cwd=root,
+            )
+            _git("update-index", "--add", "--cacheinfo", f"160000,{GITLINK_SHA},mgfembp", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            with self.assertRaises(tc.TreeCoverageError) as ctx:
+                tc.generate_exclusions_document(root, sha)
+            self.assertIn("code.json", str(ctx.exception))
 
 
 class CheckPartitionTests(unittest.TestCase):
@@ -255,6 +372,73 @@ class CheckPartitionTests(unittest.TestCase):
             self.assertEqual(reasons, sorted(reasons))
             self.assertTrue(any("docs/readme.md" in r for r in reasons))
             self.assertTrue(any("mgfembp" in r for r in reasons))
+
+
+class MixedExclusionKindPartitionTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D2): `check_partition`
+    with BOTH a gitlink-kind and a self-referential-evidence-kind
+    exclusion present together."""
+
+    def _committed_oid(self, root: Path, sha: str, path: str) -> str:
+        return {e.path: e for e in gs.list_tree(root, sha)}[path].object_id
+
+    def test_clean_mixed_kind_partition_has_no_reasons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
+            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
+            self.assertTrue(result.is_clean(), result.reasons())
+
+    def test_self_referential_evidence_path_never_required_in_allowlist(self):
+        """A blob-kind exclusion is never required to *also* be an
+        included allowlist member -- unlike an ordinary tracked blob,
+        which would otherwise be flagged missing_included."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
+            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
+            self.assertNotIn("docs/evidence.json", result.missing_included)
+
+    def test_self_referential_evidence_path_in_allowlist_is_overlap(self):
+        """The mirror-image: a blob-kind exclusion path must never *also*
+        be an included allowlist member -- exactly like a gitlink."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
+            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            result = tc.check_partition(
+                root, ["src/main.c", "docs/readme.md", "docs/evidence.json"], exclusions, sha,
+            )
+            self.assertIn("docs/evidence.json", result.overlap)
+
+    def test_missing_self_referential_evidence_blob_is_stale_excluded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            exclusions = [_exclusion(), _self_ref_exclusion(path="never-existed.json", oid=OTHER_SHA)]
+            result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
+            self.assertIn("never-existed.json", result.stale_excluded)
+
+    def test_kind_mismatch_gitlink_declared_as_self_referential_evidence_is_stale_and_missing(self):
+        """A path that IS a live gitlink, but whose exclusion record
+        wrongly declares kind self_referential_evidence, must be
+        reported (never silently trusted as "still excluded, so still
+        fine") -- both as a stale (wrong-kind) exclusion entry and as a
+        live gitlink with no *gitlink*-kind record of its own."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
+            wrong_kind = _self_ref_exclusion(path="mgfembp", mode="100644", oid=GITLINK_SHA)
+            exclusions = [wrong_kind, _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
+            self.assertIn("mgfembp", result.stale_excluded)
+            self.assertIn("mgfembp", result.missing_excluded)
 
 
 class CheckEndToEndTests(unittest.TestCase):
@@ -389,6 +573,106 @@ class CheckNonGitTreeTests(unittest.TestCase):
         self.assertTrue(result.is_clean())
 
 
+class CheckNonGitTreeSelfReferentialEvidenceTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D2): a self-referential-
+    evidence (non-gitlink) exclusion was never part of the archive at
+    all -- unlike a gitlink mountpoint, there is no "empty placeholder
+    directory" convention for it; a genuine extracted candidate must
+    never contain it, in any form."""
+
+    def test_absent_self_referential_evidence_path_is_clean(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("x")
+            (root / "mgfembp").mkdir()
+            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json")]
+            result = tc.check_non_git_tree(root, ["src/main.c"], exclusions)
+            self.assertTrue(result.is_clean(), result.reasons())
+
+    def test_present_self_referential_evidence_path_as_file_is_unsafe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("x")
+            (root / "mgfembp").mkdir()
+            (root / "docs").mkdir()
+            (root / "docs" / "evidence.json").write_text("[]")
+            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json")]
+            result = tc.check_non_git_tree(root, ["src/main.c"], exclusions)
+            self.assertIn("docs/evidence.json", result.unsafe)
+
+    def test_present_self_referential_evidence_path_as_directory_is_unsafe(self):
+        """Unlike a gitlink mountpoint (an empty directory is the
+        *expected* shape), an empty directory at a self-referential-
+        evidence path is still unsafe -- it was never part of the
+        archive at all, so nothing should be there in any shape."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("x")
+            (root / "mgfembp").mkdir()
+            (root / "docs" / "evidence.json").mkdir(parents=True)
+            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json")]
+            result = tc.check_non_git_tree(root, ["src/main.c"], exclusions)
+            self.assertIn("docs/evidence.json", result.unsafe)
+
+    def test_present_self_referential_evidence_path_as_symlink_is_unsafe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("x")
+            (root / "mgfembp").mkdir()
+            (root / "real.json").write_text("[]")
+            (root / "evidence.json").symlink_to("real.json")
+            exclusions = [_exclusion(), _self_ref_exclusion(path="evidence.json")]
+            result = tc.check_non_git_tree(root, ["src/main.c"], exclusions)
+            self.assertIn("evidence.json", result.unsafe)
+
+
+class ClosedWorldSymlinkNeverSkippedTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D5): a fresh,
+    independent review found `_present_regular_files` (the non-git
+    closed-world enumeration `check_non_git_tree` uses) `continue`d
+    straight past any symlink it found -- a stray, unlisted symlink at
+    any path was therefore completely invisible to both the `extra` and
+    `missing` accounting. `_present_paths` (its replacement) never skips
+    any filesystem entry by kind; only a genuine, non-symlink directory
+    is ever walked through rather than reported."""
+
+    def test_stray_symlink_at_an_unaccounted_for_path_is_reported_as_extra(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("x")
+            (root / "mgfembp").mkdir()
+            (root / "real.txt").write_text("real")
+            (root / "stray-symlink.txt").symlink_to("real.txt")
+            result = tc.check_non_git_tree(root, ["src/main.c"], [_exclusion()])
+            self.assertIn("stray-symlink.txt", result.extra)
+            self.assertNotIn("stray-symlink.txt", result.missing)
+
+    def test_present_paths_includes_symlinks_not_just_regular_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "real.txt").write_text("real")
+            (root / "link.txt").symlink_to("real.txt")
+            present = tc._present_paths(root)
+            self.assertIn("link.txt", present)
+            self.assertIn("real.txt", present)
+
+    def test_present_paths_walks_through_real_directories_only(self):
+        """A genuine, non-symlink directory is still only ever walked
+        through -- never itself reported as a leaf entry."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "sub").mkdir()
+            (root / "sub" / "nested.txt").write_text("x")
+            present = tc._present_paths(root)
+            self.assertIn("sub/nested.txt", present)
+            self.assertNotIn("sub", present)
+
+
 class CombinedRequiredPathsTests(unittest.TestCase):
     def test_union_of_both_sets(self):
         combined = tc.combined_required_paths(["a.txt", "b.txt"], ["mgfembp"])
@@ -411,11 +695,26 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(result.reasons(), [])
         self.assertTrue(result.is_clean())
 
-    def test_real_repo_exclusions_contains_exactly_mgfembp(self):
+    def test_real_repo_exclusions_contains_exactly_mgfembp_and_code_json(self):
+        """issue #9 guardian-correction remediation (D2): the real,
+        committed export exclusions now contain exactly two entries --
+        the pre-existing mgfembp gitlink, and the new, self-referential-
+        evidence docs/release_data/provenance/code.json."""
         exclusion_entries = tc.load_exclusions(ROOT / "docs" / "release_data" / "export_exclusions.json")
-        self.assertEqual([e.path for e in exclusion_entries], ["mgfembp"])
-        self.assertEqual(exclusion_entries[0].oid, GITLINK_SHA)
-        self.assertEqual(exclusion_entries[0].kind, "gitlink")
+        by_path = {e.path: e for e in exclusion_entries}
+        self.assertEqual(
+            sorted(by_path), sorted(["mgfembp", "docs/release_data/provenance/code.json"])
+        )
+        self.assertEqual(by_path["mgfembp"].oid, GITLINK_SHA)
+        self.assertEqual(by_path["mgfembp"].kind, "gitlink")
+        self.assertEqual(
+            by_path["docs/release_data/provenance/code.json"].kind, "self_referential_evidence"
+        )
+        self.assertEqual(by_path["docs/release_data/provenance/code.json"].mode, "100644")
+
+    def test_real_repo_code_json_is_not_in_the_included_allowlist(self):
+        allowlist_paths = al.load_allowlist_paths(ROOT / "docs" / "release_data" / "source_allowlist.json")
+        self.assertNotIn("docs/release_data/provenance/code.json", allowlist_paths)
 
     def test_real_exclusions_check_via_cli_helper(self):
         reasons = tc.check(
