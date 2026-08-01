@@ -33,6 +33,7 @@ int main(void)
     printf("startupRunCount=%zu\n", offsetof(struct ExpansionLanguageMenuProbe, startupRunCount));
     printf("settingsOpenCount=%zu\n", offsetof(struct ExpansionLanguageMenuProbe, settingsOpenCount));
     printf("settingsChangeCount=%zu\n", offsetof(struct ExpansionLanguageMenuProbe, settingsChangeCount));
+    printf("needsPreferenceRepair=%zu\n", offsetof(struct ExpansionLanguageMenuProbe, needsPreferenceRepair));
     printf("sizeof=%zu\n", sizeof(struct ExpansionLanguageMenuProbe));
     return 0;
 }

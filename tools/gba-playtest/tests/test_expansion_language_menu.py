@@ -147,6 +147,137 @@ class ExpansionLanguageMenuHeaderHostCompileTests(unittest.TestCase):
             )
 
 
+
+class RowSelectedPreferenceRepairStructureTests(unittest.TestCase):
+    """Issue #18 sprint 6 (runtime blocker fix) structural proof, by
+    scanning the real shipped src/expansion_language_menu.c and
+    include/expansion_language_menu.h: needsPreferenceRepair is appended
+    (never inserted) as the struct's last field; RuntimeInit sets it
+    unconditionally from Normalize()'s own requiresPrompt output before
+    branching on the startup action; only the AUTO_SELECT branch clears
+    it, and only inside the Store()-succeeded guard; RowSelected's own
+    mustRepair guard is derived from (active && needsPreferenceRepair)
+    and is only cleared inside its own Store()-succeeded guard; and
+    ExpansionLanguageMenu_OpenSettings never sets `active` (so the
+    settings submenu's unconditional "same locale = no-op" contract is
+    never affected by the first-start selector's repair path)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.header_text = LANGUAGE_MENU_HEADER.read_text(encoding="utf-8")
+        cls.src_text = LANGUAGE_MENU_SRC.read_text(encoding="utf-8")
+        cls.stripped_header = _strip_c_comments(cls.header_text)
+        cls.stripped_src = _strip_c_comments(cls.src_text)
+
+    def test_probe_field_is_last_and_appended(self):
+        match = re.search(
+            r"struct ExpansionLanguageMenuProbe\s*\{(.*?)\};", self.stripped_header, re.DOTALL
+        )
+        self.assertIsNotNone(match)
+        field_lines = [l.strip() for l in match.group(1).splitlines() if l.strip()]
+        self.assertTrue(field_lines, "struct ExpansionLanguageMenuProbe must not be empty")
+        self.assertEqual(
+            field_lines[-1], "u8 needsPreferenceRepair;",
+            "needsPreferenceRepair must be the last (appended, never inserted) field "
+            "so every pre-sprint-6 scenario's hardcoded probe field offsets stay valid",
+        )
+
+    def test_runtime_init_sets_flag_from_requires_prompt_before_branching(self):
+        match = re.search(
+            r"static void ExpansionLanguageMenu_RuntimeInit\(ProcPtr procPtr\)\s*\{(.*?)\n\}",
+            self.stripped_src, re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+
+        set_idx = body.index("gExpansionLanguageMenuProbe.needsPreferenceRepair = requiresPrompt;")
+        switch_idx = body.index("switch (action)")
+        self.assertLess(
+            set_idx, switch_idx,
+            "needsPreferenceRepair must be set from requiresPrompt before the "
+            "startup action switch, unconditionally of which action fires",
+        )
+
+    def test_auto_select_clears_flag_only_inside_store_succeeded_guard(self):
+        match = re.search(
+            r"case EXPANSION_LANGUAGE_STARTUP_AUTO_SELECT:\s*\{(.*?)\n        \}\n\n        Proc_Goto",
+            self.stripped_src, re.DOTALL,
+        )
+        self.assertIsNotNone(match, "could not locate the AUTO_SELECT case body")
+        body = match.group(1)
+
+        store_if_match = re.search(
+            r"if\s*\(ExpansionUserPrefs_Store\([^)]*\)\)\s*\{(.*?)\n            \}", body, re.DOTALL
+        )
+        self.assertIsNotNone(store_if_match, "AUTO_SELECT must guard its repair-clear on a successful Store()")
+        guarded_body = store_if_match.group(1)
+        self.assertIn("gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;", guarded_body)
+
+        after_guard = body[store_if_match.end():]
+        self.assertNotIn(
+            "needsPreferenceRepair = FALSE", after_guard,
+            "AUTO_SELECT must not clear needsPreferenceRepair outside the Store()-succeeded guard",
+        )
+
+    def test_row_selected_must_repair_guard_and_clear_ordering(self):
+        match = re.search(
+            r"static u8 ExpansionLanguageMenu_RowSelected\(struct MenuProc \*menu, "
+            r"struct MenuItemProc \*item\)\s*\{(.*?)\n\}",
+            self.stripped_src, re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+
+        must_repair_match = re.search(
+            r"mustRepair\s*=\s*\(bool8\)\(gExpansionLanguageMenuProbe\.active\s*"
+            r"&&\s*gExpansionLanguageMenuProbe\.needsPreferenceRepair\);",
+            body,
+        )
+        self.assertIsNotNone(
+            must_repair_match,
+            "mustRepair must be derived from (active && needsPreferenceRepair), "
+            "gating the repair-write path on the first-start selector's own liveness",
+        )
+
+        if_match = re.search(r"if\s*\(locale != previous \|\| mustRepair\)\s*\{(.*?)\n    \}", body, re.DOTALL)
+        self.assertIsNotNone(
+            if_match,
+            "RowSelected must commit when locale changed OR mustRepair is set",
+        )
+        guarded_body = if_match.group(1)
+
+        store_if_match = re.search(
+            r"if\s*\(ExpansionUserPrefs_Store\([^)]*\)\)\s*\{(.*?)\n        \}", guarded_body, re.DOTALL
+        )
+        self.assertIsNotNone(store_if_match, "RowSelected must guard its repair-clear on a successful Store()")
+        self.assertIn(
+            "gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;",
+            store_if_match.group(1),
+        )
+
+        after_guard = guarded_body[store_if_match.end():]
+        self.assertNotIn(
+            "needsPreferenceRepair = FALSE", after_guard,
+            "RowSelected must not clear needsPreferenceRepair outside the Store()-succeeded guard",
+        )
+
+    def test_open_settings_never_sets_active(self):
+        match = re.search(
+            r"void ExpansionLanguageMenu_OpenSettings\(ProcPtr parent\)\s*\{(.*?)\n\}",
+            self.stripped_src, re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+        self.assertNotIn(
+            "gExpansionLanguageMenuProbe.active = TRUE;", body,
+            "OpenSettings must never set `active` -- that flag is exclusive to the "
+            "blocking first-start selector's own ShowSelector, so the settings "
+            "submenu's unconditional same-locale no-op contract stays unaffected "
+            "by the first-start repair path (RowSelected's mustRepair is gated on "
+            "`active`)",
+        )
+
+
 class GameControlIntegrationStructureTests(unittest.TestCase):
     """Proves the blocking first-start selector is spliced between
     ProcScr_GameEarlyStartUI and the OpAnim label, is entirely

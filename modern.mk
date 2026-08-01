@@ -2861,6 +2861,21 @@ $(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav: $(MODERN_LOCALE_FIXTURE_DE
 	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
 		--disabled-locale-id 7
 
+# Issue #18 sprint 6 (runtime blocker fix): a real "already
+# first-start-selected + persisted" fixture -- state VALID, locale en --
+# needed by locale-settings-real-navigation-multi-modern-debug once blank
+# SRAM on a multi-locale build correctly shows the first-start selector
+# (see the blank-sram-selector-multi scenario above): that settings-
+# submenu-reachability scenario's own real debugtools-hotkey boot recipe
+# assumes it starts from an already-past-first-boot state (its point is
+# Options -> Configuration -> Language row reachability, not first-start
+# prompt reachability, which the blank-sram-selector-multi scenario
+# already covers on its own), so it must no longer rely on blank SRAM's
+# now-correctly-different (selector-shown) behavior to reach that state.
+$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" valid-explicit "$@" --locale-id 0
+
 # 1. Blank SRAM + single-locale default build: auto-stamp path never shows
 #    the selector; unset (never-saved) prefs on that same build auto-selects
 #    the sole enabled locale with no visible selector either.
@@ -2902,10 +2917,18 @@ else
 	@printf 'Modern ROM localization-runtime release-check skipped for config=%s (release-only)\n' '$(MODERN_CONFIG)'
 endif
 
-# 3. Multi-locale (en + qps-ploc) build: blank SRAM still never shows the
-#    selector (still auto-stamped VALID); real unset prefs DOES show the
-#    selector, and DOWN+A picks qps-ploc -- proving the EWRAM
-#    SetCurrent/GetCurrent round-trip fixed this sprint actually works.
+# 3. Multi-locale (en + qps-ploc) build: issue #18 sprint 6 fixed a runtime
+#    blocker where blank SRAM never showed the selector here (silently
+#    auto-stamping a syntactically VALID ExpansionUserPrefs record via
+#    BuildCurrentExpansionSaveMeta() regardless of enabled-locale count --
+#    see src/bmsave-lib.c and locale-blank-sram-selector-multi-modern-
+#    {debug,release}.json, which SUPERSEDE the pre-fix locale-blank-sram-
+#    no-selector-multi-modern-{debug,release} pair that encoded that bug
+#    as 'expected' and have been deleted); blank SRAM now correctly shows
+#    the selector (active=1, needsPreferenceRepair=1) exactly like real
+#    unset prefs does, and DOWN+A picks qps-ploc there -- proving the
+#    EWRAM SetCurrent/GetCurrent round-trip fixed in an earlier sprint
+#    actually works.
 #    Uses its own build root + EXPANSION_ENABLED_LOCALES override so it
 #    never disturbs the default single-locale $(MODERN_ROM) above.
 #
@@ -2926,13 +2949,14 @@ MODERN_LOCALE_MULTI_ROM := $(MODERN_LOCALE_MULTI_BUILD_ROOT)/$(MODERN_CONFIG)/$(
 
 expansion-modern-localization-runtime-multi-check: expansion-modern-boot-preflight \
 		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
-		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav
 	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) \
 		MODERN_BUILD_ROOT=$(MODERN_LOCALE_MULTI_BUILD_ROOT) \
 		EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
-		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-multi-modern-$(MODERN_CONFIG).json" \
-		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-multi-modern-$(MODERN_CONFIG).json" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-selector-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-selector-multi-modern-$(MODERN_CONFIG).json" \
 		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
 ifeq ($(MODERN_CONFIG),debug)
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
@@ -2942,7 +2966,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-settings-real-navigation-multi-modern-debug.json" \
 		--expected "$(MODERN_LOCALE_FP)/locale-settings-real-navigation-multi-modern-debug.json" \
-		--policy behavior
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav" --policy behavior
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-softreset-persistence-multi-modern-debug.json" \
 		--expected "$(MODERN_LOCALE_FP)/locale-softreset-persistence-multi-modern-debug.json" \

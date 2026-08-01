@@ -143,7 +143,7 @@ pairs as of sprint 5, real libmGBA captures):
 | Scenario | Config(s) | Contract item |
 |---|---|---|
 | `locale-blank-sram-no-selector-default` | debug, release | Blank SRAM + single-locale (`en`) config: selector reachable/auto-selects before intro/title. |
-| `locale-blank-sram-no-selector-multi` | debug, release | Blank SRAM + multi-locale (`en,qps-ploc`) config: selector prompt path reachable pre-title. |
+| `locale-blank-sram-selector-multi` (renamed, issue #18 sprint 6) | debug, release | Blank SRAM + multi-locale (`en,qps-ploc`) config: the selector genuinely shows (`active=1`, `needsPreferenceRepair=1`) pre-title, matching a real `UNSET` fixture's own behavior. **Correction (sprint 6):** this row previously named/asserted `locale-blank-sram-no-selector-multi`, encoding a real runtime bug -- `BuildCurrentExpansionSaveMeta()` unconditionally auto-stamped a syntactically VALID `ExpansionUserPrefs` record on any blank-SRAM boot regardless of enabled-locale count, silently suppressing the mandatory first-start prompt on multi-locale builds. Fixed in `src/bmsave-lib.c`; the old scenario+fingerprint pair (which asserted the suppressed-selector behavior as "expected") has been deleted and superseded by this pair. See `docs/localization.md` and the sprint 6 addendum at the end of this report. |
 | `locale-auto-select-single-locale` | debug, release | `UNSET`-prefs real fixture, single enabled locale: `AUTO_SELECT`, `promptShown=0`, no visible selector ("one enabled en auto-select no visible selector" milestone). |
 | `locale-selector-multi-switch-qps` | debug | Real selector navigation choosing `qps-ploc`; persisted (`cacheGeneration` bump visible), pseudo path exercised end-to-end. |
 | `locale-prefs-corrupt-no-wipe` | debug | Corrupt prefs -> re-prompt; SRAM hash unchanged (see exclusions below): no wipe. |
@@ -437,3 +437,68 @@ and the sprint 5 addendum below). The one remaining item from that list:
 - `git log` shows no `--amend`/force-push in this sprint's history; this
   commit is a plain, ordinary append to `agent/issue18-localization`.
 - Issue #18 is not closed by this commit.
+
+## Addendum: issue #18 sprint 6 -- two runtime blockers fixed on top of cap self-heal
+
+This report above is the sprint 4/5 closure snapshot and is intentionally
+left otherwise unmodified as historical evidence; this addendum records
+the sprint 6 correction to the one claim above that sprint 6 falsified,
+plus the two runtime blockers actually fixed:
+
+1. **Fresh-metadata over-eager VALID stamp (multi-locale first-start
+   prompt suppression).** `src/bmsave-lib.c`'s
+   `BuildCurrentExpansionSaveMeta()` unconditionally stamped a
+   syntactically VALID, already-selected-default `ExpansionUserPrefs`
+   record into fresh/blank SRAM metadata regardless of how many locales a
+   build had enabled. On a single-enabled-locale build this is correct
+   (nothing to prompt for); on a multi-locale build it silently skipped
+   the mandatory blocking first-start locale prompt every single boot,
+   because the very first `ExpansionUserPrefs_Load()` this sprint's own
+   selector performs already saw a VALID record. Fixed by gating that
+   stamp on `FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1`
+   (`include/expansion_config.h`); a multi-locale build's fresh save now
+   leaves the record canonically UNSET, and the selector correctly shows.
+   This directly falsifies this report's own table row above (previously
+   `locale-blank-sram-no-selector-multi`, corrected in place; see also
+   `docs/localization.md`).
+
+2. **Fallback-as-selection (`RowSelected` skip-on-current-equals-chosen).**
+   `ExpansionLanguageMenu_RuntimeInit`'s `EXPANSION_LANGUAGE_STARTUP_
+   SHOW_MENU` path leaves `ExpansionLocale_GetCurrent()` at its runtime
+   fallback/default value purely so the selector has something to render
+   -- it never itself persists anything. `ExpansionLanguageMenu_
+   RowSelected` only wrote a new record when the chosen row's locale
+   differed from that fallback value, so choosing the row that happened
+   to match the fallback (extremely likely, since the fallback *is* the
+   build-configured default) looked exactly like a redundant no-op
+   reselection and silently left a corrupt/unset/unknown-locale/disabled-
+   locale on-disk record unrepaired forever, re-prompting on every future
+   boot even after the player had "chosen" a locale. Fixed by adding an
+   explicit `needsPreferenceRepair` probe/runtime flag
+   (`include/expansion_language_menu.h`, appended -- never inserted --
+   after every pre-sprint-6 field), set unconditionally from
+   `ExpansionUserPrefs_Normalize()`'s own `requiresPrompt` output at
+   startup and cleared only by a verified-successful `ExpansionUserPrefs_
+   Store()`; `RowSelected` now commits when `locale != previous` **or**
+   this flag is still set (gated on the selector's own `active` probe, so
+   the independent settings submenu's unconditional same-locale no-op
+   contract is unaffected).
+
+Both fixes are covered by new host structural tests
+(`tools/gba-playtest/tests/test_expansion_language_menu.py`'s
+`RowSelectedPreferenceRepairStructureTests`, `test_locale_probe_schema.py`'s
+updated field/offset table) and by real libmGBA debug+release captures:
+the renamed `locale-blank-sram-selector-multi-modern-{debug,release}`
+pair (superseding the deleted `locale-blank-sram-no-selector-multi-
+modern-{debug,release}` pair, which had encoded the bug itself as
+"expected"), and a regenerated fingerprint for `locale-settings-real-
+navigation-multi-modern-debug` (now booted from an explicit
+`valid_explicit_en.sav` post-first-boot fixture instead of blank SRAM,
+since blank SRAM on this same two-locale build now correctly shows the
+first-start selector too and would otherwise consume that scenario's own
+hardcoded early input timeline -- that scenario's real subject is
+Settings-submenu reachability, not first-start-prompt reachability, which
+is what the renamed scenario now covers on its own). All six
+`expansion-modern-localization-runtime-*-check` targets (prefs, save,
+shifted, debug, release, multi -- both configs where applicable) were
+rerun end-to-end after these fixes and pass.

@@ -14,9 +14,9 @@
   "ewram_ui_state": {
     "missing": [],
     "symbols": {
-      "gExpansionLanguageMenuProbe": 18
+      "gExpansionLanguageMenuProbe": 20
     },
-    "total_bytes": 18
+    "total_bytes": 20
   },
   "map_overflow": false,
   "regions_headroom": {

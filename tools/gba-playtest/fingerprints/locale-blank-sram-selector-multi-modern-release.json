@@ -1,0 +1,166 @@
+{
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "selector-shown-post-startup",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031590",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031594",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031596",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031598",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "value": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 1400,
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "selector-still-shown-long-run",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031590",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031594",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031596",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031598",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "value": "0x01"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "3efbfda52957a7ade8e6301341437584794b6b65",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-blank-sram-selector-multi-modern-release"
+}

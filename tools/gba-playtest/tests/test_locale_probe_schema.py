@@ -55,6 +55,11 @@ PROBE_FIELDS = [
     "startupRunCount",
     "settingsOpenCount",
     "settingsChangeCount",
+    # Issue #18 sprint 6 (runtime blocker fix): appended, never inserted
+    # -- see the header's own "new fields may only be appended" note --
+    # so every pre-sprint-6 scenario's hardcoded probe address stays
+    # valid despite this struct growing.
+    "needsPreferenceRepair",
 ]
 
 # Byte width of each field, in the same order as PROBE_FIELDS (u8 fields
@@ -73,6 +78,7 @@ PROBE_FIELD_SIZES = {
     "startupRunCount": 2,
     "settingsOpenCount": 2,
     "settingsChangeCount": 2,
+    "needsPreferenceRepair": 1,
 }
 
 
@@ -112,13 +118,16 @@ class ExpansionLanguageMenuProbeSchemaTests(unittest.TestCase):
         against the real, current field list, not a stale copy), fields
         must be in strictly increasing offset order (packed, no
         reordering), and the struct must round up to a whole u16 (size
-        18, matching 9 u8 + padding + 4 u16 = 8 + 2(pad) + 8 = 18)."""
+        20, matching 9 u8 + pad(1) + 4 u16 + 1 appended u8 (issue #18
+        sprint 6's needsPreferenceRepair) + pad(1) = 8 + 2(pad) + 8 + 1 +
+        1(pad) = 20)."""
         offsets_in_order = [self.offsets[name] for name in PROBE_FIELDS]
         self.assertEqual(offsets_in_order, sorted(offsets_in_order),
                           "probe fields must be declared/packed in strictly increasing offset order")
-        self.assertEqual(self.struct_size, 18,
-                          "struct ExpansionLanguageMenuProbe layout changed size (9 u8 + pad(1) + 4 u16 = 18) "
-                          "-- update PROBE_FIELDS/PROBE_FIELD_SIZES and every locale-*.json probe address")
+        self.assertEqual(self.struct_size, 20,
+                          "struct ExpansionLanguageMenuProbe layout changed size (9 u8 + pad(1) + 4 u16 + "
+                          "1 u8 + pad(1) = 20) -- update PROBE_FIELDS/PROBE_FIELD_SIZES and every "
+                          "locale-*.json probe address")
 
     def _scenario_files(self):
         return sorted(SCENARIOS_DIR.glob("locale-*.json"))

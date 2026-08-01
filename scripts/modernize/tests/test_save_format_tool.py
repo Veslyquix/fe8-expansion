@@ -767,10 +767,18 @@ class BuildCurrentExpansionSaveMetaTests(unittest.TestCase):
 
     def test_built_metadata_stamps_a_valid_default_user_prefs_record(self):
         """A brand-new save's ExpansionUserPrefs sub-record (issue #18
-        sprint 2) must itself classify VALID against this build's real
-        locale configuration, not the pre-sprint-2 all-zero UNSET state."""
+        sprint 2/6) on THIS repo's real (single-enabled-locale, `en`)
+        config.mk must classify VALID -- there is no real first-start
+        ambiguity to prompt for on a single-locale build, so auto-
+        stamping the configured default now is equivalent to (and
+        strictly cheaper than) letting the runtime AUTO_SELECT path do
+        the identical write on this save's own first boot."""
         meta = sft.build_current_expansion_save_meta(ROOT)
         locale_count, enabled_mask, default_locale_id = sft.resolve_user_prefs_locale_context(ROOT)
+        self.assertLessEqual(bin(enabled_mask).count("1"), 1,
+                              "this repo's real config.mk is expected to enable exactly one locale; "
+                              "if that ever changes, this test's VALID expectation must move to the "
+                              "multi-locale UNSET tests below instead")
         prefs_bytes = meta.reserved[
             sft.EXPANSION_USER_PREFS_META_OFFSET:
             sft.EXPANSION_USER_PREFS_META_OFFSET + sft.EXPANSION_USER_PREFS_SIZE
@@ -783,6 +791,71 @@ class BuildCurrentExpansionSaveMetaTests(unittest.TestCase):
         # Every byte past the stamped record is still zeroed headroom.
         headroom = meta.reserved[sft.EXPANSION_USER_PREFS_META_OFFSET + sft.EXPANSION_USER_PREFS_SIZE:]
         self.assertEqual(headroom, b"\x00" * len(headroom))
+
+
+class BuildDefaultReservedBytesForLocaleContextTests(unittest.TestCase):
+    """Issue #18 sprint 6 runtime blocker fix: BuildCurrentExpansionSaveMeta()
+    (src/bmsave-lib.c) must only auto-stamp a VALID default
+    ExpansionUserPrefs record for a single-enabled-locale build; a
+    multi-enabled-locale build's fresh save must leave that record at the
+    canonical all-zero EXPANSION_USER_PREFS_UNSET pattern so its
+    mandatory first-start prompt is never silently skipped. Exercised
+    through the pure, repo_root-independent
+    build_default_reserved_bytes_for_locale_context() helper -- no fake
+    repository/config.mk needed."""
+
+    LOCALE_COUNT = 8
+
+    def test_single_enabled_locale_stamps_valid(self):
+        reserved = sft.build_default_reserved_bytes_for_locale_context(
+            self.LOCALE_COUNT, enabled_locale_mask=0x1, default_locale_id=0
+        )
+        self.assertEqual(len(reserved), sft.EXPANSION_SAVE_META_RESERVED_SIZE)
+        prefs_bytes = reserved[:sft.EXPANSION_USER_PREFS_SIZE]
+        state, prefs = sft.classify_user_prefs_bytes(prefs_bytes, self.LOCALE_COUNT, 0x1)
+        self.assertEqual(state, sft.EXPANSION_USER_PREFS_VALID)
+        self.assertEqual(prefs.locale_id, 0)
+        self.assertEqual(prefs.flags, 0)
+        self.assertEqual(reserved[sft.EXPANSION_USER_PREFS_SIZE:], b"\x00" * (
+            sft.EXPANSION_SAVE_META_RESERVED_SIZE - sft.EXPANSION_USER_PREFS_SIZE
+        ))
+
+    def test_zero_enabled_locale_defensive_fallback_still_stamps_valid(self):
+        """Mirrors ExpansionLanguageMenu_DecideStartupAction()'s own
+        documented "enabledLocaleCount == 0 is treated exactly like 1"
+        defensive fallback (include/expansion_language_menu.h) -- can
+        only arise from a self-contradictory build configuration, never
+        a real one, but this popcount-based decision must collapse the
+        same way as that runtime one does."""
+        reserved = sft.build_default_reserved_bytes_for_locale_context(
+            self.LOCALE_COUNT, enabled_locale_mask=0x0, default_locale_id=0
+        )
+        prefs_bytes = reserved[:sft.EXPANSION_USER_PREFS_SIZE]
+        # Classify against mask 0x1 here purely to prove the *stamped*
+        # record's own bytes are well-formed/current -- a real
+        # enabled_locale_mask=0x0 build is unreachable in practice (see
+        # docstring above) and would classify every locale id DISABLED.
+        state, prefs = sft.classify_user_prefs_bytes(prefs_bytes, self.LOCALE_COUNT, 0x1)
+        self.assertEqual(state, sft.EXPANSION_USER_PREFS_VALID)
+
+    def test_multi_enabled_locale_leaves_reserved_canonically_unset(self):
+        reserved = sft.build_default_reserved_bytes_for_locale_context(
+            self.LOCALE_COUNT, enabled_locale_mask=0x81, default_locale_id=0  # en (bit 0) + qps-ploc (bit 7)
+        )
+        self.assertEqual(len(reserved), sft.EXPANSION_SAVE_META_RESERVED_SIZE)
+        self.assertEqual(reserved, b"\x00" * sft.EXPANSION_SAVE_META_RESERVED_SIZE)
+
+        prefs_bytes = reserved[:sft.EXPANSION_USER_PREFS_SIZE]
+        state, _prefs = sft.classify_user_prefs_bytes(prefs_bytes, self.LOCALE_COUNT, 0x81)
+        self.assertEqual(state, sft.EXPANSION_USER_PREFS_UNSET)
+
+    def test_multi_enabled_locale_never_touches_headroom_bytes_differently_than_single(self):
+        """Both branches must produce the exact same total reserved-tail
+        length -- only the *content*, never the *size*, of the stamped
+        region differs by branch."""
+        single = sft.build_default_reserved_bytes_for_locale_context(self.LOCALE_COUNT, 0x1, 0)
+        multi = sft.build_default_reserved_bytes_for_locale_context(self.LOCALE_COUNT, 0x81, 0)
+        self.assertEqual(len(single), len(multi))
 
 
 # --- ExpansionUserPrefs (issue #18 sprint 2) --------------------------------

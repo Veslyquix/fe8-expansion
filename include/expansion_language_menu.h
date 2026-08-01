@@ -125,11 +125,17 @@ struct ExpansionLanguageMenuProbe
      * at the most recent startup decision. */
     u8 enabledLocaleCount;
 
-    /* Incremented only by this module, only when a locale change is
-     * actually committed (startup auto-select, or a settings-submenu
-     * selection that differs from the previously-current locale) --
-     * never on a redundant re-selection of the already-current locale.
-     * Distinct from (and not a substitute for) ExpansionLocale_
+    /* Incremented only by this module, only when
+     * ExpansionUserPrefs_Store() actually verified-writes a record:
+     * startup auto-select; a settings-submenu selection that differs
+     * from the previously-current locale (never a redundant
+     * re-selection of the already-current locale there -- the settings
+     * submenu's own "same locale = no-op" contract is unconditional); or
+     * -- issue #18 sprint 6 -- the first-start selector repairing a
+     * corrupt/unset/unknown/disabled on-disk record even when the
+     * chosen row happens to match the runtime resolver's current
+     * fallback-default locale (see needsPreferenceRepair below). Distinct
+     * from (and not a substitute for) ExpansionLocale_
      * InvalidateCache()'s own internal bookkeeping (src/expansion_locale.c,
      * not part of this sprint's file domain). */
     u16 cacheGeneration;
@@ -147,6 +153,29 @@ struct ExpansionLanguageMenuProbe
      * from within the settings submenu specifically, as opposed to from
      * the startup path). */
     u16 settingsChangeCount;
+
+    /*
+     * Issue #18 sprint 6 (runtime blocker fix): explicit repair-state
+     * flag, appended (never inserted -- see this struct's own "new
+     * fields may only be appended" schema note) after every
+     * pre-sprint-6 field so every existing scenario's hardcoded probe
+     * address stays valid. Set from ExpansionUserPrefs_Normalize()'s own
+     * `requiresPrompt` output at the start of every startup decision
+     * (TRUE for UNSET/CORRUPT/UNKNOWN_LOCALE/DISABLED_LOCALE, FALSE for
+     * VALID/MIGRATED) -- i.e. this is the same "does the on-disk record
+     * need fixing" fact DecideStartupAction() itself branches on, not a
+     * value re-derived later from comparing locale ids. Cleared only by
+     * a verified-successful ExpansionUserPrefs_Store() (auto-select, or
+     * the first-start selector's own repair write -- see
+     * ExpansionLanguageMenu_RowSelected's own comment). Deliberately NOT
+     * cleared by merely calling ExpansionLocale_SetCurrent() for
+     * rendering/fallback purposes: adopting a fallback locale into the
+     * runtime resolver so the selector has something to draw is not the
+     * same as the player having actually confirmed+persisted a choice,
+     * so this flag -- unlike comparing against
+     * ExpansionLocale_GetCurrent() -- never confuses "what the runtime
+     * is currently rendering" with "whether SRAM still needs repair". */
+    u8 needsPreferenceRepair;
 };
 
 extern struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe;

@@ -136,18 +136,15 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
  * more than that, by construction, and every byte here is now
  * accounted for (see the same itemexpansion-check comment). Growing to
  * a multi-locale build simply grows this same expression -- it is not
- * a fixed constant to maintain by hand. */
-#define EXPANSION_LANGUAGE_MENU_ENABLED_LOCALE_COUNT \
-    (((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 0) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 1) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 2) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 3) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 4) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 5) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 6) & 1) + \
-     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 7) & 1))
+ * a fixed constant to maintain by hand. Issue #18 sprint 6: this popcount
+ * is no longer computed locally -- it is the exact same
+ * FE8_EXPANSION_ENABLED_LOCALE_COUNT single source of truth
+ * (include/expansion_config.h) src/bmsave-lib.c's
+ * BuildCurrentExpansionSaveMeta() now reads too, so the two call sites
+ * can never quietly drift apart on "how many locales does this build
+ * enable". */
 #define EXPANSION_LANGUAGE_MENU_MAX_ROWS \
-    (EXPANSION_LANGUAGE_MENU_ENABLED_LOCALE_COUNT + 1)
+    (FE8_EXPANSION_ENABLED_LOCALE_COUNT + 1)
 
 /* Sentinel stashed in a locale-row MenuItemDef's otherwise-unused
  * helpMsgId field (u16) to mark the settings submenu's own reserved Back
@@ -250,25 +247,47 @@ static int ExpansionLanguageMenu_RowDraw(struct MenuProc *menu, struct MenuItemP
 
 /* Shared onSelected for every locale row (never the Back row -- that one
  * uses MenuCancelSelect directly) in both the first-start selector and
- * the settings submenu: commits the choice only when it actually differs
- * from the current locale (no redundant SRAM write/cache-generation bump
- * for reselecting the already-current locale), via
+ * the settings submenu: commits the choice when it actually differs from
+ * the current locale (no redundant SRAM write/cache-generation bump for
+ * reselecting the already-current locale there), via
  * ExpansionUserPrefs_Store (which itself calls ExpansionLocale_SetCurrent/
- * InvalidateCache on a verified-successful write). */
+ * InvalidateCache on a verified-successful write).
+ *
+ * Issue #18 sprint 6 (runtime blocker fix): the first-start selector
+ * ALSO commits when `locale == previous` if
+ * gExpansionLanguageMenuProbe.needsPreferenceRepair is still set --
+ * i.e. the on-disk record ExpansionUserPrefs_Load() read this boot was
+ * UNSET/CORRUPT/UNKNOWN_LOCALE/DISABLED_LOCALE. Without this, choosing
+ * the row that happens to match ExpansionLocale_GetCurrent()'s own
+ * fallback-default value (extremely likely: `previous` is that same
+ * build-configured default whenever no valid record has ever been
+ * adopted this boot) looked exactly like a redundant no-op reselection
+ * and skipped the write entirely, leaving the corrupt/unset/unknown/
+ * disabled record on disk unrepaired forever -- re-prompting on every
+ * future boot even after the player had already "chosen" a locale.
+ * Gated on `active` (true only while the first-start selector's own
+ * MenuProc is alive, never during the later settings submenu) so the
+ * settings submenu's own unconditional "same locale = no-op" contract
+ * is never affected by this repair path. */
 static u8 ExpansionLanguageMenu_RowSelected(struct MenuProc *menu, struct MenuItemProc *item)
 {
     ExpansionLocaleId locale = (ExpansionLocaleId)item->def->helpMsgId;
     ExpansionLocaleId previous = ExpansionLocale_GetCurrent();
+    bool8 mustRepair;
 
     (void)menu;
 
     gExpansionLanguageMenuProbe.selectedLocale = locale;
 
-    if (locale != previous)
+    mustRepair = (bool8)(gExpansionLanguageMenuProbe.active
+                       && gExpansionLanguageMenuProbe.needsPreferenceRepair);
+
+    if (locale != previous || mustRepair)
     {
         if (ExpansionUserPrefs_Store(locale, TRUE))
         {
             gExpansionLanguageMenuProbe.cacheGeneration++;
+            gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;
 
             if (gExpansionLanguageMenuProbe.settingsActive)
                 gExpansionLanguageMenuProbe.settingsChangeCount++;
@@ -420,6 +439,17 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
     gExpansionLanguageMenuProbe.promptReason = (u8)reason;
     gExpansionLanguageMenuProbe.enabledLocaleCount = enabledCount;
 
+    /* Issue #18 sprint 6 (runtime blocker fix): explicit repair
+     * obligation, set directly from ExpansionUserPrefs_Normalize()'s own
+     * requiresPrompt output -- TRUE for every non-VALID/MIGRATED state,
+     * regardless of what effectiveLocale/enabledCount happen to resolve
+     * to. Only cleared below by a verified-successful
+     * ExpansionUserPrefs_Store() (AUTO_SELECT here, or the first-start
+     * selector's own repair write in ExpansionLanguageMenu_RowSelected).
+     * APPLY_ONLY never needs to clear it -- requiresPrompt is already
+     * FALSE for the VALID/MIGRATED states that reach that action. */
+    gExpansionLanguageMenuProbe.needsPreferenceRepair = requiresPrompt;
+
     switch (action)
     {
     case EXPANSION_LANGUAGE_STARTUP_APPLY_ONLY:
@@ -440,7 +470,10 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
             ExpansionLocaleId sole = ExpansionLanguageMenu_FindSoleEnabledLocale();
 
             if (ExpansionUserPrefs_Store(sole, FALSE))
+            {
                 gExpansionLanguageMenuProbe.cacheGeneration++;
+                gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;
+            }
 
             gExpansionLanguageMenuProbe.autoSelected = TRUE;
             gExpansionLanguageMenuProbe.promptShown = FALSE;

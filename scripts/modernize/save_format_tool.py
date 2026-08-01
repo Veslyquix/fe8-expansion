@@ -457,18 +457,47 @@ def resolve_default_user_prefs_locale_id(repo_root: Path) -> int:
     return resolve_user_prefs_locale_context(repo_root)[2]
 
 
-def build_default_reserved_bytes(repo_root: Path) -> bytes:
-    """Host-side mirror of BuildCurrentExpansionSaveMeta()'s
-    ExpansionUserPrefs_Build() stamp (src/bmsave-lib.c, issue #18
-    sprint 2): a fresh, current, checksummed default-locale
+def build_default_reserved_bytes_for_locale_context(
+    locale_count: int, enabled_locale_mask: int, default_locale_id: int
+) -> bytes:
+    """Pure, context-injectable mirror of BuildCurrentExpansionSaveMeta()'s
+    `reserved`-tail stamping decision (src/bmsave-lib.c, issue #18
+    sprint 6 runtime blocker fix), decoupled from config.mk/repo_root so
+    both the real single-locale default build and a synthetic
+    multi-locale context can be exercised by a host test without needing
+    a fake repository checkout.
+
+    Single-enabled-locale context (popcount(enabled_locale_mask) <= 1,
+    matching FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1 and
+    ExpansionLanguageMenu_DecideStartupAction()'s own AUTO_SELECT
+    collapse): stamps a fresh, current, checksummed default-locale
     ExpansionUserPrefs record at EXPANSION_USER_PREFS_META_OFFSET,
-    zero-padded out to the full reserved-tail size (matching the C
-    side's memset()-then-stamp order)."""
-    default_locale_id = resolve_default_user_prefs_locale_id(repo_root)
-    prefs = build_default_user_prefs(default_locale_id, explicit_selection=False)
-    prefs_bytes = prefs.pack()
+    zero-padded out to the full reserved-tail size.
+
+    Multi-enabled-locale context: returns the reserved tail fully
+    zeroed (the canonical EXPANSION_USER_PREFS_UNSET all-zero pattern,
+    ExpansionUserPrefs_ValidateRaw()) -- a brand-new save on a
+    multi-locale build must not silently skip its mandatory first-start
+    prompt by auto-stamping a syntactically VALID record no player ever
+    actually chose."""
+    enabled_locale_count = bin(enabled_locale_mask & ((1 << locale_count) - 1)).count("1")
+    if enabled_locale_count <= 1:
+        prefs = build_default_user_prefs(default_locale_id, explicit_selection=False)
+        prefs_bytes = prefs.pack()
+    else:
+        prefs_bytes = b"\x00" * EXPANSION_USER_PREFS_SIZE
     padding = b"\x00" * (EXPANSION_SAVE_META_RESERVED_SIZE - EXPANSION_USER_PREFS_META_OFFSET - len(prefs_bytes))
     return prefs_bytes + padding
+
+
+def build_default_reserved_bytes(repo_root: Path) -> bytes:
+    """Host-side mirror of BuildCurrentExpansionSaveMeta()'s `reserved`-
+    tail stamping decision (src/bmsave-lib.c, issue #18 sprint 2 /
+    sprint 6), resolved against the real config.mk -- see
+    build_default_reserved_bytes_for_locale_context() for the pure
+    (repo_root-independent) decision logic this delegates to."""
+    locale_count, enabled_mask, default_locale_id = resolve_user_prefs_locale_context(repo_root)
+    return build_default_reserved_bytes_for_locale_context(locale_count, enabled_mask, default_locale_id)
 
 
 def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes] = None) -> ExpansionSaveMeta:

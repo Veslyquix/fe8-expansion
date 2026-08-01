@@ -317,6 +317,41 @@ int main(void)
                 f"reserved headroom byte at offset 0x{offset:02X} was not deterministically zeroed",
             )
 
+    def test_native_c_output_multi_locale_leaves_prefs_canonically_unset(self):
+        """Issue #18 sprint 6 runtime blocker fix: when
+        FE8_EXPANSION_ENABLED_LOCALE_MASK enables more than one locale,
+        BuildCurrentExpansionSaveMeta() must leave the ExpansionUserPrefs
+        sub-record fully zeroed (EXPANSION_USER_PREFS_UNSET), never
+        stamp a syntactically VALID default -- a real, compiled-and-run
+        proof (not just the Python-mirror-only coverage in
+        test_save_format_tool.py's BuildDefaultReservedBytesForLocaleContextTests)
+        that the real C `reserved` tail actually stays all-zero in this
+        configuration."""
+        defines = [
+            "-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=42",
+            "-DFE8_EXPANSION_ABI=\"aapcs\"",
+            "-DFE8_EXPANSION_VERSION_PACKED=0x010203u",
+            "-DFE8_EXPANSION_CONFIG_FINGERPRINT=\"1234567890abcdef\"",
+            "-DFE8_EXPANSION_BUILD_COMMIT=\"deadbeefcafebabe1234\"",
+            "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x81u",  # en (bit 0) + qps-ploc (bit 7)
+        ]
+        c_bytes = self._build_and_run_probe(defines)
+
+        self.assertEqual(len(c_bytes), sft.META_SIZE)
+
+        reserved_start = sft.META_CHECKSUM_DOMAIN + 2
+        reserved = c_bytes[reserved_start:reserved_start + sft.EXPANSION_SAVE_META_RESERVED_SIZE]
+        self.assertEqual(
+            reserved, b"\x00" * sft.EXPANSION_SAVE_META_RESERVED_SIZE,
+            "multi-enabled-locale build must leave the whole reserved tail "
+            "(including the ExpansionUserPrefs sub-record) canonically "
+            "zeroed/UNSET, never auto-stamp a VALID default",
+        )
+
+        prefs_bytes = reserved[:sft.EXPANSION_USER_PREFS_SIZE]
+        state, _prefs = sft.classify_user_prefs_bytes(prefs_bytes, 8, 0x81)
+        self.assertEqual(state, sft.EXPANSION_USER_PREFS_UNSET)
+
     def test_native_c_output_is_repeatable_across_builds(self):
         """The exact property the bug violated: rebuilding/re-running must
         yield bit-for-bit identical output, proving no uninitialized

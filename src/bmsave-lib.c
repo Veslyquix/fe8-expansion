@@ -211,22 +211,47 @@ void BuildCurrentExpansionSaveMeta(struct ExpansionSaveMeta *meta)
     CopyStringBounded(meta->buildCommitShort, FE8_EXPANSION_BUILD_COMMIT, sizeof(meta->buildCommitShort));
 
     /*
-     * Issue #18 sprint 2: a brand-new save (the only real caller of this
-     * function -- InitGlobalSaveInfodata(), on genuinely blank SRAM only)
-     * gets a fully-built, current ExpansionUserPrefs record stamped into
-     * the front of `reserved` (EXPANSION_USER_PREFS_META_OFFSET), rather
-     * than leaving it at the implicitly-zeroed EXPANSION_USER_PREFS_UNSET
-     * state -- the same "stamp current metadata now, don't wait for the
-     * player to touch it" precedent already used for formatVersion/
-     * compatEpoch above. explicitSelection=FALSE: this is this build's
-     * configured default, not something the player chose. Every
-     * remaining byte of `reserved` past this record stays zeroed by the
-     * memset() above (EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES of
-     * future headroom, include/expansion_save_prefs.h).
+     * Issue #18 sprint 6 (runtime blocker fix): a brand-new save (the
+     * only real caller of this function -- InitGlobalSaveInfodata(), on
+     * genuinely blank SRAM only) may only auto-stamp a fully-built,
+     * VALID-classifying ExpansionUserPrefs record into the front of
+     * `reserved` (EXPANSION_USER_PREFS_META_OFFSET) when this build
+     * enables exactly one locale (FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1,
+     * include/expansion_config.h) -- the same enabledLocaleCount <= 1
+     * collapse ExpansionLanguageMenu_DecideStartupAction() itself uses to
+     * pick EXPANSION_LANGUAGE_STARTUP_AUTO_SELECT over ...SHOW_MENU
+     * (src/expansion_language_menu.c). In that single-enabled-locale
+     * case there is no real choice for the player to make, so stamping
+     * the build's configured default now is exactly equivalent to (and
+     * strictly cheaper than) letting the runtime auto-select path do the
+     * identical write on this save's own first real boot.
+     *
+     * A multi-enabled-locale build must NOT take this shortcut: prior to
+     * this fix, ExpansionUserPrefs_Build() was called unconditionally
+     * here, so every brand-new save -- regardless of how many locales
+     * this build enabled -- was stamped with a syntactically VALID
+     * record (magic/checksum set, ExpansionUserPrefs_ValidateRaw() has
+     * no way to distinguish "player chose this" from "auto-stamped
+     * default") and `requiresPrompt` was FALSE from the very first boot,
+     * silently skipping the mandatory first-start locale prompt that
+     * build was supposed to show. Leaving `reserved` at the
+     * already-memset()'d canonical all-zero EXPANSION_USER_PREFS_UNSET
+     * pattern instead (the implicit `else` below -- no code needed, the
+     * memset() above already did it) makes ExpansionUserPrefs_Load()
+     * classify this save's first real read as genuinely UNSET, so
+     * ExpansionUserPrefs_Normalize()/DecideStartupAction() correctly
+     * require -- and, for a multi-enabled-locale build, actually show --
+     * the first-start prompt. Every remaining byte of `reserved` past
+     * this record stays zeroed by the memset() above either way
+     * (EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES of future headroom,
+     * include/expansion_save_prefs.h).
      */
+    if (FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1)
     {
         struct ExpansionUserPrefs prefs;
 
+        /* explicitSelection=FALSE: this is this build's configured
+         * default, not something the player chose. */
         ExpansionUserPrefs_Build(&prefs, (ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID, FALSE);
         memcpy(&meta->reserved[EXPANSION_USER_PREFS_META_OFFSET], &prefs, sizeof(prefs));
     }

@@ -2,13 +2,13 @@
   "checkpoints": [
     {
       "frame": 600,
-      "framebuffer_hash": "fnv1a64-rgb24:645ace29b411a325",
-      "name": "post-startup-settled",
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "selector-shown-post-startup",
       "probes": [
         {
           "address": "0x02031a94",
           "size": 1,
-          "value": "0x00"
+          "value": "0x01"
         },
         {
           "address": "0x02031a95",
@@ -18,7 +18,7 @@
         {
           "address": "0x02031a96",
           "size": 1,
-          "value": "0x00"
+          "value": "0x01"
         },
         {
           "address": "0x02031a97",
@@ -28,12 +28,12 @@
         {
           "address": "0x02031a98",
           "size": 1,
-          "value": "0x00"
+          "value": "0x01"
         },
         {
           "address": "0x02031a99",
           "size": 1,
-          "value": "0x05"
+          "value": "0x00"
         },
         {
           "address": "0x02031a9a",
@@ -69,18 +69,23 @@
           "address": "0x02031aa4",
           "size": 2,
           "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x01"
         }
       ]
     },
     {
       "frame": 1400,
-      "framebuffer_hash": "fnv1a64-rgb24:2d1ea31dcf97964d",
-      "name": "long-run-still-no-selector",
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "selector-still-shown-long-run",
       "probes": [
         {
           "address": "0x02031a94",
           "size": 1,
-          "value": "0x00"
+          "value": "0x01"
         },
         {
           "address": "0x02031a95",
@@ -90,7 +95,7 @@
         {
           "address": "0x02031a96",
           "size": 1,
-          "value": "0x00"
+          "value": "0x01"
         },
         {
           "address": "0x02031a97",
@@ -100,12 +105,12 @@
         {
           "address": "0x02031a98",
           "size": 1,
-          "value": "0x00"
+          "value": "0x01"
         },
         {
           "address": "0x02031a99",
           "size": 1,
-          "value": "0x05"
+          "value": "0x00"
         },
         {
           "address": "0x02031a9a",
@@ -141,6 +146,11 @@
           "address": "0x02031aa4",
           "size": 2,
           "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x01"
         }
       ]
     }
@@ -148,9 +158,9 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "bd296cd6aa4141fb71644ca972d1a3fa247836fd",
+    "sha1": "f444d3b825bacada6b0cbcb74decc11a99e1c1db",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },
-  "scenario": "locale-blank-sram-no-selector-multi-modern-debug"
+  "scenario": "locale-blank-sram-selector-multi-modern-debug"
 }

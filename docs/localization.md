@@ -133,7 +133,7 @@ fingerprints in the matching `tools/gba-playtest/fingerprints/` file):
 | Scenario | Proves |
 |---|---|
 | `locale-blank-sram-no-selector-default-modern-{debug,release}` | Blank SRAM, single enabled locale (`en`): selector auto-selects silently, reachable before intro/title. |
-| `locale-blank-sram-no-selector-multi-modern-{debug,release}` | Blank SRAM, multi-locale build (`en,qps-ploc`): selector prompt path is genuinely reachable pre-title. |
+| `locale-blank-sram-selector-multi-modern-{debug,release}` | Blank SRAM, multi-locale build (`en,qps-ploc`): issue #18 sprint 6 fixed `BuildCurrentExpansionSaveMeta()` unconditionally auto-stamping a syntactically VALID prefs record on a blank-SRAM boot regardless of enabled-locale count; the selector now genuinely shows (`active=1`, `needsPreferenceRepair=1`) and stays shown pre-title, matching a real `UNSET` fixture's own behavior. Supersedes the pre-fix `locale-blank-sram-no-selector-multi-modern-{debug,release}` pair, which had encoded the bug itself as "expected" and has been deleted. |
 | `locale-auto-select-single-locale-modern-{debug,release}` | An `UNSET` prefs sub-state (real reachable fixture, not blank SRAM) with one enabled locale: `AUTO_SELECT`, `promptShown=0`, never a visible selector -- contract item "one enabled en auto-select no visible selector". |
 | `locale-selector-multi-switch-qps-modern-debug` | Real selector navigation choosing `qps-ploc`; persisted via `ExpansionUserPrefs_Store` (`cacheGeneration` bump visible in probe). |
 | `locale-prefs-corrupt-no-wipe-modern-debug` | Corrupt `ExpansionUserPrefs` -> re-prompt; full-SRAM hash (minus three justified exclusions below) is unchanged frame-5 to frame-600: no wipe. |

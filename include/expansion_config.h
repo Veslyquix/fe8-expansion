@@ -175,6 +175,32 @@
 #define FE8_EXPANSION_ENABLED_LOCALE_MASK 0x1u
 #endif
 
+/*
+ * Compile-time popcount of FE8_EXPANSION_ENABLED_LOCALE_MASK's low 8 bits
+ * (EXPANSION_LOCALE_COUNT, include/expansion_locale.h, is fixed at 8) --
+ * the single shared source of truth for "how many locales does this
+ * build actually enable", used both by src/expansion_language_menu.c
+ * (sizing its row table / deciding AUTO_SELECT vs. SHOW_MENU) and by
+ * src/bmsave-lib.c's BuildCurrentExpansionSaveMeta() (issue #18 sprint 6:
+ * deciding whether a brand-new save may auto-stamp a VALID default
+ * ExpansionUserPrefs record, single-enabled-locale builds only, or must
+ * leave that record at the canonical EXPANSION_USER_PREFS_UNSET all-zero
+ * pattern so a genuinely multi-enabled-locale build's mandatory
+ * first-start prompt is never silently skipped). Both call sites must
+ * stay legacy-agbcc-compilable, so this is a plain preprocessor bit-sum,
+ * never a call to ExpansionLocale_IsEnabled() (src/expansion_locale.c,
+ * modern-linked only).
+ */
+#define FE8_EXPANSION_ENABLED_LOCALE_COUNT \
+    (((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 0) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 1) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 2) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 3) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 4) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 5) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 6) & 1) + \
+     ((FE8_EXPANSION_ENABLED_LOCALE_MASK >> 7) & 1))
+
 #ifndef FE8_EXPANSION_DEFAULT_LOCALE_ID
 #define FE8_EXPANSION_DEFAULT_LOCALE_ID 0
 #endif
