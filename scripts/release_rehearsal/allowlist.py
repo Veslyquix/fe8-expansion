@@ -184,19 +184,51 @@ def load_allowlist_paths(path: Path) -> List[str]:
     return paths
 
 
-def load_allowlist_modes(path: Path) -> Optional[Dict[str, str]]:
-    """Loads the same allowlist document's optional `"modes"` mapping
-    (guardian-correction remediation: mode binding). Returns `None` when
-    the key is entirely absent (an older/ad-hoc allowlist document that
-    does not participate in mode-binding at all -- `check()` below then
-    skips mode validation cleanly, never treating absence itself as an
-    error). When present, it must be a non-empty JSON object mapping an
-    exact path to one of `VALID_ALLOWLIST_MODES` -- a malformed shape or
-    an unsupported mode value is a hard `AllowlistError`, exactly like a
-    malformed `"paths"` array."""
+def load_allowlist_modes(path: Path) -> Dict[str, str]:
+    """Loads the same allowlist document's mandatory `"modes"` mapping
+    (guardian-correction remediation: mode binding; issue #9 R5 fix:
+    mode-binding enforcement can no longer be silently disabled by
+    deleting this key, or by tampering with `schema_version`, since a
+    prior version of this function treated an absent `"modes"` key as
+    "an older document that predates mode-binding, so skip validation
+    entirely" -- an independent review correctly found that `schema_
+    version` itself was never actually checked anywhere, so that silent
+    fallback was reachable simply by deleting `"modes"` from the real,
+    current, schema_version-4 checked-in document).
+
+    `schema_version` must be present and exactly equal to
+    `SCHEMA_VERSION` (an `int`, compared with `!=` so a wrong *type*,
+    e.g. the string `"4"`, is rejected exactly like a wrong value) --
+    any missing, downgraded, or unknown/future schema_version is a hard
+    `AllowlistError` raised *before* any mode checking runs at all. This
+    is deliberately not a soft "older document that predates
+    mode-binding" fallback: every real, checked-in allowlist document in
+    this repository has always been schema_version 4 (mode-binding and
+    schema_version were introduced together), so there is no legitimate
+    historical document to stay backward-compatible with -- an
+    unexpected schema_version here is exclusively evidence of tampering
+    or a broken generator, never a benign case to silently accommodate.
+
+    Given a valid, current schema_version, `"modes"` itself is then
+    unconditionally mandatory: an entirely absent key is exactly as hard
+    an `AllowlistError` as a malformed one. When present, it must be a
+    non-empty JSON object mapping an exact path to one of
+    `VALID_ALLOWLIST_MODES` -- a malformed shape or an unsupported mode
+    value is a hard `AllowlistError`, exactly like a malformed `"paths"`
+    array."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    schema_version = data.get("schema_version")
+    if schema_version != SCHEMA_VERSION:
+        raise AllowlistError(
+            f"{path}: unsupported schema_version {schema_version!r} (expected exactly "
+            f"{SCHEMA_VERSION!r}); a missing, downgraded, or unknown/future schema_version is "
+            "never silently tolerated, and mode-binding enforcement cannot be disabled this way"
+        )
     if "modes" not in data:
-        return None
+        raise AllowlistError(
+            f"{path}: schema_version {SCHEMA_VERSION} requires a 'modes' mapping; deleting or "
+            "omitting this key does not disable mode-binding enforcement"
+        )
     modes = data["modes"]
     if not isinstance(modes, dict) or not modes:
         raise AllowlistError(f"{path}: 'modes' must be a non-empty JSON object mapping path -> Git mode")
@@ -454,12 +486,17 @@ def check(
     `EXIT_TOOLING_ERROR`, not an honestly-recorded business fact.
 
     Guardian-correction remediation: also cross-checks the allowlist
-    document's optional `"modes"` mapping (see `load_allowlist_modes`)
-    -- a bijection check always, plus a live Git-mode identity
-    cross-check (`check_mode_identity`) when `repo_root` is a real git
-    repository -- and excludes any non-gitlink export-exclusion path
-    (see `_load_non_gitlink_exclusion_paths`) from the tracked-blob
-    bijection, exactly like a gitlink has always been excluded."""
+    document's mandatory `"modes"` mapping (see `load_allowlist_modes`)
+    -- issue #9 R5 fix: `schema_version`/`"modes"` are validated (and a
+    missing/downgraded/unknown schema_version or a deleted `"modes"` key
+    is a hard, actionable finding here, via the `AllowlistError` caught
+    below) *before* any mode checking runs, so mode-binding enforcement
+    can never be silently disabled -- a bijection check always, plus a
+    live Git-mode identity cross-check (`check_mode_identity`) when
+    `repo_root` is a real git repository -- and excludes any non-gitlink
+    export-exclusion path (see `_load_non_gitlink_exclusion_paths`) from
+    the tracked-blob bijection, exactly like a gitlink has always been
+    excluded."""
     try:
         allowlist_paths = load_allowlist_paths(allowlist_path)
         allowlist_modes = load_allowlist_modes(allowlist_path)
@@ -481,25 +518,23 @@ def check(
             f"'mgfembp', or a removed/never-extracted file): {path}"
             for path in unrepresented
         ]
-        if allowlist_modes is not None:
-            mode_missing, mode_extra = check_mode_bijection(allowlist_paths, allowlist_modes)
-            errors += [f"allowlist path has no recorded 'modes' entry: {path}" for path in mode_missing]
-            errors += [
-                f"recorded 'modes' entry for a path that is not (or is no longer) an allowlist entry: {path}"
-                for path in mode_extra
-            ]
-        return errors
-    missing, stale = check_allowlist_completeness(repo_root, allowlist_paths, target_sha, excluded_blob_paths)
-    errors = [f"tracked file missing from allowlist: {path}" for path in missing]
-    errors += [f"stale allowlist entry (no longer tracked): {path}" for path in stale]
-    if allowlist_modes is not None:
         mode_missing, mode_extra = check_mode_bijection(allowlist_paths, allowlist_modes)
         errors += [f"allowlist path has no recorded 'modes' entry: {path}" for path in mode_missing]
         errors += [
             f"recorded 'modes' entry for a path that is not (or is no longer) an allowlist entry: {path}"
             for path in mode_extra
         ]
-        errors += check_mode_identity(repo_root, allowlist_modes, target_sha)
+        return errors
+    missing, stale = check_allowlist_completeness(repo_root, allowlist_paths, target_sha, excluded_blob_paths)
+    errors = [f"tracked file missing from allowlist: {path}" for path in missing]
+    errors += [f"stale allowlist entry (no longer tracked): {path}" for path in stale]
+    mode_missing, mode_extra = check_mode_bijection(allowlist_paths, allowlist_modes)
+    errors += [f"allowlist path has no recorded 'modes' entry: {path}" for path in mode_missing]
+    errors += [
+        f"recorded 'modes' entry for a path that is not (or is no longer) an allowlist entry: {path}"
+        for path in mode_extra
+    ]
+    errors += check_mode_identity(repo_root, allowlist_modes, target_sha)
     return errors
 
 

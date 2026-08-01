@@ -27,6 +27,24 @@ def _init_repo(root: Path) -> None:
     _git("config", "user.name", "Tester", cwd=root)
 
 
+def _allowlist_dict(paths, modes=None):
+    """A well-formed, *current-schema* allowlist document dict for test
+    fixtures that are not themselves specifically testing a schema/
+    modes defect -- issue #9 R5 fix: `schema_version`/`"modes"` are now
+    both mandatory (see `al.load_allowlist_modes`), so every fixture
+    exercising `al.check()`'s ordinary (non-defect) path must declare
+    both, exactly like the real, checked-in
+    docs/release_data/source_allowlist.json always has. `modes=None`
+    (the default) declares every path an ordinary regular-file
+    (`"100644"`) mode; pass an explicit `modes` mapping to override."""
+    paths = list(paths)
+    return {
+        "schema_version": al.SCHEMA_VERSION,
+        "paths": paths,
+        "modes": modes if modes is not None else {p: "100644" for p in paths},
+    }
+
+
 class GenerateEntriesTests(unittest.TestCase):
     def test_generates_every_tracked_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -204,17 +222,84 @@ class ModeBindingTests(unittest.TestCase):
         _git("commit", "-q", "-m", "init", cwd=root)
         return gs.resolve_sha(root, "HEAD")
 
-    def test_load_allowlist_modes_returns_none_when_key_absent(self):
+    def test_load_allowlist_modes_raises_when_modes_key_deleted_even_with_current_schema(self):
+        """issue #9 R5 fix (the literal reproduced defect): deleting the
+        'modes' key must not silently disable mode-binding enforcement.
+        A document that otherwise correctly declares the current,
+        supported schema_version but omits 'modes' entirely is a hard
+        AllowlistError -- never the old silent `None` "this document
+        predates mode-binding" fallback (schema_version has always been
+        4 in every real, checked-in document; there is no legitimate
+        older document that silent fallback was ever actually for)."""
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "allow.json"
-            path.write_text(json.dumps({"paths": ["a.txt"]}), encoding="utf-8")
-            self.assertIsNone(al.load_allowlist_modes(path))
+            path.write_text(
+                json.dumps({"schema_version": al.SCHEMA_VERSION, "paths": ["a.txt"]}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(al.AllowlistError):
+                al.load_allowlist_modes(path)
+
+    def test_load_allowlist_modes_rejects_missing_schema_version(self):
+        """schema_version itself cannot be silently absent either -- an
+        allowlist document with a 'modes' key but no schema_version at
+        all is exactly as unsupported as one with a wrong value."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(
+                json.dumps({"paths": ["a.txt"], "modes": {"a.txt": "100644"}}), encoding="utf-8"
+            )
+            with self.assertRaises(al.AllowlistError):
+                al.load_allowlist_modes(path)
+
+    def test_load_allowlist_modes_rejects_downgraded_schema_version(self):
+        """A document claiming a downgraded schema_version (e.g. 3, the
+        version immediately before mode-binding existed) is rejected
+        exactly like an unknown one -- 'exactly/current-supported', not
+        'anything less than or equal to the current version'. This
+        closes the alternate escape hatch of the same defect: instead of
+        deleting 'modes', an attacker could instead just roll back
+        schema_version and leave a stale/absent 'modes' mapping."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(
+                json.dumps({"schema_version": 3, "paths": ["a.txt"], "modes": {"a.txt": "100644"}}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(al.AllowlistError):
+                al.load_allowlist_modes(path)
+
+    def test_load_allowlist_modes_rejects_unknown_future_schema_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(
+                json.dumps({"schema_version": 5, "paths": ["a.txt"], "modes": {"a.txt": "100644"}}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(al.AllowlistError):
+                al.load_allowlist_modes(path)
+
+    def test_load_allowlist_modes_rejects_non_integer_schema_version(self):
+        """A wrong *type* (e.g. the string "4") must be rejected exactly
+        like a wrong value -- `!=` correctly treats them as unequal
+        without needing a separate `isinstance` check."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(
+                json.dumps({"schema_version": "4", "paths": ["a.txt"], "modes": {"a.txt": "100644"}}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(al.AllowlistError):
+                al.load_allowlist_modes(path)
 
     def test_load_allowlist_modes_rejects_unsupported_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "allow.json"
             path.write_text(
-                json.dumps({"paths": ["a.txt"], "modes": {"a.txt": "040000"}}), encoding="utf-8"
+                json.dumps({
+                    "schema_version": al.SCHEMA_VERSION,
+                    "paths": ["a.txt"], "modes": {"a.txt": "040000"},
+                }), encoding="utf-8"
             )
             with self.assertRaises(al.AllowlistError):
                 al.load_allowlist_modes(path)
@@ -223,6 +308,7 @@ class ModeBindingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "allow.json"
             path.write_text(json.dumps({
+                "schema_version": al.SCHEMA_VERSION,
                 "paths": ["a.txt", "b.sh", "c.lnk"],
                 "modes": {"a.txt": "100644", "b.sh": "100755", "c.lnk": "120000"},
             }), encoding="utf-8")
@@ -274,9 +360,7 @@ class ModeBindingTests(unittest.TestCase):
             root = Path(tmp)
             sha1 = self._commit(root, "100644")
             allowlist_path = root / "allow.json"
-            allowlist_path.write_text(json.dumps({
-                "paths": ["f.txt"], "modes": {"f.txt": "100644"},
-            }), encoding="utf-8")
+            allowlist_path.write_text(json.dumps(_allowlist_dict(["f.txt"])), encoding="utf-8")
             self.assertEqual(al.check(root, allowlist_path, sha1), [])
 
             (root / "f.txt").chmod(0o755)
@@ -286,6 +370,89 @@ class ModeBindingTests(unittest.TestCase):
 
             errors = al.check(root, allowlist_path, sha2)
             self.assertTrue(any("f.txt" in e for e in errors), errors)
+
+    def test_check_end_to_end_fails_closed_when_modes_key_deleted(self):
+        """The literal issue #9 R5 defect, wired fully end-to-end through
+        al.check() (the exact function manifest.check_allowlist_exact()
+        / 'make release-check' invokes): deleting the checked-in
+        allowlist's 'modes' key -- while otherwise leaving
+        schema_version claiming full, current v4 support -- must make
+        al.check() fail loudly, never silently degrade into skipping
+        every mode check as if this were a legitimate older document."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._commit(root, "100644")
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(
+                json.dumps({"schema_version": al.SCHEMA_VERSION, "paths": ["f.txt"]}),
+                encoding="utf-8",
+            )
+            errors = al.check(root, allowlist_path, sha)
+            self.assertTrue(errors)
+            self.assertTrue(any("modes" in e for e in errors), errors)
+
+    def test_check_end_to_end_fails_closed_when_schema_version_downgraded(self):
+        """Companion to the above: even with a well-formed 'modes'
+        mapping still present, a document that declares a downgraded/
+        unsupported schema_version must still fail closed end-to-end --
+        schema_version cannot be used as an alternate escape hatch to
+        bypass mode-binding enforcement either."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._commit(root, "100644")
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(
+                json.dumps({"schema_version": 3, "paths": ["f.txt"], "modes": {"f.txt": "100644"}}),
+                encoding="utf-8",
+            )
+            errors = al.check(root, allowlist_path, sha)
+            self.assertTrue(errors)
+            self.assertTrue(any("schema_version" in e for e in errors), errors)
+
+    def test_check_end_to_end_detects_dropped_individual_mode_entry(self):
+        """'add/drop mode' at the individual-path granularity (distinct
+        from deleting the whole 'modes' key tested above): a path
+        present in 'paths' but missing its own 'modes' entry must be
+        reported end-to-end through al.check(), not silently tolerated
+        as if only whole-key deletion mattered."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "a.txt").write_text("a")
+            (root / "b.txt").write_text("b")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            sha = gs.resolve_sha(root, "HEAD")
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(json.dumps({
+                "schema_version": al.SCHEMA_VERSION,
+                "paths": ["a.txt", "b.txt"],
+                "modes": {"a.txt": "100644"},  # b.txt's own 'modes' entry dropped
+            }), encoding="utf-8")
+            errors = al.check(root, allowlist_path, sha)
+            self.assertTrue(
+                any("b.txt" in e and "no recorded 'modes' entry" in e for e in errors), errors
+            )
+
+    def test_check_end_to_end_detects_extra_mode_entry_for_added_path(self):
+        """The mirror-image 'add mode': a 'modes' entry for a path that
+        is not (or is no longer) an allowlist path at all must also be
+        reported end-to-end, exactly like check_mode_bijection's own
+        unit-level coverage already proves in isolation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = self._commit(root, "100644")
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(json.dumps({
+                "schema_version": al.SCHEMA_VERSION,
+                "paths": ["f.txt"],
+                "modes": {"f.txt": "100644", "phantom.txt": "100644"},
+            }), encoding="utf-8")
+            errors = al.check(root, allowlist_path, sha)
+            self.assertTrue(
+                any("phantom.txt" in e and "not (or is no longer) an allowlist entry" in e for e in errors),
+                errors,
+            )
 
 
 class ClosedWorldSymlinkNeverSkippedTests(unittest.TestCase):
@@ -325,7 +492,7 @@ class CheckFunctionTests(unittest.TestCase):
             _git("commit", "-q", "-m", "init", cwd=root)
 
             allowlist_path = root / "allow.json"
-            allowlist_path.write_text(json.dumps({"paths": ["a.txt"]}), encoding="utf-8")
+            allowlist_path.write_text(json.dumps(_allowlist_dict(["a.txt"])), encoding="utf-8")
             errors = al.check(root, allowlist_path, "HEAD")
             self.assertEqual(len(errors), 1)
             self.assertIn("b.txt", errors[0])
@@ -339,7 +506,7 @@ class CheckFunctionTests(unittest.TestCase):
             _git("commit", "-q", "-m", "init", cwd=root)
 
             allowlist_path = root / "allow.json"
-            allowlist_path.write_text(json.dumps({"paths": ["a.txt"]}), encoding="utf-8")
+            allowlist_path.write_text(json.dumps(_allowlist_dict(["a.txt"])), encoding="utf-8")
             self.assertEqual(al.check(root, allowlist_path, "HEAD"), [])
 
     def test_malformed_allowlist_json_is_actionable(self):
@@ -458,7 +625,7 @@ class CheckFunctionNonGitTests(unittest.TestCase):
 
     @staticmethod
     def _write_allowlist(path: Path, paths) -> None:
-        path.write_text(json.dumps({"paths": list(paths)}), encoding="utf-8")
+        path.write_text(json.dumps(_allowlist_dict(paths)), encoding="utf-8")
 
     def test_clean_non_git_tree_has_no_errors(self):
         """The allowlist document lives *outside* the scanned tree here
