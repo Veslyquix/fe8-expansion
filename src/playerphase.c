@@ -18,6 +18,7 @@
 #include "bmio.h"
 #include "hardware.h"
 #include "bmphase.h"
+#include "expansion_danger_overlay.h"
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "minimap.h"
@@ -27,6 +28,7 @@
 #include "bmsave.h"
 #include "eventinfo.h"
 #include "expansion_debugtools.h"
+#include "expansion_itemtest.h"
 
 #include "playerphase.h"
 
@@ -223,6 +225,14 @@ void PlayerPhase_Suspend(void)
      * writing normally. */
     if (DebugTools_IsBootstrapSuppressionActive())
         return;
+
+#if FE8_EXPANSION_ITEMTEST_ENABLED
+    /* Same one-shot boot window for the issue #10 runtime item-expansion
+     * probe build (see include/expansion_itemtest.h). Absent from every
+     * ordinary build. */
+    if (ItemExpansionTest_IsBootSuppressionActive())
+        return;
+#endif
 
     gActionData.suspendPointType = SUSPEND_POINT_PLAYERIDLE;
     WriteSuspendSave(SAVE_ID_SUSPEND);
@@ -471,10 +481,36 @@ void DisplayActiveUnitEffectRange(ProcPtr proc)
     return;
 }
 
+/*
+ * Issue #6 danger/range overlay semantic probe (see
+ * include/expansion_danger_overlay.h). Defined -- present and zero -- in
+ * every modern build (FE8_EXPANSION_MODERN_BUILD=1) so the negative-control
+ * scenarios always find it, and additionally whenever the feature itself is
+ * enabled. The legacy default build (no modern -D flags, feature off) defines
+ * nothing here, so src/playerphase.o emits no ewram_data section and cannot
+ * become a silent orphan under ldscript.txt's per-object ewram_data
+ * enumeration (which does not list src/playerphase.o). Only ever written on
+ * the enabled feature path (FE8_EXPANSION_DANGER_OVERLAY_MENU), below. */
+#if FE8_EXPANSION_MODERN_BUILD || FE8_EXPANSION_DANGER_OVERLAY_MENU
+EWRAM_DATA struct ExpansionDangerOverlayProbe gExpansionDangerOverlayProbe = {0};
+#endif
+
 //! FE8U = 0x0801CCB4
 void PlayerPhase_DisplayDangerZone(void)
 {
     GenerateDangerZoneRange(gBmSt.swapActionRangeCount & 1);
+#if FE8_EXPANSION_DANGER_OVERLAY_MENU
+    {
+        int rangeX, rangeY, rangeTiles = 0;
+        for (rangeY = 0; rangeY < gBmMapSize.y; rangeY++)
+            for (rangeX = 0; rangeX < gBmMapSize.x; rangeX++)
+                if (gBmMapRange[rangeY][rangeX] != 0)
+                    rangeTiles++;
+        gExpansionDangerOverlayProbe.dangerDisplayCount++;
+        gExpansionDangerOverlayProbe.lastRangeTileCount = (u32)rangeTiles;
+        gExpansionDangerOverlayProbe.rangeGraphicsActive = 1;
+    }
+#endif
 
     BmMapFill(gBmMapMovement, -1);
 
@@ -609,6 +645,13 @@ else_stmt:
 
             gBmSt.gameStateBits &= ~BM_FLAG_3;
 
+#if FE8_EXPANSION_DANGER_OVERLAY_MENU
+            if (gExpansionDangerOverlayProbe.rangeGraphicsActive)
+            {
+                gExpansionDangerOverlayProbe.cancelReturnCount++;
+                gExpansionDangerOverlayProbe.rangeGraphicsActive = 0;
+            }
+#endif
             HideMoveRangeGraphics();
 
             RefreshEntityBmMaps();

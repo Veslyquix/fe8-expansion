@@ -46,6 +46,42 @@ JSON source shape (see ``src/data/items.json``)::
       ]
     }
 
+``nameTextId``/``descTextId``/``useDescTextId`` accept either a plain
+integer (the vanilla authoring form -- all 206 hand-ported records use it)
+or a symbolic ``MSG_*`` name from ``include/constants/msg.h``, the header
+``scripts/texttools/textprocess.py`` regenerates from ``texts/texts.txt``::
+
+    "nameTextId": "MSG_SAVE_COMPAT_BACK"
+
+The symbolic form binds a record to a message the text pipeline actually
+emits, so removing or renaming that message fails the data build with an
+actionable diagnostic instead of silently repointing the item at whatever
+text later lands on that number. Both forms resolve to the same integer
+before generation, so the generated C and the round-trip comparison are
+identical either way.
+
+POLICY: a framework-authored (expansion overlay) record must not author a
+NEW message for itself. ``texts/texts.txt`` feeds one shared,
+Huffman-compressed blob, so one added message re-encodes the text of every
+build -- default, feature-free ones included. Such a record leaves its text
+IDs unset (they stay ``0``) and authors its display text literally instead;
+see ``authoringName`` below.
+
+``authoringName``/``authoringDescription``/``authoringUseDescription`` are
+that literal, original authoring text, and are accepted ONLY on expansion
+overlay records (``item`` >= ``ITEM_ID_EXPANSION_FIRST``)::
+
+    "authoringName": "Sample Charm"
+
+They never touch ``gItemData[]``: the generated table is byte-for-byte the
+same with or without them. ``authoringName`` is instead emitted, by
+:mod:`scripts.generated_data.items.content_text`, into a BUILD-LOCAL text
+table that only the content profile (``EXPANSION_STARTER_CONTENT=1``)
+generates and links; the descriptions are emitted only into that generator's
+audit catalog, because the vanilla description/help UI is addressed by
+message ID and this framework does not add messages (see
+``docs/starter_features.md``).
+
 Optional ``ItemData`` fields default exactly like the hand-written
 designated initializers that only set the fields they need:
 
@@ -88,8 +124,10 @@ from ..diagnostics import GeneratedDataError
 from ..escape_hatch import CSymbolRefField
 from ..json_loader import load_json_file
 from ..schema import DependencyGraph, TableSchema
+from .. import idspace
 from ..validators import (
     extract_define_constant,
+    extract_define_constants,
     extract_enum_constants,
     resolve_bitmask_flags,
     validate_range,
@@ -107,6 +145,8 @@ BMITEM_HEADER = os.path.join(REPO_ROOT, "include", "bmitem.h")
 VARIABLES_HEADER = os.path.join(REPO_ROOT, "include", "variables.h")
 MSG_HEADER = os.path.join(REPO_ROOT, "include", "constants", "msg.h")
 ITEM_ICON_SOURCE = os.path.join(REPO_ROOT, "src", "data", "data_item_icon.c")
+ITEMS_EXPANSION_HEADER = os.path.join(REPO_ROOT, "include", "constants", "items_expansion.h")
+ITEMS_EXPANSION_SOURCE = os.path.join(REPO_ROOT, "src", "data", "items_expansion.json")
 
 _U8_MIN, _U8_MAX = 0, 255
 _U16_MIN, _U16_MAX = 0, 65535
@@ -156,6 +196,38 @@ def read_msg_count(header=MSG_HEADER):
     return value
 
 
+def read_msg_constants(header=MSG_HEADER):
+    """Read the live ``MSG_*`` text-ID constant family from
+    ``include/constants/msg.h`` (the header the text pipeline
+    ``scripts/texttools/textprocess.py`` regenerates from
+    ``texts/texts.txt``).
+
+    Returned as ``{name: (value, line_number)}``, i.e. the same shape
+    :func:`~scripts.generated_data.validators.extract_enum_constants`
+    produces, so a symbolic text ID can be validated and resolved with the
+    ordinary reference machinery.
+
+    ``MSG_COUNT`` is deliberately excluded: it is the table's *bound*, not
+    a message, and authoring it as a text ID would always be a bug.
+    """
+    constants = extract_define_constants(header, name_prefix="MSG_")
+    constants.pop("MSG_COUNT", None)
+    return constants
+
+
+# Cache keyed by header path: the MSG_* family is ~3.4k entries and every
+# record in a table load would otherwise re-read the whole header.
+_MSG_CONSTANTS_CACHE = {}
+
+
+def _msg_constants(header=MSG_HEADER):
+    cached = _MSG_CONSTANTS_CACHE.get(header)
+    if cached is None:
+        cached = read_msg_constants(header)
+        _MSG_CONSTANTS_CACHE[header] = cached
+    return cached
+
+
 def read_item_icon_count(source=ITEM_ICON_SOURCE):
     """Derive the number of item-icon graphics tiles from
     ``src/data/data_item_icon.c`` by counting ``u8 item_icon_*[] =
@@ -180,6 +252,83 @@ def _optional_int(node, default=0):
     if node is None:
         return default, None
     return node.as_int(), node.loc
+
+
+def _optional_text_id(node, msg_header=MSG_HEADER):
+    """``nameTextId``/``descTextId``/``useDescTextId``.
+
+    Accepts either the vanilla authoring form -- a plain integer, which the
+    206 hand-ported records all use -- or a symbolic ``MSG_*`` name from
+    ``include/constants/msg.h``. The symbolic form is what
+    framework-authored (non-vanilla) records should use: it binds the record
+    to a message the text pipeline actually emits, so deleting/renaming that
+    message fails the data build with an actionable diagnostic instead of
+    silently pointing the item at whatever text later lands on that number.
+
+    Always returns a resolved ``(int, loc)`` pair, so everything downstream
+    (generation, round-trip comparison, range validation) is unchanged.
+    """
+    if node is None:
+        return 0, None
+    if node.is_scalar() and isinstance(node.value, str):
+        symbol = node.as_str()
+        constants = _msg_constants(msg_header)
+        if symbol not in constants:
+            raise GeneratedDataError(
+                "unknown text ID '{}': no '#define {} ...' in {} (author it in "
+                "texts/texts.txt and regenerate with `make src/msg_data.c`)".format(
+                    symbol, symbol, os.path.relpath(msg_header, REPO_ROOT)),
+                node.loc,
+                SCHEMA_NAME,
+            )
+        return constants[symbol][0], node.loc
+    return node.as_int(), node.loc
+
+
+# Authoring-text bounds. The name is drawn by the production item menu /
+# stat-screen line, so it is held to a UI-plausible width (the longest
+# vanilla item name is 15 characters); the descriptions are audit/catalog
+# text only, so they only need a sane upper bound.
+AUTHORING_NAME_MAX_CHARS = 20
+AUTHORING_DESCRIPTION_MAX_CHARS = 120
+
+
+def _optional_authoring_text(node, field_name, max_chars):
+    """``authoringName``/``authoringDescription``/``authoringUseDescription``:
+    original literal text authored in the record itself.
+
+    Deliberately strict, because this string ends up in a generated C string
+    literal (the name) or a generated JSON catalog (the descriptions):
+    printable 7-bit ASCII only, no surrounding whitespace, non-empty, and
+    bounded. Anything else is a hard, located error rather than something
+    that silently reaches a build-local generated source."""
+    if node is None:
+        return None, None
+    text = node.as_str()
+    if text != text.strip() or not text:
+        raise GeneratedDataError(
+            "{} must be non-empty original text with no leading/trailing "
+            "whitespace".format(field_name),
+            node.loc,
+            SCHEMA_NAME,
+        )
+    if len(text) > max_chars:
+        raise GeneratedDataError(
+            "{} is {} characters; the bound is {}".format(
+                field_name, len(text), max_chars),
+            node.loc,
+            SCHEMA_NAME,
+        )
+    for char in text:
+        if not (0x20 <= ord(char) <= 0x7E):
+            raise GeneratedDataError(
+                "{} contains a non printable-ASCII character {!r}; authoring "
+                "text is emitted into generated C/JSON and must stay 7-bit "
+                "printable ASCII".format(field_name, char),
+                node.loc,
+                SCHEMA_NAME,
+            )
+    return text, node.loc
 
 
 def _optional_str(node, default):
@@ -209,7 +358,10 @@ class ItemRecord:
                  range_min, range_min_loc, range_max, range_max_loc,
                  cost_per_use, cost_per_use_loc, required_wexp, required_wexp_loc,
                  icon_id, icon_id_loc, use_effect_id, use_effect_id_loc,
-                 weapon_effect, weapon_effect_loc, weapon_exp, weapon_exp_loc, loc):
+                 weapon_effect, weapon_effect_loc, weapon_exp, weapon_exp_loc, loc,
+                 authoring_name=None, authoring_name_loc=None,
+                 authoring_description=None, authoring_description_loc=None,
+                 authoring_use_description=None, authoring_use_description_loc=None):
         self.item = item
         self.item_loc = item_loc
         self.name_text_id = name_text_id
@@ -253,6 +405,16 @@ class ItemRecord:
         self.weapon_exp = weapon_exp
         self.weapon_exp_loc = weapon_exp_loc
         self.loc = loc
+        # Issue #6 content authoring: original literal display text carried
+        # by a framework-authored (expansion overlay) record. Never part of
+        # as_tuple() below -- gItemData[] is byte-identical with or without
+        # it -- see content_text.py for the build-local consumer.
+        self.authoring_name = authoring_name
+        self.authoring_name_loc = authoring_name_loc
+        self.authoring_description = authoring_description
+        self.authoring_description_loc = authoring_description_loc
+        self.authoring_use_description = authoring_use_description
+        self.authoring_use_description_loc = authoring_use_description_loc
 
     @property
     def encoded_range(self):
@@ -293,7 +455,7 @@ class ItemRecordList(list):
         self.loc = loc
 
 
-def load_records(source_path):
+def _load_records_file(source_path):
     root = load_json_file(source_path)
     schema_node = root.require("$schema")
     if schema_node.as_str() != SCHEMA_ID:
@@ -307,9 +469,9 @@ def load_records(source_path):
         item_name_node = item_node.require("item")
         weapon_type_node = item_node.require("weaponType")
 
-        name_text_id, name_text_loc = _optional_int(item_node.get("nameTextId"))
-        desc_text_id, desc_text_loc = _optional_int(item_node.get("descTextId"))
-        use_desc_text_id, use_desc_text_loc = _optional_int(item_node.get("useDescTextId"))
+        name_text_id, name_text_loc = _optional_text_id(item_node.get("nameTextId"))
+        desc_text_id, desc_text_loc = _optional_text_id(item_node.get("descTextId"))
+        use_desc_text_id, use_desc_text_loc = _optional_text_id(item_node.get("useDescTextId"))
 
         attributes_node = item_node.get("attributes")
         attributes = [n.as_str() for n in attributes_node.as_list()] if attributes_node is not None else []
@@ -341,6 +503,15 @@ def load_records(source_path):
         weapon_effect, weapon_effect_loc = _optional_str(item_node.get("weaponEffect"), WPN_EFFECT_DEFAULT)
         weapon_exp, weapon_exp_loc = _optional_int(item_node.get("weaponExp"))
 
+        authoring_name, authoring_name_loc = _optional_authoring_text(
+            item_node.get("authoringName"), "authoringName", AUTHORING_NAME_MAX_CHARS)
+        authoring_description, authoring_description_loc = _optional_authoring_text(
+            item_node.get("authoringDescription"), "authoringDescription",
+            AUTHORING_DESCRIPTION_MAX_CHARS)
+        authoring_use_description, authoring_use_description_loc = _optional_authoring_text(
+            item_node.get("authoringUseDescription"), "authoringUseDescription",
+            AUTHORING_DESCRIPTION_MAX_CHARS)
+
         records.append(
             ItemRecord(
                 item=item_name_node.as_str(), item_loc=item_name_node.loc,
@@ -365,14 +536,34 @@ def load_records(source_path):
                 weapon_effect=weapon_effect, weapon_effect_loc=weapon_effect_loc,
                 weapon_exp=weapon_exp, weapon_exp_loc=weapon_exp_loc,
                 loc=item_node.loc,
+                authoring_name=authoring_name, authoring_name_loc=authoring_name_loc,
+                authoring_description=authoring_description,
+                authoring_description_loc=authoring_description_loc,
+                authoring_use_description=authoring_use_description,
+                authoring_use_description_loc=authoring_use_description_loc,
             )
         )
     return ItemRecordList(records, items_node.loc)
 
 
+def load_records(source_path, item_cap=None, overlay_source=None):
+    """Load ItemData records, merging the opt-in expansion overlay only
+    when the resolved item ID cap has been raised to include those IDs.
+    Default (cap 0xCD) is byte-identical to the vanilla single-file load."""
+    records = _load_records_file(source_path)
+    cap = item_cap if item_cap is not None else idspace.resolve_item_id_cap()
+    if cap >= idspace.ITEM_EXPANSION_FIRST:
+        overlay_source = overlay_source or ITEMS_EXPANSION_SOURCE
+        if os.path.exists(overlay_source):
+            overlay = _load_records_file(overlay_source)
+            return ItemRecordList(list(records) + list(overlay), records.loc)
+    return records
+
+
 def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMITEM_HEADER,
              variables_header=VARIABLES_HEADER, msg_header=MSG_HEADER,
-             icon_source=ITEM_ICON_SOURCE, msg_count=None, icon_count=None):
+             icon_source=ITEM_ICON_SOURCE, msg_count=None, icon_count=None,
+             item_cap=None, expansion_header=None):
     """Run all ``ItemData`` validations, appending errors to ``diagnostics``.
 
     Checks: unique + full contiguous ``ITEM_*`` coverage (0..max enum
@@ -390,6 +581,13 @@ def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMIT
         icon_count = read_item_icon_count(icon_source)
 
     items_enum = extract_enum_constants(items_header, name_prefix="ITEM_")
+    cap = item_cap if item_cap is not None else idspace.resolve_item_id_cap()
+    # Always make expansion IDs *known* so an un-opted expansion record is
+    # rejected with the actionable cap diagnostic (raise FE8_ITEM_ID_CAP)
+    # rather than a generic undefined-reference error.
+    if expansion_header and os.path.exists(expansion_header):
+        items_enum = dict(items_enum)
+        items_enum.update(extract_enum_constants(expansion_header, name_prefix="ITEM_"))
     weapon_types = extract_enum_constants(bmitem_header, name_prefix="ITYPE_")
     wexp_thresholds = extract_enum_constants(bmitem_header, name_prefix="WPN_EXP_")
     weapon_effects = extract_enum_constants(bmitem_header, name_prefix="WPN_EFFECT_")
@@ -433,6 +631,37 @@ def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMIT
                 validate_range(value, 0, msg_count - 1, loc or record.loc,
                                 "{}.{}".format(ref, field_name), field_name=field_name)
             )
+
+        # Issue #6 content authoring: literal display text belongs ONLY to a
+        # framework-authored expansion record, and never coexists with a
+        # message ID for the same slot (one record, one source of truth).
+        item_value = items_enum.get(record.item, (None, None))[0]
+        is_expansion = (item_value is not None
+                        and item_value >= idspace.ITEM_EXPANSION_FIRST)
+        for field_name, value, loc, text_id, text_field in (
+            ("authoringName", record.authoring_name, record.authoring_name_loc,
+             record.name_text_id, "nameTextId"),
+            ("authoringDescription", record.authoring_description,
+             record.authoring_description_loc, record.desc_text_id, "descTextId"),
+            ("authoringUseDescription", record.authoring_use_description,
+             record.authoring_use_description_loc, record.use_desc_text_id,
+             "useDescTextId"),
+        ):
+            if value is None:
+                continue
+            if not is_expansion:
+                diagnostics.add(GeneratedDataError(
+                    "{}.{} is only valid on a framework-authored expansion "
+                    "record (item index >= 0x{:02X}): a vanilla record keeps "
+                    "its vanilla message ID".format(
+                        ref, field_name, idspace.ITEM_EXPANSION_FIRST),
+                    loc or record.loc, SCHEMA_NAME))
+            if text_id:
+                diagnostics.add(GeneratedDataError(
+                    "{}.{} authors literal text while {} also points at "
+                    "message {}: choose one source of truth".format(
+                        ref, field_name, text_field, text_id),
+                    loc or record.loc, SCHEMA_NAME))
 
         for field_name, value, loc in (
             ("maxUses", record.max_uses, record.max_uses_loc),
@@ -485,8 +714,17 @@ def validate(records, diagnostics, items_header=ITEMS_HEADER, bmitem_header=BMIT
             )
 
     if items_enum:
-        max_value = max(value for value, _ in items_enum.values())
-        missing = sorted(set(range(0, max_value + 1)) - set(covered_values))
+        enum_max = max(value for value, _ in items_enum.values())
+        required_max = min(cap, enum_max)
+        for _rec in records:
+            _v = items_enum.get(_rec.item, (None, None))[0]
+            if _v is not None and _v > cap:
+                diagnostics.add(GeneratedDataError(
+                    "item {} (index {}) is beyond the configured item cap "
+                    "0x{:X}; raise FE8_ITEM_ID_CAP to opt this ID in".format(
+                        _rec.item, _v, cap),
+                    _rec.item_loc, "items"))
+        missing = sorted(set(range(0, required_max + 1)) - set(covered_values))
         if missing:
             value_to_name = {value: name for name, (value, _) in items_enum.items()}
             doc_loc = getattr(records, "loc", None)
@@ -518,10 +756,10 @@ class ItemsTableSchema(TableSchema):
         )
 
     def load_records(self, source_path):
-        return load_records(source_path)
+        return load_records(source_path, overlay_source=ITEMS_EXPANSION_SOURCE)
 
     def validate(self, records, diagnostics):
-        validate(records, diagnostics)
+        validate(records, diagnostics, expansion_header=ITEMS_EXPANSION_HEADER)
 
     def generate_c(self, records, source_path):
         from . import generate as items_generate
@@ -531,13 +769,36 @@ class ItemsTableSchema(TableSchema):
         from . import inventory as items_inventory
         return items_inventory.build_inventory(records)
 
+    def manifest_record_count(self, records):
+        # Archival/default manifest count: exclude opt-in ITEM_EXPANSION_*
+        # overlay records so the committed manifest stays byte-identical
+        # between the default (0xCD) and opt-in (>=0xCE) builds. Expansion
+        # records are audited in reports/id_space_audit.md and generated into
+        # the ROM table under build/.
+        items_enum = extract_enum_constants(ITEMS_HEADER, name_prefix="ITEM_")
+        return sum(1 for r in records if r.item in items_enum)
+
     def round_trip_errors(self, records, hand_source):
         if not hand_source or not os.path.exists(hand_source):
             return []
         from . import parser as items_roundtrip
-        item_names = [r.item for r in records]
+        # Opt-in expansion IDs (ITEM_EXPANSION_*, authored in the overlay
+        # src/data/items_expansion.json) never appear in the vanilla hand
+        # table src/data_items.c; they are validated separately (schema cap
+        # check + generated-source compile). The vanilla hand table must
+        # still round-trip 100%, so compare only the hand-backed records
+        # here. This is a scoped exclusion, never a global --no-roundtrip:
+        # every record that exists in the hand source is still compared
+        # field-for-field.
+        expansion_names = set()
+        if os.path.exists(ITEMS_EXPANSION_HEADER):
+            expansion_names = set(
+                extract_enum_constants(ITEMS_EXPANSION_HEADER, name_prefix="ITEM_"))
+        hand_backed = [r for r in records if r.item not in expansion_names]
+        item_names = [r.item for r in hand_backed]
         hand_records = items_roundtrip.parse_hand_written(hand_source, item_names)
-        return items_roundtrip.compare_records(records, hand_records, hand_path=hand_source)
+        return items_roundtrip.compare_records(
+            hand_backed, hand_records, hand_path=hand_source)
 
 
 def dependency_graph():

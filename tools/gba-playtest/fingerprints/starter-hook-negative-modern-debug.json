@@ -1,0 +1,85 @@
+{
+  "checkpoints": [
+    {
+      "frame": 3285,
+      "name": "enemy-alive-before-fight",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x0f"
+        }
+      ]
+    },
+    {
+      "frame": 3296,
+      "name": "enemy-dead-after-real-hit",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3320,
+      "name": "mechanics-probe-stays-zero",
+      "probes": [
+        {
+          "address": "0x02031af8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031afc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031b00",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031b04",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031b08",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031b0c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031b10",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "4770560bc80c48f51e69975056ef2a8d01c6cb84",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "starter-hook-negative-modern-debug"
+}

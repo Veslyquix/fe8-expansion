@@ -1,0 +1,4314 @@
+{
+  "_comment": "Every scanner hit from scripts/generated_data/consumer_census.py maps to exactly one category here. reviewed-exclusion always carries a reason. Regenerate proposals with `python3 -m scripts.generated_data.consumer_census bootstrap`, then review every new row by hand.",
+  "entries": {
+    "include/EA_Standard_Library/AI_Helpers.h|macro|unit|HealUnits": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/End_Of_Chapter_Helpers.h|macro|chapter|MoveToChapter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/Main_Code_Helpers.h|macro|character|CharacterEvent": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/Main_Code_Helpers.h|macro|character|CharacterEventBothWays": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/Main_Code_Helpers.h|macro|character|CharacterEvent_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/Main_Code_Helpers.h|macro|item|Armory": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/Main_Code_Helpers.h|macro|item|SecretShop": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EA_Standard_Library/Main_Code_Helpers.h|macro|item|Vendor": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|chapter|CHECK_CHAPTER_NUMBER": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|character|CHAR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|character|CHAR_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|character|CUMO_CHAR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|character|CURSOR_CHAR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|character|CURSOR_FLASHING_CHAR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|class|CHECK_CLASS": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|event|CHECK_EVENTID": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|event|CHECK_EVENTID_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|event|CHECK_TRIG_EVENTID": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|unit|CHECK_ALLEGIANCE": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/EAstdlib.h|macro|unit|UNIT_COLORS": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/anime.h|function-signature|class|GetSpellAnimId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/anime.h|function-signature|item|FilterBattleAnimCharacterPalette": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/anime.h|function-signature|unit|GetBanimFactionPalette": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bksel.h|function-signature|item|PutBattleForecastItemName": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bksel.h|function-signature|unit|GetFactionBattleForecastFramePalette": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bm.h|function-signature|chapter|GotoChapterWithoutSave": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmarch.h|function-signature|item|GetBallistaItemIndex": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmarena.h|function-signature|class|ArenaGenerateOpposingClassId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmarena.h|function-signature|item|ArenaGetUpgradedWeapon": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmarena.h|struct-field|class|ArenaData.opponentClassId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmarena.h|struct-field|class|ArenaData.playerClassId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmbattle.h|function-signature|class|ApplyUnitPromotion": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmbattle.h|function-signature|item|BattleGenerateUiStats": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmbattle.h|function-signature|item|BattleInitItemEffect": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmbattle.h|function-signature|item|SetBattleUnitWeapon": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmcontainer.h|data-symbol|item|gConvoyItemCount": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/bmcontainer.h|function-signature|item|ClearSupplyItems": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmcontainer.h|function-signature|item|GetConvoyItemArray": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmcontainer.h|function-signature|item|GetConvoyItemCount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmcontainer.h|function-signature|item|GetConvoyItemSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmcontainer.h|function-signature|item|ShrinkConvoyItemList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmdebug.h|function-signature|chapter|Debug_GetChapterId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmidoten.h|function-signature|unit|GenerateMovementMap": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmidoten.h|struct-field|unit|MovMapFillState.unitId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmitem.h|data-symbol|item|gItemData": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|CanUnitUseStaff": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|CanUnitUseStaffNow": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|CanUnitUseWeapon": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|CanUnitUseWeaponNow": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|CanUnitUse_unused": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|DrawItemMenuLine": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|DrawItemMenuLineLong": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|DrawItemMenuLineNoColor": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|DrawItemStatScreenLine": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|EquipUnitItemSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetConvoyItemCostSum": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemAfterUse": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemAttributes": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemAwardedExp": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemCost": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemCostPerUse": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemCrit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemData": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemDefBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemDescId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemDisplayRangeString": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemDisplayRankString": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemEffectiveness": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemEncodedRange": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemHit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemHpBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemIconId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemIndex": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemLckBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemMaxCost": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemMaxRange": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemMaxUses": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemMight": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemMinRange": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemName": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemNameWithArticle": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemPowBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemReachBits": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemRequiredExp": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemResBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemSklBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemSpdBonus": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemStatBonuses": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemType": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemUseDescId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemUseEffect": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemUses": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemWeaponEffect": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetItemWeight": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetUnitItemHealAmount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetUnitItemSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetUnitItemUseReachBits": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|GetUnitWeaponReachBits": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemCoveringRange": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemDanceRing": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemDisplayUsable": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemEffectiveAgainst": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemHammernable": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemStealable": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|IsItemUnsealedForUnit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|MakeNewItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|item|SetItemUnsealedForCharacter": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|macro|item|ITEM_INDEX": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|CanUnitUseItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|CanUnitUseItemPrepScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|CanUnitUsePromotionItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|CanUnitUseStatGainItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|DoItemUse": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|GetItemCantUseMsgid": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitemuse.h|function-signature|item|RepairMenuItemOnChange": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/bmitemuse.h|function-signature|item|RepairMenuItemOnChangeOut": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/bmmap.h|function-signature|chapter|InitChapterMap": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmmap.h|function-signature|chapter|InitMapForMinimap": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmmap.h|function-signature|chapter|UnpackChapterMap": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmmap.h|function-signature|chapter|UnpackChapterMapGraphics": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmmenu.h|function-signature|character|IsAdjacentForSupply": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmmind.h|struct-field|item|ActionData.item": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmmind.h|struct-field|item|ActionData.itemSlotIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmmind.h|struct-field|unit|CombatActionProc.unitIdA": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmmind.h|struct-field|unit|CombatActionProc.unitIdB": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmphase.h|function-signature|unit|CountUnitsInState": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmphase.h|function-signature|unit|GetPhaseAbleUnitCount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmreliance.h|function-signature|character|GetCharacterAffinityIcon": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmreliance.h|function-signature|character|GetUnitSupporterNum": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|chapter|IsGameNotFirstChapter": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|chapter|ReadChapterFlags": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|chapter|WriteChapterFlags": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|GetPidStats": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddActAmt": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddDeployAmt": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddExpGained": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddFavval": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddSquaresMoved": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddStatViewAmt": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsAddWinAmt": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsGetExpGain": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsGetFavval": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsRecordDefeatInfo": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsRecordLoseData": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsSubFavval08": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|PidStatsSubFavval100": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|character|SGM_SetCharacterKnown": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|item|ReadSupplyItems": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|item|WriteSupplyItems": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|function-signature|unit|GetGlobalSupportListFromSave": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|chapter|SuspendSaveBlock.chapterFlags": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|character|GameSavePackedUnit.pid": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|character|SuspendSavePackedUnit.pid": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|class|GameSavePackedUnit.jid": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|class|SuspendSavePackedUnit.jid": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|event|SuspendSaveBlock.eventSlotCnt": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|GameSaveBlock.supplyItems": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|GameSavePackedUnit.item1": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|GameSavePackedUnit.item2": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|GameSavePackedUnit.item3": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|GameSavePackedUnit.item4": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|GameSavePackedUnit.item5": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|SuspendSaveBlock.supplyItems": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|SuspendSavePackedUnit.item1": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|SuspendSavePackedUnit.item2": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|SuspendSavePackedUnit.item3": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|SuspendSavePackedUnit.item4": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmsave.h|struct-field|item|SuspendSavePackedUnit.item5": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/bmshop.h|data-symbol|item|gDefaultShopInventory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|DrawShopItemLine": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|DrawShopItemPriceLine": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|IsItemSellable": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|ShopDrawBuyItemLine": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|ShopDrawSellItemLine": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|Shop_ConvoyFullDialogue": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartArmoryScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartArmoryScreen2": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartArmoryScreenOrphaned": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartSecretShopScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartSecretShopScreenOrphaned": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartShopScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartVendorScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|StartVendorScreenOrphaned": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|function-signature|item|UpdateShopItemCounts": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmshop.h|macro|item|SHOP_ITEMS_MAX_AMT": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/bmshop.h|macro|item|SHOP_ITEM_LINE": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/bmshop.h|struct-field|item|ProcShop.shopItemCount": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmshop.h|struct-field|item|ProcShop.shopItems": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmshop.h|struct-field|item|ProcShop.unitItemCount": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmtarget.h|function-signature|item|MakeTargetListForWeapon": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmtarget.h|function-signature|unit|MakeGorgonEggHatchTargetList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmtarget.h|function-signature|unit|MakePoisonDamageTargetList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmtarget.h|function-signature|unit|MakeTerrainHealTargetList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmudisp.h|function-signature|class|PutStandingMuSprite": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmudisp.h|function-signature|class|PutUnitSpriteForClassId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/bmunit.h|data-symbol|character|gCharacterData": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/bmunit.h|data-symbol|class|gClassData": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|character|GetCharacterData": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|character|GetUnitFromCharId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|character|GetUnitFromCharIdAndFaction": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|character|GetUnitLeaderCharId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|character|SetUnitLeaderCharId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|class|CanClassWieldWeaponType": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|class|GetClassData": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|class|GetClassSMSId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|class|UnitAutolevelCore": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|class|UnitAutolevelPenalty": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|item|GetUnitItemCount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|item|GetUnitKeyItemSlotForTerrain": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|item|UnitAddItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|item|UnitHasItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|item|UnitUpdateUsedItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|unit|GetFreeUnit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|unit|GetUnitFromCharIdAndFaction": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|unit|IsUnitSlotAvailable": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|function-signature|unit|UnitChangeFaction": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmunit.h|macro|character|UNIT_CHAR_ID": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/bmunit.h|macro|class|UNIT_CLASS_ID": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/bmunit.h|struct-field|character|UnitDefinition.charIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmunit.h|struct-field|character|UnitDefinition.leaderCharIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmunit.h|struct-field|class|UnitDefinition.classIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmunit.h|struct-field|item|Unit.items": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmunit.h|struct-field|item|UnitDefinition.items": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmunit.h|struct-field|unit|UnitDefinition.allegiance": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|class|ExecPromotionToClass1": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|class|ExecUnitPromotion": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|item|ApplyJunaFruitItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|item|ApplyStatBoostItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|item|ExecUnitDefaultPromotion": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|item|ExecUnitDefaultPromotionAndHide": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmusemind.h|function-signature|item|ExecUnitPromotion": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bonusclaim.h|struct-field|item|BonusClaimEnt.itemId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/chapterdata.h|function-signature|event|GetChapterEventDataPointer": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/chapterdata.h|macro|chapter|GUARD_CHAPTERDATA_H": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/chapterdata.h|struct-field|character|ROMChapterData.protectCharacterIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/chapterdata.h|struct-field|event|ROMChapterData.gmapEventId": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/chapterdata.h|struct-field|event|ROMChapterData.mapEventDataId": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/classchg.h|function-signature|character|MakePromotionScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/classchg.h|function-signature|class|LoadClassReelFontPalette": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|character|ProcPromoHandler.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|character|ProcPromoMain.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|character|ProcPromoSel.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|character|ProcPromoTraineeEvent.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|class|ProcPromoHandler.jid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|class|ProcPromoMain.jid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|class|ProcPromoSel.jid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/classchg.h|struct-field|item|ProcPromoHandler.item_slot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/cp_common.h|function-signature|item|AiFloodMovementAndRange": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_common.h|function-signature|item|AiSetDecision": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_common.h|function-signature|item|AiUpdateDecision": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_common.h|struct-field|item|AiCombatSimulationSt.itemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/cp_common.h|struct-field|item|AiDecision.itemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/cp_common.h|struct-field|item|AiState.specialItemFlags": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/cp_common.h|struct-field|unit|AiDecision.unitId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/cp_data.h|data-symbol|item|gAiStealPriorityItemList": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|character|AiFindTargetInReachByCharId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|character|AiUnitWithCharIdExists": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|class|AiFindTargetInReachByClassId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|class|AiGetClassRank": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiCouldReachByBirdsEyeDistance": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiFindPillageLocation": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiGetItemStealRank": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiGetUnitStealItemSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiIsInByteList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiIsInShortList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|AiReachesByBirdsEyeDistance": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/cp_utility.h|function-signature|item|FillMovementAndRangeMapForItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/ekrbattle.h|function-signature|item|EkrCheckWeaponSieglindeSiegmund": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/ekrbattle.h|function-signature|item|IsItemDisplayedInBattle": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/ekrbattle.h|function-signature|item|IsWeaponLegency": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/ending_details.h|struct-field|chapter|EndingTurnRecordProc.chapterId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/ending_details.h|struct-field|character|EndingDefeatEnt.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/ending_details.h|struct-field|character|EndingTitleEnt.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/event.h|data-symbol|event|gEventSlotCounter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|data-symbol|event|gEventSlotQueue": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|data-symbol|event|gEventSlots": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|character|GetAllyUnitCount": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|character|GetUnitStructFromEventParameter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event00_NULL": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event01_End": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event02_EvBitAndIdMod": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event03_CheckEvBitOrId": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event04_CheckRandom": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event05_SetSlot": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event06_SlotOperation": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event07_SlotQueueOperations": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event08_Label": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event09_Goto": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event0A_Call": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event0B_EnqueueCall": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event0C_Branch": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event0D_AsmCall": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event0E_STAL": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event0F_CounterOps": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event10_ModifyEvBit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event11_SetIgnoredKeys": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event12_StartBGM": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event13_BgmFadeIn": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event14_BgmOverideRestore": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event15_BgmVolume": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event16_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event17_Fade": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event18_ColorFade": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event19_Checks": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event1A_TEXTSTART": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event1B_TEXTSHOW": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event1D_TalkContinue": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event1D_WaitForLockTalk": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event1E_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event1F_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event20_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event21_TextBg": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event22_ClearScreen": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event23_DisaleMapDisp": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event24_EnableMapDisp": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event25_ChangeMap": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event26_CameraControl": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event27_MapChange": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event28_ChangeWeather": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event29_SetFogVision": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event2A_MoveToChapter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event2B_ConfigLoadUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event2C_LoadUnits": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event2D_ChangeSpritePal": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event2E_CheckAt": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event2F_MoveUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event30_ENUN": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event31_DisplayEffectRange": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event32_SpawnSingleUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event33_CheckUnitVarious": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event34_MessWithUnitState": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event35_UnitClassChanging": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event36_CheckInArea": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event37_GiveItem": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event38_ChangeActiveUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event39_ChangeAiScript": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event3A_DisplayPopup": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event3B_DisplayCursor": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event3C_MoveCursor": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event3D_MenuOverride": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event3E_PrepScreenCall": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event3F_ScriptBattle": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event40_PromoteUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event41_Warp": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event42_EarthQuake": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event43_SummonUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event44_BreakingSacredStone": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event45_GlowingCross": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event80_WmSkip_Unsure": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event81_WmFadeOut": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event82_WmEnd": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event83_WmSetCamera": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event84_WmSetCameraOntoNode": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event85_WmSetCameraOntoUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event86_WmScrollCamera": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event87_WmScrollCameraOntoNode": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event88_WmScrollCameraOntoUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event89_WmScrollWait": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event8A_WmShowCursor_Unsure": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event8B_WmHideCursor_Unsure": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event8C_WmSetCursor_Unsure": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event8D_WmNop": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event8E_WmNop": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event8F_WmNop": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event90_WmAddPathDisplayed": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event91_WmAddPath": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event92_WmRemovePath": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event93_WmEnableNode": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event94_WmDisableNode": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event95_WmEnableNodeDisplayed": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event96_WmEnablePathTargetDisplayed": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event97_WmInitNextStoryNode": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event98_WmSetNextStoryNodePath": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event99_GmNodeDisplayWait": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event9A_WmSetStoryNodeSilent": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event9B_WmSetNextStoryNodeSilentNoFlag": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event9C_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event9D_": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event9E_WmSetClassUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|Event9F_WmSetCharUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|GetEventSlotCounter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|SetEventSlotC": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|event|SetEventSlotCounter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|function-signature|unit|LoadUnit_0": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|macro|event|EVENT_SLOT_COUNT": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|macro|event|EVT_CMD_ARG32_BE": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|macro|event|EVT_CMD_ARG32_LE": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|macro|event|EVT_CMD_ARGV": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|macro|event|EVT_CMD_LEN": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/event.h|struct-field|chapter|EventEngineProc.chapterIndex": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|event|ShopList_Event_089ED9A6": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch10B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch10B_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch12A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch12B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch14A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch14B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch15A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch15B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch17A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch17A_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch17B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch17B_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch19A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ch19B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Event_089ED9A6": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Event_Ch2Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Event_Ch5Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Event_Ch5Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Event_Ch9aArmory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Event_Ch9aVendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin10_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin3_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin3_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin4_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin4_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin5_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin5_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin5_2": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin7_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Ruin8_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower1_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower1_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower5_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower5_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower6_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower6_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|data-symbol|item|ShopList_Tower6_2": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventcall.h|function-signature|event|SetEventId_0x84": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventcall.h|function-signature|event|UnsetEventId_0x84": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventcall.h|struct-field|character|Unknown03000600.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|data-symbol|character|gPidList_SethLArachelMyrrhInnes": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|chapter|GetChapterSkirmishLeaderClasses": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|chapter|ResetChapterFlags": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|CheckBattleDefeatTalk": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|DisplayDefeatTalkForPid": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|GetAvailableBattleTalk": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|IsCharacterForceDeployed_": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|IsSethLArachelMyrrhInnes": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|KillPlayerUnitByPid": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|character|SetPidDefeatedFlag": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|function-signature|item|GetChestItemSubstitute": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|chapter|BattleTalkEnt.chapter": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|chapter|BattleTalkExtEnt.chapter": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|chapter|DefeatTalkEnt.chapter": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|chapter|ForceDeploymentEnt.chapter": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|character|BattleTalkEnt.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|character|DefeatTalkEnt.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventinfo.h|struct-field|character|ForceDeploymentEnt.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/eventscript.h|macro|chapter|EvtChangeChapterBM": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|chapter|EvtChangeChapterNoSave": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|chapter|EvtChangeChapterWM": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|chapter|EvtGetChapterIndex": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|chapter|WmEvtDrawNodeNextChapter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|character|EvtGetActiveUnitPid": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|character|EvtGetPidAt": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|character|EvtMoveCameraToChar": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|character|EvtMoveCameraToCharCenter": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|class|EvtGetUnitJid": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListArea": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListCHES": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListConditionalTalk": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListDOOR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListEnd": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListFlag": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListShop": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListTalk": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListTile": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListTurn": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtListVillage": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotADD": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotAND": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotDIV": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotLSL": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotLSR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotMOD": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotMUL": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotORR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotSUB": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|EvtSlotXOR": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|_EvtArg0": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|_EvtCmd": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|_EvtParams2": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|event|_EvtParams4": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|item|EvtGiveItemAtSlot3": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|item|EvtListShop": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtChangeFaction": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtCheckUnitActive": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtCheckUnitDeployed": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtCheckUnitExists": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtCheckUnitNotDead": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtDisplayCursorAtUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtDisplayFlashingCursorAtUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtGetActiveUnitPid": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtGetUnitFaction": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtGetUnitJid": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtGetUnitLuck": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtGetUnitPosition": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtGetUnitVisitGroup": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtKillUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtLoadSingleUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtLoadUnit1": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtLoadUnit2": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtLoadUnit3": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtLoadUnit4": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtMoveUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtMoveUnitByQueue": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtMoveUnitOneStep": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtMoveUnitToTarget": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtOverrideUnitMenu": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtPromoteUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtRemoveUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetActiveUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetLoadUnitChance": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetLoadUnitCount": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetLoadUnitNoREDA": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetUnitHasMoved": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetUnitHidden": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetUnitHpFormSlot1": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetUnitStateFormSlot1": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetUnitUnhidden": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSetUnitUnselectable": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtSummonUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtWaitUnitDeathFade": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|EvtWaitUnitMoving": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtHideUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtLoadUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtMoveCamToUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtMoveUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtMoveUnitInPath": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtSetUnitOnNode": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtSetUnitPosition": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtShowUnit": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/eventscript.h|macro|unit|WmEvtUnitFadeOut": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_ConsumePendingChapter2Launch": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_ConsumePendingChapter4PrepLaunch": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_IsChapter2LaunchPending": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_IsChapter4PrepLaunchPending": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_RegisterChapter4PrepAction": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_RequestChapter2Launch": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|function-signature|chapter|DebugTools_RequestChapter4PrepLaunch": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|struct-field|chapter|DebugToolsProbe.chapterIndexSample": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|struct-field|event|DebugToolsProbe.logEventCount": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/expansion_debugtools.h|struct-field|item|DebugToolsProbe.convoyLastItemCount": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|chapter|ItemExpansionProbe.lastChapterIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentBearerItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentControlItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentItemId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.eventItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemName": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/functions.h|function-signature|item|ConvoyMenuProc_MaybeStartSelectConvoyItem": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/functions.h|function-signature|item|HandleNewItemGetFromDrop": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/gamecontrol.h|function-signature|chapter|GameControl_RememberChapterId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/gamecontrol.h|function-signature|chapter|GameControl_RestoreChapterId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/gamecontrol.h|function-signature|chapter|GetRealChaperIndex": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/gamecontrol.h|function-signature|chapter|SetNextChapterId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/helpbox.h|function-signature|item|StartHelpBoxTextInit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/helpbox.h|struct-field|item|ProcHelpBoxIntro.item": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/id_space.h|macro|chapter|CHAPTER_ID_CONFIGURED_CAP": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|chapter|CHAPTER_ID_SENTINEL": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|chapter|CHAPTER_ID_SIGNED": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|chapter|CHAPTER_ID_STORAGE_BITS": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|chapter|CHAPTER_ID_TECHNICAL_MAX": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|character|CHARACTER_ID_CONFIGURED_CAP": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|character|CHARACTER_ID_SENTINEL": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|character|CHARACTER_ID_SIGNED": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|character|CHARACTER_ID_STORAGE_BITS": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|character|CHARACTER_ID_TECHNICAL_MAX": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|class|CLASS_ID_CONFIGURED_CAP": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|class|CLASS_ID_SENTINEL": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|class|CLASS_ID_SIGNED": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|class|CLASS_ID_STORAGE_BITS": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|class|CLASS_ID_TECHNICAL_MAX": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|event|EVENT_ID_CONFIGURED_CAP": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/id_space.h|macro|event|EVENT_ID_SIGNED": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/id_space.h|macro|event|EVENT_ID_STORAGE_BITS": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/id_space.h|macro|event|EVENT_ID_TECHNICAL_MAX": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|FE8_ITEM_ID_CAP": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|ITEM_ID_CONFIGURED_CAP": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|ITEM_ID_EXPANSION_FIRST": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|ITEM_ID_SENTINEL": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|ITEM_ID_SIGNED": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|ITEM_ID_STORAGE_BITS": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|item|ITEM_ID_TECHNICAL_MAX": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|unit|UNIT_ID_CONFIGURED_CAP": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|unit|UNIT_ID_SENTINEL": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|unit|UNIT_ID_SIGNED": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|unit|UNIT_ID_STORAGE_BITS": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/id_space.h|macro|unit|UNIT_ID_TECHNICAL_MAX": {
+      "category": "runtime-macro",
+      "reason": null
+    },
+    "include/menuitempanel.h|struct-field|item|MenuItemPanelProc.ItemSlotIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/monstergen.h|data-symbol|item|gMonsterItemTable": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/monstergen.h|function-signature|class|GenerateMonsterClass": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/monstergen.h|function-signature|class|GenerateMonsterItems": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/monstergen.h|struct-field|class|MonsterItemsByClassEntry.classId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/mu.h|function-signature|class|GetMuAnimForJid": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mu.h|function-signature|class|SetMuSpecialSprite": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mu.h|function-signature|class|StartMuExt": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mu.h|function-signature|class|StartMuInternal": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mu.h|function-signature|class|StartMuScripted": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mu.h|struct-field|class|MuProc.jid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/muctrl.h|function-signature|character|MuCtr_CheckMoveDependency": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/opinfo.h|struct-field|character|OpInfoViewProc.charIndex": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/opinfo.h|struct-field|class|ClassReelEnt.classId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/opinfo.h|struct-field|class|OpInfoIconProc.classId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/player_interface.h|function-signature|unit|ApplyUnitMapUiFramePal": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/player_interface.h|struct-field|unit|PlayerInterfaceProc.burstUnitId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/player_interface.h|struct-field|unit|PlayerInterfaceProc.burstUnitIdPrev": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/playerphase.h|function-signature|unit|TrySetCursorOn": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup2_DropItem": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup2_PlanC": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup2_PlanD": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup2_SendItem": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup_GeneralItemGot": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup_ItemGot": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup_ItemGot_unused": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup_ItemStealing": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|NewPopup_WeaponBroke": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|function-signature|item|SetPopupItem": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/popup.h|struct-field|item|GotItemPopupProc.item": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/prepscreen.h|data-symbol|item|Img_PrepItemListSpinningArrow": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "include/prepscreen.h|data-symbol|item|Pal_PrepItemListSpinningArrowCycle": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "include/prepscreen.h|data-symbol|item|Tsa_PrepItemSupplyBgA": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "include/prepscreen.h|data-symbol|item|Tsa_PrepItemSupplyBgB": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "include/prepscreen.h|data-symbol|item|gPrepShopInventory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|chapter|PutPrepChapterSprite_Default": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|chapter|PutPrepChapterSprite_Ruins": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|chapter|PutPrepChapterSprite_Tower": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|character|DoPromoteAnimForChar100": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|character|IsCharacterForceDeployed": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|character|NullExpForChar100AndResetScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|character|PrepGetLatestCharId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|character|PrepSetLatestCharId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|character|UnitGetIndexInPrepList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|CheckValidLinkArenaItemSupply": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|GetActivePrepMenuItemIndex": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/prepscreen.h|function-signature|item|GetConvoyItemCount_": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|IsWeaponUsable": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|MaybeStartSelectConvoyItemProc": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_ClampCursorAndScroll": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_DrawCurrentOwnerText": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_DrawOwnerHeaderText": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_Init": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_InitGfx": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_Loop_MainKeyHandler": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_Loop_UnitInvKeyHandler": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_MoveUnitInvCursor": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_OnEnd": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_RedrawPageContents": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_ScrollVertical": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_SnapCursorIntoView": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_StartTradeScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_SwapItemWithUnitSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_SwitchPageLeft": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_SwitchPageRight": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_SwitchToUnitInventory": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemList_TakeItemToUnit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_AdjustCursorAndScroll": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_ClampScroll": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_DrawConvoyHeader": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_DrawConvoyWeaponIconTiles": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_DrawGiveTakeText": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_DrawItemList": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_DrawItemListIcons": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_DrawItemListRow": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_EnterGiveTakeMenu": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_GiveItemToSupply": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_HandleUnitInvCursorInput": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_Init": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_InitGfx": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_InitGiveTakeText": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_Loop_GiveTakeKeyHandler": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_Loop_ItemListKeyHandler": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_Loop_UnitInvKeyHandler": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_OnEnd": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_OnHBlank": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_PutPromptBoxSprites": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_RedrawAfterPageSwitch": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_RedrawConvoyHeaderWorker": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_ResetBackgrounds": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_ScrollVertical": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_ShowActiveUnitOnEnter": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_StartActiveUnitMuOnExit": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_StartPromptText": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_SwitchPageLeft": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_SwitchPageRight": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_SwitchToUnitInventory": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemSupply_TakeItemFromSupply": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemTrade_ApplyItemSwap": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItemUseBooster_OnDraw": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|PrepItem_DrawItemListBox": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|StartPrepItemListScreen": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|StartPrepItemListScreenProc": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|StartPrepItemSupply": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|StartPrepItemSupplyProc": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|item|StartPrepItemTradeScreenProcAtSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|unit|GetLatestUnitIndexInPrepListByUId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|unit|PrepGetLatestUnitIndex": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|function-signature|unit|PrepItemList_SwapItemWithUnitSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|chapter|PrepSpriteDrawProc.prepChapterNum": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|character|PrepScreenItemListEnt.pid": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|character|SioPidPool.pids": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|item|PrepMenuTradeProc.cursorItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|item|PrepMenuTradeProc.helpBoxItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|item|PrepMenuTradeProc.selectedItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|item|PrepScreenItemListEnt.item": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|item|PrepScreenItemListEnt.itemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|unit|PrepItemScreenProc.hoverUnitIdx": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/prepscreen.h|struct-field|unit|PrepItemScreenProc.selectedUnitIdx": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/savemenu.h|function-signature|chapter|SaveMenu_SetLcdChapterIdx": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/savemenu.h|struct-field|chapter|SaveMenuProc.chapter_idx": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/savemenu.h|struct-field|character|SaveMenuRTextData.pid": {
+      "category": "save-field",
+      "reason": null
+    },
+    "include/sio.h|function-signature|item|SetUnitItemUsesToMax": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|function-signature|unit|LinkArenaBattleMap_AdvancePhase": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|function-signature|unit|LinkArenaBattleMap_ClearUnitSlots": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|function-signature|unit|LinkArenaBattleMap_FindUnitSlot": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|function-signature|unit|LinkArenaBattleMap_InitUnitSlots": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|function-signature|unit|LinkArenaBattleMap_RefreshUnitSlots": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|struct-field|unit|PointsNumberMoverProc.unitId": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/sio.h|struct-field|unit|SioUnknown_0203DD90_Unk2C.unitId": {
+      "category": "link-network",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|character|GetSpellAssocCharCount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocCharCount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocEfxIndex": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocFacing": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocFlashColor": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocMapAnimProcScript": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocReturnBool": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|function-signature|item|GetSpellAssocStructPtr": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/spellassoc.h|struct-field|item|SpellAssoc.item": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/statscreen.h|function-signature|item|GetHelpBoxItemInfoKind": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/statscreen.h|function-signature|item|StartItemHelpBox": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/statscreen.h|struct-field|item|HelpBoxProc.item": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/statscreen.h|struct-field|unit|StatScreenInfo.unitId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/types.h|struct-field|chapter|PlaySt.chapterIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/types.h|struct-field|unit|PlaySt.faction": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/uichapterstatus.h|function-signature|unit|CountUnitsByFaction": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/uichapterstatus.h|struct-field|unit|ChapterStatusProc.unitIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/uichapterstatus.h|struct-field|unit|ChapterStatusProc.unitIndexPrev": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/uimenu.h|function-signature|item|DrawMenuItemHover": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/uimenu.h|function-signature|item|MenuCancelSelect": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/uimenu.h|function-signature|item|MenuStdHelpBox": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/uimenu.h|function-signature|item|OverriddenMenuSelected": {
+      "category": "reviewed-exclusion",
+      "reason": "the word item here means a menu entry (struct MenuItemProc / menu row index), not a game item ID; menu rows are bounded by the menu, not by the item ID space"
+    },
+    "include/uimenu.h|struct-field|item|MenuProc.itemCount": {
+      "category": "reviewed-exclusion",
+      "reason": "counts menu rows in a struct MenuProc, not inventory items; unrelated to the item ID space"
+    },
+    "include/uisupport.h|function-signature|character|DoesCharIdHaveSupportTalk": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|function-signature|character|GetSupportClassForCharId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|function-signature|character|GetSupportScreenCharIdAt": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|function-signature|character|GetSupportScreenPartnerCharId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|function-signature|character|GetSupportScreenPartnerCount": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|function-signature|class|GetSupportScreenClassIdAt": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|function-signature|class|GetSupportScreenPartnerClassId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|struct-field|character|SupportScreenUnit.charId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|struct-field|class|SubScreenProc.partnerClassId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|struct-field|class|SupportScreenUnit.classId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|struct-field|class|SupportScreenUnit.partnerClassId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/uisupport.h|struct-field|unit|SubScreenProc.unitIdx": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|chapter|gPlayStChapterBits": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|JidLutUnk_Tier0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_C1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_ElysianWhip": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_GuidRing": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_HeavenSeal": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_HeroCrest": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_KnightCrest": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_LunarBrace": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_MasterSeal": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_OceanSeal": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_OrionsBolt": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gItemUseJidList_SolarBrace": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|class|gPromoJidLut": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|item|gConvoyItemArray": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/variables.h|data-symbol|unit|gActiveUnitId": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_AdlasPlains_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_AdlasPlains_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_AdlasPlains_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Bethroen_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Bethroen_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Bethroen_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BlackTemple_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BlackTemple_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BlackTemple_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BorderMulan_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BorderMulan_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BorderMulan_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BorgoRidge_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BorgoRidge_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_BorgoRidge_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_CaerPelyn_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_CaerPelyn_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_CaerPelyn_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_CastleFrelia_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_CastleFrelia_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_CastleFrelia_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_DarklingWoods_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_DarklingWoods_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_DarklingWoods_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_FortRigwald_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_FortRigwald_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_FortRigwald_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_GradoKeep_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_GradoKeep_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_GradoKeep_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_HamillCanyon_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_HamillCanyon_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_HamillCanyon_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Ide_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Ide_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Ide_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_JehannaHall_0D_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_JehannaHall_0D_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_JehannaHall_0D_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_JehannaHall_13_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_JehannaHall_13_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_JehannaHall_13_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_LagdouRuins_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_LagdouRuins_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_LagdouRuins_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_MelkaenCoast_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_MelkaenCoast_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_MelkaenCoast_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_NarubeRiver_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_NarubeRiver_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_NarubeRiver_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_NelerasPeak_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_NelerasPeak_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_NelerasPeak_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_PortKiris_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_PortKiris_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_PortKiris_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_RaustenCourt_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_RaustenCourt_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_RaustenCourt_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_RenaisCastle_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_RenaisCastle_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_RenaisCastle_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Renvall_07_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Renvall_07_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Renvall_07_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Renvall_08_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Renvall_08_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Renvall_08_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Serafew_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Serafew_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Serafew_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Taizel_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Taizel_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_Taizel_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_TerasPlateau_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_TerazPlateau_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_TerazPlateau_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_TowerOfValni_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_TowerOfValni_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_TowerOfValni_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_ZaalbulMarsh_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_ZaalbulMarsh_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_ZaalbulMarsh_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_ZahaWoods_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_ZahaWoods_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|data-symbol|item|ItemList_WM_ZahaWoods_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|chapter|GetChapterIndexOnWmNode": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|chapter|GetPlayChapterId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|chapter|WMLoc_GetChapterId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|class|MapUnitC_SetDisplayedClass": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|class|NewMapUnit": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|unit|GetPaletteIdForAllegience": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|unit|MapUnitC_SetFaction": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|function-signature|unit|NewMapUnit": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|struct-field|chapter|GMapNodeData.chapteridx_eirika": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|struct-field|chapter|GMapNodeData.chapteridx_ephram": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|struct-field|character|GMapBaseMenuProc.pid": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|struct-field|class|GmapTimeMonsConf.jid": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "include/worldmap.h|struct-field|unit|GMapUnitProc.faction": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/bmarena.c|data-symbol|class|gClassList_BowArena": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/bmarena.c|data-symbol|class|gClassList_MagicArena": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/bmarena.c|data-symbol|class|gClassList_MeleeArena": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/bmarena.c|data-symbol|class|gClassList_UnusedArena": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/bmcontainer.c|data-symbol|item|gConvoyItemArray": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/bmdebug.c|data-symbol|chapter|gChapterIdOrderedList": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/bmshop.c|data-symbol|item|gDefaultShopInventory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/classchg-data.c|data-symbol|class|gPromoJidLut": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/classchg-handler.c|struct-field|character|TraineeData.charId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/classchg-handler.c|struct-field|class|TraineeData.class": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty2": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty3": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty4": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty5": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty6": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty7": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty8": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|class|gClassList_Empty9": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_data.c|data-symbol|item|gAiStealPriorityItemList": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffBarrier": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffFortify": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffHealMendRecover": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffPhysicRescue": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffRestore": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffSilence": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffSleepBerserk": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|function-signature|item|AiStaffWarp": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cp_staff.c|struct-field|item|AiStaffLutEntry.itemId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/cp_utility.c|function-signature|item|AiGetChestUnlockItemSlot": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cpextra_80407F0.c|function-signature|item|AiSpecialItemAntitoxin": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cpextra_80407F0.c|function-signature|item|AiSpecialItemDoorKey": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cpextra_80407F0.c|function-signature|item|AiSpecialItemLockpick": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/cpextra_80407F0.c|struct-field|item|AiSpecialItemLutEntry.itemId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/data_characters.c|data-symbol|character|gCharacterData": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_classes.c|data-symbol|class|gClassData": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_event_trigger.c|data-symbol|character|gPidList_SethLArachelMyrrhInnes": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_items.c|data-symbol|item|gItemData": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|JidLutUnk_Tier0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_C1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_ElysianWhip": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_GuidRing": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_HeavenSeal": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_HeroCrest": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_KnightCrest": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_LunarBrace": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_MasterSeal": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_OceanSeal": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_OrionsBolt": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/data_itemuse.c|data-symbol|class|gItemUseJidList_SolarBrace": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/eventinfo.c|macro|event|EVT_CMD_B1": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/eventinfo.c|macro|event|EVT_CMD_B2": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/eventinfo.c|macro|event|EVT_CMD_B3": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/eventinfo.c|macro|event|EVT_CMD_B4": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/eventinfo.c|macro|event|EVT_CMD_HI": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/eventinfo.c|macro|event|EVT_CMD_LO": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/eventinfo.c|struct-field|unit|EvCheck02.faction": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/events_info.c|macro|event|GENERATED_DATA_EVENTLISTS_CH2_LINKED": {
+      "category": "event-operand",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch10B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch10B_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch12A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch12B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch14A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch14B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch15A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch15B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch17A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch17A_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch17B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch17B_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch19A_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ch19B_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Event_Ch2Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Event_Ch5Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Event_Ch5Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Event_Ch9aArmory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Event_Ch9aVendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin10_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin3_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin3_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin4_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin4_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin5_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin5_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin5_2": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin7_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Ruin8_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower1_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower1_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower5_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower5_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower6_0": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower6_1": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/events_shoplist.c|data-symbol|item|ShopList_Tower6_2": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/monstergen_data.c|data-symbol|item|gMonsterItemTable": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/prep_itemscreen.c|data-symbol|item|gPrepShopInventory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/prep_itemuse.c|function-signature|item|CanUnitUseItemPrepScreen": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_0": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_1": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_2": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_3": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_4": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_5": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_6": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_7": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_8": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_9": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/prep_menuproc.c|data-symbol|chapter|Sprite_PrepChapterNum_X": {
+      "category": "reviewed-exclusion",
+      "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
+    },
+    "src/uimenu.c|data-symbol|item|sItemCountYOffsetLookup": {
+      "category": "reviewed-exclusion",
+      "reason": "pixel Y-offset lookup indexed by the number of menu rows, not by an item ID"
+    },
+    "src/uisupport.c|function-signature|character|GetSupportScreenCharIdAt": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/worldmap_automu.c|struct-field|unit|GMapAutoMuProc.unitId": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/worldmap_gmapunit.c|function-signature|class|SMS_DisplayOne": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/worldmap_player_interface.c|struct-field|character|GMapPIProc.pid": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/worldmap_player_interface.c|struct-field|class|GMapPIProc.jid": {
+      "category": "ui-buffer",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_AdlasPlains_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_AdlasPlains_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_AdlasPlains_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Bethroen_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Bethroen_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Bethroen_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BlackTemple_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BlackTemple_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BlackTemple_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BorderMulan_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BorderMulan_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BorderMulan_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BorgoRidge_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BorgoRidge_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_BorgoRidge_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_CaerPelyn_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_CaerPelyn_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_CaerPelyn_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_CastleFrelia_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_CastleFrelia_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_CastleFrelia_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_DarklingWoods_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_DarklingWoods_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_DarklingWoods_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_FortRigwald_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_FortRigwald_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_FortRigwald_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_GradoKeep_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_GradoKeep_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_GradoKeep_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_HamillCanyon_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_HamillCanyon_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_HamillCanyon_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Ide_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Ide_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Ide_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_JehannaHall_0D_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_JehannaHall_0D_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_JehannaHall_0D_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_JehannaHall_13_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_JehannaHall_13_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_JehannaHall_13_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_LagdouRuins_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_LagdouRuins_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_LagdouRuins_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_MelkaenCoast_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_MelkaenCoast_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_MelkaenCoast_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_NarubeRiver_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_NarubeRiver_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_NarubeRiver_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_NelerasPeak_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_NelerasPeak_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_NelerasPeak_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_PortKiris_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_PortKiris_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_PortKiris_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_RaustenCourt_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_RaustenCourt_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_RaustenCourt_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_RenaisCastle_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_RenaisCastle_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_RenaisCastle_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Renvall_07_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Renvall_07_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Renvall_07_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Renvall_08_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Renvall_08_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Renvall_08_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Serafew_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Serafew_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Serafew_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Taizel_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Taizel_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_Taizel_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_TerasPlateau_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_TerazPlateau_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_TerazPlateau_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_TowerOfValni_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_TowerOfValni_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_TowerOfValni_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_ZaalbulMarsh_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_ZaalbulMarsh_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_ZaalbulMarsh_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_ZahaWoods_Armory": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_ZahaWoods_SecretShop": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/worldmap_shop_data.c|data-symbol|item|ItemList_WM_ZahaWoods_Vendor": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "tools/gba-playtest/gba_playtest.py|tool-symbol|item|item": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "tools/gba-playtest/run_item_expansion_checks.py|tool-symbol|item|STAGE_ITEMDATA": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "tools/gba-playtest/tests/test_debugtools_registry.py|tool-symbol|chapter|chapter_index": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "tools/gba-playtest/tests/test_debugtools_registry.py|tool-symbol|chapter|test_gamecontrol_chapter2_boot_never_bypasses_events_or_manually_loads_units": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "tools/gba-playtest/tests/test_expansion_starter_content.py|tool-symbol|item|test_no_raw_numeric_content_item_id": {
+      "category": "reviewed-exclusion",
+      "reason": "a unittest method NAME in a host test, not an ID consumer: the test asserts that no raw numeric item ID literal appears in the issue #6 sources, so it stores no ID and is never indexed by one"
+    }
+  },
+  "schema_version": 1
+}

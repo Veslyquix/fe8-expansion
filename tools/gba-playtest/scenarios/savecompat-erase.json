@@ -95,8 +95,18 @@
       "framebuffer": true,
       "sram_hash": true,
       "sram_hash_exclude_ranges": [
-        {"offset": 29640, "length": 9},
-        {"offset": 29650, "length": 2}
+        {
+          "offset": 29620,
+          "length": 17
+        },
+        {
+          "offset": 29640,
+          "length": 9
+        },
+        {
+          "offset": 29650,
+          "length": 2
+        }
       ],
       "probes": []
     },
@@ -106,8 +116,18 @@
       "framebuffer": true,
       "sram_hash": true,
       "sram_hash_exclude_ranges": [
-        {"offset": 29640, "length": 9},
-        {"offset": 29650, "length": 2}
+        {
+          "offset": 29620,
+          "length": 17
+        },
+        {
+          "offset": 29640,
+          "length": 9
+        },
+        {
+          "offset": 29650,
+          "length": 2
+        }
       ],
       "probes": []
     },
@@ -117,8 +137,18 @@
       "framebuffer": true,
       "sram_hash": true,
       "sram_hash_exclude_ranges": [
-        {"offset": 29640, "length": 9},
-        {"offset": 29650, "length": 2}
+        {
+          "offset": 29620,
+          "length": 17
+        },
+        {
+          "offset": 29640,
+          "length": 9
+        },
+        {
+          "offset": 29650,
+          "length": 2
+        }
       ],
       "probes": []
     }

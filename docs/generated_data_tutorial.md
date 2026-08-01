@@ -103,6 +103,27 @@ Source: `src/data/items.json` (the `items` array, one record per
 live `MSG_COUNT` bound; `attributes`/`requiredWexp`/`weaponType` are
 resolved symbolically. Output: `data_items.c`.
 
+Text IDs may also be authored **symbolically** as `MSG_*` names resolved
+against `include/constants/msg.h`:
+
+```json
+{ "item": "ITEM_SWORD_STEEL", "nameTextId": "MSG_SAVE_COMPAT_BACK" }
+```
+
+(any `MSG_*` constant the live header defines; the one above is only a
+spelling example). An unknown symbol fails the data build with an actionable
+diagnostic instead of silently repointing the item at whatever text later
+lands on that number.
+The 206 vanilla records keep the plain-integer form and still round-trip
+byte-for-byte.
+
+**Framework-authored (expansion) records must not add a message at all.**
+`texts/texts.txt` feeds one shared, Huffman-compressed blob, so appending a
+message re-encodes the text of every build, default ones included. Leave the
+text IDs unset on such a record and author its display text through the
+config-gated content path instead -- see `docs/starter_features.md` for the
+bundled worked example.
+
 ### Add or modify a **support** (`--table supports`)
 
 Source: `src/data/supports.json`. A record is one owner and its parallel

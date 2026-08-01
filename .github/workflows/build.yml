@@ -38,10 +38,22 @@ jobs:
     - name: Install host-only dependencies (no arm-none-eabi toolchain)
       run: sudo apt-get update && sudo apt-get install -y build-essential libmgba-dev
 
+    # GBA_PLAYTEST_HOST_ONLY=1 is the single public switch that makes this a
+    # genuinely host-only lane (tools/gba-playtest/tests/host_mode.py): every
+    # ROM-dependent live-integration test skips explicitly, before it touches
+    # any ROM/ELF/save artifact, instead of deciding live-vs-skip from whether
+    # a git-ignored build artifact happens to exist. A clean CI checkout has
+    # no ROM, so this job behaves identically here either way; the flag makes
+    # that guarantee explicit and reproducible in a local worktree (and under
+    # `python3 -m scripts.upstream_port verify --jobs 2`, where the ROM
+    # `build` gates below rewrite exactly those artifacts while this gate
+    # runs). The live/runtime coverage is owned by the `build` job below --
+    # it is not weakened here. The env is inline on this one step only: the
+    # `build` job must NOT inherit it, or its runtime gates would skip.
     - name: Run gba-playtest host test suite
-      run: python3 -m unittest discover -s tools/gba-playtest/tests -v
+      run: GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v
 
-    # Issue #12/#15 upstream-port review tooling (scripts/upstream_port): 139
+    # Issue #12/#15 upstream-port review tooling (scripts/upstream_port): 144
     # pure-stdlib unittest cases covering classify/scan/drift/state/
     # ref-binding/output-safety/merge-commit determinism and, crucially, the
     # verify.gates() <-> this-workflow argv/order mirror. Runs here in the
@@ -52,13 +64,29 @@ jobs:
     - name: Run upstream-port tooling test suite
       run: python3 -m unittest discover -s tests/upstream_port -v
 
+    # Issue #18 host-lane closure fix: the scripts/localization package's
+    # own pure-stdlib unit test suite (schema/pseudo/catalog/generate/CLI/
+    # determinism, plus the host-native resolver-behavior and
+    # vanilla-isolation source-audit tests, which self-skip without a host
+    # `cc`) -- see localization.mk's `localization-test` target, whose own
+    # comment already named it a CI-suitable gate before this step actually
+    # wired it in. Python/stdlib only (no arm-none-eabi toolchain, no
+    # ROM/linker rebuild), so it stays in this fast host lane; it does not
+    # overlap the localization-runtime-*-check scenarios in the `build`
+    # job below (those require a real booted ROM and are reached through
+    # expansion-modern-linker-check's own dependency list, not this step).
+    - name: Run localization host test suite (issue #18)
+      run: python3 -m unittest discover -s scripts/localization/tests -p "test_*.py"
+
   # Ubuntu libmGBA ROM/runtime gate: builds the full modern object/ELF/ROM
   # chain for both supported configs (debug, release; AAPCS only -- see
   # docs/config_identity.md), checks deterministic memory budgets, rejects
   # orphan/overflow/cross-overlay errors, and verifies boot/title/debugtools/
   # new-game/save-format/suspend-resume/shifted-link runtime behavior via
   # the same tools/gba-playtest harness the host-tests job unit-tests in
-  # isolation. This is the exact (and only) supported CI host matrix today:
+  # isolation, and finally re-runs that same harness at an expanded item ID
+  # cap for the issue #10 item-ID-expansion runtime probe. This is the
+  # exact (and only) supported CI host matrix today:
   # ubuntu-latest with arm-none-eabi GCC. macOS (Homebrew) is documented in
   # tools/gba-playtest/README.md for local development but is not exercised
   # by CI. The archival/decomp agbcc `fireemblem8.gba` path (see
@@ -120,9 +148,45 @@ jobs:
     # (issue #13) debugtools/new-game/save-format/suspend-resume runtime
     # scenarios and the relocation/raw-pointer/offset audits -- all reusing
     # this same modern object/ELF build for both configs rather than
-    # rebuilding per check. Per repository policy, CI ends after these
-    # target-ROM checks.
+    # rebuilding per check. This is the default-cap lane; the expanded-cap
+    # issue #10 item-ID-expansion gate below is the final target-ROM step.
     - name: Build and verify modern target ROMs and linker
       run: |
         make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs -j2
         make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs -j2
+
+    # Issue #10 acceptance ("Boundary, serialization, and migration tests
+    # gate CI"): runs the real, booted expansion ROM's item-ID-expansion
+    # runtime probe (expansion-modern-itemexpansion-check, modern.mk) at an
+    # expanded item cap (0xCE) for both configurations, immediately after
+    # the default-cap linker-check step above and against the exact same
+    # MODERN_OUTPUT_DIR it just populated. This is additive only: it does
+    # not modify, reorder, or relax the linker-check step above, and it does
+    # not touch any committed fingerprint/baseline.
+    #
+    # Issue #6 (Sprint 2) rides this SAME step and this SAME ROM build: the
+    # EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1
+    # EXPANSION_MECHANICS_SAMPLE=1 profile links the bundled generated-data
+    # content example, so the one probe run additionally asserts the authored
+    # item record (original name/description/uses/type/attributes/icon) and
+    # the content mechanic registered through the public hook registry. No
+    # extra workflow command and no extra ROM build: the CI correctness
+    # command count stays exactly 10.
+    #
+    # Why this is not stale: every modern C/data object depends on
+    # modern.mk's content-addressed MODERN_COMPILE_SETTINGS stamp (which
+    # embeds FE8_ITEM_ID_CAP/FE8_EXPANSION_ITEMTEST), so flipping those
+    # variables here invalidates and rebuilds exactly the objects the new
+    # cap affects instead of silently reusing the previous, default-cap
+    # linker-check step's ELF/ROM. Running this bare (no env, plain
+    # expansion-modern-linker-check) is deliberately kept a hard failure --
+    # this step supplies the required FE8_ITEM_ID_CAP=0xCE
+    # FE8_EXPANSION_ITEMTEST=1 pair itself, matching the actionable error
+    # expansion-modern-itemexpansion-check prints when they are missing.
+    #
+    # This is the workflow final step: per repository policy, CI ends after
+    # these target-ROM checks.
+    - name: Boundary/serialization item-ID-expansion + content runtime gate (cap 0xCE)
+      run: |
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2

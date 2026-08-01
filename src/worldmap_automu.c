@@ -322,12 +322,17 @@ void EndGmAutoMuFor(int index)
     {
         proc = Proc_FindNext(&procIter);
 
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (proc->unitId == index)
         {
             Proc_End(proc);
             return;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return;
 }
@@ -348,11 +353,16 @@ bool IsGmAutoMuActiveFor(int index)
     {
         proc = Proc_FindNext(&procIter);
 
+        if (proc == NULL)
+        {
+            break;
+        }
+
         if (proc->unitId == index)
         {
             return true;
         }
-    } while (proc != NULL);
+    } while (1);
 
     return false;
 }

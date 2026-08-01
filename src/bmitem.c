@@ -10,6 +10,31 @@
 #include "bmcontainer.h"
 
 #include "bmitem.h"
+#include "id_space.h"
+
+/* Issue #6 bundled content example. The header declares its narrow, typed
+ * accessor ONLY under FE8_EXPANSION_STARTER_CONTENT (default 0, and never
+ * defined at all in the legacy agbcc lane), so a default build of this
+ * translation unit sees no declaration, no call and no data -- its object is
+ * the vanilla one. See include/expansion_starter_content.h. */
+#include "expansion_starter_content.h"
+
+/* Issue #10: bind the runtime item-data lookup to the single-sourced,
+ * build-time item ID cap (include/id_space.h, generated from
+ * scripts/generated_data/idspace.py). Live compile-time contract, not dead
+ * code: -DFE8_ITEM_ID_CAP flows the same cap the data generator resolved
+ * into this translation unit, and the assert rejects any cap that would not
+ * fit the u8 ItemId storage (e.g. a stray -DFE8_ITEM_ID_CAP=0x100). No ABI
+ * or table-layout change. */
+ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP <= ITEM_ID_TECHNICAL_MAX,
+                       bmitem_configured_cap_fits_storage);
+
+/* The runtime lookup index below is an ItemId-wide value: assert that
+ * storage width here, at compile time, so a future ItemId widening cannot
+ * silently outgrow gItemData[]'s u8-indexed lookup without this translation
+ * unit failing to build. Emits no code. */
+ID_SPACE_STATIC_ASSERT(sizeof(ItemId) == 1, bmitem_item_id_storage_is_u8);
+ID_SPACE_STATIC_ASSERT(ITEM_ID_TECHNICAL_MAX <= 0xFF, bmitem_item_id_max_fits_u8);
 
 // TODO: figure out those two inline functions and where they belong
 
@@ -77,6 +102,12 @@ char* GetItemNameWithArticle(int item, s8 capitalize) {
 }
 
 inline const struct ItemData* GetItemData(int itemIndex) {
+    /* itemIndex is an ITEM_INDEX-masked (0..ITEM_ID_TECHNICAL_MAX) item ID.
+     * The width contract is asserted at compile time above (ItemId storage
+     * plus the configured cap) rather than by re-masking here: every caller
+     * already goes through ITEM_INDEX, and adding a redundant mask would
+     * change this inline function's emitted code -- and therefore the whole
+     * default ROM's data layout -- for no runtime gain. */
     return gItemData + itemIndex;
 }
 
@@ -86,6 +117,22 @@ inline int GetItemIndex(int item) {
 
 inline char* GetItemName(int item) {
     char* result;
+
+#if FE8_EXPANSION_STARTER_CONTENT
+    /* A framework-authored content record carries its ORIGINAL name as
+     * literal text (src/data/items_expansion.json -> the build-local
+     * generated content text table), not as an index into the shared,
+     * Huffman-compressed message table: adding a message there would
+     * re-encode the text blob of every build, default ones included. Every
+     * production name consumer -- item menu, trade, shop, stat screen,
+     * popups, [Item] text substitution -- goes through this one function, so
+     * this single seam is the whole UI integration. NULL means "not a
+     * content record": fall through to the vanilla path unchanged. */
+    result = ExpansionStarterContentItemName((ItemId)ITEM_INDEX(item));
+
+    if (result != NULL)
+        return result;
+#endif
 
     result = GetStringFromIndex(GetItemData(ITEM_INDEX(item))->nameTextId);
     result = StrInsertTact();

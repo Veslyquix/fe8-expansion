@@ -44,12 +44,17 @@ generated-data-generate:
 		$(GENERATED_DATA_PY) generate --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --out-dir $(GENERATED_DATA_OUT_DIR)
+	@$(GENERATED_DATA_PY).idspace generate
+	@$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
 
 generated-data-check:
 	@for table in $(GENERATED_DATA_TABLES); do \
 		$(GENERATED_DATA_PY) check --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --check --out-dir $(GENERATED_DATA_OUT_DIR)
+	@$(GENERATED_DATA_PY).consumer_census check
+	@$(GENERATED_DATA_PY).idspace check
+	@$(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR)
 
 generated-data-test:
 	$(PYTHON) -m unittest discover -s scripts/generated_data/tests -v
@@ -164,6 +169,225 @@ GENERATED_DATA_CONFIG_INPUTS_items := \
 	include/constants/msg.h \
 	src/data/data_item_icon.c
 
+# --- Issue #10 item ID cap: environment/config build input, not a file -----
+# FE8_ITEM_ID_CAP selects the item ID cap (default 0xCD; >=0xCE opts the
+# src/data/items_expansion.json overlay + include/constants/items_expansion.h
+# enum into gItemData[]). Two staleness gaps this closes:
+#   1. The overlay JSON + expansion header are real generator inputs, so a
+#      change to either must regenerate the table -- added below.
+#   2. FE8_ITEM_ID_CAP is an env/config value: flipping it changes no source
+#      mtime, so a plain input-driven rule would hand back a stale table. The
+#      cap stamp records the *resolved* cap using the same FORCE +
+#      write-if-changed idiom as modern.mk's compile-settings stamp: its mtime
+#      only advances on a genuine cap change, so opting into 0xCE..0xFF (or
+#      back to 0xCD) regenerates the table with no clean, while a repeat build
+#      at the same cap stays a no-op. An invalid cap (non-integer, negative,
+#      >0xFF, ...) fails here, early, before any generation.
+# Forward the FE8_ITEM_ID_CAP *make* variable (which already reflects a
+# `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment overriding any
+# ambient environment value -- GNU Make's highest-precedence origin) into
+# the resolver's environment. Two facts force the escaping below:
+#   1. GNU Make (4.3) does NOT export makefile/command-line variables into a
+#      $(shell) subprocess (the `export` directive only reaches recipe and
+#      sub-make environments), and a `make FE8_ITEM_ID_CAP=...` command-line
+#      assignment is not in make's own process environment. So the resolver
+#      cannot merely inherit the value -- it must be passed on the command.
+#   2. Interpolating the *raw* value straight into the shell command is a
+#      shell-injection vector: a crafted FE8_ITEM_ID_CAP with a single-quote
+#      breakout (e.g. `'; touch pwned; echo '`) would otherwise execute during
+#      parse. So POSIX-single-quote-escape it first -- wrap in single quotes
+#      and rewrite every embedded ' as '\'' -- yielding one literal shell word
+#      that can never be executed. (A value containing make-function syntax
+#      like $(...) is still expanded by make itself when it evaluates the
+#      user's own command line; that is inherent GNU Make behaviour, upstream
+#      of this file, and is not a shell escape out of the resolver.)
+# Empty (unset) forwards FE8_ITEM_ID_CAP='' -> default 0xCD.
+GENERATED_DATA__SQ := '
+GENERATED_DATA_ITEM_CAP_SHELL_ARG := $(GENERATED_DATA__SQ)$(subst $(GENERATED_DATA__SQ),$(GENERATED_DATA__SQ)\$(GENERATED_DATA__SQ)$(GENERATED_DATA__SQ),$(FE8_ITEM_ID_CAP))$(GENERATED_DATA__SQ)
+GENERATED_DATA_ITEM_CAP := $(shell FE8_ITEM_ID_CAP=$(GENERATED_DATA_ITEM_CAP_SHELL_ARG) $(PYTHON) -c "import scripts.generated_data.idspace as i; print('0x%02X' % i.resolve_item_id_cap())" 2>/dev/null)
+ifeq ($(GENERATED_DATA_ITEM_CAP),)
+$(error FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' is not a valid item ID cap (want an integer 0x00..0xFF within the u8 ItemId storage); see scripts/generated_data/idspace.py resolve_item_id_cap)
+endif
+
+# --- Issue #10 archival lane guard: item expansion is modern-only ----------
+# Strategic binding decision: the archival agbcc lane is unsupported for item
+# ID expansion. Its agbcc compile commands deliberately do NOT thread
+# -DFE8_ITEM_ID_CAP (only modern.mk's MODERN_DEFINE_FLAGS does), so at a
+# non-vanilla cap the generator would plan a 0xCE..0xFF (up to 207-record)
+# gItemData[] table while every archival object still compiles
+# include/id_space.h's built-in ITEM_ID_CONFIGURED_CAP at the vanilla 0xCD --
+# a silent generated-vs-compiled contract divergence.
+#
+# This guard is deliberately NOT a fragile literal MAKECMDGOALS whitelist (the
+# prior approach only caught four hand-listed goal spellings and silently let
+# every indirect archival entry -- fireemblem8_relocs.elf, the whole
+# shiftcheck{,-static,-offsets,-diff,-run} family, objects.lst, direct object
+# builds, and any future target that reaches the archival objects -- through at
+# an expanded cap under `make -n`). Instead the cap assertion is bound to the
+# real archival dependency-graph boundary: generated_data.mk defines a single
+# .PHONY guard target here, and the Makefile attaches it (order-only) to the
+# archival objects/link products (see "archival item-cap guard" there). So
+# *any* target that reaches the agbcc archival objects/link -- named, indirect,
+# or added later -- automatically inherits the guard through the graph, with no
+# list to keep in sync.
+#
+# Mechanism: the guard's cap assertion lives in its *recipe* as a make $(error)
+# function, which make expands (and thus fires) whenever the guard target is
+# pulled into the active build graph -- including under `make -n` (a dry run
+# still expands recipe text) and even when the archival products are already up
+# to date (the guard is .PHONY, so it is always reconsidered). It is lazy: the
+# recipe is only expanded when an archival target is actually requested, so the
+# bare/default modern lane, the modern targets, and the standalone
+# generated-data checks (which never depend on the archival objects/link) stay
+# allowed at an expanded cap. The order-only attachment means the guard never
+# forces an archival relink at the vanilla cap. The comparison uses the
+# normalized, validated resolved caps (resolve_item_id_cap / ITEM_DEFAULT_CAP,
+# both formatted 0x%02X), so any legal equivalent spelling of the vanilla cap
+# (e.g. 205, 0xcd, 0o315) is accepted and any expanded value rejected -- no
+# fragile raw-string compare. FE8_ITEM_ID_CAP is read from the environment and
+# from a `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment (command
+# line wins, GNU Make's highest-precedence origin).
+GENERATED_DATA_ITEM_DEFAULT_CAP := $(shell $(PYTHON) -c "import scripts.generated_data.idspace as i; print('0x%02X' % i.ITEM_DEFAULT_CAP)" 2>/dev/null)
+# Non-empty exactly when the resolved cap is expanded past the vanilla default
+# (normalized compare, so 0xCD == 205 == 0o315 all read as vanilla / empty).
+GENERATED_DATA_ITEM_CAP_EXPANDED := $(filter-out $(GENERATED_DATA_ITEM_DEFAULT_CAP),$(GENERATED_DATA_ITEM_CAP))
+# The dependency-graph guard target. Empty recipe (`:`) at the vanilla cap;
+# a fatal, actionable $(error) at an expanded cap. Because the assertion is a
+# make function in the recipe body, it fires at plan/expansion time -- so
+# `make -n <any archival goal>` exits non-zero -- before any archival compile
+# or link (and before mgfembp's $(MAKE) sub-build) runs.
+# --- Issue #10 archival item-cap guard: single actionable diagnostic ------
+# One source of truth for the cap-divergence message, reused by BOTH gates:
+#   1. the parse-time known-goal fast-fail (Makefile, fires before any recipe
+#      / $(MAKE) -C mgfembp sub-build / agbcc compile), and
+#   2. the dependency-graph backstop recipe below (catches unknown / indirect
+#      / future archival entries).
+# := so it captures the already-resolved, normalized caps once as static
+# text; the embedded '(' / ')' / ',' only appear post-expansion, so wrapping
+# it in $(error $(...)) is paren/comma-safe.
+GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG := Archival lane (the agbcc fireemblem8.gba/.elf/.map ROM/ELF/MAP, the `legacy` alias, fireemblem8_relocs.elf, the shiftcheck family, and objects.lst) only supports the vanilla item cap FE8_ITEM_ID_CAP=$(GENERATED_DATA_ITEM_DEFAULT_CAP), but FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' resolved to $(GENERATED_DATA_ITEM_CAP). The agbcc archival lane does not thread -DFE8_ITEM_ID_CAP, so an expanded cap would generate a table that diverges from the compiled ITEM_ID_CONFIGURED_CAP. Item ID expansion is modern-only: build the modern lane instead, e.g. `FE8_ITEM_ID_CAP=$(GENERATED_DATA_ITEM_CAP) make expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs`; or unset FE8_ITEM_ID_CAP (or set it to $(GENERATED_DATA_ITEM_DEFAULT_CAP)) to build this archival target
+.PHONY: generated-data-archival-item-cap-guard
+generated-data-archival-item-cap-guard:
+	@$(if $(GENERATED_DATA_ITEM_CAP_EXPANDED),$(error $(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG)),:)
+GENERATED_DATA_ITEM_CAP_STAMP := $(GENERATED_DATA_OUT_DIR)/.item_id_cap.stamp
+
+.PHONY: FORCE_GENERATED_DATA_ITEM_CAP
+FORCE_GENERATED_DATA_ITEM_CAP:
+
+$(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
+	@mkdir -p "$(@D)"
+	@printf 'item_id_cap=%s\n' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+	@# issue #10 self-heal (ACTIVE header): FE8_ITEM_ID_CAP is an env/config
+	@# input, and the build-local ACTIVE header + audits are otherwise
+	@# re-rendered ONLY by the stamp-driven grouped rule below -- which fires
+	@# purely on the stamp's mtime. But a prior out-of-band, differently-capped
+	@# `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes the
+	@# ACTIVE header to 0xCE (advancing ITS mtime) while never touching this
+	@# stamp; on the next plain/default build the resolved cap is unchanged
+	@# (0xCD==0xCD) so the stamp mtime does NOT advance, the 0xCE header then
+	@# looks NEWER than the stamp, the grouped rule is judged up to date and
+	@# never re-renders -- yet data_items.c (which lists the header as a prereq)
+	@# DOES regenerate at the default cap, producing a 206-record table that
+	@# #includes a 207-record header: a negative static assert on the very
+	@# first consumer compile, requiring a manual `make generated-data-check`
+	@# to recover. Heal the ACTIVE surfaces here, keyed off THIS make process's
+	@# own resolved cap, so every default/configured build restores a correct
+	@# ACTIVE header *before* any consumer compiles. Use `active-heal`, NOT
+	@# `active-check`: this recipe is a FORCE prerequisite that runs on EVERY
+	@# build, and `active-check` re-renders through the full consumer census (a
+	@# ~15 MB source walk, ~8-11 s) even for a warm no-op -- a fixed per-build
+	@# tax. `active-heal` first runs a sub-second, census-free probe (resolved
+	@# cap + record counts vs the metadata already on disk): a mtime-preserving
+	@# no-op at the correct cap (no census, no rebuild storm), and only a single
+	@# full render when a surface is missing/stale/cap-count-mismatched. No
+	@# `|| true` mask: a bad cap or a schema/IO error must fail the build loudly
+	@# here, not silently defer to a later gate. The grouped rule below (stamp
+	@# -> header) still owns the ordinary cap-flip path and source/classification
+	@# drift; this closes only the out-of-band stamp/header desync, cheaply.
+	@$(GENERATED_DATA_PY).idspace active-heal --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null
+	@# issue #10 self-heal: FE8_ITEM_ID_CAP is an env/config input, so an
+	@# out-of-band write of build/generated/data/data_items.c at a different
+	@# cap (newer mtime than every tracked input) would otherwise be treated
+	@# as up to date and silently linked at the wrong cap. Re-run the items
+	@# generator through check (self-heals build/ write-if-changed; never
+	@# writes any committed file): a mtime-preserving no-op when the .c is
+	@# already correct, a single rewrite (recompiling exactly the affected
+	@# object) when it was stale. generated-data-check stays the authoritative
+	@# validation/drift gate, so real drift is reported there, not here.
+	@$(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null || true
+
+# --- Issue #18: close the literal Make-DAG/state gap for the gate itself ---
+# `generated-data-check` (the CI gate above) never referenced this stamp: its
+# own recipe heals the ACTIVE surfaces + the items table via *direct* python
+# calls (`idspace active-check`, `check --table items`), which are correct on
+# their own merits -- both resolve THIS invocation's own env cap and rewrite
+# write-if-changed, independent of the stamp's mtime -- but that means the
+# gate's own recipe never touched the one real, Make-tracked file every other
+# cap-aware target (the grouped ACTIVE_OUTPUTS rule, every linked table's .c
+# rule) keys its own staleness on. That is a structural asymmetry between
+# what the gate's recipe actually (already correctly) does and what the Make
+# dependency graph believes happened -- "cap missing from Make DAG/state".
+# Declaring the stamp as an ordinary prerequisite here closes that gap for
+# good: `generated-data-check` now always reconciles the SAME stamp every
+# other cap-aware rule relies on, so the graph and the on-disk cap state can
+# never observably diverge, at the cost of one extra (idempotent, sub-second,
+# write-if-changed) stamp-recipe invocation. Declared as a second prerequisite
+# line (not folded into the target's own line above) because
+# $(GENERATED_DATA_ITEM_CAP_STAMP) is only defined below this point in the
+# file -- GNU Make happily accumulates a target's prerequisites across
+# multiple appearances, so this reaches the same `generated-data-check`
+# target defined near the top of this file with no reordering required.
+generated-data-check: $(GENERATED_DATA_ITEM_CAP_STAMP)
+
+GENERATED_DATA_CONFIG_INPUTS_items += \
+	include/constants/items_expansion.h \
+	src/data/items_expansion.json \
+	$(GENERATED_DATA_ITEM_CAP_STAMP)
+
+# --- Issue #10 build-local ACTIVE id-space contract ------------------------
+# The generated item table (build/generated/data/data_items.c) #includes the
+# ACTIVE header from this same directory and compile-time asserts that (a) the
+# compiler cap (-DFE8_ITEM_ID_CAP / include/id_space.h default) equals the cap
+# the generator resolved and (b) sizeof(gItemData)/sizeof(gItemData[0]) equals
+# the ACTIVE record count. That makes the header a live build input, not a
+# dead artifact: listing it as an items config input means a cap flip
+# regenerates the header first and the table second, in one dependency graph,
+# with no clean and no manual ordering.
+#
+# The active outputs are deliberately build-local: reports/id_space_audit.*,
+# reports/generated_data_manifest.md and include/id_space.h stay byte-identical
+# at every cap, so an opted-in build never shows up as tracked drift.
+GENERATED_DATA_ACTIVE_HEADER := $(GENERATED_DATA_OUT_DIR)/id_space_active.h
+GENERATED_DATA_ACTIVE_JSON   := $(GENERATED_DATA_OUT_DIR)/id_space_active_audit.json
+GENERATED_DATA_ACTIVE_MD     := $(GENERATED_DATA_OUT_DIR)/id_space_active_audit.md
+GENERATED_DATA_ACTIVE_OUTPUTS := \
+	$(GENERATED_DATA_ACTIVE_HEADER) \
+	$(GENERATED_DATA_ACTIVE_JSON) \
+	$(GENERATED_DATA_ACTIVE_MD)
+
+# The census fact source feeds both audits, so a scanner/classification edit
+# must re-render the active audit exactly like a data edit does.
+GENERATED_DATA_CENSUS_INPUTS := \
+	scripts/generated_data/consumer_census.py \
+	scripts/generated_data/consumer_classification.json
+
+# One recipe renders all three surfaces; GNU Make 4.3 grouped targets (&:) say
+# so explicitly, so a parallel build never runs the generator three times.
+$(GENERATED_DATA_ACTIVE_OUTPUTS) &: \
+		$(GENERATED_DATA_ITEM_CAP_STAMP) \
+		$(GENERATED_DATA_SHARED_PY_SOURCES) \
+		$(GENERATED_DATA_CENSUS_INPUTS) \
+		$(wildcard scripts/generated_data/items/*.py) \
+		src/data/items.json \
+		src/data/items_expansion.json \
+		include/constants/items.h \
+		include/constants/items_expansion.h
+	@mkdir -p $(GENERATED_DATA_OUT_DIR)
+	$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
+
+GENERATED_DATA_CONFIG_INPUTS_items += $(GENERATED_DATA_ACTIVE_HEADER)
+
 # `supports`' own generator "config" inputs: headers
 # scripts/generated_data/supports/schema.py reads live constants from --
 # the CHARACTER_* designator set (include/constants/characters.h, via the
@@ -199,6 +423,59 @@ GENERATED_DATA_CONFIG_INPUTS_characters := \
 # Shared (every table) generator scripts. Test files/fixtures are
 # deliberately excluded -- they never affect generated output.
 GENERATED_DATA_SHARED_PY_SOURCES := $(wildcard scripts/generated_data/*.py)
+
+# --- Issue #6 config-gated CONTENT text -----------------------------------
+# Placed AFTER GENERATED_DATA_SHARED_PY_SOURCES above on purpose: make
+# expands a rule's prerequisite list when the rule is read, so a rule that
+# names that variable earlier in the file would silently get an empty list.
+#
+# A framework-authored item record must not append a message to
+# texts/texts.txt: that table is Huffman-compressed as ONE shared blob, so a
+# content-only message re-encodes the text of every build -- including a
+# default, feature-free ROM. The record therefore authors its ORIGINAL
+# display text literally ("authoringName", src/data/items_expansion.json) and
+# the generator emits it into a BUILD-LOCAL header that only the content
+# profile links (scripts/generated_data/items/content_text.py).
+#
+# EXPANSION_STARTER_CONTENT is an env/config value exactly like
+# FE8_ITEM_ID_CAP above: flipping it changes no source mtime, so it gets the
+# same FORCE + write-if-changed stamp idiom. At 0 the recipe writes nothing
+# and removes any artifact a previous content build left behind, so the
+# default profile can never pick up a stale string table.
+GENERATED_DATA_CONTENT_TEXT_HEADER  := $(GENERATED_DATA_OUT_DIR)/items_expansion_content_text.h
+GENERATED_DATA_CONTENT_TEXT_CATALOG := $(GENERATED_DATA_OUT_DIR)/items_expansion_content_text.json
+GENERATED_DATA_CONTENT_TEXT_STAMP   := $(GENERATED_DATA_OUT_DIR)/.starter_content.stamp
+
+.PHONY: FORCE_GENERATED_DATA_CONTENT_TEXT
+FORCE_GENERATED_DATA_CONTENT_TEXT:
+
+$(GENERATED_DATA_CONTENT_TEXT_STAMP): FORCE_GENERATED_DATA_CONTENT_TEXT
+	@mkdir -p "$(@D)"
+	@printf 'starter_content=%s item_id_cap=%s\n' \
+		'$(EXPANSION_STARTER_CONTENT)' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+
+$(GENERATED_DATA_CONTENT_TEXT_HEADER): \
+		$(GENERATED_DATA_CONTENT_TEXT_STAMP) \
+		$(GENERATED_DATA_SHARED_PY_SOURCES) \
+		$(wildcard scripts/generated_data/items/*.py) \
+		src/data/items.json \
+		src/data/items_expansion.json \
+		include/constants/items.h \
+		include/constants/items_expansion.h
+	@mkdir -p $(GENERATED_DATA_OUT_DIR)
+	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
+
+# The audit catalog is written by that same one recipe.
+$(GENERATED_DATA_CONTENT_TEXT_CATALOG): $(GENERATED_DATA_CONTENT_TEXT_HEADER)
+
+# Standalone entry point (contributor convenience + host tests): honours the
+# same EXPANSION_STARTER_CONTENT value and writes only under build/.
+.PHONY: generated-data-content-text
+generated-data-content-text:
+	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
 
 # Each linked table's top-level generated C symbol name(s) -- used by
 # generated-data-link-check to prove exactly one definition of each links
@@ -2304,3 +2581,152 @@ generated-data-weapontriangle-link-check: $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT
 	@test -e $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT) || { echo "FAIL: parallel build did not produce the generated object for weapontriangle" >&2; exit 1; }
 	@echo 'OK: from-scratch parallel (-j4) build of weapontriangle'"'"'s generated .c/.o succeeds, no race/duplicate generation'
 	@echo 'PASS: generated-data-weapontriangle-link-check'
+
+# ---------------------------------------------------------------------------
+# Extensible ID / count / cap contract (Issue #10)
+# ---------------------------------------------------------------------------
+# Single source: scripts/generated_data/idspace.py. Renders the committed
+# include/id_space.h typed contract + reports/id_space_audit.{json,md} and,
+# in check mode, fails on any configured-cap violation or committed-output
+# drift. Folded into generated-data-check/-generate above so the umbrella CI
+# gate covers it with no extra workflow edits.
+.PHONY: generated-data-idspace generated-data-idspace-check \
+        generated-data-idspace-active generated-data-idspace-active-check \
+        generated-data-census generated-data-census-check
+
+generated-data-idspace:
+	$(GENERATED_DATA_PY).idspace generate
+
+generated-data-idspace-check:
+	$(GENERATED_DATA_PY).idspace check
+
+# Build-local ACTIVE contract: what THIS configured build resolved (cap +
+# actually loaded record count), rendered as machine JSON, human Markdown and
+# the C header the generated item table compiles its asserts against. Never
+# touches a committed file, so `FE8_ITEM_ID_CAP=0xCE make generated-data-check`
+# reports 0xCE/207 without making reports/id_space_audit.* env-dependent.
+generated-data-idspace-active:
+	$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
+
+generated-data-idspace-active-check:
+	$(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR)
+
+# Source-driven consumer census: every declaration in include/, src/, asm/ and
+# tools/ that names an extensible ID must be classified (or explicitly
+# reviewed-excluded with a reason) in
+# scripts/generated_data/consumer_classification.json. A new unclassified
+# consumer, or a classified one that disappeared, fails here.
+generated-data-census:
+	$(GENERATED_DATA_PY).consumer_census scan
+
+generated-data-census-check:
+	$(GENERATED_DATA_PY).consumer_census check
+
+# ---------------------------------------------------------------------------
+# Issue #10 post-merge regression: item-cap self-heal (Batch fix)
+# ---------------------------------------------------------------------------
+# Proves the FE8_ITEM_ID_CAP self-heal (see the $(GENERATED_DATA_ITEM_CAP_STAMP)
+# recipe above) defends against an out-of-band, wrong-cap write to the
+# ephemeral generated items .c even when (a) the cap stamp still records the
+# default cap and (b) the poisoned .c mtime outranks every tracked input --
+# the exact state the item-cap CLI check test used to leave behind in the
+# shared build/ tree, which a later plain default build would then silently
+# link at 207 records. Local/manual (not CI wired): the object half needs
+# the archival agbcc pipeline CI deliberately does not install, exactly like
+# generated-data-link-check above.
+.PHONY: generated-data-cap-heal-check
+generated-data-cap-heal-check:
+	@C=$(GENERATED_DATA_OUT_DIR)/data_items.c; O=$(GENERATED_DATA_OUT_DIR)/data_items.o; \
+	echo --- baseline: default cap builds the 206 record item object ---; \
+	$(MAKE) --no-print-directory $$O >/dev/null; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: baseline default-cap .c already carries an expansion record >&2; exit 1; fi; \
+	base_md5=$$(md5sum $$O | cut -c1-32); \
+	echo --- poison: write a 207 record cap-0xCE .c out of band, keep the stamp at the default cap, push the .c mtime ahead ---; \
+	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
+	touch $$C; \
+	if ! grep -q EXPANSION_CE $$C; then echo FAIL: test setup did not poison the .c with an expansion record >&2; exit 1; fi; \
+	grep -q item_id_cap=$(GENERATED_DATA_ITEM_CAP) $(GENERATED_DATA_ITEM_CAP_STAMP) || { echo FAIL: cap stamp is not at the default cap for this regression >&2; exit 1; }; \
+	echo --- heal: a plain default-cap object build must restore the 206 record .c and recompile the object ---; \
+	$(MAKE) --no-print-directory $$O >/dev/null; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: default build did not self-heal the poisoned .c back to 206 records >&2; exit 1; fi; \
+	heal_md5=$$(md5sum $$O | cut -c1-32); \
+	if [ x$$heal_md5 != x$$base_md5 ]; then echo FAIL: healed object does not match the clean 206 baseline >&2; exit 1; fi; \
+	echo OK: stamp=default plus poisoned 207 .c, plain default build restored the 206 .c and object with no clean and no manual ordering; \
+	echo --- no-op: an already-correct rebuild must be a mtime-preserving no-op ---; \
+	m1=$$(stat -c %Y $$O); $(MAKE) --no-print-directory $$O >/dev/null; m2=$$(stat -c %Y $$O); \
+	if [ x$$m1 != x$$m2 ]; then echo FAIL: an already-correct object rebuilt unnecessarily >&2; exit 1; fi; \
+	echo OK: already-correct object build is a mtime-preserving no-op with no needless recompile and no tracked drift; \
+	echo --- cap flip 206 to 207 to 206 ---; \
+	FE8_ITEM_ID_CAP=0xCE $(MAKE) --no-print-directory $$O >/dev/null; \
+	grep -q EXPANSION_CE $$C || { echo FAIL: 0xCE build did not add the expansion record >&2; exit 1; }; \
+	$(MAKE) --no-print-directory $$O >/dev/null; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: default build did not drop the expansion record >&2; exit 1; fi; \
+	flip_md5=$$(md5sum $$O | cut -c1-32); \
+	if [ x$$flip_md5 != x$$base_md5 ]; then echo FAIL: 206 to 207 to 206 object does not match the clean 206 baseline >&2; exit 1; fi; \
+	echo OK: 206 to 207 cap 0xCE to 206 default round-trips the .c and object with no clean; \
+	echo --- test-suite isolation: the item-cap CLI check tests must not pollute the shared build tree ---; \
+	pre_md5=$$(md5sum $$C | cut -c1-32); \
+	$(PYTHON) -m unittest scripts.generated_data.tests.test_items_roundtrip_regression >/dev/null 2>&1; \
+	post_md5=$$(md5sum $$C | cut -c1-32); \
+	if [ x$$pre_md5 != x$$post_md5 ]; then echo FAIL: the item-cap CLI check tests mutated the shared build data_items.c >&2; exit 1; fi; \
+	if grep -q EXPANSION_CE $$C; then echo FAIL: shared build data_items.c left poisoned after the test suite >&2; exit 1; fi; \
+	echo OK: the item-cap CLI check tests run entirely in a TemporaryDirectory and leave the shared default-cap build .c untouched; \
+	echo PASS: generated-data-cap-heal-check
+
+# ---------------------------------------------------------------------------
+# Issue #10 cap-flip follow-up: ACTIVE-header stamp/header desync self-heal
+# ---------------------------------------------------------------------------
+# Companion to generated-data-cap-heal-check above, but guarding the *ACTIVE
+# header* half of the contract rather than the generated .c half -- and
+# deliberately host-only (no agbcc/arm toolchain), so CI covers it even where
+# the object build is unavailable. The real modern compile proof of the same
+# recovery (the negative static assert that a stale header would trigger)
+# lives in modern.mk's expansion-modern-idspace-active-check "desync recovery"
+# leg.
+#
+# Reproduces the exact reported first-fail: a differently-capped, out-of-band
+# `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes the
+# build-local ACTIVE header to 0xCE (advancing its mtime) while never touching
+# $(GENERATED_DATA_ITEM_CAP_STAMP). On the next plain/default build the
+# resolved cap is unchanged, so the stamp mtime does not advance, the 0xCE
+# header looks newer than the stamp, the stamp-driven grouped rule is judged
+# up to date and never re-renders -- yet data_items.c still regenerates at the
+# default cap, leaving a 206-record table that #includes a 207-record header
+# (a negative static assert on the first consumer compile). The stamp recipe's
+# ACTIVE-header self-heal must restore the header to the resolved cap on the
+# first plain build, with no manual generated-data-check and no clean.
+.PHONY: generated-data-active-heal-check
+generated-data-active-heal-check:
+	@C=$(GENERATED_DATA_OUT_DIR)/data_items.c; H=$(GENERATED_DATA_ACTIVE_HEADER); \
+	S=$(GENERATED_DATA_ITEM_CAP_STAMP); \
+	echo --- baseline: a plain default build agrees on 0xCD/206 across header, stamp and table ---; \
+	$(MAKE) --no-print-directory $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: baseline ACTIVE header is not at the default cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: baseline ACTIVE header count is not 206" >&2; exit 1; }; \
+	grep -q "item_id_cap=0xCD" $$S || { echo "FAIL: baseline cap stamp is not at the default cap" >&2; exit 1; }; \
+	if grep -q EXPANSION_CE $$C; then echo "FAIL: baseline default-cap .c already carries an expansion record" >&2; exit 1; fi; \
+	echo --- desync: an out-of-band FE8_ITEM_ID_CAP=0xCE active render advances the header to 0xCE while the stamp stays default and the .c stays 206 ---; \
+	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
+	touch $$H; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: desync setup did not advance the ACTIVE header to 0xCE" >&2; exit 1; }; \
+	grep -q "item_id_cap=0xCD" $$S || { echo "FAIL: desync setup unexpectedly moved the cap stamp off the default cap" >&2; exit 1; }; \
+	if grep -q EXPANSION_CE $$C; then echo "FAIL: desync setup unexpectedly rewrote the default-cap .c" >&2; exit 1; fi; \
+	echo --- heal: a single plain default build must restore the header to 0xCD/206 so header and table agree, with no manual generated-data-check ---; \
+	$(MAKE) --no-print-directory $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: the stale 0xCE header did not self-heal on the first plain default build" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: the self-healed header count is not 206" >&2; exit 1; }; \
+	if grep -q EXPANSION_CE $$C; then echo "FAIL: default-cap .c gained an expansion record while healing" >&2; exit 1; fi; \
+	echo "OK: stamp=default plus a stale 0xCE header, one plain default build re-synced header+table to 0xCD/206 with no clean and no manual ordering"; \
+	echo --- reverse: a configured FE8_ITEM_ID_CAP=0xCE build must move header and table together to 0xCE/207 ---; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: configured build did not move the header to 0xCE" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 207" $$H || { echo "FAIL: configured header count is not 207" >&2; exit 1; }; \
+	grep -q EXPANSION_CE $$C || { echo "FAIL: configured .c did not gain the expansion record" >&2; exit 1; }; \
+	echo "OK: the reverse (default -> 0xCE) cap flip moves header and table together to 0xCE/207"; \
+	echo --- no-op: an already-correct header rebuild must be a mtime-preserving no-op ---; \
+	m1=$$(stat -c %Y $$H); $(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null 2>&1; m2=$$(stat -c %Y $$H); \
+	if [ x$$m1 != x$$m2 ]; then echo "FAIL: an already-correct ACTIVE header was rewritten -- rebuild storm" >&2; exit 1; fi; \
+	echo "OK: an already-correct configured rebuild leaves the ACTIVE header untouched (no rebuild storm)"; \
+	$(MAKE) --no-print-directory $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap header state was not restored" >&2; exit 1; }; \
+	echo PASS: generated-data-active-heal-check

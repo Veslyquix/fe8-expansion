@@ -56,7 +56,11 @@ NAMED_ROM_SIZES = {
 # src/expansion_metadata.c). This mirrors that C struct's layout exactly --
 # keep both in sync when changing either.
 EXPANSION_METADATA_MAGIC = b"FE8M"
-EXPANSION_METADATA_STRUCT = struct.Struct("<4sBBBBI16s41s17s8s12s13s5s3sBI")
+# Issue #18 sprint 1 appends the locale identity fields after
+# rom_size_bytes (u32 enabledLocaleMask, u8 defaultLocale, u8
+# pseudoLocaleEnabled, 2 reserved bytes) -- append-only, so every
+# pre-existing offset above is unchanged; see include/expansion_metadata.h.
+EXPANSION_METADATA_STRUCT = struct.Struct("<4sBBBBI16s41s17s8s12s13s5s3sBIIBB2s")
 EXPANSION_METADATA_FIELDS = (
     "magic",
     "version_major",
@@ -74,6 +78,10 @@ EXPANSION_METADATA_FIELDS = (
     "rom_maker_code",
     "rom_revision",
     "rom_size_bytes",
+    "enabled_locale_mask",
+    "default_locale_id",
+    "pseudo_locale_enabled",
+    "reserved1",
 )
 # Fields holding fixed-size, NUL-terminated ASCII text that should be
 # decoded to str (all struct fields except magic and the plain integers).
@@ -175,6 +183,9 @@ def verify_expansion_metadata(data: bytes, expected: dict) -> dict:
         ("rom_maker_code", "rom_maker_code"),
         ("rom_revision", "rom_revision"),
         ("rom_size_bytes", "rom_size_bytes"),
+        ("enabled_locale_mask", "enabled_locale_mask"),
+        ("default_locale_id", "default_locale_id"),
+        ("pseudo_locale_enabled", "pseudo_locale_enabled"),
     )
     for record_key, expected_key in checks:
         if expected_key not in expected:

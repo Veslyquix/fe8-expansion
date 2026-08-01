@@ -1,0 +1,117 @@
+{
+  "checkpoints": [
+    {
+      "frame": 600,
+      "name": "pre-reset-selector-shown",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 800,
+      "name": "pre-reset-qps-committed",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 950,
+      "name": "post-reset-ewram-fresh",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "value": "0x07"
+        }
+      ]
+    },
+    {
+      "frame": 1640,
+      "framebuffer_hash": "fnv1a64-rgb24:fd5b926ec2fb1e7d",
+      "name": "post-reset-selector-skipped-qps-restored",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "21d8ba4446b11368d6cd3180a90b3bffb1dff2af",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-softreset-persistence-multi-modern-debug"
+}

@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "name": "locale-blank-sram-selector-multi-modern-debug",
+  "description": "Issue #18 sprint 6 runtime-blocker-fix contract evidence (multi-locale build variant of locale-blank-sram-no-selector-default-modern-debug, SUPERSEDES the pre-fix locale-blank-sram-no-selector-multi-modern-debug scenario, which encoded the sprint-6 bug itself as 'expected' and has been deleted): booting the EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1 modern debug ROM from a genuinely blank (all-0xFF) SRAM chip now correctly SHOWS the blocking first-start selector (active=1, promptShown=1, promptReason=1/UNSET, prefsState=0/UNSET, needsPreferenceRepair=1, enabledLocaleCount=2) and keeps it shown at frame 1400 with no player input given. Before this sprint's fix, BuildCurrentExpansionSaveMeta() (src/bmsave-lib.c) unconditionally stamped a syntactically VALID ExpansionUserPrefs record on every SAVE_COMPAT_EMPTY (blank-SRAM) boot regardless of FE8_EXPANSION_ENABLED_LOCALE_COUNT, so a genuinely fresh multi-locale save silently skipped the mandatory first-start locale prompt exactly like a single-locale build's AUTO_SELECT collapse -- this scenario is the real-capture proof that a multi-locale fresh save now blocks with the selector instead, matching locale-selector-multi-switch-qps-modern-debug's own real ExpansionUserPrefs UNSET fixture (which was never affected by this bug, since it forces the prefs record's raw bytes directly rather than going through the blank-SRAM stamp path -- see reports/issue18_localization_closure.md).",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "selector-shown-post-startup",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 1400,
+      "framebuffer": true,
+      "name": "selector-still-shown-long-run",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    }
+  ]
+}

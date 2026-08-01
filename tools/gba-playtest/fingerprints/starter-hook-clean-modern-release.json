@@ -1,0 +1,416 @@
+{
+  "checkpoints": [
+    {
+      "frame": 2800,
+      "name": "pre-battle-hook-probe-zero",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0202f9a6",
+          "size": 1,
+          "value": "0x1e"
+        },
+        {
+          "address": "0x0202f9a7",
+          "size": 1,
+          "value": "0x1e"
+        },
+        {
+          "address": "0x0202f9ee",
+          "size": 1,
+          "value": "0x14"
+        },
+        {
+          "address": "0x0202f9ef",
+          "size": 1,
+          "value": "0x14"
+        },
+        {
+          "address": "0x020315ec",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315f0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315f4",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315f8",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315fc",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031600",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031604",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3300,
+      "name": "opening-event-real-battle-hook-applied",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202f9a6",
+          "size": 1,
+          "value": "0x1e"
+        },
+        {
+          "address": "0x0202f9a7",
+          "size": 1,
+          "value": "0x0d"
+        },
+        {
+          "address": "0x0202f9ee",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x0202f9ef",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020315ec",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x020315f0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315f4",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x020315f8",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x020315fc",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02031600",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02031604",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3450,
+      "name": "prologue-map-player-phase-after-battle",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202f9a6",
+          "size": 1,
+          "value": "0x1e"
+        },
+        {
+          "address": "0x0202f9a7",
+          "size": 1,
+          "value": "0x0d"
+        },
+        {
+          "address": "0x0202f9ee",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x0202f9ef",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020315ec",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x020315f0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315f4",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x020315f8",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x020315fc",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02031600",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02031604",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3550,
+      "name": "hook-counters-stable-on-live-map",
+      "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210e2",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021a9c",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021a9e",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eb96",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eb97",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202f9a6",
+          "size": 1,
+          "value": "0x1e"
+        },
+        {
+          "address": "0x0202f9a7",
+          "size": 1,
+          "value": "0x0d"
+        },
+        {
+          "address": "0x0202f9ee",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x0202f9ef",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020315ec",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x020315f0",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x020315f4",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x020315f8",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x020315fc",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02031600",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02031604",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "7f634531dfa2f585384fbf6a1fb6b1c96e8576c1",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "starter-hook-clean-modern-release"
+}

@@ -8,6 +8,7 @@ MODERN_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -24,6 +25,18 @@ MODERN_GOALS := \
 	expansion-modern-overlay-audit \
 	expansion-modern-shifted-check \
 	expansion-modern-linker-check \
+	expansion-modern-localization-budget \
+	expansion-modern-localization-budget-check \
+	expansion-modern-localization-runtime-debug-check \
+	expansion-modern-localization-runtime-release-check \
+	expansion-modern-localization-runtime-multi-check \
+	expansion-modern-localization-runtime-prefs-check \
+	expansion-modern-localization-runtime-save-check \
+	expansion-modern-localization-runtime-shifted-check \
+	expansion-modern-starter-hook-check \
+	expansion-modern-starter-qol-check \
+	expansion-modern-starter-runtime-check \
+	expansion-modern-idspace-active-check \
 	expansion-modern-clean
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
@@ -110,7 +123,39 @@ MODERN_LAYOUT_FLAGS := \
 	-fno-function-sections -fno-data-sections \
 	-fno-merge-constants -fno-merge-all-constants
 MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1
+
+# Issue #10: the item ID cap is a single build input shared by the data
+# generator (scripts/generated_data/idspace.py resolve_item_id_cap, via the
+# FE8_ITEM_ID_CAP env var) and the compiled item consumer
+# (include/id_space.h -> ITEM_ID_CONFIGURED_CAP, consumed by src/bmitem.c).
+# Flow the same value into the compile so the generated (up to 207-record)
+# gItemData[] table and bmitem.c's compile-time cap contract resolve one
+# identical cap. Unset leaves id_space.h's built-in 0xCD default in force.
+ifneq ($(FE8_ITEM_ID_CAP),)
+MODERN_DEFINE_FLAGS += -DFE8_ITEM_ID_CAP=$(FE8_ITEM_ID_CAP)
+endif
+
+# Issue #10: opt-in runtime item-expansion probe (src/expansion_itemtest.c,
+# include/expansion_itemtest.h). Explicitly separate from the debug/release
+# preset and from FE8_EXPANSION_DEBUG, so the identical probe runs in a real
+# debug ROM and a real release ROM; unset (the default) compiles that
+# translation unit to an empty object and reaches no hook at all. The header
+# itself #errors when it is enabled without an expanded FE8_ITEM_ID_CAP.
+ifeq ($(FE8_EXPANSION_ITEMTEST),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXPANSION_ITEMTEST_ENABLED=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
+
+# Issue #6 bundled content example: its ORIGINAL display text is authored in
+# src/data/items_expansion.json and generated into a BUILD-LOCAL header
+# (build/generated/data/items_expansion_content_text.h, see generated_data.mk)
+# rather than added to the shared, Huffman-compressed message table, which
+# would re-encode a DEFAULT build's text blob. Only the content profile puts
+# that directory on the include path, so a default build cannot even see the
+# header -- and its compile flags, and therefore its objects, are unchanged.
+ifeq ($(EXPANSION_STARTER_CONTENT),1)
+MODERN_INCLUDE_FLAGS += -I$(GENERATED_DATA_OUT_DIR)
+endif
 MODERN_WARNING_FLAGS := \
 	-Wall -Wextra \
 	-Werror=strict-prototypes \
@@ -142,6 +187,25 @@ MODERN_CFLAGS := \
 	$(MODERN_WARNING_FLAGS) \
 	$(MODERN_CONFIG_FLAGS) \
 	$(MODERN_ABI_FLAGS)
+
+# Issue #10 (expansion-modern-idspace-active-check hermeticity): MODERN_CFLAGS
+# bakes in whatever FE8_ITEM_ID_CAP happened to be resolved when *this*
+# running instance of make parsed modern.mk (an ambient shell environment
+# variable, or a `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment
+# for this very invocation) via MODERN_DEFINE_FLAGS above -- MODERN_CFLAGS
+# itself is a plain `:=` snapshot, taken once, not re-evaluated per recipe
+# line. expansion-modern-idspace-active-check needs to compile three
+# DIFFERENT, explicit cap states (no cap define at all, -DFE8_ITEM_ID_CAP=0xCE,
+# and "the 0xCE-record table with no cap define") in the course of ONE gate
+# run, regardless of whatever ambient value the *caller* happened to invoke
+# it under. Reusing $(MODERN_CFLAGS) as-is for any of those three compiles
+# would silently fold the caller's ambient cap into all of them instead
+# (e.g. an ambient/CLI FE8_ITEM_ID_CAP=0xCE would make the "no cap flag"
+# steps compile with the flag anyway, turning the gate's own default and
+# negative-mismatch assertions into false failures/false passes). Strip any
+# existing -DFE8_ITEM_ID_CAP=... word so the gate can supply its own,
+# explicit, per-step cap define (or none) on top of this instead.
+MODERN_CFLAGS_NOCAP := $(filter-out -DFE8_ITEM_ID_CAP=%,$(MODERN_CFLAGS))
 
 MODERN_BUILD_ROOT := build/expansion-modern
 MODERN_OUTPUT_DIR := $(MODERN_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
@@ -249,6 +313,66 @@ MODERN_SCANINC ?= tools/scaninc/scaninc$(EXE)
 # to make target tools/scaninc/scaninc.cpp".
 tools/scaninc/scaninc$(EXE): $(wildcard tools/scaninc/*.cpp tools/scaninc/*.h tools/scaninc/Makefile)
 	$(MAKE) -C tools/scaninc
+
+# --- Localization catalog availability/paths (issue #18 sprint 1) ----------
+# Computed here (early, before MODERN_ALL_C_OBJECTS/MODERN_ALL_OBJECTS are
+# finalized just below) purely from file existence -- never from a
+# resolved config identity -- exactly like MODERN_EXPANSION_CONFIG_AVAILABLE
+# further down, so a real checkout (which always has both files committed)
+# always registers the generated catalog object, while a minimal synthetic
+# modern.mk-only fixture tree (neither file present) safely no-ops instead
+# of failing to find a rule for a target nothing added to
+# MODERN_ALL_C_OBJECTS. The generated catalog/header/budget files
+# themselves live under $(MODERN_BUILD_ROOT) (their content never depends
+# on MODERN_CONFIG/MODERN_ABI/MODERN_ROM_SIZE -- only on
+# texts/expansion/registry.json + catalog.en.json), so every
+# MODERN_CONFIG/MODERN_ABI combination *within the same build root* shares
+# one generated copy instead of needlessly regenerating an identical copy
+# per $(MODERN_OUTPUT_DIR).
+#
+# Issue #18 sprint 5 root-cause fix: this used to be a single, hardcoded
+# "build/expansion-localization" path shared by *every* build root,
+# including expansion-modern-localization-runtime-multi-check's own
+# recursive `+$(MAKE) expansion-modern-rom MODERN_BUILD_ROOT=build/
+# expansion-modern-multi ...` sub-invocation (modern.mk's own
+# "Localization runtime checks" section below). Content-wise this was
+# always safe (the generator is a pure function of the registry/catalog,
+# never of MODERN_BUILD_ROOT/MODERN_CONFIG/EXPANSION_ENABLED_LOCALES), but
+# *process*-wise it meant the default single-locale build and the
+# multi-locale build's own independent `make` process tree both read/wrote
+# the exact same on-disk generated header/catalog/budget files -- a real
+# recursive-make/shared-output hazard (see the "&:" grouped-target comment
+# on the generation recipe below for the *intra*-process-tree version of
+# this same class of hazard, which grouped targets already close) whenever
+# two independent process trees raced this shared path (observed as a
+# transient "missing generated header" clean-build failure specifically on
+# the multi-locale build). Keying this path off $(MODERN_BUILD_ROOT)
+# instead gives the default build and every recursively-invoked
+# alternate-build-root sub-make (multi-locale today; any future one) its
+# own private, non-shared copy -- eliminating the cross-process-tree race
+# at its root instead of merely documenting a "never run this with -j"
+# workaround. A useful side effect: expansion-modern-clean's `$(RM) -r
+# $(MODERN_BUILD_ROOT)` now also cleans this build root's own generated
+# localization output, instead of silently leaving it behind under a
+# sibling path clean never touched.
+MODERN_LOCALIZATION_CLI := scripts/localization/cli.py
+MODERN_LOCALIZATION_REGISTRY := texts/expansion/registry.json
+MODERN_LOCALIZATION_AVAILABLE := $(and $(wildcard $(MODERN_LOCALIZATION_CLI)),$(wildcard $(MODERN_LOCALIZATION_REGISTRY)))
+MODERN_LOCALIZATION_ROOT := $(MODERN_BUILD_ROOT)/expansion-localization
+MODERN_LOCALIZATION_GENERATED_DIR := $(MODERN_LOCALIZATION_ROOT)/generated
+MODERN_LOCALIZATION_CATALOG_C := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_locale_catalog.c
+MODERN_LOCALIZATION_MSG_IDS_H := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_msg_ids.h
+MODERN_LOCALIZATION_BUDGET_JSON := $(MODERN_LOCALIZATION_GENERATED_DIR)/budget.json
+
+# Lets a future sprint's C source #include "expansion_msg_ids.h" (the
+# generated EXP_MSG_* numeric-id header) without a further modern.mk change;
+# sprint 1 itself has no such consumer yet (src/expansion_locale.c only
+# uses the `extern` data declarations already reachable via -Iinclude, see
+# include/expansion_locale.h's own file comment for why). A safe no-op
+# when MODERN_LOCALIZATION_AVAILABLE is empty.
+ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
+MODERN_CFLAGS += -I$(MODERN_LOCALIZATION_GENERATED_DIR)
+endif
 
 MODERN_ALL_C_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_C_SOURCES:.c=.o))
 
@@ -409,6 +533,31 @@ endif
 ifneq ($(strip $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT)),)
 MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/bmb-weapontriangle.o
 endif
+
+# Issue #18 sprint 1: the generated locale catalog .c
+# ($(MODERN_LOCALIZATION_CATALOG_C), under $(MODERN_BUILD_ROOT)/expansion-localization/
+# generated/ -- never a committed source directory) has no "original hand
+# path" to reuse (there is no hand-written predecessor; it is brand new
+# this sprint, defining the `extern const` data
+# include/expansion_locale.h declares). A synthetic path is registered
+# instead, chosen to sort immediately before src/expansion_locale.o (the
+# hand-written resolver, itself already picked up by the ordinary
+# MODERN_ALL_C_SOURCES wildcard above -- "-" < "." so
+# "expansion_locale-catalog.o" sorts ahead of "expansion_locale.o") purely
+# for readability; unlike the Issue #5 slots above, there is no
+# pre-existing legacy layout this needs to avoid shifting; since this
+# object is entirely new content, some shift in later objects' addresses
+# relative to a build that predates issue #18 is expected and harmless
+# (this sprint does not yet link into any address-sensitive checkpoint
+# fixture -- see this sprint's own DONE criteria). A safe no-op when
+# MODERN_LOCALIZATION_AVAILABLE is empty (modern.mk included standalone,
+# or a fixture tree missing scripts/localization or texts/expansion). An
+# explicit (non-pattern) compile rule for this literal target path is
+# defined further below, alongside the generation stamp.
+ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
+MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o
+endif
+
 MODERN_ALL_DATA_PRE := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.pre.c))
 MODERN_ALL_DATA_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.o))
 MODERN_ALL_ASM_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_ASM_SOURCES:.s=.o))
@@ -446,6 +595,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -561,6 +711,16 @@ $(MODERN_OUTPUT_DIR)/src/data_$(1).o: $(GENERATED_DATA_OUT_DIR)/data_$(1).c
 endef
 
 $(foreach t,$(GENERATED_DATA_LINKED_TABLES),$(eval $(call GENERATED_DATA_MODERN_OVERRIDE_RULES,$(t))))
+
+# Issue #6: in the content profile the bundled content module compiles the
+# BUILD-LOCAL generated authored-text header, so make it an explicit
+# prerequisite -- the generic -MM -MG header scan only learns about it after
+# a first successful compile, and this must work on a clean tree too. Only
+# declared when the flag is on: a default build neither generates nor
+# consumes that header.
+ifeq ($(EXPANSION_STARTER_CONTENT),1)
+$(MODERN_OUTPUT_DIR)/src/expansion_starter_content.o: $(GENERATED_DATA_CONTENT_TEXT_HEADER)
+endif
 
 # Issue #5 Batch 3a: explicit (non-pattern) compile rule for the `units`
 # table's synthetic slot object (see the MODERN_ALL_C_OBJECTS +=
@@ -941,6 +1101,63 @@ endif
 # would risk hiding a real toolchain change made between the two runs.
 $(MODERN_ALL_C_HEADER_DEPS): | expansion-modern-toolchain-check
 
+# Issue #18 sprint 3 clean-build fix: expansion_msg_ids.h is
+# #include "expansion_msg_ids.h"'d bare (no directory) by several
+# modern-only C sources (src/uiconfig.c, src/save_compat_menu.c,
+# src/debugtools_registry.c, src/expansion_language_menu.c -- all gated
+# `#ifdef MODERN`) and is only ever resolved through this Makefile's own
+# -I$(MODERN_LOCALIZATION_GENERATED_DIR) (added above, guarded by
+# MODERN_LOCALIZATION_AVAILABLE) -- never through a same-directory or
+# repo-root-relative #include path the way json_data_rules.mk's
+# src/data/chapter_settings.h is (see the MODERN_ALL_C_HEADER_DEPS comment
+# above for why that legitimately-relative case works with plain "-MM
+# -MG"). On a cold/clean build the header does not exist on disk yet, so
+# GCC cannot resolve it through that extra -I search path at all: per
+# GCC's documented -MG behavior, a header it cannot find is recorded using
+# exactly the string written in the #include directive, with no directory
+# prepended -- i.e. the bare "expansion_msg_ids.h", never this generated
+# directory's real path. That bare name has no matching rule anywhere in
+# this Makefile (only $(MODERN_LOCALIZATION_MSG_IDS_H)'s real path does),
+# so once this recipe's output is `include`d below, GNU Make fails the
+# *entire* clean parallel build with "No rule to make target
+# 'expansion_msg_ids.h'" -- intermittently only, depending on whether some
+# unrelated earlier target already caused the real header to exist on
+# disk before this scan ran (e.g. a leftover build/ directory from a
+# previous invocation), which is exactly why this surfaced as a flaky
+# "passes if the cache happens to exist" clean-build regression rather
+# than a deterministic failure.
+#
+# The fix is to strip just that one unresolvable bare token from this
+# recipe's own freshly generated dependency file before it is ever
+# `include`d -- not to weaken/relax any #include directive (none are
+# touched) and not to commit the generated header. This loses no real
+# dependency tracking: this header's build ordering is already
+# independently and unconditionally guaranteed further below by
+# `$(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS):
+# $(MODERN_LOCALIZATION_MSG_IDS_H)` (the header's real, rule-backed path),
+# so every modern object -- not just the four direct consumers above --
+# already waits for generation first; this just removes the duplicate,
+# unresolvable alias GCC's -MG happens to also emit.
+MODERN_LOCALIZATION_MSG_IDS_H_BASENAME := $(notdir $(MODERN_LOCALIZATION_MSG_IDS_H))
+MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE := $(subst .,\.,$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME))
+
+# Portability note: this filter deliberately never uses `sed -i` (in-place
+# editing). GNU sed's `-i` takes an *optional* backup-suffix argument (no
+# argument at all means "no backup"), while BSD/macOS sed's `-i` takes a
+# *mandatory* one (an explicit empty string, `-i ''`, is required for "no
+# backup") -- the two are not command-line compatible, and macOS is a
+# supported host (see this Makefile's own Darwin-conditional $(SED)
+# definition). A bare `sed -E -i 's/.../' file` therefore either corrupts
+# the very first regex group as the "suffix" on macOS (BSD sed would
+# consume the script text as the backup suffix and then fail for a
+# missing operand) or silently does the wrong thing depending on the host
+# -- so this recipe instead redirects the filtered stream to a second,
+# equally per-target-unique temp file and atomically renames it over the
+# real target, exactly like the pre-scan step immediately above it. Plain
+# `sed -E 's/.../' in > out` (no `-i` at all) is one of the few sed
+# invocations that *is* command-line identical on GNU and BSD/macOS sed
+# (both accept `-E` for extended regexes), so no $(SED)/uname branch is
+# needed here at all. No backup file is ever created either way.
 $(MODERN_ALL_C_HEADER_DEPS): $(MODERN_OUTPUT_DIR)/%.headers.d: %.c
 	@mkdir -p "$(@D)"
 	@"$(MODERN_CC)" $(MODERN_CFLAGS) -MM -MG -MT "$(MODERN_OUTPUT_DIR)/$*.o" "$<" > "$@.tmp" || { \
@@ -948,7 +1165,13 @@ $(MODERN_ALL_C_HEADER_DEPS): $(MODERN_OUTPUT_DIR)/%.headers.d: %.c
 		printf '%s\n' "error: failed to pre-scan $< for generated header dependencies" >&2; \
 		exit 1; \
 	}
-	@mv -f "$@.tmp" "$@"
+	@sed -E 's/(^|[[:space:]])$(MODERN_LOCALIZATION_MSG_IDS_H_BASENAME_RE)([[:space:]]|$$)/\1\2/g' "$@.tmp" > "$@.tmp2" || { \
+		rm -f "$@.tmp" "$@.tmp2"; \
+		printf '%s\n' "error: failed to filter generated header dependencies for $<" >&2; \
+		exit 1; \
+	}
+	@rm -f "$@.tmp"
+	@mv -f "$@.tmp2" "$@"
 
 ifneq (,$(filter $(MODERN_ALL_SOURCE_GOALS),$(MAKECMDGOALS)))
 include $(MODERN_ALL_C_HEADER_DEPS)
@@ -983,6 +1206,7 @@ MODERN_LINKED_GOALS := \
 	expansion-modern-rom \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-title-check \
 	expansion-modern-debugtools-check \
 	expansion-modern-debugtools-timer-check \
@@ -1128,6 +1352,14 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 		--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 		--revision "$(EXPANSION_ROM_REVISION)" \
+		--enabled-locales "$(EXPANSION_ENABLED_LOCALES)" \
+		--default-locale "$(EXPANSION_DEFAULT_LOCALE)" \
+		--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" \
+		--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
+		--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
+		--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
+		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
+		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
@@ -1180,6 +1412,14 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--game-code "$(EXPANSION_ROM_GAME_CODE)" \
 	--maker-code "$(EXPANSION_ROM_MAKER_CODE)" \
 	--revision "$(EXPANSION_ROM_REVISION)" \
+	--enabled-locales "$(EXPANSION_ENABLED_LOCALES)" \
+	--default-locale "$(EXPANSION_DEFAULT_LOCALE)" \
+	--pseudo-locale "$(EXPANSION_PSEUDO_LOCALE)" \
+	--mechanics-hooks "$(EXPANSION_MECHANICS_HOOKS)" \
+	--mechanics-sample "$(EXPANSION_MECHANICS_SAMPLE)" \
+	--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
+	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
+	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
     $(error $(MODERN_EXPANSION_CONFIG_RESOLVE))
@@ -1195,11 +1435,25 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
   # override) so `make ... EXPANSION_SAVE_COMPAT_EPOCH=2` changes the
   # embedded ROM metadata without requiring `make clean` first.
   MODERN_SAVE_COMPAT_EPOCH := $(patsubst MODERN_SAVE_COMPAT_EPOCH=%,%,$(filter MODERN_SAVE_COMPAT_EPOCH=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
+  # Issue #18 sprint 1: locale identity tokens, resolved and validated the
+  # exact same way (config.mk default, or a command-line/environment
+  # MODERN_CONFIG_RESOLVE_GOALS override) as every other identity field
+  # above -- see scripts/modernize/expansion_config.py's
+  # validate_enabled_locales/validate_default_locale/validate_pseudo_locale
+  # (an invalid or inconsistent combination already made
+  # MODERN_EXPANSION_CONFIG_RESOLVE start with "error:" above, which the
+  # $(error ...) a few lines up already caught).
+  MODERN_EXPANSION_ENABLED_LOCALE_MASK := $(patsubst MODERN_EXPANSION_ENABLED_LOCALE_MASK=%,%,$(filter MODERN_EXPANSION_ENABLED_LOCALE_MASK=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
+  MODERN_EXPANSION_DEFAULT_LOCALE_ID := $(patsubst MODERN_EXPANSION_DEFAULT_LOCALE_ID=%,%,$(filter MODERN_EXPANSION_DEFAULT_LOCALE_ID=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
+  MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED := $(patsubst MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED=%,%,$(filter MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED=%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
   ifeq ($(strip $(MODERN_BUILD_COMMIT)),)
     $(error modern.mk: failed to resolve MODERN_BUILD_COMMIT from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
   ifeq ($(strip $(MODERN_SAVE_COMPAT_EPOCH)),)
     $(error modern.mk: failed to resolve MODERN_SAVE_COMPAT_EPOCH from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
+  endif
+  ifeq ($(strip $(MODERN_EXPANSION_ENABLED_LOCALE_MASK)),)
+    $(error modern.mk: failed to resolve MODERN_EXPANSION_ENABLED_LOCALE_MASK from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
 
   # Modern-only compiler defines feeding include/expansion_config.h. These
@@ -1220,7 +1474,22 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_ROM_MAKER_CODE='"$(EXPANSION_ROM_MAKER_CODE)"' \
 	-DFE8_EXPANSION_ROM_REVISION=$(EXPANSION_ROM_REVISION) \
 	-DFE8_EXPANSION_ROM_SIZE_BYTES=$(MODERN_ROM_SIZE_BYTES) \
-	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH)
+	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
+	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)u \
+	-DFE8_EXPANSION_DEFAULT_LOCALE_ID=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID) \
+	-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED) \
+	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
+	-DFE8_EXPANSION_MECHANICS_SAMPLE=$(EXPANSION_MECHANICS_SAMPLE) \
+	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU) \
+	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT)
+
+  # Internal modern-build provenance discriminator (NOT a user feature flag,
+  # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
+  # every modern translation unit so always-linked negative-control state
+  # (e.g. the issue #6 danger/range overlay probe in src/playerphase.c) stays
+  # present in every modern build, while the legacy build keeps
+  # include/expansion_config.h's 0 fallback and emits no orphan ewram_data.
+  MODERN_CFLAGS += -DFE8_EXPANSION_MODERN_BUILD=1
  endif
 endif
 
@@ -1271,6 +1540,16 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rom_revision=$(EXPANSION_ROM_REVISION)'; \
 		printf '%s\n' 'rom_size_bytes=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'save_compat_epoch=$(MODERN_SAVE_COMPAT_EPOCH)'; \
+		printf '%s\n' 'enabled_locale_mask=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)'; \
+		printf '%s\n' 'default_locale_id=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID)'; \
+		printf '%s\n' 'pseudo_locale_enabled=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)'; \
+		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
+		printf '%s\n' 'mechanics_sample=$(EXPANSION_MECHANICS_SAMPLE)'; \
+		printf '%s\n' 'danger_overlay_menu=$(EXPANSION_DANGER_OVERLAY_MENU)'; \
+		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
+		printf '%s\n' 'modern_build=1'; \
+		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
+		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"
@@ -1288,6 +1567,98 @@ endif
 # and the self-contained mgfembp sources are intentionally excluded: neither
 # includes global.h, so neither can observe expansion_config.h.
 $(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_COMPILE_SETTINGS)
+
+# --- Localization catalog generation (issue #18 sprint 1) -------------------
+# Regenerates $(MODERN_BUILD_ROOT)/expansion-localization/generated/{expansion_locale_catalog.c,
+# expansion_msg_ids.h,budget.json} from texts/expansion/registry.json +
+# catalog.en.json via scripts/localization/generate.py (invoked through its
+# CLI, scripts/localization/cli.py -- see also localization.mk's own
+# standalone, toolchain-independent localization-* targets for the same
+# generator run outside of any modern build). Uses the same FORCE +
+# write-if-unchanged idiom as MODERN_BUILD_METADATA_JSON above (the
+# generator itself only rewrites a file whose content actually changed),
+# so an unrelated rebuild does not touch these files' mtimes and therefore
+# does not spuriously invalidate $(MODERN_OUTPUT_DIR)/src/
+# expansion_locale-catalog.o. This recipe is reachable only when something
+# depends on $(MODERN_LOCALIZATION_CATALOG_C) -- which only happens when
+# MODERN_LOCALIZATION_AVAILABLE gated that object into MODERN_ALL_C_OBJECTS
+# above -- so no separate availability branch is needed here, unlike
+# MODERN_BUILD_METADATA_JSON (which is unconditionally a $(MODERN_ROM)
+# prerequisite and so needs its own placeholder fallback). Running
+# scripts/localization/cli.py performs the full validation contract
+# (duplicate/sparse/out-of-order/invalid/reused-tombstone ids, ASCII/
+# width/byte-budget, placeholder/control-token parity, ...) before writing
+# anything, so an invalid registry/catalog fails this recipe -- and
+# therefore the modern build -- with an actionable message, exactly like
+# an invalid config.mk value fails MODERN_BUILD_METADATA_JSON's own
+# recipe.
+#
+# Parallel-build safety: this recipe's three outputs used to be a plain
+# (non-grouped) multi-target rule, "$(A) $(B) $(C): FORCE_MODERN_LOCALIZATION
+# \n\trecipe". Sprint 3 now has real, independent consumers of two
+# *different* outputs of that same rule at once -- every ordinary modern
+# object depends on $(MODERN_LOCALIZATION_MSG_IDS_H) (below), while the
+# generated-catalog object depends on $(MODERN_LOCALIZATION_CATALOG_C) --
+# so a real "-j>1" build now schedules both as independent goals in the
+# same invocation. GNU Make treats each target of a plain multi-target
+# rule as an independent goal with its *own copy* of the recipe (the same
+# hazard already documented and fixed for FETSATOOL's feimg/fetsa pairs
+# above, via a portable mkdir-lock wrapper because neither
+# graphics_file_rules.mk nor grouped targets could be touched there);
+# confirmed empirically here too (instrumented recipe run under "-j16":
+# two distinct PIDs both entered the recipe body before either finished).
+# Concurrent invocations both eventually write the exact same, correct
+# content -- scripts/localization/cli.py's generation is deterministic --
+# but scripts/localization/generate.py's own write-if-unchanged helper
+# writes each output file in place (no atomic temp-file-plus-rename), so
+# two concurrent writers really can interleave partial writes to the same
+# file, and a third process (the compiler, reading the header mid-write)
+# could observe a torn/partial file. Unlike the FETSATOOL case, this
+# recipe and both files it lives in (modern.mk, scripts/localization/
+# generate.py) are not off-limits, and this repository already requires
+# GNU Make 4.3 (see the FETSATOOL comment above's own "isolated GNU Make
+# 4.3 reproduction"), so grouped "&:" targets -- introduced in GNU Make
+# 4.3 specifically to guarantee a multi-output recipe runs at most once
+# per invocation regardless of how many of its outputs are needed -- are
+# the correct, minimal fix here: no lock file, no wrapper script, no
+# change to scripts/localization/generate.py's own write behavior needed.
+.PHONY: FORCE_MODERN_LOCALIZATION
+FORCE_MODERN_LOCALIZATION:
+
+$(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_LOCALIZATION
+	@mkdir -p "$(MODERN_LOCALIZATION_GENERATED_DIR)"
+	@python3 -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
+
+# Issue #18 sprint 3: ordinary compiles are not otherwise made to wait for
+# expansion_msg_ids.h -- only the synthetic expansion_locale-catalog.o
+# object above has its own explicit prerequisite on the generated catalog
+# .c. Sprint 3 adds several new `#ifdef MODERN` call sites (src/uiconfig.c,
+# src/save_compat_menu.c, src/debugtools_registry.c,
+# src/expansion_language_menu.c) that #include expansion_msg_ids.h
+# directly, so every modern C object now needs this same generate-first
+# guarantee, not just the catalog object -- otherwise a clean build can
+# race a real compiler error ("expansion_msg_ids.h: No such file or
+# directory") depending on unrelated build parallelism/ordering. Guarded
+# by MODERN_LOCALIZATION_AVAILABLE exactly like every other localization
+# prerequisite in this section (a no-op, unreachable line when modern.mk
+# is included standalone without the localization toolchain present).
+ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
+$(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_LOCALIZATION_MSG_IDS_H)
+endif
+
+# Explicit (non-pattern) compile rule for the generated catalog's synthetic
+# slot object (see the MODERN_ALL_C_OBJECTS += comment above for why this
+# path is synthetic, not a reinstated "original" one). GNU Make always
+# prefers this explicit rule over the generic `$(MODERN_OUTPUT_DIR)/%.o: %.c`
+# pattern rule for the same target, so it always compiles the real
+# generated .c -- there is no on-disk src/expansion_locale-catalog.c for it
+# to ever fall back to. A safe no-op target when MODERN_LOCALIZATION_AVAILABLE
+# is empty (modern.mk included standalone): the rule is simply never
+# reachable, since nothing adds this path to MODERN_ALL_C_OBJECTS in that
+# case.
+$(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o: $(MODERN_LOCALIZATION_CATALOG_C)
+	@mkdir -p $(@D)
+	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
 
 # Resolve modern LD consistently with the toolchain root.
@@ -1451,7 +1822,38 @@ expansion-modern-link-prepare: $(MODERN_ELF_FE6SIO) \
 
 # Link the modern ELF with the clean, section-oriented expansion linker.
 # Legacy objects and banim are owned by expansion-modern-link-prepare.
-$(MODERN_ELF): expansion-modern-link-prepare $(MODERN_ELF_LINK_SETTINGS)
+#
+# $(MODERN_ALL_OBJECTS)/$(MODERN_COMPILE_SETTINGS) are listed here as
+# EXPLICIT, real (non-phony) prerequisites, in addition to
+# expansion-modern-link-prepare above (which already transitively pulls
+# them in via $(MODERN_ELF_OBJECTS_LST)). Diagnosed while investigating a
+# reported intermittent "gItemExpansionProbe not found" failure at
+# expansion-modern-itemexpansion-check-debug when it runs, in the same
+# build root, right after expansion-modern-linker-check (which compiles
+# without FE8_EXPANSION_ITEMTEST/FE8_ITEM_ID_CAP=0xCE): every C/data
+# object already depends on $(MODERN_COMPILE_SETTINGS) (which folds in
+# both flags -- see that stamp's own comment), so a real, isolated,
+# repeated `-j2`/`-j16` reproduction of that exact gate order never
+# reproduced a stale link locally. But this rule's ONLY prior link to
+# "objects must be current" was implicit: expansion-modern-link-prepare
+# is `.PHONY`, so GNU Make always reruns it and therefore always reruns
+# THIS rule's own recipe too (relying on that "phony prerequisite forces
+# the whole chain" side effect, not on a real file-staleness comparison
+# against the objects/compile-settings themselves). That made the "no
+# stale object ever reaches the linker" guarantee for this specific rule
+# real but non-obvious -- easy to silently break by a future change that
+# converts expansion-modern-link-prepare's aggregation into anything less
+# than an always-rerun phony (e.g. trimming it for build-speed). Listing
+# the objects and the compile-settings stamp directly here turns "the
+# link must observe the current cap/itemtest/compile flags" into an
+# ordinary, explicit, self-enforcing Make dependency edge instead of a
+# side effect of another rule's phoniness -- a pure hardening (no
+# observable behavior change: the link already always reruns; see
+# docs/upstream-porting.md and this sprint's diagnosis report,
+# reports/itemexpansion_gate_order_race_diagnosis.md, for the full
+# reproduction log and regression coverage added alongside this).
+$(MODERN_ELF): expansion-modern-link-prepare $(MODERN_ELF_LINK_SETTINGS) \
+		$(MODERN_ALL_OBJECTS) $(MODERN_COMPILE_SETTINGS)
 	@set -eu; \
 	libgcc_dir="$(MODERN_LIBGCC_DIR)"; \
 	libc_dir="$(MODERN_LIBC_DIR)"; \
@@ -1945,6 +2347,80 @@ expansion-modern-newgame-check: expansion-modern-boot-preflight expansion-modern
 MODERN_SAVEFMT_CHECKS := tools/gba-playtest/run_save_compat_checks.py
 MODERN_SAVEFMT_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/savefmt-fixtures
 
+# ---------------------------------------------------------------------------
+# Issue #10: the ACTIVE id-space contract must be COMPILED, not just generated
+# ---------------------------------------------------------------------------
+# The generated item table (build/generated/data/data_items.c) includes the
+# build-local ACTIVE header and compile-time asserts that the compiler cap
+# (-DFE8_ITEM_ID_CAP / include/id_space.h default) and the generated record
+# count are the same build input. This gate proves all three directions with
+# the real modern toolchain:
+#   * default    -> 0xCD / 206 records compiles;
+#   * configured -> 0xCE / 207 records compiles with -DFE8_ITEM_ID_CAP=0xCE;
+#   * mismatched -> the 0xCE table compiled WITHOUT the flag must fail, which
+#     is exactly the silent 206-vs-207 divergence this contract exists to stop.
+# Compile-only (no link/ROM), so it is fast and needs no emulator; it restores
+# the default-cap generated table on the way out.
+#
+# Hermeticity (this gate must pass identically regardless of how the CALLER
+# invoked it -- ambient shell environment unset, ambient FE8_ITEM_ID_CAP=0xCE,
+# or a `make ... FE8_ITEM_ID_CAP=0xCE` command-line assignment on the gate
+# itself): two independent leaks had to be closed, both stemming from the same
+# root cause -- FE8_ITEM_ID_CAP is resolved ONCE per make process, not
+# per-recipe-line, so a plain env-var prefix on a recipe command is not enough
+# to force a particular state:
+#   1. $(MODERN_CFLAGS) bakes in whatever FE8_ITEM_ID_CAP this gate's OWN
+#      make process resolved at parse time (see MODERN_CFLAGS_NOCAP above).
+#      Every compile below therefore uses $(MODERN_CFLAGS_NOCAP) plus its own
+#      explicit -DFE8_ITEM_ID_CAP (or none), never the ambient $(MODERN_CFLAGS).
+#   2. Each $(MAKE) recursion that regenerates $$C re-resolves FE8_ITEM_ID_CAP
+#      for that CHILD process. A `FE8_ITEM_ID_CAP=... $(MAKE) ...` shell env
+#      prefix is silently ignored by that child whenever the gate itself was
+#      invoked with a `make ... FE8_ITEM_ID_CAP=...` command-line assignment,
+#      because GNU Make auto-forwards command-line-origin variables to every
+#      recursive $(MAKE) via MAKEFLAGS, and command-line origin outranks a
+#      plain environment-variable prefix in the child too. The fix is GNU
+#      Make's own documented escape hatch: pass FE8_ITEM_ID_CAP as an explicit
+#      argument on the recursive make's OWN command line (`$(MAKE)
+#      FE8_ITEM_ID_CAP=... $$C`, including the empty `FE8_ITEM_ID_CAP=` to
+#      force the unset default) -- that always wins, in every ambient/CLI
+#      combination, because it is that child's own command line.
+.PHONY: expansion-modern-idspace-active-check
+expansion-modern-idspace-active-check: expansion-modern-toolchain-check
+	@set -e; \
+	OUT="$(MODERN_OUTPUT_DIR)/idspace-active-check"; mkdir -p "$$OUT"; \
+	C=$(GENERATED_DATA_OUT_DIR)/data_items.c; H=$(GENERATED_DATA_ACTIVE_HEADER); \
+	echo "--- default cap: generated table and ACTIVE header must both say 0xCD / 206 ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: ACTIVE header is not at the default cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: ACTIVE header record count is not 206" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_default.o"; \
+	echo "OK: default-cap generated table compiles against the ACTIVE contract (0xCD / 206)"; \
+	echo "--- configured cap: FE8_ITEM_ID_CAP=0xCE must move both to 0xCE / 207 ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: ACTIVE header did not follow the configured cap" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 207" $$H || { echo "FAIL: ACTIVE header record count is not 207" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -DFE8_ITEM_ID_CAP=0xCE -c "$$C" -o "$$OUT/items_active.o"; \
+	echo "OK: configured generated table compiles against the ACTIVE contract (0xCE / 207)"; \
+	echo "--- negative: the 0xCE table compiled without the cap flag must FAIL ---"; \
+	if "$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_mismatch.o" >/dev/null 2>&1; then \
+		echo "FAIL: a 207-record table compiled at the 0xCD compiler cap -- the contract assert is dead" >&2; exit 1; \
+	fi; \
+	echo "OK: cap/count divergence is a hard compile error, not a silent truncation"; \
+	echo "--- desync recovery: a stale ACTIVE header left by an out-of-band, differently-capped generated-data-check must self-heal on the FIRST plain default build, before this consumer compiles ---"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: could not stage the stale-0xCE ACTIVE header desync" >&2; exit 1; }; \
+	grep -q "item_id_cap=0xCD" $(GENERATED_DATA_OUT_DIR)/.item_id_cap.stamp || { echo "FAIL: desync setup expected the cap stamp to still record the default cap" >&2; exit 1; }; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: the stale 0xCE ACTIVE header did not self-heal to the default cap on the first plain build" >&2; exit 1; }; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: the self-healed ACTIVE header record count is not 206" >&2; exit 1; }; \
+	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_healed.o"; \
+	echo "OK: a single plain default build healed the out-of-band stale ACTIVE header and the generated table compiles clean -- no manual generated-data-check, no negative static assert"; \
+	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
+	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap state was not restored" >&2; exit 1; }; \
+	echo "PASS: expansion-modern-idspace-active-check"
+
 expansion-modern-savefmt-check: expansion-modern-boot-preflight expansion-modern-rom
 	"$(PYTHON)" "$(MODERN_SAVEFMT_CHECKS)" \
 		--rom "$(MODERN_ROM)" \
@@ -1987,6 +2463,185 @@ expansion-modern-combat-check:
 	@printf 'Modern ROM combat-check skipped: the Ch4 scripted-FIGHT combat scenario boots via the debug-only Fast Boot launcher (compiled out for config=%s); a debug-launcher scenario is legitimately debug-only, and the release runtime matrix does not include a separate combat scenario -- see reports/gba_playtest_issue13_closure.md\n' \
 		'$(MODERN_CONFIG)'
 endif
+
+# Issue #6 starter-foundation runtime gate. The positive scenarios need a ROM
+# built with the starter features ON, so this gate builds ONE dedicated
+# starter-foundation profile ROM per (config, abi) -- all EXPANSION_MECHANICS_*
+# and EXPANSION_DANGER_OVERLAY_MENU on -- into its OWN build root, so it never
+# overwrites the default flags-off baseline ROM the linker/budget gates check.
+# That single profile ROM is then reused by every positive scenario below,
+# while each default-disabled negative control runs against the ordinary
+# MODERN_ROM: same route, opposite semantic probe outcomes. Reuses the issue
+# #13 gba-playtest harness (no new framework).
+MODERN_STARTER_PROFILE_ROOT := build/expansion-modern-starter
+MODERN_STARTER_PROFILE_ROM := $(MODERN_STARTER_PROFILE_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
+
+# Mechanics-hook scenarios. The debug pair navigates Chapter 4 through the
+# debug-only Fast Boot launcher (issue #13's proven combat route), so it is
+# legitimately debug-only. The release pair instead uses the ORDINARY
+# clean-boot Normal-difficulty route shared with the QoL scenarios: the
+# Prologue's opening event contains a real scripted bout, so
+# ComputeBattleUnitStats() genuinely runs with no launcher, no debug tools and
+# no save fixture.
+MODERN_STARTER_HOOK_SCENARIO := tools/gba-playtest/scenarios/starter-hook-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-hook-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_SCENARIO := tools/gba-playtest/scenarios/starter-hook-clean-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-clean-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-hook-clean-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-hook-clean-negative-modern-$(MODERN_CONFIG).json
+
+# Player QoL danger/range overlay scenarios. Both configs use the same
+# ordinary clean-boot Normal-difficulty route to the real Prologue map.
+MODERN_STARTER_QOL_SCENARIO := tools/gba-playtest/scenarios/starter-danger-overlay-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_QOL_FINGERPRINT := tools/gba-playtest/fingerprints/starter-danger-overlay-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_QOL_NEG_SCENARIO := tools/gba-playtest/scenarios/starter-danger-overlay-negative-modern-$(MODERN_CONFIG).json
+MODERN_STARTER_QOL_NEG_FINGERPRINT := tools/gba-playtest/fingerprints/starter-danger-overlay-negative-modern-$(MODERN_CONFIG).json
+
+expansion-modern-starter-profile-rom:
+	$(MAKE) expansion-modern-rom \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_BUILD_ROOT=$(MODERN_STARTER_PROFILE_ROOT) \
+		EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 \
+		EXPANSION_DANGER_OVERLAY_MENU=1
+
+MODERN_STARTER_PROFILE_ELF := $(MODERN_STARTER_PROFILE_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.elf
+
+# sizeof(struct ItemData) (include/bmitem.h). Used only to turn the linked
+# gItemData symbol size into a record count for the negative below; a future
+# struct-layout change fails that check loudly instead of silently.
+MODERN_ITEM_DATA_RECORD_BYTES := 36
+
+# Issue #6 content-DISABLED artifact negative, run against the SAME starter
+# profile ROM/ELF the scenarios above already built (no extra ROM build, no
+# second harness). The starter profile is the strongest possible negative:
+# every other issue #6 flag is ON (hooks, sample, overlay) and the item cap is
+# the vanilla default, so anything it still lacks is attributable to
+# EXPANSION_STARTER_CONTENT=0 alone.
+#
+# It asserts three semantic facts a scenario cannot see:
+#   1. the content mechanic's callback is not even compiled in, so it cannot
+#      have been registered -- which is what the scenarios' registerOkCount=1
+#      (sample only, versus 2 in the content profile) means at the artifact
+#      level;
+#   2. the content name accessor -- the only production seam that can read
+#      authored content text -- is absent, so src/bmitem.c's GetItemName() is
+#      the vanilla one; and
+#   3. the authored display text itself appears NOWHERE in the ROM image, and
+#      gItemData is still the 206-record vanilla table.
+# The authored string is read from the authoring source of truth, so renaming
+# the content item cannot make this negative vacuous.
+define modern_starter_content_disabled_negative
+	@set -eu; \
+	elf='$(MODERN_STARTER_PROFILE_ELF)'; \
+	rom='$(MODERN_STARTER_PROFILE_ROM)'; \
+	for symbol in ExpansionStarterContentCharmEvade ExpansionStarterContentItemName; do \
+		if "$(MODERN_NM)" "$$elf" | grep -q " $$symbol$$"; then \
+			printf 'error: %s is linked into the content-DISABLED starter profile ROM\n' "$$symbol" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	name=$$("$(PYTHON)" -c "import json; print(json.load(open('src/data/items_expansion.json'))['items'][0]['authoringName'])"); \
+	if LC_ALL=C grep -a -q -F "$$name" "$$rom"; then \
+		printf 'error: authored content text "%s" is present in the content-DISABLED ROM\n' "$$name" >&2; \
+		exit 1; \
+	fi; \
+	size=$$("$(MODERN_NM)" -S "$$elf" | awk '$$4 == "gItemData" { print $$2 }'); \
+	if [ -z "$$size" ]; then \
+		printf 'error: gItemData has no linked size in %s\n' "$$elf" >&2; \
+		exit 1; \
+	fi; \
+	expected=$$("$(PYTHON)" -c "from scripts.generated_data.items import schema; print(len(schema.load_records('src/data/items.json', item_cap=0xCD)) * $(MODERN_ITEM_DATA_RECORD_BYTES))"); \
+	if [ $$(( 0x$$size )) -ne "$$expected" ]; then \
+		printf 'error: content-disabled gItemData is 0x%s bytes, expected %s (the vanilla-cap table)\n' "$$size" "$$expected" >&2; \
+		exit 1; \
+	fi; \
+	printf 'Content-disabled artifact negative passed (no content callback/accessor symbol, no authored text in the ROM, vanilla-cap gItemData): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endef
+
+# Fail loudly rather than silently skipping when a scenario/fingerprint pair
+# named by the matrix above is missing.
+define modern_starter_require_pair
+	@if [ ! -f "$(1)" ] || [ ! -f "$(2)" ]; then \
+		printf '%s\n' "error: missing starter scenario or fingerprint" >&2; \
+		printf '  scenario:    %s\n' "$(1)" >&2; \
+		printf '  fingerprint: %s\n' "$(2)" >&2; \
+		exit 1; \
+	fi
+endef
+
+ifeq ($(MODERN_CONFIG),debug)
+expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_SCENARIO),$(MODERN_STARTER_HOOK_FINGERPRINT))
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_NEG_SCENARIO),$(MODERN_STARTER_HOOK_NEG_FINGERPRINT))
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_NEG_FINGERPRINT)" \
+		--policy behavior
+	$(modern_starter_content_disabled_negative)
+	@printf 'Modern ROM starter-hook-check passed (positive registerOk=1/apply=2/sampleTrigger=2 on profile ROM; negative all-zero on default ROM; content-disabled artifact negative): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+else
+expansion-modern-starter-hook-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_CLEAN_SCENARIO),$(MODERN_STARTER_HOOK_CLEAN_FINGERPRINT))
+	$(call modern_starter_require_pair,$(MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO),$(MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT))
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_CLEAN_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_CLEAN_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_HOOK_CLEAN_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_HOOK_CLEAN_NEG_FINGERPRINT)" \
+		--policy behavior
+	$(modern_starter_content_disabled_negative)
+	@printf 'Modern ROM starter-hook-check passed (clean-boot Prologue bout: positive registerOk=1/apply=2/sampleTrigger=2/delta=+1 on profile ROM; negative all-zero on default ROM, same resolved battle; content-disabled artifact negative): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endif
+
+# Player QoL danger/range overlay runtime gate. Runs in BOTH configs against
+# the same ordinary clean-boot route (no launcher, no debug tools, no save
+# fixture): the positive proves menuSelect/dangerDisplay 0->1->2, an exact
+# 39-tile danger range, rangeGraphicsActive toggling 1->0 and
+# cancelReturnCount 0->1->2 on a real, interactive Prologue map; the negative
+# proves the always-linked probe stays all-zero on the default flags-off ROM
+# reached by the same route.
+expansion-modern-starter-qol-check: expansion-modern-boot-preflight \
+		expansion-modern-rom expansion-modern-starter-profile-rom
+	$(call modern_starter_require_pair,$(MODERN_STARTER_QOL_SCENARIO),$(MODERN_STARTER_QOL_FINGERPRINT))
+	$(call modern_starter_require_pair,$(MODERN_STARTER_QOL_NEG_SCENARIO),$(MODERN_STARTER_QOL_NEG_FINGERPRINT))
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_STARTER_PROFILE_ROM)" \
+		--scenario "$(MODERN_STARTER_QOL_SCENARIO)" \
+		--expected "$(MODERN_STARTER_QOL_FINGERPRINT)" \
+		--policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify \
+		--rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_STARTER_QOL_NEG_SCENARIO)" \
+		--expected "$(MODERN_STARTER_QOL_NEG_FINGERPRINT)" \
+		--policy behavior
+	@printf 'Modern ROM starter-qol-check passed (positive menuSelect/display 0->1->2, 39 danger tiles, cancel 0->1->2 on profile ROM; negative all-zero on default ROM): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
+# One entry point for the whole issue #6 starter runtime matrix. Both member
+# checks depend on the same expansion-modern-starter-profile-rom, so a single
+# make invocation builds that profile ROM once and reuses it for every
+# scenario.
+expansion-modern-starter-runtime-check: expansion-modern-starter-hook-check \
+		expansion-modern-starter-qol-check
+	@printf 'Modern ROM starter runtime matrix passed (mechanics hook + player QoL overlay, positive and default-disabled negative): config=%s abi=%s\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
 
 # Normal save/load runtime scenario (issue #13 closure). Reuses new-game.json's
 # clean-boot SaveMenu New Game -> slot 0 write, then a real A+B+SELECT+START
@@ -2044,6 +2699,34 @@ expansion-modern-budget-check: expansion-modern-elf
 		--output "$(MODERN_BUDGET_REPORT)" \
 		--check
 
+# Localization-specific runtime budget rollup (issue #18 sprint 4): combines
+# the real per-region headroom already computed above (real floating_end ->
+# next-pinned-region free_bytes from THIS build's own .map, never a hardcoded
+# 2820/3508-style constant), the source-catalog budget (build-config-
+# independent string/index/glyph counts from scripts/localization/generate
+# .build_budget), and real `nm`-derived EWRAM/ROM symbol sizes for the
+# concrete locale-resolver + language-menu-probe module symbols. See
+# scripts/linker_report/localization_budget.py's module docstring for the
+# exact provenance of every field. `--check` only fails on a real map-
+# reported region overflow -- it asserts no magic byte thresholds.
+MODERN_LOCALIZATION_BUDGET_REPORT ?= reports/linker-budget/modern-localization-$(MODERN_CONFIG).json
+MODERN_LOCALIZATION_BUDGET_SCRIPT := scripts/linker_report/localization_budget.py
+
+expansion-modern-localization-budget: expansion-modern-elf $(MODERN_LOCALIZATION_BUDGET_JSON)
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_LOCALIZATION_BUDGET_SCRIPT)" \
+		--map "$(MODERN_MAP)" \
+		--elf "$(MODERN_ELF)" \
+		--localization-budget "$(MODERN_LOCALIZATION_BUDGET_JSON)" \
+		--output "$(MODERN_LOCALIZATION_BUDGET_REPORT)"
+
+expansion-modern-localization-budget-check: expansion-modern-elf $(MODERN_LOCALIZATION_BUDGET_JSON)
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_LOCALIZATION_BUDGET_SCRIPT)" \
+		--map "$(MODERN_MAP)" \
+		--elf "$(MODERN_ELF)" \
+		--localization-budget "$(MODERN_LOCALIZATION_BUDGET_JSON)" \
+		--output "$(MODERN_LOCALIZATION_BUDGET_REPORT)" \
+		--check
+
 MODERN_SHIFTCHECK_DIR := $(MODERN_OUTPUT_DIR)/shiftcheck
 MODERN_RELOCS_ELF := $(MODERN_SHIFTCHECK_DIR)/fireemblem8.relocs.elf
 MODERN_OVERLAY_REPORT := $(MODERN_SHIFTCHECK_DIR)/overlay-audit.json
@@ -2052,6 +2735,31 @@ MODERN_OVERLAY_SCRIPT := scripts/linker_report/overlay_audit.py
 MODERN_SHIFTED_SCRIPT := scripts/shiftcheck/modern_shifted_boot.sh
 MODERN_SHIFT_AMOUNT ?= 0x40000
 MODERN_SHIFTED_OUTDIR := $(MODERN_SHIFTCHECK_DIR)/shift-$(MODERN_SHIFT_AMOUNT)
+# Sprint 6 (issue #18 gate-order race diagnosis): expansion-modern-shifted-check
+# and expansion-modern-localization-runtime-shifted-check are undeclared-order
+# SIBLING prerequisites of expansion-modern-linker-check (see that target's own
+# prerequisite list below) -- under `make -jN` with N>1 (exactly what
+# `python3 -m scripts.upstream_port verify --jobs N` passes through per gate),
+# GNU Make is free to run sibling prerequisites concurrently. Both targets
+# used to pass the SAME literal $(MODERN_SHIFTED_OUTDIR) as SHIFTCHECK_OUTDIR
+# to scripts/shiftcheck/modern_shifted_boot.sh, which links straight to a
+# fixed "$OUTDIR/shifted.elf" path with no temp-file-plus-rename step. Two
+# concurrent invocations therefore raced two `arm-none-eabi-ld` processes
+# writing the same shifted.elf, producing a torn ELF and an intermittent
+# "nm failed ... file format not recognized" failure inside
+# expansion-modern-linker-check (reproduced locally under -j16 while
+# investigating the reported intermittent modern-itemexpansion-check-debug
+# gItemExpansionProbe failure -- see
+# reports/itemexpansion_gate_order_race_diagnosis.md). This is the exact
+# same *class* of bug as commit 92ed1b6b (a shared, non-isolated output path
+# torn by concurrent sibling recipes), just on a different pair of targets --
+# so it is fixed the same way that precedent used elsewhere in this file:
+# give each sibling its own, non-shared output directory, instead of trying
+# to serialize two otherwise-independent checks via an artificial ordering
+# edge (which would only re-hide the same class of bug behind a fragile,
+# easy-to-lose dependency the next time either target is touched).
+MODERN_SHIFTED_OUTDIR_BOOT := $(MODERN_SHIFTED_OUTDIR)/boot-check
+MODERN_SHIFTED_OUTDIR_LOCALE := $(MODERN_SHIFTED_OUTDIR)/localization-runtime-check
 
 $(MODERN_RELOCS_ELF): $(MODERN_ELF) $(MODERN_ELF_OBJECTS_LST) \
 		$(MODERN_RELINK_SCRIPT) scripts/shiftcheck/modern_toolchain.sh
@@ -2084,7 +2792,7 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
 	MODERN_NM="$(MODERN_NM)" \
 	MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
-	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR_BOOT)" \
 	SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" \
 	SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
@@ -2095,8 +2803,375 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	SHIFTCHECK_TITLE_EXPECTED="$(MODERN_TITLE_FINGERPRINT)" \
 	"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
 
+
+# --- Issue #18 sprint 4: semantic locale runtime scenarios -----------------
+# Real libmGBA captures proving locale-selection/persistence/settings/
+# corrupt-prefs-safety milestones are actually reached at runtime -- never
+# just host-structure or frame-replay self-assertions. Every scenario here
+# was captured against a real built ROM + a byte-exact synthetic SRAM
+# fixture (tools/gba-playtest/tests/locale_prefs_fixture.py /
+# sram_fixture.py), verified via gba_playtest.py's own inline-expectation
+# and fingerprint-equality checks (never hand-written fingerprint JSON).
+MODERN_LOCALE_SCEN := tools/gba-playtest/scenarios
+MODERN_LOCALE_FP := tools/gba-playtest/fingerprints
+MODERN_LOCALE_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/locale-fixtures
+MODERN_LOCALE_PREFS_FIXTURE_PY := tools/gba-playtest/tests/locale_prefs_fixture.py
+MODERN_LOCALE_SRAM_FIXTURE_PY := tools/gba-playtest/tests/sram_fixture.py
+MODERN_SAVE_FORMAT_TOOL_PY := scripts/modernize/save_format_tool.py
+MODERN_EXPANSION_CONFIG_PY := scripts/modernize/expansion_config.py
+
+# Issue #18 sprint 6 verifier-blocker fix: every fixture below is
+# regenerated from config.mk (via save_format_tool.py's
+# build_current_expansion_save_meta()/resolve_*() helpers) at *this*
+# invocation's own live state, never a stale cached .sav left over from a
+# previous config.mk/generator-script revision -- these real prerequisites
+# (rather than none) are what make that true instead of merely asserted:
+# without them, a change to config.mk or either generator script left an
+# already-built build/ tree's *.sav byte-for-byte stale, silently
+# reproducing whatever fixture the *previous* revision would have built.
+# (The remaining source of non-determinism -- ExpansionSaveMeta.
+# buildCommitShort's dependence on live `git rev-parse HEAD` -- is fixed
+# directly in locale_prefs_fixture.py itself: see its own docstring and
+# _freeze_diagnostic_build_commit().)
+MODERN_LOCALE_FIXTURE_DEPS := \
+	$(MODERN_LOCALE_PREFS_FIXTURE_PY) \
+	$(MODERN_LOCALE_SRAM_FIXTURE_PY) \
+	$(MODERN_SAVE_FORMAT_TOOL_PY) \
+	$(MODERN_EXPANSION_CONFIG_PY) \
+	config.mk
+
+$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_SRAM_FIXTURE_PY)" write-state SAVE_COMPAT_EMPTY "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_UNSET "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_CORRUPT "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_UNKNOWN_LOCALE "$@"
+
+$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
+		--disabled-locale-id 7
+
+# Issue #18 sprint 7: a second disabled-locale fixture for the multi-locale
+# (en, qps-ploc) repair-matrix scenarios below. disabled_on_default.sav
+# above uses localeId=7 (qps-ploc) because the *single*-locale default
+# build only enables en, making qps-ploc the supported-but-not-enabled id
+# for THAT build; the multi-locale build enables both en and qps-ploc, so
+# qps-ploc is no longer disabled there -- this fixture instead uses
+# localeId=1 (EXPANSION_LOCALE_JA, include/expansion_locale.h), a real,
+# in-range, ExpansionLocale_IsSupported()-true id that is genuinely not
+# enabled by EXPANSION_ENABLED_LOCALES=en,qps-ploc.
+$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_multi.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" EXPANSION_USER_PREFS_DISABLED_LOCALE "$@" \
+		--disabled-locale-id 1
+
+# Issue #18 sprint 6 (runtime blocker fix): a real "already
+# first-start-selected + persisted" fixture -- state VALID, locale en --
+# needed by locale-settings-real-navigation-multi-modern-debug once blank
+# SRAM on a multi-locale build correctly shows the first-start selector
+# (see the blank-sram-selector-multi scenario above): that settings-
+# submenu-reachability scenario's own real debugtools-hotkey boot recipe
+# assumes it starts from an already-past-first-boot state (its point is
+# Options -> Configuration -> Language row reachability, not first-start
+# prompt reachability, which the blank-sram-selector-multi scenario
+# already covers on its own), so it must no longer rely on blank SRAM's
+# now-correctly-different (selector-shown) behavior to reach that state.
+$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav: $(MODERN_LOCALE_FIXTURE_DEPS)
+	@mkdir -p "$(@D)"
+	"$(PYTHON)" "$(MODERN_LOCALE_PREFS_FIXTURE_PY)" valid-explicit "$@" --locale-id 0
+
+# 1. Blank SRAM + single-locale default build: auto-stamp path never shows
+#    the selector; unset (never-saved) prefs on that same build auto-selects
+#    the sole enabled locale with no visible selector either.
+expansion-modern-localization-runtime-debug-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime debug-check passed (blank-sram + auto-select): %s\n' "$(MODERN_ROM)"
+else
+	@printf 'Modern ROM localization-runtime debug-check skipped for config=%s (debug-only boot-timing calibration)\n' '$(MODERN_CONFIG)'
+endif
+
+# 2. Same milestones, release build (different EWRAM probe-symbol layout,
+#    same SKIP_HS boot-timing recipe -- both captured for real, separately).
+expansion-modern-localization-runtime-release-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+ifeq ($(MODERN_CONFIG),release)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-release.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-release.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-release.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-release.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime release-check passed (blank-sram + auto-select): %s\n' "$(MODERN_ROM)"
+else
+	@printf 'Modern ROM localization-runtime release-check skipped for config=%s (release-only)\n' '$(MODERN_CONFIG)'
+endif
+
+# 3. Multi-locale (en + qps-ploc) build: issue #18 sprint 6 fixed a runtime
+#    blocker where blank SRAM never showed the selector here (silently
+#    auto-stamping a syntactically VALID ExpansionUserPrefs record via
+#    BuildCurrentExpansionSaveMeta() regardless of enabled-locale count --
+#    see src/bmsave-lib.c and locale-blank-sram-selector-multi-modern-
+#    {debug,release}.json, which SUPERSEDE the pre-fix locale-blank-sram-
+#    no-selector-multi-modern-{debug,release} pair that encoded that bug
+#    as 'expected' and have been deleted); blank SRAM now correctly shows
+#    the selector (active=1, needsPreferenceRepair=1) exactly like real
+#    unset prefs does, and DOWN+A picks qps-ploc there -- proving the
+#    EWRAM SetCurrent/GetCurrent round-trip fixed in an earlier sprint
+#    actually works.
+#    Uses its own build root + EXPANSION_ENABLED_LOCALES override so it
+#    never disturbs the default single-locale $(MODERN_ROM) above.
+#
+#    Issue #18 sprint 5: derived from $(MODERN_BUILD_ROOT) (a "-multi"
+#    sibling) rather than a hardcoded "build/expansion-modern-multi"
+#    literal, so a caller that overrides MODERN_BUILD_ROOT (e.g. an
+#    isolated/hermetic regression test -- see
+#    scripts/modernize/tests/test_modern_localization_header_bootstrap.py's
+#    ModernLocalizationMultiCheckColdCleanTests) gets its own equally
+#    isolated multi-locale build root instead of always falling through to
+#    the real repository-tracked default path regardless of the caller's
+#    own override. The default value (MODERN_BUILD_ROOT's own default,
+#    "build/expansion-modern") still resolves to exactly
+#    "build/expansion-modern-multi" as before, so no real invocation's
+#    on-disk output path actually changes.
+MODERN_LOCALE_MULTI_BUILD_ROOT := $(MODERN_BUILD_ROOT)-multi
+MODERN_LOCALE_MULTI_ROM := $(MODERN_LOCALE_MULTI_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
+
+expansion-modern-localization-runtime-multi-check: expansion-modern-boot-preflight \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_multi.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) \
+		MODERN_BUILD_ROOT=$(MODERN_LOCALE_MULTI_BUILD_ROOT) \
+		EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-selector-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-blank-sram-selector-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" --policy behavior
+	# Issue #18 sprint 7: real multi-locale prompt/choose-default REPAIR
+	# matrix (4 ExpansionUserPrefs sub-states that require a re-prompt x
+	# both configs = 8 real scenarios, mandatory for every config -- never
+	# gated to debug-only, unlike the single-locale AUTO_SELECT-collapsed
+	# no-wipe checks in expansion-modern-localization-runtime-prefs-check
+	# below, which this section does not replace/skip). Each scenario
+	# shows the real blocking selector (never AUTO_SELECT -- this build
+	# enables 2 locales), navigates it, explicitly confirms the English
+	# row, proves the whole-SRAM-minus-prefs-record hash is unchanged, and
+	# proves persistence + re-prompt suppression across a real
+	# A+B+SELECT+START soft reset. See tools/gba-playtest/scenarios/
+	# locale-repair-*-multi-modern-*.json and docs/localization.md.
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-unset-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-unset-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-corrupt-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-corrupt-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-unknown-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-unknown-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-repair-disabled-multi-modern-$(MODERN_CONFIG).json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-repair-disabled-multi-modern-$(MODERN_CONFIG).json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_multi.sav" --policy behavior
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-selector-multi-switch-qps-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-selector-multi-switch-qps-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-settings-real-navigation-multi-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-settings-real-navigation-multi-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_MULTI_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-softreset-persistence-multi-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-softreset-persistence-multi-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+endif
+	@printf 'Modern ROM localization-runtime multi-check passed (config=%s): %s\n' '$(MODERN_CONFIG)' "$(MODERN_LOCALE_MULTI_ROM)"
+
+# 4. Corrupt/unknown-locale/disabled-locale ExpansionUserPrefs sub-states
+#    all re-prompt (collapsing to AUTO_SELECT on this single-locale
+#    default build, debug-only boot-timing calibration) and provably
+#    never wipe SRAM outside (a) the 12-byte prefs record itself and (b)
+#    the pre-existing, locale-unrelated vanilla SoundRoomSaveData struct
+#    (include/bmsave.h) that ordinary boot-time bookkeeping legitimately
+#    rewrites on every boot regardless of prefs state (see reports/
+#    issue18_localization_closure.md). Issue #18 sprint 7: this single-
+#    locale/AUTO_SELECT check is a real, honestly-named scenario in its
+#    own right (a single-enabled-locale build genuinely collapses to
+#    AUTO_SELECT -- that is not a gap), but it is NOT a substitute for the
+#    real multi-locale PROMPT/choose-default repair matrix -- see the 8
+#    locale-repair-*-multi-modern-{debug,release}.json scenarios wired
+#    into expansion-modern-localization-runtime-multi-check above, which
+#    close that previously-missing coverage for both configs.
+expansion-modern-localization-runtime-prefs-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-prefs-corrupt-no-wipe-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-prefs-corrupt-no-wipe-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/corrupt.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-prefs-unknown-locale-no-wipe-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-prefs-unknown-locale-no-wipe-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unknown.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-prefs-disabled-locale-no-wipe-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-prefs-disabled-locale-no-wipe-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/disabled_on_default.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime prefs-check passed (corrupt/unknown/disabled no-wipe): %s\n' "$(MODERN_ROM)"
+else
+	@printf 'Modern ROM localization-runtime prefs-check skipped for config=%s (debug-only boot-timing calibration)\n' '$(MODERN_CONFIG)'
+endif
+
+# 5. Locale prefs must not regress ordinary normal save/load and
+#    suspend/resume behavior -- reruns the existing (unmodified) issue #13
+#    save-path gates as-is; this is a regression check, not a new scenario.
+expansion-modern-localization-runtime-save-check: expansion-modern-saveload-check \
+		expansion-modern-savefmt-check
+	@printf 'Modern ROM localization-runtime save-check passed (normal save/load + suspend/resume unaffected, config=%s)\n' '$(MODERN_CONFIG)'
+
+# 6. Shifted ROM layout (P9-A __text_shift regression class): locale
+#    resolver/selector probes must behave identically after the whole ROM
+#    is relocated -- EWRAM probe addresses are unaffected by a ROM-only
+#    text shift, so the exact same debug scenarios/fingerprints are reused
+#    against the shifted ROM.
+expansion-modern-localization-runtime-shifted-check: expansion-modern-boot-preflight \
+		expansion-modern-rom \
+		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+ifeq ($(MODERN_CONFIG),debug)
+	MODERN_CC="$(MODERN_CC)" MODERN_LD="$(MODERN_LD)" MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
+	MODERN_NM="$(MODERN_NM)" MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR_LOCALE)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
+	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
+	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
+	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" \
+	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-debug.json" \
+	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-debug.json" \
+		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
+	MODERN_CC="$(MODERN_CC)" MODERN_LD="$(MODERN_LD)" MODERN_OBJCOPY="$(MODERN_OBJCOPY)" \
+	MODERN_NM="$(MODERN_NM)" MODERN_NEWLIB_LIB="$(MODERN_NEWLIB_LIB)" \
+	SHIFTCHECK_OUTDIR="$(MODERN_SHIFTED_OUTDIR_LOCALE)" SHIFTCHECK_OBJECTS_LST="$(MODERN_ELF_OBJECTS_LST)" \
+	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
+	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
+	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" \
+	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
+	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \
+		"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
+	@printf 'Modern ROM localization-runtime shifted-check passed (locale resolver/selector probes unaffected by __text_shift), shifted output: %s\n' "$(MODERN_SHIFTED_OUTDIR_LOCALE)"
+else
+	@printf 'Modern ROM localization-runtime shifted-check skipped for config=%s (debug-only boot-timing calibration, matches expansion-modern-shifted-check)\n' '$(MODERN_CONFIG)'
+endif
+
+.PHONY: \
+	expansion-modern-localization-budget \
+	expansion-modern-localization-budget-check \
+	expansion-modern-localization-runtime-debug-check \
+	expansion-modern-localization-runtime-release-check \
+	expansion-modern-localization-runtime-multi-check \
+	expansion-modern-localization-runtime-prefs-check \
+	expansion-modern-localization-runtime-save-check \
+	expansion-modern-localization-runtime-shifted-check
+# ---------------------------------------------------------------------------
+# Issue #10: opt-in runtime item-ID-expansion probe
+# ---------------------------------------------------------------------------
+# Runs the real, booted expansion ROM and asserts what its own production
+# paths recorded for the expanded item ID: the runtime GetItemData() record,
+# the event engine's EV_CMD_GIVEITEM decoder placing it in a real unit
+# inventory, the item menu/stat-screen draw, and the MultiArena/link, game
+# save and suspend/resume roundtrips -- with the legacy 0xCD and empty
+# (0x0000) item values unchanged next to it.
+#
+# Requires a probe build: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1.
+# The probe's EWRAM address is resolved from the linked ELF at check time,
+# so this gate pins no ROM layout and needs no committed frame oracle.
+#
+# MODERN_CONFIG=release runs the boot-reachable stage set: a modern release
+# ROM does not reach a battle map in this headless harness at all (a plain
+# release ROM with no probe code, driven through the ordinary New Game route
+# with full navigation input, stalls on the world map exactly the same way),
+# so the map-dependent stages are proven against the debug configuration.
+# See docs/id_space.md, "Runtime probe".
+#
+# Issue #6 (Sprint 2) rides this SAME gate and this SAME single ROM build
+# rather than adding a second harness or a second ROM: when the caller also
+# supplies the bundled-content profile (EXPANSION_STARTER_CONTENT=1, which
+# itself requires EXPANSION_MECHANICS_HOOKS=1, plus EXPANSION_MECHANICS_SAMPLE=1
+# so both the content mechanic and the pre-existing content-free sample are
+# registered), the runner additionally asserts the authored content record's
+# original name/description/uses/type/attributes/icon and the content
+# mechanic's bounded, item-gated bonus. Requiring them here (instead of
+# silently skipping) keeps the gate's contract explicit and its ROM one build.
+MODERN_ITEMEXPANSION_SCRIPT := tools/gba-playtest/run_item_expansion_checks.py
+MODERN_ITEMEXPANSION_DIR := $(MODERN_OUTPUT_DIR)/itemexpansion
+MODERN_ITEMEXPANSION_STAGES := $(if $(filter release,$(MODERN_CONFIG)),boot,all)
+MODERN_ITEMEXPANSION_ACTIVE_HEADER := $(GENERATED_DATA_ACTIVE_HEADER)
+
+expansion-modern-itemexpansion-check: expansion-modern-rom
+	@if [ "$(FE8_EXPANSION_ITEMTEST)" != "1" ] || [ -z "$(FE8_ITEM_ID_CAP)" ]; then \
+		printf 'error: %s needs a probe build\n' 'expansion-modern-itemexpansion-check' >&2; \
+		printf '  run: FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make %s MODERN_CONFIG=%s MODERN_ABI=%s EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1\n' \
+			'expansion-modern-itemexpansion-check' '$(MODERN_CONFIG)' '$(MODERN_ABI)' >&2; \
+		exit 1; \
+	fi
+	@if [ "$(EXPANSION_STARTER_CONTENT)" = "1" ] && \
+		{ [ "$(EXPANSION_MECHANICS_HOOKS)" != "1" ] || [ "$(EXPANSION_MECHANICS_SAMPLE)" != "1" ]; }; then \
+		printf 'error: %s with EXPANSION_STARTER_CONTENT=1 needs the full content profile\n' \
+			'expansion-modern-itemexpansion-check' >&2; \
+		printf '  add: EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1\n' >&2; \
+		exit 1; \
+	fi
+	NM="$(MODERN_NM)" "$(PYTHON)" "$(MODERN_ITEMEXPANSION_SCRIPT)" \
+		--rom "$(MODERN_ROM)" \
+		--elf "$(MODERN_ELF)" \
+		--config "$(MODERN_CONFIG)" \
+		--cap "$(FE8_ITEM_ID_CAP)" \
+		--content "$(EXPANSION_STARTER_CONTENT)" \
+		--active-header "$(MODERN_ITEMEXPANSION_ACTIVE_HEADER)" \
+		--require-stages "$(MODERN_ITEMEXPANSION_STAGES)" \
+		--out-dir "$(MODERN_ITEMEXPANSION_DIR)"
+	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s content=%s)\n' \
+		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)' '$(FE8_ITEM_ID_CAP)' '$(MODERN_ITEMEXPANSION_STAGES)' '$(EXPANSION_STARTER_CONTENT)'
+
 expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-overlay-audit \
+		expansion-modern-starter-runtime-check \
 		expansion-modern-boot-check \
 		expansion-modern-title-check \
 		expansion-modern-debugtools-check \
@@ -2109,7 +3184,14 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-combat-check \
 		expansion-modern-saveload-check \
 		expansion-modern-savefmt-check \
-		expansion-modern-shifted-check
+		expansion-modern-shifted-check \
+		expansion-modern-localization-budget-check \
+		expansion-modern-localization-runtime-debug-check \
+		expansion-modern-localization-runtime-release-check \
+		expansion-modern-localization-runtime-multi-check \
+		expansion-modern-localization-runtime-prefs-check \
+		expansion-modern-localization-runtime-save-check \
+		expansion-modern-localization-runtime-shifted-check
 	"$(PYTHON)" scripts/shiftcheck/scan_build_addrs.py \
 		--makefile Makefile \
 		--ldscript "$(MODERN_CLEAN_LDSCRIPT)" \
@@ -2130,11 +3212,16 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 	expansion-modern-combat-check \
 	expansion-modern-saveload-check \
 	expansion-modern-savefmt-check \
+	expansion-modern-itemexpansion-check \
 	expansion-modern-budget \
 	expansion-modern-budget-check \
 	expansion-modern-relocs \
 	expansion-modern-overlay-audit \
 	expansion-modern-shifted-check \
-	expansion-modern-linker-check
+	expansion-modern-linker-check \
+	expansion-modern-starter-profile-rom \
+	expansion-modern-starter-hook-check \
+	expansion-modern-starter-qol-check \
+	expansion-modern-starter-runtime-check
 
 -include $(wildcard $(sort $(MODERN_COHORT_DEPS) $(MODERN_ALL_DEPS) $(MODERN_FE6SIO_OBJ:.o=.d)))

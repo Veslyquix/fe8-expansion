@@ -476,8 +476,11 @@ def check_blob_identity(entries: List[Dict], repo_root: Path, target_sha: str = 
 # --- Exact per-file generator (issue #9 exact-provenance remediation) ------
 #
 # `PROVENANCE_ROOT_SEED` is the single, small, human-curated input: one
-# entry per reviewable top-level root (the same 46 roots this repository
-# already reviewed at category granularity before this change), each
+# entry per reviewable top-level root (47 roots as of the issue #9
+# release-branch/origin-master merge that added `localization.mk`
+# (issue #18 sprint 1) as its own root -- 46 before that; this count is
+# never itself validated by any check, only kept truthful here for a
+# human reader), each
 # naming the `category`/`notes`/`pinned_commit` every exact allowlisted
 # path nested under (or equal to) that root should start out with.
 # `generate_exact_entries()` mechanically fans this out to one exact,
@@ -565,6 +568,7 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("linker", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("linker_script_banim.txt", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("linker_script_sound.txt", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("localization.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("make_tools.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("modern.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("release.mk", "code", _NOTE_CODE_RELEASE_MAKE_TARGETS),

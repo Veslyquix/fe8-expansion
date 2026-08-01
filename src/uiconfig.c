@@ -22,6 +22,15 @@
 #include "constants/msg.h"
 #include "constants/songs.h"
 
+#ifdef MODERN
+/* Issue #18 sprint 3: real, product-reachable settings entry point for
+ * the expansion language submenu -- never stuffed into
+ * struct GameOption.selectors[4] (unchanged ABI/size); see
+ * include/expansion_language_menu.h. */
+#include "expansion_language_menu.h"
+#include "expansion_msg_ids.h"
+#endif
+
 struct ConfigScreen * CONST_DATA gConfigUiState = (struct ConfigScreen *)gGenericBuffer;
 
 u8 CONST_DATA gGameOptionsUiOrder[] =
@@ -39,6 +48,9 @@ u8 CONST_DATA gGameOptionsUiOrder[] =
     [10] = GAME_OPTION_MUSIC,
     [11] = GAME_OPTION_SOUND_EFFECTS,
     [12] = GAME_OPTION_WINDOW_COLOR,
+#ifdef MODERN
+    [13] = GAME_OPTION_LANGUAGE,
+#endif
 };
 
 // clang-format off
@@ -627,6 +639,33 @@ struct GameOption CONST_DATA gGameOptions[] =
         .icon = 0x20,
         .func = GenericOptionChangeHandler,
     }
+#ifdef MODERN
+    ,
+
+    /* Issue #18 sprint 3: not a value-cycling toggle -- Left/Right just
+     * opens the independent language settings submenu (see
+     * LanguageOptionEntryHandler below and Config_Loop_KeyHandler's
+     * unconditional `.func(proc)` call on DPAD_LEFT/DPAD_RIGHT). The
+     * label/value/help text are all resolved through guarded
+     * GAME_OPTION_LANGUAGE special cases in DrawGameOptionText/
+     * DrawOptionValueTexts/DrawGameOptionHelpText below, so msgId and
+     * the selectors[] entries here are unused placeholders -- kept at
+     * the vanilla MSG_000/fixed size (never expanded) purely to satisfy
+     * struct GameOption's unchanged layout. */
+    [GAME_OPTION_LANGUAGE] =
+    {
+        .msgId = MSG_000,
+        .selectors =
+        {
+            { MSG_000, MSG_000, 112, 0 },
+            { MSG_000, MSG_000, 112, 0 },
+            { MSG_000, MSG_000, 112, 0 },
+            { MSG_000, MSG_000, 112, 0 },
+        },
+        .icon = 0x16, // reused from GAME_OPTION_SUBTITLE_HELP; no new asset
+        .func = LanguageOptionEntryHandler,
+    }
+#endif
 };
 
 struct ProcCmd CONST_DATA gProcScr_RedrawConfigHelpText[] =
@@ -710,11 +749,28 @@ void DrawGameOptionIcon(int selectedIdx, int yBase)
 void DrawGameOptionHelpText(void)
 {
     const char * str;
+    int optionIdx = gGameOptionsUiOrder[gConfigUiState->selectedOptionIdx];
 
     ClearText(&gConfigUiState->optionHelpText);
 
-    str = GetStringFromIndex(
-        gGameOptions[gGameOptionsUiOrder[gConfigUiState->selectedOptionIdx]].selectors[GetSelectedOptionValue()].helpTextId);
+#ifdef MODERN
+    /* Issue #18 sprint 3: expansion-authored help text, resolved through
+     * the catalog/current-locale resolver -- never GetStringFromIndex/
+     * vanilla MSG_*, never Text_DrawString's Huffman/vanilla decode. */
+    if (optionIdx == GAME_OPTION_LANGUAGE)
+    {
+        str = ExpansionLocale_ResolveCurrent(EXP_MSG_LANGUAGE_SETTINGS_HELP);
+
+        Text_SetCursor(&gConfigUiState->optionHelpText, 0);
+        Text_SetColor(&gConfigUiState->optionHelpText, TEXT_COLOR_SYSTEM_WHITE);
+        Text_DrawStringASCII(&gConfigUiState->optionHelpText, str);
+        PutText(&gConfigUiState->optionHelpText, TILEMAP_LOCATED(gBG0TilemapBuffer, 4, 18));
+
+        return;
+    }
+#endif
+
+    str = GetStringFromIndex(gGameOptions[optionIdx].selectors[GetSelectedOptionValue()].helpTextId);
     PutDrawText(
         &gConfigUiState->optionHelpText, TILEMAP_LOCATED(gBG0TilemapBuffer, 4, 18), TEXT_COLOR_SYSTEM_WHITE, 0, 22, str);
 
@@ -725,10 +781,25 @@ void DrawGameOptionHelpText(void)
 void DrawGameOptionText(int selectedIdx, int textIdx, int y)
 {
     const char * str;
+    int optionIdx = gGameOptionsUiOrder[selectedIdx];
 
     ClearText(&gConfigUiState->optionTexts[textIdx]);
 
-    str = GetStringFromIndex(gGameOptions[gGameOptionsUiOrder[selectedIdx]].msgId);
+#ifdef MODERN
+    if (optionIdx == GAME_OPTION_LANGUAGE)
+    {
+        str = ExpansionLocale_ResolveCurrent(EXP_MSG_LANGUAGE_SETTINGS_LABEL);
+
+        Text_SetCursor(&gConfigUiState->optionTexts[textIdx], 0);
+        Text_SetColor(&gConfigUiState->optionTexts[textIdx], TEXT_COLOR_SYSTEM_WHITE);
+        Text_DrawStringASCII(&gConfigUiState->optionTexts[textIdx], str);
+        PutText(&gConfigUiState->optionTexts[textIdx], TILEMAP_LOCATED(gBG1TilemapBuffer, 4, y));
+
+        return;
+    }
+#endif
+
+    str = GetStringFromIndex(gGameOptions[optionIdx].msgId);
     PutDrawText(
         &gConfigUiState->optionTexts[textIdx], TILEMAP_LOCATED(gBG1TilemapBuffer, 4, y), TEXT_COLOR_SYSTEM_WHITE, 0, 9, str);
 
@@ -745,6 +816,20 @@ void DrawOptionValueTexts(int selectedIdx, int textIdx, int y)
     int x = gGameOptions[optionIdx].selectors[0].xPos / 8;
 
     ClearText(&gConfigUiState->valueTexts[textIdx]);
+
+#ifdef MODERN
+    /* Not a 0-3 selectors[] value cycle -- shows the current locale's own
+     * (self-referential, never-translated) display name instead. */
+    if (optionIdx == GAME_OPTION_LANGUAGE)
+    {
+        Text_SetCursor(&gConfigUiState->valueTexts[textIdx], 0);
+        Text_SetColor(&gConfigUiState->valueTexts[textIdx], TEXT_COLOR_SYSTEM_BLUE);
+        Text_DrawStringASCII(&gConfigUiState->valueTexts[textIdx], ExpansionLanguageMenu_ResolveCurrentLocaleName());
+        PutText(&gConfigUiState->valueTexts[textIdx], TILEMAP_LOCATED(gBG1TilemapBuffer, x, y));
+
+        return;
+    }
+#endif
 
     for (i = 0; i < 4; i++)
     {
@@ -986,6 +1071,26 @@ bool GenericOptionChangeHandler(ProcPtr proc)
 
     return valueChanged;
 }
+
+#ifdef MODERN
+/*
+ * Issue #18 sprint 3: the real, product-reachable Config-screen entry
+ * point for the language settings submenu. Called unconditionally by
+ * Config_Loop_KeyHandler on DPAD_LEFT/DPAD_RIGHT for whichever option row
+ * is currently selected (its return value is discarded there, matching
+ * every other .func handler's call site) -- never a hidden debug-only
+ * entry. Opens ExpansionLanguageMenu_OpenSettings as a blocking child of
+ * the already-running ConfigProc; does not touch struct GameOption's
+ * selectors[4]/size, GetGameOption/SetGameOption, or any #11 debug
+ * hotkey/Title_IDLE lifecycle.
+ */
+bool LanguageOptionEntryHandler(ProcPtr proc)
+{
+    ExpansionLanguageMenu_OpenSettings(proc);
+
+    return false;
+}
+#endif
 
 //! FE8U: 0x080B1DE8
 u8 GetGameOption(u8 index)

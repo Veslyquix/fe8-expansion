@@ -2,9 +2,33 @@
   "checkpoints": [
     {
       "frame": 300,
-      "framebuffer_hash": "fnv1a64-rgb24:3855f352b10ce427",
-      "name": "hub-closed-before-hotkey",
+      "name": "title-idle-preboot-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0000"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -22,6 +46,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -29,9 +68,33 @@
     },
     {
       "frame": 630,
-      "framebuffer_hash": "fnv1a64-rgb24:58d0b59d175916c8",
-      "name": "hub-opened-after-first-pulse",
+      "name": "title-hotkey-pulse1-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0000"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -49,6 +112,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -56,9 +134,33 @@
     },
     {
       "frame": 680,
-      "framebuffer_hash": "fnv1a64-rgb24:46e966fa5cf45779",
-      "name": "hub-still-single-after-repeated-pulse",
+      "name": "title-hotkey-pulse2-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0000"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -76,6 +178,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -83,9 +200,33 @@
     },
     {
       "frame": 706,
-      "framebuffer_hash": "fnv1a64-rgb24:362f691ff6bd428b",
-      "name": "pre-launch",
+      "name": "title-a-press-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0000"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -103,6 +244,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -110,9 +266,33 @@
     },
     {
       "frame": 950,
-      "framebuffer_hash": "fnv1a64-rgb24:2d9ab45bcfc84b25",
-      "name": "gamecontrol-consumed-launch",
+      "name": "newgame-intro-pre-worldmap-inert",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x0000"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -130,6 +310,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -137,9 +332,33 @@
     },
     {
       "frame": 14000,
-      "framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "chapter2-interactive-stable",
+      "name": "worldmap-intro-live-progress",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -157,6 +376,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -164,9 +398,33 @@
     },
     {
       "frame": 14900,
-      "framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "post-interactive-cursor-response",
+      "name": "worldmap-intro-live-progress-sustained",
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "value": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "value": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "value": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -184,6 +442,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "value": "0x00000000"
         }
@@ -193,7 +466,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "77ba6f0a933bbec6e7b40803f2007e1e9ace6338",
+    "sha1": "5dd100ab142f8ff354abaa54d5f0dad6a4e32850",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },
