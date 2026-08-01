@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "fixed",
+  "summary": "Fix a source comment in archive_rehearsal.py that named a test class, RebuildRehearsalBlockerEndToEndVerifiedSuccessTests, which has never existed under that name; corrected to reference the real, existing RebuildRehearsalBlockerEndToEndBuildTests a fresh, independent re-review found. Adds a mechanical SourceCommentTestClassReferenceTests check scanning every scripts/release_rehearsal/*.py source file for a backtick-quoted test-class-name reference and cross-checking it against the real test classes actually defined under scripts/release_rehearsal/tests/, so a future stale reference of this exact kind fails automatically instead of silently drifting. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

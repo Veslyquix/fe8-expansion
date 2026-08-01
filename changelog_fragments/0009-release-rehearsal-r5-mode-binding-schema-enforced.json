@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Close a mode-binding schema-downgrade gap a fresh, independent re-review found: load_allowlist_modes() previously returned None with no error at all when source_allowlist.json's 'modes' key was simply absent, and nothing anywhere checked schema_version itself -- deleting 'modes', or rolling schema_version back, silently disabled every one of the D4 mode-binding checks with no actionable failure while every other allowlist check kept passing. load_allowlist_modes() now hard-requires schema_version to be exactly the current, single supported value (4) before any mode checking is even attempted, and 'modes' itself becomes unconditionally mandatory once schema_version passes -- a missing, downgraded, upgraded-but-unknown, or wrong-type schema_version, or a missing 'modes' key, is now always an actionable AllowlistError. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

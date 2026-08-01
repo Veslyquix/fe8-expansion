@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Remove false OID semantics from the self-referential-evidence export exclusion (docs/release_data/provenance/code.json) a fresh, independent re-review found: its oid field was never actually cross-checked against anything while nearby prose read as if it were an immutable, verified fact, and the checked-in value had already drifted stale. There is no truthful, immutable oid for this kind -- a file cannot record an exact hash of its own not-yet-finalized content without an unsolvable cycle. The schema now requires this kind's oid to be absent or JSON null; load_exclusions() hard-rejects any supplied/stale/fake value and generate_exclusions_document() always writes null. A gitlink exclusion (mgfembp) is unaffected and still requires and strictly cross-checks its own exact, immutable oid. Every included blob remains exactly OID/SHA256-bound with no exemption at all; code.json is documented explicitly as a curated path-only-plus-mode exclusion -- external rehearsal evidence about this repository's own tooling, never source archive content or a redistribution/legal authorization. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

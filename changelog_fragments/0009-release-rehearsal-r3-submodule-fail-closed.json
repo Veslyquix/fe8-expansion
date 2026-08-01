@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Close submodule rebuild-eligibility fail-open gaps a fresh, independent re-review found: evaluate_rebuild_eligibility()'s prior URL check only ever compared the submodule's configured remote.origin.url against .gitmodules's declared URL when both sides already happened to be known, leaving a genuinely missing origin vacuously unexercised instead of ineligible. Eligibility now requires a live, non-empty configured origin agreeing exactly with both .gitmodules's declared URL and the separate docs/release_data/provenance/submodules.json record's own URL, defaulting to non-eligible; a missing declaration in either immutable source, or a mismatch against either, is its own actionable finding. Every underlying git status/git config/git cat-file command is now itself required to actually succeed -- a genuine tooling failure (distinct from the command's own ordinary not-clean/no-origin/object-absent outcome) is caught and reported rather than silently swallowed into a false pass. Publication remains mechanically BLOCKED throughout; the real mgfembp submodule remains uninitialized/unapproved.",
+  "semver_impact": "none"
+}

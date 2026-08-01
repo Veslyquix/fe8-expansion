@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Close a self-referential-evidence export-exclusion injection gap a fresh, independent re-review found: any tracked path could previously be claimed under tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE with a fabricated oid and tree coverage stayed clean, silently moving an arbitrary blob out of the archive+provenance-required set with no review. This kind's path is now checked against a small, hard-coded, human-curated policy set (SELF_REFERENTIAL_EVIDENCE_PATHS, today exactly docs/release_data/provenance/code.json) as a validator invariant enforced in both load_exclusions() and independently again inside check_partition() itself, so even a directly-constructed exclusion entry that never went through the loader is still caught -- no prefix, no wildcard, no extra row of this kind for any other path. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

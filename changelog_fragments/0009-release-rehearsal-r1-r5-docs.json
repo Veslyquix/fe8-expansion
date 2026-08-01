@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "docs",
+  "summary": "Document the R1-R5 remediation round (self-referential-evidence validator invariant and null-OID semantics, submodule origin/command fail-closed eligibility, a corrected source-comment test-class reference, and unswitchable mode-binding schema enforcement) in docs/release_process.md and docs/release_closure_candidate.md; the candidate remains mechanically BLOCKED.",
+  "semver_impact": "none"
+}
