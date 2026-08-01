@@ -44,18 +44,33 @@ def _exclusion(path=GITLINK_SHA and "mgfembp", kind="gitlink", mode="160000", oi
     return tc.ExclusionEntry(path=path, kind=kind, mode=mode, oid=oid, reason=reason)
 
 
-def _self_ref_exclusion(path="docs/evidence.json", mode="100644", oid=OTHER_SHA, reason="because"):
-    """issue #9 guardian-correction remediation (D2): a `KIND_SELF_
-    REFERENTIAL_EVIDENCE`-kind exclusion fixture builder, mirroring
-    `_exclusion` above for the gitlink kind."""
+CURATED_SELF_REF_PATH = sorted(tc.SELF_REFERENTIAL_EVIDENCE_PATHS)[0]
+
+
+def _self_ref_exclusion(path=None, mode="100644", oid=None, reason="because"):
+    """issue #9 guardian-correction remediation (D2), then R1/R2 fix: a
+    `KIND_SELF_REFERENTIAL_EVIDENCE`-kind exclusion fixture builder,
+    mirroring `_exclusion` above for the gitlink kind. Defaults now
+    match the *enforced* (not merely documented) semantics: `path`
+    defaults to the one real, hard-coded, curated
+    `SELF_REFERENTIAL_EVIDENCE_PATHS` member (any other path is only
+    ever valid when passed explicitly, to exercise the R1 "arbitrary/
+    uncurated path" rejection), and `oid` defaults to `None` (this kind
+    never carries a real oid value at all -- see R2)."""
+    if path is None:
+        path = CURATED_SELF_REF_PATH
     return tc.ExclusionEntry(path=path, kind=tc.KIND_SELF_REFERENTIAL_EVIDENCE, mode=mode, oid=oid, reason=reason)
 
 
 def _init_repo_with_gitlink_and_blob(root: Path) -> str:
     """The same fixture as `_init_repo_with_gitlink`, plus one extra
-    tracked ordinary blob ("evidence.json") to exercise a
-    `KIND_SELF_REFERENTIAL_EVIDENCE` exclusion alongside the existing
-    `KIND_GITLINK` one."""
+    tracked ordinary blob at the exact curated self-referential-evidence
+    path (`CURATED_SELF_REF_PATH`) to exercise a `KIND_SELF_REFERENTIAL_
+    EVIDENCE` exclusion alongside the existing `KIND_GITLINK` one --
+    issue #9 R1 fix: this must be the real curated path (not an
+    arbitrary synthetic one like the former "docs/evidence.json"), since
+    `check_partition` now only ever accepts this kind for an exact
+    curated-policy-set member."""
     _git("init", "-q", cwd=root)
     _git("config", "user.email", "t@example.com", cwd=root)
     _git("config", "user.name", "Tester", cwd=root)
@@ -63,7 +78,9 @@ def _init_repo_with_gitlink_and_blob(root: Path) -> str:
     (root / "src" / "main.c").write_text("int x;")
     (root / "docs").mkdir()
     (root / "docs" / "readme.md").write_text("hi")
-    (root / "docs" / "evidence.json").write_text("[]")
+    curated_path = root / Path(CURATED_SELF_REF_PATH)
+    curated_path.parent.mkdir(parents=True, exist_ok=True)
+    curated_path.write_text("[]")
     _git("add", "-A", cwd=root)
     _git("update-index", "--add", "--cacheinfo", f"160000,{GITLINK_SHA},mgfembp", cwd=root)
     _git("commit", "-q", "-m", "init", cwd=root)
@@ -379,15 +396,11 @@ class MixedExclusionKindPartitionTests(unittest.TestCase):
     with BOTH a gitlink-kind and a self-referential-evidence-kind
     exclusion present together."""
 
-    def _committed_oid(self, root: Path, sha: str, path: str) -> str:
-        return {e.path: e for e in gs.list_tree(root, sha)}[path].object_id
-
     def test_clean_mixed_kind_partition_has_no_reasons(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             sha = _init_repo_with_gitlink_and_blob(root)
-            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
-            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            exclusions = [_exclusion(), _self_ref_exclusion()]
             result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
             self.assertTrue(result.is_clean(), result.reasons())
 
@@ -398,10 +411,9 @@ class MixedExclusionKindPartitionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             sha = _init_repo_with_gitlink_and_blob(root)
-            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
-            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            exclusions = [_exclusion(), _self_ref_exclusion()]
             result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
-            self.assertNotIn("docs/evidence.json", result.missing_included)
+            self.assertNotIn(CURATED_SELF_REF_PATH, result.missing_included)
 
     def test_self_referential_evidence_path_in_allowlist_is_overlap(self):
         """The mirror-image: a blob-kind exclusion path must never *also*
@@ -409,36 +421,177 @@ class MixedExclusionKindPartitionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             sha = _init_repo_with_gitlink_and_blob(root)
-            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
-            exclusions = [_exclusion(), _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            exclusions = [_exclusion(), _self_ref_exclusion()]
             result = tc.check_partition(
-                root, ["src/main.c", "docs/readme.md", "docs/evidence.json"], exclusions, sha,
+                root, ["src/main.c", "docs/readme.md", CURATED_SELF_REF_PATH], exclusions, sha,
             )
-            self.assertIn("docs/evidence.json", result.overlap)
+            self.assertIn(CURATED_SELF_REF_PATH, result.overlap)
 
     def test_missing_self_referential_evidence_blob_is_stale_excluded(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             sha = _init_repo_with_gitlink_and_blob(root)
-            exclusions = [_exclusion(), _self_ref_exclusion(path="never-existed.json", oid=OTHER_SHA)]
+            exclusions = [_exclusion(), _self_ref_exclusion(path="never-existed.json", oid=None)]
             result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
             self.assertIn("never-existed.json", result.stale_excluded)
+            # issue #9 R1 fix: an uncurated path is *also* independently
+            # flagged invalid, regardless of whether it happens to be
+            # live/stale -- both buckets fire together, never just one.
+            self.assertIn("never-existed.json", result.invalid_self_referential_evidence)
+            self.assertFalse(result.is_clean())
 
     def test_kind_mismatch_gitlink_declared_as_self_referential_evidence_is_stale_and_missing(self):
         """A path that IS a live gitlink, but whose exclusion record
         wrongly declares kind self_referential_evidence, must be
         reported (never silently trusted as "still excluded, so still
         fine") -- both as a stale (wrong-kind) exclusion entry and as a
-        live gitlink with no *gitlink*-kind record of its own."""
+        live gitlink with no *gitlink*-kind record of its own. "mgfembp"
+        is also not the curated self-referential-evidence path, so it is
+        independently flagged invalid too."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             sha = _init_repo_with_gitlink_and_blob(root)
-            evidence_oid = self._committed_oid(root, sha, "docs/evidence.json")
-            wrong_kind = _self_ref_exclusion(path="mgfembp", mode="100644", oid=GITLINK_SHA)
-            exclusions = [wrong_kind, _self_ref_exclusion(path="docs/evidence.json", oid=evidence_oid)]
+            wrong_kind = _self_ref_exclusion(path="mgfembp", mode="100644", oid=None)
+            exclusions = [wrong_kind, _self_ref_exclusion()]
             result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, sha)
             self.assertIn("mgfembp", result.stale_excluded)
             self.assertIn("mgfembp", result.missing_excluded)
+            self.assertIn("mgfembp", result.invalid_self_referential_evidence)
+
+
+class ArbitraryPathSelfReferentialEvidenceExclusionRejectionTests(unittest.TestCase):
+    """issue #9 R1/R2 fix -- the literal reproduced defects: an arbitrary
+    tracked path can no longer be moved out of the included allowlist
+    and into a bogus `self_referential_evidence`-kind exclusion row to
+    escape tree coverage, and this kind can no longer carry a live/
+    stale/fake `oid` value at all. Exercised at both layers: `load_
+    exclusions` (the JSON-file schema gate) and `check_partition` (the
+    independent, hard-coded-against-the-policy-set validator invariant,
+    reachable even if `ExclusionEntry` objects are constructed directly,
+    bypassing `load_exclusions` entirely)."""
+
+    def test_arbitrary_blob_moved_to_self_referential_evidence_exclusion_fails_partition(self):
+        """The literal R1 reproducer: take a real, ordinary tracked blob
+        (the Makefile-like "src/main.c"), remove it from the allowlist,
+        and add a self_referential_evidence-kind exclusion row for it
+        instead, with a well-formed-looking (but bogus) oid -- this must
+        fail coverage, never pass as "still accounted for"."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink(root)
+            bogus = tc.ExclusionEntry(
+                path="src/main.c", kind=tc.KIND_SELF_REFERENTIAL_EVIDENCE,
+                mode="100644", oid="a" * 40, reason="bogus",
+            )
+            result = tc.check_partition(root, ["docs/readme.md"], [_exclusion(), bogus], sha)
+            self.assertFalse(result.is_clean())
+            self.assertIn("src/main.c", result.invalid_self_referential_evidence)
+            # Defense-in-depth: the underlying blob is *also* still
+            # reported missing_included, exactly as if the bogus row did
+            # not exist at all.
+            self.assertIn("src/main.c", result.missing_included)
+
+    def test_arbitrary_blob_moved_to_self_referential_evidence_exclusion_fails_load_exclusions(self):
+        """The same R1 reproducer, but via the on-disk JSON schema gate
+        (`load_exclusions`) rather than direct ExclusionEntry
+        construction -- an arbitrary path must never even *load* as a
+        well-formed self_referential_evidence exclusion."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_exclusions(Path(tmp), [
+                _exclusion(),
+                tc.ExclusionEntry(
+                    path="Makefile", kind=tc.KIND_SELF_REFERENTIAL_EVIDENCE,
+                    mode="100644", oid="b" * 40, reason="bogus",
+                ),
+            ])
+            with self.assertRaises(tc.TreeCoverageError) as ctx:
+                tc.load_exclusions(path)
+            self.assertIn("Makefile", str(ctx.exception))
+
+    def test_extra_curated_kind_row_for_a_second_arbitrary_path_fails(self):
+        """An *additional* self_referential_evidence row alongside the
+        one legitimate curated entry -- for some other, arbitrary path --
+        must fail exactly the same way; the curated set is a ceiling,
+        not merely a floor."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            extra = tc.ExclusionEntry(
+                path="docs/readme.md", kind=tc.KIND_SELF_REFERENTIAL_EVIDENCE,
+                mode="100644", oid=None, reason="extra bogus row",
+            )
+            exclusions = [_exclusion(), _self_ref_exclusion(), extra]
+            result = tc.check_partition(root, ["src/main.c"], exclusions, sha)
+            self.assertIn("docs/readme.md", result.invalid_self_referential_evidence)
+            self.assertFalse(result.is_clean())
+
+    def test_missing_curated_exclusion_for_code_json_fails_via_real_repo_style_fixture(self):
+        """The 'missing curated exclusion' scenario: the curated path is
+        a live blob, correctly absent from the allowlist, but its
+        exclusion row is entirely missing (dropped) -- this is caught by
+        the existing missing_included bucket (no bespoke bijection check
+        is needed inside load_exclusions itself: check_partition's
+        cross-check against the live tree already fully covers it)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            # Only the gitlink exclusion -- the curated self-referential-
+            # evidence row for CURATED_SELF_REF_PATH is missing entirely.
+            result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], [_exclusion()], sha)
+            self.assertIn(CURATED_SELF_REF_PATH, result.missing_included)
+            self.assertFalse(result.is_clean())
+
+    def test_supplied_oid_for_self_referential_evidence_is_rejected_by_load_exclusions(self):
+        """The literal R2 reproducer: a supplied oid (even one that
+        happens to match the live blob's real oid) is rejected outright
+        -- this kind never carries a real oid value, matching or not."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_exclusions(Path(tmp), [
+                _exclusion(),
+                _self_ref_exclusion(oid="c" * 40),
+            ])
+            with self.assertRaises(tc.TreeCoverageError) as ctx:
+                tc.load_exclusions(path)
+            self.assertIn("oid", str(ctx.exception))
+
+    def test_stale_oid_for_self_referential_evidence_never_silently_trusted(self):
+        """A companion to the above using the exact, real, historically-
+        stale oid this repository's own export_exclusions.json once
+        carried for code.json (issue #9 R2's literal reproduction) --
+        rejected exactly the same way as any other supplied oid value,
+        never specially trusted merely because it once was real."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_exclusions(Path(tmp), [
+                _exclusion(),
+                _self_ref_exclusion(oid="1b1e77d300c6464c14915d4369927991fd2f2bfa"),
+            ])
+            with self.assertRaises(tc.TreeCoverageError):
+                tc.load_exclusions(path)
+
+    def test_code_json_content_change_is_never_masked_by_a_stale_oid(self):
+        """issue #9 R2: since this kind's oid is never recorded/
+        cross-checked at all any more, a committed content change to the
+        curated path is detected purely via the ordinary tree-membership
+        contract (it remains a live, correctly-kinded, correctly-moded
+        blob, so the partition stays clean) -- there is no oid field
+        left to go stale/lie about content identity in the first place."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink_and_blob(root)
+            curated_path = root / Path(CURATED_SELF_REF_PATH)
+            curated_path.write_text('["changed content"]')
+            # A *targeted* `add` (never `-a`/`-A`): this fixture's
+            # "mgfembp" gitlink was injected purely via `update-index
+            # --add --cacheinfo` and has no real on-disk directory at
+            # all, so a broad `git commit -a`/`git add -A` here would
+            # itself (spuriously) drop it from the new tree, entirely
+            # unrelated to anything this test is actually exercising.
+            _git("add", CURATED_SELF_REF_PATH, cwd=root)
+            _git("commit", "-q", "-m", "change curated path content", cwd=root)
+            new_sha = gs.resolve_sha(root, "HEAD")
+            exclusions = [_exclusion(), _self_ref_exclusion()]
+            result = tc.check_partition(root, ["src/main.c", "docs/readme.md"], exclusions, new_sha)
+            self.assertTrue(result.is_clean(), result.reasons())
 
 
 class CheckEndToEndTests(unittest.TestCase):
@@ -696,10 +849,12 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertTrue(result.is_clean())
 
     def test_real_repo_exclusions_contains_exactly_mgfembp_and_code_json(self):
-        """issue #9 guardian-correction remediation (D2): the real,
-        committed export exclusions now contain exactly two entries --
-        the pre-existing mgfembp gitlink, and the new, self-referential-
-        evidence docs/release_data/provenance/code.json."""
+        """issue #9 guardian-correction remediation (D2), then R1/R2
+        fix: the real, committed export exclusions now contain exactly
+        two entries -- the pre-existing mgfembp gitlink, and the
+        self-referential-evidence docs/release_data/provenance/
+        code.json -- and code.json's own record is a curated
+        path-only-plus-mode exclusion with no oid claimed at all."""
         exclusion_entries = tc.load_exclusions(ROOT / "docs" / "release_data" / "export_exclusions.json")
         by_path = {e.path: e for e in exclusion_entries}
         self.assertEqual(
@@ -711,6 +866,11 @@ class RepositoryStateTests(unittest.TestCase):
             by_path["docs/release_data/provenance/code.json"].kind, "self_referential_evidence"
         )
         self.assertEqual(by_path["docs/release_data/provenance/code.json"].mode, "100644")
+        self.assertIsNone(
+            by_path["docs/release_data/provenance/code.json"].oid,
+            "code.json is a curated path-only+mode exclusion -- it must never carry a live, "
+            "stale, or fabricated oid (issue #9 R2 fix)",
+        )
 
     def test_real_repo_code_json_is_not_in_the_included_allowlist(self):
         allowlist_paths = al.load_allowlist_paths(ROOT / "docs" / "release_data" / "source_allowlist.json")

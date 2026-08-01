@@ -87,7 +87,17 @@ DEFAULT_EXCLUSIONS_PATH = Path("docs/release_data/export_exclusions.json")
 #   itself) or merely relocate an empty formality to a different file
 #   with no reviewable content of its own. See
 #   `SELF_REFERENTIAL_EVIDENCE_PATHS` below for the exact, minimal,
-#   human-curated set of paths this applies to.
+#   human-curated set of paths this applies to. issue #9 R1/R2 fix: this
+#   kind is a **curated PATH-ONLY-plus-MODE** exclusion, enforced as a
+#   validator invariant (`load_exclusions` AND, independently,
+#   `check_partition`) against that exact, hard-coded path set -- never
+#   a permissive "any non-gitlink kind" definition -- and its `oid` field
+#   is always absent/JSON `null`; a real, stale, or fabricated OID value
+#   is a hard, rejected schema error, and no OID is ever cross-checked or
+#   claimed as a content-identity fact for this kind (only path, kind,
+#   and mode are). This is external rehearsal evidence about this
+#   repository's own tooling, never source archive content and never a
+#   redistribution/legal authorization of any kind.
 KIND_GITLINK = "gitlink"
 KIND_SELF_REFERENTIAL_EVIDENCE = "self_referential_evidence"
 VALID_EXCLUSION_KINDS = (KIND_GITLINK, KIND_SELF_REFERENTIAL_EVIDENCE)
@@ -154,16 +164,24 @@ _SELF_REFERENTIAL_EVIDENCE_REASON_SEED: Dict[str, str] = {
         "*included* (their own oid/sha256 identity, recorded inside this "
         "excluded file, is cross-checked with no exemption at all) -- "
         "only this one genuinely self-referential manifest is excluded. "
-        "This exclusion record (kind, mode, oid, and this reason) is "
-        "this path's own complete, sufficient, externally-owned evidence "
+        "issue #9 R1/R2 fix: this is a curated PATH-ONLY-plus-MODE "
+        "exclusion -- its 'oid' field is always absent/null, never a "
+        "live or fabricated content hash, because a file cannot carry an "
+        "immutable hash of its own not-yet-finalized content without "
+        "exactly the cycle described above; this exclusion record (kind, "
+        "mode, and this reason -- deliberately no oid) is this path's "
+        "own complete, sufficient, externally-owned rehearsal evidence "
         "-- authored and reviewed here, in export_exclusions.json, "
         "exactly like every fact this repository records about the "
         "excluded mgfembp gitlink lives in provenance/submodules.json "
-        "rather than inside mgfembp itself. This is a structural/self-"
-        "reference fix, not a legal determination: like every other "
-        "repository-authored file, this content has no human legal/"
-        "provenance review recorded, and this exclusion grants no "
-        "redistribution approval."
+        "rather than inside mgfembp itself. It is external rehearsal "
+        "evidence about this repository's own tooling, never source "
+        "archive content and never a redistribution/legal authorization "
+        "of any kind. This is a structural/self-reference fix, not a "
+        "legal determination: like every other repository-authored "
+        "file, this content has no human legal/provenance review "
+        "recorded, and this exclusion grants no redistribution "
+        "approval."
     ),
 }
 
@@ -195,11 +213,34 @@ class ExclusionEntry:
     path: str
     kind: str
     mode: str
-    oid: str
+    oid: Optional[str]
     reason: str
 
 
 def load_exclusions(path: Path) -> List[ExclusionEntry]:
+    """issue #9 R1/R2 fix: a `KIND_SELF_REFERENTIAL_EVIDENCE` entry is no
+    longer merely *shape*-validated (safe blob mode, well-formed oid) --
+    its `path` must be an *exact* member of the small, hard-coded,
+    human-curated `SELF_REFERENTIAL_EVIDENCE_PATHS` policy set (no
+    prefix/wildcard match of any kind is ever performed), and its `oid`
+    must be entirely absent or explicit JSON `null` (never a supplied
+    string of any kind, real or fabricated) -- this kind never records
+    or claims a live-content-bound OID at all (see the module docstring
+    and `SELF_REFERENTIAL_EVIDENCE_PATHS`'s own docstring for the "hash
+    quine" rationale this schema now makes structurally impossible to
+    misrepresent, rather than merely documenting). An arbitrary tracked
+    path claiming this kind (an extra, uncurated self-evidence row) is
+    therefore rejected here, at load time, before it can ever reach
+    `check_partition`'s own independent, hard-coded-against-the-same-
+    policy-set enforcement (see `PartitionResult.invalid_self_
+    referential_evidence` below) -- a validator invariant enforced
+    twice, not merely a generator convention trusted once.
+
+    A `KIND_GITLINK` entry's `oid` remains exactly as before: mandatory,
+    and a well-formed 40-lowercase-hex string (a gitlink's pinned commit
+    is a genuine, human-reviewed fact, unlike a self-referential-
+    evidence entry's oid, which no longer exists as a field with any
+    claimed meaning at all)."""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -212,7 +253,7 @@ def load_exclusions(path: Path) -> List[ExclusionEntry]:
     for index, raw in enumerate(raw_entries):
         if not isinstance(raw, dict):
             raise TreeCoverageError(f"{path}[{index}]: entry must be a JSON object")
-        missing = [key for key in ("path", "kind", "mode", "oid", "reason") if not raw.get(key)]
+        missing = [key for key in ("path", "kind", "mode", "reason") if not raw.get(key)]
         if missing:
             raise TreeCoverageError(
                 f"{path}[{index}] ({raw.get('path', '?')!r}): missing/empty required key(s): "
@@ -222,24 +263,49 @@ def load_exclusions(path: Path) -> List[ExclusionEntry]:
             raise TreeCoverageError(
                 f"{path}[{index}] ({raw['path']}): kind {raw['kind']!r} not in {VALID_EXCLUSION_KINDS}"
             )
-        if raw["kind"] == KIND_GITLINK and raw["mode"] != gs.MODE_GITLINK:
-            raise TreeCoverageError(
-                f"{path}[{index}] ({raw['path']}): kind 'gitlink' must record mode {gs.MODE_GITLINK!r}, "
-                f"found {raw['mode']!r}"
-            )
-        if raw["kind"] == KIND_SELF_REFERENTIAL_EVIDENCE and raw["mode"] not in gs.SAFE_BLOB_MODES:
-            raise TreeCoverageError(
-                f"{path}[{index}] ({raw['path']}): kind {KIND_SELF_REFERENTIAL_EVIDENCE!r} must "
-                f"record a safe blob mode {gs.SAFE_BLOB_MODES!r}, found {raw['mode']!r}"
-            )
-        if not isinstance(raw["oid"], str) or len(raw["oid"]) != 40 or raw["oid"].lower() != raw["oid"]:
-            raise TreeCoverageError(
-                f"{path}[{index}] ({raw['path']}): oid {raw['oid']!r} must be exactly 40 lowercase hex characters"
-            )
+        if raw["kind"] == KIND_GITLINK:
+            if raw["mode"] != gs.MODE_GITLINK:
+                raise TreeCoverageError(
+                    f"{path}[{index}] ({raw['path']}): kind 'gitlink' must record mode "
+                    f"{gs.MODE_GITLINK!r}, found {raw['mode']!r}"
+                )
+            oid = raw.get("oid")
+            if not isinstance(oid, str) or len(oid) != 40 or oid.lower() != oid:
+                raise TreeCoverageError(
+                    f"{path}[{index}] ({raw['path']}): kind 'gitlink' oid {oid!r} must be exactly "
+                    "40 lowercase hex characters"
+                )
+        elif raw["kind"] == KIND_SELF_REFERENTIAL_EVIDENCE:
+            if raw["path"] not in SELF_REFERENTIAL_EVIDENCE_PATHS:
+                raise TreeCoverageError(
+                    f"{path}[{index}] ({raw['path']}): kind {KIND_SELF_REFERENTIAL_EVIDENCE!r} is only "
+                    f"ever valid for the exact, hard-coded, human-curated path(s) "
+                    f"{sorted(SELF_REFERENTIAL_EVIDENCE_PATHS)} -- no other tracked path, of any kind, "
+                    "may ever be excluded this way (an arbitrary path masquerading as self-referential "
+                    "evidence, e.g. to escape ordinary allowlist/archive coverage, is never accepted)"
+                )
+            if raw["mode"] not in gs.SAFE_BLOB_MODES:
+                raise TreeCoverageError(
+                    f"{path}[{index}] ({raw['path']}): kind {KIND_SELF_REFERENTIAL_EVIDENCE!r} must "
+                    f"record a safe blob mode {gs.SAFE_BLOB_MODES!r}, found {raw['mode']!r}"
+                )
+            oid = raw.get("oid")
+            if oid is not None:
+                raise TreeCoverageError(
+                    f"{path}[{index}] ({raw['path']}): kind {KIND_SELF_REFERENTIAL_EVIDENCE!r} must "
+                    f"omit 'oid' or record it as JSON null, found {oid!r} -- this kind never carries a "
+                    "live-content-bound OID (a file cannot record an immutable hash of its own "
+                    "not-yet-finalized content without an unsolvable cycle -- see this module's "
+                    "docstring), so a supplied/stale/fake oid value is never accepted, and no oid is "
+                    "ever cross-checked or claimed as a content-identity fact for this kind"
+                )
         if raw["path"] in seen_paths:
             raise TreeCoverageError(f"{path}: duplicate exclusion entry for path {raw['path']!r}")
         seen_paths.add(raw["path"])
-        entries.append(ExclusionEntry(path=raw["path"], kind=raw["kind"], mode=raw["mode"], oid=raw["oid"], reason=raw["reason"]))
+        entries.append(ExclusionEntry(
+            path=raw["path"], kind=raw["kind"], mode=raw["mode"],
+            oid=raw.get("oid"), reason=raw["reason"],
+        ))
     return entries
 
 
@@ -327,7 +393,15 @@ def generate_exclusions_document(repo_root: Path, target_sha: str) -> Dict:
             "path": path,
             "kind": KIND_SELF_REFERENTIAL_EVIDENCE,
             "mode": tree_entry.mode,
-            "oid": tree_entry.object_id,
+            # issue #9 R2 fix: this kind never records an 'oid' at all --
+            # a file cannot carry an immutable hash of its own
+            # not-yet-finalized content without an unsolvable cycle (see
+            # this module's docstring). Always exactly `None` (rendered
+            # as JSON `null`), never `tree_entry.object_id` -- a live oid
+            # here would be stale the instant any other tracked path
+            # changes, and `load_exclusions`/`check_partition` never
+            # cross-check or claim any content-identity meaning for it.
+            "oid": None,
             "reason": reason,
         })
     entries.sort(key=lambda entry: entry["path"])
@@ -380,12 +454,13 @@ class PartitionResult:
     overlap: List[str]
     unaccounted: List[str]
     prefix_exclusions: List[str]
+    invalid_self_referential_evidence: List[str]
 
     def is_clean(self) -> bool:
         return not any((
             self.missing_included, self.stale_included, self.missing_excluded,
             self.stale_excluded, self.mismatched_excluded, self.overlap,
-            self.unaccounted, self.prefix_exclusions,
+            self.unaccounted, self.prefix_exclusions, self.invalid_self_referential_evidence,
         ))
 
     def reasons(self) -> List[str]:
@@ -410,6 +485,12 @@ class PartitionResult:
             f"(broad-prefix exclusions are forbidden): {p}"
             for p in self.prefix_exclusions
         ]
+        reasons += [
+            f"self_referential_evidence-kind exclusion for a path outside the exact, hard-coded "
+            f"curated policy set {sorted(SELF_REFERENTIAL_EVIDENCE_PATHS)} (an arbitrary/extra "
+            f"self-evidence row is never accepted, regardless of its mode/oid shape): {p}"
+            for p in self.invalid_self_referential_evidence
+        ]
         return sorted(reasons)
 
 
@@ -426,12 +507,28 @@ def check_partition(
     live tree must be in exactly one of the two sets; every entry in
     either checked-in set must still correspond to a live tracked path of
     the expected kind (a `KIND_GITLINK` exclusion must be a live gitlink;
-    a `KIND_SELF_REFERENTIAL_EVIDENCE` -- or any other future non-gitlink
-    -- exclusion must be a live safe blob; every other tracked blob must
-    be included), with the excluded entry's own recorded mode/oid
-    matching the live tree's exactly -- a changed/stale pin, or a path
-    whose live kind no longer matches its exclusion's own declared kind,
-    is reported, never silently trusted."""
+    a `KIND_SELF_REFERENTIAL_EVIDENCE` exclusion must be a live safe blob
+    AND an exact member of the hard-coded `SELF_REFERENTIAL_EVIDENCE_
+    PATHS` policy set; every other tracked blob must be included), with
+    the excluded entry's own recorded mode matching the live tree's
+    exactly -- a changed/stale pin, or a path whose live kind no longer
+    matches its exclusion's own declared kind, is reported, never
+    silently trusted.
+
+    issue #9 R1 fix: this is a *validator invariant*, enforced here
+    directly against the hard-coded `SELF_REFERENTIAL_EVIDENCE_PATHS`
+    constant -- independently of, and in addition to, `load_exclusions`'s
+    own identical check -- so a caller that constructs `ExclusionEntry`
+    objects directly (bypassing `load_exclusions` entirely) gets exactly
+    the same fail-closed guarantee: an arbitrary tracked path (of any
+    kind) can never be moved out of the included allowlist and into a
+    `self_referential_evidence`-kind exclusion row to escape coverage,
+    no matter how the exclusion entries were constructed. Such a row is
+    reported via `invalid_self_referential_evidence` below, and (since it
+    is never treated as a legitimate exclusion) its underlying tracked
+    blob -- if not otherwise allowlisted -- is *also* independently
+    reported via `missing_included`, exactly as if no exclusion row for
+    it existed at all."""
     tree = {entry.path: entry for entry in gs.list_tree(repo_root, target_sha)}
     all_paths = set(tree)
     blob_paths = {path for path, entry in tree.items() if not entry.is_gitlink}
@@ -441,15 +538,34 @@ def check_partition(
     exclusion_by_path = {entry.path: entry for entry in exclusion_entries}
     exclusion_set = set(exclusion_by_path)
     exclusion_gitlink_paths = {p for p, e in exclusion_by_path.items() if e.kind == KIND_GITLINK}
-    exclusion_blob_paths = exclusion_set - exclusion_gitlink_paths
+
+    # issue #9 R1 fix: a `self_referential_evidence`-kind exclusion only
+    # ever legitimately substitutes for an included-allowlist entry when
+    # its path is an *exact* member of the hard-coded curated policy set
+    # -- never merely "any kind other than gitlink" (that permissive
+    # definition, used previously, is exactly what let an arbitrary
+    # tracked path masquerade as this kind and vanish from coverage).
+    curated_self_referential_evidence_paths = {
+        p for p, e in exclusion_by_path.items()
+        if e.kind == KIND_SELF_REFERENTIAL_EVIDENCE and p in SELF_REFERENTIAL_EVIDENCE_PATHS
+    }
+    invalid_self_referential_evidence = {
+        p for p, e in exclusion_by_path.items()
+        if e.kind == KIND_SELF_REFERENTIAL_EVIDENCE and p not in SELF_REFERENTIAL_EVIDENCE_PATHS
+    }
 
     overlap = allowlist_set & exclusion_set
 
-    # A blob-kind exclusion (e.g. the self-referential-evidence
-    # provenance manifest) is never required to also be an included
-    # allowlist entry -- it is deliberately excluded instead; only a
-    # tracked blob that is in *neither* set at all is "missing_included".
-    missing_included = blob_paths - allowlist_set - exclusion_blob_paths
+    # A *curated* self-referential-evidence exclusion is never required
+    # to also be an included allowlist entry -- it is deliberately
+    # excluded instead; only a tracked blob that is in *neither* set at
+    # all (nor properly, curated-ly excluded) is "missing_included". An
+    # *invalid* (uncurated) self-referential-evidence row does **not**
+    # count here -- its underlying blob is therefore still independently
+    # reported missing_included too, exactly as if that bogus row were
+    # never written at all (defense-in-depth alongside `invalid_self_
+    # referential_evidence` itself).
+    missing_included = blob_paths - allowlist_set - curated_self_referential_evidence_paths
     stale_included = allowlist_set - blob_paths
 
     # Only a *gitlink*-kind exclusion is required for every live gitlink
@@ -462,7 +578,7 @@ def check_partition(
     # live tracked path of its own declared kind -- checked per-entry so
     # a kind-mismatch (e.g. a `KIND_GITLINK` exclusion whose path is now
     # an ordinary blob, or vice versa) is caught as precisely as an
-    # outright-missing path, never conflated with a simple oid/mode
+    # outright-missing path, never conflated with a simple mode
     # mismatch.
     stale_excluded = set()
     mismatched_excluded = set()
@@ -475,36 +591,17 @@ def check_partition(
         if entry.mode != tree_entry.mode:
             mismatched_excluded.add(path)
             continue
-        # A KIND_GITLINK exclusion's `oid` is a genuinely *pinned*,
-        # human-reviewed fact (the submodule commit a human chose to
-        # point at) -- live drift there (the pin silently moved without
-        # this record being regenerated) is exactly the kind of thing
-        # that must be reported. A KIND_SELF_REFERENTIAL_EVIDENCE
-        # exclusion's `oid` is different in kind: it is this repository's
-        # *own* generated evidence-manifest content, which is expected
-        # to change on every regeneration cycle (whenever any other
-        # tracked path changes) and is never independently "pinned" by a
-        # human the way a submodule commit is. Recording and (a fresh,
-        # independent review found) *enforcing* an exact live-oid match
-        # for this specific field would recreate a two-file variant of
-        # the same "hash quine" the self-referential-evidence exclusion
-        # itself was designed to solve: this file
-        # (export_exclusions.json) is an ordinary *included* blob, so
-        # code.json (the provenance manifest) must record *its* own
-        # accurate oid for export_exclusions.json -- but export_
-        # exclusions.json's own exclusion record for code.json would
-        # then need to embed code.json's oid *after* that same write,
-        # which only exists once export_exclusions.json itself has
-        # already been written, an unresolvable ordering cycle between
-        # exactly these two files. The `oid` recorded for a
-        # KIND_SELF_REFERENTIAL_EVIDENCE exclusion is therefore
-        # documentary/best-effort only (still schema-shape-validated,
-        # still regenerated fresh every time, still visible for human
-        # review) -- never enforced for exact live-content equality here.
-        # `stale_excluded` above still fully, strictly enforces that the
-        # path is a live, correctly-kinded blob; only the fast-moving
-        # `oid` field's exact-match enforcement is relaxed, and only for
-        # this one exclusion kind.
+        # issue #9 R2 fix: only a `KIND_GITLINK` exclusion's `oid` is a
+        # genuinely *pinned*, human-reviewed fact (the submodule commit a
+        # human chose to point at) -- live drift there (the pin silently
+        # moved without this record being regenerated) is exactly the
+        # kind of thing that must be reported. A `KIND_SELF_REFERENTIAL_
+        # EVIDENCE` exclusion no longer carries an `oid` field with any
+        # claimed meaning at all (see `load_exclusions`/`generate_
+        # exclusions_document`) -- there is therefore nothing to compare
+        # here for that kind; `stale_excluded`/`mismatched_excluded`
+        # above still fully, strictly enforce that the path is a live,
+        # correctly-kinded, correctly-moded blob.
         if entry.kind == KIND_GITLINK and entry.oid != tree_entry.object_id:
             mismatched_excluded.add(path)
 
@@ -531,6 +628,7 @@ def check_partition(
         overlap=sorted(overlap),
         unaccounted=sorted(unaccounted),
         prefix_exclusions=sorted(prefix_exclusions),
+        invalid_self_referential_evidence=sorted(invalid_self_referential_evidence),
     )
 
 
