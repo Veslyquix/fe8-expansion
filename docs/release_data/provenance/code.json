@@ -668,8 +668,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "774755c0eec4b459e3b5a5b0245c7e92a5dd1189",
-    "sha256": "5299a48091203fca64839151cb72e290e3192f79337f1d784538d7eb9d62b82a"
+    "oid": "e5a090f96e41c5ce2a3166a0fb6463dd4091cc60",
+    "sha256": "aee39094976b5906d43efb76577e0b99bf66551626fd0e9223700731c2f154fb"
   },
   {
     "path": "docs/release_data/provenance/submodules.json",
@@ -9980,8 +9980,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored build tooling/config/source surface (or, for asm/, decompiled disassembly derived from the original ROM). No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "8e5aeb766682d73e2dab79bb39311522e2c47224",
-    "sha256": "623ae2aff5b6d074bce89e5d0f8a38b0f3e7cceaeab95c7f2375f70c8ba007b7"
+    "oid": "e5540bc3fd3a721e6829173c29d423b74169c0ad",
+    "sha256": "db15936e7dd508beddfd42eb396af936c3e4123c1d6e2a5a7926d1cce3b64e89"
   },
   {
     "path": "scripts/release_rehearsal/changelog.py",
@@ -10148,8 +10148,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored build tooling/config/source surface (or, for asm/, decompiled disassembly derived from the original ROM). No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "6b826019d9948884f9201f4e67c2ad7d1c1b6eab",
-    "sha256": "d46a3a100ef2fe23e177f557b578c660f32581a6630c4098c5125503b0909c10"
+    "oid": "46b91834ac8bd10bc0557698ec184542cc5011d8",
+    "sha256": "ce7c21ba1ed6bb5fe68b41448d9ced2da4b9b00df14990fe08a528ae4e4a6ccb"
   },
   {
     "path": "scripts/release_rehearsal/tests/test_changelog.py",

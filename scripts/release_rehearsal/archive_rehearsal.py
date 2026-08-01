@@ -49,6 +49,7 @@ from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
 
 from scripts.release_rehearsal import allowlist as al
 from scripts.release_rehearsal import git_source as gs
+from scripts.release_rehearsal import gitmodules as gm
 from scripts.release_rehearsal import provenance as prov
 from scripts.release_rehearsal import source_guard as sg
 from scripts.release_rehearsal import tree_coverage as tc
@@ -382,6 +383,90 @@ def _parse_submodule_status(status_output: str, submodule_path: str) -> Tuple[Op
     return None, "?"
 
 
+# --- Submodule dirty-worktree / URL / accessible-object guards (issue #9 --
+# guardian-correction remediation, D3) -------------------------------------
+#
+# `evaluate_rebuild_eligibility` below previously treated "'git submodule
+# status' reports this path as initialized and at the pinned commit" as
+# sufficient -- but that indicator alone says nothing about whether the
+# submodule's own *worktree* is clean. An independent review reproduced
+# exactly this gap: a submodule whose HEAD commit matches the pinned
+# gitlink SHA (so `git submodule status` shows it "in sync") can still
+# have locally modified/staged/untracked files sitting in its working
+# tree, and the *previous* materialization strategy (`shutil.copytree`
+# of that live worktree -- see the old `_copy_verified_submodule_content`
+# below, replaced by `_materialize_verified_submodule_content`) copied
+# exactly those dirty bytes into both "independent" build runs, which
+# could then report `verified_success` over tampered content. The
+# functions below close that gap; `evaluate_rebuild_eligibility` calls
+# every one of them before ever considering the submodule eligible.
+
+
+def _submodule_worktree_status_output(submodule_dir: Path) -> str:
+    """Raw `git status --porcelain=v1` output from *inside* the
+    submodule's own working tree (never the superproject) -- empty
+    output means a genuinely clean worktree/index: no modified, staged,
+    or untracked path at all. Raises `ArchiveRehearsalError` (an
+    actionable tooling defect) if the command itself cannot even run --
+    this is only ever called once `submodule_dir` is already known to be
+    initialized/present."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1"], cwd=str(submodule_dir), capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise ArchiveRehearsalError(
+            f"git status failed inside the '{submodule_dir}' submodule worktree: {result.stderr.strip()}"
+        )
+    return result.stdout
+
+
+def _submodule_configured_url(submodule_dir: Path) -> Optional[str]:
+    """The submodule's own configured `remote.origin.url`, read directly
+    from *inside* its own git config (never from the superproject's
+    `.gitmodules`) -- `None` if unset/unreadable (e.g. no `origin` remote
+    configured at all), which is reported as a distinct, honestly-
+    unresolved fact rather than fabricated as a match or a mismatch."""
+    result = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"], cwd=str(submodule_dir), capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return None
+    url = result.stdout.strip()
+    return url or None
+
+
+def _submodule_declared_url(repo_root: Path, submodule_path: str) -> Optional[str]:
+    """The superproject's own `.gitmodules` (read at HEAD via
+    `gitmodules.py`'s immutable blob parser -- never the worktree path)
+    declared `url` for `submodule_path`; `None` if `.gitmodules` is
+    missing/malformed or declares no matching section (reported as its
+    own, separate finding elsewhere -- `submodule_binding.py` -- this
+    function only ever returns the bare value or `None`, never raises
+    for a normal "no such section" case)."""
+    try:
+        sections = gm.load_gitmodules_sections(repo_root, "HEAD")
+    except gm.GitmodulesError:
+        return None
+    for section in sections.values():
+        if section.get("path") == submodule_path:
+            return section.get("url")
+    return None
+
+
+def _submodule_pinned_object_accessible(submodule_dir: Path, pinned_commit: str) -> bool:
+    """True only if `pinned_commit` is a real, locally-present commit
+    object inside the submodule's own object database (`git cat-file -e
+    <sha>^{commit}`) -- a shallow clone, a corrupt/incomplete object
+    database, or simply a wrong/unresolvable SHA all report `False` here,
+    never silently treated as accessible. A rebuild can never
+    successfully materialize content it cannot actually read."""
+    result = subprocess.run(
+        ["git", "cat-file", "-e", f"{pinned_commit}^{{commit}}"],
+        cwd=str(submodule_dir), capture_output=True, text=True,
+    )
+    return result.returncode == 0
+
+
 def evaluate_rebuild_eligibility(
     repo_root: Path,
     submodule_path: str = "mgfembp",
@@ -389,12 +474,36 @@ def evaluate_rebuild_eligibility(
 ) -> Tuple[bool, Dict]:
     """Read-only (never fetches/initializes/approves anything) check of
     whether a clean recursive rebuild involving `submodule_path` is even
-    *eligible* to attempt: the submodule must be (1) initialized/checked
-    out, (2) at exactly its provenance-pinned commit, and (3) recorded
-    with `redistribution_approved: true`. All three must hold -- this
-    function only ever *reads* `docs/release_data/provenance/*.json` and
-    `git submodule status`; it never writes, fetches, or flips any of
-    them itself.
+    *eligible* to attempt. ALL of the following must hold (issue #9
+    guardian-correction remediation, D3, added (4)-(6) below -- a
+    dirty-but-commit-matching submodule worktree was previously the one
+    fact this function never checked, so its content could be copied
+    live into a rebuild and reported `verified_success` even though it
+    was never actually the reviewed, pinned bytes):
+
+    1. initialized/checked out (`git submodule status`);
+    2. at exactly its provenance-pinned commit (no `git submodule
+       status` `"+"`/identity-mismatch indicator);
+    3. recorded with `redistribution_approved: true`;
+    4. a genuinely clean submodule worktree/index -- `git status
+       --porcelain` run *inside* the submodule itself reports nothing at
+       all (no modified, staged, or untracked path);
+    5. the submodule's own configured `remote.origin.url` agrees with
+       `.gitmodules`'s declared `url` for this path (when both are
+       actually known/set); and
+    6. the provenance-pinned commit is a real, locally-accessible commit
+       object inside the submodule's own object database (`git cat-file
+       -e <sha>^{commit}`).
+
+    This function only ever *reads* `docs/release_data/provenance/*.json`,
+    `git submodule status`, and (once initialized) the submodule's own
+    `git status`/`git config`/`git cat-file` -- it never writes, fetches,
+    or flips any of them itself. See `rebuild_rehearsal_blocker` /
+    `_materialize_verified_submodule_content` for how (once *and only
+    once* every one of the above holds) the submodule's content is
+    actually placed into a rebuild -- never a `shutil.copytree` of this
+    checked live worktree, always a fresh `git archive <pinned_commit>`
+    extraction bound to that exact immutable commit object.
 
     issue #9 verifier remediation: when `repo_root` has no `.git` at all
     (a genuine extracted archive/non-git candidate tree), this returns
@@ -423,6 +532,10 @@ def evaluate_rebuild_eligibility(
             "submodule_status_output": "",
             "submodule_initialized": False,
             "submodule_checked_out_sha": None,
+            "submodule_worktree_clean": False,
+            "submodule_configured_url": None,
+            "submodule_declared_url": None,
+            "submodule_pinned_object_accessible": False,
             "provenance_pinned_commit": None,
             "provenance_redistribution_approved": False,
             "identity_matches_pinned": False,
@@ -440,6 +553,44 @@ def evaluate_rebuild_eligibility(
             f"worktree (see 'git submodule status' output); recursively fetching it now would "
             "pull unreviewed third-party content into a rehearsal that must remain read-only "
             "and provenance-blocked, so this rehearsal does not fetch it"
+        )
+
+    # issue #9 guardian-correction remediation (D3): "initialized and at
+    # the pinned commit" (above) is necessary but never sufficient -- a
+    # dirty, staged, or untracked submodule worktree must also make this
+    # ineligible (see the "Submodule dirty-worktree" block's own
+    # docstring above `_submodule_worktree_status_output`), since a
+    # rebuild must materialize the pinned commit's own immutable content,
+    # never whatever extra/modified bytes happen to be sitting in a live
+    # checkout that merely *starts* from that commit.
+    submodule_dir = repo_root / submodule_path
+    worktree_clean = False
+    configured_url: Optional[str] = None
+    if initialized:
+        try:
+            worktree_status = _submodule_worktree_status_output(submodule_dir)
+        except ArchiveRehearsalError as error:
+            reasons.append(str(error))
+            worktree_status = None
+        if worktree_status is not None:
+            worktree_clean = worktree_status.strip() == ""
+            if not worktree_clean:
+                reasons.append(
+                    f"the '{submodule_path}' submodule worktree/index is not clean ('git status "
+                    "--porcelain' reports modified, staged, and/or untracked path(s) inside it) "
+                    "-- a dirty submodule checkout can never be treated as the reviewed, pinned "
+                    f"content, even when its own HEAD commit matches the pinned gitlink: "
+                    f"{worktree_status.strip()!r}"
+                )
+        configured_url = _submodule_configured_url(submodule_dir)
+
+    declared_url = _submodule_declared_url(repo_root, submodule_path)
+    url_matches = True
+    if initialized and configured_url is not None and declared_url is not None and configured_url != declared_url:
+        url_matches = False
+        reasons.append(
+            f"the '{submodule_path}' submodule's configured remote URL {configured_url!r} does "
+            f"not match .gitmodules's declared URL {declared_url!r}"
         )
 
     pinned_commit: Optional[str] = None
@@ -474,11 +625,33 @@ def evaluate_rebuild_eligibility(
         identity_ok = False
         reasons.append(f"'{submodule_path}' has an unresolved merge conflict in 'git submodule status'")
 
-    eligible = initialized and approved and identity_ok
+    # issue #9 guardian-correction remediation (D3): the pinned commit
+    # object must actually be present/readable inside the submodule's
+    # own object database -- never assumed accessible merely because a
+    # provenance record names it.
+    pinned_object_accessible = False
+    if initialized and pinned_commit:
+        pinned_object_accessible = _submodule_pinned_object_accessible(submodule_dir, pinned_commit)
+        if not pinned_object_accessible:
+            reasons.append(
+                f"the pinned commit {pinned_commit!r} is not accessible as a real, locally-"
+                f"present commit object inside the '{submodule_path}' submodule (e.g. a shallow "
+                "clone, or a corrupt/incomplete object database) -- a rebuild cannot materialize "
+                "content it cannot read"
+            )
+
+    eligible = (
+        initialized and approved and identity_ok
+        and worktree_clean and url_matches and pinned_object_accessible
+    )
     return eligible, {
         "submodule_status_output": status_output,
         "submodule_initialized": initialized,
         "submodule_checked_out_sha": checked_out_sha,
+        "submodule_worktree_clean": worktree_clean,
+        "submodule_configured_url": configured_url,
+        "submodule_declared_url": declared_url,
+        "submodule_pinned_object_accessible": pinned_object_accessible,
         "provenance_pinned_commit": pinned_commit,
         "provenance_redistribution_approved": approved,
         "identity_matches_pinned": identity_ok,
@@ -486,60 +659,30 @@ def evaluate_rebuild_eligibility(
     }
 
 
-def run_build_twice(
-    build_command: List[str],
-    source_dir: Path,
-    output_relpaths: List[str],
-    env: Optional[Dict[str, str]] = None,
-) -> Dict:
-    """The actual, executable "run a build command twice and compare its
-    declared outputs" mechanism -- never a mocked boolean. Each run copies
-    `source_dir` into its own fresh temporary directory first (so the two
-    runs cannot see each other's leftover state or share any mutable
-    output directory), then invokes `build_command` via `subprocess.run`
-    with that copy as the working directory, then SHA-256-hashes every
-    path in `output_relpaths` that exists afterwards. `match` is True only
-    if both runs exit `0` and every declared output exists and is
-    byte-identical between the two runs."""
-
-    def _one_run() -> Tuple[int, str, str, Dict[str, Optional[str]]]:
-        with tempfile.TemporaryDirectory(prefix="fe8-rebuild-run-") as run_dir:
-            run_root = Path(run_dir) / "src"
-            shutil.copytree(source_dir, run_root)
-            result = subprocess.run(
-                build_command, cwd=str(run_root), capture_output=True, text=True, env=env,
-            )
-            hashes: Dict[str, Optional[str]] = {}
-            for relpath in output_relpaths:
-                out_path = run_root / relpath
-                hashes[relpath] = hash_file(out_path) if out_path.is_file() else None
-            return result.returncode, result.stdout, result.stderr, hashes
-
-    returncode1, _stdout1, stderr1, hashes1 = _one_run()
-    returncode2, _stdout2, stderr2, hashes2 = _one_run()
-
-    outputs_present = (
-        bool(output_relpaths)
-        and all(value is not None for value in hashes1.values())
-        and all(value is not None for value in hashes2.values())
-    )
-    match = returncode1 == 0 and returncode2 == 0 and outputs_present and hashes1 == hashes2
-    return {
-        "returncode1": returncode1,
-        "returncode2": returncode2,
-        "hashes1": hashes1,
-        "hashes2": hashes2,
-        "outputs_present": outputs_present,
-        "match": match,
-        "stderr1_tail": stderr1[-2000:],
-        "stderr2_tail": stderr2[-2000:],
-    }
-
-
 # --- Independent immutable-source rebuild materialization (issue #9 ------
-# mandatory correction #7) --------------------------------------------
+# mandatory correction #7 / guardian-correction remediation D1) ---------
 #
-# `run_build_twice()` above already proves each run gets its own fresh
+# issue #9 guardian-correction remediation (D1): a previous version of
+# this module also defined `run_build_twice()`, a copy-based ("each run
+# `shutil.copytree`s `source_dir` -- itself whatever mutable path the
+# caller passed in -- into its own temp dir") double-build helper. It was
+# never actually wired into `rebuild_rehearsal_blocker()`/the release
+# manifest's `verified_success` computation at all (only the
+# independent-immutable-materialization function below ever was) -- but
+# release-evidence docs and a test's own docstring nonetheless
+# (incorrectly) described a test built on top of *that* legacy function
+# as if it drove `rebuild_rehearsal_blocker()` itself end-to-end, which
+# an independent review reproduced as a documentation/evidence defect
+# (D1). Rather than leave a legacy, copy-of-a-mutable-directory API
+# sitting around for some *future* doc/test to misattribute the same way
+# again, it is deleted outright here -- see
+# `scripts/release_rehearsal/tests/test_archive_rehearsal.py`'s
+# `RebuildRehearsalBlockerEndToEndVerifiedSuccessTests` for the real,
+# corrected end-to-end replacement (which drives `rebuild_rehearsal_
+# blocker()` itself, through a synthetic fully-eligible submodule
+# fixture, to `REBUILD_STATUS_VERIFIED_SUCCESS`).
+#
+# `run_build_twice_from_immutable_source()` below already proves each run gets its own fresh
 # copy of `source_dir` and never mutates the caller's original directory
 # -- but that original `source_dir` is itself whatever the caller
 # passed in, which for a live git worktree is *mutable* (worktree/index
@@ -736,30 +879,62 @@ def run_build_twice_from_immutable_source(
         "match": match,
         "stderr1_tail": run1["stderr_tail"],
         "stderr2_tail": run2["stderr_tail"],
+        # Evidence-honesty/transparency (guardian-correction remediation):
+        # each run's own independent materialization root, surfaced so a
+        # caller/test can directly observe (never merely assume) that the
+        # two runs used genuinely distinct directories -- in addition to
+        # the hard `ArchiveRehearsalError` guard above, which already
+        # refuses to report anything at all if they were ever the same.
+        "materialization_root1": run1["run_root"],
+        "materialization_root2": run2["run_root"],
     }
 
 
-def _copy_verified_submodule_content(repo_root: Path, submodule_path: str) -> Callable[[Path], None]:
+def _materialize_verified_submodule_content(
+    repo_root: Path, submodule_path: str, pinned_commit: str
+) -> Callable[[Path], None]:
     """Returns an `extra_materialize` callback (see
-    `run_build_twice_from_immutable_source`) that copies `submodule_path`'s
-    *already-eligibility-verified* on-disk content (initialized,
-    identity-matched to the pinned commit, and provenance-approved --
-    `evaluate_rebuild_eligibility` confirmed all three before this is
-    ever called) into each independent materialization. `git archive`
-    never includes submodule content at all (see
-    `GITHUB_AUTOARCHIVE_SUBMODULE_CONTRADICTION`), so this is the one,
-    narrow, explicitly-gated exception to "everything comes from `git
-    archive`" -- the submodule's own nested `.git` (a gitdir-pointer file
-    in a real checkout) is deliberately never copied, since it would
-    point at a path that does not exist inside the isolated copy and is
-    not needed to read the submodule's already-verified file content."""
-    submodule_src = repo_root / submodule_path
+    `run_build_twice_from_immutable_source`) that materializes
+    `submodule_path`'s content into each independent materialization from
+    the submodule's own **immutable Git object** at `pinned_commit` --
+    never from its live, potentially-dirty worktree bytes.
+
+    issue #9 guardian-correction remediation (D3): the previous version
+    of this function (`_copy_verified_submodule_content`) used
+    `shutil.copytree` on the submodule's own checked-out *worktree*
+    directory. `evaluate_rebuild_eligibility` confirming the submodule's
+    HEAD commit matches the pinned gitlink is not the same fact as "the
+    worktree bytes exactly equal that commit's tree": a modified,
+    staged, or untracked file can sit in an otherwise commit-matching
+    checkout, and copying that live directory would silently carry those
+    extra/changed bytes into a rebuild that is then reported
+    `verified_success` over tampered content -- an independent review
+    reproduced exactly this. `evaluate_rebuild_eligibility` now also
+    requires the submodule worktree/index to be genuinely clean before
+    eligibility is ever granted at all (defense #1) -- but this function
+    is independent defense #2: even if eligibility were ever wrongly
+    granted by a future bug, this materializer itself never reads a
+    single byte from the submodule's worktree path; it always extracts
+    `pinned_commit`'s own immutable tree via `git archive
+    <pinned_commit> | tar -x`, run with the submodule's own directory as
+    the *source repository* (`materialize_immutable_source_tree`, the
+    exact same immutable-extraction mechanism already used for the
+    superproject's own content) -- so the materialized bytes are
+    provably bound to the pinned commit object, never to whatever
+    happens to be checked out on disk right now. `git archive` never
+    includes submodule content in the *superproject's own* archive at
+    all (see `GITHUB_AUTOARCHIVE_SUBMODULE_CONTRADICTION`), so this is
+    the one, narrow, explicitly-gated exception to "everything comes
+    from the superproject's own `git archive`" -- it still never reads
+    the submodule's worktree, only its own object database."""
+    submodule_dir = repo_root / submodule_path
 
     def _materialize(run_root: Path) -> None:
         submodule_dest = run_root / submodule_path
         if submodule_dest.exists():
             shutil.rmtree(submodule_dest)
-        shutil.copytree(submodule_src, submodule_dest, ignore=shutil.ignore_patterns(".git"))
+        submodule_dest.mkdir(parents=True)
+        materialize_immutable_source_tree(submodule_dir, pinned_commit, submodule_dest)
 
     return _materialize
 
@@ -849,9 +1024,14 @@ def rebuild_rehearsal_blocker(
             **base_report,
         }
 
+    # `eligible` is only ever True once `evaluate_rebuild_eligibility`
+    # has already confirmed `provenance_pinned_commit` is set, matches
+    # the submodule's own checked-out HEAD, and is a real, locally-
+    # accessible commit object -- so it is always non-None here.
+    pinned_commit = eligibility_report["provenance_pinned_commit"]
     build_result = run_build_twice_from_immutable_source(
         repo_root, resolved_target_sha, build_command, output_relpaths,
-        extra_materialize=_copy_verified_submodule_content(repo_root, submodule_path),
+        extra_materialize=_materialize_verified_submodule_content(repo_root, submodule_path, pinned_commit),
     )
     status = REBUILD_STATUS_VERIFIED_SUCCESS if build_result["match"] else REBUILD_STATUS_FAILED
     reasons = [] if status == REBUILD_STATUS_VERIFIED_SUCCESS else [

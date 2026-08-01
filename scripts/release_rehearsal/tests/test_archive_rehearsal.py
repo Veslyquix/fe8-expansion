@@ -1,6 +1,7 @@
 """Tests for scripts/release_rehearsal/archive_rehearsal.py (issue #9)."""
 
 import glob
+import hashlib
 import json
 import os
 import shutil
@@ -109,6 +110,34 @@ class BuildDeterministicArchiveTests(unittest.TestCase):
             dest = Path(tmp) / "out.tar"
             with self.assertRaises(ar.ArchiveRehearsalError):
                 ar.build_deterministic_archive(root, {"src/bad.gba"}, dest)
+
+    def test_wired_membership_exact_check_refuses_on_extra_members(self):
+        """issue #9 guardian-correction remediation (D5): the actual,
+        wired `build_deterministic_archive` -- not merely
+        `tree_coverage.check_archive_membership_exact` tested in
+        isolation -- refuses to write anything at all when the
+        membership-exact check it calls internally reports a problem.
+        `missing_members`/`extra_members` can never actually disagree
+        with the declared allowlist through *normal* input today (the
+        git-tree entries are always pre-filtered to the allowlist set),
+        so the "extra members" branch is exercised here by patching the
+        real check function this module actually calls (defense-in-depth
+        for a *future* filtering bug) -- proving the wiring itself, not
+        re-implementing tree_coverage's own already-tested logic."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            allowlist = _make_git_source_tree_committed(root)
+            dest = Path(tmp) / "out.tar"
+            with mock.patch.object(
+                ar.tc, "check_archive_membership_exact",
+                return_value=(["forced-missing.c"], ["forced-extra.c"]),
+            ):
+                with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                    ar.build_deterministic_archive(root, allowlist, dest)
+            self.assertIn("forced-missing.c", str(ctx.exception))
+            self.assertIn("forced-extra.c", str(ctx.exception))
+            self.assertFalse(dest.exists())
 
 
 class ExactFilesystemAllowlistTests(unittest.TestCase):
@@ -501,6 +530,14 @@ class RebuildEligibilityTests(unittest.TestCase):
         (nested / "f.txt").write_text("x")
         _git("add", "-A", cwd=nested)
         _git("commit", "-q", "-m", "nested", cwd=nested)
+        # issue #9 guardian-correction remediation (D3): a real submodule
+        # checkout normally has its own configured 'origin' remote
+        # (populated by "git submodule update --init"/"git clone
+        # --recurse-submodules"); evaluate_rebuild_eligibility() now
+        # cross-checks this against .gitmodules's declared URL, so this
+        # synthetic fixture must configure a matching one for the
+        # "eligible" scenarios below to remain eligible.
+        _git("remote", "add", "origin", "https://example.invalid/vendor.git", cwd=nested)
         nested_sha = _git("rev-parse", "HEAD", cwd=nested).strip()
         _git("update-index", "--add", "--cacheinfo", f"160000,{nested_sha},vendor", cwd=root)
         _git("commit", "-q", "-m", "with gitlink", cwd=root)
@@ -580,71 +617,17 @@ class RebuildEligibilityTests(unittest.TestCase):
             self.assertTrue(any("no provenance entry" in reason for reason in report["reasons"]))
 
 
-class RunBuildTwiceTests(unittest.TestCase):
-    """The actual, executable "run a build command twice and compare its
-    outputs" mechanism, exercised hermetically against a real (but
-    trivial/synthetic) build command -- never a mocked boolean."""
-
-    def test_deterministic_synthetic_build_reports_verified_match(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source_dir = Path(tmp) / "source"
-            source_dir.mkdir()
-            build_command = [
-                sys.executable, "-c",
-                "open('out.bin', 'wb').write(b'deterministic-output-bytes')",
-            ]
-            result = ar.run_build_twice(build_command, source_dir, ["out.bin"])
-            self.assertEqual(result["returncode1"], 0)
-            self.assertEqual(result["returncode2"], 0)
-            self.assertTrue(result["outputs_present"])
-            self.assertTrue(result["match"])
-            self.assertEqual(result["hashes1"], result["hashes2"])
-
-    def test_nondeterministic_synthetic_build_reports_mismatch(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source_dir = Path(tmp) / "source"
-            source_dir.mkdir()
-            build_command = [
-                sys.executable, "-c",
-                "import os; open('out.bin', 'wb').write(os.urandom(32))",
-            ]
-            result = ar.run_build_twice(build_command, source_dir, ["out.bin"])
-            self.assertTrue(result["outputs_present"])
-            self.assertFalse(result["match"])
-            self.assertNotEqual(result["hashes1"], result["hashes2"])
-
-    def test_failing_build_command_reports_no_match(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source_dir = Path(tmp) / "source"
-            source_dir.mkdir()
-            build_command = [sys.executable, "-c", "import sys; sys.exit(1)"]
-            result = ar.run_build_twice(build_command, source_dir, ["out.bin"])
-            self.assertEqual(result["returncode1"], 1)
-            self.assertFalse(result["match"])
-
-    def test_missing_declared_output_reports_no_match(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source_dir = Path(tmp) / "source"
-            source_dir.mkdir()
-            build_command = [sys.executable, "-c", "pass"]
-            result = ar.run_build_twice(build_command, source_dir, ["never_written.bin"])
-            self.assertFalse(result["outputs_present"])
-            self.assertFalse(result["match"])
-
-    def test_runs_use_isolated_copies_not_the_shared_source(self):
-        """Each run must operate on its own fresh copy -- the original
-        `source_dir` itself must never be mutated by the build."""
-        with tempfile.TemporaryDirectory() as tmp:
-            source_dir = Path(tmp) / "source"
-            source_dir.mkdir()
-            (source_dir / "input.txt").write_text("original\n")
-            build_command = [
-                sys.executable, "-c",
-                "open('out.bin', 'wb').write(open('input.txt', 'rb').read())",
-            ]
-            ar.run_build_twice(build_command, source_dir, ["out.bin"])
-            self.assertEqual((source_dir / "input.txt").read_text(), "original\n")
-            self.assertFalse((source_dir / "out.bin").exists())
+# issue #9 guardian-correction remediation (D1): the legacy, copy-of-a-
+# mutable-directory `run_build_twice()` helper (and its dedicated test
+# class that used to live here) was deleted outright from
+# archive_rehearsal.py -- it was never wired into `rebuild_rehearsal_
+# blocker()`'s status computation, but its mere presence let release-
+# evidence docs and a test's own docstring misattribute it as if it
+# proved the real, wired `verified_success` path (an independent review
+# reproduced this as defect D1). `RunBuildTwiceFromImmutableSourceTests`
+# below is the real replacement -- it exercises the actual function
+# `rebuild_rehearsal_blocker()` uses, including the "failing build" and
+# "missing declared output" cases the deleted class used to cover.
 
 
 class MaterializeImmutableSourceTreeTests(unittest.TestCase):
@@ -771,6 +754,32 @@ class RunBuildTwiceFromImmutableSourceTests(unittest.TestCase):
             self.assertFalse(result["match"])
             self.assertNotEqual(result["hashes1"], result["hashes2"])
 
+    def test_failing_build_command_reports_no_match(self):
+        """issue #9 guardian-correction remediation (D1): the same
+        "a non-zero exit must never match" case the deleted legacy
+        run_build_twice() used to cover, now proven against the actual,
+        wired immutable-materialization function."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "import sys; sys.exit(1)"]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertEqual(result["returncode1"], 1)
+            self.assertEqual(result["returncode2"], 1)
+            self.assertFalse(result["match"])
+
+    def test_missing_declared_output_reports_no_match(self):
+        """issue #9 guardian-correction remediation (D1): the same
+        "a build that never writes its declared output must never
+        match" case the deleted legacy run_build_twice() used to cover,
+        now proven against the actual, wired immutable-materialization
+        function."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "pass"]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["never_written.bin"])
+            self.assertFalse(result["outputs_present"])
+            self.assertFalse(result["match"])
+
     def test_extra_materialize_callback_runs_independently_for_each_run(self):
         """`extra_materialize` is invoked once per independent
         materialization -- proven by having it write a marker file whose
@@ -828,23 +837,27 @@ class RebuildRehearsalBlockerTests(unittest.TestCase):
 
     def test_eligible_but_no_build_command_reports_not_run_not_success(self):
         """A rebuild must never be described as verified/proved when it
-        was not actually executed -- even when eligible, omitting an
-        explicit build_command/output_relpaths must report "not_run", not
-        "verified_success" and not silently pass."""
+        was not actually executed -- even when eligible (with a
+        submodule_path/provenance_dir that actually *match* the
+        synthetic fixture -- guardian-correction remediation: the
+        previous version of this test called `rebuild_rehearsal_blocker`
+        with neither, so it always fell back to the real repository's
+        own unrelated "mgfembp"/`docs/release_data/provenance`
+        defaults -- trivially blocked for the wrong reason, never
+        actually exercising this eligible fixture through the wrapper at
+        all), omitting an explicit build_command/output_relpaths must
+        report exactly "not_run", never "verified_success" and never
+        silently pass."""
         with tempfile.TemporaryDirectory() as tmp:
             root, provenance_dir = RebuildEligibilityTests()._make_repo_with_submodule(
                 tmp, initialized=True, approved=True
             )
-            # Patch the provenance dir lookup by calling the lower-level
-            # eligibility function directly to confirm it is eligible...
             eligible, _ = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
             self.assertTrue(eligible)
-            # ...then confirm the *rehearsal* wrapper (which always uses
-            # the real docs/release_data/provenance path, so on this
-            # synthetic repo -- with no such directory -- eligibility
-            # itself is False) truthfully reports blocked, never a false
-            # "verified_success":
-            report = ar.rebuild_rehearsal_blocker(root)
+            report = ar.rebuild_rehearsal_blocker(
+                root, attempt_build=True, submodule_path="vendor", provenance_dir=provenance_dir,
+            )
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_NOT_RUN)
             self.assertNotEqual(report["status"], ar.REBUILD_STATUS_VERIFIED_SUCCESS)
 
     def test_attempt_build_false_is_not_run_when_eligible(self):
@@ -854,27 +867,15 @@ class RebuildRehearsalBlockerTests(unittest.TestCase):
             )
             eligible, _ = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
             self.assertTrue(eligible)
-
-    def test_hermetic_eligible_rebuild_runs_twice_and_verifies_success(self):
-        """End-to-end: an eligible synthetic fixture, with a real,
-        deterministic build_command, actually executes the double-build
-        comparison and reports verified_success -- proving the "future
-        eligible/initialized code path" genuinely runs, not merely a
-        mocked boolean."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root, provenance_dir = RebuildEligibilityTests()._make_repo_with_submodule(
-                tmp, initialized=True, approved=True
+            # guardian-correction remediation: the previous version of
+            # this test asserted nothing at all about
+            # rebuild_rehearsal_blocker()'s actual status despite its own
+            # name promising "is_not_run" -- now it actually calls it,
+            # with matching submodule_path/provenance_dir, and checks.
+            report = ar.rebuild_rehearsal_blocker(
+                root, attempt_build=False, submodule_path="vendor", provenance_dir=provenance_dir,
             )
-            eligible, _ = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
-            self.assertTrue(eligible)
-            build_command = [
-                sys.executable, "-c",
-                "open('rom.bin', 'wb').write(b'hermetic-deterministic-rom-bytes')",
-            ]
-            build_result = ar.run_build_twice(build_command, root, ["rom.bin"])
-            self.assertTrue(build_result["match"])
-            self.assertEqual(build_result["returncode1"], 0)
-            self.assertEqual(build_result["returncode2"], 0)
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_NOT_RUN)
 
     def test_current_live_repo_never_fetches_or_initializes_mgfembp(self):
         """Calling the real rehearsal against this actual repository must
@@ -883,6 +884,215 @@ class RebuildRehearsalBlockerTests(unittest.TestCase):
         ar.rebuild_rehearsal_blocker(ROOT)
         after = _git("submodule", "status", cwd=ROOT)
         self.assertEqual(before, after)
+
+
+class RebuildRehearsalBlockerEndToEndBuildTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D1): drives the actual,
+    wired `rebuild_rehearsal_blocker()` -- never a lower-level function
+    in isolation, and never the deleted legacy `run_build_twice()` --
+    through a synthetic, fully-eligible (initialized/approved/identity-
+    matched/clean-worktree/URL-matched/pinned-object-accessible)
+    submodule fixture, for every one of the machine-distinct rebuild
+    outcomes a real double-build can produce: verified_success, a
+    mismatch, a build failure, a missing declared output, a shared-
+    directory refusal, and a source (input-tree) mutation."""
+
+    def _make_eligible_repo(self, tmp):
+        root, provenance_dir = RebuildEligibilityTests()._make_repo_with_submodule(
+            tmp, initialized=True, approved=True,
+        )
+        eligible, eligibility_report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+        assert eligible, eligibility_report  # fixture sanity check, not this test's own assertion
+        return root, provenance_dir
+
+    def _blocker(self, root, provenance_dir, build_command, output_relpaths=("rom.bin",)):
+        return ar.rebuild_rehearsal_blocker(
+            root, attempt_build=True, build_command=build_command,
+            output_relpaths=list(output_relpaths), submodule_path="vendor", provenance_dir=provenance_dir,
+        )
+
+    def test_verified_success_end_to_end(self):
+        """The literal issue #9 D1 requirement: `rebuild_rehearsal_
+        blocker()` itself, through a synthetic approved+pinned+
+        initialized submodule fixture, executes a real hermetic build
+        command twice from two independently materialized immutable
+        inputs (the superproject's own tracked src/main.c *and* the
+        pinned-commit-bound vendor/f.txt submodule content) and reports
+        verified_success -- with distinct materialization roots,
+        unchanged inputs, and matching declared outputs all directly
+        observable in the report."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import pathlib; "
+                "a = pathlib.Path('src/main.c').read_bytes(); "
+                "b = pathlib.Path('vendor/f.txt').read_bytes(); "
+                "pathlib.Path('rom.bin').write_bytes(a + b)",
+            ]
+            report = self._blocker(root, provenance_dir, build_command)
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_VERIFIED_SUCCESS, report)
+            result = report["build_result"]
+            self.assertEqual(result["returncode1"], 0)
+            self.assertEqual(result["returncode2"], 0)
+            self.assertTrue(result["outputs_present"])
+            self.assertEqual(result["hashes1"], result["hashes2"])
+            self.assertEqual(result["input_tree_mutation_problems1"], [])
+            self.assertEqual(result["input_tree_mutation_problems2"], [])
+            self.assertNotEqual(result["materialization_root1"], result["materialization_root2"])
+            expected_hash = hashlib.sha256(
+                (root / "src" / "main.c").read_bytes() + (root / "vendor" / "f.txt").read_bytes()
+            ).hexdigest()
+            self.assertEqual(result["hashes1"]["rom.bin"], expected_hash)
+
+    def test_mismatch_end_to_end_reports_failed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import os; open('rom.bin', 'wb').write(os.urandom(32))",
+            ]
+            report = self._blocker(root, provenance_dir, build_command)
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_FAILED)
+            self.assertNotEqual(
+                report["build_result"]["hashes1"], report["build_result"]["hashes2"]
+            )
+            self.assertTrue(report["reasons"])
+
+    def test_build_failure_end_to_end_reports_failed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            build_command = [sys.executable, "-c", "import sys; sys.exit(3)"]
+            report = self._blocker(root, provenance_dir, build_command)
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_FAILED)
+            self.assertEqual(report["build_result"]["returncode1"], 3)
+            self.assertEqual(report["build_result"]["returncode2"], 3)
+
+    def test_missing_output_end_to_end_reports_failed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            build_command = [sys.executable, "-c", "pass"]
+            report = self._blocker(root, provenance_dir, build_command)
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_FAILED)
+            self.assertFalse(report["build_result"]["outputs_present"])
+
+    def test_source_mutation_end_to_end_reports_failed(self):
+        """The literal D1 "source mutation" case: a build that mutates
+        its own declared input (the superproject's own tracked
+        src/main.c) must be reported failed, end-to-end, through
+        `rebuild_rehearsal_blocker()` itself -- never silently
+        "matched"."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "open('src/main.c', 'w').write('int x; // mutated-by-build'); "
+                "open('rom.bin', 'wb').write(b'x')",
+            ]
+            report = self._blocker(root, provenance_dir, build_command)
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_FAILED)
+            self.assertTrue(report["build_result"]["input_tree_mutation_problems1"])
+
+    def test_shared_dir_refusal_end_to_end_raises(self):
+        """The literal D1 "shared-dir refusal" case, proven through the
+        actual wired `rebuild_rehearsal_blocker()` call -- not merely
+        `run_build_twice_from_immutable_source()` in isolation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            shared_dir = Path(tmp) / "forced-shared-run-dir"
+            shared_dir.mkdir()
+            build_command = [sys.executable, "-c", "open('rom.bin', 'wb').write(b'x')"]
+            with mock.patch("tempfile.mkdtemp", return_value=str(shared_dir)):
+                with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                    self._blocker(root, provenance_dir, build_command)
+            self.assertIn("same directory", str(ctx.exception))
+
+
+class SubmoduleDirtyWorktreeReproducerTests(unittest.TestCase):
+    """issue #9 guardian-correction remediation (D3): the literal,
+    reviewer-reproduced defect -- a submodule worktree whose HEAD commit
+    still matches the pinned gitlink SHA, but whose *worktree bytes*
+    have been locally modified/staged/added without a new commit, must
+    never be treated as eligible, and (independently, in case
+    eligibility were ever wrongly bypassed by a future bug) must never
+    have its dirty bytes flow into a rebuild via the materializer
+    either."""
+
+    def _make_eligible_repo(self, tmp):
+        return RebuildEligibilityTests()._make_repo_with_submodule(tmp, initialized=True, approved=True)
+
+    def test_dirty_modified_tracked_file_is_ineligible(self):
+        """The literal reviewer reproducer: modify a tracked file inside
+        the submodule worktree, without staging or committing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            (root / "vendor" / "f.txt").write_text("TAMPERED-UNCOMMITTED-BYTES")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertFalse(report["submodule_worktree_clean"])
+            self.assertTrue(any("not clean" in reason for reason in report["reasons"]))
+
+    def test_staged_uncommitted_change_is_ineligible(self):
+        """The staged variant: `git add`ed inside the submodule, but
+        still not committed -- HEAD still matches the pin exactly."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            (root / "vendor" / "f.txt").write_text("STAGED-TAMPERED-BYTES")
+            _git("add", "f.txt", cwd=root / "vendor")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertFalse(report["submodule_worktree_clean"])
+
+    def test_untracked_file_is_ineligible(self):
+        """The untracked variant: an extra, never-added file smuggled
+        into the submodule worktree."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            (root / "vendor" / "untracked-extra.txt").write_text("smuggled content")
+            eligible, report = ar.evaluate_rebuild_eligibility(root, "vendor", provenance_dir)
+            self.assertFalse(eligible)
+            self.assertFalse(report["submodule_worktree_clean"])
+
+    def test_dirty_submodule_never_reaches_verified_success_through_the_blocker(self):
+        """End-to-end reproducer: even a real, actually-attempted rebuild
+        against a dirty-but-commit-matching submodule is reported
+        blocked (ineligible), never verified_success, through
+        `rebuild_rehearsal_blocker()` itself."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            (root / "vendor" / "f.txt").write_text("TAMPERED-UNCOMMITTED-BYTES")
+            build_command = [
+                sys.executable, "-c",
+                "import pathlib; "
+                "pathlib.Path('rom.bin').write_bytes(pathlib.Path('vendor/f.txt').read_bytes())",
+            ]
+            report = ar.rebuild_rehearsal_blocker(
+                root, attempt_build=True, build_command=build_command,
+                output_relpaths=["rom.bin"], submodule_path="vendor", provenance_dir=provenance_dir,
+            )
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_BLOCKED)
+            self.assertNotEqual(report["status"], ar.REBUILD_STATUS_VERIFIED_SUCCESS)
+
+    def test_materializer_never_reflects_dirty_worktree_bytes_even_if_called_directly(self):
+        """Defense-in-depth positive proof (the strongest form of the D3
+        fix): even calling the new immutable-git-archive-based
+        materializer directly -- bypassing eligibility entirely, as if
+        some future bug granted eligibility anyway -- against a dirty
+        submodule worktree produces the *pinned commit's* own immutable
+        content, never the dirty worktree bytes. The fix does not merely
+        rely on the eligibility gate catching every case."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            pinned_commit = json.loads(
+                (provenance_dir / "submodules.json").read_text(encoding="utf-8")
+            )[0]["pinned_commit"]
+            (root / "vendor" / "f.txt").write_text("TAMPERED-UNCOMMITTED-BYTES")
+            materialize = ar._materialize_verified_submodule_content(root, "vendor", pinned_commit)
+            with tempfile.TemporaryDirectory() as run_dir:
+                run_root = Path(run_dir) / "run"
+                run_root.mkdir()
+                materialize(run_root)
+                self.assertEqual((run_root / "vendor" / "f.txt").read_text(), "x")
 
 
 class NonGitRebuildEligibilityTests(unittest.TestCase):
