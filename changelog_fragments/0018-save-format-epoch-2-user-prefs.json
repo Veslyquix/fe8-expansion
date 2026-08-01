@@ -1,0 +1,6 @@
+{
+  "issue": 18,
+  "category": "changed",
+  "summary": "Bump EXPANSION_SAVE_COMPAT_EPOCH and SAVE_FORMAT_VERSION_CURRENT from 1 to 2: struct ExpansionUserPrefs (include/expansion_save_prefs.h) now occupies part of struct ExpansionSaveMeta's reserved tail, and SAVE_COMPAT_MIGRATABLE_OLDER is added to enum SaveCompatState with a mechanical, no-wipe migration path (scripts/modernize/save_format_tool.py migrate; see docs/save_format.md, docs/migration_registry.md).",
+  "semver_impact": "major"
+}

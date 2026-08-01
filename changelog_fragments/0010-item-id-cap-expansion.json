@@ -1,0 +1,6 @@
+{
+  "issue": 10,
+  "category": "added",
+  "summary": "Add a typed ID space (include/id_space.h, generated from scripts/generated_data/idspace.py) with per-domain technical-max/configured-cap macros and compile-time range diagnostics, and raise the configurable item ID cap to 0xCE (the default build's cap is unchanged); no EXPANSION_SAVE_COMPAT_EPOCH change (see docs/id_space.md, reports/id_space_audit.md).",
+  "semver_impact": "minor"
+}

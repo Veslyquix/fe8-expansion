@@ -1,0 +1,6 @@
+{
+  "issue": 6,
+  "category": "added",
+  "summary": "Add four independent, default-off starter-feature build flags (EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE, EXPANSION_DANGER_OVERLAY_MENU, EXPANSION_STARTER_CONTENT), the public battle-stat mechanics hook registry, the player-facing danger/range overlay menu surface, and the bundled generated-data content example they gate; a default build links none of them and stays byte-identical (see docs/starter_features.md).",
+  "semver_impact": "minor"
+}

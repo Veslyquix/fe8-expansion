@@ -15,6 +15,16 @@ Do not hand-edit the text between the two HTML comment markers below --
 ## [Unreleased]
 
 <!-- release-rehearsal:unreleased:begin -->
+### Added
+
+- Add four independent, default-off starter-feature build flags (EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE, EXPANSION_DANGER_OVERLAY_MENU, EXPANSION_STARTER_CONTENT), the public battle-stat mechanics hook registry, the player-facing danger/range overlay menu surface, and the bundled generated-data content example they gate; a default build links none of them and stays byte-identical (see docs/starter_features.md). (#6)
+- Add a typed ID space (include/id_space.h, generated from scripts/generated_data/idspace.py) with per-domain technical-max/configured-cap macros and compile-time range diagnostics, and raise the configurable item ID cap to 0xCE (the default build's cap is unchanged); no EXPANSION_SAVE_COMPAT_EPOCH change (see docs/id_space.md, reports/id_space_audit.md). (#10)
+- Add the expansion locale catalog/config/runtime resolver, EXPANSION_ENABLED_LOCALES/EXPANSION_DEFAULT_LOCALE/EXPANSION_PSEUDO_LOCALE config.mk fields, localization.mk's host-test/generation/budget targets, and the blocking first-start language selector plus settings submenu (see docs/localization.md). (#18)
+
+### Changed
+
+- Bump EXPANSION_SAVE_COMPAT_EPOCH and SAVE_FORMAT_VERSION_CURRENT from 1 to 2: struct ExpansionUserPrefs (include/expansion_save_prefs.h) now occupies part of struct ExpansionSaveMeta's reserved tail, and SAVE_COMPAT_MIGRATABLE_OLDER is added to enum SaveCompatState with a mechanical, no-wipe migration path (scripts/modernize/save_format_tool.py migrate; see docs/save_format.md, docs/migration_registry.md). (#18)
+
 ### Fixed
 
 - Fix a fresh, independent verifier-reproduced defect in the read-only release/publication rehearsal: `check`/`summary`/`rehearse` now route through one single, shared top-level exception boundary so a well-formed-but-nonexistent --target-sha (in a real git repository) and the documented non-git/extracted-candidate path (with or without its required exact 40-lowercase-hex --target-sha override) never traceback as an unhandled exception (which collided with EXIT_NOT_ELIGIBLE); both now fail actionably as EXIT_TOOLING_ERROR (2), while a well-formed extracted candidate genuinely produces canonical BLOCKED JSON end-to-end. `evaluate_rebuild_eligibility()` never invokes `git submodule status` (or any other git command) against a non-git repo-root, and a declared allowlist member with no on-disk representation at all is now a controlled, actionable refusal instead of a silent omission. Publication remains mechanically BLOCKED throughout; no new capability or eligibility change. (#9)
