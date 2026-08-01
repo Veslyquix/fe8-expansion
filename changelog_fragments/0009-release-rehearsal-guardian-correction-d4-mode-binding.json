@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Bind every included source-release allowlist path's exact Git mode (100644/100755/120000) in docs/release_data/source_allowlist.json (schema_version 4's new 'modes' map), cross-checked for an exact bijection and, for a real git repository, against the live tree (check_mode_identity) -- a committed executable-bit/mode change now makes this canonical data stale/fail until regenerated, instead of being invisible to the allowlist. The archive itself continues to canonicalize every written member's tar mode to a fixed 0o644 regardless of the source Git mode -- a deliberate, now-documented and now-tested determinism policy (see 'Archive member mode policy' in docs/release_process.md), not an accidental omission. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

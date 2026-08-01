@@ -112,9 +112,21 @@ is not `"mechanically eligible"`.
   compare, automatic cleanup; a truthful, four-state
   (`not_run`/`blocked`/`failed`/`verified_success`) rebuild rehearsal with
   a real, executable eligible-path double-compile-and-compare mechanism
-  (`run_build_twice`), exercised end-to-end against a hermetic synthetic
-  fixture; and the documented GitHub auto-generated-archive/submodule
-  contradiction. The documented non-git/extracted candidate path (a
+  (`run_build_twice_from_immutable_source()`, wired into
+  `rebuild_rehearsal_blocker()`), exercised end-to-end -- via
+  `RebuildRehearsalBlockerEndToEndBuildTests`, which calls
+  `rebuild_rehearsal_blocker()` **itself** -- against a hermetic
+  synthetic fixture, for every one of `verified_success`/a mismatch/a
+  build failure/a missing declared output/a shared-directory refusal/an
+  input-source mutation (guardian-correction remediation D1: an
+  independent review found the *previous* version of this bullet, and a
+  same-named test's own docstring, described a *different*, legacy,
+  copy-based `run_build_twice()` helper as if it drove
+  `rebuild_rehearsal_blocker()` end-to-end -- it never did, and that
+  legacy helper has since been deleted outright rather than left as a
+  standing misattribution risk); and the documented GitHub
+  auto-generated-archive/submodule contradiction. The documented
+  non-git/extracted candidate path (a
   genuine extracted archive, with a required exact 40-lowercase-hex
   `--target-sha` override) is now fully working end-to-end: a fresh,
   independent review reproduced it (and a well-formed-but-nonexistent
@@ -379,3 +391,168 @@ test_action_pins.py`, `test_tree_coverage.py`, `test_gitmodules.py`,
 `scripts/modernize/migrations` stdlib test suites were reverified green
 after every commit in this round. `make release-check`'s live status
 remains, correctly and exactly, `"blocked"`.
+## Guardian-correction remediation round (fresh independent review, D1-D5)
+
+An independent review of `2b376912..130713de` found three blocking
+defects (D1-D3) plus several adjacent high-confidence exactness gaps,
+all remediated in the `agent/issue9-release-process` branch on top of
+the mandatory-correction round above -- **the candidate remains
+mechanically BLOCKED; this section is evidence, not a closure claim**:
+
+1. **D1 -- real end-to-end verified-success test, legacy fake path
+   removed.** The evidence/docs previously claimed a test named
+   `test_hermetic_eligible_rebuild_runs_twice_and_verifies_success`
+   drove `rebuild_rehearsal_blocker()` end-to-end to `verified_success`;
+   it actually only ever called the legacy, copy-based
+   `run_build_twice()` helper (never wired into the release status at
+   all) and asserted nothing about the manifest-facing status.
+   `run_build_twice()` is now deleted outright.
+   `RebuildRehearsalBlockerEndToEndBuildTests` (`test_archive_
+   rehearsal.py`) is the real replacement: it drives
+   `rebuild_rehearsal_blocker()` itself, through a synthetic
+   approved+pinned+initialized submodule fixture, to
+   `REBUILD_STATUS_VERIFIED_SUCCESS` -- executing a real hermetic build
+   command twice from two independently materialized immutable inputs
+   and directly asserting the status, the two runs' distinct
+   materialization roots, unchanged/unmutated inputs, and matching
+   declared outputs (a real, hand-computed hash built from both the
+   superproject's own tracked content and the pinned-commit-bound
+   submodule content). The same class adds blocker-level tests for a
+   mismatch, a build failure, a missing declared output, a shared-
+   directory refusal, and a source (input-tree) mutation --
+   `RebuildRehearsalBlockerTests`'s pre-existing "not_run"/"eligible"
+   tests were also corrected to actually call `rebuild_rehearsal_
+   blocker()` with matching `submodule_path`/`provenance_dir` (they
+   previously fell back to this repository's own unrelated `mgfembp`
+   defaults, so they never really exercised the wrapper's eligible path
+   at all). `docs/release_process.md`'s "Rebuild rehearsal" section and
+   this document's own "What is implemented" bullet are corrected to
+   name the actual wired function/test and only the claims it proves.
+
+2. **D2 -- provenance blob-identity exemption narrowed to the one
+   genuinely self-referential file, structurally.** `check_blob_
+   identity()` previously exempted all three provenance-manifest files
+   (`code.json`, `assets.json`, `submodules.json`) from live-content
+   cross-checking, even though only `code.json`'s own self-record (a
+   record about `code.json`'s content, stored *inside* `code.json`) is
+   a genuine "hash quine" -- `assets.json`/`submodules.json`'s own
+   records live inside `code.json`, a *different* file, so cross-
+   checking them has no cycle at all, and exempting them let committed
+   tampering of either file silently evade identity validation. Fixed
+   structurally, not by merely narrowing the exemption list: `docs/
+   release_data/provenance/code.json` is now an exact, explicit,
+   minimal export exclusion (`tree_coverage.
+   KIND_SELF_REFERENTIAL_EVIDENCE`, `SELF_REFERENTIAL_EVIDENCE_PATHS`)
+   -- it is no longer an *included* allowlist member at all, so it
+   never requires (and, after regeneration, no longer has) its own
+   provenance record; its own export-exclusion entry (kind, mode, OID,
+   and a documented reason) is its complete, sufficient, externally-
+   owned evidence. `check_blob_identity()`'s old `SELF_REFERENTIAL_
+   PROVENANCE_PATHS` exemption is deleted entirely -- there is nothing
+   left to exempt. `tree_coverage.py`'s exact-coverage machinery
+   (`check_partition`/`check_non_git_tree`/`check_archive_membership_
+   exact`) is generalized to a second exclusion kind so included ∪
+   excluded remains the complete, disjoint immutable HEAD tree;
+   `allowlist.py`/`provenance.py` exclude `code.json`'s path from their
+   own generated/required sets the same way a gitlink already was.
+   Committed tamper probes cover `assets.json`, `submodules.json`, a
+   changed same-path blob, and the excluded self-referential-evidence
+   path itself (a stray leftover self-record is now reported as a
+   provenance "ghost" entry, never silently accepted). `make
+   release-check`'s live status remains BLOCKED (provenance is,
+   correctly, still unresolved) throughout.
+
+3. **D3 -- immutable submodule bytes, never a dirty worktree copy.**
+   `evaluate_rebuild_eligibility()` now additionally requires (4) a
+   genuinely clean submodule worktree/index (`git status --porcelain`
+   run *inside* the submodule itself is empty -- modified, staged, and
+   untracked content are all rejected), (5) the submodule's own
+   configured `remote.origin.url` to agree with `.gitmodules`'s
+   declared URL, and (6) the provenance-pinned commit to be a real,
+   locally-accessible object inside the submodule's own object database
+   -- on top of the pre-existing (1)-(3) initialized/pinned-identity/
+   approved checks. Independently (defense-in-depth), the extra-
+   materialize callback `rebuild_rehearsal_blocker()` passes into the
+   double-build (`_materialize_verified_submodule_content()`, replacing
+   `_copy_verified_submodule_content()`) no longer `shutil.copytree`s
+   the submodule's live worktree directory at all -- it materializes the
+   submodule's content via `git archive <pinned_commit>` run *inside*
+   the submodule's own repository, exactly mirroring how the
+   superproject's own content is materialized, so even a hypothetical
+   future eligibility bug could not let dirty/tampered submodule bytes
+   flow into a build. `SubmoduleDirtyWorktreeReproducerTests` reproduces
+   the reviewer's literal dirty/staged/untracked scenarios (all
+   correctly ineligible) and directly proves the materializer itself
+   extracts the pinned commit's own content, never the dirty worktree
+   bytes, even when called directly against a dirty submodule.
+
+4. **D4 -- included Git modes bound and validated.**
+   `docs/release_data/source_allowlist.json` (schema_version 4) now
+   additionally records a `"modes"` map (exact path -> Git mode) for
+   every included path; `allowlist.py check()` cross-checks this
+   bijection and, for a real git repository, each declared mode against
+   the live tree (`check_mode_identity`) -- a committed executable-bit
+   (or other mode) change now makes this canonical data stale/fail
+   until regenerated. The archive itself continues to canonicalize
+   every written tar member's mode to a fixed `0o644` regardless of the
+   source Git mode (a deliberate, now-documented and now-tested
+   determinism policy, not an accidental omission -- see "Archive
+   member mode policy" in `docs/release_process.md`); mode-binding is a
+   drift-detection/provenance-identity concern here, not an archive-
+   fidelity promise. Tests cover a `100644<->100755` change, an
+   unsupported mode value, and the archive's own fixed output mode. The
+   allowlist file's own mode is recorded like any other path -- no new
+   self-reference cycle is introduced (a mode is a small, independently
+   verifiable fact, unlike a live-content hash of the file that would
+   have to embed it).
+
+5. **D5 -- closed-world symlinks, and evidence honesty.**
+   `tree_coverage.py`'s and `allowlist.py`'s non-git closed-world
+   enumeration (`_present_paths`, replacing `_present_regular_files`) no
+   longer `continue`s straight past a symlink it finds -- a stray,
+   unlisted symlink (or any other non-regular node) at any path is now
+   reported as an unaccounted-for "extra"/"missing from allowlist"
+   finding instead of being silently invisible; only a genuine,
+   non-symlink directory is still ever walked through rather than
+   reported. `build_deterministic_archive`'s own wired archive-member-
+   exact refusal (not merely `tree_coverage.check_archive_membership_
+   exact` tested in isolation) now has a dedicated regression test
+   forcing an "extra members" report through the real call site.
+   `docs/release_process.md`'s "External attestation is outside
+   candidate control" section is tightened to explicitly note that
+   Git-blob immutability binds *which bytes* a given commit contains,
+   never protects against what a candidate author chooses to commit in
+   the first place, and that no candidate-controlled config/data/flag/
+   env input of any kind (including a JSON provenance/allowlist/
+   exclusions record a PR author can freely edit) can ever satisfy the
+   external attestation requirement; external protected human review
+   remains the sole owner of that decision. `provenance.py`'s generator
+   docs are corrected: a changed or brand-new blob resets any
+   previously-recorded approval/reviewer/legal fact (there is nothing
+   this generator ever "preserves" -- every field it controls is always
+   freshly recomputed on every run), and a submodule's `pinned_commit`/
+   `url` are always re-read from the immutable target tree/
+   `.gitmodules`, never carried over from an existing on-disk record.
+
+### Verification (this round)
+
+* Full `scripts/release_rehearsal` + `scripts/modernize/migrations`
+  stdlib test suites re-verified green after this round's changes (see
+  the evidence commands above; the pass count itself is deliberately
+  not hardcoded here, for the same "do not trust a fixed number" reason
+  the rest of this document already explains).
+* `make release-check`'s live status remains, correctly and exactly,
+  `"blocked"`: external attestation is still, and can only ever be,
+  `"missing"`; the `mgfembp` submodule remains uninitialized/
+  unapproved/excluded; every provenance record remains honestly
+  unresolved.
+* `python3 scripts/artifact_guard.py --revision HEAD` -- unaffected;
+  this round never touches `scripts/artifact_guard.py`.
+* No tag/release/asset/comment/environment/protected ref was created,
+  moved, or deleted; no `contents: write` permission was added anywhere;
+  the `mgfembp` submodule was never fetched/initialized; no license was
+  selected; no author/rightsholder/license/reviewer/approval was
+  invented.
+
+Issue #9 remains **not closed** by this report, this round, or any
+command either describes.

@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Close a provenance blob-identity gap a guardian-correction review found: check_blob_identity() previously exempted all three provenance-manifest files (code.json, assets.json, submodules.json) from live-content cross-checking, even though only code.json's own self-record is structurally self-referential (assets.json/submodules.json's own records live inside code.json, a different file, so cross-checking them has no cycle at all) -- committed tampering of either file could silently evade identity validation. Fixed structurally: docs/release_data/provenance/code.json is now its own exact, minimal, documented export exclusion (tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE) rather than an included allowlist member, so it never requires or receives its own provenance record; the old SELF_REFERENTIAL_PROVENANCE_PATHS exemption is deleted entirely -- no included blob is exempt from OID/SHA256 validation any more. Exact tree coverage, the allowlist generator, and the provenance generator/coverage-required-path computation are all generalized to the second exclusion kind. Committed tamper probes cover assets.json, submodules.json, a changed same-path blob, and the excluded self-referential-evidence path itself. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "docs",
+  "summary": "Correct release_process.md and the closure-candidate report to name the actual wired rebuild-verified-success function/test (never the deleted legacy run_build_twice()); document the two export-exclusion kinds (gitlink and self-referential-evidence) and the new mode-binding/'Archive member mode policy'; tighten the external-attestation section to state explicitly that Git-blob immutability binds committed bytes, never protects against what a candidate author chooses to commit, and that no candidate-controlled config/data/flag/env input can ever satisfy it; and correct the provenance generator's own documentation to state that a changed/new blob resets any previously-recorded approval/reviewer/legal fact (nothing is ever 'preserved') and that a submodule's pinned commit/URL are always re-read from the immutable target tree/.gitmodules. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

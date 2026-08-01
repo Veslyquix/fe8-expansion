@@ -128,8 +128,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
-    "oid": "53b15992a5a6cb20d24263fe00d45e40d8778243",
-    "sha256": "d566c1dda05f2889ab5080fc13fb57747964dad0f1c4f70871a6a01a9da884f2"
+    "oid": "69e20635ec540b44cb16e82a8d8f49b92ef2669c",
+    "sha256": "025a501b4977201f4167b6f81d37a76a94bac05cda7125e0051aa1ce1119de8f"
   },
   {
     "path": "CLAUDE.md",
@@ -286,6 +286,78 @@
     "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
     "oid": "78859ecdfedb06d840fd7a09d2583820ac477a67",
     "sha256": "6a063a5a559b71f95b6d3dd351d22462df43f5da15c1b418babc1ff87b15e15c"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-guardian-correction-d1-rebuild-evidence.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "e3b18127577abad79ae8696c3096f21bcd70e350",
+    "sha256": "4ba236385000921059bc405fa60316712323393b8ebafb34743ed793bb4658f0"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-guardian-correction-d2-provenance-identity.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "cff2481c474ac1e7da0d2e4d41546d7049172aa8",
+    "sha256": "42f8f9fb2fd6f0e30e8d26ca1dc7987fd3551768af98686a18293706fcb44e3f"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-guardian-correction-d3-submodule-immutable-bytes.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "d6a35ea999258dcca965ef6f1dc9a2bfaa96c82a",
+    "sha256": "f3775f3c1f6ad7c29bae82bd734293737bf5e4a7e40bcd49a2ee23adae056483"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-guardian-correction-d4-mode-binding.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "4d6a5ef4c2b58503b02994261016b9810ebf7aad",
+    "sha256": "a66faadfeae7a50a314ea0d3233f9f444124b538566ddc62ad3a73f4fbee16a6"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-guardian-correction-d5-closed-world.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "5ee3a9f7c3ad399bd4585a950d564d7491d287ef",
+    "sha256": "98a0bf4f3117a784e37cce21900df65f47312b9a8d45d987e190b55ebb13897b"
+  },
+  {
+    "path": "changelog_fragments/0009-release-rehearsal-guardian-correction-docs.json",
+    "category": "code",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 release-process tooling output/input surface. No human legal/provenance review has been recorded yet; kept honestly unresolved like every other tracked path rather than assumed-clear because it is new.",
+    "oid": "cefbd545106645fccfb77bdd484fc0469d349f59",
+    "sha256": "4f28c1ffe9167ebdbc111f35f27b087afc209e2ea5325d1f970618af432902d2"
   },
   {
     "path": "changelog_fragments/0009-release-rehearsal-immutable-action-pins.json",
@@ -608,8 +680,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "964dbda4a0f8af3f0872b38524781e92f49f338d",
-    "sha256": "4ffed69c5205fc717537c5c4bcc4fa222be1b62d8925c58d96c773bc89738f41"
+    "oid": "6dcfdc418591e6dae1e8b05554e0e908e26153d1",
+    "sha256": "c5dcfd5f3c488c4f4ba90e1e04fc2049c9f45d5460b7a24da802392d6e8f3c50"
   },
   {
     "path": "docs/release_data/action_pins.json",
@@ -632,8 +704,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "3aa994b0ab6c0e398ac7dac66c267ae4c9c983f7",
-    "sha256": "05222c6e1ead4549dc4bbea3848ffcc2af3bbedc42fc13a824eabf5f869648be"
+    "oid": "d218c17c557111d3d4084989eb9f6b156af316e0",
+    "sha256": "f6aa7926765011230ed292b79ef40e8e810b842cf0727f87e926e23358717153"
   },
   {
     "path": "docs/release_data/map_hex_exceptions.json",
@@ -680,8 +752,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "9e28051e587ec29d7afd8d6aa9b16c31eb964d2e",
-    "sha256": "a86f3b86770041f91d65acbde7756586e952d30c9a1e96db31266438ea3c00f1"
+    "oid": "07dfde0c0fe6e9460460492c3f1dea256f8cd140",
+    "sha256": "b8a9730c4233f30943c089fd73c59300f4fdce331fcdb413eed83b9cfdbe31ac"
   },
   {
     "path": "docs/release_data/version_ledger.json",
@@ -704,8 +776,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "0cfa988f456116d493c1c7e63f6fce31d9c51537",
-    "sha256": "5092bd6c81297a578a12b30db40db981391316b711864aea9a0abfd40bbed20d"
+    "oid": "7aaeea50c3d67d5fd4c1b42e7efcf6caf3f6df71",
+    "sha256": "441ab17d07a7ba76422fb0b280eca88990ef270af55495cd456bf3e6b0f240e0"
   },
   {
     "path": "docs/save_format.md",

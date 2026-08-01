@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Close a closed-world enumeration gap a guardian-correction review found: the non-git candidate-tree enumeration tree_coverage.py/allowlist.py used for a genuine extracted-archive candidate (_present_regular_files) previously skipped straight past any symlink it found, making a stray, unlisted symlink at any path completely invisible to both the 'extra'/'missing from allowlist' accounting -- the replacement (_present_paths) never skips a filesystem entry by kind (regular file, symlink, hardlink, device, FIFO, socket); only a genuine, non-symlink directory is still ever walked through rather than reported. Also adds a dedicated regression test forcing build_deterministic_archive's own wired archive-member-exact refusal (not merely the tree_coverage.check_archive_membership_exact helper in isolation) through the real call site. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}
