@@ -91,6 +91,7 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
 from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import gitmodules as gm
+from scripts.release_rehearsal import tree_coverage as tc
 
 CATEGORIES = ("code", "asset", "submodule")
 UNRESOLVED_MARKERS = ("NOASSERTION", "", None)
@@ -806,39 +807,51 @@ def _load_allowlist_paths(allowlist_path: Path) -> List[str]:
 
 
 def _load_exclusion_paths(exclusions_path: Path) -> List[str]:
-    """Local, dependency-light JSON read of just the exact **gitlink-
-    kind** paths in an export-exclusions document (mirrors `_load_
-    allowlist_paths` above) -- deliberately does not import
-    `tree_coverage.py`'s full schema validation here (that belongs to
-    `tree_coverage.py`/`manifest.py`'s own dedicated checks); this
-    generator only ever needs the bare path list to know which paths to
-    assign the `"submodule"` category to.
+    """issue #9 defense-in-depth fix (final-review follow-up, mirrors
+    `allowlist.py`'s own identical `_load_non_gitlink_exclusion_paths`
+    closing-round fix): this used to be its own minimal, independent,
+    permissive local JSON reader -- it re-implemented (rather than
+    reused) `tree_coverage.py`'s exclusion-document schema, accepting
+    any entry with a string `path` and merely checking `kind ==
+    "gitlink"` as a bare string, with **no** curated-path check, no
+    `oid` shape/well-formedness check, no mode check, and no duplicate-
+    path check at all. That left this reader "backstopped" only by
+    `tree_coverage.check_partition()`/`manifest.py`'s composite report
+    catching the same malformed/fabricated/duplicate exclusion row
+    separately -- an independent review correctly flagged this as a
+    second, permissive parser of the same trust file
+    (`docs/release_data/export_exclusions.json`) that could silently
+    drift out of sync with the real, strict one, rather than a provable
+    single source of truth.
 
-    Guardian-correction remediation (D2): a non-gitlink export exclusion
-    (`kind == "self_referential_evidence"`, e.g. `docs/release_data/
-    provenance/code.json`) is deliberately excluded here -- such a path
-    is never assigned any provenance category at all (it is excluded
-    from the archive precisely *because* it can never hold a live-
-    content-bound provenance record about itself; see
-    `tree_coverage.SELF_REFERENTIAL_EVIDENCE_PATHS`'s docstring), so it
-    must never be fanned into `generate_exact_entries`'s `all_paths`
-    (which would otherwise raise a category-assignment `ProvenanceError`
-    for it, since no `PROVENANCE_ROOT_SEED` root ever assigns it the
-    `"submodule"` category)."""
+    This function now performs no schema interpretation of its own at
+    all: it delegates entirely to `tree_coverage.load_exclusion_paths()`
+    restricted to `tree_coverage.PROVENANCE_REQUIRED_EXCLUSION_KINDS`
+    (today exactly `(tree_coverage.KIND_GITLINK,)`) -- the same set
+    `scripts/release_rehearsal/manifest.py`'s `check_provenance` already
+    uses to compute this exact narrower "still needs its own separate
+    provenance-manifest record" path set (see that constant's docstring
+    in `tree_coverage.py`). An arbitrary/uncurated gitlink path, a
+    fabricated/null/mismatched `oid`, a wrong mode, a duplicate entry, or
+    a `kind == "self_referential_evidence"` row misusing self-evidence
+    semantics now all fail here, at this reader, exactly like they
+    already failed `tree_coverage.load_exclusions()` itself -- never
+    only at a separate composite backstop.
+
+    Returns `[]` if `exclusions_path` does not exist at all (unchanged
+    from before this fix). Any schema/curated-policy defect
+    `tree_coverage.load_exclusions()` would raise is re-raised here as a
+    `ProvenanceError`, so every caller of this function keeps failing
+    exactly the same way it always has, just against a strictly correct,
+    shared implementation instead of a second, independently
+    (re-)implemented one."""
+    path = Path(exclusions_path)
+    if not path.is_file():
+        return []
     try:
-        data = json.loads(Path(exclusions_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        raise ProvenanceError(f"{exclusions_path}: not valid JSON: {error}") from error
-    exclusions = data.get("exclusions")
-    if not isinstance(exclusions, list) or not exclusions:
-        raise ProvenanceError(f"{exclusions_path}: must contain a non-empty 'exclusions' array")
-    paths = []
-    for entry in exclusions:
-        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
-            raise ProvenanceError(f"{exclusions_path}: every exclusion entry must have a string 'path'")
-        if entry.get("kind") == "gitlink":
-            paths.append(entry["path"])
-    return paths
+        return tc.load_exclusion_paths(path, kinds=tc.PROVENANCE_REQUIRED_EXCLUSION_KINDS)
+    except tc.TreeCoverageError as error:
+        raise ProvenanceError(str(error)) from error
 
 
 def main(argv=None) -> int:

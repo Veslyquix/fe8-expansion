@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import provenance as prov
+from scripts.release_rehearsal import tree_coverage as tc
 
 
 def _base_entry(**overrides):
@@ -656,6 +657,186 @@ class GenerateExactEntriesTests(unittest.TestCase):
             self.assertEqual(counts, {"code.json": 2, "assets.json": 0, "submodules.json": 1})
             written = json.loads((provenance_dir / "code.json").read_text(encoding="utf-8"))
             self.assertEqual([e["path"] for e in written], ["docs/readme.md", "src/main.c"])
+
+
+class LoadExclusionPathsDelegatesToTreeCoverageTests(unittest.TestCase):
+    """issue #9 (final-review follow-up): `provenance._load_exclusion_
+    paths` used to be its own second, independent, permissive parser of
+    `docs/release_data/export_exclusions.json` -- it accepted any entry
+    with a string `path` and a bare `kind == "gitlink"` string
+    comparison, with no curated-path check, no `oid` shape/well-
+    formedness check, no mode check, and no duplicate-path check at all.
+    That was backstopped (never exploitable) only because
+    `tree_coverage.check_partition()`/`manifest.py`'s composite report
+    separately, correctly rejected the same malformed/fabricated row --
+    an independent review flagged this as a live defense-in-depth gap:
+    the same trust file should have exactly one strict validator, not
+    two parsers that can silently drift apart. This class proves the
+    provenance reader itself -- not only a composite backstop -- now
+    fails closed, because it delegates entirely to
+    `tree_coverage.load_exclusion_paths(..., kinds=tree_coverage.
+    PROVENANCE_REQUIRED_EXCLUSION_KINDS)` instead of re-implementing a
+    second, more permissive reader."""
+
+    @staticmethod
+    def _write_exclusions(dir_path, entries):
+        exclusions_path = dir_path / "export_exclusions.json"
+        exclusions_path.write_text(json.dumps({"exclusions": entries}), encoding="utf-8")
+        return exclusions_path
+
+    def test_missing_exclusions_file_still_returns_empty_unchanged(self):
+        """Behavior unchanged by this fix: a genuinely absent exclusions
+        file still returns an empty list, never an error (this mirrors
+        every existing `check`/`generate` call site's own
+        `args.exclusions.is_file()` guard)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(prov._load_exclusion_paths(Path(tmp) / "does-not-exist.json"), [])
+
+    def test_only_gitlink_kind_paths_are_returned(self):
+        """The real, curated self-referential-evidence exclusion
+        (`docs/release_data/provenance/code.json`) must never be fanned
+        into the provenance-required set -- only `PROVENANCE_REQUIRED_
+        EXCLUSION_KINDS` (today just `KIND_GITLINK`) paths come back,
+        exactly as before this fix."""
+        with tempfile.TemporaryDirectory() as tmp:
+            curated_path = sorted(tc.SELF_REFERENTIAL_EVIDENCE_PATHS)[0]
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "gitlink", "mode": gs.MODE_GITLINK, "oid": "a" * 40, "reason": "r"},
+                {"path": curated_path, "kind": "self_referential_evidence", "mode": "100644", "oid": None, "reason": "r"},
+            ])
+            self.assertEqual(prov._load_exclusion_paths(exclusions_path), ["mgfembp"])
+
+    def test_arbitrary_gitlink_path_with_fabricated_oid_fails_the_reader_directly(self):
+        """An arbitrary/uncurated gitlink path (tree_coverage places no
+        curation requirement on a gitlink *path* itself, unlike self-
+        referential-evidence) carrying a fabricated, not-well-formed
+        `oid` (here: too short, never a real 40-lowercase-hex commit)
+        must be rejected by the reader itself -- the old permissive
+        reader accepted any string `path` unconditionally."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "some/arbitrary/gitlink", "kind": "gitlink", "mode": gs.MODE_GITLINK,
+                 "oid": "not-a-real-oid", "reason": "bogus"},
+            ])
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov._load_exclusion_paths(exclusions_path)
+            self.assertIn("some/arbitrary/gitlink", str(ctx.exception))
+
+    def test_null_oid_on_a_gitlink_entry_fails_the_reader(self):
+        """A gitlink-kind entry's `oid` is mandatory (unlike self-
+        referential-evidence's, which must be null); a null/missing
+        `oid` must be rejected here, not silently treated as an
+        excluded/unpinned gitlink."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "gitlink", "mode": gs.MODE_GITLINK, "oid": None, "reason": "r"},
+            ])
+            with self.assertRaises(prov.ProvenanceError):
+                prov._load_exclusion_paths(exclusions_path)
+
+    def test_mismatched_case_oid_fails_the_reader(self):
+        """A well-formed-length but not-lowercase (i.e. never a real Git
+        OID as Git itself would ever print it) `oid` must be rejected --
+        the old reader never inspected `oid` at all for any kind."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "gitlink", "mode": gs.MODE_GITLINK, "oid": "A" * 40, "reason": "r"},
+            ])
+            with self.assertRaises(prov.ProvenanceError):
+                prov._load_exclusion_paths(exclusions_path)
+
+    def test_wrong_mode_on_a_gitlink_entry_fails_the_reader(self):
+        """A gitlink-kind entry must record Git's real gitlink mode
+        (`160000`); any other mode (e.g. an ordinary blob mode) is
+        rejected here -- the old reader never inspected `mode` at all."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "gitlink", "mode": "100644", "oid": "a" * 40, "reason": "r"},
+            ])
+            with self.assertRaises(prov.ProvenanceError):
+                prov._load_exclusion_paths(exclusions_path)
+
+    def test_unrecognized_kind_fails_the_reader(self):
+        """A `kind` outside `tree_coverage.VALID_EXCLUSION_KINDS`
+        entirely (never merely "not the literal string 'gitlink'", the
+        old reader's only check) must be rejected."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "bogus-kind", "mode": gs.MODE_GITLINK, "oid": "a" * 40, "reason": "r"},
+            ])
+            with self.assertRaises(prov.ProvenanceError):
+                prov._load_exclusion_paths(exclusions_path)
+
+    def test_duplicate_exclusion_entry_fails_the_reader(self):
+        """Two exclusion rows for the exact same path (even if each is
+        individually well-formed) must be rejected -- the old reader had
+        no duplicate-path check at all and would have silently
+        deduplicated it away via its bare list-append."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "gitlink", "mode": gs.MODE_GITLINK, "oid": "a" * 40, "reason": "r"},
+                {"path": "mgfembp", "kind": "gitlink", "mode": gs.MODE_GITLINK, "oid": "b" * 40, "reason": "r2"},
+            ])
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov._load_exclusion_paths(exclusions_path)
+            self.assertIn("duplicate", str(ctx.exception).lower())
+
+    def test_self_evidence_misuse_on_an_arbitrary_path_fails_the_reader(self):
+        """An arbitrary/uncurated tracked path masquerading as
+        `kind == "self_referential_evidence"` (never a member of
+        `tree_coverage.SELF_REFERENTIAL_EVIDENCE_PATHS`) must still be
+        rejected here even though this reader only ever *returns*
+        gitlink-kind paths -- the whole exclusions document is validated
+        up front, so a bogus row of any kind poisons the file, exactly
+        like `tree_coverage.load_exclusions()` itself, never silently
+        ignored merely because it would be filtered out of the final
+        result anyway."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp), [
+                {"path": "mgfembp", "kind": "gitlink", "mode": gs.MODE_GITLINK, "oid": "a" * 40, "reason": "r"},
+                {"path": "docs/some/arbitrary/file.md", "kind": "self_referential_evidence",
+                 "mode": "100644", "oid": None, "reason": "bogus"},
+            ])
+            with self.assertRaises(prov.ProvenanceError) as ctx:
+                prov._load_exclusion_paths(exclusions_path)
+            self.assertIn("docs/some/arbitrary/file.md", str(ctx.exception))
+
+    def test_arbitrary_gitlink_bogus_exclusion_fails_check_end_to_end(self):
+        """The full reproducer, wired end-to-end through `prov.main`'s
+        `check` subcommand (the actual CLI/`make release-check` entry
+        point that computes `required_paths` via `_load_exclusion_
+        paths`): a bogus exclusions file must make `check` fail loudly
+        (non-zero exit), never silently succeed merely because
+        `tree_coverage.check_partition()` would separately catch the
+        same defect against the same file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _git("init", "-q", cwd=root)
+            _git("config", "user.email", "t@example.com", cwd=root)
+            _git("config", "user.name", "T", cwd=root)
+            (root / "a.txt").write_text("a")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(json.dumps({"paths": ["a.txt"]}), encoding="utf-8")
+            provenance_dir = root / "provenance"
+            provenance_dir.mkdir()
+            (provenance_dir / "code.json").write_text(json.dumps([
+                _base_entry(path="a.txt"),
+            ]), encoding="utf-8")
+            exclusions_path = self._write_exclusions(root, [
+                {"path": "some/arbitrary/gitlink", "kind": "gitlink", "mode": gs.MODE_GITLINK,
+                 "oid": "not-a-real-oid", "reason": "bogus"},
+            ])
+            rc = prov.main([
+                "check",
+                "--repo-root", str(root),
+                "--provenance-dir", str(provenance_dir),
+                "--allowlist", str(allowlist_path),
+                "--exclusions", str(exclusions_path),
+            ])
+            self.assertEqual(rc, 2, "a bogus exclusions file must make 'check' fail loudly, exit code 2")
 
 
 class CheckBlobIdentityTests(unittest.TestCase):
