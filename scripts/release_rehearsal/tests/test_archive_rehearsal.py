@@ -87,6 +87,51 @@ class BuildDeterministicArchiveTests(unittest.TestCase):
                     self.assertEqual(member.gname, "")
                     self.assertTrue(member.isreg())
 
+    def test_archive_output_mode_is_canonicalized_regardless_of_source_mode(self):
+        """issue #9 guardian-correction remediation (D4): the archive's
+        *written* tar mode is always the fixed `CANONICAL_FILE_MODE`
+        (`0o644`), regardless of whether the source path's own live
+        filesystem/Git mode is an ordinary `100644` file or an executable
+        `100755` one -- a deliberate, documented determinism policy (see
+        docs/release_process.md's "Archive member mode policy"), not an
+        accidental preservation. Mode-binding (`source_allowlist.json`'s
+        `"modes"` map, `check_mode_identity`) is a drift-detection/
+        provenance-identity concern only; it never changes what the
+        archive itself actually writes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            (root / "ordinary.txt").write_text("ordinary\n")
+            (root / "ordinary.txt").chmod(0o644)
+            (root / "executable.sh").write_text("#!/bin/sh\necho hi\n")
+            (root / "executable.sh").chmod(0o755)
+            dest = Path(tmp) / "out.tar"
+            ar.build_deterministic_archive(root, {"ordinary.txt", "executable.sh"}, dest)
+            with tarfile.open(dest, "r") as tar:
+                members = {m.name: m for m in tar.getmembers()}
+            self.assertEqual(members["ordinary.txt"].mode, ar.CANONICAL_FILE_MODE)
+            self.assertEqual(members["executable.sh"].mode, ar.CANONICAL_FILE_MODE)
+            self.assertEqual(members["ordinary.txt"].mode, members["executable.sh"].mode)
+
+    def test_git_backed_archive_output_mode_is_canonicalized_for_a_committed_executable(self):
+        """The git-blob-bound half of the same D4 requirement: a
+        committed `100755` (executable) blob still archives with the
+        fixed `CANONICAL_FILE_MODE`, never its live Git mode."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _init_repo(root)
+            (root / "run.sh").write_text("#!/bin/sh\necho hi\n")
+            (root / "run.sh").chmod(0o755)
+            _git("add", "-A", cwd=root)
+            _git("update-index", "--chmod=+x", "run.sh", cwd=root)
+            _git("commit", "-q", "-m", "add executable", cwd=root)
+            dest = Path(tmp) / "out.tar"
+            ar.build_deterministic_archive(root, {"run.sh"}, dest)
+            with tarfile.open(dest, "r") as tar:
+                member = tar.getmembers()[0]
+            self.assertEqual(member.mode, ar.CANONICAL_FILE_MODE)
+
     def test_member_order_is_sorted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "root"
