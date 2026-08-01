@@ -556,3 +556,179 @@ mechanically BLOCKED; this section is evidence, not a closure claim**:
 
 Issue #9 remains **not closed** by this report, this round, or any
 command either describes.
+
+## R1-R5 remediation round (independent re-review at `28972b24`)
+
+A further independent re-review of `28972b24` (the exact tip of the
+guardian-correction remediation round above) reproduced five additional
+defects (R1-R5), all remediated in the `agent/issue9-release-process`
+branch on top of every round above -- **the candidate remains
+mechanically BLOCKED; this section is evidence, not a closure claim**:
+
+1. **R1 -- self-referential-evidence exclusion is now a validator
+   invariant, never a generator convention.** Previously, *any* tracked
+   path could be claimed under `tree_coverage.
+   KIND_SELF_REFERENTIAL_EVIDENCE` with a fabricated `oid`, and tree
+   coverage stayed clean -- silently moving an arbitrary blob out of the
+   archive+provenance-required set with no actual review, even though
+   D2 (above) had already narrowed this kind's *legitimate* use to
+   exactly one curated path. `tree_coverage.py` now checks this kind's
+   `path` against a small, hard-coded, human-curated policy set
+   (`SELF_REFERENTIAL_EVIDENCE_PATHS`, today exactly
+   `{"docs/release_data/provenance/code.json"}`) in *both*
+   `load_exclusions()` (the JSON-file-loading gate) and independently
+   again inside `check_partition()` itself, so even a directly-
+   constructed exclusion entry that never went through
+   `load_exclusions()` at all is still caught -- no prefix, no
+   wildcard, no second/extra row of this kind for any other path. A
+   claim against any other path, or an uncurated extra row, now fails
+   the partition outright (a new, dedicated
+   `invalid_self_referential_evidence` bucket on `PartitionResult`, kept
+   separate from the pre-existing `missing_included`/`missing_excluded`/
+   `mismatched_excluded` buckets so each failure mode is independently
+   reported and independently tested). Dropping the one legitimate
+   curated exclusion without replacing it is unaffected and still
+   separately, correctly caught by the pre-existing `missing_included`
+   accounting once the real path resurfaces as neither included nor
+   excluded -- so neither dropping the curated row nor adding an
+   uncurated one can ever pass.
+2. **R2 -- no false OID semantics for self-referential evidence.**
+   This kind's exclusion record previously carried an `oid` that was, in
+   truth, never cross-checked against anything at all (silently
+   "documentary/best-effort" only, while nearby prose read as if it were
+   an immutable, verified fact), and the real, checked-in document's own
+   recorded value had already drifted stale relative to the live blob
+   well before this fix, precisely because nothing ever caught that
+   drift. There is no such thing as a truthful, immutable `oid` for this
+   kind in the first place: a file cannot record an exact hash of its
+   own not-yet-finalized content without exactly the "hash quine" cycle
+   D2 (above) already describes and rejects. The schema now requires
+   this kind's `oid` to be absent or JSON `null`; `load_exclusions()`
+   hard-rejects any supplied/stale/fake value (a real 40-hex OID, an
+   empty string, anything but `null`/absent), and
+   `generate_exclusions_document()` always writes `null` for it, never a
+   live tree OID -- `docs/release_data/export_exclusions.json` is
+   regenerated accordingly. Nothing about this kind's OID is ever
+   claimed, recorded, or cross-checked as a content-identity fact; a
+   content change to the curated path is instead caught purely by the
+   ordinary tree-membership contract, which remains fully live (it is
+   still a live, correctly-kinded, correctly-moded blob either way).
+   `docs/release_process.md` and this document now say explicitly:
+   `code.json` is a curated path-only-plus-mode exclusion and
+   **external rehearsal evidence about this repository's own tooling --
+   never source archive content, and never itself a redistribution/
+   legal authorization of any kind.** Every *included* blob (every
+   ordinary allowlist member, `assets.json`, and `submodules.json`
+   alike) remains exactly OID/SHA256-bound with no exemption at all; a
+   `"gitlink"` exclusion (`mgfembp`) is unaffected and still requires
+   and strictly cross-checks its own exact, immutable OID exactly as
+   before -- only the one, single, curated, self-referential path's OID
+   semantics changed. New tests cover: injecting an arbitrary second
+   blob under this kind, a bogus/stale/non-null `oid` on the legitimate
+   curated entry, an extra uncurated row alongside the legitimate one, a
+   missing curated exclusion (the path silently resurfacing as neither
+   included nor excluded), and an actual content change to
+   `code.json`'s own live blob -- via both `test_tree_coverage.py` and a
+   dedicated `Makefile`-driven end-to-end reproduction.
+3. **R3 -- submodule future rebuild-eligibility fails closed on origin
+   URL and command failure, not just on the checks it already
+   performed.** `evaluate_rebuild_eligibility()`'s prior URL check only
+   ever compared `remote.origin.url` against `.gitmodules`'s declared
+   URL *when both sides already happened to be known* -- a genuinely
+   missing origin (the ordinary state of an uninitialized-then-partly-
+   configured submodule) left the check vacuously unexercised rather
+   than failing. Eligibility now requires a live, non-empty configured
+   origin that agrees *exactly* with **both** independent immutable
+   declared sources this repository records for it -- `.gitmodules`'s
+   own declared `url`, and the separate `docs/release_data/provenance/
+   submodules.json` record's own `url` field -- defaulting to
+   non-eligible and only becoming eligible once all three agree; a
+   missing declaration in *either* immutable source, or a mismatch
+   against *either* of them, is its own actionable, non-eligible
+   finding. `git cat-file -e <sha>^{commit}` already correctly enforced
+   both existence and type for the pinned commit object before this
+   round (a blob/tree SHA, or any other unresolvable value, was already
+   rejected) -- this round adds explicit regression coverage for that
+   existing behavior rather than changing it. Every underlying `git
+   status`/`git config`/`git cat-file` command is now itself required
+   to actually *succeed*: a genuine tooling failure (as opposed to the
+   command's own ordinary not-clean/no-origin-set/object-absent
+   outcome) is caught and reported as its own actionable, non-eligible
+   finding, never silently swallowed into a false pass -- `git config
+   --get remote.origin.url`'s exit code `1` ("key not found", the
+   ordinary no-origin-configured case) is distinguished from any other
+   nonzero exit (a genuine config/tooling error). New tests cover: a
+   clean positive control, a missing origin, a URL mismatch against
+   `.gitmodules`, a URL mismatch against provenance, a missing
+   `.gitmodules` URL, a missing provenance URL, a wrong-type pinned
+   object, a nonexistent pinned object SHA, a `git status` command
+   failure, and a `git config` command failure.
+4. **R4 -- source comment now names a real test class.** A comment in
+   `archive_rehearsal.py` referenced
+   `RebuildRehearsalBlockerEndToEndVerifiedSuccessTests`, a test class
+   that has never existed under that name; the real, existing class
+   exercising that exact end-to-end path is
+   `RebuildRehearsalBlockerEndToEndBuildTests` (see D1 above). The
+   comment is corrected to name it. A new mechanical check,
+   `SourceCommentTestClassReferenceTests`
+   (`test_archive_rehearsal.py`), scans every
+   `scripts/release_rehearsal/*.py` source file for any backtick-quoted
+   `` `SomeNameTests` `` reference and cross-checks each one against the
+   real `class SomeNameTests(...)` definitions actually present under
+   `scripts/release_rehearsal/tests/`, failing on any reference that
+   does not resolve -- verified, by a temporary negative control, to
+   actually fail when a referenced class is renamed away, then restored.
+5. **R5 -- mode-binding schema cannot be silently switched off.** D4
+   (above) added the allowlist's `"modes"` map and its cross-checks, but
+   `load_allowlist_modes()` treated `"modes"` as effectively optional at
+   load time (returning `None` with no error at all when the key was
+   simply absent) and nothing anywhere checked `schema_version` itself
+   -- so deleting the `"modes"` key, or rolling `schema_version` back to
+   an older value, silently disabled every one of D4's mode checks with
+   no actionable failure, while every other allowlist check kept
+   passing. `load_allowlist_modes()` now hard-requires `schema_version`
+   to be *exactly* the current, single supported value (`4`); a
+   missing, downgraded, upgraded-but-unknown, or wrong-type
+   `schema_version` is an actionable `AllowlistError`, raised *before*
+   any mode checking is even attempted. Once `schema_version` passes,
+   `"modes"` itself becomes unconditionally mandatory (a missing key is
+   now the same class of hard error, never a silent `None`), and its
+   bijection/identity checks always run. New tests cover: deleting
+   `"modes"` entirely, an unsupported/downgraded/missing/wrong-type
+   `schema_version`, adding an extra mode entry with no corresponding
+   path, dropping a mode entry for an existing path, and a real,
+   committed `chmod` of an allowlisted file (the case D4's own checks
+   were originally meant to catch, re-verified end-to-end here to prove
+   the schema fix did not regress the check it protects).
+
+Every item above is additionally covered by dedicated, adversarial
+stdlib-unittest coverage (extensions to `test_tree_coverage.py`,
+`test_archive_rehearsal.py`, and `test_allowlist.py`), and the full
+`scripts/release_rehearsal` stdlib test suite was reverified green after
+this round's changes. `make release-check`'s live status remains,
+correctly and exactly, `"blocked"` throughout -- this round changes no
+workflow, legal, or `artifact_guard.py` file, adds no approval/fetch/
+publication/ref/merge action of any kind, and closes no issue.
+
+### Verification (this round)
+
+* Full `scripts/release_rehearsal` stdlib test suite re-verified green
+  after this round's changes (see the evidence commands above; the pass
+  count itself is deliberately not hardcoded here, for the same "do not
+  trust a fixed number" reason the rest of this document already
+  explains).
+* `make release-check`'s live status remains, correctly and exactly,
+  `"blocked"`: external attestation is still, and can only ever be,
+  `"missing"`; the `mgfembp` submodule remains uninitialized/
+  unapproved/excluded; every provenance record remains honestly
+  unresolved.
+* `python3 scripts/artifact_guard.py --revision HEAD` -- unaffected;
+  this round never touches `scripts/artifact_guard.py`.
+* No tag/release/asset/comment/environment/protected ref was created,
+  moved, or deleted; no `contents: write` permission was added anywhere;
+  the `mgfembp` submodule was never fetched/initialized; no license was
+  selected; no author/rightsholder/license/reviewer/approval was
+  invented.
+
+Issue #9 remains **not closed** by this report, this round, or any
+command either describes.
