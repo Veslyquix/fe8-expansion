@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "fixed",
+  "summary": "Rename the generated allowlist/export-exclusions documents' misleadingly-named, never-validated 'generated_from_sha' field to 'generation_basis_sha' and document explicitly, in both generators' own '_comment' text, that this field is purely a documentary record of which commit a document was last regenerated against -- it is never read, compared, or otherwise cross-checked by any validator in this repository (every check always independently re-derives its own live target_sha), so it must never be mistaken for a validated commit binding.",
+  "semver_impact": "none"
+}

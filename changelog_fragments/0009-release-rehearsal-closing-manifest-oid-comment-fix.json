@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "docs",
+  "summary": "Fix a stale source comment in manifest.py's check_provenance() that still described the self-referential-evidence export-exclusion record as carrying 'kind/mode/oid/reason' -- this kind's oid field was already fixed (R2) to always be JSON null and never a claimed/cross-checked identity fact; the comment now says so explicitly instead of implying an oid is part of its evidence.",
+  "semver_impact": "none"
+}

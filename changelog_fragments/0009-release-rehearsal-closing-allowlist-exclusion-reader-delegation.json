@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "security",
+  "summary": "Close an allowlist/tree_coverage exclusion-consumer asymmetry a fresh independent review found: allowlist.py's own _load_non_gitlink_exclusion_paths() reader accepted any exclusion entry whose kind merely was not the literal string 'gitlink', with no curated-path or oid-shape check at all -- so al.check()'s own sub-report could stay clean for an arbitrary/uncurated self-evidence exclusion, or one with a fabricated oid, even though tree_coverage.check_partition() reading the exact same file already rejected it. This reader now delegates entirely to tree_coverage.load_exclusion_paths(), restricted to KIND_SELF_REFERENTIAL_EVIDENCE, so the same curated SELF_REFERENTIAL_EVIDENCE_PATHS policy set and oid-is-null invariant are enforced identically on both consumers. New literal reviewer-reproducer tests cover an arbitrary path with a fabricated oid, a curated path with a fabricated oid, and the full al.check() end-to-end path.",
+  "semver_impact": "none"
+}

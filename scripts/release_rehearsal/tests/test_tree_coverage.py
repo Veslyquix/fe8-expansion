@@ -188,6 +188,23 @@ class GenerateExclusionsDocumentTests(unittest.TestCase):
             self.assertEqual(document["exclusions"][0]["oid"], GITLINK_SHA)
             self.assertEqual(document["exclusions"][0]["mode"], "160000")
 
+    def test_generated_document_uses_accurately_named_documentary_sha_field(self):
+        """issue #9 closing-round fix: the generated document's
+        generation-basis field is named 'generation_basis_sha' (never
+        the old, misleading 'generated_from_sha') -- and, more
+        importantly, this field is purely documentary: no check anywhere
+        in this repository ever reads it back or cross-checks it against
+        anything (every check always re-derives its own live target_sha
+        independently -- HEAD, an explicit override, or the staged
+        index), so its presence must never be mistaken for a validated
+        commit binding."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha = _init_repo_with_gitlink(root)
+            document = tc.generate_exclusions_document(root, sha)
+            self.assertEqual(document["generation_basis_sha"], sha)
+            self.assertNotIn("generated_from_sha", document)
+
     def test_unknown_gitlink_path_has_no_seed_reason_and_is_actionable(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

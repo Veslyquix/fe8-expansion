@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "docs",
+  "summary": "Correct docs/release_closure_candidate.md's R5 section, which a fresh independent review found mislabeled the pre-existing, already-committed chmod-detection test (test_committed_executable_bit_change_makes_mode_data_stale, added in the guardian-correction remediation round's D4 fix) as one of R5's 'new tests'. The wording now states plainly it is not new to this round and was only re-verified end-to-end here.",
+  "semver_impact": "none"
+}

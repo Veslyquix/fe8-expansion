@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from scripts.release_rehearsal import git_source as gs
+from scripts.release_rehearsal import tree_coverage as tc
 
 SCHEMA_VERSION = 4
 DEFAULT_ALLOWLIST_PATH = Path("docs/release_data/source_allowlist.json")
@@ -159,10 +160,16 @@ def generate_allowlist_document(
             "structural membership allowlist only -- see "
             "docs/release_data/provenance/*.json and docs/release_process.md for "
             "the separate, currently-unresolved legal/provenance determination "
-            "that independently blocks publication regardless of this allowlist."
+            "that independently blocks publication regardless of this allowlist. "
+            "'generation_basis_sha' is a documentary record of which commit this "
+            "file was last regenerated against ONLY -- it is never read, "
+            "compared, or otherwise validated by check()/check_mode_identity() "
+            "or any other check in this repository (every check instead always "
+            "re-derives its own live target_sha independently); do not mistake "
+            "its presence for a validated commit binding of any kind."
         ),
         "schema_version": SCHEMA_VERSION,
-        "generated_from_sha": target_sha,
+        "generation_basis_sha": target_sha,
         "generator": "python3 -m scripts.release_rehearsal.allowlist generate",
         "paths": entries,
         "modes": modes,
@@ -433,34 +440,49 @@ def check_allowlist_completeness_non_git(
 
 
 def _load_non_gitlink_exclusion_paths(exclusions_path: Path) -> List[str]:
-    """A minimal, local, dependency-light JSON read of just the exact
-    paths in an export-exclusions document whose `kind` is *not*
-    `"gitlink"` (mirrors `provenance.py`'s own analogous `_load_
-    exclusion_paths` convention: deliberately does not import
-    `tree_coverage.py`'s full schema validation here). Returns `[]` if
-    `exclusions_path` does not exist at all -- this allowlist has always
-    worked standalone without one (a gitlink is already excluded via
-    pure Git-tree data alone; only a *non-gitlink* export exclusion,
-    e.g. the self-referential-evidence provenance manifest, needs this
-    extra, explicit path list, since nothing about its own tree entry
-    otherwise distinguishes it from an ordinary included blob)."""
+    """issue #9 closing-round fix: this used to be its own minimal,
+    permissive, local JSON reader that accepted *any* exclusion entry
+    whose `kind` merely was not the literal string `"gitlink"` -- no
+    curated-path check, no `oid` shape check at all. That meant an
+    arbitrary tracked path, or a `self_referential_evidence`-kind row
+    carrying a fabricated/stale `oid`, could make this allowlist's own
+    sub-report (`check()`) come back perfectly clean while
+    `tree_coverage.check_partition()`, reading the *exact same file*,
+    already rejected it outright -- an asymmetry an independent review
+    correctly flagged as a live consumer-side bypass, not merely an
+    unused permissive convention.
+
+    This function now does no schema interpretation of its own at all:
+    it delegates entirely to `tree_coverage.load_exclusion_paths()`,
+    restricted to `tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE` (the
+    only non-`"gitlink"` kind `tree_coverage.VALID_EXCLUSION_KINDS`
+    permits at all, so this restriction is exactly equivalent in scope
+    to the old "kind != gitlink" filter) -- the same curated
+    `SELF_REFERENTIAL_EVIDENCE_PATHS` policy set, the same mandatory
+    `oid is None` shape check, and every other `load_exclusions()`
+    invariant now apply here identically, not as a second,
+    independently-implemented (and, as found, more permissive) reader
+    that could silently drift out of sync with the real one.
+
+    Returns `[]` if `exclusions_path` does not exist at all (unchanged
+    from before this fix) -- this allowlist has always worked standalone
+    without one (a gitlink is already excluded via pure Git-tree data
+    alone; only a *non-gitlink* export exclusion, e.g. the
+    self-referential-evidence provenance manifest, needs this extra,
+    explicit path list, since nothing about its own tree entry otherwise
+    distinguishes it from an ordinary included blob). Any schema/
+    curated-policy defect `tree_coverage.load_exclusions()` would raise
+    (an arbitrary/uncurated path, a fabricated/stale/non-null `oid`, a
+    malformed shape, etc.) is re-raised here as an `AllowlistError`, so
+    every caller of this function keeps failing exactly the same way it
+    always has, just against a strictly correct, shared implementation."""
     path = Path(exclusions_path)
     if not path.is_file():
         return []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        raise AllowlistError(f"{path}: not valid JSON: {error}") from error
-    exclusions = data.get("exclusions")
-    if not isinstance(exclusions, list):
-        raise AllowlistError(f"{path}: must contain an 'exclusions' array")
-    paths = []
-    for entry in exclusions:
-        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
-            raise AllowlistError(f"{path}: every exclusion entry must have a string 'path'")
-        if entry.get("kind") != "gitlink":
-            paths.append(entry["path"])
-    return paths
+        return tc.load_exclusion_paths(path, kinds=(tc.KIND_SELF_REFERENTIAL_EVIDENCE,))
+    except tc.TreeCoverageError as error:
+        raise AllowlistError(str(error)) from error
 
 
 def check(

@@ -185,8 +185,11 @@ def check_provenance(repo_root: Path, target_sha: str) -> Dict:
                 # exclusion) -- a self-referential-evidence exclusion
                 # (e.g. docs/release_data/provenance/code.json) is
                 # deliberately excluded from this set: its own exclusion
-                # record (kind/mode/oid/reason in
-                # docs/release_data/export_exclusions.json) is its
+                # record (kind/mode/reason in
+                # docs/release_data/export_exclusions.json -- this
+                # kind's 'oid' is always JSON null and is never itself
+                # a claimed/cross-checked identity fact; see
+                # tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE) is its
                 # complete, sufficient, externally-owned evidence, and
                 # it must never receive a second, separate provenance
                 # entry (which could either reproduce the exact same

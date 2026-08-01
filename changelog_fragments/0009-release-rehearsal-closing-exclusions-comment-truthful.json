@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "docs",
+  "summary": "Make export_exclusions.json's generated '_comment' kind-specific and truthful, per a fresh independent review: it previously claimed every exclusion entry has 'immutable mode/OID (as recorded by git ls-tree)', which is false for kind self_referential_evidence (whose oid is always JSON null and is never cross-checked). The comment now states each kind's actual, distinct semantics explicitly (gitlink: mandatory, strictly cross-checked oid; self_referential_evidence: exact path+mode+reason only, oid always null, never claimed or cross-checked).",
+  "semver_impact": "none"
+}

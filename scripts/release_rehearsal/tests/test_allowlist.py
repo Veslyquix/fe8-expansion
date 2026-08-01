@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.release_rehearsal import allowlist as al
 from scripts.release_rehearsal import git_source as gs
+from scripts.release_rehearsal import tree_coverage as tc
 
 
 def _git(*args, cwd):
@@ -91,7 +92,8 @@ class GenerateEntriesTests(unittest.TestCase):
             sha = gs.resolve_sha(root, "HEAD")
             document = al.generate_allowlist_document(root, sha)
             self.assertEqual(document["schema_version"], al.SCHEMA_VERSION)
-            self.assertEqual(document["generated_from_sha"], sha)
+            self.assertEqual(document["generation_basis_sha"], sha)
+            self.assertNotIn("generated_from_sha", document)
             self.assertEqual(document["paths"], ["f.txt"])
             self.assertEqual(document["modes"], {"f.txt": "100644"})
 
@@ -528,6 +530,85 @@ class CheckFunctionTests(unittest.TestCase):
             path.write_text(json.dumps({"paths": ["a.txt", "a.txt"]}), encoding="utf-8")
             with self.assertRaises(al.AllowlistError):
                 al.load_allowlist_paths(path)
+
+
+class NonGitlinkExclusionReaderDelegatesToTreeCoverageTests(unittest.TestCase):
+    """issue #9 closing-round fix -- the literal reviewer-reported
+    asymmetry: `_load_non_gitlink_exclusion_paths` used to accept *any*
+    exclusion entry whose `kind` merely was not the literal string
+    `"gitlink"`, with no curated-path check and no `oid`-shape check at
+    all. That meant `al.check()`'s own sub-report could come back
+    perfectly clean for an arbitrary/uncurated self-evidence exclusion,
+    or one carrying a fabricated/stale `oid`, even though
+    `tree_coverage.check_partition()` -- reading the *exact same file*
+    -- already, correctly rejected it. This class reproduces the exact
+    scenario and proves the allowlist side now fails closed too, because
+    it now delegates entirely to `tree_coverage.load_exclusion_paths()`
+    instead of re-implementing a second, more permissive reader."""
+
+    @staticmethod
+    def _write_exclusions(dir_path, path="b.txt", kind="self_referential_evidence", mode="100644", oid="a" * 40):
+        exclusions_path = dir_path / "export_exclusions.json"
+        exclusions_path.write_text(json.dumps({
+            "exclusions": [{"path": path, "kind": kind, "mode": mode, "oid": oid, "reason": "bogus"}]
+        }), encoding="utf-8")
+        return exclusions_path
+
+    def test_arbitrary_path_fabricated_oid_fails_the_reader_directly(self):
+        """The literal reviewer reproducer at the reader layer: an
+        ordinary, non-curated tracked path (never a member of
+        tree_coverage.SELF_REFERENTIAL_EVIDENCE_PATHS), claimed under
+        kind 'self_referential_evidence' with a fabricated 'oid' -- the
+        old permissive reader silently accepted this (any kind !=
+        'gitlink' was enough); the delegated reader must now reject it,
+        exactly like tree_coverage.load_exclusions() itself does."""
+        with tempfile.TemporaryDirectory() as tmp:
+            exclusions_path = self._write_exclusions(Path(tmp))
+            with self.assertRaises(al.AllowlistError) as ctx:
+                al._load_non_gitlink_exclusion_paths(exclusions_path)
+            self.assertIn("b.txt", str(ctx.exception))
+
+    def test_curated_path_with_fabricated_oid_still_fails_the_reader(self):
+        """The narrower, more subtle reproducer: even the *correct*,
+        curated self-referential-evidence path must still be rejected
+        by the reader if its 'oid' is anything other than absent/null --
+        the old reader ignored 'oid' entirely for any non-gitlink kind."""
+        with tempfile.TemporaryDirectory() as tmp:
+            curated_path = sorted(tc.SELF_REFERENTIAL_EVIDENCE_PATHS)[0]
+            exclusions_path = self._write_exclusions(Path(tmp), path=curated_path)
+            with self.assertRaises(al.AllowlistError):
+                al._load_non_gitlink_exclusion_paths(exclusions_path)
+
+    def test_arbitrary_path_bogus_exclusion_fails_check_end_to_end(self):
+        """The full literal reviewer reproducer, wired end-to-end through
+        al.check() (the exact function manifest.check_allowlist_exact()
+        / 'make release-check' invokes): a real tracked blob ("b.txt")
+        removed from the allowlist and "hidden" behind a bogus
+        self_referential_evidence exclusion row must make al.check()
+        fail loudly -- never silently pass merely because
+        tree_coverage.check_partition() would separately catch the same
+        defect against the same file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "a.txt").write_text("a")
+            (root / "b.txt").write_text("b")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            allowlist_path = root / "allow.json"
+            allowlist_path.write_text(json.dumps(_allowlist_dict(["a.txt"])), encoding="utf-8")
+            exclusions_path = self._write_exclusions(root)
+            errors = al.check(root, allowlist_path, "HEAD", exclusions_path)
+            self.assertTrue(errors, "al.check() must not be clean for a bogus exclusion")
+
+    def test_missing_exclusions_file_still_returns_empty_unchanged(self):
+        """Behavior unchanged by this fix: a genuinely absent exclusions
+        file (this allowlist has always worked standalone without one)
+        still returns an empty list, never an error."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(
+                al._load_non_gitlink_exclusion_paths(Path(tmp) / "does-not-exist.json"), []
+            )
 
 
 class CheckAllowlistCompletenessNonGitTests(unittest.TestCase):

@@ -702,10 +702,17 @@ mechanically BLOCKED; this section is evidence, not a closure claim**:
    bijection/identity checks always run. New tests cover: deleting
    `"modes"` entirely, an unsupported/downgraded/missing/wrong-type
    `schema_version`, adding an extra mode entry with no corresponding
-   path, dropping a mode entry for an existing path, and a real,
-   committed `chmod` of an allowlisted file (the case D4's own checks
-   were originally meant to catch, re-verified end-to-end here to prove
-   the schema fix did not regress the check it protects).
+   path, and dropping a mode entry for an existing path. The committed
+   `chmod` of an allowlisted file coverage
+   (`test_committed_executable_bit_change_makes_mode_data_stale`) is
+   **not** new to this round -- a further independent re-review found
+   this section previously mislabeled it as one of the "new tests"; it
+   was already added in the guardian-correction remediation round's D4
+   fix (`a2f9d442`), and is only re-verified, unchanged in substance,
+   end-to-end here (its fixture was adjusted to also declare
+   `schema_version`/`"modes"`, per this round's own new requirement) to
+   confirm the schema fix did not regress the pre-existing check it
+   protects.
 
 Every item above is additionally covered by dedicated, adversarial
 stdlib-unittest coverage (extensions to `test_tree_coverage.py`,
@@ -728,6 +735,107 @@ publication/ref/merge action of any kind, and closes no issue.
   `"missing"`; the `mgfembp` submodule remains uninitialized/
   unapproved/excluded; every provenance record remains honestly
   unresolved.
+* `python3 scripts/artifact_guard.py --revision HEAD` -- unaffected;
+  this round never touches `scripts/artifact_guard.py`.
+* No tag/release/asset/comment/environment/protected ref was created,
+  moved, or deleted; no `contents: write` permission was added anywhere;
+  the `mgfembp` submodule was never fetched/initialized; no license was
+  selected; no author/rightsholder/license/reviewer/approval was
+  invented.
+
+Issue #9 remains **not closed** by this report, this round, or any
+command either describes.
+
+
+## Closing round (independent review at `4ea66356`)
+
+A further independent re-review of `4ea66356` (the exact tip of the
+R1-R5 remediation round above) found four additional, precise defects,
+all remediated in the `agent/issue9-release-process` branch on top of
+every round above -- **the candidate remains mechanically BLOCKED; this
+section is evidence, not a closure claim**:
+
+1. **Truthful, kind-specific generated export-exclusions comment.**
+   `tree_coverage.generate_exclusions_document()`'s generated
+   `docs/release_data/export_exclusions.json` `"_comment"` field
+   previously claimed every entry has "immutable mode/OID (as recorded
+   by 'git ls-tree')" -- true for a `"gitlink"` entry, but false for a
+   `"self_referential_evidence"` entry, whose `oid` has always been (R2)
+   exactly JSON `null` and is never itself cross-checked as a
+   content-identity fact. The generated comment is now kind-specific and
+   explicit about each kind's genuinely distinct semantics: `"gitlink"`
+   carries a mandatory, strictly cross-checked 40-lowercase-hex `oid`;
+   `"self_referential_evidence"` carries exact path/mode/reason only,
+   with `oid` always `null` and never claimed or cross-checked.
+2. **Manifest comment no longer claims a stale OID for self-evidence.**
+   `manifest.py`'s `check_provenance()` had a source comment describing
+   the self-referential-evidence exclusion record as carrying
+   "kind/mode/oid/reason" as its "complete, sufficient" evidence -- true
+   before R2, stale after it (this kind's `oid` was already fixed to
+   always be `null`, never a claimed fact). The comment now says
+   "kind/mode/reason" and explicitly notes `oid` is always `null` here.
+3. **R5's closure-report wording no longer mislabels a pre-existing
+   test as new.** The R1-R5 remediation round's own R5 write-up (above)
+   listed a real, committed `chmod` of an allowlisted file among "New
+   tests cover" -- but
+   `test_committed_executable_bit_change_makes_mode_data_stale` was
+   already added in the guardian-correction remediation round's D4 fix
+   (`a2f9d442`), well before R5; R5 only re-verified it end-to-end
+   (adjusting its fixture to also declare `schema_version`/`"modes"`)
+   to confirm the schema fix did not regress it. The R5 write-up now
+   says so explicitly instead of implying it was newly authored.
+4. **Allowlist's non-gitlink exclusion reader no longer more permissive
+   than tree_coverage's own validator.**
+   `allowlist._load_non_gitlink_exclusion_paths()` used to be its own,
+   separate, minimal JSON reader that treated *any* exclusion entry
+   whose `kind` merely was not the literal string `"gitlink"` as a valid
+   non-gitlink exclusion -- no curated-path check against
+   `tree_coverage.SELF_REFERENTIAL_EVIDENCE_PATHS`, no `oid`-shape check
+   at all. That meant `allowlist.check()`'s own sub-report (exercised by
+   `manifest.check_allowlist_exact()` / `make release-check`) could stay
+   perfectly clean for an arbitrary, uncurated self-evidence exclusion,
+   or one carrying a fabricated/stale `oid`, even though
+   `tree_coverage.check_partition()` -- reading the *exact same file* --
+   already, correctly rejected it (R1/R2's own validator invariants).
+   This reader now delegates entirely to
+   `tree_coverage.load_exclusion_paths()`, restricted to
+   `tree_coverage.KIND_SELF_REFERENTIAL_EVIDENCE` (the only
+   non-`"gitlink"` kind `tree_coverage.VALID_EXCLUSION_KINDS` permits at
+   all, so this restriction is exactly equivalent in scope to the old
+   "kind != gitlink" filter) -- so both consumers now share one,
+   single, strictly-validated implementation instead of two
+   independently-maintained readers that could (and did) silently drift
+   apart in permissiveness. Literal reviewer-reproducer tests
+   (`NonGitlinkExclusionReaderDelegatesToTreeCoverageTests` in
+   `test_allowlist.py`) cover: an arbitrary, non-curated path with a
+   fabricated `oid` (both at the reader layer and wired fully
+   end-to-end through `al.check()`), the curated path itself with a
+   fabricated `oid`, and confirm the pre-existing "exclusions file
+   genuinely absent" behavior is unchanged.
+
+Additionally, per this round's own request, the generated allowlist and
+export-exclusions documents' `"generated_from_sha"` field -- which was
+never actually read, compared, or cross-checked by any check in this
+repository (every check has always independently re-derived its own
+live `target_sha`) -- is renamed to `"generation_basis_sha"`, and both
+generators' own `"_comment"` text now says explicitly that this field is
+a documentary record only, never a validated commit binding.
+
+Every item above is additionally covered by dedicated, adversarial
+stdlib-unittest coverage (extensions to `test_tree_coverage.py` and
+`test_allowlist.py`), and the full `scripts/release_rehearsal` stdlib
+test suite was reverified green after this round's changes. `make
+release-check`'s live status remains, correctly and exactly, `"blocked"`
+throughout -- this round changes no workflow, legal, or
+`artifact_guard.py` file, adds no approval/fetch/publication/ref/merge
+action of any kind, and closes no issue.
+
+### Verification (closing round)
+
+* Full `scripts/release_rehearsal` stdlib test suite re-verified green
+  after this round's changes.
+* `make release-check`'s live status remains, correctly and exactly,
+  `"blocked"`.
 * `python3 scripts/artifact_guard.py --revision HEAD` -- unaffected;
   this round never touches `scripts/artifact_guard.py`.
 * No tag/release/asset/comment/environment/protected ref was created,
