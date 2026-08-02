@@ -912,8 +912,38 @@ evidence, not a closure claim.**
    commits, not three. `python3 -m scripts.release_rehearsal.provenance
    check` reports zero `check_blob_identity` findings at `f0e7a7fa`, and
    the full `scripts/release_rehearsal` stdlib test suite (860 tests)
-   passes cleanly there and continues to pass after every change in this
-   disclosure round (see "Verification" below).
+   passes cleanly there (see "Verification" below); it does **not**
+   continue to pass "after every change in this disclosure round" the
+   way an earlier draft of this report claimed -- some of that suite's
+   own tests (`test_tree_coverage.py`/`test_provenance.py`'s
+   `RepositoryStateTests`) run `tree_coverage check`/`allowlist
+   check`/`check_blob_identity` directly against this repository's own
+   live tree, not only disposable fixtures, so the suite's own result is
+   exactly as red as the live checks whenever the live tree drifts. This
+   disclosure round's own commit, `18f63d4c` ("close integration-
+   evidence disclosure gaps"), repeated the identical undisciplined-
+   regeneration defect against itself: it edited five already-tracked
+   files without, in that same commit, also re-running the `exclusions
+   -> allowlist -> provenance` regeneration sequence against its own new
+   tree, leaving `code.json` stale for four of those five files
+   (`CHANGELOG.md`, `docs/release_closure_candidate.md`, `docs/
+   release_data/provenance/assets.json`, `scripts/release_rehearsal/
+   provenance.py`) and leaving its own new changelog fragment
+   (`changelog_fragments/0009-release-rehearsal-integration-disclosure-
+   corrections.json`) entirely absent from both
+   `docs/release_data/source_allowlist.json` and every provenance
+   manifest -- seven live, structural findings in total (2 from
+   `tree_coverage check`, 1 from `allowlist check`, 4
+   `check_blob_identity` findings from `provenance check`), which
+   `RepositoryStateTests` surfaces as seven live test failures at
+   `18f63d4c` (`Ran 860 tests ... FAILED (failures=7)`), reproduced
+   directly against that commit (see "Verification" below). This
+   report's own live, immutable tip is the final resync that closes that
+   transient drift, run the same disciplined way `f0e7a7fa` closed the
+   four earlier ones: correct this disclosure's own wording first, stage
+   every text/data change, regenerate exclusions/allowlist/provenance
+   against the staged index, and verify zero structural findings (and a
+   clean, all-860-passing suite run) before committing.
 
    **This repository's branch/tag/support policy has never required,
    and this round does not newly require, every ancestor commit on a
@@ -987,8 +1017,14 @@ evidence, not a closure claim.**
    kind -- and unconditionally stamps every one of those regular-file
    members' `info.mode` with `CANONICAL_FILE_MODE`. `CANONICAL_DIR_MODE`
    is therefore never read or applied anywhere in this module or its
-   callers (a plain `grep -rn CANONICAL_DIR_MODE scripts/ docs/` finds
-   only its own definition). Reading "modes 0644/0755" as describing two
+   callers -- scoped to code only, a plain `git grep -n
+   CANONICAL_DIR_MODE -- '*.py'` finds only its own definition; a
+   `docs/`-inclusive text grep additionally matches this very report's
+   own prose discussing the constant by name (including this sentence),
+   which is expected commentary, never a second *code* reference, so
+   this disclosure's own evidence is scoped to the one code definition,
+   not to a mixed scripts+docs text match. Reading "modes 0644/0755" as
+   describing two
    different kinds of archive output member would be wrong: the archive
    itself only ever produces `0o644` members, full stop.
    `docs/release_process.md`'s "Archive member mode policy" section
@@ -1031,7 +1067,22 @@ evidence, not a closure claim.**
 ### Verification (integration-evidence disclosure round)
 
 * Full `scripts/release_rehearsal` stdlib test suite (860 tests)
-  re-verified green at this round's own tip after every change above.
+  re-verified green at this report's own live tip -- item 1 above
+  discloses that this claim was **not** true at this round's prior tip,
+  `18f63d4c` (`Ran 860 tests ... FAILED (failures=7)`, all seven
+  failures inside `RepositoryStateTests`, which probes the live tree
+  directly rather than only disposable fixtures).
+* `18f63d4c` re-verified as live-red, exactly as item 1 above
+  describes: `python3 -m scripts.release_rehearsal.tree_coverage check
+  --target-sha 18f63d4c` (2 findings), `python3 -m
+  scripts.release_rehearsal.allowlist check --target-sha 18f63d4c` (1
+  finding), and `check_blob_identity` inside `python3 -m
+  scripts.release_rehearsal.provenance check` against a detached
+  checkout of `18f63d4c` (4 findings) -- the same seven live, structural
+  findings the test suite's own `RepositoryStateTests` failures surface,
+  all corrected by this report's own live tip (zero remaining at `HEAD`
+  after this resync; legal-provenance/`NOASSERTION` findings are
+  unaffected and pre-existing).
 * `44ff6558`/`40940817`/`f57f2b6e`/`accb56ea` re-verified individually
   red via `python3 -m scripts.release_rehearsal.provenance check` (in
   isolated, detached `git worktree` checkouts, never the live
@@ -1047,8 +1098,13 @@ evidence, not a closure claim.**
   directly against this repository's own current HEAD; the byte
   difference and the exact `.pal` count (510) are both reproducible,
   not asserted.
-* `grep -rn CANONICAL_DIR_MODE scripts/ docs/` -- exactly one match (its
-  own definition in `archive_rehearsal.py`), confirming item 3.
+* `git grep -n CANONICAL_DIR_MODE -- '*.py'` -- exactly one match (its
+  own definition in `archive_rehearsal.py`), confirming item 3, scoped to
+  code only. (A `docs/`-inclusive text grep additionally matches this
+  report's own prose discussing the constant by name; that is expected
+  commentary, not further code usage, so item 3's evidence is
+  deliberately scoped to the one code definition, never a mixed
+  scripts+docs text match.)
 * `make release-check`'s live status remains, correctly and exactly,
   `"blocked"`.
 * `python3 scripts/artifact_guard.py --revision HEAD` -- unaffected;
