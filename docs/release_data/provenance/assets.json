@@ -89803,7 +89803,7 @@
     "license": "NOASSERTION",
     "redistribution_approved": false,
     "reviewer": null,
-    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "notes": "Issue #9 disclosure-correction seed (issue #18 localization): tracked localization catalog/source under texts/expansion -- repository-authored framework message keys and locale catalog content (e.g. registry.json / catalog.<locale>.json), never extracted or derived from the original Fire Emblem: The Sacred Stones ROM/game text. This path previously, inaccurately inherited the general 'texts' root's original-game-asset note (Nintendo/Intelligent Systems copyright) via directory-prefix seeding; that note never applied here. Author/rightsholder/license/redistribution-approval remain exactly as unresolved as every other tracked path -- this correction states the provenance *kind* honestly, it does not invent or assert an author, rightsholder, license, or approval.",
     "oid": "28853d09368bbe6b5d4d72f6fd6d372bcc22cb6c",
     "sha256": "10a4015eaba156ce85d94f6bb908f64e0d00cb5710fd9c4ce66f84c5f00c72eb"
   },
@@ -89815,7 +89815,7 @@
     "license": "NOASSERTION",
     "redistribution_approved": false,
     "reviewer": null,
-    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "notes": "Issue #9 disclosure-correction seed (issue #18 localization): tracked localization catalog/source under texts/expansion -- repository-authored framework message keys and locale catalog content (e.g. registry.json / catalog.<locale>.json), never extracted or derived from the original Fire Emblem: The Sacred Stones ROM/game text. This path previously, inaccurately inherited the general 'texts' root's original-game-asset note (Nintendo/Intelligent Systems copyright) via directory-prefix seeding; that note never applied here. Author/rightsholder/license/redistribution-approval remain exactly as unresolved as every other tracked path -- this correction states the provenance *kind* honestly, it does not invent or assert an author, rightsholder, license, or approval.",
     "oid": "eb5d8280e9ad3b1df902820cb1d75ea7d936331d",
     "sha256": "cbb278147179bb37bc5c5aa4fa619e92e1b41fe6a0de686f00688453188178c7"
   },

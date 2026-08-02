@@ -844,5 +844,222 @@ action of any kind, and closes no issue.
   selected; no author/rightsholder/license/reviewer/approval was
   invented.
 
+## Integration-evidence disclosure round (independent integration review)
+
+A further independent **integration** review (distinct from the code-level
+reviews above) recommended `candidate_pass` but found four factual
+disclosure gaps in this report and its underlying data that had to be
+corrected first. None of them changes any check's pass/fail behavior;
+all four are corrections to what this report says about the branch's own
+history, hash semantics, mode semantics, and one provenance note's
+accuracy -- **the candidate remains mechanically BLOCKED; this section is
+evidence, not a closure claim.**
+
+1. **History is never rewritten -- several intermediate commits on this
+   integration branch are not individually green, and that is expected,
+   not concealed.** `agent/issue9-release-process` merges
+   `origin/master` (issue #6 and issue #18's completed work) via commit
+   `44ff6558`. A merge commit mechanically combines two trees before any
+   semantic reconciliation between them has happened; checking out and
+   running `python3 -m scripts.release_rehearsal.provenance check` (and,
+   equivalently, the full `scripts/release_rehearsal` stdlib test suite)
+   in isolation, at each commit in turn, reproduces a genuinely non-green
+   state at every one of the following four commits (each checked out
+   via a separate, detached `git worktree add --detach <dir> <sha>` --
+   never amended, rebased, cherry-picked, or otherwise rewritten; each
+   remains exactly as it was originally committed):
+   * `44ff6558` (the merge itself): the full suite reports
+     `FAILED (failures=4)` -- two `MigrationEpochReachabilityTests`/
+     `test_manifest_includes_migration_reachability_report` failures
+     (origin/master's own save-format epoch advanced past what this
+     branch's migration registry knew about before the merge), plus a
+     `check_blob_identity` self-reference staleness (below) on exactly
+     one file, `docs/release_data/provenance/assets.json` (its content
+     changed -- issue #18's newly-authored `texts/expansion` entries
+     were merged in -- but `code.json`'s own record of its oid was not
+     yet regenerated to match).
+   * `40940817` ("register the epoch 1->2 migration the merge exposed"):
+     the migration-reachability failures above are fixed; the
+     `check_blob_identity` staleness set *grows* to four files
+     (`docs/release_data/provenance/assets.json`,
+     `docs/migration_registry.md`,
+     `scripts/modernize/migrations/registry.py`,
+     `scripts/modernize/migrations/tests/test_registry.py` -- this
+     commit's own new/changed migration-registry files, again not yet
+     re-synced into `code.json`).
+   * `f57f2b6e` ("correct stale `EXPANSION_SAVE_COMPAT_EPOCH` claims"):
+     the staleness set grows to five files (adds
+     `docs/starter_features.md`, the file this commit itself edits).
+   * `accb56ea` ("add changelog fragments for #6/#10/#18's public-API
+     surfaces"): the staleness set grows to six files (adds
+     `CHANGELOG.md`, changed by this commit's own new fragments).
+
+   Every one of these four commits is individually non-green for the
+   *same* reason, compounding: each edits a file already tracked with
+   an exact provenance record, but -- unlike the disciplined
+   `exclusions -> allowlist -> provenance` regeneration order this
+   repository documents elsewhere -- does not, in the same commit,
+   also re-run `provenance.py generate --write` to resync `code.json`'s
+   own record of that file's new oid. Commit `f0e7a7fa` ("resync
+   provenance's self-referential oid records") is exactly that
+   regeneration, in one pass, for all six accumulated files; its own
+   commit message (written before this disclosure round) named three of
+   the four affected commits (`44ff6558`/`f57f2b6e`/`accb56ea`) by its
+   author's own account of which commits it was aware of at the time --
+   this round's fresh, independent re-verification additionally found
+   `40940817` carries the same defect (it was never called out by name
+   before now), so the complete, exact set disclosed here is four
+   commits, not three. `python3 -m scripts.release_rehearsal.provenance
+   check` reports zero `check_blob_identity` findings at `f0e7a7fa`, and
+   the full `scripts/release_rehearsal` stdlib test suite (860 tests)
+   passes cleanly there and continues to pass after every change in this
+   disclosure round (see "Verification" below).
+
+   **This repository's branch/tag/support policy has never required,
+   and this round does not newly require, every ancestor commit on a
+   long-lived integration branch to be individually green** -- only the
+   branch's current tip is ever the unit this report, `make
+   release-check`, or the CI workflow evaluates. Nothing in `git log` is
+   amended, rebased, squashed, or force-pushed by this disclosure; the
+   four commits above remain exactly as committed, named here only as
+   truthful, reproducible evidence a reviewer can verify with `git
+   worktree add --detach <dir> <sha>` and `python3 -m
+   scripts.release_rehearsal.provenance check`, run from each detached
+   checkout in turn.
+
+2. **The immutable Git-blob archive and a genuine git-archive-extracted
+   non-git tree are two distinct hash domains that must never be
+   compared as the same artifact.** `build_deterministic_archive()`
+   reads every included byte exclusively through `git cat-file --batch`
+   when `root` is a real Git working tree (see
+   `scripts/release_rehearsal/git_source.py`) -- this is the *committed
+   blob* content, never worktree/checkout bytes. The documented non-git/
+   extracted-candidate path (see "The documented non-git/extracted
+   candidate path" in `docs/release_process.md`) instead reads whatever
+   bytes are physically present on disk in an already-extracted tree
+   (`path.read_bytes()` in `_filesystem_allowlisted_files`'s callers) --
+   for a tree produced by `git archive <sha> | tar -x` (the real,
+   documented reproduction command this repository's own tests use),
+   those bytes have already passed through any `.gitattributes`
+   checkout-time text/EOL conversion. This repository's `.gitattributes`
+   declares `*.pal text eol=crlf`: every one of the exactly 510 tracked
+   `.pal` palette files is stored as an LF-only blob (verified: `git
+   cat-file blob HEAD:<path> | grep -c $'\r'` is `0` for all 510) but
+   materializes with CRLF line endings on any checkout or `git archive`
+   extraction (verified directly against this repository's own HEAD:
+   `git cat-file blob HEAD:<path>` and a fresh `git archive HEAD | tar -x`
+   extraction of the same path differ byte-for-byte). Consequently:
+   * the git-blob-mode archive (built from a real `.git` `root`) and the
+     non-git/extracted-tree-mode archive (built from the *same* commit's
+     `git archive`-extracted tree) are **two independently deterministic,
+     but never mutually hash-equal, artifacts** -- each mode's own
+     `rehearse_archive_twice()` double-build-and-compare (see
+     `docs/release_process.md`'s "Archive/rebuild rehearsal") only ever
+     proves determinism *within* its own mode, never equality *across*
+     modes, and no code, test, or prior version of this report ever
+     claimed otherwise;
+   * this is a direct, mechanical consequence of a `.gitattributes`
+     export/checkout transform declared for exactly one tracked file
+     extension, not a defect in `git_source.py`, `archive_rehearsal.py`,
+     or the non-git/extracted-tree contract -- both modes remain exactly
+     as reliable and reproducible as documented elsewhere in this report,
+     each *on its own terms*;
+   * no command, doc, or check in this repository compares a git-blob-
+     mode archive hash against a non-git/extracted-tree-mode archive
+     hash as if they were the same artifact, and none ever should;
+     publication remains blocked regardless of which mode is rehearsed.
+   A reviewer can reproduce this directly:
+   ```sh
+   git ls-tree -r HEAD --name-only | grep -c '\.pal$'   # 510
+   f=$(git ls-tree -r HEAD --name-only | grep '\.pal$' | head -1)
+   git cat-file blob "HEAD:$f" | sha256sum                # blob-mode bytes
+   tmp=$(mktemp -d); git archive HEAD | tar -x -C "$tmp"
+   sha256sum "$tmp/$f"                                    # extracted-mode bytes -- differs
+   rm -rf "$tmp"
+   ```
+
+3. **Archive member mode wording, precisely: every written tar member is
+   `0o644`, never `0o755` -- `CANONICAL_DIR_MODE` is a defined-but-unused
+   constant.** `archive_rehearsal.py` defines both
+   `CANONICAL_FILE_MODE = 0o644` and `CANONICAL_DIR_MODE = 0o755`, but
+   `build_deterministic_archive()` only ever adds `tarfile.REGTYPE`
+   (regular-file) members -- it never adds a directory member of any
+   kind -- and unconditionally stamps every one of those regular-file
+   members' `info.mode` with `CANONICAL_FILE_MODE`. `CANONICAL_DIR_MODE`
+   is therefore never read or applied anywhere in this module or its
+   callers (a plain `grep -rn CANONICAL_DIR_MODE scripts/ docs/` finds
+   only its own definition). Reading "modes 0644/0755" as describing two
+   different kinds of archive output member would be wrong: the archive
+   itself only ever produces `0o644` members, full stop.
+   `docs/release_process.md`'s "Archive member mode policy" section
+   already correctly describes the schema's own `100644`/`100755`/
+   `120000` **Git**-mode bijection (a drift-detection/provenance-identity
+   concern, tracked in `source_allowlist.json`, never an archive-fidelity
+   promise) as distinct from the archive's own fixed `0o644` **tar**
+   output mode; this disclosure additionally, explicitly records that
+   `CANONICAL_DIR_MODE`'s existence must never be read as evidence that
+   any archived member other than `0o644` is ever produced.
+
+4. **`texts/expansion`'s provenance note no longer inherits an
+   inaccurate original-game-asset claim.** `PROVENANCE_ROOT_SEED`
+   previously seeded a single `"texts"` prefix root covering every path
+   under `texts/` (both the original-game `texts/textdefs.txt` /
+   `texts/texts.txt` dumps *and* issue #18's newly-authored
+   `texts/expansion/registry.json` / `texts/expansion/catalog.en.json`
+   localization-framework catalog/source) with one shared note asserting
+   "extracted/derived original-game asset... Original Fire Emblem: The
+   Sacred Stones copyright/trademark ownership is Nintendo/Intelligent
+   Systems" -- true for the two original-game text dumps, **never true**
+   for `texts/expansion`'s own repository-authored framework message
+   keys and locale strings. `PROVENANCE_ROOT_SEED` now seeds three
+   disjoint, non-overlapping roots instead of one prefix root --
+   `"texts/textdefs.txt"` and `"texts/texts.txt"` (each an exact, single-
+   path root, keeping the original-game-asset note exactly where it is
+   accurate) and `"texts/expansion"` (a new, neutral note stating this
+   path is a tracked, repository-authored localization catalog/source,
+   never derived from the original game, with author/rightsholder/
+   license/redistribution-approval left exactly as unresolved as every
+   other tracked path -- nothing is invented). `docs/release_data/
+   provenance/assets.json` is regenerated
+   (`python3 -m scripts.release_rehearsal.provenance generate
+   --target-sha HEAD --write`); only the two `texts/expansion/*` entries'
+   `notes` field changed -- every `author`/`rightsholder`/`license`
+   remains `NOASSERTION`, `redistribution_approved` remains `false`, and
+   `reviewer` remains `null`, exactly as before and exactly as every
+   other still-unreviewed tracked path.
+
+### Verification (integration-evidence disclosure round)
+
+* Full `scripts/release_rehearsal` stdlib test suite (860 tests)
+  re-verified green at this round's own tip after every change above.
+* `44ff6558`/`40940817`/`f57f2b6e`/`accb56ea` re-verified individually
+  red via `python3 -m scripts.release_rehearsal.provenance check` (in
+  isolated, detached `git worktree` checkouts, never the live
+  worktree), exactly as described in item 1 above -- including the
+  cumulative, growing stale-file count (1/4/5/6) and the fact that
+  `40940817` is disclosed here despite not being named in `f0e7a7fa`'s
+  own commit message; a transient `test_no_temporary_files_retained_
+  after_rehearsal` failure observed once during this review's own
+  parallel multi-commit full-suite runs was reproduced as a
+  parallel-execution/`/tmp` artifact, not a real regression, by
+  re-running that one test alone at the same commit.
+* `git cat-file`/`git archive` reproduction in item 2 above re-run
+  directly against this repository's own current HEAD; the byte
+  difference and the exact `.pal` count (510) are both reproducible,
+  not asserted.
+* `grep -rn CANONICAL_DIR_MODE scripts/ docs/` -- exactly one match (its
+  own definition in `archive_rehearsal.py`), confirming item 3.
+* `make release-check`'s live status remains, correctly and exactly,
+  `"blocked"`.
+* `python3 scripts/artifact_guard.py --revision HEAD` -- unaffected;
+  this round never touches `scripts/artifact_guard.py`, any workflow
+  file, or any legal/migration-behavior file.
+* No tag/release/asset/comment/environment/protected ref was created,
+  moved, or deleted; no `contents: write` permission was added anywhere;
+  the `mgfembp` submodule was never fetched/initialized; no history was
+  rewritten/amended/rebased/force-pushed; no author/rightsholder/
+  license/reviewer/approval was invented anywhere, including for
+  `texts/expansion`.
+
 Issue #9 remains **not closed** by this report, this round, or any
 command either describes.

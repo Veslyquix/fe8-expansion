@@ -476,11 +476,16 @@ def check_blob_identity(entries: List[Dict], repo_root: Path, target_sha: str = 
 # --- Exact per-file generator (issue #9 exact-provenance remediation) ------
 #
 # `PROVENANCE_ROOT_SEED` is the single, small, human-curated input: one
-# entry per reviewable top-level root (47 roots as of the issue #9
-# release-branch/origin-master merge that added `localization.mk`
-# (issue #18 sprint 1) as its own root -- 46 before that; this count is
-# never itself validated by any check, only kept truthful here for a
-# human reader), each
+# entry per reviewable root (49 roots as of the issue #9 disclosure-
+# correction round that split the single `"texts"` prefix root into
+# `"texts/textdefs.txt"`, `"texts/texts.txt"`, and `"texts/expansion"`
+# -- 47 immediately before that, 46 before the release-branch/origin-
+# master merge that added `localization.mk` (issue #18 sprint 1) as its
+# own root; this count is never itself validated by any check, only kept
+# truthful here for a human reader). Not every entry is still a literal
+# top-level path -- `"texts/expansion"` is one exact nested root, kept
+# disjoint from its now-narrowed `"texts/*.txt"` siblings so `_assign_root`
+# never sees an overlapping/ambiguous match -- each
 # naming the `category`/`notes`/`pinned_commit` every exact allowlisted
 # path nested under (or equal to) that root should start out with.
 # `generate_exact_entries()` mechanically fans this out to one exact,
@@ -528,6 +533,20 @@ _NOTE_ASSET = (
     "copyright/trademark ownership is Nintendo/Intelligent Systems and is "
     "NOT asserted or cleared by this repository. No human legal/provenance "
     "review has been recorded yet."
+)
+_NOTE_TEXTS_EXPANSION_LOCALIZATION = (
+    "Issue #9 disclosure-correction seed (issue #18 localization): tracked "
+    "localization catalog/source under texts/expansion -- repository-"
+    "authored framework message keys and locale catalog content (e.g. "
+    "registry.json / catalog.<locale>.json), never extracted or derived "
+    "from the original Fire Emblem: The Sacred Stones ROM/game text. This "
+    "path previously, inaccurately inherited the general 'texts' root's "
+    "original-game-asset note (Nintendo/Intelligent Systems copyright) via "
+    "directory-prefix seeding; that note never applied here. Author/"
+    "rightsholder/license/redistribution-approval remain exactly as "
+    "unresolved as every other tracked path -- this correction states the "
+    "provenance *kind* honestly, it does not invent or assert an author, "
+    "rightsholder, license, or approval."
 )
 _NOTE_SUBMODULE_MGFEMBP = (
     "Git submodule pointing at StanHash/mgfembp (FE6 multiboot payload "
@@ -585,7 +604,19 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("preview", "asset", _NOTE_ASSET),
     RootSeed("reports", "asset", _NOTE_ASSET),
     RootSeed("sound", "asset", _NOTE_ASSET),
-    RootSeed("texts", "asset", _NOTE_ASSET),
+    # issue #9 disclosure correction: "texts" is no longer a single
+    # prefix root -- texts/expansion is repository-authored
+    # localization-framework catalog/source (issue #18), never
+    # original-game asset content, and must never inherit the
+    # original-game-asset note by directory-prefix accident. The two
+    # remaining top-level texts/*.txt files (the actual extracted/
+    # derived original-game text dumps) are seeded as their own exact,
+    # non-prefix roots so no root here overlaps another (an
+    # overlapping/ambiguous seed is an actionable _assign_root error,
+    # never silently resolved).
+    RootSeed("texts/textdefs.txt", "asset", _NOTE_ASSET),
+    RootSeed("texts/texts.txt", "asset", _NOTE_ASSET),
+    RootSeed("texts/expansion", "asset", _NOTE_TEXTS_EXPANSION_LOCALIZATION),
     RootSeed("mgfembp", "submodule", _NOTE_SUBMODULE_MGFEMBP),
 )
 
