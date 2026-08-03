@@ -264,6 +264,137 @@ class VersionLedgerTests(unittest.TestCase):
         candidate_version = f"{config_values['EXPANSION_VERSION_MAJOR']}.{config_values['EXPANSION_VERSION_MINOR']}.{config_values['EXPANSION_VERSION_PATCH']}"
         self.assertEqual(cc.check_version_ledger(ledger, candidate_version), [])
 
+    # --- issue #9 residual-hardening: SemVer adjacency ------------------
+    # A fresh, independent verifier reproduced a ledger whose
+    # previous_supported_version names a real, correctly-ordered, valid
+    # "supported" entry that is nonetheless *not* the adjacent
+    # predecessor of current_version -- another recorded version sits
+    # strictly between them. Selecting that more-distant predecessor as
+    # the changelog SemVer-delta baseline can make an actually-small bump
+    # (versus the true last release) look artificially large, inflating
+    # the apparent evidence for a bigger declared `semver_impact`.
+
+    def test_non_adjacent_previous_supported_version_rejected(self):
+        """Concrete reproducer: 0.0.9 (selected, older predecessor) <
+        0.0.9 < 0.1.0 (intervening, true adjacent predecessor) < 0.2.0
+        (current_version). Selecting 0.0.9 instead of 0.1.0 as the
+        baseline would make the apparent bump 0.0.9 -> 0.2.0 (minor) look
+        the same as -- or, with different numbers, larger than -- the
+        true 0.1.0 -> 0.2.0 delta. This must fail closed."""
+        ledger = _valid_ledger(
+            previous_supported_version="0.0.9",
+            current_version="0.2.0",
+            next_supported_version=None,
+            supported=[
+                {"version": "0.0.9", "status": "eol", "eol": "2020-01-01"},
+                {"version": "0.1.0", "status": "eol", "eol": "2021-01-01"},
+                {"version": "0.2.0", "status": "current", "eol": None},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.2.0")
+        self.assertTrue(
+            any(
+                "previous_supported_version" in error and "0.0.9" in error
+                and "not the adjacent predecessor" in error and "0.1.0" in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_non_adjacent_previous_supported_version_with_larger_inflated_bump(self):
+        """Sharper reproducer where the inflation is unambiguous:
+        classify_bump() only looks at *which* MAJOR/MINOR/PATCH segment
+        first differs, not by how much -- so the true adjacent
+        predecessor (0.1.0) is only a 'patch' bump away from current
+        (0.1.1), but the selected, older, non-adjacent predecessor
+        (0.0.9) makes classify_bump() report 'minor' instead (the MINOR
+        segment differs from 0.0.9), a strictly larger declared-impact
+        floor via required_minimum_bump_rank() -- exactly the inflation
+        this adjacency check exists to reject."""
+        true_adjacent_bump = cc.classify_bump("0.1.0", "0.1.1")
+        inflated_bump = cc.classify_bump("0.0.9", "0.1.1")
+        self.assertEqual(true_adjacent_bump, "patch")
+        self.assertEqual(inflated_bump, "minor")
+        self.assertNotEqual(
+            true_adjacent_bump, inflated_bump,
+            "reproducer numbers must actually demonstrate inflation, not merely non-adjacency",
+        )
+
+        ledger = _valid_ledger(
+            previous_supported_version="0.0.9",
+            current_version="0.1.1",
+            next_supported_version=None,
+            supported=[
+                {"version": "0.0.9", "status": "eol", "eol": "2020-01-01"},
+                {"version": "0.1.0", "status": "eol", "eol": "2021-01-01"},
+                {"version": "0.1.1", "status": "current", "eol": None},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.1.1")
+        self.assertTrue(
+            any(
+                "previous_supported_version" in error and "0.0.9" in error
+                and "not the adjacent predecessor" in error and "0.1.0" in error
+                for error in errors
+            ),
+            errors,
+        )
+        # And the ledger/consistency check must fail closed overall --
+        # not merely emit a warning-shaped, still-empty result.
+        self.assertNotEqual(errors, [])
+
+    def test_adjacent_previous_supported_version_with_intervening_eol_gap_is_still_accepted(self):
+        """Sanity check: when previous_supported_version genuinely *is*
+        the closest recorded version below current_version, adjacency
+        must not be rejected merely because other, older, non-
+        intervening 'eol' history also exists in 'supported'."""
+        ledger = _valid_ledger(
+            previous_supported_version="0.1.0",
+            current_version="0.1.1",
+            next_supported_version=None,
+            supported=[
+                {"version": "0.0.9", "status": "eol", "eol": "2020-01-01"},
+                {"version": "0.1.0", "status": "eol", "eol": "2021-01-01"},
+                {"version": "0.1.1", "status": "current", "eol": None},
+            ],
+        )
+        self.assertEqual(cc.check_version_ledger(ledger, "0.1.1"), [])
+
+    def test_non_adjacent_next_supported_version_rejected(self):
+        """Symmetric successor-adjacency reproducer: 0.3.0 is selected as
+        next_supported_version, but 0.2.0 (recorded, 'supported') is the
+        true adjacent successor of current_version 0.1.0."""
+        ledger = _valid_ledger(
+            current_version="0.1.0",
+            next_supported_version="0.3.0",
+            supported=[
+                {"version": "0.1.0", "status": "current", "eol": None},
+                {"version": "0.2.0", "status": "supported", "eol": None},
+                {"version": "0.3.0", "status": "supported", "eol": None},
+            ],
+        )
+        errors = cc.check_version_ledger(ledger, "0.1.0")
+        self.assertTrue(
+            any(
+                "next_supported_version" in error and "0.3.0" in error
+                and "not the adjacent successor" in error and "0.2.0" in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_adjacent_next_supported_version_is_accepted(self):
+        ledger = _valid_ledger(
+            current_version="0.1.0",
+            next_supported_version="0.2.0",
+            supported=[
+                {"version": "0.1.0", "status": "current", "eol": None},
+                {"version": "0.2.0", "status": "supported", "eol": None},
+                {"version": "0.3.0", "status": "supported", "eol": None},
+            ],
+        )
+        self.assertEqual(cc.check_version_ledger(ledger, "0.1.0"), [])
+
 
 class ClassifyBumpTests(unittest.TestCase):
     def test_initial_when_no_previous(self):

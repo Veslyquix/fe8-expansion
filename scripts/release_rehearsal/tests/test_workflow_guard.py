@@ -153,6 +153,252 @@ class GeneralizedActionPinTests(unittest.TestCase):
         self.assertFalse(wg.is_local_action_reference("docker://alpine:3"))
 
 
+class FlowMappingUsesTests(unittest.TestCase):
+    """Issue #9 code-review finding #1: a `uses:` occurrence hidden
+    inside a valid YAML flow mapping (`- {uses: ..., with: {...}}`) must
+    be found and validated exactly like an ordinary block-style
+    `- uses: ...` step -- the previous line-anchored regex never
+    matched it at all, so a mutable ref hidden this way silently
+    bypassed every pin check."""
+
+    SHA_A = "a" * 40
+
+    def test_flow_mapping_mutable_ref_rejected(self):
+        text = GOOD_WORKFLOW + "      - {uses: actions/setup-python@mutable}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/setup-python@mutable" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_flow_mapping_immutable_ref_accepted(self):
+        text = GOOD_WORKFLOW + f"      - {{uses: actions/setup-python@{self.SHA_A}}}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+
+    def test_flow_mapping_with_sibling_keys_mutable_ref_rejected(self):
+        text = GOOD_WORKFLOW + "      - {uses: actions/setup-python@mutable, with: {python-version: '3.11'}}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+    def test_flow_sequence_containing_flow_mapping_ref_checked(self):
+        """A flow mapping nested inside a flow *sequence* (`[...]`) must
+        still be found -- flow nesting depth is not limited to one
+        level."""
+        text = GOOD_WORKFLOW + "      - x: [{uses: actions/setup-python@mutable}]\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+    def test_multiline_flow_mapping_ref_checked(self):
+        """A flow mapping may legally span several physical lines; the
+        `uses:` key inside it must still be found regardless."""
+        text = (
+            GOOD_WORKFLOW
+            + "      - {\n"
+            + "          uses: actions/setup-python@mutable,\n"
+            + "          with: {python-version: '3.11'}\n"
+            + "        }\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+
+class QuotedKeyAndValueUsesTests(unittest.TestCase):
+    """Issue #9 code-review finding #1: a quoted `"uses":`/`'uses':` key
+    (block or flow style), and a quoted `uses:` *value*, must both be
+    recognized -- the previous regex only ever matched the bare,
+    unquoted word `uses` as a key, and captured a quoted value's
+    surrounding quote characters as part of the ref itself (which then
+    never matched the pin-shape check at all, silently downgrading a
+    real mutable-ref finding into a much vaguer "no @ref pin" one)."""
+
+    SHA_A = "a" * 40
+
+    def test_flow_double_quoted_key_and_value_mutable_rejected(self):
+        text = GOOD_WORKFLOW + '      - {"uses": "actions/setup-python@mutable"}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/setup-python@mutable" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_flow_single_quoted_key_and_value_mutable_rejected(self):
+        text = GOOD_WORKFLOW + "      - {'uses': 'actions/setup-python@mutable'}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+    def test_flow_double_quoted_key_and_value_immutable_accepted(self):
+        text = GOOD_WORKFLOW + f'      - {{"uses": "actions/setup-python@{self.SHA_A}"}}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+
+    def test_block_double_quoted_key_mutable_rejected(self):
+        text = GOOD_WORKFLOW + '      - "uses": actions/setup-python@mutable\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+    def test_block_single_quoted_key_mutable_rejected(self):
+        text = GOOD_WORKFLOW + "      - 'uses': actions/setup-python@mutable\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+    def test_block_double_quoted_value_mutable_rejected(self):
+        text = GOOD_WORKFLOW + '      - uses: "actions/setup-python@mutable"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("not pinned to an immutable" in v for v in violations), violations)
+
+    def test_block_single_quoted_value_immutable_accepted(self):
+        text = GOOD_WORKFLOW + f"      - uses: 'actions/setup-python@{self.SHA_A}'\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+
+
+class AnchorAliasTagTemplateUsesTests(unittest.TestCase):
+    """Issue #9 hardening: a YAML anchor/alias/tag or a GitHub Actions
+    `${{ ... }}` expression attached to (or standing in for) a `uses:`
+    value can never be statically, safely resolved to a real,
+    verifiable pin -- every one of these must be rejected outright
+    (fail closed), never silently treated as "no @ref" or, worse,
+    silently ignored."""
+
+    SHA_A = "a" * 40
+
+    def test_anchor_prefixed_value_rejected(self):
+        text = GOOD_WORKFLOW + f"      - uses: &checkout_ref actions/setup-python@{self.SHA_A}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("anchor" in v.lower() and "rejected fail-closed" in v for v in violations), violations)
+
+    def test_alias_value_rejected(self):
+        text = GOOD_WORKFLOW + "      - uses: *some_previously_defined_anchor\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("alias" in v.lower() for v in violations), violations)
+
+    def test_explicit_tag_prefixed_value_rejected(self):
+        text = GOOD_WORKFLOW + f"      - uses: !!str actions/setup-python@{self.SHA_A}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("tag" in v.lower() for v in violations), violations)
+
+    def test_template_expression_value_rejected(self):
+        text = GOOD_WORKFLOW + "      - uses: ${{ inputs.action_ref }}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("template" in v.lower() or "expression" in v.lower() for v in violations), violations)
+
+    def test_template_expression_embedded_in_pin_rejected(self):
+        """An expression need not be the *entire* value -- one embedded
+        inside an otherwise plausible-looking ref (e.g. an
+        expression-interpolated ref segment) must be caught too."""
+        text = GOOD_WORKFLOW + "      - uses: actions/setup-python@${{ inputs.pinned_sha }}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("template" in v.lower() or "expression" in v.lower() for v in violations), violations)
+
+
+class CommentsSpacingAndMultipleUsesTests(unittest.TestCase):
+    """Comment/whitespace variants, and more than one `uses:` token
+    appearing within a single physical text line, must never confuse
+    the scanner into missing a real occurrence or manufacturing a fake
+    one out of commented-out text."""
+
+    SHA_A = "a" * 40
+    SHA_B = "b" * 40
+
+    def test_trailing_comment_mentioning_uses_is_not_a_second_occurrence(self):
+        text = GOOD_WORKFLOW + f"      - uses: actions/setup-python@{self.SHA_A}  # see also uses: fake@bad\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+
+    def test_extra_inline_whitespace_around_colon_and_value_tolerated(self):
+        text = GOOD_WORKFLOW + f"      -    uses:      actions/setup-python@{self.SHA_A}   \n"
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+
+    def test_two_uses_occurrences_in_two_flow_mappings_on_one_line_both_checked(self):
+        """Two entirely separate flow-mapping steps happen to be
+        written on the same physical text line: both must still be
+        individually found and validated (one immutable, one mutable)."""
+        text = (
+            GOOD_WORKFLOW
+            + f"      - {{uses: actions/setup-python@{self.SHA_A}}}\n"
+            + "      - {uses: actions/setup-node@mutable}\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-python" in v], [])
+        self.assertTrue(any("setup-node" in v and "not pinned to an immutable" in v for v in violations), violations)
+
+    def test_duplicate_uses_key_within_same_flow_mapping_rejected(self):
+        """Two `uses:` keys inside the very *same* flow mapping is
+        invalid YAML (a mapping must never repeat a key) -- this must
+        be rejected outright, regardless of whether either value would
+        otherwise have been an acceptable pin."""
+        text = GOOD_WORKFLOW + (
+            f"      - {{uses: actions/setup-python@{self.SHA_A}, uses: actions/setup-python@{self.SHA_B}}}\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("duplicate" in v.lower() for v in violations), violations)
+
+    def test_duplicate_uses_key_within_same_block_step_rejected(self):
+        text = GOOD_WORKFLOW + (
+            f"      - uses: actions/setup-python@{self.SHA_A}\n"
+            f"        uses: actions/setup-python@{self.SHA_B}\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("duplicate" in v.lower() for v in violations), violations)
+
+    def test_two_uses_in_separate_steps_never_treated_as_duplicate(self):
+        """Two *different* steps, each with their own single `uses:`
+        key, must never be (mis)flagged as a duplicate-key -- only a
+        repeat within the *same* enclosing mapping is ever rejected on
+        that basis."""
+        text = GOOD_WORKFLOW + (
+            f"      - uses: actions/setup-python@{self.SHA_A}\n"
+            f"      - uses: actions/setup-node@{self.SHA_B}\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertFalse(any("duplicate" in v.lower() for v in violations), violations)
+
+
+class MalformedUnsupportedUsesShapeTests(unittest.TestCase):
+    """A `uses:` value shape this scanner cannot fully, unambiguously
+    parse must always fail closed -- never be silently skipped, and
+    never be downgraded into a vaguer/weaker finding than the real
+    problem actually is."""
+
+    SHA_A = "a" * 40
+
+    def test_unterminated_double_quote_rejected(self):
+        text = GOOD_WORKFLOW + f'      - uses: "actions/setup-python@{self.SHA_A}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("unterminated" in v.lower() for v in violations), violations)
+
+    def test_unterminated_single_quote_rejected(self):
+        text = GOOD_WORKFLOW + f"      - uses: 'actions/setup-python@{self.SHA_A}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("unterminated" in v.lower() for v in violations), violations)
+
+    def test_ambiguous_embedded_colon_in_value_rejected(self):
+        """An unquoted `:` followed by whitespace inside a plain value
+        looks exactly like an unintended nested mapping key to a real
+        YAML parser too -- this scanner refuses to guess and fails
+        closed instead of silently accepting a truncated/garbled ref."""
+        text = GOOD_WORKFLOW + f"      - uses: actions/setup-python@{self.SHA_A} uses: fake@bad\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("ambiguous" in v.lower() or "nested mapping" in v.lower() for v in violations), violations)
+
+    def test_empty_uses_value_rejected_as_missing_pin(self):
+        text = GOOD_WORKFLOW + "      - uses:\n        with: {}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("has no '@ref' pin at all" in v for v in violations), violations)
+
+    def test_docker_reference_without_sha_pin_rejected(self):
+        """A Docker `docker://...` reference is never carved out as a
+        safe local action -- see `is_local_action_reference`'s own
+        docstring -- so a docker reference must still be pinned to an
+        exact 40-lowercase-hex SHA exactly like every other external
+        action."""
+        text = GOOD_WORKFLOW + "      - uses: docker://alpine:3.19\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("docker://alpine:3.19" in v for v in violations), violations)
+
+
 class ForbiddenSubstringTests(unittest.TestCase):
     def test_upload_artifact_rejected(self):
         text = GOOD_WORKFLOW + "\n      - uses: actions/upload-artifact@v4\n"

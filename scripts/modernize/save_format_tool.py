@@ -110,6 +110,33 @@ Exit codes
       OS-enforced os.link() publish itself losing a race against a
       concurrently created destination -- either way the destination is
       left completely untouched.
+  8   migrate: an explicit --to-epoch is out of the mechanically
+      supported range (must be between 1 and the live
+      SAVE_FORMAT_VERSION_CURRENT, inclusive); refused before any file is
+      read, nothing written.
+
+--to-epoch / --expect (migrate, issue #9 residual-hardening)
+--------------------------------------------------------------
+
+  By default, migrate always stamps whatever is *live* today
+  (SAVE_FORMAT_VERSION_CURRENT / config.mk's own
+  EXPANSION_SAVE_COMPAT_EPOCH) -- unchanged historic behavior for every
+  bare `migrate SOURCE DEST` invocation. An explicit `--to-epoch N`
+  instead stamps exactly formatVersion/compatEpoch N (1 <= N <=
+  SAVE_FORMAT_VERSION_CURRENT), decoupled from whatever config.mk
+  currently says; a target below the live current epoch classifies
+  SAVE_COMPAT_MIGRATABLE_OLDER (never SAVE_COMPAT_CURRENT -- that would
+  misrepresent an intentionally older, honest target) and is re-verified
+  by unpacking the produced formatVersion field directly, not merely by
+  an overall classifier state. `--expect STATE` (repeatable) narrows
+  which source classification(s) this specific invocation accepts,
+  instead of the generic MIGRATABLE_SOURCE_STATES default -- used by
+  scripts/modernize/migrations/registry.py to enforce one declared
+  transition's *exact* epoch_from precondition (e.g. exactly
+  SAVE_COMPAT_VALID_LEGACY_OR_VANILLA for its "no epoch" -> 1 entry,
+  never also SAVE_COMPAT_MIGRATABLE_OLDER or SAVE_COMPAT_CURRENT) rather
+  than accepting any broadly-migratable source regardless of which
+  transition was asked for.
 """
 
 from __future__ import annotations
@@ -500,16 +527,34 @@ def build_default_reserved_bytes(repo_root: Path) -> bytes:
     return build_default_reserved_bytes_for_locale_context(locale_count, enabled_mask, default_locale_id)
 
 
-def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes] = None) -> ExpansionSaveMeta:
-    """Host-side mirror of BuildCurrentExpansionSaveMeta() (src/bmsave-lib.c).
+def build_expansion_save_meta_for_target(
+    repo_root: Path,
+    format_version: int,
+    compat_epoch: int,
+    reserved: Optional[bytes] = None,
+) -> ExpansionSaveMeta:
+    """General host-side ExpansionSaveMeta builder, parameterized by an
+    explicit `format_version`/`compat_epoch` pair rather than always
+    reading whatever is "live" in config.mk (issue #9 residual-hardening:
+    a fresh, independent verifier reproduced every mechanical migration
+    step -- regardless of its own declared `epoch_to` -- collapsing onto
+    whichever formatVersion/EXPANSION_SAVE_COMPAT_EPOCH config.mk happens
+    to have *right now*, so a registry step honestly declaring
+    `epoch_to=1` silently produced a real epoch-2 image once epoch 2
+    became config.mk's live value; that made the registry's own declared
+    transitions unverifiable/non-executable contracts). See
+    `build_current_expansion_save_meta()` below -- the historic,
+    backward-compatible entry point that resolves both parameters from
+    config.mk's live values, unchanged -- for the "no explicit target"
+    case; `cmd_migrate()`'s `--to-epoch` plumbs an explicit, validated
+    target straight into this function instead of ever re-deriving it
+    from config.mk.
 
-    Reads config.mk's real EXPANSION_SAVE_COMPAT_EPOCH/EXPANSION_VERSION_*
-    (via expansion_config.py, the same #8 parser used to generate the C
-    build's own -D flags) so a bump to either value is honored by this tool
-    without a code change. abiId/configFingerprint/buildCommitShort are
-    diagnostic-only fields (see docs/save_format.md) with no live build
-    context available to a host-side tool, so they use documented,
-    honestly-labeled placeholders that can never affect compatibility.
+    abiId/configFingerprint/buildCommitShort are diagnostic-only fields
+    (see docs/save_format.md) with no live build context available to a
+    host-side tool, so they use documented, honestly-labeled placeholders
+    that can never affect compatibility -- unaffected by which
+    format_version/compat_epoch is targeted.
 
     `reserved` (issue #18 sprint 2): when None (the default, used for a
     brand-new/never-before-migrated image), a fresh default
@@ -528,7 +573,6 @@ def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes]
     version_major = int(values["EXPANSION_VERSION_MAJOR"])
     version_minor = int(values["EXPANSION_VERSION_MINOR"])
     version_patch = int(values["EXPANSION_VERSION_PATCH"])
-    save_compat_epoch = ec.validate_save_compat_epoch(values["EXPANSION_SAVE_COMPAT_EPOCH"])
 
     framework_version_packed = ec.compute_version_packed(version_major, version_minor, version_patch)
     build_commit = ec.resolve_build_commit(None, repo_root)
@@ -542,8 +586,8 @@ def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes]
 
     meta = ExpansionSaveMeta(
         magic=META_MAGIC,
-        format_version=SAVE_FORMAT_VERSION_CURRENT,
-        compat_epoch=save_compat_epoch,
+        format_version=format_version,
+        compat_epoch=compat_epoch,
         abi_id=SAVE_ABI_ID_APCS_GNU,  # diagnostic-only; host tool has no ABI context
         framework_version_packed=framework_version_packed,
         config_fingerprint=b"0000000000000000\x00",  # diagnostic-only placeholder
@@ -553,6 +597,26 @@ def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes]
     )
     meta.checksum = meta.computed_checksum()
     return meta
+
+
+def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes] = None) -> ExpansionSaveMeta:
+    """Host-side mirror of BuildCurrentExpansionSaveMeta() (src/bmsave-lib.c).
+
+    Reads config.mk's real EXPANSION_SAVE_COMPAT_EPOCH/EXPANSION_VERSION_*
+    (via expansion_config.py, the same #8 parser used to generate the C
+    build's own -D flags) so a bump to either value is honored by this tool
+    without a code change: a thin, behavior-preserving wrapper around
+    `build_expansion_save_meta_for_target()` above, resolving both
+    `format_version` (always `SAVE_FORMAT_VERSION_CURRENT`) and
+    `compat_epoch` (always config.mk's live `EXPANSION_SAVE_COMPAT_EPOCH`)
+    exactly as this function always has -- unchanged for every existing
+    caller that does not ask for an explicit target epoch.
+    """
+    values = ec.parse_config_mk(repo_root / "config.mk")
+    save_compat_epoch = ec.validate_save_compat_epoch(values["EXPANSION_SAVE_COMPAT_EPOCH"])
+    return build_expansion_save_meta_for_target(
+        repo_root, SAVE_FORMAT_VERSION_CURRENT, save_compat_epoch, reserved=reserved
+    )
 
 
 # --- Classifier (mirrors ClassifySaveCompatRaw()/ClassifySramSaveCompat()) ---
@@ -717,9 +781,25 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _publish_atomically(
-    dest: Path, payload: bytes, save_compat_epoch: int, force: bool
+    dest: Path,
+    payload: bytes,
+    save_compat_epoch: int,
+    force: bool,
+    required_state: str = SAVE_COMPAT_CURRENT,
 ) -> Optional[Tuple[int, str]]:
     """Writes `payload` to `dest` atomically and non-destructively.
+
+    `required_state` (issue #9 residual-hardening): the exact
+    classification `payload` must re-verify as, both before and after
+    publish. Defaults to `SAVE_COMPAT_CURRENT`, this function's original
+    and only behavior for every pre-existing caller. `cmd_migrate()`
+    passes an explicit, non-`CURRENT` `required_state` only for a
+    validated `--to-epoch` target strictly below the live
+    `SAVE_FORMAT_VERSION_CURRENT` -- such an image genuinely cannot ever
+    classify `SAVE_COMPAT_CURRENT` against today's live config (that
+    would misrepresent it), so demanding `SAVE_COMPAT_CURRENT`
+    unconditionally here would make an honestly-older declared target
+    unpublishable even when byte-for-byte correct.
 
     Writes to a temporary file in dest's own directory (so the publish
     step below is on the same filesystem and therefore atomic), flushes
@@ -780,7 +860,7 @@ def _publish_atomically(
             written = tmp_path.read_bytes()
         except OSError as error:
             return 1, f"failed to re-read temporary migration output {tmp_path}: {error}"
-        if written != payload or classify_image(written, save_compat_epoch) != SAVE_COMPAT_CURRENT:
+        if written != payload or classify_image(written, save_compat_epoch) != required_state:
             return 1, f"temporary migration output {tmp_path} failed pre-publish verification"
 
         if force:
@@ -819,7 +899,7 @@ def _publish_atomically(
         published = dest.read_bytes()
     except OSError as error:
         return 1, f"failed to re-read published {dest}: {error}"
-    if published != payload or classify_image(published, save_compat_epoch) != SAVE_COMPAT_CURRENT:
+    if published != payload or classify_image(published, save_compat_epoch) != required_state:
         return 1, f"published {dest} failed post-publish verification"
 
     return None
@@ -889,6 +969,34 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         )
         return 7
 
+    to_epoch = args.to_epoch
+    if to_epoch is not None:
+        # Issue #9 residual-hardening: an explicit --to-epoch is a
+        # validated, non-negotiable transition target -- it must never be
+        # silently reinterpreted. It can only ever mechanically stamp a
+        # format_version this tool actually implements (1..SAVE_FORMAT_
+        # VERSION_CURRENT today); anything else is rejected before any
+        # file is even read, exactly like every other precondition
+        # failure in this function.
+        if to_epoch < 1:
+            print(
+                f"error: --to-epoch must be >= 1 (no format version below 1 is ever "
+                f"stamped by this tool), got {to_epoch}",
+                file=sys.stderr,
+            )
+            return 8
+        if to_epoch > SAVE_FORMAT_VERSION_CURRENT:
+            print(
+                f"error: --to-epoch {to_epoch} exceeds the live SAVE_FORMAT_VERSION_CURRENT "
+                f"{SAVE_FORMAT_VERSION_CURRENT}; no mechanical migration can produce a format "
+                "version this tool does not itself implement yet; source left untouched, "
+                "nothing written",
+                file=sys.stderr,
+            )
+            return 8
+
+    expected_states = tuple(args.expect) if args.expect else MIGRATABLE_SOURCE_STATES
+
     try:
         save_compat_epoch = resolve_save_compat_epoch(repo_root)
         image = bytearray(read_image(source))
@@ -896,11 +1004,23 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
+    # source_state is always classified against the *live* config epoch
+    # (save_compat_epoch) -- this answers "what is this file, as-is,
+    # today", independently of which specific epoch_to a caller is
+    # targeting; --to-epoch only ever affects what gets *stamped*, never
+    # how the source itself is classified. Exact-source enforcement is
+    # `expected_states`: the generic MIGRATABLE_SOURCE_STATES set by
+    # default (this tool's own historic, standalone-CLI behavior,
+    # unchanged), or the single exact state a caller (e.g.
+    # scripts/modernize/migrations/registry.py, one declared transition
+    # at a time) explicitly demands via --expect -- so a source that does
+    # not match *this specific* declared transition's precondition is
+    # rejected here, before any byte of `image` is mutated below.
     source_state = classify_image(bytes(image), save_compat_epoch)
-    if source_state not in MIGRATABLE_SOURCE_STATES:
+    if source_state not in expected_states:
         print(
             f"error: {source} classified as {source_state}, which is not migratable "
-            f"in this slice (only {' or '.join(MIGRATABLE_SOURCE_STATES)} are); "
+            f"in this slice (only {' or '.join(expected_states)} are); "
             "source left untouched, nothing written",
             file=sys.stderr,
         )
@@ -928,27 +1048,73 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         if source_meta.magic == META_MAGIC
         else None  # v0/vanilla: no prior ExpansionSaveMeta at all to preserve from
     )
-    new_meta = build_current_expansion_save_meta(repo_root, reserved=preserved_reserved)
+
+    if to_epoch is None:
+        # Historic, backward-compatible default: stamp whatever is live
+        # today (SAVE_FORMAT_VERSION_CURRENT / config.mk's
+        # EXPANSION_SAVE_COMPAT_EPOCH), unchanged for every pre-existing
+        # caller that never asked for an explicit target.
+        new_meta = build_current_expansion_save_meta(repo_root, reserved=preserved_reserved)
+        target_format_version = SAVE_FORMAT_VERSION_CURRENT
+        target_compat_epoch = save_compat_epoch
+    else:
+        # Issue #9 residual-hardening: an explicit --to-epoch stamps
+        # *exactly* that formatVersion/compatEpoch pair -- never
+        # whatever config.mk's live epoch happens to be -- so a
+        # registry-declared `epoch_to` is an executable contract rather
+        # than always collapsing onto the live current epoch.
+        new_meta = build_expansion_save_meta_for_target(
+            repo_root, to_epoch, to_epoch, reserved=preserved_reserved
+        )
+        target_format_version = to_epoch
+        target_compat_epoch = to_epoch
+
     image[META_OFFSET:META_OFFSET + META_SIZE] = new_meta.pack()
 
-    post_state = classify_image(bytes(image), save_compat_epoch)
-    if post_state != SAVE_COMPAT_CURRENT:
+    # Verify the in-memory rebuilt image is *exactly* the declared
+    # target, not merely "some migration happened": both the raw
+    # formatVersion field (the precise numbered contract --to-epoch/a
+    # registry step's epoch_to promises) and the overall classifier
+    # state must agree. A target equal to today's live current epoch
+    # must still classify SAVE_COMPAT_CURRENT (this tool's original,
+    # unweakened guarantee); an explicit, validated older target
+    # (to_epoch < SAVE_FORMAT_VERSION_CURRENT) can never classify
+    # SAVE_COMPAT_CURRENT against today's live config -- demanding that
+    # would make an honest older target unpublishable -- so it must
+    # instead classify SAVE_COMPAT_MIGRATABLE_OLDER, the truthful state
+    # for a real, valid, older-formatVersion image.
+    produced_meta = ExpansionSaveMeta.unpack(bytes(image[META_OFFSET:META_OFFSET + META_SIZE]))
+    if produced_meta.format_version != target_format_version:
+        print(
+            f"error: post-migration verification failed (stamped formatVersion "
+            f"{produced_meta.format_version}, expected exactly {target_format_version}); "
+            f"nothing written to {dest}",
+            file=sys.stderr,
+        )
+        return 5
+
+    required_state = (
+        SAVE_COMPAT_CURRENT if target_format_version == SAVE_FORMAT_VERSION_CURRENT
+        else SAVE_COMPAT_MIGRATABLE_OLDER
+    )
+    post_state = classify_image(bytes(image), target_compat_epoch)
+    if post_state != required_state:
         print(
             f"error: post-migration verification failed (got {post_state}, expected "
-            f"{SAVE_COMPAT_CURRENT}); nothing written to {dest}",
+            f"{required_state}); nothing written to {dest}",
             file=sys.stderr,
         )
         return 5
 
     publish_result = _publish_atomically(
-        dest_resolved, bytes(image), save_compat_epoch, args.force
+        dest_resolved, bytes(image), target_compat_epoch, args.force, required_state=required_state
     )
     if publish_result is not None:
         exit_code, message = publish_result
         print(f"error: {message}", file=sys.stderr)
         return exit_code
 
-    print(f"migrated {source} ({source_state}) -> {dest} (SAVE_COMPAT_CURRENT)")
+    print(f"migrated {source} ({source_state}) -> {dest} ({required_state}, formatVersion {target_format_version})")
     return 0
 
 
@@ -990,6 +1156,34 @@ def build_parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="allow overwriting an existing destination (default: refuse)",
+    )
+    migrate_parser.add_argument(
+        "--to-epoch",
+        type=int,
+        default=None,
+        help=(
+            "explicit, validated transition target: stamp exactly this formatVersion/"
+            "compatEpoch (must be between 1 and the live SAVE_FORMAT_VERSION_CURRENT, "
+            "inclusive) instead of always the live config.mk epoch. Default (omitted): "
+            "unchanged historic behavior -- stamps whatever is live today. Used by "
+            "scripts/modernize/migrations/registry.py so a declared registry transition's "
+            "epoch_to is an executable contract, never silently re-derived from the live "
+            "epoch."
+        ),
+    )
+    migrate_parser.add_argument(
+        "--expect",
+        action="append",
+        choices=ALL_SAVE_COMPAT_STATES,
+        default=None,
+        help=(
+            "acceptable source classification(s) for this specific migration "
+            "(repeatable; default: the generic MIGRATABLE_SOURCE_STATES set -- "
+            "SAVE_COMPAT_VALID_LEGACY_OR_VANILLA, SAVE_COMPAT_MIGRATABLE_OLDER, or "
+            "SAVE_COMPAT_CURRENT). Used by scripts/modernize/migrations/registry.py to "
+            "enforce a single declared transition's exact epoch_from precondition "
+            "instead of accepting any broadly-migratable source."
+        ),
     )
     migrate_parser.set_defaults(func=cmd_migrate)
 

@@ -2,6 +2,7 @@
 correction #1: immutable Actions pin inventory)."""
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -115,20 +116,74 @@ class LoadInventoryTests(unittest.TestCase):
                 ap.load_inventory(path)
 
 
-class WorkflowExternalUsesTests(unittest.TestCase):
+class WorkflowExternalOccurrencesTests(unittest.TestCase):
+    """`ap.workflow_external_uses`'s old `{action: pin}` dict return
+    shape is gone entirely (issue #9 hardening): it silently collapsed
+    every occurrence of the same action down to whichever one happened
+    to be seen last, which is exactly the "duplicate/conflicting
+    occurrence disappears without a trace" defect this rewrite closes.
+    `ap.workflow_external_occurrences` returns a flat, ordered list of
+    `ap.ActionOccurrence` instead -- one entry per physical occurrence,
+    always -- so this test module (like the real implementation) can
+    never accidentally lose one."""
+
     def test_extracts_external_reference(self):
-        refs = ap.workflow_external_uses(GOOD_WORKFLOW)
-        self.assertEqual(refs, {"actions/checkout": SHA_A})
+        occurrences = ap.workflow_external_occurrences(GOOD_WORKFLOW)
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].action, "actions/checkout")
+        self.assertEqual(occurrences[0].ref, SHA_A)
 
     def test_local_action_excluded(self):
         text = GOOD_WORKFLOW + "      - uses: ./.github/actions/local\n"
-        refs = ap.workflow_external_uses(text)
-        self.assertNotIn("./.github/actions/local", refs)
+        occurrences = ap.workflow_external_occurrences(text)
+        self.assertFalse(any(o.action == "./.github/actions/local" for o in occurrences))
 
     def test_unpinned_reference_excluded(self):
         text = GOOD_WORKFLOW + "      - uses: actions/setup-python\n"
-        refs = ap.workflow_external_uses(text)
-        self.assertNotIn("actions/setup-python", refs)
+        occurrences = ap.workflow_external_occurrences(text)
+        self.assertFalse(any(o.action == "actions/setup-python" for o in occurrences))
+
+    def test_every_occurrence_of_a_repeated_action_is_preserved(self):
+        """The core occurrence-preservation contract: two separate
+        `uses:` occurrences of the *same* action, at two different
+        lines, must both come back -- never collapsed into one."""
+        text = GOOD_WORKFLOW + f"      - uses: actions/checkout@{SHA_B}\n"
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "actions/checkout"]
+        self.assertEqual(len(occurrences), 2)
+        self.assertEqual({o.ref for o in occurrences}, {SHA_A, SHA_B})
+        self.assertEqual({o.line for o in occurrences}, {occurrences[0].line, occurrences[1].line})
+        self.assertNotEqual(occurrences[0].line, occurrences[1].line)
+
+    def test_flow_mapping_occurrence_is_extracted(self):
+        """A `uses:` occurrence hidden inside a flow mapping (the
+        original code-review-found bypass -- the old line-anchored
+        regex never matched it at all) must be extracted exactly like
+        an ordinary block-style one."""
+        text = GOOD_WORKFLOW + f"      - {{uses: actions/setup-node@{SHA_B}}}\n"
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "actions/setup-node"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, SHA_B)
+
+    def test_ambiguous_occurrence_excluded_but_still_reported_by_workflow_guard(self):
+        """A *repeated* 'uses' key within the very same flow mapping is
+        invalid YAML (a mapping must not repeat a key): the scanner
+        keeps the first occurrence as an ordinary, clean, bijection-
+        eligible reference, but flags every *repeat* after it
+        ('duplicate-key') and excludes only that flagged repeat from
+        this module's own per-action bijection view -- it is already
+        unconditionally, separately reported, precisely, by
+        `workflow_guard.check_uses_pins`, so it must never be silently
+        dropped from the *system's* overall result even though this
+        module's own view no longer carries it."""
+        text = GOOD_WORKFLOW + (
+            f"      - {{uses: actions/setup-node@{SHA_A}, uses: actions/setup-node@{SHA_B}}}\n"
+        )
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "actions/setup-node"]
+        # only the first (clean) occurrence survives into this module's own view
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, SHA_A)
+        from scripts.release_rehearsal import workflow_guard as wg
+        self.assertTrue(any("duplicate" in v.lower() for v in wg.check_uses_pins(text)))
 
 
 class CheckWorkflowAgainstInventoryTests(unittest.TestCase):
@@ -161,6 +216,131 @@ class CheckWorkflowAgainstInventoryTests(unittest.TestCase):
         self.assertTrue(any("no matching entry" in r for r in reasons))
         # but the unrelated other.yml row is not flagged as "stale" against this workflow
         self.assertFalse(any("setup-python" in r for r in reasons))
+
+
+class OccurrencePreservationTests(unittest.TestCase):
+    """Adversarial coverage for issue #9's second code-review finding:
+    the action-pin inventory cross-check must never let a workflow
+    occurrence silently disappear by dict-overwrite, and must fail
+    closed on every conflicting/unrecorded duplicate `uses:` occurrence
+    of the same action -- regardless of whether some *other* occurrence
+    of that action happens to match the committed inventory."""
+
+    def _two_occurrence_workflow(self, sha_first: str, sha_second: str) -> str:
+        return (
+            GOOD_WORKFLOW
+            + f"      - uses: actions/setup-node@{sha_first}\n"
+            + f"      - uses: actions/setup-node@{sha_second}\n"
+        )
+
+    def test_conflicting_duplicate_shas_rejected_even_when_one_matches_inventory(self):
+        """The exact scenario named by the task: an *earlier* occurrence
+        pinned to some conflicting SHA, and a *later* occurrence that
+        happens to exactly match the committed inventory row, must
+        still never pass -- the conflict itself is the failure,
+        independent of which occurrence the inventory happens to
+        agree with."""
+        text = self._two_occurrence_workflow(SHA_B, SHA_A)  # first=B (conflict), second=A (matches inventory)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(workflow="workflow.yml", action="actions/setup-node", pinned_sha=SHA_A),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertTrue(any("conflicting SHAs" in r and "setup-node" in r for r in reasons), reasons)
+        # every occurrence's own line number is named as evidence
+        self.assertTrue(any(re.search(r"line \d+ -> '" + SHA_A + r"'", r) for r in reasons), reasons)
+        self.assertTrue(any(re.search(r"line \d+ -> '" + SHA_B + r"'", r) for r in reasons), reasons)
+
+    def test_conflicting_shas_reversed_order_still_rejected(self):
+        """Order must not matter: the *first* occurrence matching the
+        inventory and a *later* one conflicting is exactly as rejected
+        as the reverse."""
+        text = self._two_occurrence_workflow(SHA_A, SHA_B)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(workflow="workflow.yml", action="actions/setup-node", pinned_sha=SHA_A),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertTrue(any("conflicting SHAs" in r for r in reasons), reasons)
+
+    def test_same_sha_duplicate_occurrence_unrecorded_is_rejected(self):
+        """Two occurrences of the same action, both pinned to the
+        *identical* SHA -- no conflict -- must still fail closed if the
+        inventory's ('occurrence_count'-defaulted-to-1) row does not
+        truthfully record that there really are two occurrences. A
+        same-SHA duplicate must never silently disappear."""
+        text = self._two_occurrence_workflow(SHA_A, SHA_A)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(workflow="workflow.yml", action="actions/setup-node", pinned_sha=SHA_A),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertTrue(
+            any("actually occurs 2 time(s)" in r and "occurrence_count" in r for r in reasons), reasons
+        )
+
+    def test_same_sha_duplicate_occurrence_explicitly_recorded_passes(self):
+        """The same two-identical-SHA-occurrence workflow passes cleanly
+        once the inventory truthfully records 'occurrence_count': 2 --
+        the smallest durable schema evolution this module needed."""
+        text = self._two_occurrence_workflow(SHA_A, SHA_A)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(
+                workflow="workflow.yml", action="actions/setup-node", pinned_sha=SHA_A, occurrence_count=2
+            ),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertEqual(reasons, [])
+
+    def test_wrong_occurrence_count_still_rejected(self):
+        """An inventory row that declares the *wrong* occurrence count
+        (here: 3, when the workflow really has 2) must still fail --
+        'occurrence_count' is a truthful fact about the workflow, not a
+        free-form allowance."""
+        text = self._two_occurrence_workflow(SHA_A, SHA_A)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(
+                workflow="workflow.yml", action="actions/setup-node", pinned_sha=SHA_A, occurrence_count=3
+            ),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertTrue(any("actually occurs 2 time(s)" in r for r in reasons), reasons)
+
+    def test_single_occurrence_default_occurrence_count_still_works(self):
+        """The ordinary, single-occurrence case (today's real committed
+        inventory's own shape) needs no 'occurrence_count' field at all
+        -- it defaults to 1, which is the truth for a single
+        occurrence."""
+        reasons = ap.check_workflow_against_inventory(
+            "workflow.yml", GOOD_WORKFLOW, [_good_inventory_row(workflow="workflow.yml")]
+        )
+        self.assertEqual(reasons, [])
+
+    def test_unrecorded_single_action_occurrence_reported_with_evidence(self):
+        text = GOOD_WORKFLOW + f"      - uses: actions/setup-node@{SHA_B}\n"
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, [_good_inventory_row(workflow="workflow.yml")])
+        self.assertTrue(
+            any("setup-node" in r and "no matching entry" in r and f"line" in r for r in reasons), reasons
+        )
+
+    def test_flow_mapping_duplicate_occurrence_participates_in_bijection(self):
+        """A duplicate occurrence hidden inside a flow mapping is exactly
+        as subject to the same-SHA-duplicate/'occurrence_count' rule as
+        an ordinary block-style one -- the canonical extractor, not the
+        surface YAML spelling, is what this module's logic keys off
+        of."""
+        text = GOOD_WORKFLOW + (
+            f"      - {{uses: actions/setup-node@{SHA_A}}}\n"
+            f"      - uses: actions/setup-node@{SHA_A}\n"
+        )
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(workflow="workflow.yml", action="actions/setup-node", pinned_sha=SHA_A),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertTrue(any("actually occurs 2 time(s)" in r for r in reasons), reasons)
 
 
 class CheckEndToEndTests(unittest.TestCase):

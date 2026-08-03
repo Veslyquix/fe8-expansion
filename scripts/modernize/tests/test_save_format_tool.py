@@ -753,6 +753,136 @@ class CliMigrateTests(unittest.TestCase):
             self.assertTrue(self._no_stray_temp_files(dest.parent))
 
 
+class CliMigrateToEpochTests(unittest.TestCase):
+    """Issue #9 residual-hardening: --to-epoch/--expect let a caller
+    (scripts/modernize/migrations/registry.py) declare an exact,
+    validated transition target instead of always collapsing onto
+    whatever config.mk's live epoch happens to be."""
+
+    def test_migrate_to_epoch_1_produces_migratable_older_not_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "migrated.bin"
+            source.write_bytes(bytes(make_image(make_header(valid=True), make_meta(present=False))))
+
+            exit_code = sft.main(
+                ["--repo-root", str(ROOT), "migrate", str(source), str(dest), "--to-epoch", "1"]
+            )
+            self.assertEqual(exit_code, 0)
+
+            produced = dest.read_bytes()
+            meta = sft.ExpansionSaveMeta.unpack(produced[sft.META_OFFSET:sft.META_OFFSET + sft.META_SIZE])
+            self.assertEqual(meta.format_version, 1)
+            self.assertEqual(meta.compat_epoch, 1)
+            live_epoch = sft.resolve_save_compat_epoch(ROOT)
+            # Never SAVE_COMPAT_CURRENT: an honest formatVersion-1 image
+            # is genuinely older than today's live SAVE_FORMAT_VERSION_CURRENT.
+            self.assertEqual(sft.classify_image(produced, live_epoch), sft.SAVE_COMPAT_MIGRATABLE_OLDER)
+
+    def test_migrate_to_epoch_matching_live_current_matches_default_behavior(self):
+        """An explicit --to-epoch equal to SAVE_FORMAT_VERSION_CURRENT
+        must behave identically to omitting --to-epoch entirely."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest_explicit = Path(tmp) / "explicit.bin"
+            dest_default = Path(tmp) / "default.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            code_explicit = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest_explicit),
+                "--to-epoch", str(sft.SAVE_FORMAT_VERSION_CURRENT),
+            ])
+            code_default = sft.main(
+                ["--repo-root", str(ROOT), "migrate", str(source), str(dest_default)]
+            )
+            self.assertEqual(code_explicit, 0)
+            self.assertEqual(code_default, 0)
+            epoch = sft.resolve_save_compat_epoch(ROOT)
+            self.assertEqual(sft.classify_image(dest_explicit.read_bytes(), epoch), sft.SAVE_COMPAT_CURRENT)
+            self.assertEqual(sft.classify_image(dest_default.read_bytes(), epoch), sft.SAVE_COMPAT_CURRENT)
+            self.assertEqual(dest_explicit.read_bytes(), dest_default.read_bytes())
+
+    def test_migrate_to_epoch_zero_rejected_before_any_read(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest), "--to-epoch", "0",
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_migrate_to_epoch_beyond_live_current_rejected(self):
+        """--to-epoch cannot mechanically claim a future format version
+        this tool does not itself implement -- no unknown/future target
+        is ever silently accepted."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-epoch", str(sft.SAVE_FORMAT_VERSION_CURRENT + 1),
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_migrate_expect_override_rejects_source_not_matching_exact_state(self):
+        """--expect narrows accepted source states beyond the generic
+        MIGRATABLE_SOURCE_STATES default: a legacy/v0 source (normally
+        migratable) must be rejected when --expect demands exactly
+        SAVE_COMPAT_MIGRATABLE_OLDER instead -- the exact-source-state
+        enforcement scripts/modernize/migrations/registry.py's run()
+        relies on for a single declared transition."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--expect", sft.SAVE_COMPAT_MIGRATABLE_OLDER,
+            ])
+            self.assertEqual(exit_code, 4)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_migrate_to_epoch_verification_failure_is_detected_and_nothing_written(self):
+        """Adversarial: if the meta builder ever stamped a formatVersion
+        that does not match the declared --to-epoch (a hypothetical
+        future regression), cmd_migrate's own re-verification must catch
+        it before publish -- nothing is ever written to dest."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            real_builder = sft.build_expansion_save_meta_for_target
+
+            def _wrong_epoch_builder(repo_root, format_version, compat_epoch, reserved=None):
+                # Simulate a builder bug: always stamps a format version
+                # one higher than what was actually requested.
+                return real_builder(repo_root, format_version + 1, compat_epoch, reserved=reserved)
+
+            with mock.patch.object(sft, "build_expansion_save_meta_for_target", side_effect=_wrong_epoch_builder):
+                exit_code = sft.main([
+                    "--repo-root", str(ROOT), "migrate", str(source), str(dest), "--to-epoch", "1",
+                ])
+            self.assertEqual(exit_code, 5)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+
 class BuildCurrentExpansionSaveMetaTests(unittest.TestCase):
     def test_built_metadata_classifies_current_against_repo_epoch(self):
         meta = sft.build_current_expansion_save_meta(ROOT)

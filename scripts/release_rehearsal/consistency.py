@@ -145,6 +145,14 @@ def check_version_ledger(ledger: Dict, candidate_version: str) -> List[str]:
 
     seen_versions: List[str] = []
     current_status_versions: List[str] = []
+    # Issue #9 residual-hardening: every syntactically-valid recorded
+    # `supported[]` version tuple, gathered alongside (never replacing)
+    # `seen_versions` above -- used below to detect a
+    # previous_supported_version/next_supported_version reference that is
+    # merely *some* older/newer recorded version rather than the true
+    # *adjacent* one (see the betweenness check after the ordering checks
+    # below).
+    recorded_version_tuples: List[Tuple[str, Tuple[int, int, int]]] = []
     for index, entry in enumerate(supported):
         if not isinstance(entry, dict):
             errors.append(f"version ledger supported[{index}] must be an object")
@@ -154,6 +162,7 @@ def check_version_ledger(ledger: Dict, candidate_version: str) -> List[str]:
         eol = entry.get("eol")
         if isinstance(version, str) and VERSION_RE.fullmatch(version):
             seen_versions.append(version)
+            recorded_version_tuples.append((version, parse_version(version)))
         else:
             errors.append(f"version ledger supported[{index}].version {version!r} is not a valid version")
         if status not in VALID_LEDGER_STATUS:
@@ -217,6 +226,49 @@ def check_version_ledger(ledger: Dict, candidate_version: str) -> List[str]:
             errors.append("version ledger next_supported_version must be greater than current_version")
     if previous_t is not None and next_t is not None and previous_t == next_t:
         errors.append("version ledger previous_supported_version and next_supported_version must not be equal")
+
+    # Issue #9 residual-hardening (SemVer adjacency): a fresh, independent
+    # verifier reproduced `previous_supported_version` accepted as long as
+    # it is *some* recorded version below current_version -- even when
+    # another recorded `supported[]` entry actually lies strictly between
+    # it and current_version, i.e. previous_supported_version was not the
+    # true, adjacent predecessor. That silently inflates the apparent
+    # SemVer delta check_changelog_semver_delta() computes (a distant,
+    # skipped-over predecessor can make a small real bump look like a
+    # much bigger one), and is never acceptable merely because the older
+    # version remains "supported"/"eol" -- adjacency is a fact about the
+    # *complete recorded set* (parsed and compared as SemVer tuples, not
+    # inferred from `supported[]`'s own array order, which this schema
+    # never guarantees), not a status. Symmetrically for
+    # next_supported_version and any recorded version strictly between
+    # current_version and it.
+    if previous_t is not None and current_t is not None and previous_t < current_t:
+        intervening = sorted(
+            version for version, version_t in recorded_version_tuples
+            if previous_t < version_t < current_t
+        )
+        if intervening:
+            errors.append(
+                f"version ledger previous_supported_version {previous!r} is not the adjacent "
+                f"predecessor of current_version {current!r}: recorded 'supported' "
+                f"entr{'y' if len(intervening) == 1 else 'ies'} {intervening!r} lies strictly "
+                "between them -- previous_supported_version must be the closest recorded "
+                "version below current_version, not merely any older one (this would "
+                "otherwise inflate the apparent SemVer bump versus the true last release)"
+            )
+    if next_t is not None and current_t is not None and current_t < next_t:
+        intervening = sorted(
+            version for version, version_t in recorded_version_tuples
+            if current_t < version_t < next_t
+        )
+        if intervening:
+            errors.append(
+                f"version ledger next_supported_version {nxt!r} is not the adjacent successor "
+                f"of current_version {current!r}: recorded 'supported' "
+                f"entr{'y' if len(intervening) == 1 else 'ies'} {intervening!r} lies strictly "
+                "between them -- next_supported_version must be the closest recorded version "
+                "above current_version, not merely any newer one"
+            )
 
     # issue #9 residual-hardening: a fresh, independent verifier
     # reproduced `previous_supported_version` (and, symmetrically,

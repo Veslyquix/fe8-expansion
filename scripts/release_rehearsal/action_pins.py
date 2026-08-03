@@ -49,6 +49,7 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
@@ -108,6 +109,14 @@ def load_inventory(path: Path) -> List[Dict]:
                 f"{path}[{index}] ({entry['action']}): source_url {entry['source_url']!r} must be "
                 "an https:// URL"
             )
+        if "occurrence_count" in entry:
+            occurrence_count = entry["occurrence_count"]
+            if not isinstance(occurrence_count, int) or isinstance(occurrence_count, bool) or occurrence_count < 1:
+                raise ActionPinError(
+                    f"{path}[{index}] ({entry['action']}): 'occurrence_count' {occurrence_count!r} "
+                    "must be a positive integer (the exact number of separate 'uses:' occurrences "
+                    "of this action this workflow file actually contains)"
+                )
         key = (entry["workflow"], entry["action"])
         if key in seen_keys:
             raise ActionPinError(f"{path}: duplicate inventory entry for workflow/action {key}")
@@ -115,60 +124,153 @@ def load_inventory(path: Path) -> List[Dict]:
     return pins
 
 
-def workflow_external_uses(text: str) -> Dict[str, str]:
-    """Every *external* `uses:` reference in `text`, as an exact
-    `{action: pinned_sha}` mapping -- a local action
-    (`wg.is_local_action_reference`) is never included (there is nothing
-    to cross-check it against; see that function's own docstring), and a
-    reference with no `@ref` at all is also excluded here (already
-    reported, precisely, by `workflow_guard.check_uses_pins` -- this
-    function's job is exact-pin cross-checking, not re-detecting an
-    already-covered malformed-reference class)."""
-    refs: Dict[str, str] = {}
-    for match in wg._USES_LINE_RE.finditer(text):
-        action_ref = match.group(1)
+@dataclass(frozen=True)
+class ActionOccurrence:
+    """One individual, external, `@ref`-pinned `uses:` occurrence -- the
+    exact `(action, ref, line)` this occurrence recorded, never
+    collapsed/overwritten against any other occurrence of the same
+    action elsewhere in the same workflow (that collapsing -- a bare
+    `{action: pin}` dict silently overwritten key-by-key as each match
+    was found -- was itself a code-review-found defect this module used
+    to have: a second, differently-pinned occurrence of the same action
+    silently replaced the first in that dict, so only the *last*
+    occurrence was ever cross-checked and an earlier, conflicting SHA
+    (or an earlier, entirely unrecorded duplicate) could vanish without
+    a trace). See `workflow_external_occurrences` and
+    `check_workflow_against_inventory` below for how every occurrence is
+    preserved and truthfully accounted for instead."""
+
+    action: str
+    ref: str
+    line: int
+
+
+def workflow_external_occurrences(text: str) -> List[ActionOccurrence]:
+    """Every *external*, `@ref`-pinned `uses:` occurrence in `text`,
+    preserved individually (never collapsed/keyed by action name -- see
+    `ActionOccurrence`'s own docstring for why that matters). Uses the
+    single canonical `workflow_guard.extract_uses_occurrences` scanner
+    (block style, flow style, quoted or bare keys, all alike) -- there
+    is exactly one definition, repository-wide, of what a `uses:`
+    reference looks like (issue #9 hardening: this module and
+    `workflow_guard` no longer have two divergent regex-based
+    extractors). A local action (`wg.is_local_action_reference`) is
+    never included (there is nothing to cross-check it against; see
+    that function's own docstring); a reference with no `@ref` at all,
+    or an occurrence `workflow_guard` itself already flags as
+    unsupported/ambiguous (`occ.problem` set -- an anchor, alias, tag,
+    template expression, unterminated quote, ambiguous embedded colon,
+    or duplicate key), is also excluded here -- both classes are
+    already reported, precisely and unconditionally, by
+    `workflow_guard.check_uses_pins` itself; this function's own job is
+    exact-pin, per-occurrence bijection cross-checking of the
+    remaining, cleanly-parsed external references, never re-detecting
+    an already-covered malformed/ambiguous-reference class a second
+    time under a different message."""
+    occurrences: List[ActionOccurrence] = []
+    for occ in wg.extract_uses_occurrences(text):
+        if occ.problem is not None:
+            continue
+        action_ref = occ.action_ref
         if wg.is_local_action_reference(action_ref):
             continue
         if "@" not in action_ref:
             continue
-        action, _, pin = action_ref.rpartition("@")
-        refs[action] = pin
-    return refs
+        action, _, ref = action_ref.rpartition("@")
+        occurrences.append(ActionOccurrence(action=action, ref=ref, line=occ.line))
+    return occurrences
+
+
+def _format_occurrences(occurrences: List[ActionOccurrence]) -> str:
+    return ", ".join(f"line {occurrence.line} -> {occurrence.ref!r}" for occurrence in occurrences)
 
 
 def check_workflow_against_inventory(workflow_key: str, text: str, inventory: List[Dict]) -> List[str]:
-    """Exact bijection between `workflow_key`'s own external `uses:`
-    references and the inventory rows recorded for that exact workflow
-    path: every external reference must have exactly one inventory row
-    naming the same action with the identical `pinned_sha` (a workflow
-    pin that was hand-edited to some other SHA without updating the
-    inventory -- or vice versa -- is caught here, never silently
-    tolerated because "some" inventory row happens to exist for that
-    action); every inventory row recorded for `workflow_key` must
-    correspond to a reference that is actually still present (a stale
-    inventory row left behind after an action was removed is reported
-    too, exactly like every other exact-bijection check in this release-
-    rehearsal system)."""
+    """Exact, occurrence-preserving bijection between `workflow_key`'s
+    own external `uses:` occurrences and the inventory row recorded for
+    that exact workflow/action pair (`load_inventory` itself already
+    enforces at most one inventory row per `(workflow, action)` pair --
+    see its own duplicate-key check -- so an inventory row can never
+    itself silently overwrite another; the risk this function closes is
+    entirely on the *workflow* side: two or more separate `uses:`
+    occurrences of the very same action in the very same workflow file,
+    which a naive `{action: pin}` dict would silently collapse into
+    "whichever occurrence happened to be seen last").
+
+    For every action referenced one or more times in this workflow:
+
+      * if its occurrences disagree on the pinned SHA at all (a
+        conflicting duplicate), this is rejected outright -- with every
+        occurrence's own line number and SHA named explicitly -- no
+        matter what the inventory records for that action; a later
+        occurrence that happens to match the inventory can never make
+        an earlier, conflicting occurrence pass.
+      * otherwise every occurrence shares one identical SHA. That SHA
+        must have a matching, identically-pinned inventory row (exactly
+        as before); in addition, the row's own (optional, defaulting to
+        `1`) `occurrence_count` field must equal the *actual* number of
+        occurrences this workflow really has -- so a second (third,
+        ...), identically-pinned, but never-truthfully-recorded
+        duplicate occurrence can never silently disappear either; it
+        must be truthfully counted in the inventory (the smallest
+        durable schema change this module needed -- a single optional
+        integer field -- rather than a full per-occurrence inventory
+        schema, since every occurrence of one action in one workflow is
+        already required to share one identical SHA by the check
+        immediately above).
+
+    A row recorded for `workflow_key` naming an action no longer
+    referenced by this workflow at all is still reported stale, exactly
+    as before."""
     reasons: List[str] = []
-    workflow_refs = workflow_external_uses(text)
+    occurrences = workflow_external_occurrences(text)
+    occurrences_by_action: Dict[str, List[ActionOccurrence]] = {}
+    for occurrence in occurrences:
+        occurrences_by_action.setdefault(occurrence.action, []).append(occurrence)
+
     inventory_rows = [row for row in inventory if row["workflow"] == workflow_key]
     inventory_by_action = {row["action"]: row for row in inventory_rows}
 
-    for action, pin in sorted(workflow_refs.items()):
+    for action, action_occurrences in sorted(occurrences_by_action.items()):
+        unique_shas = sorted({occurrence.ref for occurrence in action_occurrences})
+        if len(unique_shas) > 1:
+            reasons.append(
+                f"{workflow_key}: action {action!r} has {len(action_occurrences)} 'uses:' "
+                f"occurrences pinned to conflicting SHAs ({_format_occurrences(action_occurrences)}) "
+                "-- every occurrence of the same action in the same workflow must pin the "
+                "identical immutable SHA; this can never pass no matter what the action-pin "
+                "inventory records"
+            )
+            continue
+
+        sha = unique_shas[0]
         row = inventory_by_action.get(action)
         if row is None:
             reasons.append(
-                f"{workflow_key}: '{action}@{pin}' has no matching entry in the action-pin "
-                f"inventory ({DEFAULT_INVENTORY_PATH})"
+                f"{workflow_key}: '{action}@{sha}' ({len(action_occurrences)} occurrence(s): "
+                f"{_format_occurrences(action_occurrences)}) has no matching entry in the "
+                f"action-pin inventory ({DEFAULT_INVENTORY_PATH})"
             )
             continue
-        if row["pinned_sha"] != pin:
+        if row["pinned_sha"] != sha:
             reasons.append(
                 f"{workflow_key}: action-pin inventory records pinned_sha {row['pinned_sha']!r} for "
-                f"{action!r}, but the workflow itself actually pins {pin!r} -- these must agree exactly"
+                f"{action!r}, but the workflow itself actually pins {sha!r} -- these must agree exactly"
+            )
+            continue
+
+        expected_count = row.get("occurrence_count", 1)
+        if expected_count != len(action_occurrences):
+            reasons.append(
+                f"{workflow_key}: action {action!r} actually occurs {len(action_occurrences)} "
+                f"time(s) in this workflow ({_format_occurrences(action_occurrences)}), but the "
+                f"action-pin inventory's 'occurrence_count' for {action!r} records "
+                f"{expected_count} -- every duplicate occurrence must be truthfully counted in "
+                "the inventory, even when every occurrence pins the identical SHA (a same-SHA "
+                "duplicate must never silently disappear)"
             )
 
-    for action in sorted(set(inventory_by_action) - set(workflow_refs)):
+    for action in sorted(set(inventory_by_action) - set(occurrences_by_action)):
         reasons.append(
             f"{workflow_key}: stale action-pin inventory entry for {action!r} (no longer referenced "
             "by this workflow)"

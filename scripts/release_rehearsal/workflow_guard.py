@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -102,8 +103,322 @@ _COMPILED_FORBIDDEN_PATTERNS = [(re.compile(pattern, re.IGNORECASE), label) for 
 # ever-growing enumeration of specific action names, so a "disguised"/
 # unlisted-but-clearly-named upload/release/publish/deploy action is still
 # caught. Deliberately case-insensitive.
-_USES_LINE_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*(\S+)", re.IGNORECASE | re.MULTILINE)
 _DANGEROUS_ACTION_NAME_SUBSTRINGS = ("upload", "release", "publish", "deploy")
+
+
+# --- Canonical `uses:` occurrence extraction (fail-closed workflow/
+# action-pin parsing hardening) ------------------------------------------
+#
+# The previous implementation here was a single line-anchored regex
+# (`^\s*(?:-\s*)?uses:\s*(\S+)`, one match per *line*, MULTILINE): it only
+# ever recognized a bare, unquoted `uses:` key sitting at the very start
+# of a line (optionally after a single `-\s*` list-item marker). Two
+# independent code-review findings showed that shape covers only the
+# "happy path" YAML this repository's own real workflow happens to use,
+# and is trivially bypassed by other, equally-valid YAML spellings of
+# exactly the same key/value pair:
+#
+#   * a flow mapping step, e.g. `- {uses: actions/checkout@mutable}` or
+#     `- {"uses": "actions/checkout@mutable"}` -- the key never sits at
+#     column 0 (or right after a bare `-\s*`), so the old regex's `^`
+#     anchor never matched it at all: a mutable ref hidden inside a flow
+#     mapping silently passed every check below.
+#   * a quoted key in block style, e.g. `"uses": ...` / `'uses': ...` --
+#     the old regex only ever matched the bare word `uses`, never a
+#     quoted spelling of it.
+#   * a quoted *value*, e.g. `uses: "actions/checkout@mutable"` -- the
+#     old regex's `(\S+)` captured the value *including* its
+#     surrounding quote characters, which then never matched
+#     `_USES_REF_SPLIT_RE` (a literal `"` is not part of any real action
+#     name), so `check_uses_pins` silently treated it as a "no @ref at
+#     all" case instead of validating the real, quoted pin underneath.
+#
+# This module deliberately still never depends on PyYAML (or any other
+# new dependency) and never executes/evaluates any YAML or template --
+# see the module docstring. Instead, `extract_uses_occurrences` below is
+# a single, well-defined, structural *subset* scanner: a hand-written,
+# character-by-character reader that understands exactly the YAML
+# constructs a `uses:` key/value pair can legally appear in (block
+# mapping, flow mapping, single/double-quoted keys and values, line
+# comments, and enough indentation-/bracket-depth-aware nesting to tell
+# one mapping scope apart from another for duplicate-key detection) --
+# and explicitly, individually flags (rather than silently skipping)
+# every construct it does not fully, unambiguously understand: a YAML
+# anchor (`&name`) or an explicit tag (`!!str`, `!foo`) attached to the
+# value, a YAML alias (`*name`) as the value, a GitHub Actions
+# expression/template (`${{ ... }}`) anywhere in the value, an
+# unterminated or multi-line quoted scalar, an unquoted `:` followed by
+# whitespace inside a plain value (a strong sign of an unintended nested
+# mapping key -- YAML's own plain-scalar grammar treats it exactly the
+# same way), and a duplicate `uses` key repeated within the same
+# enclosing mapping (block or flow). None of these ever "pass" -- every
+# one of them produces a `problem`-tagged `UsesOccurrence` that
+# `check_uses_pins` (below) always reports as a hard violation,
+# regardless of what text happens to follow. This is the single,
+# canonical extractor: `workflow_guard.check_uses_pins`,
+# `check_checkout_pin`, `check_dangerous_uses_actions`, and
+# `scripts/release_rehearsal/action_pins.py` (via
+# `extract_uses_occurrences`) all share this one implementation -- there
+# is exactly one definition, repository-wide, of what a `uses:`
+# reference looks like and how to find every occurrence of one.
+#
+# Every physical `uses:` occurrence is yielded independently (never
+# collapsed/deduplicated by action name) -- callers that need an
+# action-name-keyed view (e.g. `action_pins.py`'s inventory cross-check)
+# are responsible for grouping this module's occurrence list themselves,
+# preserving every individual occurrence (see that module's own
+# `workflow_external_occurrences`) -- this scanner itself never discards
+# or overwrites one occurrence with another.
+@dataclass(frozen=True)
+class UsesOccurrence:
+    """One `uses:` key/value pair found anywhere in a workflow's raw
+    text (block or flow style, quoted or bare key). `line` is the
+    1-based source line the *key* starts on. `key_repr` is the exact key
+    spelling as found (`"uses"`, `'uses'`, or bare `uses`). `raw_value`
+    is the unparsed value text exactly as it appeared (quotes, anchor/
+    alias/tag prefix, and all -- for diagnostics). `action_ref` is the
+    best-effort *decoded* value (quotes stripped/unescaped for a quoted
+    scalar; the raw text, including any anchor/alias/tag prefix, for an
+    unsupported shape) -- always a `str` (never `None`; an entirely
+    empty `uses:` value decodes to `""`). `problem` is `None` for a
+    clean, statically-resolvable value, or one of the short reason codes
+    below (`"anchor"`, `"alias"`, `"tag"`, `"template-expression"`,
+    `"unterminated-quote"`, `"ambiguous-colon-in-value"`,
+    `"duplicate-key"`) otherwise. A caller must always treat any
+    non-`None` `problem` as an unconditional, fail-closed rejection --
+    never attempt to still parse/trust `action_ref` in that case."""
+
+    line: int
+    key_repr: str
+    raw_value: str
+    action_ref: str
+    problem: "str | None"
+
+
+_PLAIN_VALUE_TERMINATORS = frozenset(",}]\r\n#")
+
+
+def _scan_quoted_scalar(text: str, start: int, quote: str):
+    """`start` indexes the opening quote character. Returns `(end,
+    content, ok)`: `end` is the index just past the closing quote (or,
+    if never properly closed, the index of the first raw `\r`/`\n`
+    encountered, or `len(text)` if neither ever appears); `content` is
+    the decoded scalar (double-quote backslash escapes resolved;
+    single-quote `''` resolved to a literal `'`); `ok` is `False` if a
+    raw newline was reached (or the text ran out) before the scalar was
+    properly closed on the same logical line -- this scanner
+    deliberately does not support a `uses:` value folded/continued
+    across multiple physical lines (an obscure, never-needed-in-
+    practice shape for a short action-reference string); an unterminated
+    quote always fails closed rather than silently guessing where it
+    should have ended."""
+    n = len(text)
+    i = start + 1
+    parts: List[str] = []
+    if quote == '"':
+        escapes = {'"': '"', "\\": "\\", "n": "\n", "t": "\t", "r": "\r", "0": "\0"}
+        while i < n:
+            c = text[i]
+            if c == "\\" and i + 1 < n and text[i + 1] not in "\r\n":
+                nxt = text[i + 1]
+                parts.append(escapes.get(nxt, nxt))
+                i += 2
+                continue
+            if c == '"':
+                return i + 1, "".join(parts), True
+            if c in "\r\n":
+                return i, "".join(parts), False
+            parts.append(c)
+            i += 1
+        return i, "".join(parts), False
+    while i < n:
+        c = text[i]
+        if c == "'":
+            if i + 1 < n and text[i + 1] == "'":
+                parts.append("'")
+                i += 2
+                continue
+            return i + 1, "".join(parts), True
+        if c in "\r\n":
+            return i, "".join(parts), False
+        parts.append(c)
+        i += 1
+    return i, "".join(parts), False
+
+
+def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
+    """The single, canonical `uses:` key/value-pair scanner (see the
+    design-rationale comment block above this function). Fails closed by
+    construction: a `uses:` value shape this scanner does not fully,
+    unambiguously understand is always yielded with a non-`None`
+    `problem` (never silently skipped/ignored), and a `uses` key
+    repeated within the same enclosing mapping (block or flow) is always
+    flagged `"duplicate-key"` for every repeat after the first."""
+    occurrences: List[UsesOccurrence] = []
+    n = len(text)
+    i = 0
+    line = 1
+    # `flow_stack`: one frame per currently-open `{`/`[`; only a `{`
+    # (mapping) frame's `seen` set matters for duplicate-key detection --
+    # a `[` (sequence) frame carries no key semantics of its own but
+    # still needs a stack slot so its matching `]` pops the right frame.
+    flow_stack: List[dict] = []
+    # `block_stack[0]` is a permanent root/document-level scope (never
+    # popped) so even a stray top-level `uses:` (outside any list item)
+    # still has a defined enclosing scope to check for a duplicate
+    # sibling. Every subsequent frame corresponds to one open block
+    # list-item (`- ...`) mapping, keyed by that item's own `-` column
+    # (`indent`) so a dedent (a new line whose indentation is at or
+    # below an open item's own column) correctly closes it -- and every
+    # deeper-nested item -- before any new key on that line is scanned.
+    block_stack: List[dict] = [{"indent": -1, "seen": set()}]
+
+    def current_scope() -> dict:
+        for frame in reversed(flow_stack):
+            if frame["kind"] == "{":
+                return frame
+        return block_stack[-1]
+
+    at_line_start = True
+    while i < n:
+        if at_line_start:
+            j = i
+            while j < n and text[j] in " \t":
+                j += 1
+            if j < n and text[j] not in "\r\n":
+                indent = j - i
+                if not flow_stack:
+                    while len(block_stack) > 1 and block_stack[-1]["indent"] >= indent:
+                        block_stack.pop()
+                    if text[j] == "-" and (j + 1 >= n or text[j + 1] in " \t\r\n"):
+                        block_stack.append({"indent": indent, "seen": set()})
+            at_line_start = False
+
+        ch = text[i]
+
+        if ch == "\n":
+            line += 1
+            at_line_start = True
+            i += 1
+            continue
+        if ch == "\r":
+            i += 1
+            continue
+        if ch == "#":
+            while i < n and text[i] not in "\r\n":
+                i += 1
+            continue
+        if ch in "{[":
+            flow_stack.append({"kind": ch, "seen": set()})
+            i += 1
+            continue
+        if ch in "}]":
+            if flow_stack:
+                flow_stack.pop()
+            i += 1
+            continue
+
+        # A `uses` key -- quoted (`"uses":`/`'uses':`) or bare (`uses:`)
+        # -- attempted *before* any generic quote handling below, so a
+        # quoted key is recognized as a key instead of merely being
+        # consumed as an unrelated quoted scalar.
+        key_repr = None
+        key_end = None
+        quote = ch if ch in ('"', "'") else None
+        if quote is not None:
+            if text[i + 1:i + 5] == "uses" and i + 5 < n and text[i + 5] == quote:
+                k = i + 6
+                while k < n and text[k] in " \t":
+                    k += 1
+                if k < n and text[k] == ":" and (k + 1 >= n or text[k + 1] != ":"):
+                    key_repr = f"{quote}uses{quote}"
+                    key_end = k + 1
+        elif ch == "u" and text[i:i + 4] == "uses":
+            word_boundary_before = i == 0 or not (text[i - 1].isalnum() or text[i - 1] == "_")
+            if word_boundary_before:
+                k = i + 4
+                while k < n and text[k] in " \t":
+                    k += 1
+                if k < n and text[k] == ":" and (k + 1 >= n or text[k + 1] != ":"):
+                    key_repr = "uses"
+                    key_end = k + 1
+
+        if key_repr is None:
+            if quote is not None:
+                end, _content, _ok = _scan_quoted_scalar(text, i, quote)
+                i = end
+            else:
+                i += 1
+            continue
+
+        k = key_end
+        while k < n and text[k] in " \t":
+            k += 1
+
+        problem = None
+        raw_start = k
+        if k >= n or text[k] in "\r\n" or text[k] == "#":
+            value = ""
+        elif text[k] in "&*!":
+            prefix = text[k]
+            end_of_line = k
+            while end_of_line < n and text[end_of_line] not in "\r\n":
+                end_of_line += 1
+            value = text[k:end_of_line].strip()
+            problem = {"&": "anchor", "*": "alias", "!": "tag"}[prefix]
+            k = end_of_line
+        elif text[k] in ('"', "'"):
+            q = text[k]
+            end, content, ok = _scan_quoted_scalar(text, k, q)
+            value = content
+            if not ok:
+                problem = "unterminated-quote"
+            elif "${{" in content:
+                problem = "template-expression"
+            k = end
+        else:
+            start = k
+            ambiguous_colon = False
+            while k < n and text[k] not in _PLAIN_VALUE_TERMINATORS:
+                if text[k] == ":" and (k + 1 >= n or text[k + 1] in " \t\r\n"):
+                    ambiguous_colon = True
+                    break
+                k += 1
+            value = text[start:k].strip()
+            if ambiguous_colon:
+                problem = "ambiguous-colon-in-value"
+            elif "${{" in value:
+                problem = "template-expression"
+
+        scope = current_scope()
+        if "uses" in scope["seen"]:
+            problem = problem or "duplicate-key"
+        else:
+            scope["seen"].add("uses")
+
+        occurrences.append(
+            UsesOccurrence(
+                line=line,
+                key_repr=key_repr,
+                raw_value=text[raw_start:k],
+                action_ref=value,
+                problem=problem,
+            )
+        )
+        i = k
+
+    return occurrences
+
+
+_PROBLEM_DESCRIPTIONS = {
+    "anchor": "a YAML anchor ('&name') attached to the value -- this scanner never resolves anchors",
+    "alias": "a YAML alias ('*name') -- this scanner never resolves aliases, so the actual pinned value cannot be statically verified",
+    "tag": "an explicit YAML tag (e.g. '!!str'/'!foo') attached to the value",
+    "template-expression": "a GitHub Actions expression ('${{ ... }}') or other template/variable substitution -- the actual pinned value is not statically knowable and can change at runtime",
+    "unterminated-quote": "an unterminated or multi-line quoted string -- only a single-line quoted scalar is a supported 'uses:' value shape",
+    "ambiguous-colon-in-value": "an unquoted ':' followed by whitespace inside the value -- this looks like an unintended nested mapping key, not a real action reference",
+    "duplicate-key": "a duplicate 'uses' key repeated within the same enclosing mapping -- a YAML mapping must not repeat a key, and this scanner refuses to guess which repeated value would actually win",
+}
 
 
 # --- Shell variable/fragment command assembly (issue #9 residual
@@ -473,10 +788,18 @@ def check_checkout_pin(text: str) -> List[str]:
     generically by `check_uses_pins` below -- this function is
     deliberately narrow now (checkout-specific presence/credential
     hygiene only), so there is exactly one place (`check_uses_pins`) that
-    knows what an acceptable action pin looks like."""
+    knows what an acceptable action pin looks like. Uses the same
+    canonical `extract_uses_occurrences` scanner as every other `uses:`
+    check in this module (see that function's own design-rationale
+    comment) -- a checkout step hidden inside a flow mapping or behind a
+    quoted key is found exactly the same way a plain block-style one
+    is."""
     violations = []
-    refs = re.findall(r"uses:\s*actions/checkout@([^\s]+)", text, re.IGNORECASE)
-    if not refs:
+    found_checkout = any(
+        occ.problem is None and occ.action_ref.lower().startswith("actions/checkout@")
+        for occ in extract_uses_occurrences(text)
+    )
+    if not found_checkout:
         violations.append("no 'actions/checkout' step found")
     if "persist-credentials: false" not in text:
         violations.append("no checkout step sets 'persist-credentials: false'")
@@ -517,26 +840,44 @@ def check_uses_pins(text: str) -> List[str]:
     all rejected alike -- there is no accepted-tag allowlist any more.
     A reference with no `@ref` segment at all (an entirely unpinned
     `owner/repo` -- implicitly whatever the default branch currently
-    is) is exactly as rejected as a mutable tag."""
+    is) is exactly as rejected as a mutable tag.
+
+    Every occurrence `extract_uses_occurrences` finds is visited here --
+    block style, flow style, quoted or bare keys, all alike -- and any
+    occurrence that scanner could not fully, unambiguously parse (an
+    anchor/alias/tag, a template expression, an unterminated quote, an
+    ambiguous embedded colon, or a duplicate key within the same
+    mapping) is *always* reported as a hard violation, regardless of
+    whatever text happens to follow: this module never guesses a
+    meaning for a construct it does not fully understand, and never
+    lets an unrecognized `uses:` shape silently pass through
+    unchecked."""
     violations = []
-    for match in _USES_LINE_RE.finditer(text):
-        action_ref = match.group(1)
+    for occ in extract_uses_occurrences(text):
+        if occ.problem is not None:
+            description = _PROBLEM_DESCRIPTIONS.get(occ.problem, occ.problem)
+            violations.append(
+                f"line {occ.line}: 'uses:' value {occ.raw_value!r} is not a recognized/supported "
+                f"static action reference ({description}) -- rejected fail-closed"
+            )
+            continue
+        action_ref = occ.action_ref
         if is_local_action_reference(action_ref):
             continue
         split = _USES_REF_SPLIT_RE.match(action_ref)
         if split is None:
             violations.append(
-                f"'uses: {action_ref}' has no '@ref' pin at all -- every external action must be "
-                "pinned to an exact 40-lowercase-hex commit SHA"
+                f"line {occ.line}: 'uses: {action_ref}' has no '@ref' pin at all -- every external "
+                "action must be pinned to an exact 40-lowercase-hex commit SHA"
             )
             continue
         ref = split.group("ref")
         if not FULL_SHA_RE.fullmatch(ref):
             violations.append(
-                f"'uses: {action_ref}' is not pinned to an immutable 40-lowercase-hex commit SHA "
-                f"(found {ref!r} -- a version tag, branch name, short SHA, or wrong-case SHA is "
-                "never accepted; see docs/release_data/action_pins.json for the exact pinned SHA "
-                "and its documented upstream source/version)"
+                f"line {occ.line}: 'uses: {action_ref}' is not pinned to an immutable "
+                f"40-lowercase-hex commit SHA (found {ref!r} -- a version tag, branch name, short "
+                "SHA, or wrong-case SHA is never accepted; see docs/release_data/action_pins.json "
+                "for the exact pinned SHA and its documented upstream source/version)"
             )
     return violations
 
@@ -607,14 +948,22 @@ def check_dangerous_uses_actions(text: str) -> List[str]:
     this deliberately catches a disguised/unlisted-but-clearly-named
     action (e.g. a fork, a differently-cased reference, or an action this
     module's authors have never heard of) instead of only matching a
-    fixed enumeration that must be kept manually up to date forever."""
+    fixed enumeration that must be kept manually up to date forever.
+    Scans every occurrence `extract_uses_occurrences` finds (block,
+    flow, quoted, or bare key alike), not only a bare block-style
+    `uses:` at column 0."""
     violations = []
-    for match in _USES_LINE_RE.finditer(text):
-        action_ref = match.group(1)
+    for occ in extract_uses_occurrences(text):
+        action_ref = occ.action_ref
+        if not action_ref:
+            continue
         lowered = action_ref.lower()
         for needle in _DANGEROUS_ACTION_NAME_SUBSTRINGS:
             if needle in lowered:
-                violations.append(f"'uses:' references a dangerous-sounding action: {action_ref!r} (contains {needle!r})")
+                violations.append(
+                    f"line {occ.line}: 'uses:' references a dangerous-sounding action: "
+                    f"{action_ref!r} (contains {needle!r})"
+                )
                 break
     return violations
 
