@@ -1,0 +1,586 @@
+{
+  "checkpoints": [
+    {
+      "frame": 5,
+      "name": "pre-runtimeinit-sram-baseline",
+      "probes": [
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "value": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "value": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "value": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "value": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "value": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "value": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1,
+          "value": "0xd2"
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1,
+          "value": "0xf0"
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "value": "0x00"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:6295eed6a6ecee64"
+    },
+    {
+      "frame": 600,
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "pre-repair-selector-shown",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x04"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 680,
+      "framebuffer_hash": "fnv1a64-rgb24:ecae84fae7937e65",
+      "name": "selector-after-navigate-down",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 740,
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "selector-after-navigate-back-to-en",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 900,
+      "framebuffer_hash": "fnv1a64-rgb24:6700c723dafc879b",
+      "name": "post-repair-committed",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x04"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "value": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "value": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "value": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "value": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "value": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "value": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1,
+          "value": "0xd2"
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1,
+          "value": "0xf0"
+        },
+        {
+          "address": "0x0e0073d4",
+          "size": 1,
+          "value": "0xa5"
+        },
+        {
+          "address": "0x0e0073d5",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e0073d7",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x0e0073dc",
+          "size": 1,
+          "value": "0x4a"
+        },
+        {
+          "address": "0x0e0073dd",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "value": "0x00"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:6295eed6a6ecee64"
+    },
+    {
+      "frame": 1050,
+      "name": "post-reset-ewram-fresh",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 1740,
+      "framebuffer_hash": "fnv1a64-rgb24:1496564d86348ad0",
+      "name": "post-reset-selector-skipped-en-restored",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x05"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa6",
+          "size": 1,
+          "value": "0x00"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "f65b25c48579459b79e9685dd16f56d32b980fdf",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-repair-disabled-multi-modern-debug"
+}

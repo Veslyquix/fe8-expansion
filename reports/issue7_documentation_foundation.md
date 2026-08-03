@@ -4,15 +4,65 @@
 issue #7's state is not asserted or changed by this document, and no CI
 run URL or merged state is claimed here.** This report maps issue #7's
 own scope checklist to concrete, current-scope files, code, and tests in
-this repository. Issues #10, #11, and #13 are already merged into
-`master` with final, supported public/support contracts documented in
-[`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13)
-and [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
-(see the "What this explicitly does not claim" section below for each
-issue's own narrow non-goals, which are not open/deferred scope); the
-genuinely active/unmerged work outside this report's own closure scope
-is issues #6, #9, and #18. This report does not itself claim full
-closure of issue #7.
+this repository. The current source tree includes merged implementation for
+#6, #10, #11, #13, and #18, documented in
+[`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts)
+and [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries),
+with narrow non-goals retained. Issue #9 remains future-only release work.
+This source-state summary does not assert any GitHub issue state, and this
+report does not itself claim full closure of issue #7.
+
+
+## Current integration section (supersedes earlier status/gate snapshots)
+
+This section describes the current master integration used for the issues
+#7/#17 candidate, and supersedes later historical statements that call #6 or
+#18 unmerged or describe 12 verifier gates. It does not close either issue.
+
+| Current requirement | Current source of truth |
+| --- | --- |
+| Install -> configure -> author -> build -> test -> debug | `README.md`, `CONTRIBUTING.md`, `docs/README.md`, `docs/quickstart.md`, then `docs/config_identity.md`, `docs/generated_data_tutorial.md`, `docs/localization.md`, `docs/debugtools.md`, and `tools/gba-playtest/README.md` |
+| Exact documentation inventory | `scripts/check_docs.py` discovers the case-insensitive `.md`/`.markdown`/`.mdown`/`.mkd`/`.mkdn` set and requires exact set equality with `docs/documentation-inventory.md`; no drifting count is policy input |
+| External links | Every merged Markdown HTTP(S) occurrence must match `docs/external-link-registry.md`; this is offline coverage, never an online-link claim |
+| Merged #6 coverage | `docs/starter_features.md`, `docs/config_identity.md`, `docs/generated_data_tutorial.md`, `docs/id_space.md`, and support/API tables document all four default-off flags, dependencies, typed content/mechanics, QoL, matrices, budgets, save/legal boundaries |
+| Merged #18 coverage | `docs/localization.md`, `docs/save_format.md`, `docs/config_identity.md`, architecture/support/API tables document stable IDs/catalogs, en/qps-ploc authoring, config/defines, prefs/epoch-2 precedence/migration, selector/settings/reset, budgets and matrices |
+| Gate truth | `scripts/upstream_port/verify.py` remains exactly 10 ordered gates. The standalone docs workflow step is the eleventh issues #7/#17 closure gate. Master's localization host step remains required workflow-only coverage; localization runtime checks remain inside the linker gates. |
+| Future #9 boundary | Only current issue-resolution governance and an unfilled migration template exist; no release automation/tag/changelog/artifact/updater claim is made |
+
+### Current integration validation evidence
+
+All results below were reproduced in this integration worktree; counts are
+point-in-time output, not policy constants:
+
+- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> 182 tests,
+  `OK`.
+- `python3 scripts/check_docs.py --check --check-examples` -> 72 recognized
+  Markdown files, 0 findings; all three safe help examples passed. This made
+  no network requests.
+- `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s
+  tools/gba-playtest/tests -v` -> 407 tests, `OK (skipped=11)`.
+- `python3 -m unittest discover -s scripts/generated_data/tests -v` -> 633
+  tests, `OK`; `make generated-data-check` -> 13 tables / 722 records, no
+  table/manifest/consumer-census/ID-space drift.
+- `python3 -m unittest discover -s tests/upstream_port -v` -> 146 tests,
+  `OK`, including live workflow argv/order and both standalone-step locks.
+- `python3 -m unittest discover -s scripts/modernize/tests -v` -> 530 tests,
+  `OK (skipped=1)`. Because temporary files were required to remain inside
+  this worktree, the first run exposed two Git-parent-discovery assertions;
+  the final run set `GIT_CEILING_DIRECTORIES` at the in-worktree scratch root
+  and passed without writing to `/tmp` or changing tests.
+- `python3 -m unittest discover -s scripts/localization/tests -p
+  'test_*.py' -v` -> 82 tests, `OK`.
+- Targeted defaults: `test_build_default_lane.py` -> 15 tests, `OK`;
+  `test_quickstart.py` -> 15 tests, `OK`.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 10
+  ordered `SKIPPED(dry-run)` entries, with the issue #6 starter-content args
+  on gates 9-10. The workflow-only docs check remains the eleventh issues
+  #7/#17 closure gate; the localization host step is separately preserved.
+- Safe Make probes resolved the live object-print targets, localization
+  generation target, and compile-only `apcs-gnu` cohort; the linked
+  `apcs-gnu` ELF probe failed with the documented AAPCS-only guard.
+
 
 ## Scope recap
 
@@ -56,7 +106,7 @@ substitute:
 | --- | --- | --- |
 | "A new contributor can install, configure, author content, build, test, and debug using repository documentation alone." | [`docs/README.md`](../docs/README.md#learning-paths) chains [`docs/quickstart.md`](../docs/quickstart.md) (install/configure/build) -> [`docs/architecture.md`](../docs/architecture.md) (orient) -> [`docs/generated_data_tutorial.md`](../docs/generated_data_tutorial.md) (author content) -> [`CONTRIBUTING.md`](../CONTRIBUTING.md) (test: fast checks / full gates) -> [`docs/debugtools.md`](../docs/debugtools.md) (debug) | `scripts/quickstart.sh --help` is one of the three commands `--check-examples` actually executes; see the last row for the reproduced result |
 | "Documentation clearly separates supported expansion workflows from archival decomp workflows." | [`docs/migration-from-decomp.md`](../docs/migration-from-decomp.md) (bridge guide) and [`docs/archival-decomp.md`](../docs/archival-decomp.md), listed by [`docs/README.md`](../docs/README.md#full-document-list-and-status) as "Current, archival scope"; the split is governed by [`docs/issue-resolution-policy.md`](../docs/issue-resolution-policy.md#supported-modern-path-vs-archival-decomp-path) | The STALE_PHRASE_RULES denylist in `scripts/check_docs.py` rejects the pre-rewrite claim that the decomp tutorial lives in `CONTRIBUTING.md` (moved to `docs/archival-decomp.md`); see the last row for the reproduced 0-finding result |
-| "Public APIs and compatibility guarantees are explicit." | [`docs/README.md`](../docs/README.md#public-api-index-source-of-truth-by-subsystem) (Public API index table); [`docs/project-governance.md`](../docs/project-governance.md#support-and-compatibility-policy); [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918); [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13) | `python3 scripts/check_docs.py` resolves every internal anchor cited in this row (fail-closed on any broken anchor); see the last row for the reproduced result |
+| "Public APIs and compatibility guarantees are explicit." | [`docs/README.md`](../docs/README.md#public-api-index-source-of-truth-by-subsystem) (Public API index table); [`docs/project-governance.md`](../docs/project-governance.md#support-and-compatibility-policy); [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries); [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts) | `python3 scripts/check_docs.py` resolves every internal anchor cited in this row (fail-closed on any broken anchor); see the last row for the reproduced result |
 | "Documentation commands/examples are CI-tested where practical." | the "Check documentation (issues #7/#17)" step in `.github/workflows/build.yml`; [`scripts/check_docs.py`](../scripts/check_docs.py) `--check --check-examples`; [`scripts/docs_check_tests/`](../scripts/docs_check_tests/) | Reproduced directly in this worktree: `python3 -m unittest discover -s scripts/docs_check_tests -v` -> `Ran 174 tests ... OK`; `python3 scripts/check_docs.py --check --check-examples` -> `check_docs: OK -- 65 Markdown file(s) checked, 0 findings.` plus `example[quickstart-help]: ok`, `example[upstream-port-help]: ok`, `example[check-docs-help]: ok` (point-in-time counts -- re-run both commands against the commit under review rather than trusting the numbers frozen here) |
 
 ## What this explicitly does not claim
@@ -69,8 +119,8 @@ substitute:
 - **Update (issues #7/#17 integration merge): issues #10, #11, and #13 are
   now merged into `master` with final, supported public interfaces**,
   superseding the original (pre-merge) framing of this bullet below.
-  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
-  and [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13)
+  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries)
+  and [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts)
   now document each interface's supported surface and narrow, explicit
   non-goals (not an open/deferred scope); this documentation-foundation
   work does not itself implement or close those issues -- it documents

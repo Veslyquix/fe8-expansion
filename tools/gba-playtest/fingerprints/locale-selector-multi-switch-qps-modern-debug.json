@@ -1,0 +1,228 @@
+{
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "name": "selector-shown-before-pick",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 660,
+      "framebuffer_hash": "fnv1a64-rgb24:ecae84fae7937e65",
+      "name": "selector-still-shown-after-down",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 800,
+      "framebuffer_hash": "fnv1a64-rgb24:e39b31bd4ef59d25",
+      "name": "qps-ploc-committed-and-dismissed",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x07"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0000"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "bd296cd6aa4141fb71644ca972d1a3fa247836fd",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-selector-multi-switch-qps-modern-debug"
+}

@@ -1,0 +1,614 @@
+{
+  "checkpoints": [
+    {
+      "frame": 3450,
+      "name": "prologue-map-normal-mode-player-phase",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0004"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3550,
+      "name": "cursor-moved-map-interactive",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3800,
+      "name": "overlay-first-display-39-tiles",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000027"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000000"
+        }
+      ]
+    },
+    {
+      "frame": 3980,
+      "name": "overlay-cancel-returns-to-map",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000027"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 4250,
+      "name": "overlay-second-display-repeatable",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000027"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000001"
+        }
+      ]
+    },
+    {
+      "frame": 4430,
+      "name": "overlay-second-cancel",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0003"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000027"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000002"
+        }
+      ]
+    },
+    {
+      "frame": 4550,
+      "name": "map-interactive-after-overlay",
+      "probes": [
+        {
+          "address": "0x020210b2",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b3",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210b4",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x020210b8",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x020210e6",
+          "size": 1,
+          "value": "0x20"
+        },
+        {
+          "address": "0x02021104",
+          "size": 2,
+          "value": "0x0004"
+        },
+        {
+          "address": "0x02021106",
+          "size": 2,
+          "value": "0x0005"
+        },
+        {
+          "address": "0x02021ab4",
+          "size": 2,
+          "value": "0x000f"
+        },
+        {
+          "address": "0x02021ab6",
+          "size": 2,
+          "value": "0x000a"
+        },
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "value": "0x17"
+        },
+        {
+          "address": "0x02038230",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02038234",
+          "size": 4,
+          "value": "0x00000002"
+        },
+        {
+          "address": "0x02038238",
+          "size": 4,
+          "value": "0x00000027"
+        },
+        {
+          "address": "0x0203823c",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02038240",
+          "size": 4,
+          "value": "0x00000002"
+        }
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "4dd7569a3e826abe9a54cb8486efb9d613d7d75a",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "starter-danger-overlay-modern-debug"
+}

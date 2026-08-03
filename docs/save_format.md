@@ -64,9 +64,82 @@ field (`STRUCT_PAD` fills the small alignment gaps between them):
 | `0x24` | 9 | `buildCommitShort` (8 hex chars + NUL) | diagnostic only |
 | `0x2D` | 1 | *(pad)* | -- |
 | `0x2E` | 2 | `checksum` (`Checksum16` over `[0x00, 0x2E)`) | -- |
-| `0x30` | 44 | `reserved` (zero-filled) | -- |
+| `0x30` | 44 | `reserved` (`struct ExpansionUserPrefs` at offset `0x00`-`0x0B` since issue #18 sprint 2, see below; remaining `0x0C`-`0x2B` still zero-filled headroom) | -- |
 
 Total: `0x5C` bytes exactly.
+
+### `struct ExpansionUserPrefs` (issue #18 sprint 2)
+
+The player's own persisted locale selection is a distinct, independently
+versioned/checksummed sub-record living at a **fixed byte offset inside
+`ExpansionSaveMeta.reserved`** (`EXPANSION_USER_PREFS_META_OFFSET`, currently
+`0`) -- it does **not** move `SRAM_OFFSET_EXPANSION_SAVE_META`, resize
+`ExpansionSaveMeta` (still exactly `0x5C` bytes), change any `0x00`-`0x2F`
+field's offset, or touch `xmap`/any other `SaveBlocks` field. See
+`include/expansion_save_prefs.h`.
+
+| Offset (within `reserved`) | Size | Field |
+| --- | --- | --- |
+| `0x00` | 1 | `magic` (`0xA5`) |
+| `0x01` | 1 | `version` (`EXPANSION_USER_PREFS_VERSION_CURRENT`, currently `1`) |
+| `0x02` | 1 | `localeId` (`ExpansionLocaleId`) |
+| `0x03` | 1 | `flags` (bit 0 = `EXPANSION_USER_PREFS_FLAG_LOCALE_EXPLICIT`) |
+| `0x04` | 4 | `reserved[4]` (always `0`, headroom for near-future fields) |
+| `0x08` | 2 | `checksum` (`Checksum16` over `[0x00, 0x08)`, its own independent domain -- never covered by `ExpansionSaveMeta`'s own checksum) |
+
+`sizeof(struct ExpansionUserPrefs) == 0x0C` (`ALIGN(4)` forces legacy agbcc
+and modern AAPCS-conformant GCC to agree on this size -- the same class of
+cross-compiler layout fix already used for `struct BonusClaimSaveData`,
+`include/bmsave.h`). This leaves `EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES
+== 0x20` (32 bytes) of `reserved` tail still free for future sub-records;
+`scripts/modernize/tests/test_save_format_layout.py` proves the headroom
+computation never goes negative and that every existing `0x00`-`0x2F` field
+offset is unchanged.
+
+**No-wipe contract.** None of `ExpansionUserPrefs_Build/ValidateRaw/Load/
+Normalize/StoreRaw` (`src/bmsave-lib.c`) ever calls `WipeSram()` or touches
+any byte outside this record's own `0x0C`-byte window. An all-zero record
+(every pre-sprint-2 "current" save's `reserved` tail, always deterministically
+zeroed by `BuildCurrentExpansionSaveMeta()`) or all-`0xFF` record (the
+documented blank-SRAM fill pattern) classifies `EXPANSION_USER_PREFS_UNSET`,
+never `EXPANSION_USER_PREFS_CORRUPT` -- so an old save that predates this
+sprint, or a never-yet-saved slot, is never misdiagnosed as damaged.
+`EXPANSION_USER_PREFS_CORRUPT` (bad magic/checksum/future version),
+`EXPANSION_USER_PREFS_UNKNOWN_LOCALE` (locale id outside this build's known
+slots), and `EXPANSION_USER_PREFS_DISABLED_LOCALE` (a known but currently
+disabled locale) likewise never mutate SRAM: `ExpansionUserPrefs_Normalize`
+resolves all four of these non-`VALID`/non-`MIGRATED` states down to this
+build's configured default locale (`FE8_EXPANSION_DEFAULT_LOCALE_ID`) with
+`requiresPrompt = TRUE`, so a runtime caller falls back safely and can
+re-prompt the player instead of silently trusting (or erasing) an unusable
+record. `EXPANSION_USER_PREFS_MIGRATED` (a well-formed older-version record)
+and `EXPANSION_USER_PREFS_VALID` both resolve with `requiresPrompt = FALSE`.
+
+`ExpansionUserPrefs_Store` (`src/expansion_save_prefs.c`, modern-only linked --
+see the file header comment) is the only function that ever writes this
+record: it builds a fresh checksummed record in a local temporary, rejects
+an unsupported/disabled `localeId` before touching SRAM at all, and reuses
+the exact same bounded single `ReadSramFast`/`WriteAndVerifySramFast`-based
+existing-API write path `BuildCurrentExpansionSaveMeta`'s callers already
+use -- no new parallel SRAM-write mechanism, no source/destination buffer
+overlap, no `WipeSram()` call on any validation failure. On a successful
+store it calls `ExpansionLocale_SetCurrent()` (which internally invalidates
+the runtime resolver's cache), so a UI that just persisted a selection can
+immediately observe it without a reboot.
+
+Host-side (`scripts/modernize/save_format_tool.py`) mirrors this exact
+struct/classification/checksum logic in Python (`ExpansionUserPrefs`
+dataclass + `classify_user_prefs_raw`/`classify_user_prefs_bytes`/
+`normalize_user_prefs`), and
+`cmd_migrate` **preserves** an existing source's `reserved` bytes (hence
+its prefs record) verbatim across a v1(+)->current migration -- only a
+true v0/vanilla source (nothing to preserve) gets a fresh default record.
+`scripts/modernize/tests/test_expansion_user_prefs_native.py` cross-checks
+the real C implementation (extracted verbatim from `src/bmsave-lib.c` and
+compiled/run as a host probe) against the Python mirror across the full
+9-case state matrix (blank-`0xFF`, unset-zero, valid, unknown-locale,
+disabled-locale, corrupt-magic, corrupt-checksum, corrupt-newer-version,
+migrated-older-version).
 
 ### Compatibility vs. diagnostic fields
 
@@ -266,11 +339,13 @@ save_format_tool.py [--repo-root PATH] migrate  <source> <dest> [--force]
      step 7.
   3. Reads the full 0x8000-byte source image into an in-memory
      `bytearray` -- the source file is **never** opened for writing.
-  4. Classifies the source. Only `SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`
-     (the "v0" state: no metadata record at all) and already-`SAVE_COMPAT_CURRENT`
-     (a no-op re-migration) are migratable in this slice -- every other
-     classification is a precondition failure; nothing is written
-     anywhere and the source is left untouched.
+  4. Classifies the source. `SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`
+     (the v0 state), `SAVE_COMPAT_MIGRATABLE_OLDER` (including the real
+     version-1/epoch-1 -> current version-2/epoch-2 case), and already-
+     `SAVE_COMPAT_CURRENT` (a no-op re-migration) are migratable. Every other
+     classification is a precondition failure; nothing is written and the
+     source remains untouched. For older/current metadata, the existing
+     `reserved` bytes -- including any prefs record -- are preserved verbatim.
   5. Builds a current `ExpansionSaveMeta` record (mirroring
      `BuildCurrentExpansionSaveMeta()`; diagnostic fields use documented
      placeholders since a host tool has no live build context -- they
@@ -385,10 +460,12 @@ via the existing text-generation pipeline; no hardcoded numeric IDs):
 | `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` | `MSG_SAVE_COMPAT_CONFIG_INCOMPATIBLE` |
 | (defensive fallback only; never reachable in practice) | `MSG_SAVE_COMPAT_UNKNOWN` |
 
-Menu labels (`MSG_SAVE_COMPAT_BACK`, `MSG_SAVE_COMPAT_ERASE_ALL`) and the
-confirmation prompt (`MSG_SAVE_COMPAT_ERASE_CONFIRM`) are likewise
-generated constants. All text is English-only for now; issue #18 will
-generalize this to other languages, same as every other menu in the game.
+The modern build now draws the **Back** and **Erase All Save Data** rows from
+issue #18's expansion catalog (`EXP_MSG_FRAMEWORK_BACK` and
+`EXP_MSG_SAVE_COMPAT_MENU_ERASE_ALL`). The state diagnostics and irreversible-
+erase confirmation remain the existing vanilla-message-table constants above;
+they are not silently claimed as localized. `qps-ploc` is a QA transform, not
+a translation -- see [`localization.md`](localization.md).
 
 ### Read-only diagnostic probe
 
@@ -483,25 +560,46 @@ name embedded in the hash text itself (never ambiguous downstream):
   no-dialog checkpoint, `savecompat-erase.json`'s post-erase checkpoints,
   and the migrated-v1-load reuse of `savecompat-current.json`) whose SRAM
   legitimately contains intentionally build-variable diagnostic bytes:
-  `ExpansionSaveMeta.buildCommitShort` (9 bytes, absolute SRAM offset
-  29640) and its dependent metadata `checksum` (2 bytes, absolute SRAM
-  offset 29650) -- see "`struct ExpansionSaveMeta` layout" above. Without
-  normalization, a committed fingerprint for one of these checkpoints
-  would break on every legitimate follow-up commit, since
-  `buildCommitShort` embeds this build's live `FE8_EXPANSION_BUILD_COMMIT`
-  (and the checksum's domain covers it).
+  `ExpansionSaveMeta.configFingerprint` (17 bytes, absolute SRAM offset
+  29620 / `0x73B4`), `ExpansionSaveMeta.buildCommitShort` (9 bytes,
+  absolute SRAM offset 29640 / `0x73C8`) and its dependent metadata
+  `checksum` (2 bytes, absolute SRAM offset 29650 / `0x73D2`) -- see
+  "`struct ExpansionSaveMeta` layout" above. The three ordered,
+  non-overlapping ranges are `{29620, 17}`, `{29640, 9}`, `{29650, 2}`.
+  Without normalization, a committed fingerprint for one of these
+  checkpoints would break on every legitimate follow-up commit
+  (`buildCommitShort` embeds this build's live `FE8_EXPANSION_BUILD_COMMIT`,
+  and the checksum's domain covers it) or on any config-schema change
+  (`configFingerprint`; see below).
 
-**Why every other field stays covered.** `configFingerprint` and
-`frameworkVersionPacked` are diagnostic fields too, but neither is
-excluded: `configFingerprint` is derived only from compatibility-relevant
-config settings (`scripts/modernize/expansion_config.py`'s
-`fingerprint_fields()`), so -- unlike `buildCommitShort` -- it does not
-vary per-commit in ordinary development, and a normalized hash that still
-covers it retains detection of any unexpected drift there. `magic`,
-`formatVersion`, and `compatEpoch` (the three fields that actually gate
-compatibility -- see "Compatibility vs. diagnostic fields" above) are
-never excluded either; a normalized hash must still change if any of
-those is corrupted, exactly as the exact hash does.
+**Why `configFingerprint` is excluded (issue #6 sprint-1 remediation).**
+`configFingerprint` is a purely diagnostic field: it records which
+compatibility-relevant config settings
+(`scripts/modernize/expansion_config.py`'s `fingerprint_fields()`) a build
+was compiled with, but it **never** gates classification (see
+"Compatibility vs. diagnostic fields" above) and, critically, config
+feature flags change runtime **behaviour/identity without changing the
+save layout or `compatEpoch`**. An earlier revision deliberately left it
+*in* the normalized hash on the assumption it "does not vary per-commit".
+Issue #6 disproved that: adding a config feature flag -- even one
+defaulting to OFF -- changes the config-schema fingerprint (which is also
+preset-derived, so debug and release already differ: `2295d6fc2407d1be`
+vs `89415b300f350ce6`). That drifted the "same persisted save" normalized
+hash and produced a false gate failure with **zero** change to the actual
+save bytes. Because a behaviour-comparison fingerprint asks "is this the
+same *persisted save*", not "was this the same *build config*",
+`configFingerprint` is now normalized out alongside
+`buildCommitShort`/`checksum`; doing so converges the debug and release
+normalized hashes onto a single build-independent value (proven in
+`tools/gba-playtest/tests/test_sram_hash_normalization.py`). This does not
+weaken the oracle: exact ROM identity is still verified by the fingerprint
+`rom` provenance/ROM fields, and savecompat semantics are still proven by
+the classifier probes, the `SaveCompatState`, and every other SRAM byte.
+`magic`, `formatVersion`, and `compatEpoch` (the three fields that
+actually gate compatibility) and `frameworkVersionPacked` are **never**
+excluded; a normalized hash must still change if any of those, or any
+save-payload byte, is corrupted -- exactly as the exact hash does, and as
+that test suite asserts.
 
 **Excluding the checksum bytes from the hash does not weaken corruption
 detection.** `save_format_tool.py`'s `classify_image()` independently
@@ -670,15 +768,18 @@ legitimate way above via SaveMenu RESTART -> `ReadGameSave`.
 
 ### Host migration workflow (recap)
 
-The v0 (`SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`) -> v1 (`SAVE_COMPAT_CURRENT`)
-migration this slice's runtime tests exercise is exactly the existing
-`save_format_tool.py migrate <source> <dest>` CLI documented above under
-"Host-side CLI" -- no changes were needed to that tool for slice 2. The
-compatibility proc itself never performs or offers in-console migration
+The host `save_format_tool.py migrate <source> <dest>` CLI supports v0
+(`SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`) -> current, older-format
+(`SAVE_COMPAT_MIGRATABLE_OLDER`) -> current, and current -> current. The real
+issue #18 version-1/epoch-1 input exercises the older-format path; its reserved
+bytes are carried forward rather than replaced. The compatibility proc itself
+never performs or offers in-console migration
 (see "Limitations"); a player whose save is `SAVE_COMPAT_MIGRATABLE_OLDER`
 sees `MSG_SAVE_COMPAT_OLDER` (which explains that an external tool is
 required) and their only in-console options are Back or a full erase.
 
+> **Documentation correction (supersedes wording in commit `795d2abdb22e6ad80e1c4f0eea04534263e5348f`'s own message, which is left verbatim/unedited per policy):** that commit's message describes a pre-sprint-2 save as classifying `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE`. That was inaccurate against the actual, unchanged classifier precedence (magic -> `formatVersion` -> `compatEpoch`, documented in "Raw-byte compatibility classifier" above and unchanged by that commit): the row below is this document's corrected, authoritative account -- such a save classifies `SAVE_COMPAT_MIGRATABLE_OLDER`, because `formatVersion` alone already resolves the classification before `compatEpoch` is ever checked.
+>
 ### Format / compatibility bump table
 
 | What changed | Bump | Player-visible effect on an old save |
@@ -686,18 +787,18 @@ required) and their only in-console options are Back or a full erase.
 | Any `FE8_EXPANSION_*` build/title/debug/ROM-size-only setting | neither `SAVE_FORMAT_VERSION_CURRENT` nor `EXPANSION_SAVE_COMPAT_EPOCH` | none -- these never gate compatibility |
 | A save-layout/serialization-compatible addition (e.g. a new optional field with a documented default) | `SAVE_FORMAT_VERSION_CURRENT` (metadata `formatVersion`) | old saves classify `SAVE_COMPAT_MIGRATABLE_OLDER` -> `MSG_SAVE_COMPAT_OLDER`; a newer save loaded on an older build classifies `SAVE_COMPAT_NEWER_UNSUPPORTED` -> `MSG_SAVE_COMPAT_NEWER` |
 | A save-layout/serialization-incompatible change (reordered/resized/reinterpreted fields, changed checksum domain, changed packing) | `EXPANSION_SAVE_COMPAT_EPOCH` (`config.mk`) | saves built under the old epoch classify `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` -> `MSG_SAVE_COMPAT_CONFIG_INCOMPATIBLE` |
+| Concrete instance: issue #18 sprint 2 stamped `struct ExpansionUserPrefs` into the previously-always-zero `reserved` tail and started reading it at boot -- an on-media semantic change to what a "current" save's bytes mean, even though `ExpansionSaveMeta`'s own `0x00`-`0x2E` checksum domain/fields are untouched | `SAVE_FORMAT_VERSION_CURRENT` `1`->`2` **and** `EXPANSION_SAVE_COMPAT_EPOCH` `1`->`2` (both bumped together, out of caution -- a v1 save's `reserved` tail was always zero-filled so it is also valid `EXPANSION_USER_PREFS_UNSET` input; the epoch bump adds no *further* observable classification change on its own here, since `ClassifySaveCompatRaw()`'s `formatVersion` check already fires first and settles the classification below -- it is carried anyway so a future config-only, format-unchanged epoch bump on top of this one stays auditable rather than silent, per this table's own `EXPANSION_SAVE_COMPAT_EPOCH`-only row above) | a genuine pre-sprint-2 save (`formatVersion` `1`, `compatEpoch` `1`) classifies `SAVE_COMPAT_MIGRATABLE_OLDER` -> `MSG_SAVE_COMPAT_OLDER` -- **not** `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` -- because `ClassifySaveCompatRaw()`'s fixed precedence (magic -> `formatVersion` -> `compatEpoch`; see "Raw-byte compatibility classifier" above) checks `formatVersion` strictly *before* `compatEpoch`, and `formatVersion` `1` `<` current `2` alone already resolves the classification; this save's stale `compatEpoch` `1` is never even reached/evaluated. (`SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` only ever applies to a save already *at* the current `formatVersion` whose `compatEpoch` alone is stale -- not this slice's case, since the format bump always takes precedence.) Either way it must go through the host `migrate <source> <dest>` CLI (host/runtime migration is out-of-place and non-destructive -- it never wipes/erases the source, and preserves any bytes already in `reserved`, so a hypothetical already-populated future field would survive; today's v1 saves have nothing there to preserve) to reach `SAVE_COMPAT_CURRENT`; the in-console gate itself never performs or offers this migration (see "Limitations") -- only Back or a full erase |
 | Corrupted `GlobalSaveInfo` header | (detected, not a bump) | `SAVE_COMPAT_HEADER_CORRUPT` -> `MSG_SAVE_COMPAT_HEADER_CORRUPT` |
 | Corrupted `ExpansionSaveMeta` (bad checksum) | (detected, not a bump) | `SAVE_COMPAT_METADATA_CORRUPT` -> `MSG_SAVE_COMPAT_METADATA_CORRUPT` |
 | No metadata record at all (true vanilla, or pre-slice-1 expansion save) | (detected, not a bump) | `SAVE_COMPAT_VALID_LEGACY_OR_VANILLA` -> `MSG_SAVE_COMPAT_LEGACY` |
 
 ## Limitations
 
-* **No automatic in-console structural migration.** This slice's
-  `migrate` command is host-side only, and only performs the trivial
-  v0 -> v1 transition (stamping a metadata record onto a save that never
-  had one). A real in-console migration of an *older current-format*
-  save (`SAVE_COMPAT_MIGRATABLE_OLDER`, once a future format version 2+
-  exists) would need to reinterpret and rewrite live save-block structs
+* **No automatic in-console structural migration.** The host-only
+  `migrate` command can stamp v0 metadata and refresh the supported additive
+  version-1 metadata to current while preserving its reserved tail. The console
+  itself cannot transform an older current-format save safely: a general
+  structural migration would need to reinterpret and rewrite live save-block structs
   in place, and **no safe scratch SRAM block exists today** to do that
   atomically -- a partial in-place rewrite that is interrupted (power
   loss, reset) could corrupt the save beyond what any classifier can

@@ -5,7 +5,7 @@ with a recognized Markdown extension, tracked (or untracked-but-not-
 ignored, in a dev worktree) in this repository (see
 [`docs/README.md`](README.md) for the human-oriented narrative
 index/learning-paths view of the same set). The recognized extension set
-is small, explicit, and documented: `.md`, `.markdown`, `.mdown`, `.mkd`
+is small, explicit, and documented: `.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`
 (matched case-insensitively -- see
 [`scripts/check_docs.py`](../scripts/check_docs.py)'s
 `RECOGNIZED_MARKDOWN_EXTENSIONS`); an unrecognized extension (`.txt`,
@@ -65,6 +65,8 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/debugtools.md | laqieer | current | Debug-tools full closure reference: action registry, hotkey hub, five bounded tools, diagnostics, safety/release gating, non-goals (issue #11)
 - docs/generated_data.md | laqieer | current | Full generated-data platform design/reference (issue #5)
 - docs/generated_data_tutorial.md | laqieer | current | Contributor-facing generated-data authoring walkthrough
+- docs/starter_features.md | laqieer | current | Four default-off starter flags, typed mechanics/content API, QoL, and runtime matrices (issue #6)
+- docs/localization.md | laqieer | current | Stable locale/message IDs, catalog authoring, prefs/UI, budgets, and runtime matrices (issue #18)
 - docs/upstream-porting.md | laqieer | current | Canonical upstream-port tracking tooling reference (issue #12)
 - docs/issue-resolution-policy.md | laqieer | current | Wave 0 issue closure / review / legal-boundary governance baseline
 - docs/dump_extraction_plan.md | laqieer | historical | Now-completed dump/ raw-blob-to-source extraction workflow
@@ -103,6 +105,11 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - reports/gba_playtest_issue13_closure.md | laqieer | evidence | Candidate closure-mapping evidence for issue #13, not a closure claim
 - reports/issue7_documentation_foundation.md | laqieer | evidence | Candidate closure-mapping evidence for issue #7, not a closure claim
 - reports/issue17_documentation_audit.md | laqieer | evidence | Candidate closure-mapping evidence for issue #17, not a closure claim
+- reports/issue6_closure.md | laqieer | evidence | Historical issue #6 Sprint 2 candidate closure evidence; current contract is docs/starter_features.md
+- reports/issue6_foundation_evidence.md | laqieer | evidence | Historical issue #6 Sprint 1 foundation/runtime evidence
+- reports/issue18_idspace_active_cap_dag_closure.md | laqieer | evidence | Issue #18 active-cap dependency-DAG remediation evidence
+- reports/issue18_localization_closure.md | laqieer | evidence | Historical issue #18 sprint evidence and superseding addenda
+- reports/itemexpansion_gate_order_race_diagnosis.md | laqieer | evidence | Point-in-time item-expansion gate-order race diagnosis
 - scripts/symdoc.md | laqieer | subsystem-reference | Symbol-renaming tooling reference
 - scripts/linker_report/README.md | laqieer | subsystem-reference | Deterministic linker .map memory-budget report tooling
 - scripts/modernize/README.md | laqieer | subsystem-reference | Modern-compiler blocker audit tooling reference

@@ -405,6 +405,19 @@ class HostOnlyStagedWorktreeSubprocessTests(unittest.TestCase):
             cls.tree / "scripts" / "modernize",
             ignore=ignore,
         )
+        # Issue #18 integration: scripts/modernize/expansion_config.py (and,
+        # transitively, save_format_tool.py/sram_fixture.py, which the
+        # save/suspend-resume live test classes below import) now imports
+        # scripts.localization.schema as the single source of truth for
+        # locale ids/counts, so this hermetic staged tree must carry that
+        # package too or every live class import fails with
+        # ModuleNotFoundError before host-only mode even gets a chance to
+        # skip it -- a staged-tree gap, not a real host-only-mode defect.
+        shutil.copytree(
+            REPO_ROOT / "scripts" / "localization",
+            cls.tree / "scripts" / "localization",
+            ignore=ignore,
+        )
         shutil.copy2(REPO_ROOT / "config.mk", cls.tree / "config.mk")
         cls.staged = []
         for index, relative in enumerate(_STAGED_ARTIFACT_RELATIVE_PATHS):

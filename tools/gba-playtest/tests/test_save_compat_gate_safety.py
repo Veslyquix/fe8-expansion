@@ -189,14 +189,39 @@ class CompatMenuNeverTouchesSlotOrBlockApisTests(unittest.TestCase):
         self.assertNotIn("InitGlobalSaveInfodata", do_back_match.group(1))
 
     def test_back_is_default_first_menu_item(self):
+        """Back is item 0 in *both* the legacy and modern-guarded
+        branches of gSaveCompatMenuItems (issue #18 sprint 3 wrapped the
+        array's first two rows in `#ifdef MODERN ... #else ... #endif`
+        so their labels resolve through the expansion catalog under
+        MODERN instead of the vanilla MSG_SAVE_COMPAT_BACK/
+        MSG_SAVE_COMPAT_ERASE_ALL lookup -- see src/save_compat_menu.c's
+        own header comment). The legacy (#else) branch must still use
+        the exact original vanilla MSG_SAVE_COMPAT_BACK literal,
+        unchanged."""
         items_match = re.search(
             r"CONST_DATA struct MenuItemDef gSaveCompatMenuItems\[\]\s*=\s*\{(.*?)MenuItemsEnd",
             self.text, re.DOTALL,
         )
         self.assertIsNotNone(items_match)
-        first_item = items_match.group(1).strip().splitlines()[0]
-        self.assertIn("MSG_SAVE_COMPAT_BACK", first_item)
-        self.assertIn("SaveCompatMenu_SelectBack", first_item)
+        body = items_match.group(1)
+
+        guard_match = re.search(
+            r"#ifdef MODERN\s*\n(.*?)\n#else\b(.*?)#endif",
+            body, re.DOTALL,
+        )
+        self.assertIsNotNone(
+            guard_match,
+            "expected an #ifdef MODERN/#else/#endif guard as the array's first rows",
+        )
+
+        modern_first_item = guard_match.group(1).strip().splitlines()[0]
+        legacy_first_item = guard_match.group(2).strip().splitlines()[0]
+
+        self.assertIn("SaveCompatMenu_DrawBackLabel", modern_first_item)
+        self.assertIn("SaveCompatMenu_SelectBack", modern_first_item)
+
+        self.assertIn("MSG_SAVE_COMPAT_BACK", legacy_first_item)
+        self.assertIn("SaveCompatMenu_SelectBack", legacy_first_item)
 
 
 class EraseConfirmWarningActiveTests(unittest.TestCase):

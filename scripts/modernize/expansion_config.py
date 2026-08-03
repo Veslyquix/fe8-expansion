@@ -32,6 +32,15 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+# scripts/localization/schema.py is the single source of truth for the
+# stable locale id list (issue #18 sprint 1); this tool only validates and
+# encodes EXPANSION_ENABLED_LOCALES/EXPANSION_DEFAULT_LOCALE/
+# EXPANSION_PSEUDO_LOCALE against that same list, never a private copy.
+_REPO_ROOT_FOR_LOCALE_SCHEMA = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT_FOR_LOCALE_SCHEMA) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_LOCALE_SCHEMA))
+from scripts.localization import schema as locale_schema  # noqa: E402
+
 # --- Field constraints (see docs/config_identity.md) -----------------------
 
 ASCII_MIN = 0x20
@@ -49,6 +58,21 @@ VERSION_COMPONENT_MAX = 255
 # include/save_format.h's ExpansionSaveMeta record.
 SAVE_COMPAT_EPOCH_MIN = 0
 SAVE_COMPAT_EPOCH_MAX = 0xFFFF
+
+# Starter-feature opt-in flags (issue #6) are strict 0/1 build switches:
+# any other value (-1, 2, text) is rejected with an actionable message.
+FEATURE_FLAG_MIN = 0
+FEATURE_FLAG_MAX = 1
+
+# Item ID cap boundary the issue #6 starter *content* flag depends on.
+# scripts/generated_data/idspace.py owns these numbers (ITEM domain
+# `default_cap` / `ITEM_EXPANSION_FIRST`); they are restated here because
+# this tool is deliberately import-free (it runs as a bare script from
+# modern.mk, not as a package module). scripts/modernize/tests/
+# test_expansion_config.py asserts the two definitions stay equal, so a
+# future cap change cannot silently desynchronize them.
+ITEM_ID_DEFAULT_CAP = 0xCD
+ITEM_ID_EXPANSION_FIRST = 0xCE
 
 # Named ROM sizes, matching modern.mk's MODERN_ROM_SIZE values.
 NAMED_ROM_SIZES = {"16M": 16 * 1024 * 1024, "32M": 32 * 1024 * 1024}
@@ -75,6 +99,21 @@ CONFIG_MK_KEYS = (
     "EXPANSION_ROM_REVISION",
     "EXPANSION_BUILD_ID",
     "EXPANSION_SAVE_COMPAT_EPOCH",
+    "EXPANSION_ENABLED_LOCALES",
+    "EXPANSION_DEFAULT_LOCALE",
+    "EXPANSION_PSEUDO_LOCALE",
+)
+
+# Optional starter-feature flag keys (issue #6). Unlike CONFIG_MK_KEYS these
+# are NOT required to be present: a config.mk (or a synthetic test fixture)
+# that omits them is treated exactly as if each were 0, matching config.mk's
+# own `?= 0` default. This keeps the blast radius of adding the flags to a
+# single new source (config.mk) instead of every committed/synthetic fixture.
+CONFIG_MK_FEATURE_KEYS = (
+    "EXPANSION_MECHANICS_HOOKS",
+    "EXPANSION_MECHANICS_SAMPLE",
+    "EXPANSION_DANGER_OVERLAY_MENU",
+    "EXPANSION_STARTER_CONTENT",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -157,6 +196,209 @@ def validate_save_compat_epoch(value) -> int:
             f"[{SAVE_COMPAT_EPOCH_MIN}, {SAVE_COMPAT_EPOCH_MAX}]"
         )
     return epoch
+
+
+def _normalize_locale_list(value) -> Tuple[str, ...]:
+    """Splits a comma-separated EXPANSION_ENABLED_LOCALES string (or accepts
+    an already-iterable value, for programmatic callers/tests) into a plain
+    tuple of trimmed, non-empty tokens -- no dedup/order/membership
+    validation yet, that is validate_enabled_locales's job."""
+    if isinstance(value, (list, tuple)):
+        raw_items = list(value)
+    else:
+        text = str(value).strip()
+        raw_items = [item.strip() for item in text.split(",")] if text else []
+    return tuple(item for item in raw_items if item)
+
+
+def validate_enabled_locales(value) -> Tuple[str, ...]:
+    """Validate EXPANSION_ENABLED_LOCALES (see config.mk and
+    scripts/localization/schema.py's LOCALE_IDS/INITIALLY_SUPPORTED_LOCALES).
+
+    Fails early (ConfigError) on: an empty list, any locale id outside the
+    stable locale_schema.LOCALE_IDS set, a repeated locale id, a missing
+    'en', or any locale not yet supported in sprint 1 (only 'en' and
+    'qps-ploc' may be enabled today -- every other stable id is a reserved
+    slot for a future sprint). On success, returns the enabled set
+    normalized into the fixed stable-id order (locale_schema.LOCALE_IDS'
+    order), independent of the input order, so two configs naming the same
+    set in a different order are identical from here on (fingerprint
+    included).
+    """
+    items = _normalize_locale_list(value)
+    if not items:
+        raise ConfigError("EXPANSION_ENABLED_LOCALES must not be empty")
+
+    unknown = [item for item in items if item not in locale_schema.LOCALE_INDEX]
+    if unknown:
+        raise ConfigError(
+            f"EXPANSION_ENABLED_LOCALES contains unknown locale id(s) {unknown!r}; "
+            f"expected a subset of {locale_schema.LOCALE_IDS}"
+        )
+
+    seen = set()
+    duplicates = []
+    for item in items:
+        if item in seen:
+            duplicates.append(item)
+        seen.add(item)
+    if duplicates:
+        raise ConfigError(
+            f"EXPANSION_ENABLED_LOCALES contains duplicate locale id(s) {duplicates!r}"
+        )
+
+    if "en" not in seen:
+        raise ConfigError("EXPANSION_ENABLED_LOCALES must include 'en'")
+
+    unsupported = sorted(
+        item for item in seen if item not in locale_schema.INITIALLY_SUPPORTED_LOCALES
+    )
+    if unsupported:
+        raise ConfigError(
+            f"EXPANSION_ENABLED_LOCALES contains locale id(s) not yet supported in "
+            f"sprint 1: {unsupported!r}; only {locale_schema.INITIALLY_SUPPORTED_LOCALES} "
+            f"may be enabled today -- every other stable locale id is a reserved slot "
+            f"for a future sprint"
+        )
+
+    return tuple(sorted(seen, key=lambda name: locale_schema.LOCALE_INDEX[name]))
+
+
+def validate_default_locale(value, enabled_locales: Tuple[str, ...]) -> str:
+    """Validate EXPANSION_DEFAULT_LOCALE: must be one of the stable locale
+    ids, and must be a member of the already-validated `enabled_locales`
+    set (a build can never default to a locale it does not enable)."""
+    text = str(value).strip()
+    if text not in locale_schema.LOCALE_INDEX:
+        raise ConfigError(
+            f"EXPANSION_DEFAULT_LOCALE {value!r} unknown; expected one of "
+            f"{locale_schema.LOCALE_IDS}"
+        )
+    if text not in enabled_locales:
+        raise ConfigError(
+            f"EXPANSION_DEFAULT_LOCALE {text!r} must be included in "
+            f"EXPANSION_ENABLED_LOCALES ({enabled_locales!r})"
+        )
+    return text
+
+
+def validate_pseudo_locale(value, enabled_locales: Tuple[str, ...]) -> int:
+    """Validate EXPANSION_PSEUDO_LOCALE: must be the literal string '0' or
+    '1' (never a truthy-ish alternative like 'yes'/'true'/'2'), and must be
+    exactly consistent with whether locale_schema.PSEUDO_LOCALE
+    ('qps-ploc') is present in the already-validated `enabled_locales` set
+    -- 1 requires qps-ploc enabled, 0 requires it not enabled. This keeps
+    the flag from ever silently disagreeing with the enabled-locale set it
+    describes."""
+    text = str(value).strip()
+    if text not in ("0", "1"):
+        raise ConfigError(f"EXPANSION_PSEUDO_LOCALE {value!r} must be exactly '0' or '1'")
+    flag = int(text)
+    qps_enabled = locale_schema.PSEUDO_LOCALE in enabled_locales
+    if flag == 1 and not qps_enabled:
+        raise ConfigError(
+            f"EXPANSION_PSEUDO_LOCALE=1 requires {locale_schema.PSEUDO_LOCALE!r} to be "
+            f"present in EXPANSION_ENABLED_LOCALES ({enabled_locales!r})"
+        )
+    if flag == 0 and qps_enabled:
+        raise ConfigError(
+            f"EXPANSION_PSEUDO_LOCALE=0 but {locale_schema.PSEUDO_LOCALE!r} is present in "
+            f"EXPANSION_ENABLED_LOCALES ({enabled_locales!r}); set EXPANSION_PSEUDO_LOCALE=1 "
+            f"or remove it from EXPANSION_ENABLED_LOCALES"
+        )
+    return flag
+
+
+def validate_feature_flag(name: str, value) -> int:
+    """Validate a starter-feature opt-in flag (issue #6): strictly 0 or 1.
+
+    Any other value -- a negative number, 2, or non-numeric text -- is
+    rejected with a specific, actionable message, matching the rest of this
+    tool's fail-before-writing-anything contract.
+    """
+    try:
+        flag = int(str(value).strip(), 0)
+    except (TypeError, ValueError) as error:
+        raise ConfigError(
+            f"{name} {value!r} is not an integer; expected 0 or 1"
+        ) from error
+    if not (FEATURE_FLAG_MIN <= flag <= FEATURE_FLAG_MAX):
+        raise ConfigError(
+            f"{name} {flag} out of range [{FEATURE_FLAG_MIN}, {FEATURE_FLAG_MAX}]; "
+            f"expected 0 (off) or 1 (on)"
+        )
+    return flag
+
+
+def compute_locale_mask(enabled_locales: Tuple[str, ...]) -> int:
+    """Bitmask over locale_schema.LOCALE_INDEX -- bit N set iff
+    locale_schema.LOCALE_IDS[N] is enabled. Matches
+    ExpansionLocale_IsEnabled()'s `FE8_EXPANSION_ENABLED_LOCALE_MASK &
+    (1u << locale)` check in src/expansion_locale.c exactly."""
+    mask = 0
+    for name in enabled_locales:
+        mask |= 1 << locale_schema.LOCALE_INDEX[name]
+    return mask
+def validate_item_id_cap(value) -> int:
+    """Resolve the active item ID cap (modern.mk's FE8_ITEM_ID_CAP).
+
+    An empty/None value means "not overridden", i.e. the committed default
+    cap in include/id_space.h. Anything else must be an integer in
+    [0, 0xFF] (the item ID storage width, see
+    scripts/generated_data/idspace.py's item domain).
+    """
+    if value in (None, ""):
+        return ITEM_ID_DEFAULT_CAP
+    try:
+        cap = int(str(value).strip(), 0)
+    except (TypeError, ValueError) as error:
+        raise ConfigError(
+            f"FE8_ITEM_ID_CAP {value!r} is not an integer"
+        ) from error
+    if not (0 <= cap <= 0xFF):
+        raise ConfigError(
+            f"FE8_ITEM_ID_CAP 0x{cap:X} out of range [0x00, 0xFF]; the item ID "
+            f"storage width is 8 bits (see scripts/generated_data/idspace.py)"
+        )
+    return cap
+
+
+def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
+                           starter_content=0, item_id_cap=None):
+    """Validate the three starter-feature flags plus their one dependency.
+
+    The sample mechanic can only be registered through the mechanics hook
+    registry, so EXPANSION_MECHANICS_SAMPLE=1 with EXPANSION_MECHANICS_HOOKS=0
+    is a contradiction and is rejected here (an actionable error), rather than
+    silently linking a sample with no registry to register it into.
+    """
+    hooks = validate_feature_flag("EXPANSION_MECHANICS_HOOKS", mechanics_hooks)
+    sample = validate_feature_flag("EXPANSION_MECHANICS_SAMPLE", mechanics_sample)
+    danger = validate_feature_flag("EXPANSION_DANGER_OVERLAY_MENU", danger_overlay_menu)
+    content = validate_feature_flag("EXPANSION_STARTER_CONTENT", starter_content)
+    cap = validate_item_id_cap(item_id_cap)
+    if sample and not hooks:
+        raise ConfigError(
+            "EXPANSION_MECHANICS_SAMPLE=1 requires EXPANSION_MECHANICS_HOOKS=1: "
+            "the sample mechanic is registered through the mechanics hook "
+            "registry, which is not linked when EXPANSION_MECHANICS_HOOKS=0"
+        )
+    if content and not hooks:
+        raise ConfigError(
+            "EXPANSION_STARTER_CONTENT=1 requires EXPANSION_MECHANICS_HOOKS=1: "
+            "the bundled content item's mechanic is registered through the "
+            "mechanics hook registry, which is not linked when "
+            "EXPANSION_MECHANICS_HOOKS=0"
+        )
+    if content and cap < ITEM_ID_EXPANSION_FIRST:
+        raise ConfigError(
+            f"EXPANSION_STARTER_CONTENT=1 requires an expanded item ID cap: the "
+            f"bundled content item is ITEM_EXPANSION_CE "
+            f"(0x{ITEM_ID_EXPANSION_FIRST:02X}) and the active cap is "
+            f"0x{cap:02X}; build with FE8_ITEM_ID_CAP=0x"
+            f"{ITEM_ID_EXPANSION_FIRST:02X} (or higher)"
+        )
+    return hooks, sample, danger, content
 
 
 def validate_rom_size(value) -> int:
@@ -262,7 +504,7 @@ def parse_config_mk(path: Path) -> Dict[str, str]:
         if not match:
             continue
         key, value = match.group(1), match.group(2)
-        if key in CONFIG_MK_KEYS:
+        if key in CONFIG_MK_KEYS or key in CONFIG_MK_FEATURE_KEYS:
             values[key] = value
     missing = [key for key in CONFIG_MK_KEYS if key not in values]
     if missing:
@@ -344,6 +586,13 @@ class ExpansionIdentity:
     text_shift: int
     build_commit: str
     save_compat_epoch: int
+    enabled_locales: Tuple[str, ...] = ()
+    default_locale: str = locale_schema.DEFAULT_LOCALE
+    pseudo_locale_enabled: int = 0
+    mechanics_hooks: int = 0
+    mechanics_sample: int = 0
+    danger_overlay_menu: int = 0
+    starter_content: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -354,10 +603,26 @@ class ExpansionIdentity:
     def version_packed(self) -> int:
         return compute_version_packed(self.version_major, self.version_minor, self.version_patch)
 
+    @property
+    def enabled_locale_mask(self) -> int:
+        return compute_locale_mask(self.enabled_locales)
+
+    @property
+    def default_locale_id(self) -> int:
+        return locale_schema.LOCALE_INDEX[self.default_locale]
+
     def fingerprint_fields(self) -> dict:
         """Compatibility-relevant settings folded into the config fingerprint:
         semantic version, ABI, ROM size, link-time text shift, ROM identity,
-        and the debug/release preset. See docs/config_identity.md."""
+        the debug/release preset, (issue #18 sprint 1) the normalized
+        enabled-locale set/default locale/pseudo-locale flag, and (issue #6)
+        the starter-feature opt-in flags (so toggling any feature flag or
+        locale setting changes the fingerprint). Deliberately does NOT
+        include save_compat_epoch: that field has its own independent,
+        narrower bump policy (see config.mk) and must never change merely
+        because a locale or feature-flag setting changed -- proven by
+        scripts/modernize/tests/test_expansion_config.py. See
+        docs/config_identity.md and docs/starter_features.md."""
         return {
             "version": [self.version_major, self.version_minor, self.version_patch],
             "abi": self.abi,
@@ -368,12 +633,24 @@ class ExpansionIdentity:
             "rom_game_code": self.rom_game_code,
             "rom_maker_code": self.rom_maker_code,
             "rom_revision": self.rom_revision,
+            "enabled_locales": list(self.enabled_locales),
+            "default_locale": self.default_locale,
+            "pseudo_locale_enabled": self.pseudo_locale_enabled,
+            "features": {
+                "mechanics_hooks": self.mechanics_hooks,
+                "mechanics_sample": self.mechanics_sample,
+                "danger_overlay_menu": self.danger_overlay_menu,
+                "starter_content": self.starter_content,
+            },
         }
 
     def to_dict(self) -> dict:
         data = asdict(self)
+        data["enabled_locales"] = list(self.enabled_locales)
         data["version_string"] = self.version_string
         data["version_packed"] = self.version_packed
+        data["enabled_locale_mask"] = self.enabled_locale_mask
+        data["default_locale_id"] = self.default_locale_id
         return data
 
 
@@ -393,6 +670,14 @@ def load_identity(
     rom_maker_code: Optional[str] = None,
     rom_revision=None,
     save_compat_epoch=None,
+    enabled_locales=None,
+    default_locale=None,
+    pseudo_locale=None,
+    mechanics_hooks=None,
+    mechanics_sample=None,
+    danger_overlay_menu=None,
+    starter_content=None,
+    item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
 
@@ -437,6 +722,32 @@ def load_identity(
         if save_compat_epoch not in (None, "")
         else cfg["EXPANSION_SAVE_COMPAT_EPOCH"]
     )
+    resolved_enabled_locales = validate_enabled_locales(
+        enabled_locales if enabled_locales not in (None, "") else cfg["EXPANSION_ENABLED_LOCALES"]
+    )
+    resolved_default_locale = validate_default_locale(
+        default_locale if default_locale not in (None, "") else cfg["EXPANSION_DEFAULT_LOCALE"],
+        resolved_enabled_locales,
+    )
+    resolved_pseudo_locale = validate_pseudo_locale(
+        pseudo_locale if pseudo_locale not in (None, "") else cfg["EXPANSION_PSEUDO_LOCALE"],
+        resolved_enabled_locales,
+    )
+    resolved_hooks, resolved_sample, resolved_danger, resolved_content = validate_feature_flags(
+        mechanics_hooks
+        if mechanics_hooks not in (None, "")
+        else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
+        mechanics_sample
+        if mechanics_sample not in (None, "")
+        else cfg.get("EXPANSION_MECHANICS_SAMPLE", "0"),
+        danger_overlay_menu
+        if danger_overlay_menu not in (None, "")
+        else cfg.get("EXPANSION_DANGER_OVERLAY_MENU", "0"),
+        starter_content
+        if starter_content not in (None, "")
+        else cfg.get("EXPANSION_STARTER_CONTENT", "0"),
+        item_id_cap,
+    )
     resolved_rom_size = validate_rom_size(rom_size)
     resolved_preset = validate_preset(config_preset)
     resolved_abi = validate_abi(abi)
@@ -460,6 +771,13 @@ def load_identity(
         text_shift=resolved_text_shift,
         build_commit=build_commit,
         save_compat_epoch=resolved_save_compat_epoch,
+        enabled_locales=resolved_enabled_locales,
+        default_locale=resolved_default_locale,
+        pseudo_locale_enabled=resolved_pseudo_locale,
+        mechanics_hooks=resolved_hooks,
+        mechanics_sample=resolved_sample,
+        danger_overlay_menu=resolved_danger,
+        starter_content=resolved_content,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -500,6 +818,9 @@ def generate_metadata_files(output_dir: Path, identity: ExpansionIdentity) -> Di
         f"MODERN_VERSION_PACKED := {identity.version_packed}",
         f"MODERN_VERSION_STRING := {identity.version_string}",
         f"MODERN_SAVE_COMPAT_EPOCH := {identity.save_compat_epoch}",
+        f"MODERN_EXPANSION_ENABLED_LOCALE_MASK := {identity.enabled_locale_mask}",
+        f"MODERN_EXPANSION_DEFAULT_LOCALE_ID := {identity.default_locale_id}",
+        f"MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED := {identity.pseudo_locale_enabled}",
         "",
     ]
     _write_if_changed(mk_path, "\n".join(mk_lines))
@@ -535,6 +856,44 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--save-compat-epoch", default=None, help="override EXPANSION_SAVE_COMPAT_EPOCH"
     )
+    parser.add_argument(
+        "--enabled-locales", default=None, help="override EXPANSION_ENABLED_LOCALES"
+    )
+    parser.add_argument(
+        "--default-locale", default=None, help="override EXPANSION_DEFAULT_LOCALE"
+    )
+    parser.add_argument(
+        "--pseudo-locale", default=None, help="override EXPANSION_PSEUDO_LOCALE"
+    )
+    parser.add_argument(
+        "--mechanics-hooks",
+        default=None,
+        help="override EXPANSION_MECHANICS_HOOKS (0 or 1)",
+    )
+    parser.add_argument(
+        "--mechanics-sample",
+        default=None,
+        help="override EXPANSION_MECHANICS_SAMPLE (0 or 1)",
+    )
+    parser.add_argument(
+        "--danger-overlay-menu",
+        default=None,
+        help="override EXPANSION_DANGER_OVERLAY_MENU (0 or 1)",
+    )
+    parser.add_argument(
+        "--starter-content",
+        default=None,
+        help="override EXPANSION_STARTER_CONTENT (0 or 1)",
+    )
+    parser.add_argument(
+        "--item-id-cap",
+        default=None,
+        help=(
+            "the build's active FE8_ITEM_ID_CAP (empty = the committed default "
+            "cap); EXPANSION_STARTER_CONTENT=1 requires it to reach "
+            "ITEM_EXPANSION_CE"
+        ),
+    )
 
 
 def _resolve_tokens(identity: ExpansionIdentity) -> str:
@@ -543,7 +902,10 @@ def _resolve_tokens(identity: ExpansionIdentity) -> str:
         f"MODERN_CONFIG_FINGERPRINT={identity.config_fingerprint} "
         f"MODERN_VERSION_PACKED={identity.version_packed} "
         f"MODERN_VERSION_STRING={identity.version_string} "
-        f"MODERN_SAVE_COMPAT_EPOCH={identity.save_compat_epoch}"
+        f"MODERN_SAVE_COMPAT_EPOCH={identity.save_compat_epoch} "
+        f"MODERN_EXPANSION_ENABLED_LOCALE_MASK={identity.enabled_locale_mask} "
+        f"MODERN_EXPANSION_DEFAULT_LOCALE_ID={identity.default_locale_id} "
+        f"MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED={identity.pseudo_locale_enabled}"
     )
 
 
@@ -586,6 +948,14 @@ def main(argv=None) -> int:
             rom_maker_code=args.maker_code,
             rom_revision=args.revision,
             save_compat_epoch=args.save_compat_epoch,
+            enabled_locales=args.enabled_locales,
+            default_locale=args.default_locale,
+            pseudo_locale=args.pseudo_locale,
+            mechanics_hooks=args.mechanics_hooks,
+            mechanics_sample=args.mechanics_sample,
+            danger_overlay_menu=args.danger_overlay_menu,
+            starter_content=args.starter_content,
+            item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:
         print(f"error: {error}", file=sys.stderr)

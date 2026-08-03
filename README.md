@@ -33,6 +33,14 @@ See [`docs/quickstart.md`](docs/quickstart.md) for full flags and
 troubleshooting, and [`docs/framework-support.md`](docs/framework-support.md)
 for the exact supported-host/toolchain/target matrix.
 
+
+Then configure the build in `config.mk` or with `make` overrides. The default
+is English-only with all starter features off; see
+[`docs/config_identity.md`](docs/config_identity.md),
+[`docs/starter_features.md`](docs/starter_features.md), and
+[`docs/localization.md`](docs/localization.md) before enabling optional
+content or locales.
+
 ## Default build behavior
 
 A bare `make` (or `make all`) deterministically builds and boot-verifies
@@ -58,6 +66,8 @@ slow battle-animation compression outputs).
 | I want to... | Go to |
 | --- | --- |
 | Author game content (characters, classes, items, chapters) | [`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md) |
+| Enable/extend the typed starter-content and mechanics examples | [`docs/starter_features.md`](docs/starter_features.md) |
+| Author expansion UI text or locale catalogs | [`docs/localization.md`](docs/localization.md) |
 | Write/modify C runtime code under the modern framework | [`docs/architecture.md`](docs/architecture.md), [`docs/quickstart.md`](docs/quickstart.md) |
 | Debug a build or investigate runtime behavior | [`docs/debugtools.md`](docs/debugtools.md), `tools/gba-playtest/README.md` |
 | Port/track a change from the canonical upstream decomp | [`docs/upstream-porting.md`](docs/upstream-porting.md) |
@@ -65,6 +75,12 @@ slow battle-animation compression outputs).
 
 Full contribution workflow (preparation, fast checks, full gates, PR
 provenance): [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+
+The repository-only path is therefore: quickstart -> configure -> author
+JSON/content and locale catalogs -> build -> run host and ROM gates -> debug
+with the bounded debug-tools and libmGBA scenario harness. No upstream wiki is
+required for that path.
 
 ## Support, compatibility, and governance
 

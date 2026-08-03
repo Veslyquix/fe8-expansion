@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "debugtools-map-hub-modern-release",
-  "description": "Release counterpart of debugtools-map-hub-modern-debug.json (Issue #11 slice 2). Replays debugtools-hub-modern-release.json's own already-verified 259-frame input script verbatim (proving, as that scenario documents, that FE8_EXPANSION_DEBUGTOOLS_ENABLED being compiled out means the title-screen SELECT+R hotkey never diverts Title_IDLE's vanilla A/START handling, so this modern release build's deterministic outcome for that input script is a stable, unchanging frame -- expected_framebuffer_hash fnv1a64-rgb24:d11078d0ec60076d matches debugtools-hub-modern-release.json's own 'chapter2-interactive-stable'/'post-interactive-cursor-response' checkpoints exactly, frame for frame, byte for byte), then appends this slice's new map-hotkey tail: two FE8_EXPANSION_DEBUGTOOLS_MAP_HOTKEY_MASK (SELECT+L) pulses, followed by the same DOWN/A/RIGHT/RIGHT/B/DOWN/A/RIGHT/B/B tap sequence used in the debug-build map-hub scenario. In this release build, DebugTools_MapHotkeyCheck (src/debugtools_registry.c) compiles to an empty no-op body and DebugTools_IsHubActive() always returns 0, so src/playerphase.c's PlayerPhase_MainIdle never returns early for these keys and gDebugToolsProbe is never written by any debugtools code path -- there is no live sHubActive symbol at all in this build (see docs/debugtools.md). Every appended checkpoint's framebuffer_hash is proven identical to the pre-existing frozen frame and to every other checkpoint in this scenario: the map hotkey (like the title hotkey before it) has zero observable effect, and gDebugToolsProbe.hubOpenCount/registeredActionCount/lastRegisterResult/launcherArmed all stay 0x00000000 throughout, exactly like debugtools-hub-modern-release.json's own probes -- proving the map-phase debug entry point is compiled out, not merely unreached, and introduces no new behavior whatsoever into a release build.",
+  "description": "Release compiled-out mirror for the map-phase SELECT+L hotkey: replays debugtools-hub-modern-release.json's own frame script verbatim, then appends two separated SELECT+L pulses plus a trailing input tail. In a release build the map hotkey is compiled out just like the title hotkey, so gDebugToolsProbe stays all-zero across the pulses (no hub opens on the map). The shared prefix has already driven the vanilla path into the live opening world-map sequence (gPlaySt.chapterIndex==0x10, faction==0x40 (NPC), map cursor==0x0e), and the appended SELECT+L tail leaves every one of those semantic progress scalars unchanged across all four checkpoints -- the concrete evidence that the map hotkey tail is inert on top of a genuinely running, unfrozen world map (the pre-fix -O2 build locked here with chapterIndex stuck at 0x00). The former frozen-framebuffer-hash oracle (d11078d0, vacuously satisfied by the frozen screen) is deleted in favour of these semantic scalars plus the all-zero gDebugToolsProbe. This scenario reaches the opening world-map cinematic, never a debug hub. See docs/debugtools.md.",
   "frames": [
     {
       "start": 90,
@@ -1907,11 +1907,35 @@
   ],
   "checkpoints": [
     {
+      "name": "worldmap-intro-pre-maphotkey-inert",
       "frame": 14796,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "pre-map-hotkey",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -1931,15 +1955,54 @@
           "address": "0x02031510",
           "size": 4,
           "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
+          "size": 4,
+          "expected": "0x00000000"
         }
       ]
     },
     {
+      "name": "worldmap-intro-maphotkey-pulse1-inert",
       "frame": 14856,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-map-pulse1",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -1959,15 +2022,54 @@
           "address": "0x02031510",
           "size": 4,
           "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
+          "size": 4,
+          "expected": "0x00000000"
         }
       ]
     },
     {
+      "name": "worldmap-intro-maphotkey-pulse2-inert",
       "frame": 14916,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-map-pulse2",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -1985,17 +2087,56 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "expected": "0x00000000"
         }
       ]
     },
     {
+      "name": "worldmap-intro-after-maphotkey-tail-inert",
       "frame": 15476,
-      "framebuffer": true,
-      "expected_framebuffer_hash": "fnv1a64-rgb24:d11078d0ec60076d",
-      "name": "after-full-input-mirror",
+      "framebuffer": false,
       "probes": [
+        {
+          "address": "0x020210ae",
+          "size": 1,
+          "expected": "0x10"
+        },
+        {
+          "address": "0x020210af",
+          "size": 1,
+          "expected": "0x40"
+        },
+        {
+          "address": "0x020210bb",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x020210ec",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02021100",
+          "size": 2,
+          "expected": "0x000e"
+        },
         {
           "address": "0x02031504",
           "size": 4,
@@ -2013,6 +2154,21 @@
         },
         {
           "address": "0x02031510",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031514",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031518",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x0203151c",
           "size": 4,
           "expected": "0x00000000"
         }

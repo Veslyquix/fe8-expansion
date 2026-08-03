@@ -62,12 +62,13 @@ class SaveCompatEpochModernBuildTests(unittest.TestCase):
     def test_default_epoch_is_wired_into_cflags(self):
         """Without any override, MODERN_CFLAGS must carry
         -DFE8_EXPANSION_SAVE_COMPAT_EPOCH matching config.mk's
-        EXPANSION_SAVE_COMPAT_EPOCH default (1) -- proving the define is
-        present at all, not silently falling back to the header's #ifndef
-        default by omission."""
+        EXPANSION_SAVE_COMPAT_EPOCH default (2, bumped from 1 for issue
+        #18 sprint 2's ExpansionUserPrefs sub-record -- see config.mk)
+        -- proving the define is present at all, not silently falling
+        back to the header's #ifndef default by omission."""
         result = self.make("-n", "expansion-modern-cohort")
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=1", result.stdout)
+        self.assertIn("-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=2", result.stdout)
 
     def test_override_changes_cflags_define_but_not_config_fingerprint(self):
         """Overriding EXPANSION_SAVE_COMPAT_EPOCH on the command line must
@@ -83,14 +84,14 @@ class SaveCompatEpochModernBuildTests(unittest.TestCase):
         )
 
         overridden = self.make(
-            "-n", "expansion-modern-cohort", "EXPANSION_SAVE_COMPAT_EPOCH=2"
+            "-n", "expansion-modern-cohort", "EXPANSION_SAVE_COMPAT_EPOCH=3"
         )
         self.assertEqual(overridden.returncode, 0, overridden.stdout)
         self.assertIn(
-            "-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=2", overridden.stdout
+            "-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=3", overridden.stdout
         )
         self.assertNotIn(
-            "-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=1", overridden.stdout
+            "-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=2", overridden.stdout
         )
         overridden_fingerprint = self._extract_token(
             overridden.stdout, "-DFE8_EXPANSION_CONFIG_FINGERPRINT"

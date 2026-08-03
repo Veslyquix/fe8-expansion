@@ -104,13 +104,15 @@ for this repository:
 - Version-to-version migration guidance (once a versioned release exists)
   follows [`docs/release-migration-template.md`](release-migration-template.md).
 
-## Merged vs. active integration slots
+## Merged implementation vs. future release scope
 
-Issues **#10** (typed IDs / extensible-ID contracts), **#11** (debug-tools
-extension surface), and **#13** (regression/host-matrix policy) are now
-merged with final, supported public interfaces — narrow, explicit
-non-goals remain per closure report, not open governance questions.
-Issues **#6**, **#9**, and **#18** remain open/active; any governance
-statement about "supported public API" scope for those areas is deferred
-to their own follow-up documentation updates — see
-[`docs/architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918).
+Issues **#6**, **#10**, **#11**, **#13**, and **#18** have implementation
+merged into the current source tree. This does not close or change any GitHub
+issue state; it means their live APIs must be documented and reviewed as
+current surfaces. See [`architecture.md`](architecture.md#public-extension-boundaries)
+and [`framework-support.md`](framework-support.md#merged-framework-contracts).
+
+Issue **#9** remains future release/migration work. The current repository does
+not provide release automation, a tag/changelog policy, versioned artifacts,
+or a downstream updater. [`release-migration-template.md`](release-migration-template.md)
+is scaffolding only and must not be represented as a current release process.

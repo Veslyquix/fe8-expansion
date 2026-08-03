@@ -21,6 +21,13 @@ toolchain (and libmGBA) by default, **no agbcc of any kind**; pass
 which installs agbcc instead. A legally obtained `baserom.gba` is
 optional and only needed by `asmdiff.sh`.
 
+
+For generated content use `docs/generated_data_tutorial.md`; for the four
+validated, default-off starter flags and typed mechanics registry use
+`docs/starter_features.md`; for stable locale/message IDs, catalog authoring,
+prefs and selector behavior use `docs/localization.md`. Never hand-edit
+build-local generated output.
+
 ```bash
 # Default, supported path: modern release ROM (no agbcc involved)
 make

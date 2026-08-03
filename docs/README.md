@@ -14,6 +14,8 @@ See [`../README.md`](../README.md) for the top-level project overview.
 | Understand what's actually supported (hosts, toolchains, targets) | [`framework-support.md`](framework-support.md) |
 | Get the architecture map before diving into source | [`architecture.md`](architecture.md) |
 | Author game content (characters/classes/items/etc.) | [`generated_data_tutorial.md`](generated_data_tutorial.md) |
+| Enable/extend starter content, mechanics, or Threat Range QoL | [`starter_features.md`](starter_features.md) |
+| Author expansion-localized UI text/locales | [`localization.md`](localization.md) |
 | Contribute code/docs and know the review process | [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`project-governance.md`](project-governance.md) |
 | Come from the old decomp-base/agbcc workflow | [`migration-from-decomp.md`](migration-from-decomp.md) |
 | Do byte-for-byte decomp-matching work | [`archival-decomp.md`](archival-decomp.md) |
@@ -22,10 +24,14 @@ See [`../README.md`](../README.md) for the top-level project overview.
 ## Learning paths
 
 **New contributor, modern framework (most people):**
-1. [`quickstart.md`](quickstart.md) — get a build running.
-2. [`architecture.md`](architecture.md) — orient yourself.
-3. [`generated_data_tutorial.md`](generated_data_tutorial.md) — author content, or dive into `src/` for C/runtime work.
-4. [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — fast checks / full gates / PR evidence.
+1. [`quickstart.md`](quickstart.md) — install and boot-verify a build.
+2. [`config_identity.md`](config_identity.md) — configure identity, debug/release, starter flags, and locales.
+3. [`architecture.md`](architecture.md) — orient yourself.
+4. [`generated_data_tutorial.md`](generated_data_tutorial.md) and
+   [`localization.md`](localization.md) — author typed content and expansion UI text.
+5. [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — run host checks, both ROM gates, and record PR evidence.
+6. [`debugtools.md`](debugtools.md) and
+   [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md) — debug bounded runtime behavior.
 
 **Coming from the old decomp-first workflow:**
 1. [`migration-from-decomp.md`](migration-from-decomp.md) — what changed and why.
@@ -52,14 +58,16 @@ numbers mark merged (closed) contracts only:
 | Typed IDs / caps (issue #10) | `include/id_space.h` (DEFAULT), `build/generated/data/id_space_active.h` (ACTIVE), `FE8_ITEM_ID_CAP` | [`id_space.md`](id_space.md), [`../reports/id_space_audit.md`](../reports/id_space_audit.md) |
 | Config / ROM identity | `struct ExpansionMetadata` (`include/expansion_metadata.h`), `EXPANSION_SAVE_COMPAT_EPOCH` | [`config_identity.md`](config_identity.md), [`save_format.md`](save_format.md) |
 | Debug-tools extension (issue #11) | Action-registration API (`include/expansion_debugtools.h`), `FE8_EXPANSION_DEBUGTOOLS_ENABLED` | [`debugtools.md`](debugtools.md) |
+| Starter features (issue #6) | Four default-off flags; `include/expansion_mechanics.h`; `include/expansion_starter_content.h`; danger-overlay menu | [`starter_features.md`](starter_features.md) |
+| Localization (issue #18) | `ExpansionLocaleId`/`ExpansionMsgId`, `texts/expansion/`, prefs + selector/settings APIs | [`localization.md`](localization.md), [`save_format.md`](save_format.md) |
 | Runtime test harness (issue #13) | JSON scenario format + fingerprints, `GBA_PLAYTEST_HOST_ONLY` | [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md) |
 | Upstream-port review tooling | `python3 -m scripts.upstream_port {scan,drift,verify,update-state}` | [`upstream-porting.md`](upstream-porting.md) |
 | Proc/runtime core | `include/proc.h` (`struct Proc`, `struct ProcCmd[]`) | [`architecture.md`](architecture.md) |
 
-Not a public API today (active/unmerged; see "Merged vs. active
-integration slots" below): starter-feature hook registries (issue #6),
-release/version tooling (issue #9), language-selection config (issue
-#18).
+Not a public API today: issue #9's future versioned-release/downstream-
+upgrade tooling. The repository currently has no release automation, tags/
+changelog contract, versioned artifact pipeline, or downstream updater; the
+migration template is scaffolding only.
 
 ## Documentation governance
 
@@ -96,6 +104,10 @@ and
 | [`debugtools.md`](debugtools.md) | Current | Debug-tools subsystem, merged (issue #11); see its "Remaining #11 scope" for the few narrow non-goals |
 | [`generated_data.md`](generated_data.md) | Current, reference | Full generated-data design reference (issue #5) |
 | [`generated_data_tutorial.md`](generated_data_tutorial.md) | Current, tutorial | Contributor-facing generated-data walkthrough |
+| [`starter_features.md`](starter_features.md) | Current | Four opt-in flags, typed mechanics/content API, QoL and matrices (issue #6) |
+| [`localization.md`](localization.md) | Current | Stable locale/message IDs, authoring, prefs/UI, budgets and matrices (issue #18) |
+| [`documentation-inventory.md`](documentation-inventory.md) | Current | Exact recognized-Markdown inventory |
+| [`external-link-registry.md`](external-link-registry.md) | Current | Offline URL ownership/status coverage |
 | [`upstream-porting.md`](upstream-porting.md) | Current | Canonical upstream drift tooling (issue #12) |
 | [`issue-resolution-policy.md`](issue-resolution-policy.md) | Current, authoritative | Issue closure / review / legal-boundary governance |
 | [`dump_extraction_plan.md`](dump_extraction_plan.md) | Archival | Raw-blob-to-source extraction workflow |
@@ -110,10 +122,14 @@ and
 workflow and is not re-verified against the modern framework. "Template"
 means it is intentionally unfilled scaffolding.
 
-## Merged vs. active integration slots
+## Merged contracts and future release slot
 
-Issues **#10**, **#11**, and **#13** are merged, with narrow, explicit
-non-goals; issues **#6**, **#9**, and **#18** are still open/active. See
-[`architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
-and [`framework-support.md`](framework-support.md#merged-framework-contracts-issues-10-11-13)
-for exactly what is documented, supported, and still open for each.
+Issues **#6**, **#10**, **#11**, **#13**, and **#18** have implementation
+merged into the current source tree; this statement does not assert or change
+their GitHub issue state. Their supported surfaces and explicit non-goals are
+summarized in [`architecture.md`](architecture.md#public-extension-boundaries)
+and [`framework-support.md`](framework-support.md#merged-framework-contracts).
+
+Issue **#9** remains future work. Only the current issue-resolution policy and
+an explicitly unfilled migration template exist; do not infer release
+automation or a current release process from either.

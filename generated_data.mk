@@ -317,6 +317,29 @@ $(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
 	@# validation/drift gate, so real drift is reported there, not here.
 	@$(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null || true
 
+# --- Issue #18: close the literal Make-DAG/state gap for the gate itself ---
+# `generated-data-check` (the CI gate above) never referenced this stamp: its
+# own recipe heals the ACTIVE surfaces + the items table via *direct* python
+# calls (`idspace active-check`, `check --table items`), which are correct on
+# their own merits -- both resolve THIS invocation's own env cap and rewrite
+# write-if-changed, independent of the stamp's mtime -- but that means the
+# gate's own recipe never touched the one real, Make-tracked file every other
+# cap-aware target (the grouped ACTIVE_OUTPUTS rule, every linked table's .c
+# rule) keys its own staleness on. That is a structural asymmetry between
+# what the gate's recipe actually (already correctly) does and what the Make
+# dependency graph believes happened -- "cap missing from Make DAG/state".
+# Declaring the stamp as an ordinary prerequisite here closes that gap for
+# good: `generated-data-check` now always reconciles the SAME stamp every
+# other cap-aware rule relies on, so the graph and the on-disk cap state can
+# never observably diverge, at the cost of one extra (idempotent, sub-second,
+# write-if-changed) stamp-recipe invocation. Declared as a second prerequisite
+# line (not folded into the target's own line above) because
+# $(GENERATED_DATA_ITEM_CAP_STAMP) is only defined below this point in the
+# file -- GNU Make happily accumulates a target's prerequisites across
+# multiple appearances, so this reaches the same `generated-data-check`
+# target defined near the top of this file with no reordering required.
+generated-data-check: $(GENERATED_DATA_ITEM_CAP_STAMP)
+
 GENERATED_DATA_CONFIG_INPUTS_items += \
 	include/constants/items_expansion.h \
 	src/data/items_expansion.json \
@@ -400,6 +423,59 @@ GENERATED_DATA_CONFIG_INPUTS_characters := \
 # Shared (every table) generator scripts. Test files/fixtures are
 # deliberately excluded -- they never affect generated output.
 GENERATED_DATA_SHARED_PY_SOURCES := $(wildcard scripts/generated_data/*.py)
+
+# --- Issue #6 config-gated CONTENT text -----------------------------------
+# Placed AFTER GENERATED_DATA_SHARED_PY_SOURCES above on purpose: make
+# expands a rule's prerequisite list when the rule is read, so a rule that
+# names that variable earlier in the file would silently get an empty list.
+#
+# A framework-authored item record must not append a message to
+# texts/texts.txt: that table is Huffman-compressed as ONE shared blob, so a
+# content-only message re-encodes the text of every build -- including a
+# default, feature-free ROM. The record therefore authors its ORIGINAL
+# display text literally ("authoringName", src/data/items_expansion.json) and
+# the generator emits it into a BUILD-LOCAL header that only the content
+# profile links (scripts/generated_data/items/content_text.py).
+#
+# EXPANSION_STARTER_CONTENT is an env/config value exactly like
+# FE8_ITEM_ID_CAP above: flipping it changes no source mtime, so it gets the
+# same FORCE + write-if-changed stamp idiom. At 0 the recipe writes nothing
+# and removes any artifact a previous content build left behind, so the
+# default profile can never pick up a stale string table.
+GENERATED_DATA_CONTENT_TEXT_HEADER  := $(GENERATED_DATA_OUT_DIR)/items_expansion_content_text.h
+GENERATED_DATA_CONTENT_TEXT_CATALOG := $(GENERATED_DATA_OUT_DIR)/items_expansion_content_text.json
+GENERATED_DATA_CONTENT_TEXT_STAMP   := $(GENERATED_DATA_OUT_DIR)/.starter_content.stamp
+
+.PHONY: FORCE_GENERATED_DATA_CONTENT_TEXT
+FORCE_GENERATED_DATA_CONTENT_TEXT:
+
+$(GENERATED_DATA_CONTENT_TEXT_STAMP): FORCE_GENERATED_DATA_CONTENT_TEXT
+	@mkdir -p "$(@D)"
+	@printf 'starter_content=%s item_id_cap=%s\n' \
+		'$(EXPANSION_STARTER_CONTENT)' '$(GENERATED_DATA_ITEM_CAP)' > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+
+$(GENERATED_DATA_CONTENT_TEXT_HEADER): \
+		$(GENERATED_DATA_CONTENT_TEXT_STAMP) \
+		$(GENERATED_DATA_SHARED_PY_SOURCES) \
+		$(wildcard scripts/generated_data/items/*.py) \
+		src/data/items.json \
+		src/data/items_expansion.json \
+		include/constants/items.h \
+		include/constants/items_expansion.h
+	@mkdir -p $(GENERATED_DATA_OUT_DIR)
+	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
+
+# The audit catalog is written by that same one recipe.
+$(GENERATED_DATA_CONTENT_TEXT_CATALOG): $(GENERATED_DATA_CONTENT_TEXT_HEADER)
+
+# Standalone entry point (contributor convenience + host tests): honours the
+# same EXPANSION_STARTER_CONTENT value and writes only under build/.
+.PHONY: generated-data-content-text
+generated-data-content-text:
+	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
 
 # Each linked table's top-level generated C symbol name(s) -- used by
 # generated-data-link-check to prove exactly one definition of each links

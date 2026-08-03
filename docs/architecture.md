@@ -31,6 +31,32 @@ hand-editing generated C under `build/generated/data/` is not.
 - Contributor walkthrough: [`docs/generated_data_tutorial.md`](generated_data_tutorial.md)
 - Discoverable table/record registry: [`reports/generated_data_manifest.md`](../reports/generated_data_manifest.md)
 
+
+## Starter extension layer (issue #6)
+
+Four independent, fingerprinted flags default to off: mechanics hooks, the
+content-free sample mechanic, the Threat Range menu, and starter content.
+`include/expansion_mechanics.h` exposes the typed fixed-capacity battle-stat
+registry; callbacks receive a mutable subject plus a read-only opponent/config
+context, with explicit capacity, lifetime-copy, duplicate, length, disabled,
+and reentrancy behavior. The typed `ITEM_EXPANSION_CE` example is authored by
+the generated-data/content-text pipeline and requires both the hooks flag and
+an active item cap of at least `0xCE`. Full API, dependency, debug/release,
+positive/negative runtime, budget, save, and legal boundaries:
+[`starter_features.md`](starter_features.md).
+
+## Localization layer (issue #18)
+
+`texts/expansion/registry.json` and `catalog.en.json` are the stable source of
+truth for append-only `ExpansionMsgId` values and English strings;
+`ExpansionLocaleId` reserves stable locale slots. The modern runtime links the
+English catalog and the derived `qps-ploc` QA transform, an EWRAM resolver
+cache, checksummed locale preferences inside the existing save metadata,
+first-start selection/repair, and a Config settings submenu. This is
+independent of vanilla `MSG_*`/`GetLang()` state. Full authoring, save
+precedence/migration, runtime/shifted/budget matrices, and legal non-goals:
+[`localization.md`](localization.md) and [`save_format.md`](save_format.md).
+
 ## Config identity & save format
 
 - `config.mk` (root, committed) plus `modern.mk`'s `MODERN_CONFIG`/
@@ -92,7 +118,7 @@ hand-editing generated C under `build/generated/data/` is not.
   fingerprint review"), and relocation-independent probes rather than a
   proc ROM-pointer oracle. The supported CI host matrix is Ubuntu +
   `arm-none-eabi` — see
-  [`docs/framework-support.md`](framework-support.md#merged-framework-contracts-issues-10-11-13)
+  [`docs/framework-support.md`](framework-support.md#merged-framework-contracts)
   and `reports/gba_playtest_issue13_closure.md` for the scenario-by-
   scenario DONE evidence.
 
@@ -106,34 +132,30 @@ manually apply patches. Nothing in it auto-applies, merges, commits,
 branches, pushes, or fetches without an explicit subcommand. Full
 reference: [`docs/upstream-porting.md`](upstream-porting.md).
 
-## Public extension boundaries — merged (#10/#11/#13) vs. active (#6/#9/#18)
+## Public extension boundaries
 
-**Merged, supported today** (see [`docs/framework-support.md`](framework-support.md#merged-framework-contracts-issues-10-11-13) and each closure report for exact bounds — this section only summarizes):
+**Merged into the current source tree** (this is a source-state statement,
+not a GitHub issue-state/closure action):
 
-- **Issue #10 — typed IDs / extensible content-ID contracts, limits.** The
-  DEFAULT/ACTIVE ID-space contract (`include/id_space.h`, `docs/id_space.md`,
-  `reports/id_space_audit.md`) is the current public interface. Migrations
-  for domains beyond the item-ID cap raise are not built — see
-  `reports/issue10_closure.md`'s explicit non-goals before assuming otherwise.
-- **Issue #11 — debug-tools extension/config/safety interface.** The
-  registration API, hotkey hub entry points, five bounded validated tools,
-  and structured diagnostics are the current, supported surface (see above
-  and `docs/debugtools.md`). `mgba_printf`/interactive-debugger/memory-editor
-  remain explicit non-goals, not a gap in this closure.
-- **Issue #13 — regression-scenario library, host matrix, runtime-verification
-  policy.** `tools/gba-playtest` now provides the full deterministic
-  scenario suite, host-only vs. normal run modes, and retry/timeout/
-  provenance policy described in its own `README.md`; the supported CI host
-  matrix is Ubuntu + `arm-none-eabi` (see `docs/framework-support.md`).
+- **#6 starter features:** four default-off flags, typed mechanics registry,
+  generated `ITEM_EXPANSION_CE` content-text example, and Threat Range QoL.
+  No second registry, persisted option, new graphics, borrowed vanilla text,
+  or broad content pack is promised.
+- **#10 typed IDs:** DEFAULT/ACTIVE ID-space contracts and the modern-only
+  item-cap pilot. Character/class/chapter/unit widening remains out of scope.
+- **#11 debug tools:** release-safe registration/hub/five bounded tools and
+  scalar diagnostics; no arbitrary memory editor or interactive debugger.
+- **#13 regression harness:** deterministic host-only and live libmGBA
+  scenarios; Ubuntu is the CI host, while macOS is local-only support.
+- **#18 localization:** stable locale/message IDs, English plus derived pseudo
+  catalog, resolver/cache, checksummed prefs, first-start/settings UI, runtime
+  and budget gates. Reserved locale IDs are not translations; no foreign
+  copyrighted catalog is shipped.
 
-**Active/unmerged — do not read as current support:**
-
-- **Issue #6** (starter expansion feature bundle), **issue #9** (versioned
-  releases/downstream upgrades), and **issue #18** (in-game multilingual
-  support) are open. No public hook-registry, release/versioning, or
-  language-selection API exists in this baseline; this document makes no
-  current-stability or completeness claim for any of them, and no GitHub
-  issue-state (open/closed) claim either.
+**Future-only #9 boundary:** no release automation, tag/changelog contract,
+versioned artifacts, or downstream updater exists. The present governance
+policy and [`release-migration-template.md`](release-migration-template.md)
+are not a release process.
 
 ## See also
 

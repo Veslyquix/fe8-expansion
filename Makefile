@@ -75,6 +75,10 @@ ASFLAGS  := -mcpu=arm7tdmi -mthumb-interwork -I include
 
 include generated_data.mk
 
+# Issue #18 sprint 1: fast, Python-only localization catalog targets
+# (validate/generate/check/test/budget); see localization.mk for details.
+include localization.mk
+
 #### Files ####
 
 C_SUBDIR = src

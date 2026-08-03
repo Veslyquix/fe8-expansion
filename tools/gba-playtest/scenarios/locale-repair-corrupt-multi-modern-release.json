@@ -1,0 +1,695 @@
+{
+  "schema_version": 1,
+  "name": "locale-repair-corrupt-multi-modern-release",
+  "description": "Issue #18 sprint 7 real repair-matrix scenario -- the corrupt ExpansionUserPrefs sub-state on a real two-locale (en, qps-ploc) EXPANSION_ENABLED_LOCALES=en,qps-ploc EXPANSION_PSEUDO_LOCALE=1 release ROM, proving the *actual multi-locale prompt/choose-default repair path* (never AUTO_SELECT, which only exists for single-locale builds and was the whole gap this scenario closes) end to end. Fixture: PREFS_STATE_CORRUPT -- magic/version/localeId are all otherwise valid but the stored 16-bit checksum has been XORed with 0xFFFF, exactly the 'bit-rot/partial-write' shape ExpansionUserPrefs_ValidateRaw() classifies CORRUPT rather than UNSET (tools/gba-playtest/tests/locale_prefs_fixture.py, corrupt.sav, built via build_prefs_fixture_image()/build_prefs_reserved_bytes()). Boots through the real debug/release health-safety-screen skip cadence (A@90-95, START@155-160, A@220-225, START@285-290 -- identical, real input on both configs; only the gExpansionLanguageMenuProbe EWRAM base differs, 0x2031588 here vs the other config's own base). Checkpoint 'pre-repair-selector-shown' (frame 600) proves the real blocking first-start selector actually reached ExpansionLanguageMenu_RuntimeInit's EXPANSION_LANGUAGE_STARTUP_SHOW_MENU branch (never AUTO_SELECT, since enabledLocaleCount=2 here): active=1, promptShown=1, autoSelected=0, promptReason=EXPANSION_LANGUAGE_PROMPT_CORRUPT (0x02), prefsState=EXPANSION_USER_PREFS_CORRUPT (0x01), needsPreferenceRepair=1 (ExpansionUserPrefs_Normalize()'s own requiresPrompt output), and currentLocale=0x00 -- the runtime's current fallback is English even though no record has been adopted yet (the SHOW_MENU branch deliberately never calls ExpansionLocale_SetCurrent() before a real player choice is committed -- see ExpansionLanguageMenu_RuntimeInit's own comment -- so this 0x00 is EWRAM's cold-boot zero value, which happens to equal FE8_EXPANSION_DEFAULT_LOCALE_ID/EXPANSION_LOCALE_EN). Real navigation then proves this is a genuine player choice, never an implicit auto-dismiss: DOWN (frames 650-656) moves the cursor onto the qps-ploc row (checkpoint 'selector-after-navigate-down', frame 680, a real screen-render change -- framebuffer_hash differs from frame 600's), then UP (frames 710-716) moves it back onto the English row (checkpoint 'selector-after-navigate-back-to-en', frame 740, framebuffer_hash verified byte-identical to frame 600's own hash -- real proof the cursor round-tripped back to the exact same visual state, not merely 'never moved'), and only then A (frames 780-786) confirms the English row -- the SAME row the runtime was already falling back to. Checkpoint 'post-repair-committed' (frame 900) is the core proof this sprint closes: active 1->0 (selector dismissed), cacheGeneration 0x0000->0x0001 (a real ExpansionUserPrefs_Store() call actually happened -- issue #18 sprint 6's needsPreferenceRepair/mustRepair fix in ExpansionLanguageMenu_RowSelected is what makes this fire even though the chosen locale (en) equals the runtime's own previous/fallback value), needsPreferenceRepair 1->0 (repair obligation cleared), and the real persisted 12-byte ExpansionUserPrefs record (SRAM offset 0x73d4) now reads magic=0xa5/version=0x01/localeId=0x00/flags=0x01 (EXPLICIT) byte-for-byte -- a genuine durable write, not merely an EWRAM-only state change. Both this checkpoint and the frame-5 'pre-runtimeinit-sram-baseline' checkpoint hash the WHOLE 0x8000 SRAM image excluding only the three same pre-existing, locale-unrelated regions every other no-wipe scenario in this suite excludes (the vanilla SoundRoomSaveData struct, 36 bytes at 0x7224; SramInit()'s own hardware self-test scratch pad, 4 bytes at 0x73a0; and the 12-byte ExpansionUserPrefs sub-record itself, the only region this repair path is allowed to rewrite) -- both hashes are byte-identical, real, empirical proof that repairing this corrupt record never touched any other byte of SRAM (no InitGlobalSaveInfodata()-style full wipe, no adjacent-region bleed). The same per-byte probes of the SramInit() self-test pad, ExpansionSaveMeta's own magic/checksum bytes, and the not-yet-populated XMAP save header (magic/checksum/save_magic32, all still 0x00) are read at both checkpoints too, individually confirming those specific known-stable regions rather than only trusting the whole-image hash. A literal A+B+SELECT+START soft reset (frames 1000-1024, the real GBA BIOS/hardware combination, sent through the same per-frame setKeys()/ runFrame() path as every other input here -- never a host-side core->reset() call) is then sent on the SAME SRAM chip state (never swapped/reloaded). Checkpoint 'post-reset-ewram-fresh' (frame 1050) proves a genuine reboot happened: every gExpansionLanguageMenuProbe field is back to cold-boot zero (active/promptShown/prefsState/needsPreferenceRepair/startupRunCount all 0x00/0x0000 -- AGB crt0's own BSS clear + AgbMain cold entry genuinely re-ran), while the persisted SRAM localeId byte (0x73d6) still reads 0x00 (English) -- proving the SRAM chip alone carried the repaired choice across the reset. The same real health-safety-skip cadence replays at the equivalent post-reset offsets (A@1090-1095, START@1155-1160, A@1220-1225, START@1285-1290), and the final checkpoint 'post-reset-selector-skipped-en-restored' (frame 1740) is the complete repair-and-persistence proof: active stays 0x00 and promptShown is 0x00 (the blocking selector correctly did NOT reappear -- ExpansionUserPrefs_Normalize() now finds the just-repaired VALID record instead of the original EXPANSION_USER_PREFS_CORRUPT state), prefsState reads 0x05 (EXPANSION_USER_PREFS_VALID -- this second boot's own real classification of the repaired on-disk record is the empirical proof 'prefs classification VALID' actually holds, not merely inferred from the first boot's cacheGeneration bump), and currentLocale reads 0x00 (English) again WITHOUT the player re-selecting anything -- loaded straight from the surviving, repaired SRAM record. No SRAM image is swapped mid-scenario, no host-side reset call is used, no fixture shortcut substitutes for a real ExpansionUserPrefs_Store()/reboot, and no locale is ever hardcoded/oracle-asserted beyond these real captured probe bytes.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "UP"
+      ]
+    },
+    {
+      "start": 780,
+      "end": 786,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1000,
+      "end": 1024,
+      "keys": [
+        "A",
+        "B",
+        "SELECT",
+        "START"
+      ]
+    },
+    {
+      "start": 1090,
+      "end": 1095,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1155,
+      "end": 1160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1220,
+      "end": 1225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1285,
+      "end": 1290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 5,
+      "framebuffer": false,
+      "name": "pre-runtimeinit-sram-baseline",
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "offset": 29220,
+          "length": 36
+        },
+        {
+          "offset": 29600,
+          "length": 4
+        },
+        {
+          "offset": 29652,
+          "length": 12
+        }
+      ],
+      "probes": [
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "expected": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "expected": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "expected": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "expected": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "expected": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "expected": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "pre-repair-selector-shown",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031590",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031594",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031596",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031598",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 680,
+      "framebuffer": true,
+      "name": "selector-after-navigate-down",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 740,
+      "framebuffer": true,
+      "name": "selector-after-navigate-back-to-en",
+      "expected_framebuffer_hash": "fnv1a64-rgb24:10803abdfb3ebc5f",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "expected": "0x01"
+        }
+      ]
+    },
+    {
+      "frame": 900,
+      "framebuffer": true,
+      "name": "post-repair-committed",
+      "sram_hash": true,
+      "sram_hash_exclude_ranges": [
+        {
+          "offset": 29220,
+          "length": 36
+        },
+        {
+          "offset": 29600,
+          "length": 4
+        },
+        {
+          "offset": 29652,
+          "length": 12
+        }
+      ],
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e0073d4",
+          "size": 1,
+          "expected": "0xa5"
+        },
+        {
+          "address": "0x0e0073d5",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e0073d7",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x0e0073dc",
+          "size": 1
+        },
+        {
+          "address": "0x0e0073dd",
+          "size": 1
+        },
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "expected": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "expected": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "expected": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "expected": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "expected": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "expected": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "expected": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 1050,
+      "framebuffer": false,
+      "name": "post-reset-ewram-fresh",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031590",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031594",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031596",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031598",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 1740,
+      "framebuffer": true,
+      "name": "post-reset-selector-skipped-en-restored",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "expected": "0x05"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031590",
+          "size": 1,
+          "expected": "0x02"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031594",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x0203159a",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    }
+  ]
+}

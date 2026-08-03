@@ -6,7 +6,7 @@ governance closure. Verifies, over every tracked (and, in a dev worktree,
 untracked-but-not-ignored) file whose extension is one of a small,
 explicit, documented set of recognized Markdown extensions
 (``RECOGNIZED_MARKDOWN_EXTENSIONS`` -- ``.md``, ``.markdown``, ``.mdown``,
-``.mkd``, matched case-insensitively) in this repository:
+``.mkd``, ``.mkdn``, matched case-insensitively) in this repository:
 
   1. Internal relative links/images resolve to a real in-repo path, and
      ``file.md#anchor`` anchors resolve against a deterministic,
@@ -80,10 +80,10 @@ REGISTRY_PATH = "docs/external-link-registry.md"
 # resolution, external-URL registry coverage, stale-phrase/object-count
 # scanning) uses this same set via ``discover_markdown_files()`` below --
 # never a bare ``*.md`` glob, which would silently miss a real Markdown
-# file using one of the other three recognized extensions. This is
+# file using one of the other four recognized extensions. This is
 # deliberately a fixed, closed set: an unrecognized extension (``.txt``,
 # ``.mdx``, ...) is never swept in just because it looks Markdown-adjacent.
-RECOGNIZED_MARKDOWN_EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd")
+RECOGNIZED_MARKDOWN_EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".mkdn")
 
 INVENTORY_BEGIN = "<!-- DOCS-INVENTORY:BEGIN -->"
 INVENTORY_END = "<!-- DOCS-INVENTORY:END -->"
@@ -480,7 +480,7 @@ def discover_markdown_files(root):
     Deliberately lists the *entire* tracked+untracked file set (no ``--
     '*.md'`` pathspec glob) and filters by ``RECOGNIZED_MARKDOWN_EXTENSIONS``
     in Python: a pathspec glob only ever matches a literal ``.md`` suffix,
-    so it would silently miss a real ``.markdown``/``.mdown``/``.mkd`` file
+    so it would silently miss a real ``.markdown``/``.mdown``/``.mkd``/``.mkdn`` file
     (or an uppercase ``.MD``) entirely -- never even reaching inventory
     coverage, link/anchor resolution, external-URL registry coverage, or
     stale-phrase/object-count scanning. An ignored file with a recognized

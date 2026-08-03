@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "name": "locale-blank-sram-no-selector-default-modern-debug",
+  "description": "Issue #18 sprint 4 contract evidence: booting the default (single-enabled-locale, en) modern debug ROM from a genuinely blank (all-0xFF) SRAM chip never shows the blocking first-start language selector. src/bmsave-lib.c's BuildCurrentExpansionSaveMeta() (called from EraseSramDataIfInvalid()/InitGlobalSaveInfodata() at the very start of AgbMain, before ExpansionLanguageMenu_RuntimeInit ever runs) already stamps a fully VALID default ExpansionUserPrefs record into any SAVE_COMPAT_EMPTY image -- a deliberate, already-tested (scripts/modernize/tests/test_save_format_tool.py) issue #18 sprint 2 design decision, documented in docs/localization.md. gExpansionLanguageMenuProbe (0x02031a94) confirms: prefsState=VALID (0x05), promptShown=0, active=0, autoSelected=0 -- the resolver silently applies the stored (default en) locale with no visible UI, at both an early and a long-run checkpoint. Uses only the health/safety+Nintendo+IS logo skip presses (SKIP_HS) -- no further input is needed or given, since APPLY_ONLY never blocks on anything.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "post-startup-settled",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x05"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        }
+      ]
+    },
+    {
+      "frame": 1400,
+      "framebuffer": true,
+      "name": "long-run-still-no-selector",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2
+        }
+      ]
+    }
+  ]
+}

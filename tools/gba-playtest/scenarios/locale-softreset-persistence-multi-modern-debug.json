@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "name": "locale-softreset-persistence-multi-modern-debug",
+  "description": "Real, actual-hardware soft-reset persistence proof (issue #18 sprint 5 WHAT #4), never a fixture swap or a re-invoked capture pretending to be a reboot: boots the two-locale (en, qps-ploc) debug ROM from the same real UNSET ExpansionUserPrefs fixture as locale-selector-multi-switch-qps-modern-debug.json and replays that scenario's exact real first-run selector input verbatim (health/safety-skip A/START taps at frames 90-285, then a real DOWN+A at frames 650/700 on the real, live blocking first-start ExpansionLanguageMenu selector) so a genuine player choice of qps-ploc is committed: checkpoint at frame 800 confirms active 0x01->0x00 (selector dismissed) and currentLocale 0x00->0x07 (qps-ploc), exactly matching the base scenario's own proven frame-800 state. Then, with the selection settled, a real A+B+SELECT+START held for 24 frames (900-924) is sent through the SAME per-frame setKeys()/runFrame() backend path as every other input in this suite -- this is the real GBA BIOS/hardware soft-reset key combination, not a custom debug hotkey and not a host-side core->reset() call issued by this scenario or its harness. The very next checkpoint (frame 950) proves a genuine full reboot actually happened: EVERY EWRAM gExpansionLanguageMenuProbe field is back to its cold-boot-zero state (active=0x00, currentLocale=0x00, startupRunCount=0x0000 -- indistinguishable from a true fresh power-on, because AGB crt0's BSS clear + AgbMain cold entry genuinely ran again), while the persisted SRAM ExpansionUserPrefs record's localeId byte (0x0e0073d6) still reads 0x07 (qps-ploc) -- proving the emulator's SRAM chip state (a real, continuous backing store across the reset, never swapped, cleared, or reloaded from a different fixture by this scenario) is the ONLY thing carrying the choice across the reset, exactly like a real GBA cartridge. The scenario then replays the exact same relative health/safety-skip cadence used for the very first boot (A/START at the same +90/+155/+220/+285 frame offsets from the reset point) to let the second, post-reset boot run to the equivalent point in its own startup -- and the final checkpoint (frame 1640) is the complete real persistence proof: active stays 0x00 and promptShown is 0x00 (the blocking first-run selector did NOT reappear -- 'selector skipped' -- because ExpansionUserPrefs_Normalize found an already-VALID persisted record instead of the UNSET state that triggered it the first time), while currentLocale reads 0x07 (qps-ploc) again WITHOUT the player re-selecting anything -- the runtime resolver loaded it straight from the surviving SRAM record. No SRAM image is swapped mid-scenario, no host-side reset call is used, and no locale is ever hardcoded/oracle-asserted beyond these real captured probe bytes.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 700,
+      "end": 706,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 924,
+      "keys": [
+        "A",
+        "B",
+        "SELECT",
+        "START"
+      ]
+    },
+    {
+      "start": 1090,
+      "end": 1095,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1155,
+      "end": 1160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 1220,
+      "end": 1225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1285,
+      "end": 1290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": false,
+      "name": "pre-reset-selector-shown",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        }
+      ]
+    },
+    {
+      "frame": 800,
+      "framebuffer": false,
+      "name": "pre-reset-qps-committed",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2
+        }
+      ]
+    },
+    {
+      "frame": 950,
+      "framebuffer": false,
+      "name": "post-reset-ewram-fresh",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1
+        }
+      ]
+    },
+    {
+      "frame": 1640,
+      "framebuffer": true,
+      "name": "post-reset-selector-skipped-qps-restored",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2
+        }
+      ]
+    }
+  ]
+}

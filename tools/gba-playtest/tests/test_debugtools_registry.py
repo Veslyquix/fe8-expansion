@@ -363,9 +363,67 @@ class DebugToolsScenarioSchemaTests(unittest.TestCase):
         scenario, data = self._load("debugtools-hub-modern-release.json")
         self.assertEqual(scenario.name, "debugtools-hub-modern-release")
         self.assertEqual(len(data["checkpoints"]), 7)
+
+        # (1) No framebuffer oracle anywhere. The former frozen-screen hash
+        # (d11078d0) was a vacuous compiled-out proof: a frozen screen
+        # trivially matched a frozen-screen hash regardless of whether
+        # debugtools linked, so the world-map UB fix (which unfroze the
+        # screen) turned it into a false negative. Every checkpoint must now
+        # capture relocation-independent semantic memory only.
         for checkpoint in data["checkpoints"]:
-            for probe in checkpoint["probes"]:
-                self.assertEqual(probe["expected"], "0x00000000")
+            self.assertFalse(
+                checkpoint["framebuffer"],
+                f"{checkpoint['name']} must not capture a framebuffer",
+            )
+            self.assertNotIn("expected_framebuffer_hash", checkpoint)
+
+        by_name = {c["name"]: c for c in data["checkpoints"]}
+
+        def probe(checkpoint, address):
+            for p in checkpoint["probes"]:
+                if p["address"] == address:
+                    return p
+            self.fail(f"checkpoint {checkpoint['name']} does not probe {address}")
+
+        # (2) Compiled-out proof: the always-linked gDebugToolsProbe stays
+        # all-zero at every checkpoint (hub never opens, no launcher armed,
+        # the idle-timer setter never runs).
+        zero_fields = (
+            "0x02031504", "0x02031508", "0x0203150c", "0x02031510",
+            "0x02031514", "0x02031518", "0x0203151c",
+        )
+        for checkpoint in data["checkpoints"]:
+            for addr in zero_fields:
+                self.assertEqual(
+                    probe(checkpoint, addr)["expected"], "0x00000000",
+                    f"{checkpoint['name']} gDebugToolsProbe {addr} must be all-zero",
+                )
+
+        # (3) Semantic progress/liveness: the inert START/A taps drive the
+        # vanilla title -> new-game path into the live opening world-map
+        # sequence. chapterIndex advances 0x00 (title) -> 0x10 (world map),
+        # faction 0x00 -> 0x40 (NPC), map cursor 0x0000 -> 0x000e. That exact
+        # transition is impossible on the pre-fix -O2 build, which locked
+        # with chapterIndex stuck at 0x00 (frozen-vs-fixed capture evidence
+        # is recorded in reports/issue6_foundation_evidence.md).
+        title = by_name["title-idle-preboot-inert"]
+        self.assertEqual(probe(title, "0x020210ae")["expected"], "0x00")
+        self.assertEqual(probe(title, "0x020210af")["expected"], "0x00")
+        self.assertEqual(probe(title, "0x02021100")["expected"], "0x0000")
+        world_map = by_name["worldmap-intro-live-progress"]
+        self.assertEqual(probe(world_map, "0x020210ae")["expected"], "0x10")
+        self.assertEqual(probe(world_map, "0x020210af")["expected"], "0x40")
+        self.assertEqual(probe(world_map, "0x02021100")["expected"], "0x000e")
+
+        # (4) The progress scalar must actually CHANGE across the scenario
+        # (liveness): a still/frozen build reads one constant value.
+        chapter_values = {
+            probe(c, "0x020210ae")["expected"] for c in data["checkpoints"]
+        }
+        self.assertEqual(
+            chapter_values, {"0x00", "0x10"},
+            "chapterIndex must transition title(0x00) -> world map(0x10) across checkpoints",
+        )
 
     def test_debug_and_release_scenarios_use_identical_input_script(self):
         _, debug_data = self._load("debugtools-hub-modern-debug.json")
@@ -388,8 +446,13 @@ class DebugToolsScenarioSchemaTests(unittest.TestCase):
         debug_addrs = [p["address"] for p in debug_data["checkpoints"][0]["probes"]]
         release_addrs = [p["address"] for p in release_data["checkpoints"][0]["probes"]]
         self.assertNotEqual(debug_addrs, release_addrs)
-        self.assertEqual(len(debug_addrs), 4)
-        self.assertEqual(len(release_addrs), 4)
+        # Release reads its own gDebugToolsProbe base (0x02031504) and never
+        # the debug build's (0x02031818); debug reads the opposite. This
+        # survives the release scenario growing semantic progress probes.
+        self.assertIn("0x02031504", release_addrs)
+        self.assertNotIn("0x02031818", release_addrs)
+        self.assertIn("0x02031818", debug_addrs)
+        self.assertNotIn("0x02031504", debug_addrs)
 
     def test_debug_scenario_has_two_hotkey_pulses_before_the_select(self):
         """Review-fix regression: the reviewer reproduced hubOpenCount=2 by
@@ -1831,21 +1894,65 @@ class DebugToolsMapPrepScenarioSchemaTests(unittest.TestCase):
         self.assertEqual(probe(closed, "0x02021104")["expected"], "0x06")  # cursor x, before final RIGHT
         self.assertEqual(probe(interactive, "0x02021104")["expected"], "0x07")  # cursor x, after final RIGHT
 
+    def _assert_release_worldmap_negative(self, data, zero_fields):
+        """Shared invariant for the map/prep release mirrors: no framebuffer
+        oracle, all-zero gDebugToolsProbe compiled-out fields, and the live
+        opening world-map progress scalars (which read 0x00 on the pre-fix
+        frozen build)."""
+        def probe(checkpoint, address):
+            for p in checkpoint["probes"]:
+                if p["address"] == address:
+                    return p
+            self.fail(f"checkpoint {checkpoint['name']} does not probe {address}")
+
+        for checkpoint in data["checkpoints"]:
+            self.assertFalse(
+                checkpoint["framebuffer"],
+                f"{checkpoint['name']} must not capture a framebuffer",
+            )
+            self.assertNotIn("expected_framebuffer_hash", checkpoint)
+            for addr in zero_fields:
+                self.assertEqual(
+                    probe(checkpoint, addr)["expected"], "0x00000000",
+                    f"{checkpoint['name']} gDebugToolsProbe {addr} must be all-zero",
+                )
+            # Live world-map progress reached (0x00 on the frozen pre-fix
+            # build): chapterIndex 0x10, faction 0x40 (NPC), map cursor 0x0e.
+            # Held constant across the appended hotkey tail == the hotkey is
+            # inert (never opens a hub / never changes game state).
+            self.assertEqual(probe(checkpoint, "0x020210ae")["expected"], "0x10")
+            self.assertEqual(probe(checkpoint, "0x020210af")["expected"], "0x40")
+            self.assertEqual(probe(checkpoint, "0x02021100")["expected"], "0x000e")
+
     def test_map_release_scenario_is_schema_valid(self):
         scenario, data = self._load("debugtools-map-hub-modern-release.json")
         self.assertEqual(scenario.name, "debugtools-map-hub-modern-release")
         self.assertEqual(len(data["checkpoints"]), 4)
-        for checkpoint in data["checkpoints"]:
-            for probe in checkpoint["probes"]:
-                self.assertEqual(probe["expected"], "0x00000000")
+        self._assert_release_worldmap_negative(
+            data,
+            zero_fields=(
+                "0x02031504", "0x02031508", "0x0203150c", "0x02031510",
+                "0x02031514", "0x02031518", "0x0203151c",
+            ),
+        )
 
     def test_prep_release_scenario_is_schema_valid(self):
         scenario, data = self._load("debugtools-prep-hub-modern-release.json")
         self.assertEqual(scenario.name, "debugtools-prep-hub-modern-release")
         self.assertEqual(len(data["checkpoints"]), 4)
-        for checkpoint in data["checkpoints"]:
-            for probe in checkpoint["probes"]:
-                self.assertEqual(probe["expected"], "0x00000000")
+        # The prep mirror additionally proves the prep-specific launcher
+        # fields (pendingCh4PrepLaunchRequest / ch4PrepLauncherArmed /
+        # ch4PrepLaunchRequestConsumedCount / prepScreenObservedCount) are
+        # all-zero: the SELECT+B hotkey and its Ch4-Prep launcher are
+        # compiled out. This release input never reaches a real prep screen
+        # (documented honest scope), only the live opening world map.
+        self._assert_release_worldmap_negative(
+            data,
+            zero_fields=(
+                "0x02031504", "0x02031508", "0x0203150c", "0x02031510",
+                "0x02031534", "0x02031538", "0x0203153c", "0x02031540",
+            ),
+        )
 
     def test_map_and_prep_release_scenarios_reuse_the_hub_release_scenarios_frames(self):
         """Both release mirrors must replay debugtools-hub-modern-release.json's
@@ -1886,27 +1993,93 @@ class DebugToolsMapPrepScenarioSchemaTests(unittest.TestCase):
         prep_hotkey_frames = [f for f in prep_tail if set(f["keys"]) == {"SELECT", "B"}]
         self.assertEqual(len(prep_hotkey_frames), 2)
 
-    def test_map_and_prep_release_scenarios_stay_at_the_frozen_release_frame(self):
-        """Every checkpoint in both release mirrors must assert the exact
-        same expected_framebuffer_hash as debugtools-hub-modern-release.json's
-        own final checkpoints -- proving the appended map/prep hotkey tail
-        causes zero visible change in a release build, not merely that
-        gDebugToolsProbe stays zero."""
-        # debugtools-hub-modern-release.json itself does not embed inline
-        # expected_framebuffer_hash values (only its fingerprint does), so
-        # this is the same literal hash independently captured for both
-        # new release mirrors below via `gba_playtest.py capture`.
-        frozen_hash = "fnv1a64-rgb24:d11078d0ec60076d"
-        for name in (
+    def test_release_negatives_forbid_any_framebuffer_and_require_semantic_probes(self):
+        """Standing guard (issue #6 sprint 1 gate remediation) replacing the
+        former "stay at the frozen release frame" test.
+
+        The three debugtools release negatives -- hub, map, prep -- must
+        never again use a framebuffer oracle. The old frozen-screen hash
+        (d11078d0) vacuously "passed" only because the world-map UB froze
+        the screen, so a frozen-screen hash matched whether or not
+        debugtools was compiled out; once the Proc_FindNext NULL-guard fix
+        unfroze the screen it became a false negative. Each release scenario
+        AND its fingerprint must instead carry: (a) zero framebuffer
+        captures, (b) all-zero gDebugToolsProbe fields (compiled-out proof),
+        and (c) relocation-independent semantic progress probes -- with the
+        hub scenario exhibiting an actual chapterIndex change (liveness). No
+        4-byte probe may hold a pointer-range value."""
+        import json
+
+        release = (
+            "debugtools-hub-modern-release.json",
             "debugtools-map-hub-modern-release.json",
             "debugtools-prep-hub-modern-release.json",
-        ):
-            _, data = self._load(name)
-            for checkpoint in data["checkpoints"]:
-                self.assertEqual(
-                    checkpoint.get("expected_framebuffer_hash"), frozen_hash,
-                    f"{name} checkpoint {checkpoint['name']!r} must match the frozen release frame hash",
+        )
+        pointer_ranges = (
+            (0x02000000, 0x0203FFFF), (0x03000000, 0x03007FFF),
+            (0x08000000, 0x0DFFFFFF), (0x0E000000, 0x0E00FFFF),
+        )
+
+        def in_pointer_range(value):
+            return any(lo <= value <= hi for lo, hi in pointer_ranges)
+
+        for name in release:
+            _, sdata = self._load(name)
+            fpath = REPO_ROOT / "tools" / "gba-playtest" / "fingerprints" / name
+            fdata = json.loads(fpath.read_text(encoding="utf-8"))
+
+            # (a) No framebuffer anywhere -- scenario or fingerprint.
+            for checkpoint in sdata["checkpoints"]:
+                self.assertFalse(
+                    checkpoint["framebuffer"],
+                    f"{name}:{checkpoint['name']} must not capture a framebuffer",
                 )
+                self.assertNotIn("expected_framebuffer_hash", checkpoint)
+            for checkpoint in fdata["checkpoints"]:
+                self.assertNotIn(
+                    "framebuffer_hash", checkpoint,
+                    f"{name} fingerprint {checkpoint['name']!r} must not carry a framebuffer hash",
+                )
+
+            # (b) all-zero gDebugToolsProbe base + (c) semantic scalar,
+            # per checkpoint; and no pointer-valued 4-byte probe.
+            for checkpoint in sdata["checkpoints"]:
+                addrs = {p["address"]: p for p in checkpoint["probes"]}
+                for base in ("0x02031504", "0x02031508", "0x0203150c", "0x02031510"):
+                    self.assertIn(base, addrs, f"{name}:{checkpoint['name']} missing {base}")
+                    self.assertEqual(addrs[base]["expected"], "0x00000000")
+                semantic = [
+                    a for a in addrs
+                    if a in ("0x020210ae", "0x020210af", "0x020210bb", "0x02021100")
+                ]
+                self.assertTrue(
+                    semantic,
+                    f"{name}:{checkpoint['name']} must carry semantic progress probes, "
+                    "not a framebuffer-only oracle",
+                )
+                for p in checkpoint["probes"]:
+                    if p["size"] >= 4 and p.get("expected"):
+                        self.assertFalse(
+                            in_pointer_range(int(p["expected"], 16)),
+                            f"{name}:{checkpoint['name']} probe {p['address']} is a pointer oracle",
+                        )
+
+        # Suite-level liveness: the hub scenario must show a real progress
+        # CHANGE (title chapterIndex 0x00 -> world-map 0x10) that a frozen
+        # screen could never produce.
+        _, hub = self._load("debugtools-hub-modern-release.json")
+
+        def chapter_index(checkpoint):
+            for p in checkpoint["probes"]:
+                if p["address"] == "0x020210ae":
+                    return p["expected"]
+            self.fail(f"hub checkpoint {checkpoint['name']!r} missing chapterIndex probe")
+
+        values = {chapter_index(cp) for cp in hub["checkpoints"]}
+        self.assertEqual(
+            values, {"0x00", "0x10"},
+            "hub release scenario must exhibit the title -> world-map chapterIndex change",
+        )
 
 
 class DebugToolsCh4PrepLaunchScenarioSchemaTests(unittest.TestCase):

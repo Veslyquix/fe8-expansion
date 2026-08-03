@@ -31,6 +31,11 @@ and not a third-party Markdown/link-checker library.
 | `downstream-reference` | Projects/sites that consume this repo, kept for credits/context. |
 | `third-party-reference` | External tools/docs/services this project merely links to. |
 
+The issue #6/#18 Markdown merged into the current tree is covered by the
+same exact occurrence scan; it introduces no new unclassified host/prefix.
+This statement reflects offline syntax/registry coverage only, never an online
+availability check.
+
 ## Coverage note on prefix rule count
 
 `docs/tsa_audit.md` alone contributes several hundred pinned

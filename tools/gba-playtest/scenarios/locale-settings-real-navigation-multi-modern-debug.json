@@ -1,0 +1,617 @@
+{
+ "schema_version": 1,
+ "name": "locale-settings-real-navigation-multi-modern-debug",
+ "description": "Real, end-user-reachable Config/Options settings navigation proof (issue #18 sprint 5 WHAT #3): boots the two-locale (en, qps-ploc) debug ROM through the exact same genuine debug-tools boot+hub+Ch4-narration-advance input sequence already proven in debugtools-ch4-prep-positive-modern-debug.json (frames 0-3550, unchanged) to reach the real, live PrepScreenProc/gProcScr_SALLYCURSOR prep map screen -- this is actual in-game input via a legitimate shipped debug-tools hotkey, never a fixture or a direct ExpansionLanguageMenu_OpenSettings()/OpenSettings-style call. From the real 'View Map / Formation / Options / Save' prep map menu, DOWN,DOWN,A (frames 4400-4526) selects the real 'Options' item (PrepMapMenu_OnOptions -> PrepScreenProc_StartConfigMenu -> ProcScr_Config_PrepMapMenu, src/prep_sallycursor.c), landing on the real live Configuration screen. 13 further real DOWN presses (frames 4700-5426, src/uiconfig.c Config_Loop_KeyHandler) walk the cursor down gGameOptionsUiOrder to row 13 = GAME_OPTION_LANGUAGE (checkpoint at frame 5550 -- cursor sits on the real Language row; gExpansionLanguageMenuProbe.settingsActive is still 0x00, proving the settings submenu has NOT opened yet). A real RIGHT press (frame 5600) fires the real GAME_OPTION_LANGUAGE handler (LanguageOptionEntryHandler -> ExpansionLanguageMenu_OpenSettings, src/expansion_language_menu.c): checkpoint at frame 5800 shows settingsActive 0x00 -> 0x01 and settingsOpenCount 0x0000 -> 0x0001, definitive real proof the settings submenu actually opened via the real menu entry, not a direct function call. With the submenu open (row order is ascending ExpansionLocaleId for enabled locales -- English id 0 first, qps-ploc id 7 second, then the reserved Back row -- ExpansionLanguageMenu_BuildLocaleRows, src/expansion_language_menu.c), a real DOWN (frame 5900) moves off the current-locale (English) row onto the qps-ploc row, and a real A (frame 6000) selects it. Checkpoint at frame 6200 proves the real switch: currentLocale 0x00 -> 0x07 (qps-ploc), cacheGeneration 0x0000 -> 0x0001, settingsChangeCount 0x0000 -> 0x0001, and the submenu auto-closes back to the Configuration screen (settingsActive back to 0x00) as ExpansionLanguageMenu_RowSelected commits and returns; the checkpoint's framebuffer_hash also differs from the earlier English-locale frame-5550/settings-submenu-opened hashes, a real render-probe change accompanying the real locale switch. The persisted 12-byte ExpansionUserPrefs record (SRAM offset 0x73d4, include/expansion_save_prefs.h) is read back byte-by-byte (0x73d4 magic=0xa5, 0x73d5 version=0x01, 0x73d6 localeId=0x07, 0x73d7 flags=0x01=EXPLICIT, 0x73dc/0x73dd checksum) at frame 6350, confirming the real player choice was durably stored. A second real RIGHT (frame 6400) reopens the settings submenu a second time (checkpoint at 6500: settingsActive 0x00 -> 0x01, settingsOpenCount 0x0001 -> 0x0002, cursor now defaults to the current qps-ploc row -- selectedLocale probe 0x07), and this time a real B press (frame 6600, the reserved Back row's own MenuCancelSelect handler per its 'Back is always allowed here; never mutates prefs' contract) cancels back out WITHOUT selecting any row. The final checkpoint at frame 6800 proves Back genuinely never mutates prefs: settingsActive back to 0x00 (real close), settingsOpenCount now 0x0002 (a second real open genuinely happened), yet currentLocale/cacheGeneration/settingsChangeCount (0x07/0x0001/0x0001) and every one of the 6 persisted ExpansionUserPrefs bytes above are byte-identical to the frame-6350 snapshot taken before this second open+cancel round-trip -- real, targeted, non-whole-SRAM-hash proof that Back leaves the persisted preference untouched. Every probe here is a real EWRAM/SRAM byte read at a fixed address from this build's own ELF symbol table (gExpansionLanguageMenuProbe, include/expansion_language_menu.h, and the ExpansionUserPrefs record itself) -- no ROM/proc/pointer oracle is used or asserted, and no OpenSettings()-style fixture shortcut is used anywhere in this input sequence. Frame 5800 (\"settings-submenu-opened\", currentLocale still English) and frame 6500 (\"settings-reopened-second-time\", currentLocale now qps-ploc after the real in-menu switch above) additionally carry a \"back_row_label\" region probe (the on-screen tile row that draws the settings submenu's Back item via ExpansionLocale_ResolveCurrent(EXP_MSG_FRAMEWORK_BACK) -- src/expansion_language_menu.c's ExpansionLanguageMenu_RowDraw, the one row in this menu whose label is resolved in the CURRENT locale rather than always in English) plus two individual pixel probes inside that row. Real capture proves this region's hash and both pixel values differ between the two checkpoints (English renders \"Back\"; qps-ploc renders the deterministic bracket-wrapped/case-alternating/vowel-doubled pseudo-locale transform of the same catalog string, \"[[BaaCk]]\" -- see scripts/localization/pseudo.py), e.g. pixel (142,91) is a dark ink byte in the English capture and a light background byte in the qps-ploc capture, and pixel (66,93) is a dark ink byte in English vs. pure white in qps-ploc -- a real, screen-region/pixel-level semantic proof that the qps-ploc decoration marker is visible and differs from English at the same screen location (not merely a whole-framebuffer hash difference). Issue #18 sprint 6 (runtime blocker fix) note: this scenario boots against the modern.mk-provided valid_explicit_en.sav SRAM fixture (tools/gba-playtest/tests/locale_prefs_fixture.py's 'valid-explicit' state, English already selected+persisted) rather than blank/no-SRAM as before sprint 6 -- once src/bmsave-lib.c's BuildCurrentExpansionSaveMeta() was fixed to stop auto-stamping a syntactically VALID prefs record on multi-locale builds, genuinely blank SRAM on this same two-locale ROM now correctly shows the blocking first-start selector too (see locale-blank-sram-selector-multi-modern-debug.json), which would consume this scenario's own hardcoded early debug-tools-hotkey input timeline. This scenario's real subject is Options -> Configuration -> Language settings-submenu reachability/round-trip behavior (already past first boot), never first-start prompt reachability -- that is covered on its own by the blank-sram-selector-multi scenario -- so an explicit already-selected fixture is the correct, minimal way to keep testing exactly that without being shadowed by the (now correctly fixed) first-start selector.",
+ "frames": [
+  {
+   "start": 90,
+   "end": 95,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 150,
+   "end": 155,
+   "keys": [
+    "START"
+   ]
+  },
+  {
+   "start": 210,
+   "end": 215,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 270,
+   "end": 275,
+   "keys": [
+    "START"
+   ]
+  },
+  {
+   "start": 330,
+   "end": 335,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 390,
+   "end": 395,
+   "keys": [
+    "START"
+   ]
+  },
+  {
+   "start": 450,
+   "end": 455,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 600,
+   "end": 606,
+   "keys": [
+    "SELECT",
+    "R"
+   ]
+  },
+  {
+   "start": 650,
+   "end": 656,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 710,
+   "end": 716,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 770,
+   "end": 776,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 830,
+   "end": 836,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 900,
+   "end": 904,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 1300,
+   "end": 1306,
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "start": 1360,
+   "end": 1366,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 1650,
+   "end": 1655,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 1760,
+   "end": 1765,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 1870,
+   "end": 1875,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 1980,
+   "end": 1985,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2090,
+   "end": 2095,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2200,
+   "end": 2205,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2310,
+   "end": 2315,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2420,
+   "end": 2425,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2530,
+   "end": 2535,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2640,
+   "end": 2645,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2750,
+   "end": 2755,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2860,
+   "end": 2865,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 2970,
+   "end": 2975,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 3080,
+   "end": 3085,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 3250,
+   "end": 3255,
+   "keys": [
+    "START"
+   ]
+  },
+  {
+   "start": 3550,
+   "end": 3556,
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "start": 4400,
+   "end": 4406,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 4460,
+   "end": 4466,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 4520,
+   "end": 4526,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 4700,
+   "end": 4706,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 4760,
+   "end": 4766,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 4820,
+   "end": 4826,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 4880,
+   "end": 4886,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 4940,
+   "end": 4946,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5000,
+   "end": 5006,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5060,
+   "end": 5066,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5120,
+   "end": 5126,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5180,
+   "end": 5186,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5240,
+   "end": 5246,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5300,
+   "end": 5306,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5360,
+   "end": 5366,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5420,
+   "end": 5426,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 5600,
+   "end": 5606,
+   "keys": [
+    "RIGHT"
+   ]
+  },
+  {
+   "start": 5900,
+   "end": 5906,
+   "keys": [
+    "DOWN"
+   ]
+  },
+  {
+   "start": 6000,
+   "end": 6006,
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "start": 6400,
+   "end": 6406,
+   "keys": [
+    "RIGHT"
+   ]
+  },
+  {
+   "start": 6600,
+   "end": 6606,
+   "keys": [
+    "B"
+   ]
+  }
+ ],
+ "checkpoints": [
+  {
+   "frame": 4650,
+   "framebuffer": false,
+   "name": "config-open-before-language-row",
+   "probes": [
+    {
+     "address": "0x02031a94",
+     "size": 1
+    },
+    {
+     "address": "0x02031a95",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9b",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9e",
+     "size": 2
+    },
+    {
+     "address": "0x02031aa2",
+     "size": 2
+    }
+   ]
+  },
+  {
+   "frame": 5550,
+   "framebuffer": true,
+   "name": "cursor-on-language-row",
+   "probes": [
+    {
+     "address": "0x02031a95",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9b",
+     "size": 1
+    }
+   ]
+  },
+  {
+   "frame": 5800,
+   "framebuffer": true,
+   "name": "settings-submenu-opened",
+   "probes": [
+    {
+     "address": "0x02031a95",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9b",
+     "size": 1
+    },
+    {
+     "address": "0x02031aa2",
+     "size": 2
+    }
+   ],
+   "regions": [
+    {
+     "name": "back_row_label",
+     "x": 56,
+     "y": 88,
+     "width": 136,
+     "height": 8
+    }
+   ],
+   "pixel_probes": [
+    {
+     "x": 142,
+     "y": 91
+    },
+    {
+     "x": 66,
+     "y": 93
+    }
+   ]
+  },
+  {
+   "frame": 6200,
+   "framebuffer": true,
+   "name": "qps-ploc-selected",
+   "probes": [
+    {
+     "address": "0x02031a95",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9b",
+     "size": 1
+    },
+    {
+     "address": "0x02031a96",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9e",
+     "size": 2
+    },
+    {
+     "address": "0x02031aa2",
+     "size": 2
+    },
+    {
+     "address": "0x02031aa4",
+     "size": 2
+    }
+   ]
+  },
+  {
+   "frame": 6350,
+   "framebuffer": false,
+   "name": "prefs-before-second-open",
+   "probes": [
+    {
+     "address": "0x02031a9b",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9e",
+     "size": 2
+    },
+    {
+     "address": "0x02031aa4",
+     "size": 2
+    },
+    {
+     "address": "0x0e0073d4",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073d5",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073d6",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073d7",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073dc",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073dd",
+     "size": 1
+    }
+   ]
+  },
+  {
+   "frame": 6500,
+   "framebuffer": true,
+   "name": "settings-reopened-second-time",
+   "probes": [
+    {
+     "address": "0x02031a95",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9a",
+     "size": 1
+    },
+    {
+     "address": "0x02031aa2",
+     "size": 2
+    }
+   ],
+   "regions": [
+    {
+     "name": "back_row_label",
+     "x": 56,
+     "y": 88,
+     "width": 136,
+     "height": 8
+    }
+   ],
+   "pixel_probes": [
+    {
+     "x": 142,
+     "y": 91
+    },
+    {
+     "x": 66,
+     "y": 93
+    }
+   ]
+  },
+  {
+   "frame": 6800,
+   "framebuffer": true,
+   "name": "back-cancel-no-mutation",
+   "probes": [
+    {
+     "address": "0x02031a95",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9b",
+     "size": 1
+    },
+    {
+     "address": "0x02031a9e",
+     "size": 2
+    },
+    {
+     "address": "0x02031aa2",
+     "size": 2
+    },
+    {
+     "address": "0x02031aa4",
+     "size": 2
+    },
+    {
+     "address": "0x0e0073d4",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073d5",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073d6",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073d7",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073dc",
+     "size": 1
+    },
+    {
+     "address": "0x0e0073dd",
+     "size": 1
+    }
+   ]
+  }
+ ]
+}

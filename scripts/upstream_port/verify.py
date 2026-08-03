@@ -6,14 +6,14 @@ repository's *own* current working tree/commit. It never builds, checks out,
 or executes the canonical upstream ref/tree. It is a thin, literal mirror of
 .github/workflows/build.yml's gate steps (kept independent from that file:
 this module doesn't parse/execute the workflow, it re-states the same gate
-commands so `verify` stays runnable locally without a CI runner) -- WITH ONE
-DELIBERATE EXCEPTION: build.yml's "Check documentation (issues #7/#17)" step
-is a required, standalone CI gate that is intentionally NOT part of this
-mirror. Repository policy pins this verify gate set to exactly the original
-10 #10/#11/#13 gates; documentation governance (scripts/docs_check_tests and
-scripts/check_docs.py --check --check-examples) is enforced directly by CI
-instead of by growing this pinned list. Run those two commands yourself to
-reproduce that standalone step locally -- see docs/upstream-porting.md.
+commands so `verify` stays runnable locally without a CI runner) -- WITH TWO
+DELIBERATE EXCEPTIONS: build.yml's issue #18 localization-host step and
+"Check documentation (issues #7/#17)" step are required standalone CI
+checks intentionally outside this mirror. Repository policy pins this verify
+gate set to exactly the original 10 #10/#11/#13 commands; localization host
+coverage and documentation governance are enforced directly by CI instead of
+by growing this pinned list. Run the standalone commands directly to reproduce
+them locally -- see docs/upstream-porting.md.
 """
 
 from __future__ import annotations
@@ -101,10 +101,10 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "-v",
             ],
             applicable_note=(
-                "issue #12/#15 host lane (same `host-tests` job): 145 "
-                "pure-stdlib upstream-port review tooling tests as of the "
-                "issues #7/#17 remediation (restoring the pinned 10-gate "
-                "contract) -- re-run this suite for the current count -- "
+                "issue #12/#15 host lane (same `host-tests` job): pure-stdlib "
+                "upstream-port review tooling tests; re-run this suite for "
+                "the current count. The issues #7/#17 remediation restores "
+                "the pinned 10-gate contract -- "
                 "(classify/scan/drift/state/ref-binding/output-safety/"
                 "merge-commit determinism and this verify.gates() <-> build.yml "
                 "mirror, which now deliberately excludes the standalone "
@@ -117,7 +117,8 @@ def gates(jobs: int = 2) -> List[Gate]:
             command=["python3", "scripts/artifact_guard.py", "--revision", "HEAD"],
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
         ),
-        # NOTE: build.yml's "Check documentation (issues #7/#17)" step
+        # NOTE: build.yml's localization-host step and
+        # "Check documentation (issues #7/#17)" step
         # (scripts/docs_check_tests then scripts/check_docs.py --check
         # --check-examples) intentionally has NO Gate(...) entry here. It
         # remains a required, standalone build.yml CI step immediately after
@@ -221,6 +222,9 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "expansion-modern-itemexpansion-check",
                 "MODERN_CONFIG=debug",
                 "MODERN_ABI=aapcs",
+                "EXPANSION_STARTER_CONTENT=1",
+                "EXPANSION_MECHANICS_HOOKS=1",
+                "EXPANSION_MECHANICS_SAMPLE=1",
                 f"-j{jobs}",
             ],
             applicable_note=(
@@ -228,7 +232,11 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "default-cap modern-linker gates above -- never the host lane): "
                 "boots the real modern debug ROM at an expanded item cap (0xCE, "
                 "FE8_EXPANSION_ITEMTEST=1) and runs the item-ID-expansion runtime "
-                "probe (expansion-modern-itemexpansion-check)"
+                "probe (expansion-modern-itemexpansion-check). The same single "
+                "ROM build also carries the issue #6 bundled-content profile "
+                "(EXPANSION_STARTER_CONTENT=1 + hooks + sample), so the authored "
+                "content record and its public-registry mechanic are asserted by "
+                "this same probe run -- no extra gate and no extra ROM build"
             ),
         ),
         Gate(
@@ -240,6 +248,9 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "expansion-modern-itemexpansion-check",
                 "MODERN_CONFIG=release",
                 "MODERN_ABI=aapcs",
+                "EXPANSION_STARTER_CONTENT=1",
+                "EXPANSION_MECHANICS_HOOKS=1",
+                "EXPANSION_MECHANICS_SAMPLE=1",
                 f"-j{jobs}",
             ],
             applicable_note=(

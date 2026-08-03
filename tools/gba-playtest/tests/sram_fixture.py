@@ -244,7 +244,31 @@ def _main(argv: list[str] | None = None) -> int:
         help="Repository root used to resolve config.mk (default: %(default)s)",
     )
 
+    write_state = subparsers.add_parser(
+        "write-state",
+        help=(
+            "Write a byte-exact SRAM image classified as the given "
+            "ClassifySramSaveCompat() state (build_fixture_image) -- e.g. "
+            "'write-state EXPANSION_USER_PREFS_EMPTY' style genuinely-blank "
+            "(all-0xFF) SRAM for issue #18 sprint 4's locale-blank-sram "
+            "scenarios. See ALL_FIXTURE_STATES for the full list."
+        ),
+    )
+    write_state.add_argument("state", choices=list(ALL_FIXTURE_STATES))
+    write_state.add_argument("output", type=Path)
+    write_state.add_argument(
+        "--repo-root", type=Path, default=_REPO_ROOT,
+        help="Repository root used to resolve config.mk (default: %(default)s)",
+    )
+
     args = parser.parse_args(argv)
+
+    if args.mode == "write-state":
+        image = build_fixture_image(args.state, args.repo_root)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_bytes(image)
+        print(f"wrote {args.state} SRAM fixture: {args.output} ({len(image)} bytes)")
+        return 0
 
     if args.mode == "write-deterministic-current":
         path = write_deterministic_current_fixture(args.output, args.repo_root)

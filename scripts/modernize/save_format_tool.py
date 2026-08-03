@@ -40,12 +40,26 @@ Commands
                              destination unless --force is given. Reads the
                              full source image into host memory, classifies
                              it, and only migrates a
-                             SAVE_COMPAT_VALID_LEGACY_OR_VANILLA or already-
-                             SAVE_COMPAT_CURRENT source (the only transition
-                             this slice supports is v0 -> v1: no metadata
-                             record at all -> a current, checksummed one).
-                             Every other source classification is a
-                             precondition failure: neither the source nor any
+                             SAVE_COMPAT_VALID_LEGACY_OR_VANILLA,
+                             SAVE_COMPAT_MIGRATABLE_OLDER, or already-
+                             SAVE_COMPAT_CURRENT source: no metadata record
+                             at all -> a current, checksummed one (v0 ->
+                             current); an older-but-supported formatVersion
+                             -> current (issue #18 sprint 2); or a no-op
+                             re-migration of an already-current source. A
+                             source classified SAVE_COMPAT_VALID_LEGACY_OR_
+                             VANILLA has no prior ExpansionSaveMeta.reserved
+                             to preserve, so it gets a fresh default
+                             ExpansionUserPrefs record
+                             (include/expansion_save_prefs.h); any other
+                             migratable source's existing `reserved` bytes
+                             (which may hold a real, player-stored
+                             ExpansionUserPrefs record) are carried forward
+                             verbatim -- migration only ever refreshes
+                             formatVersion/compatEpoch/diagnostics/checksum,
+                             never a real stored user preference. Every
+                             other source classification is a precondition
+                             failure: neither the source nor any
                              destination file is touched. Before publishing,
                              the in-memory migrated image is re-classified
                              and must come back SAVE_COMPAT_CURRENT, or the
@@ -131,7 +145,10 @@ META_SIZE = 0x5C  # SRAM_SIZE_EXPANSION_SAVE_META / sizeof(struct ExpansionSaveM
 META_CHECKSUM_DOMAIN = 0x2E  # EXPANSION_SAVE_META_SIZE_FOR_CHECKSUM
 META_MAGIC = b"FSAV"  # EXPANSION_SAVE_META_MAGIC
 
-SAVE_FORMAT_VERSION_CURRENT = 1
+# Bumped 1 -> 2 for issue #18 sprint 2 alongside
+# include/save_format.h's SAVE_FORMAT_VERSION_CURRENT: struct
+# ExpansionUserPrefs (see below) now occupies part of `reserved`.
+SAVE_FORMAT_VERSION_CURRENT = 2
 
 # struct.Struct layout for struct ExpansionSaveMeta. '<' = no alignment/
 # padding, matching the C side's explicit STRUCT_PAD()-filled layout.
@@ -164,9 +181,15 @@ ALL_SAVE_COMPAT_STATES = (
     SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE,
 )
 
-# Migratable in this slice: only the v0 (no metadata at all) -> v1 (current)
-# transition. SAVE_COMPAT_CURRENT is accepted too (a no-op re-migration).
-MIGRATABLE_SOURCE_STATES = (SAVE_COMPAT_VALID_LEGACY_OR_VANILLA, SAVE_COMPAT_CURRENT)
+# Migratable sources: v0 (no metadata at all -- SAVE_COMPAT_VALID_LEGACY_OR_VANILLA),
+# any older-but-supported formatVersion (SAVE_COMPAT_MIGRATABLE_OLDER -- added
+# issue #18 sprint 2, now that a real formatVersion bump exists to exercise
+# it), and SAVE_COMPAT_CURRENT itself (accepted as a no-op re-migration).
+MIGRATABLE_SOURCE_STATES = (
+    SAVE_COMPAT_VALID_LEGACY_OR_VANILLA,
+    SAVE_COMPAT_MIGRATABLE_OLDER,
+    SAVE_COMPAT_CURRENT,
+)
 
 
 class SaveFormatError(Exception):
@@ -194,6 +217,159 @@ def is_region_blank(data: bytes) -> bool:
     """Mirrors IsRegionBlank() (src/bmsave-lib.c): true iff every byte is
     0xFF, matching WipeSram()'s 0xFFFFFFFF fill pattern."""
     return all(byte == 0xFF for byte in data)
+
+
+def is_region_all_zero(data: bytes) -> bool:
+    """Mirrors IsRegionAllZero() (src/bmsave-lib.c, issue #18 sprint 2):
+    true iff every byte is 0x00 -- the deterministic "never written"
+    pattern every pre-sprint-2 build left in ExpansionSaveMeta's
+    `reserved` tail."""
+    return all(byte == 0x00 for byte in data)
+
+
+# --- ExpansionUserPrefs record (issue #18 sprint 2) --------------------------
+#
+# Byte-exact mirror of struct ExpansionUserPrefs/its state machine
+# (include/expansion_save_prefs.h, src/bmsave-lib.c's
+# ExpansionUserPrefs_Build()/ExpansionUserPrefsChecksum()/
+# ExpansionUserPrefs_ValidateRaw()). See that header for the full design
+# rationale (no-wipe contract, UNSET-vs-CORRUPT precedence, etc.) -- not
+# repeated here.
+
+EXPANSION_USER_PREFS_MAGIC = 0xA5
+EXPANSION_USER_PREFS_VERSION_CURRENT = 1
+EXPANSION_USER_PREFS_FLAG_LOCALE_EXPLICIT = 0x01
+EXPANSION_USER_PREFS_SIZE_FOR_CHECKSUM = 0x08
+EXPANSION_USER_PREFS_META_OFFSET = 0
+EXPANSION_USER_PREFS_SIZE = 0x0C  # sizeof(struct ExpansionUserPrefs) (ALIGN(4))
+EXPANSION_SAVE_META_RESERVED_SIZE = META_SIZE - META_CHECKSUM_DOMAIN - 2  # 0x2C
+EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES = (
+    EXPANSION_SAVE_META_RESERVED_SIZE - EXPANSION_USER_PREFS_META_OFFSET - EXPANSION_USER_PREFS_SIZE
+)
+
+# struct.Struct layout for struct ExpansionUserPrefs: magic, version,
+# localeId, flags (4 x u8), reserved[4], checksum (u16), then 2 trailing
+# pad bytes to reach ALIGN(4)'s sizeof == 0x0C (mirrors the C struct's own
+# ALIGN(4) padding -- see include/expansion_save_prefs.h).
+_USER_PREFS_STRUCT = struct.Struct("<BBBB4sH2x")
+assert _USER_PREFS_STRUCT.size == EXPANSION_USER_PREFS_SIZE, _USER_PREFS_STRUCT.size
+
+EXPANSION_USER_PREFS_UNSET = "EXPANSION_USER_PREFS_UNSET"
+EXPANSION_USER_PREFS_CORRUPT = "EXPANSION_USER_PREFS_CORRUPT"
+EXPANSION_USER_PREFS_UNKNOWN_LOCALE = "EXPANSION_USER_PREFS_UNKNOWN_LOCALE"
+EXPANSION_USER_PREFS_DISABLED_LOCALE = "EXPANSION_USER_PREFS_DISABLED_LOCALE"
+EXPANSION_USER_PREFS_MIGRATED = "EXPANSION_USER_PREFS_MIGRATED"
+EXPANSION_USER_PREFS_VALID = "EXPANSION_USER_PREFS_VALID"
+
+ALL_EXPANSION_USER_PREFS_STATES = (
+    EXPANSION_USER_PREFS_UNSET,
+    EXPANSION_USER_PREFS_CORRUPT,
+    EXPANSION_USER_PREFS_UNKNOWN_LOCALE,
+    EXPANSION_USER_PREFS_DISABLED_LOCALE,
+    EXPANSION_USER_PREFS_MIGRATED,
+    EXPANSION_USER_PREFS_VALID,
+)
+
+
+@dataclass
+class ExpansionUserPrefs:
+    magic: int
+    version: int
+    locale_id: int
+    flags: int
+    reserved: bytes
+    checksum: int
+
+    @classmethod
+    def unpack(cls, raw: bytes) -> "ExpansionUserPrefs":
+        if len(raw) != EXPANSION_USER_PREFS_SIZE:
+            raise SaveFormatError(
+                f"user-prefs region must be exactly {EXPANSION_USER_PREFS_SIZE} bytes, got {len(raw)}"
+            )
+        magic, version, locale_id, flags, reserved, checksum = _USER_PREFS_STRUCT.unpack(raw)
+        return cls(
+            magic=magic,
+            version=version,
+            locale_id=locale_id,
+            flags=flags,
+            reserved=reserved,
+            checksum=checksum,
+        )
+
+    def pack(self) -> bytes:
+        return _USER_PREFS_STRUCT.pack(
+            self.magic, self.version, self.locale_id, self.flags, self.reserved, self.checksum
+        )
+
+    def computed_checksum(self) -> int:
+        """Mirrors ExpansionUserPrefsChecksum(): Checksum16 over bytes
+        [0, EXPANSION_USER_PREFS_SIZE_FOR_CHECKSUM) of the packed record."""
+        return checksum16(self.pack()[:EXPANSION_USER_PREFS_SIZE_FOR_CHECKSUM])
+
+
+def build_default_user_prefs(default_locale_id: int, explicit_selection: bool = False) -> ExpansionUserPrefs:
+    """Host-side mirror of ExpansionUserPrefs_Build() (src/bmsave-lib.c)."""
+    prefs = ExpansionUserPrefs(
+        magic=EXPANSION_USER_PREFS_MAGIC,
+        version=EXPANSION_USER_PREFS_VERSION_CURRENT,
+        locale_id=default_locale_id,
+        flags=EXPANSION_USER_PREFS_FLAG_LOCALE_EXPLICIT if explicit_selection else 0,
+        reserved=b"\x00" * 4,
+        checksum=0,
+    )
+    prefs.checksum = prefs.computed_checksum()
+    return prefs
+
+
+def classify_user_prefs_raw(prefs: ExpansionUserPrefs, region_unset: bool, locale_count: int, enabled_locale_mask: int) -> str:
+    """Pure classifier: byte-exact mirror of ExpansionUserPrefs_ValidateRaw()
+    (src/bmsave-lib.c). `locale_count`/`enabled_locale_mask` come from the
+    real repo config (scripts.localization.schema.LOCALE_COUNT /
+    expansion_config.compute_locale_mask()), never a private copy."""
+    if region_unset:
+        return EXPANSION_USER_PREFS_UNSET
+
+    if prefs.magic != EXPANSION_USER_PREFS_MAGIC:
+        return EXPANSION_USER_PREFS_CORRUPT
+
+    if prefs.checksum != prefs.computed_checksum():
+        return EXPANSION_USER_PREFS_CORRUPT
+
+    if prefs.version > EXPANSION_USER_PREFS_VERSION_CURRENT:
+        return EXPANSION_USER_PREFS_CORRUPT
+
+    if prefs.locale_id >= locale_count:
+        return EXPANSION_USER_PREFS_UNKNOWN_LOCALE
+
+    if not (enabled_locale_mask & (1 << prefs.locale_id)):
+        return EXPANSION_USER_PREFS_DISABLED_LOCALE
+
+    if prefs.version < EXPANSION_USER_PREFS_VERSION_CURRENT:
+        return EXPANSION_USER_PREFS_MIGRATED
+
+    return EXPANSION_USER_PREFS_VALID
+
+
+def classify_user_prefs_bytes(raw: bytes, locale_count: int, enabled_locale_mask: int) -> Tuple[str, ExpansionUserPrefs]:
+    """Convenience wrapper: unpacks `raw` (exactly EXPANSION_USER_PREFS_SIZE
+    bytes) and classifies it, mirroring ExpansionUserPrefs_Load()'s
+    region_unset detection (either all-0x00 or all-0xFF is UNSET)."""
+    region_unset = is_region_blank(raw) or is_region_all_zero(raw)
+    prefs = ExpansionUserPrefs.unpack(raw)
+    return classify_user_prefs_raw(prefs, region_unset, locale_count, enabled_locale_mask), prefs
+
+
+def normalize_user_prefs(
+    prefs: ExpansionUserPrefs, state: str, default_locale_id: int
+) -> Tuple[int, bool]:
+    """Pure mirror of ExpansionUserPrefs_Normalize() (src/bmsave-lib.c):
+    resolves a classified record down to (effective_locale_id,
+    requires_prompt). VALID/MIGRATED trust the stored localeId
+    (requires_prompt=False); every other state falls back to
+    `default_locale_id` with requires_prompt=True."""
+    if state in (EXPANSION_USER_PREFS_VALID, EXPANSION_USER_PREFS_MIGRATED):
+        return prefs.locale_id, False
+    return default_locale_id, True
 
 
 # --- Metadata record (struct ExpansionSaveMeta mirror) -----------------------
@@ -256,7 +432,75 @@ class ExpansionSaveMeta:
         return self.build_commit_short.split(b"\x00", 1)[0].decode("ascii", "replace")
 
 
-def build_current_expansion_save_meta(repo_root: Path) -> ExpansionSaveMeta:
+def resolve_user_prefs_locale_context(repo_root: Path) -> Tuple[int, int, int]:
+    """Resolves (locale_count, enabled_locale_mask, default_locale_id) from
+    the real config.mk -- mirrors EXPANSION_LOCALE_COUNT
+    (include/expansion_locale.h) / FE8_EXPANSION_ENABLED_LOCALE_MASK /
+    FE8_EXPANSION_DEFAULT_LOCALE_ID (include/expansion_config.h), the same
+    single source of truth build_current_expansion_save_meta() already
+    reads EXPANSION_VERSION_*/EXPANSION_SAVE_COMPAT_EPOCH from. Never a
+    private copy of the locale id list -- see scripts.localization.schema."""
+    values = ec.parse_config_mk(repo_root / "config.mk")
+    enabled_locales = ec.validate_enabled_locales(values["EXPANSION_ENABLED_LOCALES"])
+    default_locale = ec.validate_default_locale(values["EXPANSION_DEFAULT_LOCALE"], enabled_locales)
+    return (
+        ec.locale_schema.LOCALE_COUNT,
+        ec.compute_locale_mask(enabled_locales),
+        ec.locale_schema.LOCALE_INDEX[default_locale],
+    )
+
+
+def resolve_default_user_prefs_locale_id(repo_root: Path) -> int:
+    """Resolves this build's configured default locale id (mirrors
+    FE8_EXPANSION_DEFAULT_LOCALE_ID, include/expansion_config.h) from the
+    real config.mk."""
+    return resolve_user_prefs_locale_context(repo_root)[2]
+
+
+def build_default_reserved_bytes_for_locale_context(
+    locale_count: int, enabled_locale_mask: int, default_locale_id: int
+) -> bytes:
+    """Pure, context-injectable mirror of BuildCurrentExpansionSaveMeta()'s
+    `reserved`-tail stamping decision (src/bmsave-lib.c, issue #18
+    sprint 6 runtime blocker fix), decoupled from config.mk/repo_root so
+    both the real single-locale default build and a synthetic
+    multi-locale context can be exercised by a host test without needing
+    a fake repository checkout.
+
+    Single-enabled-locale context (popcount(enabled_locale_mask) <= 1,
+    matching FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1 and
+    ExpansionLanguageMenu_DecideStartupAction()'s own AUTO_SELECT
+    collapse): stamps a fresh, current, checksummed default-locale
+    ExpansionUserPrefs record at EXPANSION_USER_PREFS_META_OFFSET,
+    zero-padded out to the full reserved-tail size.
+
+    Multi-enabled-locale context: returns the reserved tail fully
+    zeroed (the canonical EXPANSION_USER_PREFS_UNSET all-zero pattern,
+    ExpansionUserPrefs_ValidateRaw()) -- a brand-new save on a
+    multi-locale build must not silently skip its mandatory first-start
+    prompt by auto-stamping a syntactically VALID record no player ever
+    actually chose."""
+    enabled_locale_count = bin(enabled_locale_mask & ((1 << locale_count) - 1)).count("1")
+    if enabled_locale_count <= 1:
+        prefs = build_default_user_prefs(default_locale_id, explicit_selection=False)
+        prefs_bytes = prefs.pack()
+    else:
+        prefs_bytes = b"\x00" * EXPANSION_USER_PREFS_SIZE
+    padding = b"\x00" * (EXPANSION_SAVE_META_RESERVED_SIZE - EXPANSION_USER_PREFS_META_OFFSET - len(prefs_bytes))
+    return prefs_bytes + padding
+
+
+def build_default_reserved_bytes(repo_root: Path) -> bytes:
+    """Host-side mirror of BuildCurrentExpansionSaveMeta()'s `reserved`-
+    tail stamping decision (src/bmsave-lib.c, issue #18 sprint 2 /
+    sprint 6), resolved against the real config.mk -- see
+    build_default_reserved_bytes_for_locale_context() for the pure
+    (repo_root-independent) decision logic this delegates to."""
+    locale_count, enabled_mask, default_locale_id = resolve_user_prefs_locale_context(repo_root)
+    return build_default_reserved_bytes_for_locale_context(locale_count, enabled_mask, default_locale_id)
+
+
+def build_current_expansion_save_meta(repo_root: Path, reserved: Optional[bytes] = None) -> ExpansionSaveMeta:
     """Host-side mirror of BuildCurrentExpansionSaveMeta() (src/bmsave-lib.c).
 
     Reads config.mk's real EXPANSION_SAVE_COMPAT_EPOCH/EXPANSION_VERSION_*
@@ -266,6 +510,17 @@ def build_current_expansion_save_meta(repo_root: Path) -> ExpansionSaveMeta:
     diagnostic-only fields (see docs/save_format.md) with no live build
     context available to a host-side tool, so they use documented,
     honestly-labeled placeholders that can never affect compatibility.
+
+    `reserved` (issue #18 sprint 2): when None (the default, used for a
+    brand-new/never-before-migrated image), a fresh default
+    ExpansionUserPrefs record is stamped in, mirroring
+    BuildCurrentExpansionSaveMeta()'s own C-side behavior exactly. When
+    given -- used by cmd_migrate() to carry a source image's existing
+    reserved-tail bytes (including any real stored ExpansionUserPrefs
+    record) forward verbatim -- migration only ever refreshes
+    formatVersion/compatEpoch/diagnostics/checksum, never silently
+    overwrites a real stored user preference with a fresh default. Must
+    be exactly EXPANSION_SAVE_META_RESERVED_SIZE bytes if given.
     """
     config_mk_path = repo_root / "config.mk"
     values = ec.parse_config_mk(config_mk_path)
@@ -278,6 +533,13 @@ def build_current_expansion_save_meta(repo_root: Path) -> ExpansionSaveMeta:
     framework_version_packed = ec.compute_version_packed(version_major, version_minor, version_patch)
     build_commit = ec.resolve_build_commit(None, repo_root)
 
+    if reserved is None:
+        reserved = build_default_reserved_bytes(repo_root)
+    elif len(reserved) != EXPANSION_SAVE_META_RESERVED_SIZE:
+        raise SaveFormatError(
+            f"reserved must be exactly {EXPANSION_SAVE_META_RESERVED_SIZE} bytes, got {len(reserved)}"
+        )
+
     meta = ExpansionSaveMeta(
         magic=META_MAGIC,
         format_version=SAVE_FORMAT_VERSION_CURRENT,
@@ -287,7 +549,7 @@ def build_current_expansion_save_meta(repo_root: Path) -> ExpansionSaveMeta:
         config_fingerprint=b"0000000000000000\x00",  # diagnostic-only placeholder
         build_commit_short=(build_commit[:8].encode("ascii") + b"\x00" * 9)[:9],
         checksum=0,
-        reserved=b"\x00" * (META_SIZE - META_CHECKSUM_DOMAIN - 2),
+        reserved=reserved,
     )
     meta.checksum = meta.computed_checksum()
     return meta
@@ -408,6 +670,27 @@ def cmd_inspect(args: argparse.Namespace) -> int:
             print(f"meta.frameworkVersionPacked: 0x{meta.framework_version_packed:06X}")
             print(f"meta.configFingerprint: {meta.config_fingerprint_str()!r} (diagnostic only)")
             print(f"meta.buildCommitShort: {meta.build_commit_short_str()!r} (diagnostic only)")
+
+            # Issue #18 sprint 2: ExpansionUserPrefs sub-record, nested
+            # inside meta.reserved at EXPANSION_USER_PREFS_META_OFFSET.
+            # Printed best-effort/diagnostic-only here -- never gates this
+            # command's exit code (cmd_inspect never fails on
+            # classification, only on I/O, matching its documented
+            # contract above).
+            try:
+                locale_count, enabled_mask, default_locale_id = resolve_user_prefs_locale_context(repo_root)
+                prefs_bytes = meta.reserved[
+                    EXPANSION_USER_PREFS_META_OFFSET:EXPANSION_USER_PREFS_META_OFFSET + EXPANSION_USER_PREFS_SIZE
+                ]
+                prefs_state, prefs = classify_user_prefs_bytes(prefs_bytes, locale_count, enabled_mask)
+                print(f"userPrefs.classification: {prefs_state}")
+                if prefs_state != EXPANSION_USER_PREFS_UNSET:
+                    print(f"userPrefs.version: {prefs.version}")
+                    print(f"userPrefs.localeId: {prefs.locale_id}")
+                    print(f"userPrefs.flags: 0x{prefs.flags:02X}")
+                print(f"userPrefs.effectiveDefaultLocaleId: {default_locale_id}")
+            except (SaveFormatError, ec.ConfigError) as error:
+                print(f"userPrefs.classification: error resolving config: {error}")
     return 0
 
 
@@ -627,7 +910,25 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     # metadata record. The source bytearray is never written back to
     # `source` at any point -- only ever to `dest`, and only after
     # re-verification below.
-    new_meta = build_current_expansion_save_meta(repo_root)
+    #
+    # Issue #18 sprint 2 no-wipe contract: the source's existing
+    # `reserved` bytes (which may hold a real, player-stored
+    # ExpansionUserPrefs record -- include/expansion_save_prefs.h) are
+    # carried forward verbatim into the rebuilt meta, rather than being
+    # replaced by a fresh default. Migration only ever refreshes
+    # formatVersion/compatEpoch/diagnostics/checksum; it must never
+    # silently discard a real stored user preference. A source with no
+    # metadata at all (SAVE_COMPAT_VALID_LEGACY_OR_VANILLA) has no such
+    # record to preserve, so it correctly gets a fresh default instead
+    # (source_meta.reserved is itself already all-zero/blank in that
+    # case, both classified EXPANSION_USER_PREFS_UNSET either way).
+    source_meta = ExpansionSaveMeta.unpack(image[META_OFFSET:META_OFFSET + META_SIZE])
+    preserved_reserved = (
+        source_meta.reserved
+        if source_meta.magic == META_MAGIC
+        else None  # v0/vanilla: no prior ExpansionSaveMeta at all to preserve from
+    )
+    new_meta = build_current_expansion_save_meta(repo_root, reserved=preserved_reserved)
     image[META_OFFSET:META_OFFSET + META_SIZE] = new_meta.pack()
 
     post_state = classify_image(bytes(image), save_compat_epoch)
@@ -682,7 +983,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate_parser.set_defaults(func=cmd_validate)
 
-    migrate_parser = subparsers.add_parser("migrate", help="out-of-place v0 -> v1 migration")
+    migrate_parser = subparsers.add_parser("migrate", help="out-of-place save-format migration (v0/older -> current)")
     migrate_parser.add_argument("source", type=Path)
     migrate_parser.add_argument("dest", type=Path)
     migrate_parser.add_argument(

@@ -66,6 +66,20 @@ jobs:
     - name: Run upstream-port tooling test suite
       run: python3 -m unittest discover -s tests/upstream_port -v
 
+    # Issue #18 host-lane closure fix: the scripts/localization package's
+    # own pure-stdlib unit test suite (schema/pseudo/catalog/generate/CLI/
+    # determinism, plus the host-native resolver-behavior and
+    # vanilla-isolation source-audit tests, which self-skip without a host
+    # `cc`) -- see localization.mk's `localization-test` target, whose own
+    # comment already named it a CI-suitable gate before this step actually
+    # wired it in. Python/stdlib only (no arm-none-eabi toolchain, no
+    # ROM/linker rebuild), so it stays in this fast host lane; it does not
+    # overlap the localization-runtime-*-check scenarios in the `build`
+    # job below (those require a real booted ROM and are reached through
+    # expansion-modern-linker-check's own dependency list, not this step).
+    - name: Run localization host test suite (issue #18)
+      run: python3 -m unittest discover -s scripts/localization/tests -p "test_*.py"
+
   # Ubuntu libmGBA ROM/runtime gate: builds the full modern object/ELF/ROM
   # chain for both supported configs (debug, release; AAPCS only -- see
   # docs/config_identity.md), checks deterministic memory budgets, rejects
@@ -167,6 +181,15 @@ jobs:
     # not modify, reorder, or relax the linker-check step above, and it does
     # not touch any committed fingerprint/baseline.
     #
+    # Issue #6 (Sprint 2) rides this SAME step and this SAME ROM build: the
+    # EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1
+    # EXPANSION_MECHANICS_SAMPLE=1 profile links the bundled generated-data
+    # content example, so the one probe run additionally asserts the authored
+    # item record (original name/description/uses/type/attributes/icon) and
+    # the content mechanic registered through the public hook registry. No
+    # extra workflow command and no extra ROM build: the CI correctness
+    # command count stays exactly 10.
+    #
     # Why this is not stale: every modern C/data object depends on
     # modern.mk's content-addressed MODERN_COMPILE_SETTINGS stamp (which
     # embeds FE8_ITEM_ID_CAP/FE8_EXPANSION_ITEMTEST), so flipping those
@@ -180,7 +203,7 @@ jobs:
     #
     # This is the workflow final step: per repository policy, CI ends after
     # these target-ROM checks.
-    - name: Boundary/serialization item-ID-expansion runtime gate (cap 0xCE)
+    - name: Boundary/serialization item-ID-expansion + content runtime gate (cap 0xCE)
       run: |
-        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs -j2
-        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs -j2
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2
+        FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2

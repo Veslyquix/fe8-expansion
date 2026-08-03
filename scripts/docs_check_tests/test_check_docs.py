@@ -1865,7 +1865,7 @@ class DiscoveryTests(unittest.TestCase):
     # Second final-verifier residual finding #2: discover_markdown_files()
     # previously used a `git ls-files -- '*.md'` pathspec, so a real
     # Markdown file using any other recognized extension (`.markdown`,
-    # `.mdown`, `.mkd`) -- or an uppercase variant of any recognized
+    # `.mdown`, `.mkd`, `.mkdn`) -- or an uppercase variant of any recognized
     # extension -- was silently invisible to every check keyed off "the
     # set of Markdown files" (inventory coverage, link/anchor resolution,
     # external-URL registry coverage, stale-phrase/object-count scanning).
@@ -1882,12 +1882,14 @@ class DiscoveryTests(unittest.TestCase):
             write(root, "a.markdown", "# A\n")
             write(root, "b.mdown", "# B\n")
             write(root, "c.mkd", "# C\n")
+            write(root, "d.mkdn", "# D\n")
             git(root, "add", "-A")
             git(root, "commit", "-q", "-m", "init")
             files = check_docs.discover_markdown_files(root)
             self.assertIn("a.markdown", files)
             self.assertIn("b.mdown", files)
             self.assertIn("c.mkd", files)
+            self.assertIn("d.mkdn", files)
 
     def test_untracked_alternate_extensions_discovered(self):
         with TempRepo() as repo:
@@ -1904,11 +1906,13 @@ class DiscoveryTests(unittest.TestCase):
             root = repo.root
             write(root, "UPPER.MD", "# U\n")
             write(root, "Mixed.Markdown", "# M\n")
+            write(root, "Other.MkDn", "# N\n")
             git(root, "add", "-A")
             git(root, "commit", "-q", "-m", "init")
             files = check_docs.discover_markdown_files(root)
             self.assertIn("UPPER.MD", files)
             self.assertIn("Mixed.Markdown", files)
+            self.assertIn("Other.MkDn", files)
 
     def test_ignored_alternate_extension_excluded(self):
         with TempRepo() as repo:
@@ -1967,14 +1971,14 @@ class RecognizedExtensionInventoryTests(unittest.TestCase):
         with TempRepo() as repo:
             root = repo.root
             write(root, "a.md", "# A\n")
-            write(root, "b.markdown", "# B\n")
+            write(root, "b.mkdn", "# B\n")
             self._write_inventory(root, "- a.md | alice | current | test doc\n"
                                          "- " + check_docs.INVENTORY_PATH + " | alice | current | inventory")
             entries, _ = check_docs.parse_inventory(root)
             files = check_docs.discover_markdown_files(root)
             findings = check_docs.check_inventory_coverage(root, files, entries)
             messages = [f.message for f in findings]
-            self.assertTrue(any("b.markdown" in m and "missing" in m for m in messages))
+            self.assertTrue(any("b.mkdn" in m and "missing" in m for m in messages))
 
     def test_extra_entry_detected_for_nonexistent_alternate_extension(self):
         with TempRepo() as repo:

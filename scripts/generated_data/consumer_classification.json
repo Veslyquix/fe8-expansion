@@ -2181,8 +2181,28 @@
       "category": "runtime-struct",
       "reason": null
     },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentBearerItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentControlItemSlot": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.contentItemId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
     "include/expansion_itemtest.h|struct-field|item|ItemExpansionProbe.eventItemSlot": {
       "category": "runtime-struct",
+      "reason": null
+    },
+    "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemId": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemName": {
+      "category": "external-interface",
       "reason": null
     },
     "include/functions.h|function-signature|item|ConvoyMenuProc_MaybeStartSelectConvoyItem": {
@@ -4277,9 +4297,17 @@
       "category": "external-interface",
       "reason": null
     },
+    "tools/gba-playtest/tests/test_debugtools_registry.py|tool-symbol|chapter|chapter_index": {
+      "category": "external-interface",
+      "reason": null
+    },
     "tools/gba-playtest/tests/test_debugtools_registry.py|tool-symbol|chapter|test_gamecontrol_chapter2_boot_never_bypasses_events_or_manually_loads_units": {
       "category": "external-interface",
       "reason": null
+    },
+    "tools/gba-playtest/tests/test_expansion_starter_content.py|tool-symbol|item|test_no_raw_numeric_content_item_id": {
+      "category": "reviewed-exclusion",
+      "reason": "a unittest method NAME in a host test, not an ID consumer: the test asserts that no raw numeric item ID literal appears in the issue #6 sources, so it stores no ID and is never indexed by one"
     }
   },
   "schema_version": 1

@@ -43,6 +43,7 @@ _NON_GATE_STEP_NAMES = {
 # -- never silently dropped from CI, only excluded from this one mirror
 # comparison.
 _DOCS_GOVERNANCE_STEP_NAME = "Check documentation (issues #7/#17)"
+_LOCALIZATION_HOST_STEP_NAME = "Run localization host test suite (issue #18)"
 
 
 def _parse_workflow_gate_commands(path=BUILD_WORKFLOW_PATH):
@@ -87,24 +88,22 @@ def _parse_workflow_gate_commands(path=BUILD_WORKFLOW_PATH):
 class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
     """Assert verify.gates() is a literal, argv-identical, order-preserving
     mirror of the gate steps in .github/workflows/build.yml -- parsed from
-    the live workflow file, not a hardcoded copy of it -- with one
-    deliberate, separately-tested exception: the standalone
-    documentation-governance step (_DOCS_GOVERNANCE_STEP_NAME; see
+    the live workflow file, not a hardcoded copy of it -- with two
+    deliberate, separately-tested exceptions: the localization-host step and
+    the documentation-governance step (_DOCS_GOVERNANCE_STEP_NAME; see
     test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate
     below)."""
 
     def test_gate_argv_matches_workflow_commands_in_order(self):
         # Issues #7/#17 remediation: verify.gates() pins exactly the
-        # original 10 #10/#11/#13 gates, so the standalone
-        # documentation-governance workflow step (_DOCS_GOVERNANCE_STEP_NAME)
-        # is deliberately excluded from this mirror comparison -- it is
-        # covered separately by
-        # test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate
-        # below, which asserts it still exists, unchanged, in build.yml.
+        # original 10 #10/#11/#13 gates, so the localization-host and
+        # documentation-governance workflow steps are deliberately excluded
+        # from this mirror comparison. Dedicated tests below assert both still
+        # exist unchanged in build.yml.
         workflow_commands = [
             (step_name, argv)
             for step_name, argv in _parse_workflow_gate_commands()
-            if step_name != _DOCS_GOVERNANCE_STEP_NAME
+            if step_name not in {_DOCS_GOVERNANCE_STEP_NAME, _LOCALIZATION_HOST_STEP_NAME}
         ]
         gate_commands = [g.command for g in verify_mod.gates(jobs=2)]
 
@@ -112,7 +111,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
             len(gate_commands),
             len(workflow_commands),
             f"verify.gates() has {len(gate_commands)} gate(s) but build.yml "
-            f"has {len(workflow_commands)} non-docs-governance gate command(s): "
+            f"has {len(workflow_commands)} mirrored gate command(s): "
             f"{[c for _, c in workflow_commands]!r}",
         )
         for gate_command, (step_name, workflow_argv) in zip(gate_commands, workflow_commands):
@@ -180,6 +179,36 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
             "docs-governance step must immediately precede the #15 default-lane step",
         )
 
+    def test_issue_18_localization_host_suite_is_preserved_workflow_only(self):
+        """The merged issue #18 host suite stays required in build.yml but
+        does not expand the pinned ten-command upstream-port verify contract."""
+        names = [g.name for g in verify_mod.gates()]
+        self.assertNotIn("localization-host-suite", names)
+
+        all_workflow_commands = _parse_workflow_gate_commands()
+        localization_commands = [
+            argv
+            for step_name, argv in all_workflow_commands
+            if step_name == _LOCALIZATION_HOST_STEP_NAME
+        ]
+        self.assertEqual(
+            localization_commands,
+            [[
+                "python3", "-m", "unittest", "discover", "-s",
+                "scripts/localization/tests", "-p", "test_*.py",
+            ]],
+        )
+
+        ordered_unique_steps = []
+        for step_name, _ in all_workflow_commands:
+            if not ordered_unique_steps or ordered_unique_steps[-1] != step_name:
+                ordered_unique_steps.append(step_name)
+        localization_index = ordered_unique_steps.index(_LOCALIZATION_HOST_STEP_NAME)
+        self.assertEqual(
+            ordered_unique_steps[localization_index - 1],
+            "Run upstream-port tooling test suite",
+        )
+
     def test_issue_15_default_lane_and_quickstart_gates_present(self):
         names = [g.name for g in verify_mod.gates()]
         self.assertIn("default-lane-check", names)
@@ -236,16 +265,16 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
             ],
         )
         # The merged CI runs the fast `host-tests` lane textually before the
-        # ROM `build` job, so the two host-only gates are first. They must stay
-        # host-only -- never a ROM/linker `make` build (that belongs solely to
-        # the modern-linker gates) -- so the fast host job and the ROM build
-        # job never duplicate work.
+        # ROM `build` job, so the two mirrored host-only gates are first. They must
+        # stay host-only -- never a ROM/linker `make` build (that belongs
+        # solely to the modern-linker gates) -- so the fast host job and the
+        # ROM build job never duplicate work.
         for g in verify_mod.gates()[:2]:
             self.assertNotIn("make", g.command)
             self.assertNotIn("expansion-modern-linker-check", g.command)
 
     def test_artifact_guard_command(self):
-        # After the merged host lane, the two host-only gates come first, so
+        # After the merged host lane, the two mirrored host-only gates come first, so
         # the artifact guard (first gate of the ROM `build` job) is index 2.
         g = verify_mod.gates()[2]
         self.assertEqual(g.name, "artifact-guard")

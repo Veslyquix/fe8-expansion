@@ -90,6 +90,7 @@ class SaveFormatLayoutTests(unittest.TestCase):
         #include "bmtrick.h"
         #include "bmdifficulty.h"
         #include "sram-layout.h"
+        #include "expansion_save_prefs.h"
 
         /* struct ExpansionSaveMeta itself: exactly the 0x5C-byte pad,
          * zero implicit padding, checksum domain fixed at 0x2E bytes. */
@@ -189,6 +190,33 @@ class SaveFormatLayoutTests(unittest.TestCase):
          * (include/sram-layout.h) must agree with the struct itself. */
         char probe_layout_offset[SRAM_OFFSET_EXPANSION_SAVE_META == 0x73A4 ? 1 : -1];
         char probe_layout_size[SRAM_SIZE_EXPANSION_SAVE_META == 0x5C ? 1 : -1];
+
+        /* struct ExpansionUserPrefs (include/expansion_save_prefs.h, issue
+         * #18 sprint 2): fixed layout, ALIGN(4)-forced size agreement
+         * between agbcc and modern gcc (same class of divergence as
+         * struct BonusClaimSaveData above), and fits entirely inside
+         * struct ExpansionSaveMeta's `reserved` tail with the documented
+         * headroom left over -- none of ExpansionSaveMeta's own 0x00-0x2F
+         * named-field layout (probed above) is touched by any of this. */
+        char probe_user_prefs_size[sizeof(struct ExpansionUserPrefs) == 0x0C ? 1 : -1];
+        char probe_user_prefs_off_magic[offsetof(struct ExpansionUserPrefs, magic) == 0x00 ? 1 : -1];
+        char probe_user_prefs_off_version[offsetof(struct ExpansionUserPrefs, version) == 0x01 ? 1 : -1];
+        char probe_user_prefs_off_localeId[offsetof(struct ExpansionUserPrefs, localeId) == 0x02 ? 1 : -1];
+        char probe_user_prefs_off_flags[offsetof(struct ExpansionUserPrefs, flags) == 0x03 ? 1 : -1];
+        char probe_user_prefs_off_reserved[offsetof(struct ExpansionUserPrefs, reserved) == 0x04 ? 1 : -1];
+        char probe_user_prefs_off_checksum[offsetof(struct ExpansionUserPrefs, checksum) == 0x08 ? 1 : -1];
+        char probe_user_prefs_size_for_checksum[EXPANSION_USER_PREFS_SIZE_FOR_CHECKSUM == 0x08 ? 1 : -1];
+        char probe_user_prefs_meta_offset[EXPANSION_USER_PREFS_META_OFFSET == 0 ? 1 : -1];
+        char probe_reserved_tail_size_matches[
+            (int)sizeof(((struct ExpansionSaveMeta *)0)->reserved) == EXPANSION_SAVE_META_RESERVED_SIZE ? 1 : -1];
+        char probe_user_prefs_fits_in_reserved[
+            (EXPANSION_USER_PREFS_META_OFFSET + (int)sizeof(struct ExpansionUserPrefs))
+                <= (int)sizeof(((struct ExpansionSaveMeta *)0)->reserved) ? 1 : -1];
+        char probe_reserved_headroom_bytes[EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES == 0x20 ? 1 : -1];
+        char probe_reserved_headroom_matches[
+            EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES
+                == ((int)sizeof(((struct ExpansionSaveMeta *)0)->reserved)
+                    - EXPANSION_USER_PREFS_META_OFFSET - (int)sizeof(struct ExpansionUserPrefs)) ? 1 : -1];
     """)
 
     # -- legacy agbcc coverage (always runs; no optional dependency) --------

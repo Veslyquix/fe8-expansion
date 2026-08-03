@@ -1,8 +1,8 @@
 # Release migration template
 
 > **This is a template, not a current release's migration guide.** No
-> tagged version-to-version migration exists yet in this repository as of
-> commit `68871ed5b6ef3c47b301e26824ca7725383ab606`. Copy this file's
+> tagged version-to-version migration or automated release process exists in
+> the current repository. Copy this file's
 > structure into a real, dated migration doc (for example
 > `docs/migration-v0.1-to-v0.2.md`) when a future framework version
 > actually ships a breaking or notable change, and fill in every bracketed
@@ -49,16 +49,13 @@ each: what changed, why, and which lane(s) (modern/archival) it affects.
 
 - Public headers changed: `[list `include/*.h` files and the specific
   symbols added/removed/changed]`
-- Issues **#10**, **#11**, and **#13** already reached a final merged
-  interface (see
-  [`docs/architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918));
-  if this migration involves one of the still-open issues (currently
-  **#6**, **#9**, **#18**) reaching a final merged interface for the
-  first time, say so explicitly here and update
-  [`docs/architecture.md`](architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
-  and [`docs/framework-support.md`](framework-support.md#active--unmerged-work-do-not-read-as-current-support)
-  in the same change — do not leave either document's active/unmerged-work
-  language stale once an interface actually ships.
+- Issues **#6**, **#10**, **#11**, **#13**, and **#18** have current merged
+  implementation surfaces (see
+  [`docs/architecture.md`](architecture.md#public-extension-boundaries)).
+  If a future release changes one, name the exact header/API and migration
+  impact. Issue #9 is still future release tooling; filling out a copy of this
+  template does not itself create tags, changelogs, artifacts, automation, or
+  a downstream updater.
 
 ## Debug and test surface changes
 

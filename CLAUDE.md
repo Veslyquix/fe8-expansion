@@ -60,6 +60,14 @@ through the generated-data platform rather than hand-written C tables —
 see [`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md)
 (`make generated-data-validate`, `-generate`, `-check`, `-test`).
 
+
+Optional starter features are four default-off, fingerprinted flags with
+validated dependencies; never infer the profile from the item cap alone. See
+[`docs/starter_features.md`](docs/starter_features.md). Expansion UI strings
+and locale IDs use the independent catalog under `texts/expansion/`; see
+[`docs/localization.md`](docs/localization.md) and run the stdlib localization
+suite before changing registry/catalog data.
+
 ## Compiler & Toolchain
 
 - **Modern (default release lane)**: `arm-none-eabi` GCC targeting AAPCS.

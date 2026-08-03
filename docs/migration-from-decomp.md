@@ -55,9 +55,19 @@ for the governance framing.
      [`docs/config_identity.md`](config_identity.md). The archival lane has
      none of this; it keeps its own hardcoded identity
      (`src/rom_header.s`), entirely unaffected by `config.mk`.
-   - Save-format compatibility (`EXPANSION_SAVE_COMPAT_EPOCH`) is a
-     modern-lane concept — see [`docs/save_format.md`](save_format.md).
-6. **Pick the right issue/PR evidence template.** State which lane
+   - Save-format compatibility is currently format/epoch 2 because the
+     checksummed locale-prefs subrecord gives part of the reserved tail a
+     defined meaning. Classification checks format before epoch, and host
+     migration is out-of-place — see [`docs/save_format.md`](save_format.md).
+   - The four issue #6 starter switches default off and carry dependency
+     checks; expansion-localized strings use stable IDs/catalogs independent
+     of vanilla `MSG_*`. See [`starter_features.md`](starter_features.md) and
+     [`localization.md`](localization.md).
+6. **Retarget authoring and tests together.** Run `make generated-data-check`
+   after data edits and `make localization-test` after catalog/locale edits.
+   For runtime changes, run both debug and release modern linker checks; do
+   not substitute archival byte comparison for modern behavior evidence.
+7. **Pick the right issue/PR evidence template.** State which lane
    (modern/archival) your change targets and run the commands in
    [`CONTRIBUTING.md`](../CONTRIBUTING.md)'s fast-checks/full-gates
    sections for that lane.

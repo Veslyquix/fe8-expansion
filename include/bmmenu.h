@@ -15,6 +15,9 @@ u8 MapMenu_IsGuideCommandAvailable(const struct MenuItemDef * def, int number);
 int MapMenu_GuideCommandDraw(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 MapMenu_GuideCommand(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 MapMenu_DangerZone_UnusedEffect(void);
+#if FE8_EXPANSION_DANGER_OVERLAY_MENU
+u8 ExpansionDangerOverlay_MenuSelect(struct MenuProc * menu, struct MenuItemProc * menuItem);
+#endif
 u8 MapMenu_SuspendCommandEffect(void);
 u8 MenuEffect_CloseMenuVoid(void);
 u8 EffectWait(struct MenuProc * menu, struct MenuItemProc * menuItem);

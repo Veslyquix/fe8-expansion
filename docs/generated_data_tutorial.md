@@ -103,6 +103,56 @@ Source: `src/data/items.json` (the `items` array, one record per
 live `MSG_COUNT` bound; `attributes`/`requiredWexp`/`weaponType` are
 resolved symbolically. Output: `data_items.c`.
 
+Text IDs may also be authored **symbolically** as `MSG_*` names resolved
+against `include/constants/msg.h`:
+
+```json
+{ "item": "ITEM_SWORD_STEEL", "nameTextId": "MSG_SAVE_COMPAT_BACK" }
+```
+
+(any `MSG_*` constant the live header defines; the one above is only a
+spelling example). An unknown symbol fails the data build with an actionable
+diagnostic instead of silently repointing the item at whatever text later
+lands on that number.
+The 206 vanilla records keep the plain-integer form and still round-trip
+byte-for-byte.
+
+**Framework-authored (expansion) records must not add a message at all.**
+`texts/texts.txt` feeds one shared, Huffman-compressed blob, so appending a
+message re-encodes the text of every build, default ones included. Leave the
+text IDs unset on such a record and author its display text through the
+config-gated content path instead -- see `docs/starter_features.md` for the
+bundled worked example.
+
+
+For the merged typed example, add the symbolic ID to
+`include/constants/items_expansion.h`, author `ITEM_EXPANSION_CE` in
+`src/data/items_expansion.json`, and use `authoringName`/
+`authoringDescription`/`authoringUseDescription`. With
+`EXPANSION_STARTER_CONTENT=1`, `python3 -m scripts.generated_data
+content-text` produces the build-local typed name table and audit catalog;
+with the flag off it removes stale outputs and writes nothing. The profile
+also requires mechanics hooks and an active item cap reaching `0xCE`; see
+[`starter_features.md`](starter_features.md) for the exact matrix and
+in-game-description boundary.
+
+### Author expansion-localized UI strings
+
+Expansion framework UI text is independent of item `MSG_*` IDs. Add an
+append-only message record to `texts/expansion/registry.json`, add matching
+English text to `texts/expansion/catalog.en.json`, then run:
+
+```sh
+make localization-validate
+make localization-generate
+make localization-test
+```
+
+`qps-ploc` is derived from English and never hand-authored. Reserved locale
+slots have no translation content today; enabling a future real locale also
+requires its complete catalog and equivalent host/runtime matrix. See
+[`localization.md`](localization.md).
+
 ### Add or modify a **support** (`--table supports`)
 
 Source: `src/data/supports.json`. A record is one owner and its parallel

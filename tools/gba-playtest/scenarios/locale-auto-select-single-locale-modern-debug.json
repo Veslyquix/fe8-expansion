@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "name": "locale-auto-select-single-locale-modern-debug",
+  "description": "Issue #18 sprint 4: WHAT #8's 'one enabled en auto-select no visible selector (default config)' milestone. Boots the default (en-only) modern debug ROM from a real ExpansionUserPrefs UNSET sub-state fixture (outer ExpansionSaveMeta already SAVE_COMPAT_CURRENT, so BuildCurrentExpansionSaveMeta()'s blank-chip auto-stamp never runs -- see tools/gba-playtest/tests/locale_prefs_fixture.py) -- a real reachable state ExpansionUserPrefs_Normalize() classifies as requiresPrompt=TRUE. With enabledLocaleCount==1, ExpansionLanguageMenu_DecideStartupAction returns AUTO_SELECT: the sole enabled locale (en) is silently stored (ExpansionUserPrefs_Store, cacheGeneration 0->1) and the blocking selector's own active flag never becomes 1 -- gExpansionLanguageMenuProbe shows autoSelected=1, promptReason=1 (UNSET), promptShown=0, active=0.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "auto-select-settled",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "expected": "0x0000"
+        }
+      ]
+    }
+  ]
+}

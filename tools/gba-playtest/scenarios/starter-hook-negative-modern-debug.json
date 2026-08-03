@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "name": "starter-hook-negative-modern-debug",
+  "description": "Issue #6 mechanics-hook default-disabled negative control (default debug ROM, all EXPANSION_MECHANICS_* flags 0). The identical combat navigation resolves the same REAL Chapter 4 FIGHT -- the enemy at gUnitArrayRed[0] is 15/15 alive before and 15/0 dead after the hit -- proving the scenario still reaches genuine combat; yet because the seam is compiled out, gExpansionMechanicsProbe stays entirely zero (registerOkCount/registerErrCount/applyCount/lastAppliedCount/lastDefenseDelta/sampleTriggerCount/lastResult all 0). Exact scalar negative control, not framebuffer-only.",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 150,
+      "end": 155,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 270,
+      "end": 275,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 330,
+      "end": 335,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 390,
+      "end": 395,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 450,
+      "end": 455,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 600,
+      "end": 606,
+      "keys": [
+        "SELECT",
+        "R"
+      ]
+    },
+    {
+      "start": 650,
+      "end": 656,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 710,
+      "end": 716,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 770,
+      "end": 776,
+      "keys": [
+        "DOWN"
+      ]
+    },
+    {
+      "start": 830,
+      "end": 836,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 900,
+      "end": 904,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1300,
+      "end": 1306,
+      "keys": [
+        "L"
+      ]
+    },
+    {
+      "start": 1360,
+      "end": 1366,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1650,
+      "end": 1655,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1760,
+      "end": 1765,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1870,
+      "end": 1875,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 1980,
+      "end": 1985,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2090,
+      "end": 2095,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2200,
+      "end": 2205,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2310,
+      "end": 2315,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2420,
+      "end": 2425,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2530,
+      "end": 2535,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2640,
+      "end": 2645,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2750,
+      "end": 2755,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2860,
+      "end": 2865,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 2970,
+      "end": 2975,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3080,
+      "end": 3085,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 3250,
+      "end": 3255,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 3285,
+      "framebuffer": false,
+      "name": "enemy-alive-before-fight",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x0f"
+        }
+      ]
+    },
+    {
+      "frame": 3296,
+      "framebuffer": false,
+      "name": "enemy-dead-after-real-hit",
+      "probes": [
+        {
+          "address": "0x0202eba6",
+          "size": 1,
+          "expected": "0x0f"
+        },
+        {
+          "address": "0x0202eba7",
+          "size": 1,
+          "expected": "0x00"
+        }
+      ]
+    },
+    {
+      "frame": 3320,
+      "framebuffer": false,
+      "name": "mechanics-probe-stays-zero",
+      "probes": [
+        {
+          "address": "0x02031af8",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031afc",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031b00",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031b04",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031b08",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031b0c",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02031b10",
+          "size": 4,
+          "expected": "0x00000000"
+        }
+      ]
+    }
+  ]
+}

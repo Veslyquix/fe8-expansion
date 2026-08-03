@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "name": "locale-blank-sram-no-selector-default-modern-release",
+  "description": "Release-build variant of locale-blank-sram-no-selector-default-modern-debug: same real finding (genuinely blank SRAM is auto-stamped VALID by BuildCurrentExpansionSaveMeta() before the selector's RuntimeInit ever runs, so it never shows), proven against a real MODERN_CONFIG=release ROM. The probe struct exists unconditionally in release too (see include/expansion_language_menu.h) at its own release-build address (debug tooling data shifts the base address; this scenario's probes target THIS build's own real symbol address, not the debug one).",
+  "frames": [
+    {
+      "start": 90,
+      "end": 95,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 155,
+      "end": 160,
+      "keys": [
+        "START"
+      ]
+    },
+    {
+      "start": 220,
+      "end": 225,
+      "keys": [
+        "A"
+      ]
+    },
+    {
+      "start": 285,
+      "end": 290,
+      "keys": [
+        "START"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "post-startup-settled",
+      "probes": [
+        {
+          "address": "0x02031588",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031589",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158a",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158b",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158c",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158d",
+          "size": 1,
+          "expected": "0x05"
+        },
+        {
+          "address": "0x0203158e",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x0203158f",
+          "size": 1,
+          "expected": "0x00"
+        },
+        {
+          "address": "0x02031590",
+          "size": 1,
+          "expected": "0x01"
+        },
+        {
+          "address": "0x02031592",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031594",
+          "size": 2,
+          "expected": "0x0001"
+        },
+        {
+          "address": "0x02031596",
+          "size": 2,
+          "expected": "0x0000"
+        },
+        {
+          "address": "0x02031598",
+          "size": 2,
+          "expected": "0x0000"
+        }
+      ]
+    }
+  ]
+}

@@ -58,6 +58,9 @@ name.
 | `make legacy` / `make fireemblem8.gba` | Archival agbcc `fireemblem8.gba` | Yes | No (agbcc, fetched on first use) |
 | `make clean` / `make clean_fast` | Removes build artifacts (see [`README.md`](../README.md)) | — | — |
 | `make generated-data-validate` / `-generate` / `-check` / `-test` | Structured content authoring (see [`docs/generated_data_tutorial.md`](generated_data_tutorial.md)) | No | No |
+| `make localization-validate` / `make localization-generate` / `make localization-check` / `make localization-test` | Expansion locale registry/catalog authoring and host tests (see [`localization.md`](localization.md)) | No | No |
+| `make expansion-modern-starter-runtime-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Issue #6 enabled/disabled mechanics + Threat Range runtime matrix | Yes | Yes |
+| `make expansion-modern-localization-budget-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Issue #18 catalog/resolver/UI source+linker budget and real region headroom | No new ROM beyond its linked prerequisite | No |
 | `python3 -m scripts.upstream_port {scan,drift,report,verify,...}` | Upstream-drift tracking (see [`docs/upstream-porting.md`](upstream-porting.md)) | No for `scan`/`drift`/`report`; `verify` builds the full gate set | No for `scan`/`drift`/`report`; depends on the gate set for `verify` |
 
 **ABI contract:** `MODERN_ABI=aapcs` is the only supported choice for every
@@ -120,62 +123,50 @@ toolchain, slow rebuilds) is maintained in one place:
 compile-probe failures and the Homebrew cask-vs-formula pitfall are covered
 in [`docs/quickstart.md`](quickstart.md#modern-gcc-compile-only-object-cohort).
 
-## Merged framework contracts (issues #10, #11, #13)
+## Merged framework contracts
 
-These three issues are merged into `master` and their public interfaces are
-supported, with the narrow, explicit non-goals below — they are **not**
-open/aspirational. Closure evidence: `reports/issue10_closure.md`,
-`reports/debugtools_issue11_closure.md`, `reports/gba_playtest_issue13_closure.md`.
+Issues **#6**, **#10**, **#11**, **#13**, and **#18** have implementation
+merged into the current source tree. This is not an issue-closure action; each
+surface remains bounded by its live reference and evidence report.
 
-- **Issue #10** (typed IDs / extensible-ID contracts / caps): the DEFAULT
-  contract (`include/id_space.h`, `reports/id_space_audit.{json,md}`) and
-  the build-local ACTIVE contract (regenerated under `FE8_ITEM_ID_CAP`) are
-  the supported public interface — see
-  [`docs/id_space.md`](id_space.md) for the full DEFAULT-vs-ACTIVE contract,
-  domain-by-domain caps/budgets, and the consumer census. Item IDs are
-  raised and CI-gated at cap `0xCE`/207 records
-  (`expansion-modern-itemexpansion-check`, gates 9-10 of
-  [`docs/upstream-porting.md`](upstream-porting.md)). **Explicit non-goals
-  (still true, not silently dropped):** no class/chapter/unit/character ID
-  widening; no save-layout/epoch change (`EXPANSION_SAVE_COMPAT_EPOCH`
-  untouched); no new event-command encoding; no migration tooling exists
-  yet because the item-cap raise needed none — see
-  `reports/issue10_closure.md`'s "Explicit non-goals"/"Known gaps" sections
-  before assuming any other domain's cap can be raised the same way.
-- **Issue #11** (debug-tools extension surface): a release-safe config gate
-  (`FE8_EXPANSION_DEBUGTOOLS_ENABLED`), a fixed-capacity action-registration
-  API, title/map/prep hotkey hub entry points, five bounded validated tools
-  (unit/convoy/flags/RNG/save-state), and structured diagnostics (probe/log
-  ring, non-fatal assert record) are the supported, merged surface — see
-  [`docs/debugtools.md`](debugtools.md). Its own "Remaining #11 scope"
-  section is the authoritative, current (not stale) list of the few
-  narrow, deliberate non-goals: a full `mgba_printf`/AGB debug-print
-  protocol, an interactive debugger, and an arbitrary memory editor are
-  never attempted; migrating the remaining dormant chapter/BGM-commit
-  tools out of `bmdebug.c`/`uidebug.c` is clearly-scoped future work, not
-  part of this closure.
-- **Issue #13** (regression harness): `tools/gba-playtest` now provides the
-  full deterministic scenario/fingerprint suite (boot, title, new-game,
-  chapter load, combat, suspend/resume, save/load, debugtools hub/tools),
-  a host-only vs. normal (live-ROM) run mode
-  (`GBA_PLAYTEST_HOST_ONLY=1`), retry/timeout/provenance policy, and the
-  Ubuntu + `arm-none-eabi` CI host matrix described above — see its own
-  [`README.md`](../tools/gba-playtest/README.md) and
-  `reports/gba_playtest_issue13_closure.md` for the scenario-by-scenario
-  DONE evidence. macOS/Homebrew is documented for local development but is
-  **not** CI-exercised (see "Supported hosts" above); that gap is
-  unchanged by this closure.
+- **#6 starter features:**
+  `EXPANSION_MECHANICS_HOOKS`, `EXPANSION_MECHANICS_SAMPLE`,
+  `EXPANSION_DANGER_OVERLAY_MENU`, and `EXPANSION_STARTER_CONTENT` all default
+  to `0`. Sample requires hooks; starter content requires hooks and
+  `FE8_ITEM_ID_CAP>=0xCE`. The mechanics registry has typed callbacks, eight
+  slots, copied key/label storage, deterministic order, explicit error codes,
+  and a reentrancy guard. Debug and release both run enabled and default-
+  disabled runtime negatives; the content profile rides the existing item-
+  expansion gates. See [`starter_features.md`](starter_features.md).
+- **#10 typed IDs:** DEFAULT committed and ACTIVE build-local contracts,
+  consumer census, and modern-only item cap `0xCE` pilot are supported; its
+  debug/release runtime commands are gates 9-10 of the pinned 10-gate
+  upstream-port verifier. There is no class/chapter/unit/character widening
+  or implied save migration. See
+  [`id_space.md`](id_space.md).
+- **#11 debug tools:** release-safe config gate, fixed-capacity action API,
+  title/map/prep entry points, five bounded tools, and scalar diagnostics are
+  supported. No full debug-print protocol, arbitrary memory editor, or
+  interactive debugger is claimed. See [`debugtools.md`](debugtools.md).
+- **#13 runtime harness:** deterministic JSON scenarios/fingerprints,
+  `GBA_PLAYTEST_HOST_ONLY=1`, timeout/retry/provenance policy, and live ROM
+  verification are supported. Ubuntu + `arm-none-eabi` is the only CI matrix;
+  macOS/Homebrew remains documented local support, not CI evidence.
+- **#18 localization:** append-only locale/message IDs, English and generated
+  `qps-ploc`, build config/derived defines, resolver/cache, independently
+  checksummed prefs, save format/epoch 2 migration precedence, first-start
+  selector/repair, settings and soft-reset persistence, source/linker budgets,
+  and host/debug/release/shifted/save runtime matrices are supported. Reserved
+  locale slots have no catalog content and pseudo is not a translation. See
+  [`localization.md`](localization.md) and [`save_format.md`](save_format.md).
 
-## Active / unmerged work (do not read as current support)
+The archival agbcc lane remains explicit and default-only for these expansion
+features. Modern output is judged by link/boot/runtime behavior, never vanilla
+ROM byte identity.
 
-The following issues are **open** at the time of writing. Nothing in this
-repository's documentation should be read as promising their public API,
-behavior, or timeline; treat any mention of them elsewhere in the docs the
-same way:
+## Future versioned release work (issue #9)
 
-- **Issue #6** (starter expansion feature bundle) — not merged; no starter
-  feature/hook-registry public API exists yet.
-- **Issue #9** (versioned releases / downstream upgrades) — not merged; no
-  semantic-version/tag/release-CI policy exists yet.
-- **Issue #18** (in-game multilingual support) — not merged; no language
-  configuration/selection surface exists yet.
+No release automation, semantic-version/tag/changelog contract, versioned
+artifact publication, or downstream updater exists in the current tree.
+[`release-migration-template.md`](release-migration-template.md) is unfilled
+future scaffolding, not a current release procedure.

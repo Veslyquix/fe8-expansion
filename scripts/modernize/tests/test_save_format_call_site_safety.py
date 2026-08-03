@@ -220,12 +220,14 @@ class EnsureGlobalSaveInfoLoadedBehaviorTests(unittest.TestCase):
 
     def test_metadata_corrupt_never_inits(self):
         header = make_header(valid=True)
-        meta = make_meta(format_version=1, compat_epoch=self.epoch, corrupt_checksum=True)
+        meta = make_meta(
+            format_version=sft.SAVE_FORMAT_VERSION_CURRENT, compat_epoch=self.epoch, corrupt_checksum=True
+        )
         self._assert_never_inits_on_nonblank(header, meta, sft.SAVE_COMPAT_METADATA_CORRUPT)
 
     def test_current_never_inits(self):
         header = make_header(valid=True)
-        meta = make_meta(format_version=1, compat_epoch=self.epoch)
+        meta = make_meta(format_version=sft.SAVE_FORMAT_VERSION_CURRENT, compat_epoch=self.epoch)
         self._assert_never_inits_on_nonblank(header, meta, sft.SAVE_COMPAT_CURRENT)
 
     def test_migratable_older_never_inits(self):
@@ -242,7 +244,7 @@ class EnsureGlobalSaveInfoLoadedBehaviorTests(unittest.TestCase):
 
     def test_save_config_incompatible_never_inits(self):
         header = make_header(valid=True)
-        meta = make_meta(format_version=1, compat_epoch=self.epoch + 1)
+        meta = make_meta(format_version=sft.SAVE_FORMAT_VERSION_CURRENT, compat_epoch=self.epoch + 1)
         self._assert_never_inits_on_nonblank(
             header, meta, sft.SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE
         )

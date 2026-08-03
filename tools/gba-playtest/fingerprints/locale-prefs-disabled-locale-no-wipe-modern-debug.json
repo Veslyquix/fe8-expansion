@@ -1,0 +1,282 @@
+{
+  "checkpoints": [
+    {
+      "frame": 5,
+      "name": "pre-runtimeinit-sram-baseline",
+      "probes": [
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "value": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "value": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "value": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "value": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "value": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "value": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1,
+          "value": "0xd2"
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1,
+          "value": "0xf0"
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "value": "0x00"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:6295eed6a6ecee64"
+    },
+    {
+      "frame": 600,
+      "framebuffer_hash": "fnv1a64-rgb24:645ace29b411a325",
+      "name": "post-decision-settled",
+      "probes": [
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a96",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a97",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a98",
+          "size": 1,
+          "value": "0x04"
+        },
+        {
+          "address": "0x02031a99",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa0",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x0e0073a0",
+          "size": 1,
+          "value": "0x78"
+        },
+        {
+          "address": "0x0e0073a1",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073a2",
+          "size": 1,
+          "value": "0x34"
+        },
+        {
+          "address": "0x0e0073a3",
+          "size": 1,
+          "value": "0x12"
+        },
+        {
+          "address": "0x0e0073a4",
+          "size": 1,
+          "value": "0x46"
+        },
+        {
+          "address": "0x0e0073a5",
+          "size": 1,
+          "value": "0x53"
+        },
+        {
+          "address": "0x0e0073a6",
+          "size": 1,
+          "value": "0x41"
+        },
+        {
+          "address": "0x0e0073a7",
+          "size": 1,
+          "value": "0x56"
+        },
+        {
+          "address": "0x0e0073d2",
+          "size": 1,
+          "value": "0xd2"
+        },
+        {
+          "address": "0x0e0073d3",
+          "size": 1,
+          "value": "0xf0"
+        },
+        {
+          "address": "0x0e007400",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007401",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007402",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007403",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007406",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007407",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007408",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e007409",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740a",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x0e00740b",
+          "size": 1,
+          "value": "0x00"
+        }
+      ],
+      "sram_hash": "fnv1a64-sram-normalized:6295eed6a6ecee64"
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "4707e6baeea471547009ef7df099b4b19f85f606",
+    "size": 16777216,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-prefs-disabled-locale-no-wipe-modern-debug"
+}

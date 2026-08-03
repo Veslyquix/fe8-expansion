@@ -65,4 +65,68 @@ EXPANSION_BUILD_ID ?=
 # see docs/save_format.md for the full compatibility-vs-diagnostic field
 # list and docs/config_identity.md for how this fits the rest of the
 # identity surface.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 1
+#
+# Bumped 1 -> 2 for issue #18 sprint 2: struct ExpansionUserPrefs
+# (include/expansion_save_prefs.h) now occupies part of ExpansionSaveMeta's
+# `reserved` tail.
+EXPANSION_SAVE_COMPAT_EPOCH ?= 2
+
+# --- Localization (issue #18 sprint 1) --------------------------------------
+# EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
+#   scripts/localization/schema.py's LOCALE_IDS) enabled for this build; must
+#   include "en", must not repeat an id, and sprint 1 supports only "en" and
+#   "qps-ploc" (an ASCII pseudo-locale test harness, never a real
+#   translation -- see scripts/localization/pseudo.py). Every other stable
+#   locale id is a reserved slot for a future sprint and is rejected today.
+#   Normalized into the fixed stable-id order regardless of the order given
+#   here (see scripts/modernize/expansion_config.py's validate_enabled_locales).
+EXPANSION_ENABLED_LOCALES ?= en
+
+# EXPANSION_DEFAULT_LOCALE -- the locale the runtime resolver
+# (src/expansion_locale.c) starts in; must be one of EXPANSION_ENABLED_LOCALES.
+EXPANSION_DEFAULT_LOCALE ?= en
+
+# EXPANSION_PSEUDO_LOCALE -- exactly "0" or "1"; must be "1" if and only if
+# "qps-ploc" is present in EXPANSION_ENABLED_LOCALES above (this is checked,
+# not just documented -- an inconsistent combination fails the build before
+# any compilation). This setting (like EXPANSION_ENABLED_LOCALES/
+# EXPANSION_DEFAULT_LOCALE above) folds into the config identity fingerprint
+# but never changes EXPANSION_SAVE_COMPAT_EPOCH: locale configuration is
+# diagnostic/UI-facing, never a save-format compatibility concern.
+EXPANSION_PSEUDO_LOCALE ?= 0
+
+# --- Starter-feature opt-in build flags (issue #6) --------------------------
+# Independent 0/1 switches for the issue #6 starter-feature foundation. Each
+# flag defaults to 0, so a default build links none of them and stays
+# byte/behaviour-identical to today's ROM (see docs/starter_features.md).
+# Overriding a flag on the `make` command line (e.g.
+# `make ... EXPANSION_MECHANICS_HOOKS=1`) opts that one feature in.
+# scripts/modernize/expansion_config.py validates every value (only 0 or 1
+# is accepted; -1/2/text fail with an actionable message) and folds every
+# one of them into the config-identity fingerprint and embedded metadata JSON --
+# they are diagnostic identity only and never change the save format (see
+# EXPANSION_SAVE_COMPAT_EPOCH above, which stays independent).
+#
+#   EXPANSION_MECHANICS_HOOKS     -- link the public battle-stat mechanics
+#                                    hook registry (include/expansion_mechanics.h).
+#   EXPANSION_MECHANICS_SAMPLE    -- register the bundled sample mechanic
+#                                    through that registry. Requires
+#                                    EXPANSION_MECHANICS_HOOKS=1 (validated:
+#                                    sample=1 with hooks=0 is a hard error).
+#   EXPANSION_DANGER_OVERLAY_MENU -- expose the player-facing danger/range
+#                                    overlay map-menu surface (reuses the
+#                                    existing danger-zone range path).
+#   EXPANSION_STARTER_CONTENT     -- link the bundled generated-data content
+#                                    example: the framework-authored item
+#                                    ITEM_EXPANSION_CE ("Sample Charm",
+#                                    src/data/items_expansion.json) and its
+#                                    mechanic, registered through the public
+#                                    hook registry. Requires
+#                                    EXPANSION_MECHANICS_HOOKS=1 AND an
+#                                    expanded item ID cap
+#                                    (FE8_ITEM_ID_CAP=0xCE or higher) --
+#                                    both validated, both hard errors.
+EXPANSION_MECHANICS_HOOKS     ?= 0
+EXPANSION_MECHANICS_SAMPLE    ?= 0
+EXPANSION_DANGER_OVERLAY_MENU ?= 0
+EXPANSION_STARTER_CONTENT     ?= 0

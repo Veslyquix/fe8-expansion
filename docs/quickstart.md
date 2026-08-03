@@ -51,6 +51,26 @@ On success you’ll see:
 [✓] Modern build complete: /path/to/fireemblem8-expansion/build/expansion-modern/release/aapcs/fireemblem8.gba
 ```
 
+
+## After installation: configure, author, test, debug
+
+1. Keep the supported linked ABI at `MODERN_ABI=aapcs`; choose
+   `MODERN_CONFIG=debug` while developing and `release` for the default lane.
+2. Set ROM identity, locale configuration, or the four default-off starter
+   flags through `config.mk`/`make` overrides, following
+   [`config_identity.md`](config_identity.md),
+   [`starter_features.md`](starter_features.md), and
+   [`localization.md`](localization.md). Invalid locale/flag/dependency
+   combinations fail before compilation.
+3. Author typed game data under `src/data/` and expansion UI text under
+   `texts/expansion/`; never edit `build/generated/` output. Follow
+   [`generated_data_tutorial.md`](generated_data_tutorial.md).
+4. Run the fast host checks from [`../CONTRIBUTING.md`](../CONTRIBUTING.md),
+   then both debug/release `expansion-modern-linker-check` gates for runtime,
+   save, budget, shifted-link, starter, and localization coverage.
+5. Diagnose failures with [`debugtools.md`](debugtools.md) and the scenario
+   harness in [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md).
+
 ### Archival `--legacy` path
 
 Pass `--legacy` (or `--refresh-agbcc`, which implies it) to build the

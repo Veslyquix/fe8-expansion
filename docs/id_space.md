@@ -330,9 +330,21 @@ generated objects) are unaffected.
 ## Adding a supported item record
 
 1. Add the enum constant to `include/constants/items_expansion.h`.
-2. Add the record to `src/data/items_expansion.json` (original/blank text only
-   -- do not introduce copyrighted names/descriptions; author real names via
-   the `texts/` pipeline as a follow-on).
+2. Add the record to `src/data/items_expansion.json`. **Do not append a
+   message to `texts/texts.txt` for it.** That table is Huffman-compressed
+   as one shared blob, so one added message re-encodes the text blob of
+   *every* build -- including default, feature-free ones -- which this
+   repository treats as a default-identity regression, not a cost of doing
+   business. Leave `nameTextId`/`descTextId`/`useDescTextId` unset (they
+   stay `0`); never reuse a vanilla message index, name or icon design as a
+   shortcut, and do not add new graphics assets: point `iconId` at an
+   existing neutral slot and document the choice. The bundled issue #6
+   example (`ITEM_EXPANSION_CE`) is the worked reference for authoring the
+   record's *original* display text through the config-gated content path:
+   put it in the record as `"authoringName": "..."`, which
+   `scripts/generated_data/items/content_text.py` emits into a build-local
+   text table that only an `EXPANSION_STARTER_CONTENT=1` build generates and
+   links -- see `docs/starter_features.md`, "Config-gated content text".
 3. Raise `FE8_ITEM_ID_CAP` to at least the new ID.
 4. Regenerate and test (no `--no-roundtrip`: the vanilla 206-record round
    trip stays fully enforced; overlay-only IDs are verified separately):
@@ -367,17 +379,31 @@ FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 \
   make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs -j"$(nproc)"
 ```
 
-What the debug run proves, all with 0xCE and with the legacy 0xCD and the
-empty (0x0000) slot unchanged beside it:
+Every expected record value is read from the authored source of truth
+(`src/data/items_expansion.json` resolved through the generated-data schema,
+plus the `MSG_*`/`ITYPE_*`/`IA_*` headers), never restated as a literal in the
+runner, so ROM-vs-data drift fails the gate. The runner also cross-checks the
+running ROM's compiled cap against the build-local `id_space_active.h`
+ACTIVE contract (`--active-header`), binding the runtime, the generated table
+and the compiler cap together: cap `0xCE`, 207 records.
+
+Adding `EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1
+EXPANSION_MECHANICS_SAMPLE=1` to the same command (what CI does) additionally
+proves the issue #6 bundled content example on this same single ROM build --
+no second harness and no extra build. See `docs/starter_features.md`.
+
+What the debug run proves, all with the authored `0xCE` record and with the
+legacy `0xCD` and the empty (`0x0000`) slot unchanged beside it:
 
 | Stage | Production path exercised | Observed |
 | --- | --- | --- |
-| item record | `GetItemData` / `MakeNewItem` / `GetItemIndex` / `GetItemUses` | `number=0xCE`, `weaponType=ITYPE_ITEM`, `maxUses=1`, `MakeNewItem=0x01CE` |
-| event | a real `SVAL`+`GIVEITEMTO` script through `CallEvent` -> the engine's own `EV_CMD_GIVEITEM` handler -> the "got item" popup | Eirika's live inventory slot 3 holds `0x01CE`; the same script's `0xCD` item holds `0x00CD` |
+| item record | `GetItemData` / `MakeNewItem` / `GetItemIndex` / `GetItemUses` | every field of the authored `ITEM_EXPANSION_CE` record (`number`, `weaponType`, `maxUses`, `attributes`, `iconId`, `nameTextId`, `descTextId`) and `MakeNewItem = uses<<8 \| id` |
+| event | a real `SVAL`+`GIVEITEMTO` script through `CallEvent` -> the engine's own `EV_CMD_GIVEITEM` handler -> the "got item" popup | Eirika's live inventory slot holds the authored item halfword; the same script's `0xCD` item holds `0x00CD` |
 | UI | `GetItemName` / `GetItemIconId` / `GetItemDescId`, `DrawItemMenuLine`, `DrawItemStatScreenLine` | name resolves to a real string; icon/name/uses tiles written into the live BG0 tilemap; both draw paths place the same icon |
-| link / MultiArena | `WriteMultiArenaSaveTeam` -> `ReadMultiArenaSaveTeam` (through real SRAM) | `0x01CE` bit-exact |
-| game save | `WriteGameSavePackedUnit` -> `LoadSavedUnit` | `0x01CE` bit-exact, and the packed 14-bit field itself reads back `0x01CE` |
-| suspend save | `EncodeSuspendSavePackedUnit` -> `ReadSuspendSavePackedUnit` | `0x01CE` bit-exact |
+| link / MultiArena | `WriteMultiArenaSaveTeam` -> `ReadMultiArenaSaveTeam` (through real SRAM) | the authored item halfword, bit-exact |
+| game save | `WriteGameSavePackedUnit` -> `LoadSavedUnit` | bit-exact, and the packed 14-bit field itself reads it back |
+| suspend save | `EncodeSuspendSavePackedUnit` -> `ReadSuspendSavePackedUnit` | bit-exact |
+| content (issue #6) | the public `ExpansionMechanicsApplyBattleStats()` seam on two production-initialized `struct BattleUnit`s | the bundled mechanic's bounded bonus for the item's bearer only; a deployed control unit that does not carry it gets `+0` |
 
 The whole-block save/suspend cycle (manual Suspend through the ordinary Map
 Menu, soft reset, Resume) is separately verified on the same expanded-cap ROM
@@ -391,7 +417,10 @@ for both configurations. The probe deliberately does not add a
 `MODERN_CONFIG=release` runs the same probe with `--require-stages boot`: the
 running release ROM's own `GetItemData`/`MakeNewItem`/`GetItemIndex`/
 `GetItemUses` are asserted to resolve `0xCE` to the expanded record with
-`0xCD` unchanged, and the map-dependent stages are proven on the debug ROM.
+`0xCD` unchanged -- plus, when the content profile is on, the whole issue #6
+config/registry half (the compiled content flag, the typed bundled item ID,
+and both mechanics registered through the public API). The map-dependent
+stages are proven on the debug ROM.
 
 The reason is a pre-existing property of the release configuration, not of the
 ID space: a modern release ROM does not reach a battle map in this headless

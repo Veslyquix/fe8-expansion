@@ -8,6 +8,63 @@ classification, authoritative/historical/generated/deprecated status
 accounting, and the checker/CI evidence backing it, plus the remaining
 follow-up work.
 
+
+## Current master-integration audit (supersedes all gate/status/count snapshots below)
+
+The sections after this one are retained as useful historical snapshots, but
+their hardcoded file counts, pre-merge #6/#18 status, and any 12-gate wording
+are superseded. Current policy is set equality, not a frozen count:
+
+- recognized Markdown extensions are `.md`, `.markdown`, `.mdown`, `.mkd`,
+  and `.mkdn`, case-insensitive, discovered from Git's complete tracked plus
+  untracked-not-ignored set;
+- inventory entries must match that set exactly and every HTTP(S) occurrence
+  must match the offline external registry; no online link check is claimed;
+- #6 starter features and #18 localization are now integrated into current
+  navigation, source-of-truth/API/support tables, config/save/migration docs,
+  and positive/negative host/runtime/debug/release/shifted/save matrices;
+- upstream-port `verify` has 10 ordered mirrored commands; the independent
+  docs workflow gate makes the issues #7/#17 contract 11. The preserved
+  localization host workflow step is additional workflow-only coverage, not a
+  resurrected 11th `verify` entry or a 12-gate docs model;
+- #9 remains future work: the template is not release automation or a current
+  migration process.
+
+### Current audit validation evidence
+
+All results below were reproduced in this integration worktree; counts are
+point-in-time output, not policy constants:
+
+- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> 182 tests,
+  `OK`.
+- `python3 scripts/check_docs.py --check --check-examples` -> 72 recognized
+  Markdown files, 0 findings; all three safe help examples passed. This made
+  no network requests.
+- `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s
+  tools/gba-playtest/tests -v` -> 407 tests, `OK (skipped=11)`.
+- `python3 -m unittest discover -s scripts/generated_data/tests -v` -> 633
+  tests, `OK`; `make generated-data-check` -> 13 tables / 722 records, no
+  table/manifest/consumer-census/ID-space drift.
+- `python3 -m unittest discover -s tests/upstream_port -v` -> 146 tests,
+  `OK`, including live workflow argv/order and both standalone-step locks.
+- `python3 -m unittest discover -s scripts/modernize/tests -v` -> 530 tests,
+  `OK (skipped=1)`. Because temporary files were required to remain inside
+  this worktree, the first run exposed two Git-parent-discovery assertions;
+  the final run set `GIT_CEILING_DIRECTORIES` at the in-worktree scratch root
+  and passed without writing to `/tmp` or changing tests.
+- `python3 -m unittest discover -s scripts/localization/tests -p
+  'test_*.py' -v` -> 82 tests, `OK`.
+- Targeted defaults: `test_build_default_lane.py` -> 15 tests, `OK`;
+  `test_quickstart.py` -> 15 tests, `OK`.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 10
+  ordered `SKIPPED(dry-run)` entries, with the issue #6 starter-content args
+  on gates 9-10. The workflow-only docs check remains the eleventh issues
+  #7/#17 closure gate; the localization host step is separately preserved.
+- Safe Make probes resolved the live object-print targets, localization
+  generation target, and compile-only `apcs-gnu` cohort; the linked
+  `apcs-gnu` ELF probe failed with the documented AAPCS-only guard.
+
+
 ## Post-merge integration update (issues #10/#11/#13 into this docs branch)
 
 **Historical snapshot, superseded for gate-count/composition facts by the
@@ -767,9 +824,9 @@ facts:**
   hook registry (#6), release/versioning tooling (#9), or
   language-selection config API (#18) exists in this baseline yet;
   see
-  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries--merged-101113-vs-active-6918)
+  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries)
   and
-  [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts-issues-10-11-13)
+  [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts)
   for the current merged-vs-active boundary.
 - This audit does not re-verify the factual accuracy of every
   historical/archival document against `master` -- only that it is

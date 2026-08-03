@@ -4,6 +4,8 @@
 
 #if FE8_EXPANSION_ITEMTEST_ENABLED
 
+#include <string.h>
+
 #include "proc.h"
 #include "hardware.h"
 #include "fontgrp.h"
@@ -20,6 +22,9 @@
 #include "EAstdlib.h"
 #include "worldmap.h"
 #include "gamecontrol.h"
+#include "bmbattle.h"
+#include "expansion_mechanics.h"
+#include "expansion_starter_content.h"
 #include "constants/items.h"
 #include "constants/items_expansion.h"
 #include "constants/characters.h"
@@ -43,11 +48,39 @@ EWRAM_DATA static u8 sChapterBootRequested = 0;
 EWRAM_DATA static u8 sBootSuppressionActive = 0;
 EWRAM_DATA static u16 sTitleIdleFrames = 0;
 
-/* Scratch team buffer for the MultiArena/link roundtrip below. EWRAM (not
- * stack): struct Unit is far too large for MULTIARENA_UNITS_PER_TEAM
- * copies on a proc's stack. */
-EWRAM_DATA static struct Unit sArenaTeamOut[MULTIARENA_UNITS_PER_TEAM];
-EWRAM_DATA static struct Unit sArenaTeamIn[MULTIARENA_UNITS_PER_TEAM];
+/* Scratch team buffer for the MultiArena/link roundtrip (stage 4) and
+ * scratch combatants for the issue #6 content-mechanic stage (stage 7,
+ * the very last stage this proc script runs -- see the PROC_CALL list
+ * at the bottom of this file) share one EWRAM allocation below: the
+ * proc script is a strictly sequential state machine (never concurrent,
+ * never re-entrant), stage 4 fully drains sArenaTeamOut/sArenaTeamIn
+ * into gItemExpansionProbe fields before it returns, and no stage
+ * between 4 and 7 ever touches this buffer again, so stage 7's
+ * combatants can safely reuse the same bytes once stage 4 is done with
+ * them. EWRAM (not stack): struct Unit is far too large for
+ * MULTIARENA_UNITS_PER_TEAM copies, and struct BattleUnit embeds a
+ * whole struct Unit, on a proc's stack. This is scratch reuse only --
+ * sContentBearer and sContentControl still get their own, separate
+ * members (never merged with each other): the content stage keeps both
+ * combatants concurrently live across a single
+ * ExpansionMechanicsApplyBattleStats() call each way. */
+EWRAM_DATA static union
+{
+    struct
+    {
+        struct Unit out[MULTIARENA_UNITS_PER_TEAM];
+        struct Unit in[MULTIARENA_UNITS_PER_TEAM];
+    } arena;
+    struct
+    {
+        struct BattleUnit bearer;
+        struct BattleUnit control;
+    } content;
+} sArenaContentScratch;
+#define sArenaTeamOut   (sArenaContentScratch.arena.out)
+#define sArenaTeamIn    (sArenaContentScratch.arena.in)
+#define sContentBearer  (sArenaContentScratch.content.bearer)
+#define sContentControl (sArenaContentScratch.content.control)
 
 /* Scratch packed-record buffers for the game-save/suspend pack+unpack
  * roundtrips below, and the unit the production unpackers restore into. */
@@ -76,6 +109,12 @@ CONST_DATA static char sArenaTeamName[MULTIARENA_TEAMNAME_SIZE + 1] = "ITEMTEST"
 /* The unit the production event targets and every later production save
  * path carries. Eirika is deployed from the first turn of Chapter 2. */
 #define ITEMTEST_TARGET_PID CHARACTER_EIRIKA
+
+/* The negative control for the issue #6 content stage: a second unit that is
+ * deployed on the same map from turn 1 and never receives the content item,
+ * so one run records the content mechanic firing for the bearer and NOT
+ * firing for a unit that does not carry it. */
+#define ITEMTEST_CONTROL_PID CHARACTER_SETH
 
 /* Fixed RN seed for the scripted boot (see ItemExpansionTest_PrepareChapterBoot). */
 #define ITEMTEST_RNG_SEED 0x42D690E9
@@ -132,6 +171,74 @@ static u32 ItemExpansionTest_FindRawItem(struct Unit * unit, int itemIndex)
     }
 
     return 0;
+}
+
+/* Registry index of a mechanic key, using only the public introspection
+ * API (ExpansionMechanicsCount/KeyAt). Returns ITEMTEST_INDEX_NONE when the
+ * key is not registered. */
+static u32 ItemExpansionTest_FindMechanicIndex(const char * key)
+{
+    const char * entry;
+    int count;
+    int i;
+
+    count = ExpansionMechanicsCount();
+
+    for (i = 0; i < count; i++)
+    {
+        entry = ExpansionMechanicsKeyAt(i);
+
+        if (entry != NULL && strcmp(entry, key) == 0)
+            return (u32)i;
+    }
+
+    return ITEMTEST_INDEX_NONE;
+}
+
+static u32 ItemExpansionTest_SlotValue(int slot)
+{
+    if (slot < 0)
+        return ITEMTEST_INDEX_NONE;
+
+    return (u32)slot;
+}
+
+/* FNV-1a 32, over the NUL-terminated string the production name path
+ * returned. A hash plus the length is a scalar, order-sensitive witness of
+ * the exact bytes drawn, so the probe never has to publish a pointer (or a
+ * framebuffer) to prove the text. Offset basis/prime are the published
+ * FNV-1a 32 constants. */
+#define ITEMTEST_FNV1A_OFFSET 2166136261u
+#define ITEMTEST_FNV1A_PRIME 16777619u
+
+static u32 ItemExpansionTest_StringHash(const char * text)
+{
+    u32 hash = ITEMTEST_FNV1A_OFFSET;
+    const u8 * cursor = (const u8 *)text;
+
+    if (text == NULL)
+        return 0;
+
+    while (*cursor != 0)
+    {
+        hash ^= (u32)*cursor++;
+        hash *= ITEMTEST_FNV1A_PRIME;
+    }
+
+    return hash;
+}
+
+static u32 ItemExpansionTest_StringLength(const char * text)
+{
+    u32 length = 0;
+
+    if (text == NULL)
+        return 0;
+
+    while (text[length] != 0)
+        length++;
+
+    return length;
 }
 
 static int ItemExpansionTest_FindItemSlot(struct Unit * unit, int itemIndex)
@@ -274,6 +381,23 @@ static void ItemExpansionTest_StageItemData(struct ItemExpansionTestProc * proc)
     gItemExpansionProbe.lookupUses = GetItemUses(made);
     gItemExpansionProbe.legacyDataNumber = GetItemData(ITEM_UNK_CD)->number;
 
+    /* Issue #6 content example, boot half: the compile-time config flag, the
+     * bundled item's typed ID, and the state of the PUBLIC mechanics registry
+     * after the framework's single built-in install point has run. None of
+     * this needs a map, so a modern release ROM records it too. */
+    ExpansionMechanicsInstallBuiltins();
+
+    gItemExpansionProbe.contentEnabled = (u32)ExpansionStarterContentIsEnabled();
+    gItemExpansionProbe.contentItemId = (u32)ExpansionStarterContentItemId();
+    gItemExpansionProbe.contentMechanicsCount = (u32)ExpansionMechanicsCount();
+    gItemExpansionProbe.contentMechanicIndex =
+        ItemExpansionTest_FindMechanicIndex(EXPANSION_STARTER_CONTENT_KEY);
+    gItemExpansionProbe.contentSampleIndex =
+        ItemExpansionTest_FindMechanicIndex(EXPANSION_MECHANICS_SAMPLE_KEY);
+    gItemExpansionProbe.contentRegisterOk = gExpansionMechanicsProbe.registerOkCount;
+    gItemExpansionProbe.contentRegisterErr = gExpansionMechanicsProbe.registerErrCount;
+    gItemExpansionProbe.contentLastResult = gExpansionMechanicsProbe.lastResult;
+
     gItemExpansionProbe.stagesCompleted |= ITEMTEST_STAGE_ITEMDATA;
 }
 
@@ -336,6 +460,7 @@ static void ItemExpansionTest_StageUi(struct ItemExpansionTestProc * proc)
     struct Text text;
     u16 * mapOut;
     struct Unit * unit;
+    const char * name;
     int item;
 
     (void)proc;
@@ -346,7 +471,11 @@ static void ItemExpansionTest_StageUi(struct ItemExpansionTestProc * proc)
     if (item == 0)
         item = MakeNewItem(ITEM_EXPANSION_CE);
 
-    gItemExpansionProbe.uiNamePtr = (u32)GetItemName(item);
+    name = GetItemName(item);
+
+    gItemExpansionProbe.uiNamePtr = (u32)name;
+    gItemExpansionProbe.uiNameLen = ItemExpansionTest_StringLength(name);
+    gItemExpansionProbe.uiNameHash = ItemExpansionTest_StringHash(name);
     gItemExpansionProbe.uiIconId = GetItemIconId(item);
     gItemExpansionProbe.uiDescId = GetItemDescId(item);
 
@@ -477,6 +606,99 @@ static void ItemExpansionTest_StageSuspend(struct ItemExpansionTestProc * proc)
     gItemExpansionProbe.stagesCompleted |= ITEMTEST_STAGE_SUSPEND;
 }
 
+/* Stage 7 (issue #6): the bundled content example end to end on a live map.
+ *
+ * Both combatants are built by the production InitBattleUnit() from real,
+ * deployed units, and the bonus is applied through the PUBLIC registry seam
+ * ExpansionMechanicsApplyBattleStats() -- the very entry point
+ * ComputeBattleUnitStats() itself calls. Nothing here re-implements the
+ * mechanic, and nothing special-cases a stat.
+ *
+ * The bearer received the content item from the production event decoder in
+ * stage 2; the control unit never did. One apply each therefore records the
+ * content mechanic's bounded avoid bonus for the bearer only, next to the
+ * content-free sample's bounded defence bonus for both -- a positive and its
+ * negative control in the same deterministic run. */
+static void ItemExpansionTest_StageContent(struct ItemExpansionTestProc * proc)
+{
+    struct Unit * bearer;
+    struct Unit * control;
+    ItemId item;
+    u32 appliesBefore;
+    u32 triggersBefore;
+    short avoidBefore;
+    short defenseBefore;
+
+    (void)proc;
+
+    /* Content flag off: record the explicit "no bearer / no control" sentinels
+     * and complete the stage, so a probe build WITHOUT the content example
+     * still reaches ITEMTEST_STAGE_ALL and its negative control is an
+     * explicit recorded value rather than an untouched zero. */
+    if (!ExpansionStarterContentIsEnabled())
+    {
+        gItemExpansionProbe.contentBearerItemSlot = ITEMTEST_INDEX_NONE;
+        gItemExpansionProbe.contentControlItemSlot = ITEMTEST_INDEX_NONE;
+        gItemExpansionProbe.stagesCompleted |= ITEMTEST_STAGE_CONTENT;
+        return;
+    }
+
+    bearer = ItemExpansionTest_GetTargetUnit();
+    control = GetUnitFromCharId(ITEMTEST_CONTROL_PID);
+
+    if (bearer == NULL || control == NULL)
+        return;
+
+    item = ExpansionStarterContentItemId();
+
+    gItemExpansionProbe.contentBearerPid = UNIT_CHAR_ID(bearer);
+    gItemExpansionProbe.contentControlPid = UNIT_CHAR_ID(control);
+    gItemExpansionProbe.contentBearerItemSlot =
+        ItemExpansionTest_SlotValue(GetUnitItemSlot(bearer, (int)item));
+    gItemExpansionProbe.contentControlItemSlot =
+        ItemExpansionTest_SlotValue(GetUnitItemSlot(control, (int)item));
+
+    appliesBefore = gExpansionMechanicsProbe.applyCount;
+    triggersBefore = gExpansionMechanicsProbe.sampleTriggerCount;
+
+    /* sContentBearer/sContentControl alias the already-drained arena
+     * scratch above (see the union comment by their declaration):
+     * InitBattleUnit() only ever sets a named subset of struct
+     * BattleUnit's fields (src/bmbattle.c), the same way it does for a
+     * genuinely fresh, zero-BSS EWRAM global, so this scratch must be
+     * explicitly rezeroed before every use here -- exactly the same
+     * convention this file already applies to sUnpackedUnit above,
+     * which is reused across stages 5 and 6 for the same reason. */
+    CpuFill16(0, &sContentBearer, sizeof(sContentBearer));
+    CpuFill16(0, &sContentControl, sizeof(sContentControl));
+
+    InitBattleUnit(&sContentBearer, bearer);
+    InitBattleUnit(&sContentControl, control);
+
+    avoidBefore = sContentBearer.battleAvoidRate;
+    defenseBefore = sContentBearer.battleDefense;
+    ExpansionMechanicsApplyBattleStats(&sContentBearer, &sContentControl, 0);
+    gItemExpansionProbe.contentBearerAvoidDelta =
+        (u32)((int)sContentBearer.battleAvoidRate - (int)avoidBefore);
+    gItemExpansionProbe.contentBearerDefenseDelta =
+        (u32)((int)sContentBearer.battleDefense - (int)defenseBefore);
+
+    avoidBefore = sContentControl.battleAvoidRate;
+    defenseBefore = sContentControl.battleDefense;
+    ExpansionMechanicsApplyBattleStats(&sContentControl, &sContentBearer, 0);
+    gItemExpansionProbe.contentControlAvoidDelta =
+        (u32)((int)sContentControl.battleAvoidRate - (int)avoidBefore);
+    gItemExpansionProbe.contentControlDefenseDelta =
+        (u32)((int)sContentControl.battleDefense - (int)defenseBefore);
+
+    gItemExpansionProbe.contentApplyCount =
+        gExpansionMechanicsProbe.applyCount - appliesBefore;
+    gItemExpansionProbe.contentSampleTriggerCount =
+        gExpansionMechanicsProbe.sampleTriggerCount - triggersBefore;
+
+    gItemExpansionProbe.stagesCompleted |= ITEMTEST_STAGE_CONTENT;
+}
+
 static void ItemExpansionTest_Finish(struct ItemExpansionTestProc * proc)
 {
     (void)proc;
@@ -503,6 +725,7 @@ CONST_DATA static struct ProcCmd sItemExpansionTestScript[] = {
     PROC_CALL(ItemExpansionTest_StageMultiArena),
     PROC_CALL(ItemExpansionTest_StageGameSave),
     PROC_CALL(ItemExpansionTest_StageSuspend),
+    PROC_CALL(ItemExpansionTest_StageContent),
     PROC_CALL(ItemExpansionTest_Finish),
 
     PROC_END,
