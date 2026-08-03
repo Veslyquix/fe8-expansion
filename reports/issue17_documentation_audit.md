@@ -23,10 +23,9 @@ are superseded. Current policy is set equality, not a frozen count:
 - #6 starter features and #18 localization are now integrated into current
   navigation, source-of-truth/API/support tables, config/save/migration docs,
   and positive/negative host/runtime/debug/release/shifted/save matrices;
-- upstream-port `verify` has 10 ordered mirrored commands; the independent
-  docs workflow gate makes the issues #7/#17 contract 11. The preserved
-  localization host workflow step is additional workflow-only coverage, not a
-  resurrected 11th `verify` entry or a 12-gate docs model;
+- upstream-port `verify` has all 11 current-master mirrored commands,
+  including the localization host suite; the independent issues #7/#17 docs
+  workflow gate is additional and intentionally absent from `verify.gates()`;
 - #9 remains future work: the template is not release automation or a current
   migration process.
 
@@ -56,10 +55,10 @@ point-in-time output, not policy constants:
   'test_*.py' -v` -> 82 tests, `OK`.
 - Targeted defaults: `test_build_default_lane.py` -> 15 tests, `OK`;
   `test_quickstart.py` -> 15 tests, `OK`.
-- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 10
-  ordered `SKIPPED(dry-run)` entries, with the issue #6 starter-content args
-  on gates 9-10. The workflow-only docs check remains the eleventh issues
-  #7/#17 closure gate; the localization host step is separately preserved.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 11
+  ordered `SKIPPED(dry-run)` entries, including localization at gate 3 and
+  the issue #6 starter-content args on gates 10-11. The issues #7/#17 docs
+  check remains one additional standalone workflow gate.
 - Safe Make probes resolved the live object-print targets, localization
   generation target, and compile-only `apcs-gnu` cohort; the linked
   `apcs-gnu` ELF probe failed with the documented AAPCS-only guard.
@@ -113,10 +112,11 @@ numbers without rerunning them):
   finding for that review, not silently bypassed and not hidden by
   rewording the evidence it describes.
 
-## Remediation addendum (post-rejection fix)
+## Intermediate remediation snapshot (superseded)
 
-**Status: candidate remediation evidence. Independent review rejected
-candidate `df374b9e0db81fee9e08b3969ed4be4cf11f8e18` (the state the
+**Status: historical remediation evidence, superseded for current gate
+composition by the Current master-integration audit above. Independent review
+rejected candidate `df374b9e0db81fee9e08b3969ed4be4cf11f8e18` (the state the
 Post-merge integration update above describes) for two P0 defects: (1)
 `docs-check`/`docs-check-tests` failed on two fixable prose examples in
 `reports/issue10_closure.md`, and (2) this branch had expanded the
@@ -141,8 +141,9 @@ trust these numbers without rerunning them.**
   artifact-guard, default-lane-check, quickstart-legacy-check,
   generated-data-check, the two linker-check gates, and the two issue
   #10 item-expansion gates) -- see [`docs/upstream-porting.md`](../docs/upstream-porting.md)
-  for the corrected, renumbered 10-gate list. Documentation governance
-  (`scripts/docs_check_tests` then `scripts/check_docs.py --check
+  for that intermediate candidate's then-corrected 10-gate list.
+  Documentation governance (`scripts/docs_check_tests` then
+  `scripts/check_docs.py --check
   --check-examples`) remains a required, standalone `build.yml` CI step
   in the exact same position (immediately after `Check tracked
   artifacts`, before the issue #15 default-lane step) -- it is not
@@ -157,8 +158,9 @@ trust these numbers without rerunning them.**
   now-superseded 12-gate contract).
 - The "8 gates, not 6" sentence in the CI evidence section below
   described this branch's own pre-master-merge state and is likewise
-  superseded by the 10-gate figures above; it is left unedited as an
-  accurate record of that earlier point in time.
+  superseded at that intermediate point by the 10-gate figures above; both
+  snapshots are superseded for current composition by the 11-gate audit at
+  the top of this report.
 
 ## 100% Markdown count
 
@@ -324,18 +326,19 @@ the shortcut-unsupported-detection fixture).
 Remediation addendum above -- left unedited below as an accurate,
 point-in-time record of this branch in its pre-master-merge state, when
 `docs-check-tests`/`docs-check` were still mirrored inside the
-`gates()` function of `scripts/upstream_port/verify.py`. Current,
-corrected contract (reproduce yourself, do not trust this sentence
-either): `python3 -m scripts.upstream_port verify --dry-run --jobs 2`
-lists exactly 10 gates; `docs-check-tests`/`docs-check` are absent from
-that list. Documentation governance (`scripts/docs_check_tests` then
+`gates()` function of `scripts/upstream_port/verify.py`. The live contract is
+stated in the Current master-integration audit
+above: `python3 -m scripts.upstream_port verify --dry-run --jobs 2` lists
+exactly 11 mirrored gates, including localization;
+`docs-check-tests`/`docs-check` remain absent from that list. Documentation
+governance (`scripts/docs_check_tests` then
 `scripts/check_docs.py --check --check-examples`) remains a required,
 standalone `build.yml` "Check documentation (issues #7/#17)" CI step in
 the same position described below -- it is not dropped from CI, only
 excluded from the pinned `verify.gates()` mirror. See the Remediation
 addendum above and
 [`docs/upstream-porting.md`](../docs/upstream-porting.md#6-verify-the-manually-applied-batch)
-for the full, current, renumbered 10-gate list.**
+for the full current 11-gate mirrored list plus standalone docs gate.**
 
 `.github/workflows/build.yml`'s new "Check documentation" step runs
 `python3 -m unittest discover -s scripts/docs_check_tests` and

@@ -26,7 +26,7 @@ This section describes the current master integration used for the issues
 | External links | Every merged Markdown HTTP(S) occurrence must match `docs/external-link-registry.md`; this is offline coverage, never an online-link claim |
 | Merged #6 coverage | `docs/starter_features.md`, `docs/config_identity.md`, `docs/generated_data_tutorial.md`, `docs/id_space.md`, and support/API tables document all four default-off flags, dependencies, typed content/mechanics, QoL, matrices, budgets, save/legal boundaries |
 | Merged #18 coverage | `docs/localization.md`, `docs/save_format.md`, `docs/config_identity.md`, architecture/support/API tables document stable IDs/catalogs, en/qps-ploc authoring, config/defines, prefs/epoch-2 precedence/migration, selector/settings/reset, budgets and matrices |
-| Gate truth | `scripts/upstream_port/verify.py` remains exactly 10 ordered gates. The standalone docs workflow step is the eleventh issues #7/#17 closure gate. Master's localization host step remains required workflow-only coverage; localization runtime checks remain inside the linker gates. |
+| Gate truth | `scripts/upstream_port/verify.py` mirrors all 11 current-master gates, including `localization-host-suite`. The issues #7/#17 docs workflow gate is additional, standalone, and intentionally absent from `verify.gates()`; localization runtime checks remain inside the linker gates. |
 | Future #9 boundary | Only current issue-resolution governance and an unfilled migration template exist; no release automation/tag/changelog/artifact/updater claim is made |
 
 ### Current integration validation evidence
@@ -55,10 +55,10 @@ point-in-time output, not policy constants:
   'test_*.py' -v` -> 82 tests, `OK`.
 - Targeted defaults: `test_build_default_lane.py` -> 15 tests, `OK`;
   `test_quickstart.py` -> 15 tests, `OK`.
-- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 10
-  ordered `SKIPPED(dry-run)` entries, with the issue #6 starter-content args
-  on gates 9-10. The workflow-only docs check remains the eleventh issues
-  #7/#17 closure gate; the localization host step is separately preserved.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 11
+  ordered `SKIPPED(dry-run)` entries, including localization at gate 3 and
+  the issue #6 starter-content args on gates 10-11. The issues #7/#17 docs
+  check remains one additional standalone workflow gate.
 - Safe Make probes resolved the live object-print targets, localization
   generation target, and compile-only `apcs-gnu` cohort; the linked
   `apcs-gnu` ELF probe failed with the documented AAPCS-only guard.

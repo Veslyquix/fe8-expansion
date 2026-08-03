@@ -1,6 +1,11 @@
 # Issue #18 sprint 4 closure evidence -- "host+semantic libmGBA localization
 # scenarios, runtime probes, budget/headroom, real fingerprint captures"
 
+**Current integration clarification (2026-08-03):** this report's 11-gate
+localization evidence now matches live `verify.gates()`: localization is the
+third mirrored gate. The issues #7/#17 documentation-governance gate remains
+an additional standalone workflow step and is not mirrored.
+
 Status: **historical candidate closure evidence for reviewer/verifier. The
 implementation documented here was later merged into the current source tree;
 this report does not assert the current GitHub issue state, close it, or claim

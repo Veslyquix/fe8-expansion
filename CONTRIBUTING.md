@@ -72,12 +72,11 @@ make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs
 ```
 
 
-The fixed upstream-port verifier lists its 10 mirrored commands with
-`python3 -m scripts.upstream_port verify --dry-run --jobs 2`; documentation
-governance remains a separate required workflow gate, for an 11-gate
-closure contract. The issue #18 localization host suite is also preserved as
-a workflow-only host test; localization runtime coverage is already inside
-the two linker checks.
+The fixed upstream-port verifier lists all 11 current-master mirrored commands
+with `python3 -m scripts.upstream_port verify --dry-run --jobs 2`, including
+the issue #18 localization host suite. Documentation governance remains one
+additional, standalone required workflow gate; localization runtime coverage
+also remains inside the two linker checks.
 
 Run the relevant subset for your change type; run all of them for anything
 that touches shared runtime, linker, or generated-data code. If your change

@@ -140,8 +140,9 @@ surface remains bounded by its live reference and evidence report.
   expansion gates. See [`starter_features.md`](starter_features.md).
 - **#10 typed IDs:** DEFAULT committed and ACTIVE build-local contracts,
   consumer census, and modern-only item cap `0xCE` pilot are supported; its
-  debug/release runtime commands are gates 9-10 of the pinned 10-gate
-  upstream-port verifier. There is no class/chapter/unit/character widening
+  debug/release runtime commands are gates 10-11 of the current-master
+  11-gate upstream-port verifier. There is no class/chapter/unit/character
+  widening
   or implied save migration. See
   [`id_space.md`](id_space.md).
 - **#11 debug tools:** release-safe config gate, fixed-capacity action API,

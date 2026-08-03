@@ -181,11 +181,11 @@ python3 -m scripts.upstream_port verify --dry-run   # list the gate commands wit
 
 **⚠️ This builds and checks the CURRENT TRUSTED WORKTREE (your repo, after
 you manually applied whatever you accepted) — it never builds, checks out,
-or executes the upstream ref/tree.** It orchestrates the fixed 10-gate
-upstream-port verification contract in fail-fast order. `.github/workflows/build.yml` carries the same 10 commands
-with argv/order preserved across its host and ROM jobs, plus two deliberately
-standalone workflow checks described below: issue #18's localization host
-suite and issues #7/#17's documentation-governance step.
+or executes the upstream ref/tree.** It orchestrates all 11 current-master
+mirrored verifier gates in fail-fast order. `.github/workflows/build.yml`
+carries the same 11 commands with argv/order preserved across its host and ROM
+jobs, plus the deliberately standalone issues #7/#17 documentation-governance
+workflow gate described below.
 
 1. `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`
    (issue #13 host-only suite; the inline environment assignment applies only
@@ -193,34 +193,26 @@ suite and issues #7/#17's documentation-governance step.
 2. `python3 -m unittest discover -s tests/upstream_port -v`
    (pure-stdlib upstream-port tests, including the workflow mirror contract;
    rerun it for the current test count rather than trusting a written count)
-3. `python3 scripts/artifact_guard.py --revision HEAD`
-4. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
-5. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
-6. `make generated-data-check`
-7. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
-8. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
-9. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
-10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
+3. `python3 -m unittest discover -s scripts/localization/tests -p "test_*.py"`
+   (issue #18 host-only localization schema/catalog/pseudo/generation/resolver
+   coverage)
+4. `python3 scripts/artifact_guard.py --revision HEAD`
+5. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
+6. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
+7. `make generated-data-check`
+8. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+9. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
+11. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
 
-Gates 7-8 aggregate the complete modern debug/release ROM, linker, budget,
+Gates 8-9 aggregate the complete modern debug/release ROM, linker, budget,
 shift, save, starter-feature, and localization runtime matrices through
-`expansion-modern-linker-check`. Gates 9-10 reuse the item-expansion runtime
+`expansion-modern-linker-check`. Gates 10-11 reuse the item-expansion runtime
 probe at cap `0xCE`; the three issue #6 arguments make the same ROM also prove
 the typed starter-content record and both registered mechanics. No extra ROM
 build or gate is added.
 
-### Standalone workflow checks
-
-The `host-tests` job also preserves master's required issue #18 step:
-
-```sh
-python3 -m unittest discover -s scripts/localization/tests -p "test_*.py"
-```
-
-It is fast, host-only localization schema/catalog/pseudo/generation/resolver
-coverage. It is intentionally workflow-only rather than another
-`verify.gates()` entry; the six real localization runtime families remain
-inside gates 7-8.
+### Standalone workflow check
 
 Immediately after the artifact guard, the `build` job runs the independent
 issues #7/#17 documentation-governance gate:
@@ -230,12 +222,10 @@ python3 -m unittest discover -s scripts/docs_check_tests -v
 python3 scripts/check_docs.py --check --check-examples
 ```
 
-This is the eleventh gate in the repository's pinned documentation closure
-contract: 10 ordered `verify` gates plus one standalone documentation gate.
-It is stdlib-only, zero-network, and zero-ROM, and runs before dependency/tool
-installation. The localization host step above remains additional required
-workflow coverage; neither standalone check weakens, reorders, or replaces any
-of the 10 mirrored commands.
+This gate is stdlib-only, zero-network, and zero-ROM, and runs before
+dependency/tool installation. It is additional to all 11 mirrored verifier
+gates and intentionally has no `verify.gates()` entry; it does not weaken,
+reorder, or replace any mirrored command.
 
 **There is no gate subset/selection flag, on the CLI or in the internal
 `verify.run_gates` API.** `verify` (with or without `--dry-run`) always

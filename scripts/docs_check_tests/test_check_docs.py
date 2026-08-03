@@ -1037,16 +1037,16 @@ class StaleIssue5StatusAndGateNumberRegressionTests(unittest.TestCase):
         self.assertNotIn("is still **OPEN**", generated_data_text)
         self.assertNotIn("OPEN at time of writing", closure_report_text)
 
-    def test_framework_support_states_item_expansion_gates_9_10(self):
+    def test_framework_support_states_item_expansion_gates_10_11(self):
         framework_support_text = check_docs.read_text(
             os.path.join(REAL_REPO_ROOT, "docs", "framework-support.md")
         )
-        self.assertIn("gates 9-10 of", framework_support_text)
-        self.assertNotIn("gates 11-12", framework_support_text)
+        self.assertIn("gates 10-11 of", framework_support_text)
+        self.assertNotIn("gates 9-10 of", framework_support_text)
 
-    def test_verify_gates_item_expansion_entries_are_indexes_9_and_10_of_10(self):
+    def test_verify_gates_item_expansion_entries_are_indexes_10_and_11_of_11(self):
         # Safe, standalone, no-network import of the live verify module
-        # straight off disk -- proves "gates 9-10" against the real,
+        # straight off disk -- proves "gates 10-11" against the real,
         # current scripts/upstream_port/verify.py gates() ordering rather
         # than a hardcoded fake substitute.
         verify_path = os.path.join(
@@ -1063,12 +1063,12 @@ class StaleIssue5StatusAndGateNumberRegressionTests(unittest.TestCase):
         finally:
             sys.modules.pop(spec.name, None)
 
-        self.assertEqual(len(all_gates), 10)
-        # Gates are 1-indexed in the docs ("gates 9-10"); Python lists are
-        # 0-indexed, so that's positions [8] and [9].
-        self.assertIn("itemexpansion", all_gates[8].name)
+        self.assertEqual(len(all_gates), 11)
+        # Gates are 1-indexed in the docs ("gates 10-11"); Python lists are
+        # 0-indexed, so that's positions [9] and [10].
         self.assertIn("itemexpansion", all_gates[9].name)
-        for gate in all_gates[:8]:
+        self.assertIn("itemexpansion", all_gates[10].name)
+        for gate in all_gates[:9]:
             self.assertNotIn("itemexpansion", gate.name)
 
 

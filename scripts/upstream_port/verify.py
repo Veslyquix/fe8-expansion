@@ -6,14 +6,11 @@ repository's *own* current working tree/commit. It never builds, checks out,
 or executes the canonical upstream ref/tree. It is a thin, literal mirror of
 .github/workflows/build.yml's gate steps (kept independent from that file:
 this module doesn't parse/execute the workflow, it re-states the same gate
-commands so `verify` stays runnable locally without a CI runner) -- WITH TWO
-DELIBERATE EXCEPTIONS: build.yml's issue #18 localization-host step and
-"Check documentation (issues #7/#17)" step are required standalone CI
-checks intentionally outside this mirror. Repository policy pins this verify
-gate set to exactly the original 10 #10/#11/#13 commands; localization host
-coverage and documentation governance are enforced directly by CI instead of
-by growing this pinned list. Run the standalone commands directly to reproduce
-them locally -- see docs/upstream-porting.md.
+commands so `verify` stays runnable locally without a CI runner), with one
+DELIBERATE EXCEPTION: build.yml's "Check documentation (issues #7/#17)"
+step remains a required standalone workflow gate outside this mirror. Run
+that standalone command pair directly to reproduce it locally; see
+docs/upstream-porting.md.
 """
 
 from __future__ import annotations
@@ -103,13 +100,35 @@ def gates(jobs: int = 2) -> List[Gate]:
             applicable_note=(
                 "issue #12/#15 host lane (same `host-tests` job): pure-stdlib "
                 "upstream-port review tooling tests; re-run this suite for "
-                "the current count. The issues #7/#17 remediation restores "
-                "the pinned 10-gate contract -- "
-                "(classify/scan/drift/state/ref-binding/output-safety/"
-                "merge-commit determinism and this verify.gates() <-> build.yml "
-                "mirror, which now deliberately excludes the standalone "
-                "documentation-governance step). Python/stdlib only, links no C "
-                "and never rebuilds the ROM"
+                "the current count (classify/scan/drift/state/ref-binding/"
+                "output-safety/merge-commit determinism and this "
+                "verify.gates() <-> build.yml mirror, which excludes only "
+                "the standalone documentation-governance step). Python/stdlib "
+                "only, links no C and never rebuilds the ROM"
+            ),
+        ),
+        Gate(
+            name="localization-host-suite",
+            command=[
+                "python3",
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "scripts/localization/tests",
+                "-p",
+                "test_*.py",
+            ],
+            applicable_note=(
+                "issue #18 host lane addition (same `host-tests` job, "
+                "textually after upstream-port-tests): the "
+                "scripts/localization package's own pure-stdlib unit test "
+                "suite (schema/pseudo/catalog/generate/CLI/determinism plus "
+                "the host-native resolver-behavior and vanilla-isolation "
+                "source-audit tests, which self-skip without a host `cc`). "
+                "Python/stdlib only; never builds/links the ROM, so it does "
+                "not overlap the localization-runtime-*-check scenarios "
+                "reached through the modern-linker gates below"
             ),
         ),
         Gate(
@@ -117,16 +136,10 @@ def gates(jobs: int = 2) -> List[Gate]:
             command=["python3", "scripts/artifact_guard.py", "--revision", "HEAD"],
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
         ),
-        # NOTE: build.yml's localization-host step and
-        # "Check documentation (issues #7/#17)" step
-        # (scripts/docs_check_tests then scripts/check_docs.py --check
-        # --check-examples) intentionally has NO Gate(...) entry here. It
-        # remains a required, standalone build.yml CI step immediately after
-        # "Check tracked artifacts" and before "Check default build lane and
-        # quickstart legacy glue (issue #15)" -- see the module docstring
-        # above and docs/upstream-porting.md. Restoring/keeping this pinned
-        # verify gate set at exactly 10 (the original #10/#11/#13 gates) is
-        # deliberate repository policy, not an oversight or a coverage drop.
+        # build.yml's "Check documentation (issues #7/#17)" step
+        # (scripts/docs_check_tests followed by scripts/check_docs.py --check
+        # --check-examples) intentionally has no Gate(...) entry here. It is
+        # independently required immediately after the artifact guard.
         Gate(
             name="default-lane-check",
             command=[

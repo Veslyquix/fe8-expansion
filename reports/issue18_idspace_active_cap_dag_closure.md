@@ -1,5 +1,10 @@
 # `id_space_active.h` cap-DAG closure (Issue #18 branch-local report)
 
+**Current integration clarification (2026-08-03):** this report's 11-gate
+localization evidence now matches live `verify.gates()`: localization is the
+third mirrored gate. The issues #7/#17 documentation-governance gate remains
+an additional standalone workflow step and is not mirrored.
+
 ## Reported symptom
 
 `generated-data-check` (verify's own `generated-data-check` gate, always

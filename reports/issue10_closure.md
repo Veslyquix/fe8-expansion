@@ -1,5 +1,11 @@
 # Issue #10 closure evidence: Extend IDs and engine limits safely
 
+**Current integration clarification (2026-08-03):** any 10-gate counts below
+are point-in-time evidence from this historical closure run and are
+superseded for current composition. Live `verify.gates()` mirrors all 11
+current-master gates, including localization; the issues #7/#17 documentation
+gate remains an additional standalone workflow step.
+
 Candidate handoff. Every claim below was produced by running the command
 shown in this worktree; nothing is inferred. Final pass/fail remains with the
 independent verifier -- this report only records what has actually been
