@@ -49,6 +49,8 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - CLAUDE.md | laqieer | current | Claude Code agent guidance for this repository
 - .github/copilot-instructions.md | laqieer | current | GitHub Copilot agent guidance for this repository
 - .github/PULL_REQUEST_TEMPLATE.md | laqieer | template | PR checklist template shape referenced by CONTRIBUTING.md
+- CHANGELOG.md | laqieer | current | Human-readable changelog; its Unreleased section is rendered deterministically from changelog_fragments/*.json (issue #9)
+- changelog_fragments/README.md | laqieer | current | Machine changelog-fragment schema, authoring, and validation/render/write contract (issue #9)
 - docs/README.md | laqieer | current | Documentation index: learning paths and full document list/status
 - docs/documentation-inventory.md | laqieer | current | This file: exact-coverage Markdown inventory consumed by scripts/check_docs.py
 - docs/external-link-registry.md | laqieer | current | External-URL host/prefix ownership+status registry consumed by scripts/check_docs.py
@@ -69,6 +71,10 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/localization.md | laqieer | current | Stable locale/message IDs, catalog authoring, prefs/UI, budgets, and runtime matrices (issue #18)
 - docs/upstream-porting.md | laqieer | current | Canonical upstream-port tracking tooling reference (issue #12)
 - docs/issue-resolution-policy.md | laqieer | current | Wave 0 issue closure / review / legal-boundary governance baseline
+- docs/release_process.md | laqieer | current | Authoritative release-rehearsal/publication-eligibility process contract (issue #9)
+- docs/public_api_policy.md | laqieer | current | Public API/SemVer scope and branch/tag conventions for this pre-1.0 project (issue #9)
+- docs/migration_registry.md | laqieer | current | EXPANSION_SAVE_COMPAT_EPOCH transition registry: mechanical-vs-manual migrations (issue #9)
+- docs/release_closure_candidate.md | laqieer | evidence | Issue #9 closure-candidate evidence report; not a closure claim or publication approval
 - docs/dump_extraction_plan.md | laqieer | historical | Now-completed dump/ raw-blob-to-source extraction workflow
 - docs/lz_suffix_diagnostic.md | laqieer | historical | Point-in-time hidden-asset LZ diagnostic technique
 - docs/tsa_audit.md | laqieer | historical | Point-in-time tilemap (TSA) data audit snapshot
