@@ -1861,5 +1861,310 @@ class ProcessSubstitutionTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
+class SemanticEscapeDecodingUsesKeyTests(unittest.TestCase):
+    """issue #9 semantic-decoding hardening: a quoted `uses:` key or
+    value spelled with a YAML double-quote escape sequence that decodes
+    to the exact same string as its plain/literal spelling (e.g.
+    `"u\u0073es"` decodes to exactly `uses` -- every real YAML parser
+    treats these as identical) must be recognized *semantically*, by
+    its decoded content, never merely by its raw source spelling. This
+    is the exact adversarial shape named by the issue."""
+
+    SHA_A = "a" * 40
+
+    def test_flow_style_escaped_key_mutable_ref_rejected(self):
+        text = GOOD_WORKFLOW + '      - {"u\\u0073es": actions/checkout@main}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/checkout@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_flow_style_escaped_key_immutable_sha_accepted(self):
+        text = GOOD_WORKFLOW + f'      - {{"u\\u0073es": actions/checkout@{self.SHA_A}}}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if f"checkout@{self.SHA_A}" in v], [])
+
+    def test_block_style_escaped_key_mutable_ref_rejected(self):
+        text = GOOD_WORKFLOW + '      "u\\u0073es": actions/checkout@main\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/checkout@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_block_style_escaped_key_immutable_sha_accepted(self):
+        text = GOOD_WORKFLOW + f'      "u\\u0073es": actions/checkout@{self.SHA_A}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if f"checkout@{self.SHA_A}" in v], [])
+
+    def test_single_quoted_key_variant_also_recognized(self):
+        """The mirror-image, single-quoted-style control (single-quoted
+        YAML has no `\\uXXXX`-style escape at all -- spec 7.3.1 -- so
+        this exercises the single-quote decode path being reached by
+        the *same* semantic key-matching, not only the double-quoted
+        `\\uXXXX` shape)."""
+        text = GOOD_WORKFLOW + "      - {'uses': actions/checkout@main}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/checkout@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_hex_escape_key_variant_also_recognized(self):
+        """A different escape *shape* for the identical semantic key --
+        `\\x73` (2-hex-digit `\\x` escape) instead of `\\u0073` (4-hex-
+        digit `\\u` escape) -- must decode to the identical `uses` key
+        and be recognized the same way."""
+        text = GOOD_WORKFLOW + '      - {"u\\x73es": actions/checkout@main}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/checkout@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_escaped_value_mutable_ref_reaches_pin_validation(self):
+        """The *value* side matters too: an escaped ref segment must be
+        decoded before pin validation -- here the mutable tag `v5` is
+        spelled with an escaped leading `v` (`\\u0076`)."""
+        text = GOOD_WORKFLOW + '      - uses: "actions/setup-python@\\u00765"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("actions/setup-python@v5" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_escaped_value_immutable_sha_accepted(self):
+        text = GOOD_WORKFLOW + '      - uses: "actions/checkout@\\u0061' + ("a" * 39) + '"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if f"checkout@{self.SHA_A}" in v], [])
+
+
+class DuplicateKeyEscapedSpellingTests(unittest.TestCase):
+    """issue #9 semantic-decoding hardening: duplicate-key detection
+    must operate on the *decoded* key, never the source spelling -- two
+    (or more) `uses:` keys within the same enclosing mapping that decode
+    to the identical string `uses`, however differently each is
+    *spelled* (plain, or escaped in any of several different ways), must
+    always be rejected as a duplicate key -- regardless of which
+    spelling appears first."""
+
+    SHA_A = "a" * 40
+    SHA_B = "b" * 40
+
+    def test_plain_key_then_escaped_duplicate_rejected(self):
+        text = GOOD_WORKFLOW + (
+            f'      - {{uses: actions/setup-python@{self.SHA_A}, '
+            f'"u\\u0073es": actions/setup-python@{self.SHA_B}}}\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("duplicate" in v.lower() for v in violations), violations)
+
+    def test_escaped_key_then_plain_duplicate_rejected(self):
+        """Reverse order: the escaped spelling appears first, the plain
+        spelling second -- still rejected; order must never matter."""
+        text = GOOD_WORKFLOW + (
+            f'      - {{"u\\u0073es": actions/setup-python@{self.SHA_A}, '
+            f'uses: actions/setup-python@{self.SHA_B}}}\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("duplicate" in v.lower() for v in violations), violations)
+
+    def test_two_differently_escaped_spellings_both_decoding_to_uses_rejected(self):
+        """Two *different* escape shapes (`\\u0073` vs `\\x73`) for the
+        same semantic key -- neither is the plain spelling at all --
+        must still be recognized as the identical decoded key `uses`
+        and rejected as a duplicate."""
+        text = GOOD_WORKFLOW + (
+            f'      - {{"u\\u0073es": actions/setup-python@{self.SHA_A}, '
+            f'"u\\x73es": actions/setup-python@{self.SHA_B}}}\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("duplicate" in v.lower() for v in violations), violations)
+
+    def test_two_uses_in_separate_steps_with_escaping_never_treated_as_duplicate(self):
+        """Negative control: two *different* steps (separate enclosing
+        mappings), one plain and one escaped, must never be
+        (mis)flagged as a duplicate -- only a repeat within the *same*
+        mapping is ever rejected on that basis."""
+        text = GOOD_WORKFLOW + (
+            f"      - uses: actions/setup-python@{self.SHA_A}\n"
+            f'      - "u\\u0073es": actions/setup-python@{self.SHA_B}\n'
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertFalse(any("duplicate" in v.lower() for v in violations), violations)
+
+
+class PermissionsSemanticEscapeDecodingTests(unittest.TestCase):
+    """issue #9 semantic-decoding hardening: `permissions`/`contents`
+    (and any other scope) keys and `write`/`write-all` values must be
+    matched by their *semantically decoded* content, never their raw
+    source spelling -- `"c\u006fntents": "wr\u0069te"` decodes to
+    exactly `contents: write` and must be rejected exactly like the
+    unescaped spelling already is (the exact adversarial shape named by
+    the issue)."""
+
+    def test_exact_reported_escaped_contents_write_rejected(self):
+        text = GOOD_WORKFLOW + '\n      - x: {"c\\u006fntents": "wr\\u0069te"}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("contents: write" in v and "escaped" in v for v in violations),
+            violations,
+        )
+
+    def test_escaped_key_plain_value_write_rejected(self):
+        text = GOOD_WORKFLOW + '\n      - x: {"c\\u006fntents": write}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("write" in v.lower() for v in violations), violations)
+
+    def test_plain_key_escaped_value_write_rejected(self):
+        text = GOOD_WORKFLOW + '\n      - x: {contents: "wr\\u0069te"}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("write" in v.lower() for v in violations), violations)
+
+    def test_single_quoted_key_with_escaped_value_rejected(self):
+        """Single-quoted YAML has no `\\u`-style escape (spec 7.3.1) --
+        this exercises the single-quote candidate path (key side) paired
+        with a genuinely double-quote-escaped value."""
+        text = GOOD_WORKFLOW + "\n      - x: {'contents': \"wr\\u0069te\"}\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("write" in v.lower() for v in violations), violations)
+
+    def test_safe_value_then_escaped_write_duplicate_rejected(self):
+        """A safe `contents: read` declared first, an escaped-spelling
+        `contents: write` duplicate declared later in the very same
+        flow mapping -- rejected regardless of order (this module scans
+        for *any* write grant anywhere; a later, more-dangerous
+        duplicate can never be shadowed by an earlier safe one)."""
+        text = GOOD_WORKFLOW + '\n      - x: {contents: read, "c\\u006fntents": "wr\\u0069te"}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("contents: write" in v for v in violations), violations)
+
+    def test_escaped_write_then_safe_value_duplicate_still_rejected(self):
+        """Reverse order: the dangerous escaped grant appears first, the
+        safe plain declaration second -- still rejected."""
+        text = GOOD_WORKFLOW + '\n      - x: {"c\\u006fntents": "wr\\u0069te", contents: read}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("contents: write" in v for v in violations), violations)
+
+    def test_top_level_permissions_block_with_escaped_write_rejected(self):
+        text = GOOD_WORKFLOW.replace(
+            "permissions:\n  contents: read",
+            'permissions:\n  "c\\u006fntents": "wr\\u0069te"',
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(any("write" in v.lower() for v in violations), violations)
+
+    def test_unescaped_legitimate_workflow_remains_clean(self):
+        self.assertEqual(wg.validate_workflow_text(GOOD_WORKFLOW), [])
+
+
+class InvalidEscapeFailClosedTests(unittest.TestCase):
+    """issue #9 semantic-decoding hardening: a malformed, truncated,
+    unknown, or out-of-range/surrogate YAML double-quote escape must
+    never be lossily decoded or silently passed through -- it is always
+    rejected fail-closed, both at the low-level canonical decoder
+    (`_scan_quoted_scalar`) and end-to-end through `uses:` value
+    validation."""
+
+    def test_unknown_escape_letter_rejected_at_decoder_level(self):
+        _end, _content, problem = wg._scan_quoted_scalar('"a\\qb"', 0, '"')
+        self.assertEqual(problem, "invalid-escape")
+
+    def test_truncated_u_escape_rejected_at_decoder_level(self):
+        _end, _content, problem = wg._scan_quoted_scalar('"a\\u12"', 0, '"')
+        self.assertEqual(problem, "invalid-escape")
+
+    def test_truncated_x_escape_at_end_of_text_rejected(self):
+        _end, _content, problem = wg._scan_quoted_scalar('"a\\x', 0, '"')
+        self.assertEqual(problem, "invalid-escape")
+
+    def test_non_hex_digits_in_u_escape_rejected(self):
+        _end, _content, problem = wg._scan_quoted_scalar('"\\uZZZZ"', 0, '"')
+        self.assertEqual(problem, "invalid-escape")
+
+    def test_surrogate_codepoint_rejected(self):
+        _end, _content, problem = wg._scan_quoted_scalar('"\\ud800"', 0, '"')
+        self.assertEqual(problem, "invalid-escape")
+
+    def test_out_of_range_big_u_escape_rejected(self):
+        _end, _content, problem = wg._scan_quoted_scalar('"\\U7fffffff"', 0, '"')
+        self.assertEqual(problem, "invalid-escape")
+
+    def test_valid_x_escape_decodes_cleanly(self):
+        _end, content, problem = wg._scan_quoted_scalar('"\\x41"', 0, '"')
+        self.assertIsNone(problem)
+        self.assertEqual(content, "A")
+
+    def test_valid_big_u_escape_decodes_cleanly(self):
+        _end, content, problem = wg._scan_quoted_scalar('"\\U0001F600"', 0, '"')
+        self.assertIsNone(problem)
+        self.assertEqual(content, "\U0001F600")
+
+    def test_single_quote_escaping_decodes_cleanly(self):
+        _end, content, problem = wg._scan_quoted_scalar("'it''s'", 0, "'")
+        self.assertIsNone(problem)
+        self.assertEqual(content, "it's")
+
+    def test_uses_value_with_invalid_escape_rejected_end_to_end(self):
+        text = GOOD_WORKFLOW + '      - uses: "actions/setup-python@\\qbad"\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("invalid" in v.lower() and "escape" in v.lower() for v in violations),
+            violations,
+        )
+
+    def test_undecodable_key_position_quoted_scalar_never_guessed_to_be_uses(self):
+        """An undecodable quoted key must never be *guessed* to be
+        `uses` -- this scanner never lossily decodes around the bad
+        escape and hopes for the best. `key_repr`/`raw_value` reflect
+        the raw, undecoded source spelling exactly (never a guessed
+        decoded string)."""
+        text = GOOD_WORKFLOW + '      - {"u\\qses": actions/checkout@main}\n'
+        occurrences = [o for o in wg.extract_uses_occurrences(text) if o.raw_value == "actions/checkout@main"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].key_repr, '"u\\qses"')
+
+    def test_undecodable_key_position_quoted_scalar_never_silently_disappears(self):
+        """issue #9 residual-hardening (combined self-review finding):
+        a quoted key in genuine key position (followed by ':') that
+        cannot be proven to spell anything -- including "uses" -- must
+        never simply vanish from this scanner's results just because it
+        could not be decoded: doing so previously let a completely
+        unpinned/mutable reference (here, bare `checkout@main`, no SHA
+        pin at all) sail through entirely unflagged whenever the key in
+        front of it happened to carry one malformed escape byte. It is
+        now always surfaced as its own hard, fail-closed occurrence."""
+        text = GOOD_WORKFLOW + '      - {"u\\qses": actions/checkout@main}\n'
+        occurrences = [o for o in wg.extract_uses_occurrences(text) if o.raw_value == "actions/checkout@main"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].problem, "invalid-escape")
+
+    def test_undecodable_key_position_quoted_scalar_rejected_end_to_end(self):
+        """The same undecodable-key scenario, exercised through the full
+        `validate_workflow_text` pipeline (not just the lower-level
+        `extract_uses_occurrences` scanner in isolation) -- proving the
+        fix is actually wired into the real, end-to-end check a real
+        workflow file is validated against, not merely correct in an
+        isolated unit test."""
+        text = GOOD_WORKFLOW + '      - {"u\\qses": actions/checkout@main}\n'
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("invalid" in v.lower() and "escape" in v.lower() for v in violations),
+            violations,
+        )
+
+    def test_undecodable_key_not_followed_by_colon_still_ignored(self):
+        """Negative control: an undecodable quoted scalar that is *not*
+        in key position at all (no colon follows it) is still correctly
+        ignored -- only a key-position candidate is ever surfaced, never
+        every stray malformed-escape quoted scalar anywhere in the
+        text."""
+        text = GOOD_WORKFLOW + '      - x: ["u\\qses", actions/checkout@main]\n'
+        occurrences = [o for o in wg.extract_uses_occurrences(text) if o.raw_value == "actions/checkout@main"]
+        self.assertEqual(occurrences, [])
+
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -237,6 +237,66 @@ class HashInPlainScalarBypassRetainedByActionPinsTests(unittest.TestCase):
         self.assertFalse(any("setup-node" in r for r in reasons), reasons)
 
 
+class SemanticEscapeDecodingRetainedByActionPinsTests(unittest.TestCase):
+    """issue #9 semantic-decoding hardening: this module shares the
+    exact same canonical `workflow_guard.extract_uses_occurrences`
+    scanner (via `workflow_external_occurrences`), so a `uses:`
+    occurrence spelled with an escaped key and/or an escaped ref value
+    must be retained here too -- with the correct decoded action name,
+    decoded ref, workflow path, and source line -- never silently
+    dropped just because its raw source spelling differs from the
+    plain, unescaped form."""
+
+    def test_escaped_key_and_ref_action_path_retained_with_correct_line(self):
+        text = GOOD_WORKFLOW + '      - {"u\u0073es": evilcorp/upload-secrets@main}\n'
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "evilcorp/upload-secrets"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, "main")
+        self.assertIsInstance(occurrences[0].line, int)
+        self.assertGreater(occurrences[0].line, 0)
+
+    def test_escaped_key_immutable_ref_matches_inventory(self):
+        text = GOOD_WORKFLOW + f'      - {{"u\u0073es": actions/setup-node@{SHA_B}}}\n'
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "actions/setup-node"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, SHA_B)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(
+                workflow="workflow.yml",
+                action="actions/setup-node",
+                pinned_sha=SHA_B,
+                source_url="https://github.com/actions/setup-node/releases/tag/v4.0.0",
+            ),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertFalse(any("setup-node" in r for r in reasons), reasons)
+
+    def test_escaped_ref_value_mutable_tag_reported_unmatched(self):
+        """The ref *value* side matters too -- an escaped mutable tag
+        (`v\u0035` decodes to exactly `v5`) must reach the same
+        cross-check as its plain spelling and be reported unmatched."""
+        text = GOOD_WORKFLOW + '      - uses: "actions/setup-python@v\u0035"\n'
+        reasons = ap.check_workflow_against_inventory(
+            "workflow.yml", text, [_good_inventory_row(workflow="workflow.yml")]
+        )
+        self.assertTrue(any("setup-python" in r and "no matching entry" in r for r in reasons), reasons)
+
+    def test_escaped_action_after_hash_glued_plain_scalar_retained_with_line(self):
+        """Combines both known-tricky shapes at once: a '#'-containing
+        plain scalar immediately before the occurrence, *and* an
+        escaped `uses` key -- the occurrence must still be retained
+        with the correct decoded action/ref/line, exactly like the
+        unescaped '#'-glued case already is."""
+        text = GOOD_WORKFLOW + '      - {name: setup#, "u\u0073es": evilcorp/upload-secrets@main}\n'
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "evilcorp/upload-secrets"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, "main")
+        self.assertIsInstance(occurrences[0].line, int)
+        self.assertGreater(occurrences[0].line, 0)
+
+
+
 class CheckWorkflowAgainstInventoryTests(unittest.TestCase):
     def test_matching_pin_has_no_reasons(self):
         inventory = [_good_inventory_row(workflow="workflow.yml")]

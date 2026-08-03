@@ -204,39 +204,145 @@ class UsesOccurrence:
 _PLAIN_VALUE_TERMINATORS = frozenset(",}]\r\n")
 
 
+# --- Canonical YAML quoted-scalar semantic decoder (issue #9 semantic-
+# decoding hardening) -----------------------------------------------
+#
+# A fresh, independent verifier reproduced a real fail-open bypass: this
+# decoder previously only ever recognized a small, ad-hoc subset of YAML
+# double-quote escapes (`\"`, `\\`, `\n`, `\t`, `\r`, `\0`) and silently
+# passed *any other* escaped character straight through unchanged (a
+# lossy "just use the raw character" fallback for e.g. `\x`, `\u`, `\U`,
+# or any other letter). Two independent, real-world consequences follow
+# directly from that: (1) a `uses:`/`permissions:`/`contents:` *key* or
+# *value* spelled with a `\uXXXX`/`\xXX`/`\UXXXXXXXX` escape (e.g. the
+# key `"u\u0073es"`, which every real YAML parser decodes to exactly the
+# same string as the plain key `uses`) was never recognized as
+# equivalent to its unescaped spelling at all, so a mutable/dangerous
+# `uses:` reference or a `contents: write` grant hidden behind such an
+# escape silently evaded every check below; (2) a genuinely malformed,
+# truncated, unknown, or out-of-range/surrogate escape was silently
+# "decoded" into a plausible-looking (but semantically wrong) literal
+# character instead of being rejected, which is exactly backwards for a
+# security-relevant, fail-closed parser: an unrecognized construct must
+# never be silently accepted.
+#
+# This is now a complete, stdlib-only (no PyYAML, no `unicode_escape`
+# shortcut -- that stdlib codec is a *Python* string-literal decoder, not
+# a YAML one: it does not implement YAML's own escape table, silently
+# accepts several escapes YAML does not define, and cannot be made to
+# reject an invalid/surrogate Unicode scalar value on demand) YAML
+# double-quoted escape decoder, exactly matching the YAML 1.2 spec's own
+# "Escaped Characters" table (5.7): `\0 \a \b \t \n \v \f \r \e \  \" \/
+# \\ \N \_ \L \P`, plus `\xXX` / `\uXXXX` / `\UXXXXXXXX` hex escapes.
+# Every one of those -- and *only* those -- decodes; anything else after
+# a backslash (an unknown escape letter, a truncated or non-hex `\x`/
+# `\u`/`\U` sequence, or a hex escape whose codepoint is a UTF-16
+# surrogate (U+D800-U+DFFF, never a valid standalone Unicode scalar
+# value) or exceeds U+10FFFF) is rejected fail-closed -- reported back
+# to the caller via `problem="invalid-escape"` -- rather than lossily
+# decoded or silently passed through. Single-quoted scalars only ever
+# support YAML's own `''`-escapes-to-`'` rule (spec 7.3.1); a bare
+# backslash inside a single-quoted scalar is always literal (YAML never
+# defines an escape there), exactly as before. Neither quote style
+# supports a folded/continued value across multiple physical lines --
+# an unclosed scalar at end-of-line/end-of-text always fails closed as
+# `"unterminated-quote"`, exactly as before this hardening.
+_DOUBLE_QUOTE_SIMPLE_ESCAPES = {
+    "0": "\x00",
+    "a": "\x07",
+    "b": "\x08",
+    "t": "\x09",
+    "n": "\x0a",
+    "v": "\x0b",
+    "f": "\x0c",
+    "r": "\x0d",
+    "e": "\x1b",
+    " ": " ",
+    '"': '"',
+    "/": "/",
+    "\\": "\\",
+    "N": "\u0085",
+    "_": "\u00a0",
+    "L": "\u2028",
+    "P": "\u2029",
+}
+_HEX_ESCAPE_LENGTHS = {"x": 2, "u": 4, "U": 8}
+_HEX_DIGIT_CHARS = frozenset("0123456789abcdefABCDEF")
+
+
 def _scan_quoted_scalar(text: str, start: int, quote: str):
     """`start` indexes the opening quote character. Returns `(end,
-    content, ok)`: `end` is the index just past the closing quote (or,
-    if never properly closed, the index of the first raw `\r`/`\n`
-    encountered, or `len(text)` if neither ever appears); `content` is
-    the decoded scalar (double-quote backslash escapes resolved;
-    single-quote `''` resolved to a literal `'`); `ok` is `False` if a
-    raw newline was reached (or the text ran out) before the scalar was
-    properly closed on the same logical line -- this scanner
-    deliberately does not support a `uses:` value folded/continued
-    across multiple physical lines (an obscure, never-needed-in-
-    practice shape for a short action-reference string); an unterminated
-    quote always fails closed rather than silently guessing where it
-    should have ended."""
+    content, problem)`: `end` is the index just past the closing quote
+    (or, if never properly closed, the index of the first raw `\r`/`\n`
+    encountered, or `len(text)` if neither ever appears -- a caller can
+    always safely resume scanning at `end`, whether or not this scalar
+    was valid); `content` is the fully semantically-decoded scalar for
+    a clean, single-line, validly-escaped scalar (double-quote escapes
+    resolved per the YAML 1.2 spec's own escape table -- see the
+    design-rationale comment above this function; single-quote `''`
+    resolved to a literal `'`), or a best-effort (not-fully-trustworthy)
+    partial rendering otherwise; `problem` is `None` for a clean,
+    fully-understood scalar, `"unterminated-quote"` if a raw newline or
+    end-of-text was reached before the scalar was properly closed on
+    the same logical line (this scanner deliberately does not support a
+    value folded/continued across multiple physical lines), or
+    `"invalid-escape"` if the scalar contains a malformed, truncated,
+    unknown, or out-of-range/surrogate double-quote escape sequence. A
+    caller must always treat any non-`None` `problem` as an
+    unconditional, fail-closed rejection -- never attempt to still
+    trust `content` in that case."""
     n = len(text)
     i = start + 1
     parts: List[str] = []
+    problem = None
     if quote == '"':
-        escapes = {'"': '"', "\\": "\\", "n": "\n", "t": "\t", "r": "\r", "0": "\0"}
         while i < n:
             c = text[i]
             if c == "\\" and i + 1 < n and text[i + 1] not in "\r\n":
                 nxt = text[i + 1]
-                parts.append(escapes.get(nxt, nxt))
+                if nxt in _DOUBLE_QUOTE_SIMPLE_ESCAPES:
+                    parts.append(_DOUBLE_QUOTE_SIMPLE_ESCAPES[nxt])
+                    i += 2
+                    continue
+                hex_len = _HEX_ESCAPE_LENGTHS.get(nxt)
+                if hex_len is not None:
+                    hex_digits = text[i + 2:i + 2 + hex_len]
+                    valid = len(hex_digits) == hex_len and all(d in _HEX_DIGIT_CHARS for d in hex_digits)
+                    codepoint = int(hex_digits, 16) if valid else -1
+                    if valid and (0xD800 <= codepoint <= 0xDFFF or codepoint > 0x10FFFF):
+                        valid = False
+                    if not valid:
+                        # Consume only the backslash + the `x`/`u`/`U`
+                        # marker itself -- never the (possibly absent,
+                        # possibly non-hex, possibly actually-the-
+                        # closing-quote) characters that would have
+                        # been the hex digits -- so a genuine closing
+                        # quote or newline immediately following a
+                        # truncated/invalid escape is still correctly
+                        # found by the normal per-character scan below,
+                        # keeping `end` accurate for skip-over purposes
+                        # even when decoding this scalar has failed.
+                        problem = "invalid-escape"
+                        i += 2
+                        continue
+                    parts.append(chr(codepoint))
+                    i += 2 + hex_len
+                    continue
+                # An unknown escape letter -- reject fail-closed rather
+                # than lossily passing the raw character through (the
+                # exact bypass a fresh, independent verifier reproduced
+                # against this decoder's previous `escapes.get(nxt,
+                # nxt)` fallback).
+                problem = "invalid-escape"
                 i += 2
                 continue
             if c == '"':
-                return i + 1, "".join(parts), True
+                return i + 1, "".join(parts), problem
             if c in "\r\n":
-                return i, "".join(parts), False
+                return i, "".join(parts), problem or "unterminated-quote"
             parts.append(c)
             i += 1
-        return i, "".join(parts), False
+        return i, "".join(parts), problem or "unterminated-quote"
     while i < n:
         c = text[i]
         if c == "'":
@@ -244,12 +350,12 @@ def _scan_quoted_scalar(text: str, start: int, quote: str):
                 parts.append("'")
                 i += 2
                 continue
-            return i + 1, "".join(parts), True
+            return i + 1, "".join(parts), None
         if c in "\r\n":
-            return i, "".join(parts), False
+            return i, "".join(parts), "unterminated-quote"
         parts.append(c)
         i += 1
-    return i, "".join(parts), False
+    return i, "".join(parts), "unterminated-quote"
 
 
 def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
@@ -346,21 +452,67 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
             i += 1
             continue
 
-        # A `uses` key -- quoted (`"uses":`/`'uses':`) or bare (`uses:`)
-        # -- attempted *before* any generic quote handling below, so a
-        # quoted key is recognized as a key instead of merely being
-        # consumed as an unrelated quoted scalar.
+        # A `uses` key -- quoted (`"uses":`/`'uses':`, decoded, or bare
+        # (`uses:`) -- attempted *before* any generic quote handling
+        # below, so a quoted key is recognized as a key instead of
+        # merely being consumed as an unrelated quoted scalar.
+        #
+        # issue #9 semantic-decoding hardening: a quoted key is matched
+        # against the *semantically decoded* scalar content (`"uses"`),
+        # never the raw source spelling -- so an escaped-but-equivalent
+        # spelling such as `"u\u0073es"` (which every real YAML parser
+        # decodes to the exact same string as the plain key `uses`) is
+        # recognized here exactly the same way the plain/literal
+        # spelling already was, closing the fail-open bypass a fresh,
+        # independent verifier reproduced against the previous
+        # literal-4-characters-between-the-quotes shortcut. A bare/plain
+        # key never has escape sequences at all (YAML's own plain-
+        # scalar grammar has none), so bare-key matching still compares
+        # the raw source spelling directly -- there is nothing to
+        # decode.
+        #
+        # issue #9 residual-hardening (combined self-review finding):
+        # a quoted key sitting in genuine key position (immediately
+        # followed, after optional whitespace, by a single ':') whose
+        # escape sequence does *not* fully, unambiguously decode
+        # (`key_problem` set) is *never* silently skipped just because
+        # this scanner cannot tell whether it spells "uses" -- a
+        # previous revision did exactly that (treating an undecodable
+        # key exactly like a *confirmed*-not-"uses" key, i.e. simply
+        # continuing past it), which let a completely unpinned/mutable
+        # `uses:` reference sail through entirely unflagged whenever its
+        # key happened to carry one malformed escape byte. This scanner
+        # never guesses a decoded meaning it cannot prove, but it also
+        # never lets "cannot prove" collapse into "therefore harmless,
+        # skip it": an undecodable key-position quoted scalar is always
+        # surfaced as its own hard, fail-closed occurrence (`problem`
+        # is the same `"invalid-escape"`/etc. reason `_scan_quoted_
+        # scalar` reported), so no malformed relevant key ever simply
+        # disappears.
         key_repr = None
         key_end = None
+        key_undecodable = False
         quote = ch if ch in ('"', "'") else None
         if quote is not None:
-            if text[i + 1:i + 5] == "uses" and i + 5 < n and text[i + 5] == quote:
-                k = i + 6
+            end, decoded_key, key_problem = _scan_quoted_scalar(text, i, quote)
+            if key_problem is None and decoded_key == "uses":
+                k = end
                 while k < n and text[k] in " \t":
                     k += 1
                 if k < n and text[k] == ":" and (k + 1 >= n or text[k + 1] != ":"):
-                    key_repr = f"{quote}uses{quote}"
+                    key_repr = text[i:end]
                     key_end = k + 1
+            elif key_problem is not None:
+                k = end
+                while k < n and text[k] in " \t":
+                    k += 1
+                if k < n and text[k] == ":" and (k + 1 >= n or text[k + 1] != ":"):
+                    key_repr = text[i:end]
+                    key_end = k + 1
+                    key_undecodable = True
+            if key_repr is None:
+                i = end
+                continue
         elif ch == "u" and text[i:i + 4] == "uses":
             word_boundary_before = i == 0 or not (text[i - 1].isalnum() or text[i - 1] == "_")
             if word_boundary_before:
@@ -372,11 +524,7 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
                     key_end = k + 1
 
         if key_repr is None:
-            if quote is not None:
-                end, _content, _ok = _scan_quoted_scalar(text, i, quote)
-                i = end
-            else:
-                i += 1
+            i += 1
             continue
 
         k = key_end
@@ -406,10 +554,18 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
             k = end_of_line
         elif text[k] in ('"', "'"):
             q = text[k]
-            end, content, ok = _scan_quoted_scalar(text, k, q)
+            end, content, value_problem = _scan_quoted_scalar(text, k, q)
             value = content
-            if not ok:
-                problem = "unterminated-quote"
+            # issue #9 semantic-decoding hardening: `value_problem` is
+            # now `"invalid-escape"` (a malformed/truncated/unknown/
+            # out-of-range/surrogate double-quote escape -- see
+            # `_scan_quoted_scalar`'s own docstring) as well as the
+            # existing `"unterminated-quote"` -- both are always a
+            # hard, fail-closed rejection: this scanner never lossily
+            # decodes (or silently passes through) a quoted `uses:`
+            # value it does not fully, unambiguously understand.
+            if value_problem is not None:
+                problem = value_problem
             elif "${{" in content:
                 problem = "template-expression"
             k = end
@@ -447,11 +603,22 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
             elif "${{" in value:
                 problem = "template-expression"
 
-        scope = current_scope()
-        if "uses" in scope["seen"]:
-            problem = problem or "duplicate-key"
+        if key_undecodable:
+            # This key-position quoted scalar could not be proven to
+            # spell anything other than "uses" (nor proven that it
+            # does) -- the undecodable-key finding itself always wins
+            # over whatever the value side happened to parse as, and
+            # this ambiguous occurrence is never folded into the
+            # confirmed-"uses" duplicate-key bookkeeping below (it is
+            # not confirmed to *be* "uses" -- only that it cannot be
+            # ruled out, which is already fully, separately reported).
+            problem = key_problem
         else:
-            scope["seen"].add("uses")
+            scope = current_scope()
+            if "uses" in scope["seen"]:
+                problem = problem or "duplicate-key"
+            else:
+                scope["seen"].add("uses")
 
         occurrences.append(
             UsesOccurrence(
@@ -475,6 +642,7 @@ _PROBLEM_DESCRIPTIONS = {
     "unterminated-quote": "an unterminated or multi-line quoted string -- only a single-line quoted scalar is a supported 'uses:' value shape",
     "ambiguous-colon-in-value": "an unquoted ':' followed by whitespace inside the value -- this looks like an unintended nested mapping key, not a real action reference",
     "duplicate-key": "a duplicate 'uses' key repeated within the same enclosing mapping -- a YAML mapping must not repeat a key, and this scanner refuses to guess which repeated value would actually win",
+    "invalid-escape": "a malformed, truncated, unknown, or out-of-range/surrogate YAML double-quote escape sequence -- this scanner never lossily decodes or silently passes through an escape it does not fully, unambiguously understand",
 }
 
 
@@ -748,6 +916,109 @@ def _extract_block(text: str, key: str) -> str:
     return "\n".join(block)
 
 
+# --- Decode-aware permission-scope/write detection helpers (issue #9
+# semantic-decoding hardening) --------------------------------------
+#
+# `_ANY_SCOPE_WRITE_RE` below (unchanged) already matches *any*
+# identifier-shaped scope key immediately followed by a `write`/
+# `write-all` value, key and/or value optionally single/double-quoted --
+# but only ever against the *raw source spelling* inside those optional
+# quotes. A fresh, independent verifier reproduced the fail-open gap
+# that leaves: `"c\u006fntents": "wr\u0069te"` never matches it at all,
+# since its raw source spelling is literally the characters
+# `c\u006fntents`/`wr\u0069te` (containing a backslash), never the
+# literal words `contents`/`write` the regex's own character classes
+# require. `_decode_quoted_span` below decodes exactly one already-
+# regex-matched quoted span (or returns a bare/plain token unchanged --
+# a YAML plain scalar has no escape sequences at all) via the same
+# canonical `_scan_quoted_scalar` decoder `extract_uses_occurrences`
+# uses, so there is exactly one decoder, repository-wide, for "what a
+# quoted YAML scalar actually, semantically says" -- never a second,
+# divergent implementation.
+def _decode_all_quoted_spans(block_text: str):
+    """Walks `block_text` char-by-char, replacing *every* well-formed
+    quoted scalar span (single or double) it finds with its
+    semantically decoded, unquoted content -- via the same canonical
+    `_scan_quoted_scalar` decoder used everywhere else in this module.
+    Returns `(decoded_text, problems)`; `problems` is a list of
+    `(raw_span, problem)` pairs for every quoted span that failed to
+    decode cleanly (left untouched, quotes and all, in `decoded_text` --
+    never silently dropped or guessed at).
+
+    Deliberately only ever called against a small, already-isolated
+    single mapping's own raw text (the top-level `permissions:` block --
+    see `check_top_level_permissions`), **never** the whole workflow
+    file: a real workflow's `run:` steps routinely contain ordinary
+    shell double-quoted strings (e.g. `echo "hello"`) that are not YAML
+    quoted-scalar *nodes* at all (the YAML value there is the *entire*
+    plain-scalar shell script; the quote characters inside it are just
+    ordinary content) -- blindly decoding every quote character across
+    the entire file would misinterpret those as YAML scalars instead.
+    Restricting this whole-block substitution to a small, known-shape,
+    shell-free mapping block avoids that misinterpretation entirely,
+    while `check_no_write_anywhere`'s own narrower, regex-candidate-
+    gated approach (`_SCOPE_WRITE_CANDIDATE_RE`) safely covers the same
+    escaped-scope-grant detection everywhere else in the file."""
+    n = len(block_text)
+    i = 0
+    out: List[str] = []
+    problems: List[tuple] = []
+    while i < n:
+        ch = block_text[i]
+        if ch in ('"', "'"):
+            end, content, problem = _scan_quoted_scalar(block_text, i, ch)
+            if problem is None:
+                out.append(content)
+            else:
+                problems.append((block_text[i:end], problem))
+                out.append(block_text[i:end])
+            i = end
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out), problems
+
+
+def _decode_quoted_span(raw: str):
+    """`raw` is either a bare/plain identifier-shaped token (returned
+    unchanged -- a YAML plain scalar key/value never has escape
+    sequences to decode) or a complete, well-formed single/double-quoted
+    span (source spelling, opening/closing quote characters included).
+    Returns `(decoded_or_best_effort, problem)`; `problem` is `None` for
+    a bare token or a cleanly, unambiguously decoded quoted span, or the
+    `_scan_quoted_scalar` fail-closed reason code (`"unterminated-
+    quote"`/`"invalid-escape"`) otherwise -- a caller must always treat
+    any non-`None` `problem` as an unconditional, fail-closed rejection,
+    never trust the returned content in that case."""
+    if raw[:1] in ('"', "'"):
+        _end, content, problem = _scan_quoted_scalar(raw, 0, raw[0])
+        return content, problem
+    return raw, None
+
+
+# A single well-formed (balanced-quote) double- or single-quoted span,
+# used only to *locate* a quoted key/value candidate for the decode-
+# aware scope/write check below -- deliberately permissive at the
+# regex-matching stage (any escaped character after a backslash in the
+# double-quoted alternative, `''` anywhere in the single-quoted one) so
+# a genuinely malformed escape sequence is still captured as a candidate
+# and handed to the real, strict `_scan_quoted_scalar` decoder for the
+# fail-closed verdict, rather than the locating regex itself silently
+# failing to match and letting the malformed span slip past unnoticed.
+_QUOTED_SPAN_RE = r'"(?:[^"\\]|\\.)*"|\'(?:[^\']|\'\')*\''
+# A scope-key/value *candidate* pair: either side may be a bare
+# identifier-shaped token or one of the quoted spans above. Matched
+# across the *entire* text -- exactly the same "scan everywhere, prefer
+# a false positive over a silent miss" design `_ANY_SCOPE_WRITE_RE`
+# itself already uses (see that regex's own design-rationale comment) --
+# not narrowed to any particular block, so an escaped grant nested at
+# any depth (top-level `permissions:`, job-level, or inside a flow
+# mapping) is found the same way.
+_SCOPE_WRITE_CANDIDATE_RE = re.compile(
+    rf"(?P<key>{_QUOTED_SPAN_RE}|[a-zA-Z][a-zA-Z0-9_-]*)\s*:\s*(?P<value>{_QUOTED_SPAN_RE}|[a-zA-Z][a-zA-Z0-9_-]*)"
+)
+
+
 def check_triggers(text: str) -> List[str]:
     violations = []
     block = _extract_block(text, "on")
@@ -776,9 +1047,27 @@ def check_top_level_permissions(text: str) -> List[str]:
         violations.append("no top-level 'permissions:' block found before 'jobs:'")
         return violations
     block = _extract_block(text, "permissions")
-    if "contents: read" not in block:
+    # issue #9 semantic-decoding hardening: the top-level `permissions:`
+    # block is a small, already-isolated mapping (never shell/`run:`
+    # script content), so it is safe to decode *every* quoted scalar
+    # inside it in one pass -- unlike scanning the whole workflow file
+    # for quoted spans (which would also misinterpret an unrelated
+    # quoted shell string elsewhere -- see `check_no_write_anywhere`'s
+    # own narrower, candidate-regex-gated approach for that case). A
+    # scalar that fails to decode cleanly is left in its raw/undecoded
+    # form in `decoded_block` (so the substring checks below still run
+    # against *something*) and is separately, always reported fail-
+    # closed here regardless of what the substring checks find.
+    decoded_block, block_problems = _decode_all_quoted_spans(block)
+    for raw_span, problem in block_problems:
+        violations.append(
+            f"top-level permissions block contains a quoted scalar {raw_span!r} that is not a "
+            f"supported/decodable YAML quoted scalar ({_PROBLEM_DESCRIPTIONS.get(problem, problem)}) "
+            "-- rejected fail-closed"
+        )
+    if "contents: read" not in decoded_block:
         violations.append(f"top-level permissions block does not declare 'contents: read': {block.strip()!r}")
-    if re.search(r"\bwrite\b", block, re.IGNORECASE):
+    if re.search(r"\bwrite\b", decoded_block, re.IGNORECASE):
         violations.append(f"top-level permissions block grants a 'write' scope: {block.strip()!r}")
     return violations
 
@@ -835,6 +1124,51 @@ def check_no_write_anywhere(text: str) -> List[str]:
         )
     for match in re.finditer(r"permissions\s*:\s*['\"]?write(-all)?\b", text, re.IGNORECASE):
         violations.append(f"found a 'permissions: write...' shorthand grant: {match.group(0)!r}")
+    # issue #9 semantic-decoding hardening: `_ANY_SCOPE_WRITE_RE` above
+    # only ever matches a scope key/value pair's *raw source spelling*
+    # (optional surrounding quote characters aside) -- it never decodes
+    # a YAML escape sequence. A fresh, independent verifier reproduced
+    # the resulting fail-open bypass: `"c\u006fntents": "wr\u0069te"`
+    # never matches it at all, since the raw text between the quotes is
+    # literally `c\u006fntents`/`wr\u0069te`, not the literal words
+    # `contents`/`write`. `_SCOPE_WRITE_CANDIDATE_RE` locates every
+    # bare-or-quoted "key: value" candidate pair anywhere in the text
+    # (the same "scan everywhere" design as `_ANY_SCOPE_WRITE_RE`
+    # itself); each candidate is only actually decoded (via the one
+    # canonical `_scan_quoted_scalar` decoder) when at least one side is
+    # quoted *and* contains a backslash (a plain/bare pair, or an
+    # unescaped quoted pair, is already fully covered by the literal
+    # regex above -- re-decoding it would be redundant, never
+    # incremental). A candidate whose key or value fails to decode
+    # cleanly is always reported fail-closed here (this scanner never
+    # silently guesses that an undecodable escaped pair was *probably*
+    # harmless); a cleanly-decoded pair is reported exactly like its
+    # literal-spelling counterpart above whenever the decoded value is
+    # `write`/`write-all` (case-insensitive, matching the literal check
+    # above).
+    for match in _SCOPE_WRITE_CANDIDATE_RE.finditer(text):
+        raw_key, raw_value = match.group("key"), match.group("value")
+        key_is_quoted = raw_key[:1] in ('"', "'")
+        value_is_quoted = raw_value[:1] in ('"', "'")
+        if not (key_is_quoted or value_is_quoted):
+            continue  # already covered by the literal regex above
+        if "\\" not in raw_key and "\\" not in raw_value:
+            continue  # no escape sequence present -- nothing new to decode
+        key_decoded, key_problem = _decode_quoted_span(raw_key)
+        value_decoded, value_problem = _decode_quoted_span(raw_value)
+        if key_problem is not None or value_problem is not None:
+            problem = key_problem or value_problem
+            violations.append(
+                f"found a quoted permission-scope key/value pair {match.group(0)!r} with an "
+                f"unsupported/invalid quoted-scalar escape ({_PROBLEM_DESCRIPTIONS.get(problem, problem)}) "
+                "-- rejected fail-closed"
+            )
+            continue
+        if value_decoded.lower() in ("write", "write-all"):
+            violations.append(
+                f"found permission scope grant {key_decoded}: {value_decoded} (raw: {match.group(0)!r}, "
+                "decoded from an escaped/quoted spelling)"
+            )
     return violations
 
 
