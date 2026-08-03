@@ -68,11 +68,10 @@ external URL availability nor asserts that an external wiki is reachable.
 
 ### Current audit validation evidence
 
-All results below were reproduced in this integration worktree; counts are
-point-in-time output, not policy constants:
+All results below were reproduced in this integration worktree:
 
-- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> 189 tests,
-  `OK`, including valid/broken `resolve_internal_link()` anchors for all five
+- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> `OK`,
+  including valid/broken `resolve_internal_link()` anchors for all five
   extensions in lower/upper/mixed case and offline #6/#18 stale-status fixtures.
 - `python3 scripts/check_docs.py --check --check-examples` -> 72 recognized
   Markdown files, 0 findings; all three safe help examples passed. This made

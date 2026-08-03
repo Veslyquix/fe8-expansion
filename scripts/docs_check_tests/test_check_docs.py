@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -1258,13 +1259,13 @@ class ABIFactualDocContractTests(unittest.TestCase):
 
 
 class RealMakeDryRunABIContractProbeTests(unittest.TestCase):
-    """Real, executed `make -n` (dry-run, never invokes a recipe) probes
-    against this repository's actual modern.mk -- not a simulated or
-    equivalent source-level stand-in -- proving the documented ABI
-    contract is what the build system actually enforces today. `-n`
-    guarantees no compiler/assembler/linker command is ever run; the
-    linked-goal guard in modern.mk is evaluated during Makefile parsing,
-    before any recipe would even be dry-run-printed."""
+    """Toolchain-free probes against the real parsed Make database.
+
+    A modern source goal can remake included ``*.headers.d`` files even
+    under ``make -n``, which invokes the ARM compiler before CI installs
+    it. Keep the linked ``apcs-gnu`` negative as a real parse-time probe,
+    but use an inert goal for positive/database assertions.
+    """
 
     def _run(self, *args, timeout=60):
         return subprocess.run(
@@ -1274,6 +1275,26 @@ class RealMakeDryRunABIContractProbeTests(unittest.TestCase):
             text=True,
             timeout=timeout,
         )
+
+    def _database(self, abi):
+        result = subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-rR",
+                "-pn",
+                "--eval=__docs_abi_probe__: ;",
+                "__docs_abi_probe__",
+                "MODERN_CONFIG=debug",
+                "MODERN_ABI=%s" % abi,
+            ],
+            cwd=REAL_REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return result.stdout
 
     def test_linked_elf_apcs_gnu_fails_fast_without_linking(self):
         result = self._run(
@@ -1288,24 +1309,24 @@ class RealMakeDryRunABIContractProbeTests(unittest.TestCase):
         self.assertNotIn("arm-none-eabi-gcc", combined)
         self.assertNotIn("arm-none-eabi-ld", combined)
 
-    def test_linked_elf_aapcs_dry_run_does_not_fail_fast(self):
-        result = self._run(
-            "expansion-modern-elf", "MODERN_CONFIG=debug", "MODERN_ABI=aapcs",
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertNotIn("requires MODERN_ABI=aapcs", result.stdout + result.stderr)
+    def test_aapcs_database_uses_default_abi_flags(self):
+        database = self._database("aapcs")
+        self.assertRegex(database, r"(?m)^MODERN_ABI_FLAGS :=\s*$")
 
-    def test_cohort_apcs_gnu_compile_only_dry_run_succeeds(self):
-        result = self._run(
-            "expansion-modern-cohort", "MODERN_CONFIG=debug", "MODERN_ABI=apcs-gnu",
+    def test_apcs_gnu_is_compile_only_in_parsed_goal_contract(self):
+        database = self._database("apcs-gnu")
+        self.assertRegex(
+            database,
+            r"(?m)^MODERN_ABI_FLAGS := -mabi=apcs-gnu$",
         )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
-    def test_all_apcs_gnu_compile_only_dry_run_succeeds(self):
-        result = self._run(
-            "expansion-modern-all", "MODERN_CONFIG=debug", "MODERN_ABI=apcs-gnu",
+        linked_goals = re.search(
+            r"(?m)^MODERN_LINKED_GOALS := (.+)$", database
         )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIsNotNone(linked_goals)
+        goals = linked_goals.group(1).split()
+        self.assertIn("expansion-modern-elf", goals)
+        self.assertNotIn("expansion-modern-cohort", goals)
+        self.assertNotIn("expansion-modern-all", goals)
 
 
 # ---------------------------------------------------------------------------

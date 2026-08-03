@@ -31,11 +31,9 @@ This section describes the current master integration used for the issues
 
 ### Current integration validation evidence
 
-All results below were reproduced in this integration worktree; counts are
-point-in-time output, not policy constants:
+All results below were reproduced in this integration worktree:
 
-- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> 182 tests,
-  `OK`.
+- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> `OK`.
 - `python3 scripts/check_docs.py --check --check-examples` -> 72 recognized
   Markdown files, 0 findings; all three safe help examples passed. This made
   no network requests.
@@ -107,7 +105,7 @@ substitute:
 | "A new contributor can install, configure, author content, build, test, and debug using repository documentation alone." | [`docs/README.md`](../docs/README.md#learning-paths) chains [`docs/quickstart.md`](../docs/quickstart.md) (install/configure/build) -> [`docs/architecture.md`](../docs/architecture.md) (orient) -> [`docs/generated_data_tutorial.md`](../docs/generated_data_tutorial.md) (author content) -> [`CONTRIBUTING.md`](../CONTRIBUTING.md) (test: fast checks / full gates) -> [`docs/debugtools.md`](../docs/debugtools.md) (debug) | `scripts/quickstart.sh --help` is one of the three commands `--check-examples` actually executes; see the last row for the reproduced result |
 | "Documentation clearly separates supported expansion workflows from archival decomp workflows." | [`docs/migration-from-decomp.md`](../docs/migration-from-decomp.md) (bridge guide) and [`docs/archival-decomp.md`](../docs/archival-decomp.md), listed by [`docs/README.md`](../docs/README.md#full-document-list-and-status) as "Current, archival scope"; the split is governed by [`docs/issue-resolution-policy.md`](../docs/issue-resolution-policy.md#supported-modern-path-vs-archival-decomp-path) | The STALE_PHRASE_RULES denylist in `scripts/check_docs.py` rejects the pre-rewrite claim that the decomp tutorial lives in `CONTRIBUTING.md` (moved to `docs/archival-decomp.md`); see the last row for the reproduced 0-finding result |
 | "Public APIs and compatibility guarantees are explicit." | [`docs/README.md`](../docs/README.md#public-api-index-source-of-truth-by-subsystem) (Public API index table); [`docs/project-governance.md`](../docs/project-governance.md#support-and-compatibility-policy); [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries); [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts) | `python3 scripts/check_docs.py` resolves every internal anchor cited in this row (fail-closed on any broken anchor); see the last row for the reproduced result |
-| "Documentation commands/examples are CI-tested where practical." | the "Check documentation (issues #7/#17)" step in `.github/workflows/build.yml`; [`scripts/check_docs.py`](../scripts/check_docs.py) `--check --check-examples`; [`scripts/docs_check_tests/`](../scripts/docs_check_tests/) | Reproduced directly in this worktree: `python3 -m unittest discover -s scripts/docs_check_tests -v` -> `Ran 174 tests ... OK`; `python3 scripts/check_docs.py --check --check-examples` -> `check_docs: OK -- 65 Markdown file(s) checked, 0 findings.` plus `example[quickstart-help]: ok`, `example[upstream-port-help]: ok`, `example[check-docs-help]: ok` (point-in-time counts -- re-run both commands against the commit under review rather than trusting the numbers frozen here) |
+| "Documentation commands/examples are CI-tested where practical." | the "Check documentation (issues #7/#17)" step in `.github/workflows/build.yml`; [`scripts/check_docs.py`](../scripts/check_docs.py) `--check --check-examples`; [`scripts/docs_check_tests/`](../scripts/docs_check_tests/) | Reproduced directly in this worktree: `python3 -m unittest discover -s scripts/docs_check_tests -v` -> `OK`; `python3 scripts/check_docs.py --check --check-examples` -> `0 findings` plus successful `quickstart-help`, `upstream-port-help`, and `check-docs-help` examples. Re-run both commands against the commit under review rather than trusting frozen counts. |
 
 ## What this explicitly does not claim
 
