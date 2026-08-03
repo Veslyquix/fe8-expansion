@@ -181,64 +181,51 @@ python3 -m scripts.upstream_port verify --dry-run   # list the gate commands wit
 
 **⚠️ This builds and checks the CURRENT TRUSTED WORKTREE (your repo, after
 you manually applied whatever you accepted) — it never builds, checks out,
-or executes the upstream ref/tree.** It orchestrates the same gates
-`.github/workflows/build.yml` runs, in the same order, fail-fast. The
-workflow splits them across two jobs — a fast, host-only `host-tests` job
-(textually first: no arm-none-eabi toolchain, no ROM/linker build) and the
-`build` job (full modern ROM/ELF/linker) — and `verify` mirrors that exact
-argv-and-order sequence across both jobs:
+or executes the upstream ref/tree.** It orchestrates all 11 current-master
+mirrored verifier gates in fail-fast order. `.github/workflows/build.yml`
+carries the same 11 commands with argv/order preserved across its host and ROM
+jobs, plus the deliberately standalone issues #7/#17 documentation-governance
+workflow gate described below.
 
 1. `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`
-   (issue #13: the full tools/gba-playtest suite in explicit host-only mode
-   — host job, never rebuilds the ROM. `GBA_PLAYTEST_HOST_ONLY=1` is a
-   leading inline environment assignment, mirrored verbatim from `build.yml`
-   and applied to that one child process only, so the ROM/runtime gates
-   below never inherit it and keep owning live coverage. It makes this gate
-   independent of whether a git-ignored ROM happens to exist in the worktree
-   while gates 8-11 rebuild it — see `tools/gba-playtest/README.md`,
-   “Host-only test mode”.)
+   (issue #13 host-only suite; the inline environment assignment applies only
+   to this child process, so later runtime gates retain live-ROM coverage)
 2. `python3 -m unittest discover -s tests/upstream_port -v`
-   (issue #12/#15: the 144 pure-stdlib upstream-port review tooling tests,
-   including this `verify.gates()` <-> `build.yml` mirror — host job, links
-   no C and never rebuilds the ROM)
-3. `python3 -m unittest discover -s scripts/localization/tests -p test_*.py`
-   (issue #18: the scripts/localization package's own pure-stdlib unit test
-   suite — schema/pseudo/catalog/generate/CLI/determinism plus the
-   host-native resolver-behavior and vanilla-isolation source-audit tests,
-   which self-skip without a host `cc` — host job, never rebuilds the ROM;
-   the localization-runtime-*-check scenarios that actually boot a ROM are
-   reached through gates 8-9's `expansion-modern-linker-check` dependency
-   chain instead, see `localization.mk`'s `localization-test` target)
+   (pure-stdlib upstream-port tests, including the workflow mirror contract;
+   rerun it for the current test count rather than trusting a written count)
+3. `python3 -m unittest discover -s scripts/localization/tests -p "test_*.py"`
+   (issue #18 host-only localization schema/catalog/pseudo/generation/resolver
+   coverage)
 4. `python3 scripts/artifact_guard.py --revision HEAD`
 5. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
-   (issue #15: bare `make`/`make all` always resolves to the modern
-   release AAPCS lane)
 6. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
-   (issue #15: quickstart.sh only reaches the archival agbcc lane via
-   explicit `make legacy`/`make fireemblem8.gba`)
 7. `make generated-data-check`
 8. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
-   (aggregates the full modern debug ROM/runtime + linker suite off one
-   reused object/ELF build — boot/title/new-game/debugtools-hub/timer/map/
-   tools/prep/ch4-prep/combat/save-load/suspend/save-format-migration,
-   budget, shift/offset, raw-pointer, relocation, cross-overlay, and (issue
-   #18) the localization-runtime-*-check scenarios — so the runtime
-   scenarios are covered here, not re-run individually; see `modern.mk`'s
-   `expansion-modern-linker-check` dependency chain)
 9. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
-   (release-config counterpart, incl. the release debugtools-disabled
-   negative scenarios)
-10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
-    (issue #10: boots the real modern debug ROM at an expanded item cap and
-    runs the item-ID-expansion runtime probe, immediately after the two
-    default-cap linker-check gates above and against the same build output)
-11. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs`
-    (release-config counterpart of gate 10, and the final gate)
+10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
+11. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
 
-None of these existing gates are weakened, reordered, or skipped; the three
-host-lane gates were added by the issues #11/#13 <-> #12/#15 <-> #18
-integrations and run before the ROM build so a host-tooling regression fails
-in well under a minute.
+Gates 8-9 aggregate the complete modern debug/release ROM, linker, budget,
+shift, save, starter-feature, and localization runtime matrices through
+`expansion-modern-linker-check`. Gates 10-11 reuse the item-expansion runtime
+probe at cap `0xCE`; the three issue #6 arguments make the same ROM also prove
+the typed starter-content record and both registered mechanics. No extra ROM
+build or gate is added.
+
+### Standalone workflow check
+
+Immediately after the artifact guard, the `build` job runs the independent
+issues #7/#17 documentation-governance gate:
+
+```sh
+python3 -m unittest discover -s scripts/docs_check_tests -v
+python3 scripts/check_docs.py --check --check-examples
+```
+
+This gate is stdlib-only, zero-network, and zero-ROM, and runs before
+dependency/tool installation. It is additional to all 11 mirrored verifier
+gates and intentionally has no `verify.gates()` entry; it does not weaken,
+reorder, or replace any mirrored command.
 
 **There is no gate subset/selection flag, on the CLI or in the internal
 `verify.run_gates` API.** `verify` (with or without `--dry-run`) always

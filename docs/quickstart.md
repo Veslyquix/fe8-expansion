@@ -1,8 +1,17 @@
 # Fire Emblem 8U Quick Start
 
+> Part of the [documentation index](README.md). This is the setup guide for
+> both the supported modern framework (default) and the archival agbcc
+> lane (`--legacy`) — see [`framework-support.md`](framework-support.md)
+> for the full supported-host/toolchain/target matrix and
+> [`archival-decomp.md`](archival-decomp.md) for manual archival setup
+> steps and the decompiling workflow itself.
+
 Get a working build of this ROM-hack base with a single command using the
-bundled `scripts/quickstart.sh` helper. If you prefer manual setup or run on
-another distro/package manager, see the README.
+bundled `scripts/quickstart.sh` helper. If you run on an unsupported
+package manager, see "Unsupported distro" under Troubleshooting below, or
+[`framework-support.md`](framework-support.md) for exactly which hosts are
+auto-installed vs. CI-verified.
 
 ## Prerequisites
 
@@ -41,6 +50,26 @@ On success you’ll see:
 ```
 [✓] Modern build complete: /path/to/fireemblem8-expansion/build/expansion-modern/release/aapcs/fireemblem8.gba
 ```
+
+
+## After installation: configure, author, test, debug
+
+1. Keep the supported linked ABI at `MODERN_ABI=aapcs`; choose
+   `MODERN_CONFIG=debug` while developing and `release` for the default lane.
+2. Set ROM identity, locale configuration, or the four default-off starter
+   flags through `config.mk`/`make` overrides, following
+   [`config_identity.md`](config_identity.md),
+   [`starter_features.md`](starter_features.md), and
+   [`localization.md`](localization.md). Invalid locale/flag/dependency
+   combinations fail before compilation.
+3. Author typed game data under `src/data/` and expansion UI text under
+   `texts/expansion/`; never edit `build/generated/` output. Follow
+   [`generated_data_tutorial.md`](generated_data_tutorial.md).
+4. Run the fast host checks from [`../CONTRIBUTING.md`](../CONTRIBUTING.md),
+   then both debug/release `expansion-modern-linker-check` gates for runtime,
+   save, budget, shifted-link, starter, and localization coverage.
+5. Diagnose failures with [`debugtools.md`](debugtools.md) and the scenario
+   harness in [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md).
 
 ### Archival `--legacy` path
 
@@ -83,9 +112,11 @@ path or start modifying the source.
 
 ## Modern GCC compile-only object cohort
 
-The modern bootstrap compiles eighteen verified C files and three handwritten
-assembly files to ARM relocatable objects only. This cohort target itself
-does **not** link an ELF or a ROM — the fuller modern chain
+The modern bootstrap compiles a verified set of C files (reproduce the
+current count against this worktree with `make print-MODERN_COHORT_C_OBJECTS`,
+rather than trusting a number written here) and a small, fixed set of
+handwritten assembly files (named below) to ARM relocatable objects only.
+This cohort target itself does **not** link an ELF or a ROM — the fuller modern chain
 (`expansion-modern-elf` → `expansion-modern-rom` → `expansion-modern-boot-check`,
 documented below) is what the default quickstart path now builds and
 boot-verifies as the supported release ROM, superseding the legacy ROM as the
@@ -95,30 +126,42 @@ modern release ROM directly, with no quickstart script required and no
 `tools/agbcc` executable or library ever needed or resolved; `make legacy`
 (equivalent to the pre-existing `make fireemblem8.gba`) is the named,
 explicit way to reach the archival lane instead. The modern
-`ap.o`, the five save objects (`bmsave-misc.o`, `bmsave-gmap.o`,
+`ap.o`, the save objects (`bmsave-misc.o`, `bmsave-gmap.o`,
 `bmsave-lib.o`, `bmsave.o`, and `bmsave-xmap.o`), the convoy/container object
 (`bmcontainer.o`, which defines `ClearSupplyItems` and `GetConvoyItemArray` for
 save dependency closure but is not itself one of the save objects), the Proc
 scheduler object (`proc.o`), the hardware/input object (`hardware.o`, which
-calls into `proc.o`'s `Proc_Start`), and the object defining `AgbMain` remain
-compile-only; none is linked into or executed by the ROM. `proc.o` and
+calls into `proc.o`'s `Proc_Start`), and the object defining `AgbMain` are
+compile-only *under this target*: `expansion-modern-cohort` itself never
+links an ELF or a ROM, so none of them is linked or executed as part of
+running this target. That is not the same as saying these objects are
+never linked at all -- the cohort's C sources are a strict subset of
+`MODERN_ALL_C_SOURCES`, and the cohort and full/linked targets share the
+same isolated `build/expansion-modern/<config>/<abi>/` output tree, so an
+already-built cohort object for a given `MODERN_CONFIG`/`MODERN_ABI` is
+reused, not recompiled, by a later `expansion-modern-elf`/`-rom`/
+`-boot-check` run with a matching `MODERN_CONFIG` and
+`MODERN_ABI=aapcs` (the only ABI those linked targets accept) -- meaning
+these same objects are among the ones that do get linked into, and
+executed by, the modern AAPCS ROM once that fuller chain runs.
+`proc.o` and
 `hardware.o` are neither save nor container objects; they close prior
 cohort-internal Proc and key/VBlank dependencies but do not claim OAM,
 software-reset, callback, ABI, SRAM, EWRAM-overlay, or any other runtime
-readiness. Cross-ABI layout probes cover the world-map save structures, but
+readiness on their own. Cross-ABI layout probes cover the world-map save structures, but
 this does not claim callback, ABI, SRAM, EWRAM-overlay, or save-persistence
 readiness.
 
-The cohort also assembles three handwritten files that must not be
+The cohort also assembles the handwritten files that must not be
 decompiled (see `CONTRIBUTING.md`): `libagbsyscall.o` is a self-contained set
 of BIOS SWI trampolines (`SoftReset`, `SoundBiasReset`, `SoundBiasSet`, and
 others), while `arm.o` and `arm_call.o` are a coupled ARM/Thumb interwork
 pair — `arm_call.o`'s Thumb trampolines branch directly into `arm.o`'s
-ARM-mode functions, so they are promoted together. Adding all three closes 17
+ARM-mode functions, so they are promoted together. Adding these closes 17
 prior cohort-unsatisfied symbols (the debug/aapcs unsatisfied set moves from
 139 to 131), including `ClearOAMBuffer`, `SoftReset`, `SoundBiasReset`, and
-`SoundBiasSet`, while exposing nine new IWRAM/ROM data globals that `arm.o`
-references but does not define: `gBmMapTerrain`, `gBmMapUnit`,
+`SoundBiasSet`, while exposing nine new IWRAM/ROM data
+globals that `arm.o` references but does not define: `gBmMapTerrain`, `gBmMapUnit`,
 `gMovMapFillStPool1`, `gMovMapFillStPool2`, `gMovMapFillState`,
 `gMsgHuffmanTable`, `gMsgHuffmanTableRoot`, `gWorkingBmMap`, and
 `gWorkingTerrainMoveCosts`. `arm.s`'s 13 exported functions are not yet typed
@@ -152,10 +195,13 @@ make expansion-modern-cohort
 ```
 
 Outputs are isolated under
-`build/expansion-modern/<config>/<abi>/` (C objects under `src/`, the three
+`build/expansion-modern/<config>/<abi>/` (C objects under `src/`, the
 handwritten assembly objects under `src/` and `asm/`, matching each source's
-own directory) as twenty-one `.o` and twenty-one `.d` files. Select
-`MODERN_CONFIG=debug` (`-Og -g3`, the default) or `MODERN_CONFIG=release`
+own directory) as one `.o`/`.d` pair per cohort source file; reproduce the
+current C, assembly, and combined object counts against this worktree with
+`make print-MODERN_COHORT_C_OBJECTS`, `make print-MODERN_COHORT_ASM_OBJECTS`,
+and `make print-MODERN_COHORT_OBJECTS` rather than trusting a number written
+here. Select `MODERN_CONFIG=debug` (`-Og -g3`, the default) or `MODERN_CONFIG=release`
 (`-O2 -g0 -DNDEBUG`). Select `MODERN_ABI=aapcs` (GCC's default ABI, the
 supported choice for linked outputs) or `MODERN_ABI=apcs-gnu` (compile-only
 layout comparison, incompatible with EABI5 runtime libraries).
@@ -183,9 +229,11 @@ targets share the same isolated output tree).
 ### Full-source modern compilation target
 
 `expansion-modern-all` compiles every currently supported translation unit —
-all 435 authoritative C files (363 normal `src/*.c`, including the generated
-`src/msg_data.c`, plus the 72 preprocessed data files under `src/data/**`) and
-the same 3 handwritten assembly files as the fast cohort — to relocatable
+every authoritative C file (normal `src/*.c` sources, including the generated
+`src/msg_data.c`, plus the preprocessed data files under `src/data/**`; reproduce
+the current split with `make print-MODERN_ALL_C_OBJECTS` and
+`make print-MODERN_ALL_DATA_OBJECTS`) and the same handwritten assembly files as
+the fast cohort (`make print-MODERN_ALL_ASM_OBJECTS`) — to relocatable
 objects only. Like `expansion-modern-cohort`, it does not link an ELF or a
 modern ROM. `expansion-modern-cohort` remains the fast, default,
 dependency-closure-focused migration target; `expansion-modern-all` is the
@@ -199,10 +247,12 @@ make expansion-modern-all
 
 Outputs land in the same isolated `build/expansion-modern/<config>/<abi>/`
 tree as the fast cohort (objects already built by `expansion-modern-cohort`
-are not recompiled, since the 18-file cohort is a strict subset of the
-363-file full C list) as 438 `.o` and 438 primary `.d` files. `MODERN_CONFIG`,
-`MODERN_ABI`, and the toolchain override variables above all apply the same
-way.
+are not recompiled, since the cohort's C sources are a strict subset of the
+full `MODERN_ALL_C_SOURCES` list) as one `.o`/primary `.d` pair per source;
+reproduce the current combined object/dependency count against this worktree
+with `make print-MODERN_ALL_OBJECTS` rather than trusting a number written
+here. `MODERN_CONFIG`, `MODERN_ABI`, and the toolchain override variables
+above all apply the same way.
 
 Data files under `src/data/**` embed `INCBIN_U8`/`INCBIN_U16` binary and
 graphics assets that modern GCC cannot consume directly. Each one is compiled
@@ -241,8 +291,10 @@ source set and can be overridden the same way as the cohort variables.
 
 ### Modern expansion ELF target
 
-`expansion-modern-elf` links a full modern ELF using all 438 modern objects,
-modern runtime libraries (`-lc -lnosys -lgcc`), and no agbcc libraries.
+`expansion-modern-elf` links a full modern ELF using every modern object
+(reproduce the current count against this worktree with
+`make print-MODERN_ALL_OBJECTS`), modern runtime libraries
+(`-lc -lnosys -lgcc`), and no agbcc libraries.
 The clean section-oriented `linker/expansion.ld` owns ROM, IWRAM, persistent
 EWRAM, and mutually exclusive EWRAM overlays. Persistent EWRAM begins after
 the largest overlay, and linker assertions reject orphan sections, overlap,
@@ -278,9 +330,14 @@ Use the ROM/runtime targets below for behavior validation.
 (`ReadSramFast`, `VerifySramFast`, `gSoundInfo`, `gMPlayJumpTable`,
 `gCgbChans`, `gMPlayMemAccArea`, `SoundMainRAM_Buffer`, `gText_GoldBox`)
 are placed at their exact legacy IWRAM offsets via per-symbol BSS sections.
-Three source files (`src/agb_sram.c`, `src/m4a.c`, `src/bmshop.c`) receive
+The source files that need this treatment receive
 `-fdata-sections` so modern GCC emits the named `.bss.<symbol>` sections
-the clean linker places at pinned offsets.
+the clean linker places at pinned offsets. `modern.mk`'s "IWRAM-placed
+symbols need per-symbol BSS sections" block is the current source of truth
+for which sources carry the override and may grow as more symbols move to
+IWRAM; search that file for `-fdata-sections` (e.g.
+`grep -n -- '-fdata-sections' modern.mk`) rather than trusting a fixed list
+written here.
 `src/agb_sram.o` additionally receives `-fno-toplevel-reorder
 -fno-reorder-functions`: `SetSramFastFunc()` copies `ReadSramFast_Core`/
 `VerifySramFast_Core` into IWRAM scratch buffers at runtime by subtracting

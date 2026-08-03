@@ -30,6 +30,13 @@ _NON_GATE_STEP_NAMES = {
     "Build tools",
 }
 
+# Issues #7/#17 remediation: the documentation step is a genuine required
+# workflow gate, but it is the sole correctness step deliberately excluded
+# from verify.gates(). Its exact commands and position are asserted separately
+# below; localization remains part of the current-master 11-gate mirror.
+_DOCS_GOVERNANCE_STEP_NAME = "Check documentation (issues #7/#17)"
+_LOCALIZATION_HOST_STEP_NAME = "Run localization host test suite (issue #18)"
+
 
 def _parse_workflow_gate_commands(path=BUILD_WORKFLOW_PATH):
     """Read build.yml with stdlib only (no PyYAML) and return the ordered
@@ -72,18 +79,23 @@ def _parse_workflow_gate_commands(path=BUILD_WORKFLOW_PATH):
 
 class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
     """Assert verify.gates() is a literal, argv-identical, order-preserving
-    mirror of .github/workflows/build.yml's gate steps -- parsed from the
-    live workflow file, not a hardcoded copy of it."""
+    mirror of the gate steps in .github/workflows/build.yml -- parsed from
+    the live workflow file, not a hardcoded copy -- excluding only the
+    separately tested standalone documentation-governance step."""
 
     def test_gate_argv_matches_workflow_commands_in_order(self):
-        workflow_commands = _parse_workflow_gate_commands()
+        workflow_commands = [
+            (step_name, argv)
+            for step_name, argv in _parse_workflow_gate_commands()
+            if step_name != _DOCS_GOVERNANCE_STEP_NAME
+        ]
         gate_commands = [g.command for g in verify_mod.gates(jobs=2)]
 
         self.assertEqual(
             len(gate_commands),
             len(workflow_commands),
             f"verify.gates() has {len(gate_commands)} gate(s) but build.yml "
-            f"has {len(workflow_commands)} gate command(s): "
+            f"has {len(workflow_commands)} mirrored gate command(s): "
             f"{[c for _, c in workflow_commands]!r}",
         )
         for gate_command, (step_name, workflow_argv) in zip(gate_commands, workflow_commands):
@@ -93,6 +105,84 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 f"gate command {gate_command!r} does not literally match "
                 f"build.yml step {step_name!r} command {workflow_argv!r}",
             )
+
+    def test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate(self):
+        """Docs governance stays outside the current-master 11-gate mirror
+        while remaining required, argv-identical, and immediately after the
+        artifact guard in build.yml."""
+        names = [g.name for g in verify_mod.gates()]
+        self.assertNotIn("docs-check-tests", names)
+        self.assertNotIn("docs-check", names)
+
+        all_workflow_commands = _parse_workflow_gate_commands()
+        docs_commands = [
+            argv
+            for step_name, argv in all_workflow_commands
+            if step_name == _DOCS_GOVERNANCE_STEP_NAME
+        ]
+        self.assertEqual(
+            docs_commands,
+            [
+                [
+                    "python3",
+                    "-m",
+                    "unittest",
+                    "discover",
+                    "-s",
+                    "scripts/docs_check_tests",
+                    "-v",
+                ],
+                ["python3", "scripts/check_docs.py", "--check", "--check-examples"],
+            ],
+            "build.yml standalone docs-governance step must still run both "
+            "commands, argv-identical, even though verify.gates() no longer "
+            "mirrors them",
+        )
+
+        ordered_unique_steps = []
+        for step_name, _ in all_workflow_commands:
+            if not ordered_unique_steps or ordered_unique_steps[-1] != step_name:
+                ordered_unique_steps.append(step_name)
+        docs_index = ordered_unique_steps.index(_DOCS_GOVERNANCE_STEP_NAME)
+        self.assertEqual(
+            ordered_unique_steps[docs_index - 1],
+            "Check tracked artifacts",
+            "docs-governance step must immediately follow the artifact-guard step",
+        )
+        self.assertEqual(
+            ordered_unique_steps[docs_index + 1],
+            "Check default build lane and quickstart legacy glue (issue #15)",
+            "docs-governance step must immediately precede the #15 default-lane step",
+        )
+
+    def test_issue_18_localization_host_suite_is_in_mirrored_gate_set(self):
+        """The current-master localization host suite is mirrored exactly."""
+        names = [g.name for g in verify_mod.gates()]
+        self.assertIn("localization-host-suite", names)
+
+        all_workflow_commands = _parse_workflow_gate_commands()
+        localization_commands = [
+            argv
+            for step_name, argv in all_workflow_commands
+            if step_name == _LOCALIZATION_HOST_STEP_NAME
+        ]
+        self.assertEqual(
+            localization_commands,
+            [[
+                "python3", "-m", "unittest", "discover", "-s",
+                "scripts/localization/tests", "-p", "test_*.py",
+            ]],
+        )
+
+        ordered_unique_steps = []
+        for step_name, _ in all_workflow_commands:
+            if not ordered_unique_steps or ordered_unique_steps[-1] != step_name:
+                ordered_unique_steps.append(step_name)
+        localization_index = ordered_unique_steps.index(_LOCALIZATION_HOST_STEP_NAME)
+        self.assertEqual(
+            ordered_unique_steps[localization_index - 1],
+            "Run upstream-port tooling test suite",
+        )
 
     def test_issue_15_default_lane_and_quickstart_gates_present(self):
         names = [g.name for g in verify_mod.gates()]
@@ -130,6 +220,8 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         )
 
     def test_gate_list_full_ordered_names(self):
+        # All 11 current-master mirrored gates remain; docs governance is
+        # deliberately absent and asserted as a standalone workflow step.
         names = [g.name for g in verify_mod.gates()]
         self.assertEqual(
             names,

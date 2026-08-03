@@ -66,9 +66,9 @@ The flags are **diagnostic identity only**. None of these four flags touches
 the save format: flipping any of them never changes `EXPANSION_SAVE_COMPAT_EPOCH`
 or the `ExpansionSaveMeta`/save-block layout, and the fingerprint is deliberately
 *not* part of the save compatibility key -- a flag change can never make an
-existing save look incompatible. (`EXPANSION_SAVE_COMPAT_EPOCH` itself has since
-been bumped independently, `1` -> `2`, by issue #18 sprint 2's unrelated
-`struct ExpansionUserPrefs` change -- see `docs/save_format.md` and
+existing save look incompatible. (`EXPANSION_SAVE_COMPAT_EPOCH` stays at its
+current default `2`, bumped independently from `1` by issue #18 sprint 2's
+unrelated `struct ExpansionUserPrefs` change -- see `docs/save_format.md` and
 `docs/migration_registry.md` for its current value/history; that bump has
 nothing to do with, and was not caused by, any flag documented on this page.) The embedded `ExpansionMetadata` struct layout is unchanged (no
 new bitmask), so `verify_rom_header.py` needs no layout change.
@@ -389,6 +389,18 @@ the default flags-off ROM -- hard-locked on the world map. It is fixed in
 `src/worldmap_rm.c`/`src/worldmap_automu.c` and pinned by
 `tools/gba-playtest/tests/test_worldmap_proc_iter_null_guard.py`.
 
+## Resource budgets
+
+The modern negative-control instrumentation reserves exactly 48 EWRAM bytes:
+`gExpansionDangerOverlayProbe` (20) plus `gExpansionMechanicsProbe` (28), all
+zero when disabled and containing scalar counters only. Starter content adds
+one `ItemData` record only in the expanded-cap profile; its name table is
+build-local and statically bounded by `EXPANSION_CONTENT_TEXT_NAME_CAPACITY`.
+A content-disabled artifact check proves the callback, accessor, authored text,
+and expanded table are absent. Debug and release linker headroom remains owned
+by the live `expansion-modern-linker-check` budget reports rather than a copied,
+drifting free-byte number in this document.
+
 ## Safety notes
 
 * Shared C is GNU89/C89-safe (agbcc + modern GCC), no new `//` comments.
@@ -407,9 +419,10 @@ the default flags-off ROM -- hard-locked on the world map. It is fixed in
   additional QoL surface, no broad rewrite.
 * No raw numeric content IDs, no hand-edited generated C, no second
   router/registry/harness, no range-math rewrite, no save field and no
-  save-epoch bump caused by this content example (`EXPANSION_SAVE_COMPAT_EPOCH`'s
-  current value/history is tracked independently in `docs/migration_registry.md`;
-  it was later bumped `1` -> `2` by issue #18 sprint 2, for an unrelated reason).
+  save-epoch bump caused by this content example (`EXPANSION_SAVE_COMPAT_EPOCH`
+  remains the current default `2`; its value/history is tracked independently
+  in `docs/migration_registry.md`, having been bumped `1` -> `2` by issue #18
+  sprint 2, for an unrelated reason).
 * No new graphics asset and no reuse of a vanilla message/name/icon design for
   the authored content.
 

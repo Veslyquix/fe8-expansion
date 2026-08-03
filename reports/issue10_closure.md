@@ -1,5 +1,11 @@
 # Issue #10 closure evidence: Extend IDs and engine limits safely
 
+**Current integration clarification (2026-08-03):** any 10-gate counts below
+are point-in-time evidence from this historical closure run and are
+superseded for current composition. Live `verify.gates()` mirrors all 11
+current-master gates, including localization; the issues #7/#17 documentation
+gate remains an additional standalone workflow step.
+
 Candidate handoff. Every claim below was produced by running the command
 shown in this worktree; nothing is inferred. Final pass/fail remains with the
 independent verifier -- this report only records what has actually been
@@ -917,6 +923,69 @@ A final verifier recommended pass but its log reproduced a real first-fail that
 is **not** hidden here: any modern configured/default build must self-heal to
 its own resolved cap before compiling the consumer, and one sequence did not.
 
+### Command-naming note (transcript provenance)
+
+The issues #7/#17 remediation renamed the `make` invocation shown in
+each of the three code blocks below and in "Verification run for this
+follow-up" further down (originally invoked as plain `make` against
+the literal, computed object path
+`build/expansion-modern/debug/aapcs/src/data_items.o`) to the public,
+checker-resolvable aggregate target,
+`expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs`, because
+`scripts/check_docs.py` cannot statically resolve a literal computed
+object path (see `reports/issue17_documentation_audit.md`, "Post-merge
+integration update"). That rename was confirmed only by `make -n` (a
+dry run: the aggregate target still resolves through the identical
+rule and object path), not by a fresh full execution of the
+failure/self-heal scenario under the renamed command. To avoid pairing
+a historical transcript with the wrong command name: the
+compiler-error text in "First-fail reproduced (before)" below, and the
+exit-code/header/record-count outcomes in "After" and "Verification
+run for this follow-up" below, are the original evidence captured
+against the direct object-path target -- a minimal build that reaches
+this one rule without also rebuilding the roughly 450 other modern
+objects (and every sound/song object) the aggregate target also
+depends on, so an actual fresh run of the aggregate target prints
+substantially more "is up to date" lines than shown below, not the
+same terse transcript. The self-heal fix itself is a prerequisite of
+`data_items.c` (see "Fix" below), so it is structurally reached by
+either target identically -- this note is about transcript wording,
+not about doubting the fix.
+
+Reproduced fresh, directly, against this worktree at commit
+`742eb5b8` (current HEAD of this remediation), with no desync staged
+(proving the aggregate target itself is real, checker-resolvable, and
+currently successful -- not repeating the historical desync scenario,
+which the safe, host-only regression gate below already covers on
+every CI run):
+
+```
+$ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs
+[... hundreds of "is up to date" prerequisite-object lines and a few
+pre-existing newlib linker warnings, identical every run, omitted here ...]
+Linked modern ELF: build/expansion-modern/debug/aapcs/fireemblem8.elf
+Modern ELF ready: build/expansion-modern/debug/aapcs/fireemblem8.elf
+```
+
+and the safe, host-only, self-contained regression gate that stages
+and heals the exact desync internally (no manual state hacking needed
+to reproduce the self-heal claim):
+
+```
+$ make generated-data-active-heal-check
+--- baseline: a plain default build agrees on 0xCD/206 across header, stamp and table ---
+--- desync: an out-of-band FE8_ITEM_ID_CAP=0xCE active render advances the header to 0xCE while the stamp stays default and the .c stays 206 ---
+--- heal: a single plain default build must restore the header to 0xCD/206 so header and table agree, with no manual generated-data-check ---
+OK: stamp=default plus a stale 0xCE header, one plain default build re-synced header+table to 0xCD/206 with no clean and no manual ordering
+--- reverse: a configured FE8_ITEM_ID_CAP=0xCE build must move header and table together to 0xCE/207 ---
+OK: the reverse (default -> 0xCE) cap flip moves header and table together to 0xCE/207
+--- no-op: an already-correct header rebuild must be a mtime-preserving no-op ---
+OK: an already-correct configured rebuild leaves the ACTIVE header untouched (no rebuild storm)
+PASS: generated-data-active-heal-check
+```
+
+Both reproduced directly in this worktree during this remediation, exit 0.
+
 ### First-fail reproduced (before)
 
 ```
@@ -925,7 +994,7 @@ $ FE8_ITEM_ID_CAP=0xCE make generated-data-check         # leaves ACTIVE header 
 $ stat -c '%Y %n' build/generated/data/{id_space_active.h,.item_id_cap.stamp}
 1785238039 build/generated/data/id_space_active.h        # 0xCE, newest
 1785237943 build/generated/data/.item_id_cap.stamp       # still 0xCD, older
-$ make build/expansion-modern/debug/aapcs/src/data_items.o   # plain default, no manual fix
+$ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # plain default, no manual fix
 include/id_space.h:12: error: size of array
   'id_space_static_assert_generated_items_record_count_matches_active_contract' is negative
 make: *** [modern.mk:607: build/expansion-modern/debug/aapcs/src/data_items.o] Error 1
@@ -963,11 +1032,11 @@ relied on, no oracle/gold artifact was touched.
 
 ```
 # desync staged exactly as above (header 0xCE, stamp 0xCD)
-$ make build/expansion-modern/debug/aapcs/src/data_items.o          # plain default, exit 0
+$ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # plain default, exit 0
 $ grep ITEM_ID_ACTIVE_ build/generated/data/id_space_active.h
 #define ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD
 #define ITEM_ID_ACTIVE_RECORD_COUNT 206
-# full modern ELF from the same desync also self-heals + links:
+# re-staging the same desync and rebuilding again proves the self-heal repeats, not a one-off:
 $ FE8_ITEM_ID_CAP=0xCE make generated-data-check >/dev/null   # re-stage 0xCE header
 $ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # exit 0
 Modern ELF ready: build/expansion-modern/debug/aapcs/fireemblem8.elf   # header healed to 0xCD/206
@@ -1012,7 +1081,7 @@ Measured on this host (`/usr/bin/time -v`):
 idspace active-check  (removed from the recipe)   0:08.10   full census / 658-file walk
 idspace active-heal   (new warm no-op)            0:00.32   census-free probe, no write
 check --table items   (pre-existing recipe heal)  0:00.82   unchanged neighbour
-warm no-op `make build/generated/data/data_items.c`:  ~8-11 s  ->  ~2.6 s (x3 runs)
+warm no-op rebuild of build/generated/data/data_items.c:  ~8-11 s  ->  ~2.6 s (x3 runs)
 ```
 
 The warm heal is now on par with the neighbouring items-table self-heal instead
@@ -1071,6 +1140,6 @@ make generated-data-cap-heal-check               # PASS
 make generated-data-check                        # PASS (item cap 0xCD, 206 record(s))
 make expansion-modern-idspace-active-check ...   # PASS (incl. desync-recovery leg, real compile)
 python3 -m unittest discover -s scripts/generated_data/tests   # Ran 613 tests, OK
-make -j4 build/expansion-modern/debug/aapcs/src/data_items.o (from staged desync)  # exit 0, header healed to 0xCD/206
+make -j4 expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # from staged desync: exit 0, header healed to 0xCD/206
 idspace active-heal warm no-op / active-check    # 0.32 s vs 8.10 s (per /usr/bin/time -v)
 ```

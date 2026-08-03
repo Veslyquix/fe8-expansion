@@ -1,9 +1,15 @@
 # Issue #18 sprint 4 closure evidence -- "host+semantic libmGBA localization
 # scenarios, runtime probes, budget/headroom, real fingerprint captures"
 
-Status: **candidate closure evidence for reviewer/verifier. GitHub issue
-#18 is OPEN at time of writing; this report does not close it, and does
-not claim any CI run URL or merged state.** It maps every item of this
+**Current integration clarification (2026-08-03):** this report's 11-gate
+localization evidence now matches live `verify.gates()`: localization is the
+third mirrored gate. The issues #7/#17 documentation-governance gate remains
+an additional standalone workflow step and is not mirrored.
+
+Status: **historical candidate closure evidence for reviewer/verifier. The
+implementation documented here was later merged into the current source tree;
+this report does not assert the current GitHub issue state, close it, or claim
+an online CI URL.** It maps every item of this
 sprint's frozen contract (the WHAT/DONE sections of the task that produced
 this commit) to concrete code, scenarios, tests, and explicit non-goals,
 so a reviewer can verify closure claim-by-claim. It builds on Sprint 1

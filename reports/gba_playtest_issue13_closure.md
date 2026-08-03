@@ -534,7 +534,8 @@ $ scripts/shiftcheck/scan_raw_casts.sh
 ... RESULT: no raw ROM/RAM pointer literals in source (the redas class is clean)
 ```
 
-Legacy/archival path (`make shiftcheck-build/-static/-offsets/-diff/-run`,
+Legacy/archival path (`make shiftcheck-build`, `make shiftcheck-static`,
+`make shiftcheck-offsets`, `make shiftcheck-diff`, `make shiftcheck-run`,
 `ldscript.txt`-based): Layer 0 (`shiftcheck-build`, pure Python, no
 compilation) passes identically against the legacy `ldscript.txt`. Layers
 1-3 (`shiftcheck-static`/`-offsets`/`-diff`/`-run`) require the archival

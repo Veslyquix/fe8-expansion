@@ -1,0 +1,878 @@
+# Issue #17 closure evidence -- documentation audit
+
+**Status: candidate closure-mapping evidence for reviewer/verifier. GitHub
+issue #17's state is not asserted or changed by this document; no CI run URL,
+merged state, or claim that CI contacted GitHub is made here.** This report
+records the 100% Markdown-inventory audit, link/external-URL classification,
+authoritative/historical/generated/deprecated status accounting, and the
+offline checker/CI evidence backing it. A separately labeled, manually captured
+point-in-time GitHub wiki acceptance check appears below; it is not a CI gate.
+
+
+## Current master-integration audit (supersedes all gate/status/count snapshots below)
+
+The sections after this one are retained as useful historical snapshots, but
+their hardcoded file counts, pre-merge #6/#18 status, and any 12-gate wording
+are superseded. Current policy is set equality, not a frozen count:
+
+- recognized Markdown extensions are `.md`, `.markdown`, `.mdown`, `.mkd`,
+  and `.mkdn`, case-insensitive; one closed-set predicate governs both Git's
+  complete tracked-plus-untracked-not-ignored discovery and cross-file anchor
+  validation, including uppercase/mixed-case targets;
+- inventory entries must match that set exactly and every HTTP(S) occurrence
+  must match the offline external registry; no online link check is claimed;
+- #6 starter features and #18 localization are closed/merged and integrated
+  into current navigation, source-of-truth/API/support tables,
+  config/save/migration docs, and positive/negative
+  host/runtime/debug/release/shifted/save matrices; their committed public APIs
+  are documented in [`docs/starter_features.md`](../docs/starter_features.md)
+  and [`docs/localization.md`](../docs/localization.md); narrow offline
+  stale-status rules reject their former active/absent-API wording while
+  preserving explicitly superseded historical evidence;
+- upstream-port `verify` has all 11 current-master mirrored commands,
+  including the localization host suite; the independent issues #7/#17 docs
+  workflow gate is additional and intentionally absent from `verify.gates()`;
+- #9 remains future work: the template is not release automation or a current
+  migration process.
+
+### Issue #17 wiki-scope acceptance mapping (manual, point-in-time)
+
+The project wiki is initialized and maintained as a concise navigation portal,
+not a second copy of the technical documentation. Its Home page and sidebar
+link to the versioned repository guides. Repository Markdown remains
+authoritative and CI-checked; wiki changes are manually reviewed in the
+separate wiki Git repository. External `fireemblem8u` wiki links remain
+`[historical upstream]` provenance references.
+
+The following commands and results were captured manually on
+2026-08-03T08:37Z as acceptance evidence:
+
+```text
+$ gh api repos/laqieer/fireemblem8-expansion \
+  --jq '{full_name: .full_name, has_wiki: .has_wiki}'
+{"full_name":"laqieer/fireemblem8-expansion","has_wiki":true}
+
+$ git ls-remote https://github.com/laqieer/fireemblem8-expansion.wiki.git
+9ae044feee766b75317391c024478f17377469a4	HEAD
+9ae044feee766b75317391c024478f17377469a4	refs/heads/master
+```
+
+These are manually captured network/metadata observations, not CI checks and
+not behavior of `scripts/check_docs.py`. The offline docs checker never contacts
+GitHub and only verifies exact recognized-Markdown inventory, internal
+link/anchor syntax and resolution, external-URL registry coverage, and
+classification (including `authoritative-self` for the project wiki and
+`[historical upstream]` for the upstream wiki). It neither live-checks external
+URL availability nor asserts that a wiki is reachable.
+
+
+### Current audit validation evidence
+
+All results below were reproduced in this integration worktree:
+
+- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> `OK`,
+  including valid/broken `resolve_internal_link()` anchors for all five
+  extensions in lower/upper/mixed case and offline #6/#18 stale-status fixtures.
+- `python3 scripts/check_docs.py --check --check-examples` -> 72 recognized
+  Markdown files, 0 findings; all three safe help examples passed. This made
+  no network requests.
+- `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s
+  tools/gba-playtest/tests -v` -> 407 tests, `OK (skipped=11)`.
+- `python3 -m unittest discover -s scripts/generated_data/tests -v` -> 633
+  tests, `OK`; `make generated-data-check` -> 13 tables / 722 records, no
+  table/manifest/consumer-census/ID-space drift.
+- `python3 -m unittest discover -s tests/upstream_port -v` -> 146 tests,
+  `OK`, including live workflow argv/order and both standalone-step locks.
+- `python3 -m unittest discover -s scripts/modernize/tests -v` -> 530 tests,
+  `OK (skipped=1)`. Because temporary files were required to remain inside
+  this worktree, the first run exposed two Git-parent-discovery assertions;
+  the final run set `GIT_CEILING_DIRECTORIES` at the in-worktree scratch root
+  and passed without writing to `/tmp` or changing tests.
+- `python3 -m unittest discover -s scripts/localization/tests -p
+  'test_*.py' -v` -> 82 tests, `OK`.
+- Targeted defaults: `test_build_default_lane.py` -> 15 tests, `OK`;
+  `test_quickstart.py` -> 15 tests, `OK`.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` -> exactly 11
+  ordered `SKIPPED(dry-run)` entries, including localization at gate 3 and
+  the issue #6 starter-content args on gates 10-11. The issues #7/#17 docs
+  check remains one additional standalone workflow gate.
+- Safe Make probes resolved the live object-print targets, localization
+  generation target, and compile-only `apcs-gnu` cohort; the linked
+  `apcs-gnu` ELF probe failed with the documented AAPCS-only guard.
+
+
+## Post-merge integration update (issues #10/#11/#13 into this docs branch)
+
+**Historical snapshot, superseded for gate-count/composition facts by the
+Remediation addendum immediately below -- this section is left unedited as
+an accurate, point-in-time record of candidate commit
+`df374b9e0db81fee9e08b3969ed4be4cf11f8e18` (the merge this branch produced
+before independent review), not a description of the current tree.**
+
+This branch (`agent/issues7-17-docs`) was normal-merged with
+`origin/master` (bringing in the merged issue #10 typed-ID/cap work, issue
+#11 debug-tools productization, and issue #13 regression harness) after
+the audit evidence below was first recorded. Re-verified, current facts
+as of that merge (reproduce with the commands shown, do not trust these
+numbers without rerunning them):
+
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` lists **12**
+  gates, not the pre-merge 10: the issues #7/#17 `docs-check-tests`/
+  `docs-check` gates (added by this branch) and master's 10 pre-existing
+  gates (host-suite, upstream-port-tests, artifact-guard,
+  default-lane-check, quickstart-legacy-check, generated-data-check, the
+  two linker-check gates, and the two issue #10 item-expansion gates) are
+  now one fixed, ordered, 12-gate list — see
+  [`docs/upstream-porting.md`](../docs/upstream-porting.md) for the full list.
+- `python3 -m unittest discover -s tests/upstream_port -v`: **145** tests, all
+  passing (144 pre-existing on `master` plus 1 added by this branch's own
+  `test_issue_7_17_docs_governance_gates_present`).
+- `python3 -m unittest discover -s scripts/generated_data/tests -v`: **613**
+  tests, all passing.
+- `GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v`:
+  **271** tests, `OK (skipped=9)`.
+- `python3 scripts/check_docs.py --check --check-examples` surfaced two new,
+  genuine findings from this merge (both in `reports/issue10_closure.md`,
+  a file this docs branch never previously checked): two documented
+  build-output-path invocations (a modern per-config/ABI object-file
+  target and a generated-data source-file target -- see that report for
+  the literal commands), both real and `make -n`-confirmed working, that the checker's Makefile-target parser
+  cannot statically resolve because `parse_make_targets`'s
+  `_split_make_line_tokens` deliberately drops any target token containing an
+  unresolved Make variable (`$(MODERN_OUTPUT_DIR)`-style computed paths) rather than
+  attempting variable expansion. This is a pre-existing, intentional
+  design boundary of the checker (see its own comment at that function),
+  not a regression introduced by this merge, and it is **not** patched
+  here: doing so would modify a documentation validator/checker, which
+  is outside this integration pass's authority without separate
+  reviewer/policy sign-off. Left as an explicit, bounded, reported
+  finding for that review, not silently bypassed and not hidden by
+  rewording the evidence it describes.
+
+## Intermediate remediation snapshot (superseded)
+
+**Status: historical remediation evidence, superseded for current gate
+composition by the Current master-integration audit above. Independent review
+rejected candidate `df374b9e0db81fee9e08b3969ed4be4cf11f8e18` (the state the
+Post-merge integration update above describes) for two P0 defects: (1)
+`docs-check`/`docs-check-tests` failed on two fixable prose examples in
+`reports/issue10_closure.md`, and (2) this branch had expanded the
+explicitly preserved upstream-verify contract from 10 to 12 gates. Both
+are fixed by this addendum; reproduce with the commands shown, do not
+trust these numbers without rerunning them.**
+
+- `reports/issue10_closure.md` no longer invokes `make` against a
+  computed build-output path; the two flagged lines now name real,
+  checker-resolvable targets (`expansion-modern-elf
+  MODERN_CONFIG=debug MODERN_ABI=aapcs`) that are already proven
+  elsewhere in that same report, and the computed object/source paths
+  they exercise are kept as plain descriptive text, not as invocable
+  `make <path>` examples. `python3 scripts/check_docs.py --check
+  --check-examples` now reports **0** findings (down from the 2 the
+  Post-merge integration update above recorded) -- `scripts/check_docs.py`
+  itself was not modified.
+- `python3 -m scripts.upstream_port verify --dry-run --jobs 2` lists
+  **10** gates, not 12: `docs-check-tests`/`docs-check` were removed
+  from `scripts/upstream_port/verify.py`'s `gates()`, restoring the
+  exact pinned #10/#11/#13 contract (host-suite, upstream-port-tests,
+  artifact-guard, default-lane-check, quickstart-legacy-check,
+  generated-data-check, the two linker-check gates, and the two issue
+  #10 item-expansion gates) -- see [`docs/upstream-porting.md`](../docs/upstream-porting.md)
+  for that intermediate candidate's then-corrected 10-gate list.
+  Documentation governance (`scripts/docs_check_tests` then
+  `scripts/check_docs.py --check
+  --check-examples`) remains a required, standalone `build.yml` CI step
+  in the exact same position (immediately after `Check tracked
+  artifacts`, before the issue #15 default-lane step) -- it is not
+  dropped from CI, only excluded from this one pinned gate mirror.
+- `python3 -m unittest discover -s tests/upstream_port -v`: still
+  **145** tests, all passing (the renamed
+  `test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate`
+  now asserts the restored contract -- docs-check-tests/docs-check are
+  absent from `verify.gates()`, and the standalone `build.yml` step is
+  unchanged -- in place of the prior branch's
+  `test_issue_7_17_docs_governance_gates_present`, which asserted the
+  now-superseded 12-gate contract).
+- The "8 gates, not 6" sentence in the CI evidence section below
+  described this branch's own pre-master-merge state and is likewise
+  superseded at that intermediate point by the 10-gate figures above; both
+  snapshots are superseded for current composition by the 11-gate audit at
+  the top of this report.
+
+## 100% Markdown count
+
+`scripts/check_docs.py`'s `discover_markdown_files()` enumerates every
+Git-tracked or untracked-but-not-ignored file whose extension is one of
+the recognized Markdown extensions (`.md`, `.markdown`, `.mdown`, `.mkd`,
+matched case-insensitively -- `RECOGNIZED_MARKDOWN_EXTENSIONS`) by
+filtering the full `git ls-files --cached --others --exclude-standard`
+listing in Python, not a `*.md`-only pathspec glob (which would silently
+miss any other recognized extension); `docs/documentation-inventory.md`
+is required (by `scripts/check_docs.py --check`) to have **exactly** one
+entry per path in that set -- no more, no fewer. At the original
+establishment of this audit (commit `a6dab189`, 2026-07-26) that was
+**60 files**: the pre-existing 49 tracked files, the 7 files added by
+the prior documentation-foundation rewrite
+(`docs/README.md`, `docs/architecture.md`, `docs/archival-decomp.md`,
+`docs/framework-support.md`, `docs/migration-from-decomp.md`,
+`docs/project-governance.md`, `docs/release-migration-template.md`), and
+the 4 files added by this governance closure
+(`docs/documentation-inventory.md`, `docs/external-link-registry.md`,
+this file, and `reports/issue7_documentation_foundation.md`) -- a
+historical, point-in-time snapshot, not a current-tense count.
+
+**Current, superseding count: 65 files.** The issues #10/#11/#13 merge
+integration (commit `df374b9e`) added 5 more tracked Markdown files on
+top of the 60 above (`docs/id_space.md`, `reports/id_space_audit.md`,
+`reports/issue10_closure.md`, `reports/debugtools_issue11_closure.md`,
+and `reports/gba_playtest_issue13_closure.md`); the count has stayed 65
+through this remediation (commit `742eb5b8`). This is likewise not
+restated as a hardcoded number inside the checker -- `scripts/check_docs.py`
+itself reports the live count on every run (`check_docs: OK -- 65
+Markdown file(s) checked, 0 findings.` at the time of this remediation);
+reproduce it directly against the commit under review rather than
+trusting either number written above.
+
+This count is deliberately **not restated as a hardcoded number inside
+the checker** (only the *set equality* is enforced) so it cannot silently
+drift out of sync with the checker's actual behavior; re-run
+`git ls-files --cached --others --exclude-standard -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l`
+against the commit under review to reproduce it (today's repository has
+no `.markdown`/`.mdown`/`.mkd` files, so this is currently equivalent to
+the `*.md`-only form, but the recognized-extension set -- not the `*.md`
+pathspec -- is what the checker itself actually enforces).
+
+## Status/category accounting
+
+`docs/documentation-inventory.md`'s "Status enum" table is the
+controlled vocabulary; every one of the currently-65 tracked entries
+(see "100% Markdown count" above for the reproducible, non-hardcoded
+source of that number) has exactly one of:
+`current`, `historical`, `generated`, `subsystem-reference`,
+`deprecated` (unused today -- no entry is currently deprecated),
+`evidence`, or `template`. See that file for the full per-path
+breakdown; in summary:
+
+- **`current`** (authoritative, expected to match `master`): top-level
+  README/CONTRIBUTING/CLAUDE/copilot-instructions, the full `docs/`
+  narrative set (architecture, framework-support, project-governance,
+  quickstart, migration-from-decomp, archival-decomp, config_identity,
+  save_format, debugtools, generated_data(+tutorial), upstream-porting,
+  issue-resolution-policy), and this governance work's own two registry
+  files.
+- **`historical`**: the point-in-time dump/TSA/battle-animation
+  extraction and audit reports (`docs/dump_extraction_plan.md`,
+  `docs/lz_suffix_diagnostic.md`, `docs/tsa_audit.md`,
+  `docs/banim_asset_extraction.md`, the two `docs/Banim_*_Report.md`
+  files, and their `reports/` counterparts) -- **not re-verified against
+  `master`** and not claimed to be.
+- **`generated`**: every `reports/generated_data_*_inventory.md` +
+  `reports/generated_data_manifest.md` (regenerated by
+  `make generated-data-check`/`-generate`) and
+  `reports/modernize/inventory.md` (regenerated by
+  `scripts/modernize/audit.py`) -- their *content* is machine-produced
+  and is never hand-edited by this or any documentation-governance work.
+- **`subsystem-reference`**: tool-scoped `README.md`/`.md` files under
+  `githooks/`, `preview/`, `reports/baseline/`, `scripts/*/`, and
+  `tools/gba-playtest/`.
+- **`evidence`**: `reports/generated_data_issue5_closure.md` and this
+  work's own two closure-mapping reports.
+- **`template`**: `.github/PULL_REQUEST_TEMPLATE.md` and
+  `docs/release-migration-template.md`.
+
+## Link and external-URL classification
+
+- **Internal links/images and `file.md#anchor` anchors**: verified by
+  `scripts/check_docs.py`'s `resolve_internal_link` against a
+  deterministic, stdlib-only approximation of GitHub's heading-slug rule
+  (duplicate-heading `-1`/`-2` suffixing, inline-code/emphasis/markdown-
+  link stripping in heading text, path-escape rejection). Fenced code
+  blocks are excluded from link/URL scanning so pseudo-links in shell/
+  code samples are never checked; single-backtick inline code spans are
+  still scanned.
+- **External URLs**: every `http(s)://` occurrence across all
+  currently-65 recognized-Markdown-extension files (fenced code
+  excluded; see "100% Markdown count" above for the reproducible
+  source of that number) must match a `host:`/`prefix:`
+  rule in `docs/external-link-registry.md`. This is registry/syntax
+  coverage only -- **no network request is ever made**; nothing here
+  claims the upstream wiki, decomp.dev tracker, or any third-party site
+  was actually fetched/checked online.
+- **Upstream-wiki classification**: every `github.com/laqieer/
+  fireemblem8u*` and `decomp.dev/laqieer/fireemblem8u*` occurrence is
+  required by `scripts/check_docs.py` (`FIREEMBLEM8U_URL_RE` +
+  `check_external_urls`) to match a registry rule whose status is
+  exactly `historical-upstream` -- never `authoritative-self`. This
+  repository's own docs are authoritative; the upstream project is
+  provenance/credits context (see
+  [`docs/project-governance.md`](../docs/project-governance.md#credits-and-downstream-context)),
+  **not** a mirrored source of truth, and this document does not claim
+  otherwise.
+- One `prefix:` rule (`https://github.com/laqieer/fireemblem8u`) covers
+  the several hundred pinned per-asset commit links in
+  `docs/tsa_audit.md` alone, instead of one registry line per link.
+
+## Reference-style link/image support
+
+`scripts/check_docs.py`'s internal-link check originally only parsed
+inline links/images (square brackets immediately followed by
+parentheses), so a *reference-style*
+(`[label]: target` definition plus `[text][label]`/`![alt][label]`/
+`[text][]` usage) broken or undefined link would have been silently
+0-findings -- this repository currently has zero reference-style link
+usages, so that gap was invisible until exercised. `check_reference_style_links`
+(`scripts/check_docs.py`) now fully parses and resolves that family the
+same way an inline link is resolved (undefined labels and broken
+internal-path/anchor definition targets are hard findings; external
+definition targets are covered for free by the existing external-URL
+scan, since the raw URL text on a definition line is scanned regardless
+of link syntax); malformed/duplicate definitions are also findings.
+Bare shortcut references (`[label]` alone, no second bracket pair) are
+not resolved -- disambiguating a bare bracketed word in prose from an
+intended shortcut-reference-link use is out of scope for this
+stdlib-only checker -- but per the fail-closed policy, any such
+occurrence whose text matches an *actually-defined* label in the same
+document is still reported as an explicit "unsupported" finding rather
+than passing silently. See
+[`scripts/docs_check_tests/test_check_docs.py`](../scripts/docs_check_tests/test_check_docs.py)'s
+`ReferenceStyleLinkTests` for adversarial fixtures (valid/broken internal
+reference, image, undefined label, collapsed reference, case/whitespace
+label normalization, duplicate/malformed definition, fenced-code and
+inline-code-span exclusion, registered/unregistered external target, and
+the shortcut-unsupported-detection fixture).
+
+## Stale-reference and command-existence evidence
+
+- `scripts/check_docs.py`'s `STALE_PHRASE_RULES` denylist catches the
+  specific pre-rewrite claims that (a) the decomp tutorial lives in
+  `CONTRIBUTING.md` (it now lives in `docs/archival-decomp.md`) and (b)
+  `scripts/quickstart.sh` installs agbcc by default (it installs the
+  modern toolchain by default; agbcc only via `--legacy`/
+  `--refresh-agbcc`). Both were found in `.github/copilot-instructions.md`
+  and fixed in this change -- see that file's diff.
+- Every `make TARGET` invocation appearing as the first token of its own
+  fenced-code line or inline code span, across all Markdown, is checked
+  against a **statically parsed** (never executed -- no recipe, no
+  compiler, no network) Makefile/`include`-graph target database
+  (`parse_make_targets`/`make_target_exists`), including pattern-rule
+  matching (e.g. `%.gba` covering the literal `fireemblem8.gba` target).
+
+## CI evidence
+
+**Historical snapshot, superseded for gate-composition facts by the
+Remediation addendum above -- left unedited below as an accurate,
+point-in-time record of this branch in its pre-master-merge state, when
+`docs-check-tests`/`docs-check` were still mirrored inside the
+`gates()` function of `scripts/upstream_port/verify.py`. The live contract is
+stated in the Current master-integration audit
+above: `python3 -m scripts.upstream_port verify --dry-run --jobs 2` lists
+exactly 11 mirrored gates, including localization;
+`docs-check-tests`/`docs-check` remain absent from that list. Documentation
+governance (`scripts/docs_check_tests` then
+`scripts/check_docs.py --check --check-examples`) remains a required,
+standalone `build.yml` "Check documentation (issues #7/#17)" CI step in
+the same position described below -- it is not dropped from CI, only
+excluded from the pinned `verify.gates()` mirror. See the Remediation
+addendum above and
+[`docs/upstream-porting.md`](../docs/upstream-porting.md#6-verify-the-manually-applied-batch)
+for the full current 11-gate mirrored list plus standalone docs gate.**
+
+`.github/workflows/build.yml`'s new "Check documentation" step runs
+`python3 -m unittest discover -s scripts/docs_check_tests` and
+`python3 scripts/check_docs.py --check --check-examples`, placed after
+the existing artifact-tracked-content guard and before dependency
+install/tool build/ROM linker gates, so a documentation regression fails
+fast without needing a multi-minute build first. No existing gate (issue
+#5/#12/#15/governance/host/linker) was removed, renamed, given a new
+`continue-on-error`, or made conditional by this change. Per issue #12,
+`scripts/upstream_port/verify.py`'s `gates()` mirror was updated in lockstep
+(`docs-check-tests`/`docs-check`, argv-identical, same position immediately
+after `artifact-guard`) so a manually-applied upstream port batch cannot
+skip this same documentation governance -- see
+`tests/upstream_port/test_verify.py`'s workflow-mirror test, which parses
+the live `build.yml` and now asserts 8 gates, not 6.
+
+## Self-review evidence for this closure round (reproducible, 0-ROM)
+
+**Status: candidate self-review evidence, not an issue-closure claim and
+not a full-ROM-build claim.** Every command below runs with no ROM build,
+no network access, and no mutation of tracked source, so anyone reviewing
+this candidate can reproduce it directly against this worktree:
+
+```bash
+# Doc unit tests (includes the new adversarial ReferenceStyleLinkTests
+# fixtures added this round; the suite must pass in full -- do not trust
+# a test count written in this report, it drifts every time a test is
+# added or removed; reproduce it yourself
+python3 -m unittest discover -s scripts/docs_check_tests -v
+
+# Full checker, including the hardcoded --help-only safe examples
+python3 scripts/check_docs.py --check --check-examples
+
+# Make-variable-sourced object-count evidence for docs/framework-support.md
+# (never invokes a recipe -- print-% only prints the variable's value).
+# The live counts are intentionally NOT persisted anywhere in this report
+# (the source set drifts as src/*.c files are added/removed) -- run these
+# against the commit under review to see the current values; treat the
+# commands, not any number, as authoritative.
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_OBJECTS
+
+# Make-target resolution (dry-run only, never invokes a compiler/linker)
+make -n expansion-modern-cohort
+make -n expansion-modern-all
+
+# Markdown-inventory exact-coverage count backing docs/documentation-inventory.md
+# (recognized-extension set: .md/.markdown/.mdown/.mkd; no alternate-extension
+# files exist in this repository today, so this is currently equivalent to a
+# *.md-only count -- see RECOGNIZED_MARKDOWN_EXTENSIONS)
+git ls-files --cached --others --exclude-standard -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l   # -> 65 as of this remediation (commit 742eb5b8) -- do not trust this number, reproduce it yourself
+```
+
+This round's findings-driven fixes:
+
+- `scripts/check_docs.py` / `scripts/docs_check_tests/test_check_docs.py`:
+  added fail-closed reference-style link/image support (see the section
+  above) plus adversarial tests; an inline-code-span exclusion
+  (`blank_inline_code_spans`) was added to that new scan path after it
+  produced one real false positive against `docs/dump_extraction_plan.md`'s
+  pointer-audit `grep -E` regex character class (`[89][0-9A-Fa-f]`) --
+  fixed by mirroring every real Markdown renderer's own precedence rule
+  that a code span's contents are never re-parsed as link syntax, not by
+  weakening the check.
+- `docs/framework-support.md`: the `expansion-modern-cohort`/`-all`
+  object counts are now sourced from the `make print-<VARIABLE>` commands
+  above instead of being hand-typed, and the dangling "see this task's
+  verification log" sentence (no such log exists as a locatable artifact)
+  was replaced with a pointer to `scripts/check_docs.py`'s own
+  static-Makefile-parse mechanism plus the reproducible `make -n`/
+  `make print-<VARIABLE>` commands above.
+- `CLAUDE.md`: brought in line with `.github/copilot-instructions.md`'s
+  already-corrected modern-default/archival-lane framing (previously it
+  still led with the archival decomp workflow as the primary path); see
+  the updated checklist row in
+  [`reports/issue7_documentation_foundation.md`](issue7_documentation_foundation.md).
+  This document still does not read issues #10/#11/#13 as having a
+  final, merged, current public interface (see "Remaining follow-ups"
+  below, unchanged by this round). **Superseded by the time of this
+  remediation: see the "Post-merge integration update" section above
+  and the corrected "Remaining follow-ups" section below -- issues
+  #10/#11/#13 merged with final, documented public interfaces before
+  this remediation.**
+
+## Verifier finding follow-up: docs/quickstart.md stale object counts
+
+**Status: candidate fix for a final-verifier finding, not a re-closure
+claim.** A final verifier pass found that `docs/quickstart.md` --
+unlike `docs/framework-support.md` -- still hardcoded pre-drift modern
+object counts that no longer matched `modern.mk`'s actual
+`MODERN_COHORT_*`/`MODERN_ALL_*` variables:
+
+- Cohort `.o` count spelled out, and matching `.d` count (cohort
+  section) -- stale hardcoded value; reproduce today's actual split with
+  `make print-MODERN_COHORT_C_OBJECTS`/`print-MODERN_COHORT_ASM_OBJECTS`/
+  `print-MODERN_COHORT_OBJECTS`.
+- Cohort described again as a different N-file set two paragraphs later
+  (full-source section) -- stale hardcoded value, and inconsistent with
+  the cohort section's own count above; reproduce with
+  `make print-MODERN_COHORT_C_OBJECTS`.
+- Full C-source-file total, split into a "normal `src/*.c`" sub-count
+  plus a preprocessed-data sub-count (full-source section) -- stale
+  hardcoded values; reproduce with `make print-MODERN_ALL_C_OBJECTS`/
+  `print-MODERN_ALL_DATA_OBJECTS`.
+- Full C source list described as an N-file list (full-source section)
+  -- stale hardcoded value, and did not match the full-source total two
+  bullets above either; reproduce with `make print-MODERN_ALL_C_OBJECTS`.
+- Combined object/primary-dependency total, repeated for the linked ELF
+  target (full-source and ELF sections) -- stale hardcoded value;
+  reproduce with `make print-MODERN_ALL_OBJECTS`.
+
+None of these removed numbers were internally consistent with each other
+either -- the full-source C-file sub-totals did not sum to the claimed
+combined total once the handwritten-assembly objects were accounted for,
+and the cohort's claimed C-file total in one paragraph did not match its
+own claimed combined-object total two paragraphs earlier -- confirming
+they were stale hand-typed values rather than a single, currently-wrong-
+but-internally-consistent snapshot. Neither the removed stale numbers nor
+the correct current numbers are reproduced in this report (see
+`scripts/check_docs.py`'s `STALE_PHRASE_RULES` for the precise regex each
+bullet above corresponds to, `docs/quickstart.md`'s own diff for the
+literal removed text, and the reproduction commands above/below for the
+live values -- the live values are intentionally not persisted anywhere
+in this report so they cannot themselves drift out of sync with
+`modern.mk`).
+
+**Fix, in the smallest-diff mode the task contract required:** every one
+of the phrases above was replaced in `docs/quickstart.md` with a
+qualitative description plus the exact `make print-<VAR>` command that
+reproduces the current count against any worktree (`print-
+MODERN_COHORT_C_OBJECTS`/`ASM_OBJECTS`/`OBJECTS`,
+`print-MODERN_ALL_C_OBJECTS`/`DATA_OBJECTS`/`ASM_OBJECTS`/`OBJECTS`) --
+**no replacement hardcoded number was written into this authoritative
+guide**, so this class of drift cannot recur there. `docs/framework-
+support.md` was reviewed against the same drift and found already
+correct at the time: its own cohort/all-object counts matched today's
+actual `make print-<VAR>` output and were already explicitly labeled
+"currently"/"as of this audit" with a reproduce-this-yourself command
+and (for the wildcard-derived all-objects row) an explicit "this count
+drifts ... treat the command, not this number, as authoritative" caveat
+-- so no edit was needed there to satisfy the same closure bar, and it
+did not conflict with quickstart.md's now-number-free wording. (This
+"already correct" assessment is itself superseded by the "Acceptance
+follow-up" section below, which found `docs/framework-support.md` had
+since reintroduced hardcoded numbers and removed them again.)
+
+`scripts/check_docs.py`'s `STALE_PHRASE_RULES` denylist gained seven new
+entries (one per phrase above) so every one of these exact stale claims
+is now a hard finding if it ever reappears in any Markdown file, and
+`scripts/docs_check_tests/test_check_docs.py` gained a matching
+`StaleQuickstartObjectCountRegressionTests` class proving (a) each old
+phrase is flagged, (b) the current `docs/quickstart.md` text (read live
+from disk, not a copy) produces zero stale-phrase findings, and (c)
+every `print-<VAR>` command quickstart.md now documents resolves against
+this repository's real, statically parsed Makefile/`modern.mk` target
+graph via the existing `print-%%` pattern rule (`parse_make_targets`/
+`make_target_exists` -- never invokes `make`). This intentionally stays
+a small, explicit phrase denylist, per the existing module docstring's
+own stated scope -- not a general natural-language number parser.
+
+Reproduce the fix and its evidence directly against this worktree:
+
+```bash
+# Full doc checker: 0 findings (the checker itself reports how many
+# Markdown files it checked each run -- do not trust a file count
+# written in this report, it drifts every time a Markdown file is
+# added or removed; reproduce it yourself
+python3 scripts/check_docs.py
+
+# Regression tests for this round, plus the full existing suite
+python3 -m unittest discover -s scripts/docs_check_tests -v
+
+# Confirm no stale phrase survives anywhere in tracked/untracked Markdown
+# (the exact rg alternation used for this is intentionally not repeated
+# verbatim in this report -- see scripts/check_docs.py's
+# STALE_PHRASE_RULES for the seven precise regexes, or docs/quickstart.md's
+# diff for the removed literal text -- reproducing the full pattern here
+# would make this very report line self-match when the same search is run
+# over all Markdown, which is exactly the false-positive this evidence is
+# careful to avoid). `python3 scripts/check_docs.py` above already
+# exercises every one of those seven regexes across every currently
+# tracked/untracked Markdown file with 0 findings (the checker's own
+# run above reports the current file count; not repeated here since it
+# drifts).
+
+# Current, actual object counts (this is what quickstart.md now tells the
+# reader to reproduce themselves, instead of hardcoding a number). The
+# live values are intentionally not persisted in this report either, for
+# the same drift-avoidance reason -- run these yourself:
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_C_OBJECTS
+make print-MODERN_ALL_DATA_OBJECTS
+make print-MODERN_ALL_ASM_OBJECTS
+make print-MODERN_ALL_OBJECTS
+
+# Upstream-port verify.py gate mirror is unaffected by this docs-only change
+python3 -m unittest tests.upstream_port.test_verify -v
+
+# No trailing-whitespace/conflict-marker regressions in this change
+git diff --check
+```
+
+This section documents the fix of a specific verifier finding. It does
+not assert GitHub issue #17's final state, does not claim a full ROM
+build was run, and does not supersede the "Remaining follow-ups" below,
+which are unchanged by this round.
+
+## Acceptance follow-up: framework-support.md ABI/object-count corrections
+
+**Status: candidate fix for a subsequent acceptance-review finding, not a
+re-closure claim.** An acceptance pass over this branch found three
+factual defects introduced by the governance-establishing commit that
+followed the "Verifier finding follow-up" round directly above -- notably,
+the paragraph in that section asserting `docs/framework-support.md` was
+"already correct" and needed "no edit" is **superseded** by this section:
+
+1. **Linked-output ABI misstatement.** `docs/framework-support.md`'s
+   `expansion-modern-elf` row listed
+   `` MODERN_ABI=<aapcs\|apcs-gnu> `` as if both ABIs were valid for a
+   *linked* target. They are not: `modern.mk`'s `MODERN_LINKED_GOALS`
+   guard (the block enforcing AAPCS for `expansion-modern-elf`,
+   `-rom`, `-boot-check`, `-linker-check`, and every target that
+   transitively depends on them) fails fast on anything but
+   `MODERN_ABI=aapcs`. `apcs-gnu` is compile-only, valid only for
+   `expansion-modern-cohort`/`expansion-modern-all` layout comparison.
+2. **Reintroduced hardcoded object counts.** The same commit hardcoded
+   `MODERN_COHORT_OBJECTS`/`MODERN_ALL_OBJECTS` resolved counts directly
+   into `docs/framework-support.md`'s cohort/all rows -- the exact drift
+   risk the "Verifier finding follow-up" round above had already fixed in
+   `docs/quickstart.md`, but did not catch here because the numbers
+   happened to still be numerically correct at review time.
+3. **No compile-only caveat in `docs/config_identity.md`.** Its
+   `MODERN_ABI` settings-reference row listed `aapcs`, `apcs-gnu` as
+   supported values with no note that `apcs-gnu` is accepted only by the
+   compile-only cohort/all targets.
+
+**Fix:** `docs/framework-support.md`'s `expansion-modern-elf`/`-rom`/
+`-boot-check`/`-linker-check` rows now state `MODERN_ABI=aapcs` only, and
+an explicit "ABI contract" paragraph was added directly below the targets
+table spelling out the fail-fast behavior and pointing at a reproducible
+`make -n` dry-run. The cohort/all rows now point exclusively at
+`make print-MODERN_COHORT_C_OBJECTS`/`ASM_OBJECTS`/`OBJECTS` and
+`print-MODERN_ALL_C_OBJECTS`/`DATA_OBJECTS`/`ASM_OBJECTS`/`OBJECTS` --
+no replacement hardcoded number was written back in. `docs/
+config_identity.md` gained a matching caveat cross-linking to the same
+contract. `scripts/check_docs.py`'s `STALE_PHRASE_RULES` gained three
+more entries (the two removed count phrases plus the ambiguous
+dual-ABI `expansion-modern-elf` row text) so none of this can reappear
+silently, and `scripts/docs_check_tests/test_check_docs.py` gained
+`StaleFrameworkSupportABIRegressionTests` (stale-phrase regression),
+`ABIFactualDocContractTests` (reads the live doc files off disk and
+asserts the AAPCS-only/apcs-gnu-compile-only wording is actually present),
+and `RealMakeDryRunABIContractProbeTests` (real, executed `make -n`
+dry-run probes -- never a simulated/equivalent stand-in -- proving
+`modern.mk` itself rejects `MODERN_ABI=apcs-gnu` for
+`expansion-modern-elf` before any recipe would be dry-run-printed, and
+accepts it for `expansion-modern-cohort`/`-all`).
+
+Reproduce the fix and its evidence directly against this worktree:
+
+```bash
+# Full doc checker: 0 findings, including the three new
+# STALE_PHRASE_RULES entries from this round (the checker itself
+# reports the current Markdown file count each run -- not repeated
+# here since it drifts; reproduce it yourself
+python3 scripts/check_docs.py
+
+# Full doc unit test suite for this round, including the new
+# ABI-contract/stale-phrase/real-make-probe tests added this round --
+# the suite must pass in full; do not trust a test count written in
+# this report, it drifts every time a test is added or removed;
+# reproduce it yourself
+python3 -m unittest discover -s scripts/docs_check_tests -v
+
+# The same real make -n dry-run probe the new unittest exercises,
+# reproduced directly: fails fast, never reaches a compiler/linker
+make -n expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit=$?"
+
+# The compile-only counterpart: apcs-gnu is accepted here (dry run only)
+make -n expansion-modern-cohort MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit=$?"
+make -n expansion-modern-all MODERN_CONFIG=debug MODERN_ABI=apcs-gnu; echo "exit=$?"
+
+# Current, actual object counts (this is what framework-support.md now
+# tells the reader to reproduce themselves, instead of hardcoding a
+# number -- expect the same split as the reproduction commands earlier in
+# this report resolve to, but never re-typed into an authoritative doc,
+# and intentionally not persisted here either)
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_C_OBJECTS
+make print-MODERN_ALL_DATA_OBJECTS
+make print-MODERN_ALL_ASM_OBJECTS
+make print-MODERN_ALL_OBJECTS
+
+# No trailing-whitespace/conflict-marker regressions in this change
+git diff --check
+```
+
+This section documents the fix of a follow-on acceptance finding. It
+does not assert GitHub issue #17's final state, does not claim a full
+ROM build was run, and does not supersede the "Remaining follow-ups"
+below, which are unchanged by this round.
+
+## Second final-verifier follow-up: spelled-out counts, extension
+## discovery, bounded link parser
+
+**Status: candidate fix for a second, later verifier pass's residual
+findings, not a re-closure claim.** A subsequent review of this
+checker found three ways the checker itself (not just the documents it
+checks) could still produce a false pass or a false fail:
+
+1. **Spelled-out object/source counts escaped detection.** The digit-
+   based `check_object_count_claims()` rules added by the "Verifier
+   finding follow-up" round above only matched Arabic numerals (`3`,
+   `139`, ...). `docs/quickstart.md` still spelled a small modern-cohort
+   handwritten-object count out in English words, and separately named
+   an exact count of save objects in words too -- each exactly as
+   stale-prone as a hardcoded numeral, but invisible to every existing
+   rule (see `SpelledObjectCountClaimRegressionTests` in
+   `scripts/docs_check_tests/test_check_docs.py` for the precise old
+   phrasing this closes, without repeating it verbatim here -- doing so
+   would make this very report line self-match the rule it describes).
+2. **`discover_markdown_files()` only recognized `.md`.** Every check
+   keyed off "the set of Markdown files" (inventory coverage, link/
+   anchor resolution, external-URL registry coverage, stale-phrase and
+   object-count scanning) was silently blind to any real documentation
+   file using `.markdown`/`.mdown`/`.mkd`, or an uppercase variant of
+   any of those extensions -- the discovery step used a `git ls-files
+   -- '*.md'` pathspec, not the full recognized set this repository's
+   own docs already claimed to cover.
+3. **Inline link destination truncated at the first literal `)`.** The
+   destination-extraction regex used by `extract_internal_link_targets`
+   read up to the first `)`, so a real, well-formed destination whose
+   path itself contains a literal parenthesis character was silently
+   truncated to the wrong (nonexistent) path -- either producing a
+   false "broken link" finding for a link that was actually fine, or
+   (worse) resolving to some other, wrong, coincidentally-existing file.
+   Malformed input (an unbalanced or unterminated destination) was also
+   silently dropped rather than reported.
+
+**Fix:**
+
+- `check_object_count_claims()` gained a second, full-text scan (in
+  addition to its pre-existing per-line digit scan) using a closed
+  spelled-number-word set (`zero`-`twenty`, plus hyphenated
+  `twenty-one`-`twenty-nine`) combined with a closed, codebase-scoped
+  noun-phrase alternation (`handwritten assembly files/objects`,
+  `save objects`, `C files`, `asm sources`, `cohort objects`, and
+  similarly scoped phrases) -- deliberately excluding bare "source"/
+  "file" so ordinary prose ("one source of truth", numbered steps)
+  is not flagged. `docs/quickstart.md`'s spelled-out modern-cohort/
+  save-object counts were rewritten to qualitative wording pointing at
+  `make print-MODERN_COHORT_*_OBJECTS`/`print-MODERN_ALL_*_OBJECTS`,
+  matching the numeral-count fix already applied to this same file by
+  the earlier round. Historical, non-modern-cohort symbol-resolution
+  facts elsewhere in that file (unrelated prior-commit numbers) were
+  deliberately left untouched -- they are not `MODERN_COHORT_*`/
+  `MODERN_ALL_*`-derived counts and are outside this finding's scope.
+- A `RECOGNIZED_MARKDOWN_EXTENSIONS` constant (`.md`, `.markdown`,
+  `.mdown`, `.mkd`) now documents the full recognized set.
+  `discover_markdown_files()` lists the full
+  `git ls-files -z --cached --others --exclude-standard` output (still
+  respecting `.gitignore`/tracked/untracked semantics exactly as
+  before) and filters by `os.path.splitext(...)[1].casefold()`
+  membership in that set in Python, instead of a `.md`-only pathspec.
+  `docs/documentation-inventory.md` and this report's own wording were
+  updated from "every Markdown file"/`*.md`-only phrasing to describe
+  the full recognized, case-insensitive set. This repository currently
+  has no tracked or untracked file using an alternate recognized
+  extension, so the reproduction count below is unaffected in practice
+  by this change -- only the mechanism and its documented contract
+  changed.
+- `_parse_link_destination` was rewritten as a bounded, stateful scanner
+  that tracks balanced-parenthesis depth (so a destination path
+  containing one, or several nested, literal parenthesis characters is
+  read in full, not truncated), unescapes backslash-escaped `\(`/`\)`
+  for correct path lookup, still
+  supports angle-bracket (`<...>`) destinations and double/single-quoted
+  titles exactly as before, and now returns an explicit error for
+  malformed input (missing/unbalanced closing parenthesis, excess
+  nesting depth, or an unterminated title) instead of silently
+  truncating or dropping it. `extract_internal_link_targets` gained an
+  optional `errors` list parameter (default `None` preserves its
+  original silent-skip behavior for existing callers/tests);
+  `check_internal_links` -- the only production caller -- now passes a
+  real list and reports every malformed destination as an explicit
+  `Finding` instead of ignoring it.
+
+Reproduce the fix and its evidence directly against this worktree:
+
+```bash
+# Full doc checker: 0 findings against the current recognized-extension
+# file set (the checker itself reports how many files it checked each
+# run -- do not trust a file count written in this report, it drifts
+# every time a Markdown file is added, removed, or given an alternate
+# recognized extension; reproduce it yourself)
+python3 scripts/check_docs.py --check --check-examples
+
+# Full doc unit test suite for this round, including the new
+# spelled-out-count, recognized-extension-discovery, and bounded-link-
+# parser regression tests added this round -- the suite must pass in
+# full; do not trust a test count written in this report, it drifts
+# every time a test is added or removed; reproduce it yourself
+python3 -m unittest discover -s scripts/docs_check_tests -v
+
+# Current, actual object/source counts (this is what quickstart.md now
+# tells the reader to reproduce themselves, instead of a spelled-out or
+# numeral count). The live values are intentionally not persisted in
+# this report, for the same drift-avoidance reason -- run these
+# yourself:
+make print-MODERN_COHORT_C_OBJECTS
+make print-MODERN_COHORT_ASM_OBJECTS
+make print-MODERN_COHORT_OBJECTS
+make print-MODERN_ALL_C_OBJECTS
+make print-MODERN_ALL_DATA_OBJECTS
+make print-MODERN_ALL_ASM_OBJECTS
+make print-MODERN_ALL_OBJECTS
+
+# Confirm the recognized-extension pathspec currently resolves to the
+# same file count as a `.md`-only pathspec (no alternate-extension
+# files exist in this repository today; this only proves the mechanism
+# change introduced no numeric drift, not that any alternate-extension
+# file exists)
+git ls-files --cached --others --exclude-standard -- '*.md' | wc -l
+git ls-files --cached --others --exclude-standard \
+  -- '*.md' '*.markdown' '*.mdown' '*.mkd' | wc -l
+
+# No trailing-whitespace/conflict-marker regressions in this change
+git diff --check
+```
+
+This section documents the fix of a second verifier pass's residual
+findings. It does not assert GitHub issue #17's final state, does not
+claim a full ROM build was run, and does not supersede the "Remaining
+follow-ups" below, which are unchanged by this round.
+
+## Remaining follow-ups (explicitly not closed by this work)
+
+**Update (issues #7/#17 integration merge): the three bullets below
+about issues #10/#11/#13 described the original, pre-merge state
+recorded by this audit and are now superseded -- those three issues
+merged into `master` with final, documented public interfaces before
+this remediation (see the "Post-merge integration update" section
+above and the "Update" bullet in
+`reports/issue7_documentation_foundation.md`). Corrected, current
+facts:**
+
+- **Issue #10** -- merged, not open, and not undocumented. The
+  DEFAULT/ACTIVE typed-ID contract, its per-domain caps/budgets, and the
+  consumer census are documented in
+  [`docs/id_space.md`](../docs/id_space.md); see the "Explicit
+  non-goals (unchanged)" and "Known gaps / risks handed to the
+  verifier" sections of `reports/issue10_closure.md` for the few
+  narrow, deliberate items still out of scope (no
+  class/chapter/unit/character ID widening; no save-migration tooling
+  -- the item-cap raise this closure covers needed none).
+- **Issue #11** -- merged, not limited to "slices 1-2". A
+  release-safe config gate, a fixed-capacity action-registration API,
+  title/map/prep hotkey hub entry points, five bounded validated
+  tools, and structured diagnostics are the current, documented,
+  supported surface -- see
+  [`docs/debugtools.md`](../docs/debugtools.md#registration-api),
+  whose own
+  ["Remaining #11 scope"](../docs/debugtools.md#remaining-11-scope-issue-11-closure)
+  section is authoritative for the few narrow, deliberate non-goals (a
+  full `mgba_printf`/AGB debug-print protocol, an interactive
+  debugger, and an arbitrary memory editor are never attempted).
+- **Issue #13** -- merged, not "single-scenario". `tools/gba-playtest`
+  now provides a full deterministic multi-scenario harness -- boot,
+  title, new-game, chapter/map arrival, combat, suspend/resume,
+  save/load, and the issue #11 debug-tools hub/tools scenarios -- see
+  its own
+  [`README.md`](../tools/gba-playtest/README.md#deterministic-runtime-scenario-coverage-issue-13)
+  "Deterministic runtime scenario coverage" table, a host-only vs.
+  normal run mode, and the Ubuntu + `arm-none-eabi`
+  [CI host matrix](../tools/gba-playtest/README.md#supported-ci-host-matrix);
+  macOS/Homebrew local-only support (not CI-exercised) is the one
+  documented, narrow gap.
+- **Current correction (supersedes this audit's pre-integration #6/#18
+  snapshot):** #6 starter features and #18 localization are closed/merged;
+  their public APIs exist in
+  [`include/expansion_mechanics.h`](../include/expansion_mechanics.h) and
+  [`include/expansion_locale.h`](../include/expansion_locale.h), with current
+  contracts in [`docs/starter_features.md`](../docs/starter_features.md),
+  [`docs/localization.md`](../docs/localization.md), and supporting evidence in
+  [`reports/issue6_closure.md`](issue6_closure.md) and
+  [`reports/issue18_localization_closure.md`](issue18_localization_closure.md).
+  **Only #9 remains future/unmerged:** there is no release/versioning tooling;
+  see [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries)
+  and
+  [`docs/framework-support.md`](../docs/framework-support.md#future-versioned-release-work-issue-9).
+- This audit does not re-verify the factual accuracy of every
+  historical/archival document against `master` -- only that it is
+  inventoried, internally link-consistent, and
+  externally-URL-registry-covered.

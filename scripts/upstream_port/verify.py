@@ -6,7 +6,11 @@ repository's *own* current working tree/commit. It never builds, checks out,
 or executes the canonical upstream ref/tree. It is a thin, literal mirror of
 .github/workflows/build.yml's gate steps (kept independent from that file:
 this module doesn't parse/execute the workflow, it re-states the same gate
-commands so `verify` stays runnable locally without a CI runner).
+commands so `verify` stays runnable locally without a CI runner), with one
+DELIBERATE EXCEPTION: build.yml's "Check documentation (issues #7/#17)"
+step remains a required standalone workflow gate outside this mirror. Run
+that standalone command pair directly to reproduce it locally; see
+docs/upstream-porting.md.
 """
 
 from __future__ import annotations
@@ -94,12 +98,13 @@ def gates(jobs: int = 2) -> List[Gate]:
                 "-v",
             ],
             applicable_note=(
-                "issue #12/#15 host lane (same `host-tests` job): the 144 "
-                "pure-stdlib upstream-port review tooling tests "
-                "(classify/scan/drift/state/ref-binding/output-safety/"
-                "merge-commit determinism and this verify.gates() <-> build.yml "
-                "mirror). Python/stdlib only, links no C and never rebuilds the "
-                "ROM"
+                "issue #12/#15 host lane (same `host-tests` job): pure-stdlib "
+                "upstream-port review tooling tests; re-run this suite for "
+                "the current count (classify/scan/drift/state/ref-binding/"
+                "output-safety/merge-commit determinism and this "
+                "verify.gates() <-> build.yml mirror, which excludes only "
+                "the standalone documentation-governance step). Python/stdlib "
+                "only, links no C and never rebuilds the ROM"
             ),
         ),
         Gate(
@@ -131,6 +136,10 @@ def gates(jobs: int = 2) -> List[Gate]:
             command=["python3", "scripts/artifact_guard.py", "--revision", "HEAD"],
             applicable_note="always applicable: rejects prohibited tracked build artifacts",
         ),
+        # build.yml's "Check documentation (issues #7/#17)" step
+        # (scripts/docs_check_tests followed by scripts/check_docs.py --check
+        # --check-examples) intentionally has no Gate(...) entry here. It is
+        # independently required immediately after the artifact guard.
         Gate(
             name="default-lane-check",
             command=[

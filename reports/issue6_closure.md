@@ -1,5 +1,11 @@
 # Issue #6 Sprint 2 -- bundled generated-data content example: closure evidence
 
+**Current integration clarification (2026-08-03):** any 10-gate counts below
+are point-in-time evidence from this historical closure run and are
+superseded for current composition. Live `verify.gates()` mirrors all 11
+current-master gates, including localization; the issues #7/#17 documentation
+gate remains an additional standalone workflow step.
+
 Branch `agent/issue6-starter-features`, built on `origin/master`
 `976c71230788d73283bea3871116274c5a232565`. Sprint 1's foundation evidence
 (config flags, mechanics registry, player QoL overlay, clean-boot runtime

@@ -339,11 +339,13 @@ save_format_tool.py [--repo-root PATH] migrate  <source> <dest> [--force]
      step 7.
   3. Reads the full 0x8000-byte source image into an in-memory
      `bytearray` -- the source file is **never** opened for writing.
-  4. Classifies the source. Only `SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`
-     (the "v0" state: no metadata record at all) and already-`SAVE_COMPAT_CURRENT`
-     (a no-op re-migration) are migratable in this slice -- every other
-     classification is a precondition failure; nothing is written
-     anywhere and the source is left untouched.
+  4. Classifies the source. `SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`
+     (the v0 state), `SAVE_COMPAT_MIGRATABLE_OLDER` (including the real
+     version-1/epoch-1 -> current version-2/epoch-2 case), and already-
+     `SAVE_COMPAT_CURRENT` (a no-op re-migration) are migratable. Every other
+     classification is a precondition failure; nothing is written and the
+     source remains untouched. For older/current metadata, the existing
+     `reserved` bytes -- including any prefs record -- are preserved verbatim.
   5. Builds a current `ExpansionSaveMeta` record (mirroring
      `BuildCurrentExpansionSaveMeta()`; diagnostic fields use documented
      placeholders since a host tool has no live build context -- they
@@ -458,10 +460,12 @@ via the existing text-generation pipeline; no hardcoded numeric IDs):
 | `SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE` | `MSG_SAVE_COMPAT_CONFIG_INCOMPATIBLE` |
 | (defensive fallback only; never reachable in practice) | `MSG_SAVE_COMPAT_UNKNOWN` |
 
-Menu labels (`MSG_SAVE_COMPAT_BACK`, `MSG_SAVE_COMPAT_ERASE_ALL`) and the
-confirmation prompt (`MSG_SAVE_COMPAT_ERASE_CONFIRM`) are likewise
-generated constants. All text is English-only for now; issue #18 will
-generalize this to other languages, same as every other menu in the game.
+The modern build now draws the **Back** and **Erase All Save Data** rows from
+issue #18's expansion catalog (`EXP_MSG_FRAMEWORK_BACK` and
+`EXP_MSG_SAVE_COMPAT_MENU_ERASE_ALL`). The state diagnostics and irreversible-
+erase confirmation remain the existing vanilla-message-table constants above;
+they are not silently claimed as localized. `qps-ploc` is a QA transform, not
+a translation -- see [`localization.md`](localization.md).
 
 ### Read-only diagnostic probe
 
@@ -764,11 +768,12 @@ legitimate way above via SaveMenu RESTART -> `ReadGameSave`.
 
 ### Host migration workflow (recap)
 
-The v0 (`SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`) -> v1 (`SAVE_COMPAT_CURRENT`)
-migration this slice's runtime tests exercise is exactly the existing
-`save_format_tool.py migrate <source> <dest>` CLI documented above under
-"Host-side CLI" -- no changes were needed to that tool for slice 2. The
-compatibility proc itself never performs or offers in-console migration
+The host `save_format_tool.py migrate <source> <dest>` CLI supports v0
+(`SAVE_COMPAT_VALID_LEGACY_OR_VANILLA`) -> current, older-format
+(`SAVE_COMPAT_MIGRATABLE_OLDER`) -> current, and current -> current. The real
+issue #18 version-1/epoch-1 input exercises the older-format path; its reserved
+bytes are carried forward rather than replaced. The compatibility proc itself
+never performs or offers in-console migration
 (see "Limitations"); a player whose save is `SAVE_COMPAT_MIGRATABLE_OLDER`
 sees `MSG_SAVE_COMPAT_OLDER` (which explains that an external tool is
 required) and their only in-console options are Back or a full erase.
@@ -789,12 +794,11 @@ required) and their only in-console options are Back or a full erase.
 
 ## Limitations
 
-* **No automatic in-console structural migration.** This slice's
-  `migrate` command is host-side only, and only performs the trivial
-  v0 -> v1 transition (stamping a metadata record onto a save that never
-  had one). A real in-console migration of an *older current-format*
-  save (`SAVE_COMPAT_MIGRATABLE_OLDER`, once a future format version 2+
-  exists) would need to reinterpret and rewrite live save-block structs
+* **No automatic in-console structural migration.** The host-only
+  `migrate` command can stamp v0 metadata and refresh the supported additive
+  version-1 metadata to current while preserving its reserved tail. The console
+  itself cannot transform an older current-format save safely: a general
+  structural migration would need to reinterpret and rewrite live save-block structs
   in place, and **no safe scratch SRAM block exists today** to do that
   atomically -- a partial in-place rewrite that is interrupted (power
   loss, reset) could corrupt the save beyond what any classifier can

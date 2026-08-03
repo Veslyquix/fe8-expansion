@@ -1,9 +1,9 @@
 # In-game localization framework (issue #18)
 
-Status: implementation + real libmGBA runtime evidence exist (Sprints 1-4);
-**issue #18 remains open**. This document is architecture/authoring/testing
-reference, not a closure claim -- see
-`reports/issue18_localization_closure.md` for the sprint 4 evidence mapping.
+Status: the issue #18 implementation and its real libmGBA evidence are
+merged into the current source tree. This is an architecture/authoring/testing
+reference, not a GitHub issue-state or closure claim; historical sprint
+evidence remains in `reports/issue18_localization_closure.md`.
 
 ## Architecture
 
@@ -37,7 +37,7 @@ The framework is layered, each layer independently testable:
    versioned/checksummed `ExpansionUserPrefs`, Sprint 2): a small SRAM
    record (locale choice + validity state) with its own version/checksum,
    read via `ExpansionUserPrefs_Load()`/classified via `_Normalize()` into
-   `ExpansionUserPrefsState` (`UNSET` / `VALID` / `CORRUPT` /
+   `ExpansionUserPrefsState` (`UNSET` / `VALID` / `MIGRATED` / `CORRUPT` /
    `UNKNOWN_LOCALE` / `DISABLED_LOCALE`), and written via `_Store()`.
    Deliberately excludes vanilla `struct SoundRoomSaveData` and every
    other pre-existing SRAM field -- see the "no-wipe" contract below.
@@ -45,7 +45,7 @@ The framework is layered, each layer independently testable:
    (`src/expansion_language_menu.c`, `include/expansion_language_menu.h`,
    Sprint 3): `ExpansionLanguageMenu_DecideStartupAction()` is a pure,
    host-testable function mapping `(prefs state, enabled locale count)` to
-   one of `PROMPT` / `AUTO_SELECT` / `APPLY_ONLY`. The blocking first-start
+   one of `SHOW_MENU` / `AUTO_SELECT` / `APPLY_ONLY`. The blocking first-start
    selector Proc script runs this decision once per boot, immediately
    after `ProcScr_GameEarlyStartUI` and before `ProcScr_OpAnim` (`#ifdef
    MODERN`-guarded call site in `src/gamecontrol.c`); with exactly one
@@ -82,6 +82,33 @@ enabled-locale mask, default-locale id, pseudo-locale flag) so a given ROM's
 config is always recoverable from the binary itself, never only from the
 build invocation.
 
+
+`modern.mk` derives `FE8_EXPANSION_ENABLED_LOCALE_MASK`,
+`FE8_EXPANSION_ENABLED_LOCALE_COUNT`, `FE8_EXPANSION_DEFAULT_LOCALE_ID`, and
+`FE8_EXPANSION_PSEUDO_LOCALE_ENABLED` from these validated inputs. The
+normalized enabled list/default/pseudo setting also enters the config
+fingerprint, so configuration changes are diagnosable without becoming save-
+compatibility keys.
+
+## Save compatibility, migration, and precedence
+
+Issue #18 uses `SAVE_FORMAT_VERSION_CURRENT=2` and the repository default
+`EXPANSION_SAVE_COMPAT_EPOCH=2`. `ExpansionUserPrefs` occupies a fixed
+0x0C-byte subregion of `ExpansionSaveMeta.reserved`, has independent magic,
+version and checksum, and leaves 0x20 bytes of reserved-tail headroom. The
+outer metadata layout and neighboring XMAP offset do not move.
+
+Classifier precedence matters: an older `formatVersion` resolves to
+`SAVE_COMPAT_MIGRATABLE_OLDER` before the epoch comparison, so a genuine
+version-1/epoch-1 save is migratable older, not config-incompatible. The host
+`save_format_tool.py migrate` path is out-of-place, preserves an older/current
+record's reserved bytes (including valid prefs), verifies before atomic
+publication, and never rewrites the source. Runtime normalization falls back
+to the configured default and requests repair for unset/corrupt/unknown/
+disabled prefs; only a verified bounded store mutates the prefs window. The
+full record, migration, no-wipe, and menu limitations are authoritative in
+[`save_format.md`](save_format.md).
+
 ## Pseudo locale (`qps-ploc`) -- legal/non-goals
 
 `qps-ploc` (`scripts/localization/pseudo.py`) is a deterministic, purely
@@ -102,12 +129,13 @@ future sprints.
 1. Add/edit entries in `texts/expansion/registry.json` (id name, never
    renumbering or reusing a retired id) and `texts/expansion/catalog.en.
    json` (the English text).
-2. `make expansion-localization-generate` (or let any modern build target
+2. `make localization-generate` (or let any modern build target
    depend on it) regenerates `expansion_locale_catalog.c`/
    `expansion_msg_ids.h`/the localization budget JSON, write-if-unchanged.
-3. `python3 -m pytest scripts/localization/tests` / `make
-   localization-test` re-validates the schema, catalog parsing, pseudo
-   transform, and the generated header.
+3. `python3 -m unittest discover -s scripts/localization/tests -p
+   'test_*.py' -v` (or `make localization-test`) re-validates schema,
+   catalog parsing, pseudo transform, generated output, host-native resolver
+   behavior, and vanilla-isolation audits.
 4. To enable another real (non-English) locale in the future: populate its
    `catalog.<locale>.json`, add it to `EXPANSION_ENABLED_LOCALES`, and
    extend the runtime/host test matrix analogous to `en`/`qps-ploc` --
