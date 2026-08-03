@@ -161,12 +161,20 @@ def generate_allowlist_document(
             "docs/release_data/provenance/*.json and docs/release_process.md for "
             "the separate, currently-unresolved legal/provenance determination "
             "that independently blocks publication regardless of this allowlist. "
-            "'generation_basis_sha' is a documentary record of which commit this "
-            "file was last regenerated against ONLY -- it is never read, "
-            "compared, or otherwise validated by check()/check_mode_identity() "
-            "or any other check in this repository (every check instead always "
-            "re-derives its own live target_sha independently); do not mistake "
-            "its presence for a validated commit binding of any kind."
+            "'generation_basis_sha' records which commit this file was last "
+            "regenerated against -- it never drives (and is never itself used to compute) "
+            "any bijection/mode-identity result above; every check instead "
+            "always re-derives its own live target_sha independently. It IS, "
+            "however, mechanically checked for truthfulness (issue #9 final-review "
+            "remediation): check() always calls "
+            "git_source.check_generation_basis_is_commit(), which fails closed if "
+            "this value is not itself a real, still-reachable commit object -- "
+            "e.g. a tree written by a development-time '--target-sha index' "
+            "preview (see git_source.write_index_tree) that was never actually "
+            "committed, or any other non-commit/dangling object -- so this field "
+            "can never silently carry a false or ephemeral commit claim, even "
+            "though it is not itself a validated *binding* driving any other "
+            "result computed above."
         ),
         "schema_version": SCHEMA_VERSION,
         "generation_basis_sha": target_sha,
@@ -557,6 +565,13 @@ def check(
         for path in mode_extra
     ]
     errors += check_mode_identity(repo_root, allowlist_modes, target_sha)
+    # issue #9 final-review remediation: this document's own schema/
+    # comment text promises 'generation_basis_sha' names a real commit --
+    # `gs.check_generation_basis_is_commit` mechanically enforces that
+    # promise is always actually true (never a dangling tree, never any
+    # other non-commit object) instead of leaving it a purely
+    # documentary, never-validated claim.
+    errors += gs.check_generation_basis_is_commit(repo_root, allowlist_path)
     return errors
 
 
@@ -591,6 +606,29 @@ def main(argv=None) -> int:
         return 2
 
     if args.command == "generate":
+        if args.write and args.target_sha == "index":
+            # issue #9 final-review remediation: the checked-in
+            # 'generation_basis_sha' promises a real commit (see this
+            # document's own '_comment') -- writing an 'index'-derived
+            # tree basis (a development-time-only preview/convenience;
+            # see git_source.write_index_tree) into the actual checked-in
+            # file would make that promise false, and the resulting tree
+            # object is also never reachable from any ref, so a future
+            # 'git gc' could silently prune it out from under this
+            # "documentary" claim entirely. '--write' is reserved for
+            # committing real, final evidence: commit first, then
+            # regenerate with '--target-sha HEAD --write' (the
+            # documented docs/release_process.md procedure) -- never
+            # '--write' straight from 'index'.
+            print(
+                "error: refusing to --write an 'index'-derived (tree, not commit) "
+                "generation basis into the checked-in allowlist -- commit first, then "
+                "re-run with '--target-sha HEAD --write' (see docs/release_process.md); "
+                "'--target-sha index' without '--write' remains available for a local, "
+                "uncommitted preview/verification",
+                file=sys.stderr,
+            )
+            return 2
         try:
             excluded_blob_paths = _load_non_gitlink_exclusion_paths(args.exclusions)
         except AllowlistError as error:

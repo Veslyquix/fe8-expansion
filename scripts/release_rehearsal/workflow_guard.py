@@ -195,7 +195,13 @@ class UsesOccurrence:
     problem: "str | None"
 
 
-_PLAIN_VALUE_TERMINATORS = frozenset(",}]\r\n#")
+# Deliberately excludes "#": whether an unquoted "#" terminates a
+# plain value as a trailing comment depends on context (it must be
+# preceded by whitespace -- see the design-rationale comment on the
+# main scan loop's own "#" handling above) rather than being an
+# unconditional terminator, so it is handled explicitly inline
+# in the plain-value scan below instead of living in this set.
+_PLAIN_VALUE_TERMINATORS = frozenset(",}]\r\n")
 
 
 def _scan_quoted_scalar(text: str, start: int, quote: str):
@@ -304,7 +310,29 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
         if ch == "\r":
             i += 1
             continue
-        if ch == "#":
+        # YAML's comment indicator ("#") only ever starts a comment
+        # when it is the first character on the (logical) line or is
+        # immediately preceded by whitespace (a space or tab) -- see
+        # YAML spec 6.2.4 / 7.3.3 ("Plain scalars must not contain the
+        # '#' character preceded by whitespace [that is not itself part
+        # of the scalar]"; conversely, a '#' with *no* preceding
+        # whitespace is simply an ordinary character embedded in
+        # whatever token precedes it, e.g. the plain scalar `setup#`).
+        # A fresh, independent final review reproduced a fail-open
+        # bypass here: `- {name: setup#, uses: evilcorp/...@main}` has
+        # its `#` glued directly onto `setup` with no preceding
+        # whitespace, so it is *not* a comment at all -- the previous,
+        # unconditional "any '#' starts a comment" rule nonetheless
+        # consumed the rest of that physical line (silently discarding
+        # the very real `uses:` key that followed), so the dangerous,
+        # mutable-ref `uses:` occurrence was never even yielded, let
+        # alone rejected. When the preceding-whitespace/start-of-line
+        # condition does not hold, '#' is simply an ordinary character:
+        # fall through to the normal key/quote/plain-value handling
+        # below (which, for a bare '#' matching none of those, just
+        # advances one character at the bottom of this loop) instead of
+        # ever silently truncating the rest of the line.
+        if ch == "#" and (i == 0 or text[i - 1] in " \t\r\n"):
             while i < n and text[i] not in "\r\n":
                 i += 1
             continue
@@ -356,8 +384,17 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
             k += 1
 
         problem = None
+        ws_before_value = k > key_end
         raw_start = k
-        if k >= n or text[k] in "\r\n" or text[k] == "#":
+        if k >= n or text[k] in "\r\n":
+            value = ""
+        elif text[k] == "#" and ws_before_value:
+            # Same YAML comment-indicator rule as the main scan loop:
+            # only a "#" preceded by whitespace (here, at least one
+            # space/tab consumed right after the "uses:" colon) is a
+            # comment. A bare "uses:#..." (no separating whitespace at
+            # all) falls through to the plain-value branch below
+            # instead, where it is treated as literal value content.
             value = ""
         elif text[k] in "&*!":
             prefix = text[k]
@@ -380,6 +417,26 @@ def extract_uses_occurrences(text: str) -> List[UsesOccurrence]:
             start = k
             ambiguous_colon = False
             while k < n and text[k] not in _PLAIN_VALUE_TERMINATORS:
+                # A "#" only terminates a plain value as a trailing
+                # comment when it is preceded by whitespace (a space or
+                # tab) -- exactly the same YAML comment-indicator rule
+                # as the main scan loop above. A final review reproduced
+                # a fail-open bypass here: an unquoted plain value such
+                # as `setup#` (no whitespace before the "#") previously
+                # had this "#" mis-treated as an unconditional
+                # terminator by `_PLAIN_VALUE_TERMINATORS`, truncating
+                # the value and -- worse, in the main scan loop's own
+                # matching bug -- discarding whatever real YAML followed
+                # it on the same line (e.g. a sibling `uses:` key).
+                # `k > start` guards the very first character of this
+                # value: a "#" glued directly onto the preceding ":" (no
+                # separating whitespace at all) is never treated as a
+                # comment either, and instead becomes literal value
+                # content, consistent with the "must be preceded by
+                # whitespace" rule (there is no whitespace to precede it
+                # here at all).
+                if text[k] == "#" and k > start and text[k - 1] in " \t":
+                    break
                 if text[k] == ":" and (k + 1 >= n or text[k + 1] in " \t\r\n"):
                     ambiguous_colon = True
                     break

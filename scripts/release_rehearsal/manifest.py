@@ -248,6 +248,12 @@ def check_tree_coverage(repo_root: Path, target_sha: str) -> Dict:
 
     result = tc.check_partition(repo_root, allowlist_paths, exclusion_entries, target_sha)
     errors = result.reasons()
+    # issue #9 final-review remediation: this document's own schema/
+    # comment text promises 'generation_basis_sha' names a real, still-
+    # reachable commit -- mechanically enforce that promise here too
+    # (source_allowlist.json's own field is already enforced by
+    # al.check()'s own call to the same shared check).
+    errors += gs.check_generation_basis_is_commit(repo_root, exclusions_path)
     return {"ok": not errors, "errors": errors}
 
 

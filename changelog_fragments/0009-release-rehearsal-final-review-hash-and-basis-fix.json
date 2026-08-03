@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "internal",
+  "summary": "Close two critical findings from a fresh, independent final review of the read-only release/publication rehearsal system: the workflow/action-pin `uses:` scanner no longer mis-treats an unquoted `#` glued directly onto a preceding plain-scalar character (e.g. `- {name: setup#, uses: evilcorp/upload-secrets@main}`) as a YAML comment (a fail-open bypass that discarded the real `uses:` key and everything after it on the same line), now recognizing `#` as a comment only when it is the first character on a line or is preceded by whitespace, exactly like real YAML; and `source_allowlist.json`/`export_exclusions.json`'s own `generation_basis_sha` field, which both documents' schema/comments promise names a commit, is now mechanically checked (and both CLIs' `--write` now refuses an `--target-sha index`-derived tree basis outright) so a dangling, unreachable tree object can never again be silently recorded as if it were a commit. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}

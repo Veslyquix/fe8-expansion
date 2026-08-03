@@ -370,6 +370,32 @@ Regenerate it with:
 python3 -m scripts.release_rehearsal.allowlist generate --target-sha HEAD --write
 ```
 
+**issue #9 final-review remediation -- 'generation_basis_sha' must be a
+real, reachable commit, never a dangling tree.** Both
+`docs/release_data/source_allowlist.json` and `docs/release_data/
+export_exclusions.json` record a `"generation_basis_sha"` field whose
+own schema/comment text promises it documents *which commit* the file
+was last regenerated against. `--target-sha index` (a development-time
+convenience that serializes the *current staged index* into a real Git
+tree object via `git write-tree` -- see `git_source.write_index_tree`)
+is useful for previewing/verifying an in-progress, not-yet-committed
+change, but its resulting object is a **tree**, never a commit, and (if
+never actually committed) is never reachable from any ref either -- a
+future `git gc` can prune it at any time. Writing that value into the
+actual checked-in file would make the schema's own "which commit"
+promise false and ephemeral. Both CLIs therefore **refuse** `--write`
+combined with `--target-sha index` outright (`generate --write` /
+`generate-exclusions --write` exit 2, actionably, without touching the
+checked-in file) -- `--target-sha index` remains available without
+`--write` for a local, uncommitted stdout preview only. `allowlist.py
+check()` and `manifest.check_tree_coverage()` additionally both call
+the single, shared `git_source.check_generation_basis_is_commit()`
+check on every `make release-check`, which fails closed if either
+checked-in document's own `"generation_basis_sha"` is not itself a
+real, still-reachable commit object -- so this exact defect (a
+dangling/tree basis silently committed into checked-in evidence) can
+never regress unnoticed.
+
 ### Archive member mode policy (guardian-correction remediation, D4)
 
 `docs/release_data/source_allowlist.json` (schema_version 4) additionally

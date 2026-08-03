@@ -197,6 +197,87 @@ class CheckSourceGuardTests(unittest.TestCase):
             marker.rmdir()
 
 
+class CheckTreeCoverageGenerationBasisTests(unittest.TestCase):
+    """Final-review-found finding #2, reproduced through the actual
+    wired `manifest.check_tree_coverage` pipeline (not just the shared
+    `git_source.check_generation_basis_is_commit` unit in isolation):
+    `export_exclusions.json`'s own 'generation_basis_sha' must be
+    mechanically validated here too, exactly like
+    `allowlist.check()`'s own call to the same shared check already
+    validates `source_allowlist.json`'s."""
+
+    @staticmethod
+    def _git(*args, cwd):
+        result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
+        assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+        return result.stdout
+
+    def _build_valid_repo(self, root: Path):
+        from scripts.release_rehearsal import allowlist as al
+        from scripts.release_rehearsal import git_source as gs
+        from scripts.release_rehearsal import tree_coverage as tc
+
+        self._git("init", "-q", cwd=root)
+        self._git("config", "user.email", "t@example.com", cwd=root)
+        self._git("config", "user.name", "Tester", cwd=root)
+        (root / "src").mkdir()
+        (root / "src" / "main.c").write_text("int x;")
+        (root / "docs" / "release_data").mkdir(parents=True)
+        self._git("add", "-A", cwd=root)
+        self._git(
+            "update-index", "--add", "--cacheinfo",
+            "160000,c87e74dcd6c8878b809e013cd8ff0c52baa75332,mgfembp",
+            cwd=root,
+        )
+        self._git("commit", "-q", "-m", "init", cwd=root)
+        sha = gs.resolve_sha(root, "HEAD")
+
+        allowlist_doc = al.generate_allowlist_document(root, sha)
+        (root / "docs" / "release_data" / "source_allowlist.json").write_text(
+            json.dumps(allowlist_doc), encoding="utf-8"
+        )
+        exclusions_doc = tc.generate_exclusions_document(root, sha)
+        exclusions_path = root / "docs" / "release_data" / "export_exclusions.json"
+        exclusions_path.write_text(json.dumps(exclusions_doc), encoding="utf-8")
+        return sha, exclusions_path
+
+    def test_valid_repo_has_no_generation_basis_findings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha, _exclusions_path = self._build_valid_repo(root)
+            report = rm.check_tree_coverage(root, sha)
+            self.assertEqual(report, {"ok": True, "errors": []})
+
+    def test_reproduces_the_dangling_tree_false_commit_case_end_to_end(self):
+        """Tamper the checked-in export-exclusions document's own
+        'generation_basis_sha' to a real 'index'-derived tree object
+        (never committed, genuinely dangling) -- exactly the reported
+        final-review defect -- and confirm the wired manifest pipeline
+        now reports it, rather than silently accepting a false
+        documentary claim."""
+        from scripts.release_rehearsal import git_source as gs
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sha, exclusions_path = self._build_valid_repo(root)
+
+            (root / "uncommitted.txt").write_text("never committed\n")
+            self._git("add", "uncommitted.txt", cwd=root)
+            dangling_tree_sha = gs.write_index_tree(root)
+            self._git("reset", cwd=root)  # unstage again; tree stays dangling
+
+            doc = json.loads(exclusions_path.read_text(encoding="utf-8"))
+            doc["generation_basis_sha"] = dangling_tree_sha
+            exclusions_path.write_text(json.dumps(doc), encoding="utf-8")
+
+            report = rm.check_tree_coverage(root, sha)
+            self.assertFalse(report["ok"])
+            self.assertTrue(
+                any(dangling_tree_sha in e and "not a commit" in e for e in report["errors"]),
+                report["errors"],
+            )
+
+
 class RequiredDocsTests(unittest.TestCase):
     def test_all_present_on_real_repo(self):
         self.assertEqual(rm.check_required_docs(ROOT), [])

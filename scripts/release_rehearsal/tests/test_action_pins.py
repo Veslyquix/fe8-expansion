@@ -186,6 +186,57 @@ class WorkflowExternalOccurrencesTests(unittest.TestCase):
         self.assertTrue(any("duplicate" in v.lower() for v in wg.check_uses_pins(text)))
 
 
+class HashInPlainScalarBypassRetainedByActionPinsTests(unittest.TestCase):
+    """Final-review-found critical bypass (shared with
+    `workflow_guard`'s own adversarial coverage): this module consumes
+    the very same `workflow_guard.extract_uses_occurrences` scanner via
+    `workflow_external_occurrences`, so a `uses:` occurrence hidden
+    after a '#'-glued plain scalar (e.g. `name: setup#`) must be
+    retained -- with its correct action/ref/line -- here too, never
+    silently dropped the way the previous, unconditional '#'-starts-a-
+    comment scanning bug would have dropped it."""
+
+    def test_uses_after_hash_glued_plain_scalar_is_retained_with_line(self):
+        text = GOOD_WORKFLOW + "      - {name: setup#, uses: evilcorp/upload-secrets@main}\n"
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "evilcorp/upload-secrets"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, "main")
+        self.assertIsInstance(occurrences[0].line, int)
+        self.assertGreater(occurrences[0].line, 0)
+
+    def test_uses_after_hash_glued_plain_scalar_reported_as_unmatched_inventory_entry(self):
+        """With no matching row in the committed inventory at all, the
+        cross-check must report it (via `check_workflow_against_inventory`)
+        exactly like any other un-inventoried external action -- it
+        must never vanish from the system's overall result just because
+        it was preceded by a '#'-containing plain scalar."""
+        text = GOOD_WORKFLOW + "      - {name: setup#, uses: evilcorp/upload-secrets@main}\n"
+        reasons = ap.check_workflow_against_inventory(
+            "workflow.yml", text, [_good_inventory_row(workflow="workflow.yml")]
+        )
+        self.assertTrue(any("upload-secrets" in r and "no matching entry" in r for r in reasons), reasons)
+
+    def test_immutable_uses_after_hash_glued_plain_scalar_retained_and_matched(self):
+        """The mirror-image, non-adversarial case: a correctly pinned
+        action after a '#'-containing plain scalar must still be found
+        and successfully cross-checked against a matching inventory row."""
+        text = GOOD_WORKFLOW + f"      - {{name: setup#, uses: actions/setup-node@{SHA_B}}}\n"
+        occurrences = [o for o in ap.workflow_external_occurrences(text) if o.action == "actions/setup-node"]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].ref, SHA_B)
+        inventory = [
+            _good_inventory_row(workflow="workflow.yml"),
+            _good_inventory_row(
+                workflow="workflow.yml",
+                action="actions/setup-node",
+                pinned_sha=SHA_B,
+                source_url="https://github.com/actions/setup-node/releases/tag/v4.0.0",
+            ),
+        ]
+        reasons = ap.check_workflow_against_inventory("workflow.yml", text, inventory)
+        self.assertFalse(any("setup-node" in r for r in reasons), reasons)
+
+
 class CheckWorkflowAgainstInventoryTests(unittest.TestCase):
     def test_matching_pin_has_no_reasons(self):
         inventory = [_good_inventory_row(workflow="workflow.yml")]

@@ -770,6 +770,92 @@ class CheckFunctionNonGitTests(unittest.TestCase):
                 al.check(root, allowlist_path, nonexistent_sha)
 
 
+class CliWriteFromIndexGuardTests(unittest.TestCase):
+    """Final-review-found finding #2 (durable fix, not a one-off hand
+    edit): '--write' must never be able to commit an 'index'-derived
+    (tree, not commit) generation basis into the checked-in allowlist
+    at all -- this is what makes the fix durable against the next
+    regeneration silently reintroducing the exact same defect, rather
+    than relying on a human always remembering to pass '--target-sha
+    HEAD'."""
+
+    def test_write_from_index_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "f.txt").write_text("x")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            (root / "g.txt").write_text("staged-not-committed\n")
+            _git("add", "g.txt", cwd=root)
+
+            allowlist_path = root / "allow.json"
+            exclusions_path = root / "exclusions.json"
+            rc = al.main(
+                [
+                    "generate",
+                    "--repo-root", str(root),
+                    "--allowlist", str(allowlist_path),
+                    "--exclusions", str(exclusions_path),
+                    "--target-sha", "index",
+                    "--write",
+                ]
+            )
+            self.assertEqual(rc, 2)
+            self.assertFalse(allowlist_path.exists())
+
+    def test_generate_from_index_without_write_still_allowed(self):
+        """'--target-sha index' remains available for a local,
+        uncommitted stdout preview -- only '--write' combined with it is
+        refused."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "f.txt").write_text("x")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+            (root / "g.txt").write_text("staged-not-committed\n")
+            _git("add", "g.txt", cwd=root)
+
+            allowlist_path = root / "allow.json"
+            exclusions_path = root / "exclusions.json"
+            rc = al.main(
+                [
+                    "generate",
+                    "--repo-root", str(root),
+                    "--allowlist", str(allowlist_path),
+                    "--exclusions", str(exclusions_path),
+                    "--target-sha", "index",
+                ]
+            )
+            self.assertEqual(rc, 0)
+            self.assertFalse(allowlist_path.exists())
+
+    def test_write_from_head_is_allowed_and_passes_generation_basis_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            (root / "f.txt").write_text("x")
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "init", cwd=root)
+
+            allowlist_path = root / "allow.json"
+            exclusions_path = root / "exclusions.json"
+            rc = al.main(
+                [
+                    "generate",
+                    "--repo-root", str(root),
+                    "--allowlist", str(allowlist_path),
+                    "--exclusions", str(exclusions_path),
+                    "--target-sha", "HEAD",
+                    "--write",
+                ]
+            )
+            self.assertEqual(rc, 0)
+            self.assertTrue(allowlist_path.exists())
+            self.assertEqual(gs.check_generation_basis_is_commit(root, allowlist_path), [])
+
+
 class RepositoryStateTests(unittest.TestCase):
     """The real, checked-in docs/release_data/source_allowlist.json must
     be exactly consistent with this repository's own tracked-file set."""

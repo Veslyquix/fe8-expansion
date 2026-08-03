@@ -33,6 +33,8 @@ the caller rather than silently skipped.
 
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -127,6 +129,114 @@ def write_index_tree(repo_root: Path) -> str:
     if result.returncode != 0 or len(sha) != 40:
         raise GitSourceError(f"git write-tree failed: {result.stderr.strip()}")
     return sha.lower()
+
+
+def object_kind(repo_root: Path, object_id: str) -> Optional[str]:
+    """Returns the exact Git object type (``"commit"``/``"tree"``/
+    ``"blob"``/``"tag"``) that `object_id` names in this repository's own
+    object database, or ``None`` if it does not name any valid object at
+    all (e.g. it was pruned by a `git gc`, or was never a real object in
+    the first place). Deliberately never raises for a missing object --
+    "this recorded id no longer exists at all" and "it exists but is the
+    wrong kind of object" are two distinguishable, both-actionable
+    outcomes a caller must be able to tell apart (see
+    `check_generation_basis_is_commit` below)."""
+    result = _run_git(["cat-file", "-t", object_id], repo_root, text=True)
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def is_ancestor_commit(repo_root: Path, ancestor_sha: str, descendant: str = "HEAD") -> bool:
+    """True if `ancestor_sha` *is* `descendant` itself, or is a genuine
+    ancestor of it (``git merge-base --is-ancestor``) -- i.e. `ancestor_sha`
+    is actually reachable today from a real, current ref/commit, not
+    merely still physically present as some otherwise-unreferenced loose
+    object sitting in the object database (which any future `git gc` may
+    prune at any time without warning)."""
+    result = _run_git(["merge-base", "--is-ancestor", ancestor_sha, descendant], repo_root, text=True)
+    return result.returncode == 0
+
+
+_GENERATION_BASIS_SHA_RE_SOURCE = r"^[0-9a-f]{40}$"
+
+
+def check_generation_basis_is_commit(repo_root: Path, document_path: Path) -> List[str]:
+    """Issue #9 final-review remediation (false/ephemeral generation-
+    basis claim): the single, canonical, shared truthfulness check for a
+    generated evidence document's own `"generation_basis_sha"` field --
+    used identically by `allowlist.py`'s `docs/release_data/
+    source_allowlist.json` and `tree_coverage.py`'s `docs/release_data/
+    export_exclusions.json`, since both documents' own `_comment` text
+    makes the exact same promise: this field documents *which commit*
+    the file was last regenerated against.
+
+    In a real git repository, that promise must always actually hold:
+    `generation_basis_sha` must resolve to a genuine, still-reachable
+    *commit* object -- never a tree (e.g. from a locally-generated,
+    pre-commit `git write-tree` "index" snapshot -- see
+    `write_index_tree` above -- accidentally written into the checked-in
+    file instead of only ever being used for local, uncommitted
+    development-time preview/verification, exactly the defect a fresh,
+    independent final review reproduced here), never any other non-
+    commit object kind, and never a dangling/unreachable object a future
+    `git gc` could silently prune out from under this "documentary"
+    claim entirely (an ephemeral basis is exactly as false a provenance
+    claim as a wrong-kind one).
+
+    Returns a flat, human-readable error list (empty means the field is
+    present, well-formed, and names a real, reachable commit). Never
+    raises: a malformed/missing field, or a `document_path` that is not
+    valid JSON at all, is reported as an ordinary string finding here,
+    not an exception -- callers already treat this exactly like every
+    other `check()`-style finding list. When `repo_root` is not a git
+    repository at all (e.g. a genuinely extracted, non-git release
+    candidate tree), there is no object database to check against, so
+    this deliberately returns no findings -- exactly like every other
+    git-only check in this module family."""
+    try:
+        data = json.loads(Path(document_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return [f"{document_path}: not valid JSON: {error}"]
+    if "generation_basis_sha" not in data:
+        # Absence is not itself a truthfulness defect this check exists
+        # to catch: a document that makes no 'generation_basis_sha' claim
+        # at all has nothing this check can validate or contradict (this
+        # field is not otherwise schema-mandatory -- unlike, e.g.,
+        # `load_allowlist_modes`'s own `schema_version`/`"modes"`
+        # enforcement). Every *real* checked-in document in this
+        # repository has always included it, though, so this branch is
+        # exercised only by minimal ad hoc test fixtures exercising
+        # unrelated concerns.
+        return []
+    basis = data.get("generation_basis_sha")
+    if not isinstance(basis, str) or not re.fullmatch(_GENERATION_BASIS_SHA_RE_SOURCE, basis):
+        return [f"{document_path}: 'generation_basis_sha' must be a 40-lowercase-hex object id, found {basis!r}"]
+    if not is_git_repo(repo_root):
+        return []
+    kind = object_kind(repo_root, basis)
+    if kind is None:
+        return [
+            f"{document_path}: 'generation_basis_sha' {basis!r} does not name any object in this "
+            "repository's object database at all -- regenerate against a real, current commit "
+            "(e.g. '--target-sha HEAD --write')"
+        ]
+    if kind != "commit":
+        return [
+            f"{document_path}: 'generation_basis_sha' {basis!r} is a Git {kind!r} object, not a "
+            "commit -- this document's own schema/comment promises a commit; a tree (e.g. from a "
+            "development-time '--target-sha index' preview) must never be written into the "
+            "checked-in file -- regenerate against a real, current commit (e.g. '--target-sha HEAD "
+            "--write')"
+        ]
+    if not is_ancestor_commit(repo_root, basis, "HEAD"):
+        return [
+            f"{document_path}: 'generation_basis_sha' {basis!r} is a real commit, but is not HEAD "
+            "nor any ancestor of it in this repository -- it is an unreachable/dangling reference "
+            "outside this branch's own history (a future 'git gc' could prune it at any time); "
+            "regenerate against the actual current commit (e.g. '--target-sha HEAD --write')"
+        ]
+    return []
 
 
 def list_tree(repo_root: Path, target_sha: str) -> List[GitEntry]:

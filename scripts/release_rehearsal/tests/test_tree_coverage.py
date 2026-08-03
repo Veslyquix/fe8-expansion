@@ -853,6 +853,72 @@ class CombinedRequiredPathsTests(unittest.TestCase):
         self.assertEqual(combined, ["a.txt"])
 
 
+class CliWriteFromIndexGuardTests(unittest.TestCase):
+    """Final-review-found finding #2 (durable fix): mirrors
+    allowlist.py's identical '--write'-from-'index' refusal for
+    `export_exclusions.json` -- both checked-in evidence documents make
+    the exact same 'generation_basis_sha' promise, so both CLIs must
+    refuse the exact same defect the same way."""
+
+    def test_write_from_index_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo_with_gitlink(root)
+            (root / "staged.txt").write_text("staged-not-committed\n")
+            _git("add", "staged.txt", cwd=root)
+
+            exclusions_path = root / "exclusions.json"
+            rc = tc.main(
+                [
+                    "generate-exclusions",
+                    "--repo-root", str(root),
+                    "--exclusions", str(exclusions_path),
+                    "--target-sha", "index",
+                    "--write",
+                ]
+            )
+            self.assertEqual(rc, 2)
+            self.assertFalse(exclusions_path.exists())
+
+    def test_generate_from_index_without_write_still_allowed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo_with_gitlink(root)
+            (root / "staged.txt").write_text("staged-not-committed\n")
+            _git("add", "staged.txt", cwd=root)
+
+            exclusions_path = root / "exclusions.json"
+            rc = tc.main(
+                [
+                    "generate-exclusions",
+                    "--repo-root", str(root),
+                    "--exclusions", str(exclusions_path),
+                    "--target-sha", "index",
+                ]
+            )
+            self.assertEqual(rc, 0)
+            self.assertFalse(exclusions_path.exists())
+
+    def test_write_from_head_is_allowed_and_passes_generation_basis_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo_with_gitlink(root)
+
+            exclusions_path = root / "exclusions.json"
+            rc = tc.main(
+                [
+                    "generate-exclusions",
+                    "--repo-root", str(root),
+                    "--exclusions", str(exclusions_path),
+                    "--target-sha", "HEAD",
+                    "--write",
+                ]
+            )
+            self.assertEqual(rc, 0)
+            self.assertTrue(exclusions_path.exists())
+            self.assertEqual(gs.check_generation_basis_is_commit(root, exclusions_path), [])
+
+
 class RepositoryStateTests(unittest.TestCase):
     """The real, checked-in source_allowlist.json and export_exclusions.json
     must together be an exact, disjoint partition of this repository's own

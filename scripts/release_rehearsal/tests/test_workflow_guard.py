@@ -292,6 +292,155 @@ class AnchorAliasTagTemplateUsesTests(unittest.TestCase):
         self.assertTrue(any("template" in v.lower() or "expression" in v.lower() for v in violations), violations)
 
 
+class HashInPlainScalarNotACommentBypassTests(unittest.TestCase):
+    """Final-review-found critical bypass: YAML's comment indicator
+    ("#") only ever starts a comment when it is the first character on
+    a line or is immediately preceded by whitespace (YAML spec 6.2.4 /
+    7.3.3). A "#" glued directly onto a preceding plain-scalar
+    character (e.g. `setup#`) is simply an ordinary character embedded
+    in that scalar -- NOT a comment -- so it must never cause the rest
+    of the physical line (or any later `uses:` key on it) to be
+    silently discarded."""
+
+    SHA_A = "a" * 40
+
+    def test_exact_bypass_flow_mapping_uses_after_hash_glued_plain_scalar_is_found_and_rejected(self):
+        """The exact reported bypass: a naive "any unquoted '#' starts
+        a comment" scanner discards the real 'uses:' key that follows
+        'setup#' on the same physical line, so a mutable ref to a
+        dangerous-sounding action silently passes every check."""
+        text = GOOD_WORKFLOW + "      - {name: setup#, uses: evilcorp/upload-secrets@main}\n"
+        occurrences = wg.extract_uses_occurrences(text)
+        self.assertTrue(
+            any(o.action_ref == "evilcorp/upload-secrets@main" for o in occurrences),
+            occurrences,
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("evilcorp/upload-secrets@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+        self.assertTrue(
+            any("evilcorp/upload-secrets@main" in v and "dangerous-sounding" in v for v in violations),
+            violations,
+        )
+
+    def test_immutable_uses_after_hash_glued_plain_scalar_is_accepted(self):
+        """The mirror-image, non-adversarial case: a '#'-containing
+        plain scalar earlier in the same flow mapping must never cause
+        a perfectly good, correctly SHA-pinned 'uses:' that follows it
+        to be mistakenly flagged either -- discovery must work
+        identically for both a mutable and an immutable ref."""
+        text = GOOD_WORKFLOW + f"      - {{name: setup#, uses: actions/setup-node@{self.SHA_A}}}\n"
+        occurrences = wg.extract_uses_occurrences(text)
+        self.assertTrue(
+            any(o.action_ref == f"actions/setup-node@{self.SHA_A}" for o in occurrences),
+            occurrences,
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-node" in v], [])
+
+    def test_block_style_hash_glued_name_does_not_hide_uses_on_next_line(self):
+        """Block-style variant of the same shape: 'name: setup#' on its
+        own physical line must never swallow the very real 'uses:' key
+        that follows on the *next* line either."""
+        text = GOOD_WORKFLOW + (
+            "      - name: setup#\n"
+            "        uses: evilcorp/upload-secrets@main\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("evilcorp/upload-secrets@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+    def test_genuine_whitespace_preceded_comment_still_hides_only_its_own_line(self):
+        """A *genuine* comment (its '#' properly preceded by whitespace)
+        must still behave exactly as before: it is ignored, and never
+        hides a real 'uses:' key on the very next line."""
+        text = GOOD_WORKFLOW + (
+            "      # a genuine comment mentioning uses: fake@bad should never count\n"
+            f"      - uses: actions/setup-node@{self.SHA_A}\n"
+        )
+        occurrences = wg.extract_uses_occurrences(text)
+        self.assertEqual(
+            [o.action_ref for o in occurrences if "setup-node" in o.action_ref],
+            [f"actions/setup-node@{self.SHA_A}"],
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "setup-node" in v], [])
+
+    def test_start_of_line_hash_is_still_a_genuine_comment(self):
+        """A '#' that is the very first character on a line (no
+        indentation at all) must still be recognized as a comment --
+        the fix narrows *unconditional* comment recognition, it must
+        never remove the legitimate start-of-line case."""
+        text = GOOD_WORKFLOW + (
+            "#uses: fake@bad\n"
+            f"      - uses: actions/setup-node@{self.SHA_A}\n"
+        )
+        violations = wg.validate_workflow_text(text)
+        self.assertEqual([v for v in violations if "fake@bad" in v], [])
+        self.assertEqual([v for v in violations if "setup-node" in v and "not pinned" in v], [])
+
+    def test_hash_embedded_in_uses_plain_value_itself_is_parsed_not_truncated(self):
+        """A '#' embedded directly inside a 'uses:' plain *value* (no
+        preceding whitespace) must be treated as literal value content,
+        never as a truncating comment start -- so the real, full,
+        dangerous ref is what gets validated, not a silently
+        truncated/garbled prefix of it."""
+        text = GOOD_WORKFLOW + "      - uses: evilcorp/upload-secrets@ma#in\n"
+        occurrences = [o for o in wg.extract_uses_occurrences(text) if "upload-secrets" in o.action_ref]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].action_ref, "evilcorp/upload-secrets@ma#in")
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("evilcorp/upload-secrets@ma#in" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+        self.assertTrue(
+            any("evilcorp/upload-secrets@ma#in" in v and "dangerous-sounding" in v for v in violations),
+            violations,
+        )
+
+    def test_hash_immediately_after_colon_no_whitespace_is_not_a_comment(self):
+        """'uses:#comment-shaped-text' -- no whitespace at all separates
+        the colon from the '#' -- must never be treated as an implicit
+        empty value with a trailing comment (there is no whitespace to
+        satisfy YAML's separation requirement): the '#...' text is
+        literal value content instead."""
+        text = GOOD_WORKFLOW + "      - uses:#evilcorp/upload-secrets@main\n"
+        occurrences = [o for o in wg.extract_uses_occurrences(text) if "evilcorp" in o.action_ref]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].action_ref, "#evilcorp/upload-secrets@main")
+
+    def test_quoted_hash_in_value_still_never_treated_as_comment(self):
+        """A quoted 'uses:' value containing '#' must still be parsed
+        exactly as its decoded quoted content, exactly as before this
+        fix -- quoted-scalar scanning never treated '#' specially in
+        the first place, and this fix must not regress that."""
+        text = GOOD_WORKFLOW + '      - uses: "evilcorp/upload-secrets#weird@main"\n'
+        occurrences = [o for o in wg.extract_uses_occurrences(text) if "upload-secrets" in o.action_ref]
+        self.assertEqual(len(occurrences), 1)
+        self.assertEqual(occurrences[0].action_ref, "evilcorp/upload-secrets#weird@main")
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("evilcorp/upload-secrets#weird@main" in v and "dangerous-sounding" in v for v in violations),
+            violations,
+        )
+
+    def test_flow_sequence_variant_of_bypass_also_found_and_rejected(self):
+        """The same bypass shape nested inside a flow *sequence*
+        ('[...]') must be found and rejected exactly like the plain
+        flow-mapping case."""
+        text = GOOD_WORKFLOW + "      - x: [{name: setup#, uses: evilcorp/upload-secrets@main}]\n"
+        violations = wg.validate_workflow_text(text)
+        self.assertTrue(
+            any("evilcorp/upload-secrets@main" in v and "not pinned to an immutable" in v for v in violations),
+            violations,
+        )
+
+
 class CommentsSpacingAndMultipleUsesTests(unittest.TestCase):
     """Comment/whitespace variants, and more than one `uses:` token
     appearing within a single physical text line, must never confuse
