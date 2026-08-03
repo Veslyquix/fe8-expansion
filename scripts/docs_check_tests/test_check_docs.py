@@ -945,6 +945,50 @@ class StaleIssue6Issue18StatusRegressionTests(unittest.TestCase):
         )
 
 
+class ProjectWikiStatusRegressionTests(unittest.TestCase):
+    def test_old_uninitialized_wiki_claims_are_flagged(self):
+        stale_claims = (
+            "This project's wiki is uninitialized/nonexistent.",
+            "There were no project wiki pages to migrate or update.",
+        )
+        for claim in stale_claims:
+            with self.subTest(claim=claim), TempRepo() as repo:
+                write(repo.root, "doc.md", claim + "\n")
+                findings = check_docs.check_stale_phrases(["doc.md"], repo.root)
+                self.assertTrue(findings)
+
+    def test_current_wiki_portal_policy_passes(self):
+        with TempRepo() as repo:
+            write(
+                repo.root,
+                "doc.md",
+                "The project wiki is an initialized navigation portal; "
+                "versioned repository docs remain authoritative.\n",
+            )
+            findings = check_docs.check_stale_phrases(["doc.md"], repo.root)
+            self.assertEqual(findings, [])
+
+    def test_repository_docs_link_the_project_wiki(self):
+        readme = check_docs.read_text(os.path.join(REAL_REPO_ROOT, "README.md"))
+        governance = check_docs.read_text(os.path.join(
+            REAL_REPO_ROOT, "docs", "project-governance.md"
+        ))
+        audit = check_docs.read_text(os.path.join(
+            REAL_REPO_ROOT, "reports", "issue17_documentation_audit.md"
+        ))
+        project_wiki = "https://github.com/laqieer/fireemblem8-expansion/wiki"
+
+        self.assertIn(project_wiki, readme)
+        self.assertIn(project_wiki, governance)
+        self.assertIn("9ae044feee766b75317391c024478f17377469a4", audit)
+        self.assertEqual(
+            check_docs.check_stale_phrases(
+                ["reports/issue17_documentation_audit.md"], REAL_REPO_ROOT
+            ),
+            [],
+        )
+
+
 # ---------------------------------------------------------------------------
 # Issue #17 verifier finding regression: docs/quickstart.md previously
 # hardcoded modern-object counts (18/21/363/435/438) that drifted out of

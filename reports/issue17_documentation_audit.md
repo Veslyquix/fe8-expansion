@@ -37,15 +37,15 @@ are superseded. Current policy is set equality, not a frozen count:
 
 ### Issue #17 wiki-scope acceptance mapping (manual, point-in-time)
 
-Issue #17's wiki scope has no missing migration deliverable. The project GitHub
-Wiki capability is enabled, but this project's wiki is uninitialized/nonexistent:
-there were no project wiki pages to migrate or update. Repository documentation
-is therefore the authoritative deliverable. Any external wiki links in repository
-docs are `[historical upstream]` (the offline registry status is
-`historical-upstream`), provenance only, and never this project's authority.
+The project wiki is initialized and maintained as a concise navigation portal,
+not a second copy of the technical documentation. Its Home page and sidebar
+link to the versioned repository guides. Repository Markdown remains
+authoritative and CI-checked; wiki changes are manually reviewed in the
+separate wiki Git repository. External `fireemblem8u` wiki links remain
+`[historical upstream]` provenance references.
 
 The following commands and results were captured manually on
-2026-08-03T04:35Z as acceptance evidence:
+2026-08-03T08:37Z as acceptance evidence:
 
 ```text
 $ gh api repos/laqieer/fireemblem8-expansion \
@@ -53,17 +53,17 @@ $ gh api repos/laqieer/fireemblem8-expansion \
 {"full_name":"laqieer/fireemblem8-expansion","has_wiki":true}
 
 $ git ls-remote https://github.com/laqieer/fireemblem8-expansion.wiki.git
-remote: Repository not found.
-fatal: repository 'https://github.com/laqieer/fireemblem8-expansion.wiki.git/' not found
-# exit status: 128
+9ae044feee766b75317391c024478f17377469a4	HEAD
+9ae044feee766b75317391c024478f17377469a4	refs/heads/master
 ```
 
 These are manually captured network/metadata observations, not CI checks and
 not behavior of `scripts/check_docs.py`. The offline docs checker never contacts
 GitHub and only verifies exact recognized-Markdown inventory, internal
 link/anchor syntax and resolution, external-URL registry coverage, and
-classification (including `[historical upstream]`). It neither live-checks
-external URL availability nor asserts that an external wiki is reachable.
+classification (including `authoritative-self` for the project wiki and
+`[historical upstream]` for the upstream wiki). It neither live-checks external
+URL availability nor asserts that a wiki is reachable.
 
 
 ### Current audit validation evidence

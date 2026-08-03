@@ -11,7 +11,9 @@ an explicit, unbroken **archival** side lane for decomp-matching work — see
 [`docs/archival-decomp.md`](docs/archival-decomp.md).
 
 📚 **[Full documentation index](docs/README.md)** — start there for
-architecture, support matrix, governance, and migration guides.
+architecture, support matrix, governance, and migration guides. The
+**[project wiki](https://github.com/laqieer/fireemblem8-expansion/wiki)**
+is a concise navigation portal to those authoritative repository docs.
 
 ## Quick start
 
@@ -79,8 +81,8 @@ provenance): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 The repository-only path is therefore: quickstart -> configure -> author
 JSON/content and locale catalogs -> build -> run host and ROM gates -> debug
-with the bounded debug-tools and libmGBA scenario harness. No upstream wiki is
-required for that path.
+with the bounded debug-tools and libmGBA scenario harness. The project wiki is
+optional navigation; no wiki is required for that path.
 
 ## Support, compatibility, and governance
 
@@ -107,4 +109,4 @@ repository — see [`docs/project-governance.md`](docs/project-governance.md#cre
 [![Data](https://decomp.dev/laqieer/fireemblem8u/us.svg?mode=shield&measure=matched_data_percent&label=Data)](https://decomp.dev/laqieer/fireemblem8u/us)
 [![Functions](https://decomp.dev/laqieer/fireemblem8u/us.svg?mode=shield&measure=matched_functions_percent&label=Functions)](https://decomp.dev/laqieer/fireemblem8u/us)
 
-[Wiki](https://github.com/laqieer/fireemblem8u/wiki) · [FE Decomp Portal](https://laqieer.github.io/fe-decomp-portal/) · [decomp.dev](https://decomp.dev/laqieer/fireemblem8u/us)
+[Upstream wiki](https://github.com/laqieer/fireemblem8u/wiki) · [FE Decomp Portal](https://laqieer.github.io/fe-decomp-portal/) · [decomp.dev](https://decomp.dev/laqieer/fireemblem8u/us)

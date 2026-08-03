@@ -137,6 +137,15 @@ STALE_PHRASE_RULES = [
         "stale claim: scripts/quickstart.sh installs the modern toolchain "
         "(no agbcc) by default; agbcc is only installed with --legacy/--refresh-agbcc",
     ),
+    (
+        re.compile(
+            r"(?:this project(?:'s)? wiki is uninitialized/nonexistent|"
+            r"there were no project wiki pages to migrate or update)",
+            re.IGNORECASE,
+        ),
+        "stale claim: the fireemblem8-expansion project wiki is initialized "
+        "and maintained as a navigation portal; repository docs remain authoritative",
+    ),
     # Issue #17 verifier finding: docs/quickstart.md hardcoded modern-object
     # counts (18/21/363/435/438) that drifted out of sync with modern.mk's
     # actual MODERN_COHORT_*/MODERN_ALL_* variables. The fix replaced every

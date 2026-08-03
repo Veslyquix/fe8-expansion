@@ -5,6 +5,9 @@ The project's default, supported path is a **modern `arm-none-eabi`
 GCC/AAPCS release framework**; the original agbcc-based decompilation
 workflow is preserved as an explicit, clearly separated **archival** lane.
 See [`../README.md`](../README.md) for the top-level project overview.
+The [project wiki](https://github.com/laqieer/fireemblem8-expansion/wiki)
+provides a concise navigation portal; the versioned files indexed here remain
+the authoritative technical documentation and are checked by CI.
 
 ## Start here
 

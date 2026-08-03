@@ -48,7 +48,7 @@ repo) instead of one registry line per pinned link.
 <!-- EXTERNAL-LINK-REGISTRY:BEGIN -->
 - prefix:https://github.com/laqieer/fireemblem8u | laqieer | historical-upstream | Canonical upstream decomp repo: wiki, blob/tree/commit links (incl. docs/tsa_audit.md's ~500 pinned-commit asset links), .git clone URL. Wiki is provenance, not a mirrored source of truth for this repo -- see docs/project-governance.md.
 - prefix:https://decomp.dev/laqieer/fireemblem8u | laqieer | historical-upstream | decomp.dev match-percentage tracker + badges for the upstream decomp project.
-- prefix:https://github.com/laqieer/fireemblem8-expansion | laqieer | authoritative-self | This repository's own GitHub Actions/badge/issue links.
+- prefix:https://github.com/laqieer/fireemblem8-expansion | laqieer | authoritative-self | This repository's own GitHub Actions/badge/issue links and project-wiki navigation portal.
 - prefix:https://github.com/laqieer/fe-maps | laqieer | downstream-reference | Downstream project consuming this repo's ELF for browsable ROM/RAM maps.
 - prefix:https://github.com/laqieer/FE_GBA_Function_Library | laqieer | downstream-reference | Downstream cross-game function-documentation project.
 - prefix:https://github.com/laqieer/FE-Clib-Decomp | laqieer | downstream-reference | Downstream ROM-hacking linker-script/Event-Assembler-define project.

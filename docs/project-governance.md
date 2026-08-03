@@ -75,6 +75,20 @@ guaranteed private-disclosure email address, contact method, or SLA.
 
 ## Credits and downstream context
 
+### Project wiki
+
+The [fireemblem8-expansion project wiki](https://github.com/laqieer/fireemblem8-expansion/wiki)
+is maintained as a concise navigation portal. Its Home page and sidebar link
+to the versioned repository documentation; they do not duplicate the full
+technical guides. The Markdown files under `docs/` and the repository root
+remain authoritative because they are reviewed with source changes and checked
+by `scripts/check_docs.py` in CI.
+
+Wiki changes are reviewed manually in the separate
+`fireemblem8-expansion.wiki.git` repository. Repository CI does not fetch or
+live-check the wiki. The upstream `fireemblem8u` wiki below is a distinct,
+historical provenance reference.
+
 Projects that consume this repository's ELF/decomp output:
 
 - [**fe-maps**](https://github.com/laqieer/fe-maps) ([site](https://laqieer.github.io/fe-maps/)) — browsable ROM/RAM data maps extracted with `readelf`/`nm -l`.
