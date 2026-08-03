@@ -358,6 +358,43 @@ class ResolveInternalLinkTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("anchor", msg)
 
+    def test_cross_file_anchor_matrix_for_all_recognized_extension_cases(self):
+        variants = {
+            ".md": (".md", ".MD", ".Md"),
+            ".markdown": (".markdown", ".MARKDOWN", ".MarkDown"),
+            ".mdown": (".mdown", ".MDOWN", ".MDown"),
+            ".mkd": (".mkd", ".MKD", ".Mkd"),
+            ".mkdn": (".mkdn", ".MKDN", ".MkDn"),
+        }
+        for family, case_variants in variants.items():
+            for extension in case_variants:
+                target = "anchor-target" + extension
+                write(self.root, "docs/" + target, "# Target\n\n## Cross File Heading\n")
+                with self.subTest(family=family, target=target, anchor="valid"):
+                    ok, msg = check_docs.resolve_internal_link(
+                        self.root, "docs/b.md", target + "#cross-file-heading", {},
+                    )
+                    self.assertTrue(ok, msg)
+                with self.subTest(family=family, target=target, anchor="broken"):
+                    ok, msg = check_docs.resolve_internal_link(
+                        self.root, "docs/b.md", target + "#missing-heading", {},
+                    )
+                    self.assertFalse(ok)
+                    self.assertIn("anchor", msg)
+
+    def test_recognized_markdown_path_predicate_is_closed_and_case_insensitive(self):
+        for extension in check_docs.RECOGNIZED_MARKDOWN_EXTENSIONS:
+            with self.subTest(extension=extension):
+                self.assertTrue(check_docs.is_recognized_markdown_path("doc" + extension))
+                self.assertTrue(check_docs.is_recognized_markdown_path(
+                    "doc" + extension.upper()
+                ))
+        for extension in (".mdx", ".txt", ".rst", ""):
+            with self.subTest(extension=extension):
+                self.assertFalse(check_docs.is_recognized_markdown_path(
+                    "doc" + extension
+                ))
+
     def test_path_escape_rejected(self):
         ok, msg = check_docs.resolve_internal_link(self.root, "docs/b.md", "../../../../etc/passwd", {})
         self.assertFalse(ok)
@@ -818,6 +855,93 @@ class StalePhraseTests(unittest.TestCase):
             write(root, "doc.md", "This project uses a modern toolchain by default.\n")
             findings = check_docs.check_stale_phrases(["doc.md"], root)
             self.assertEqual(findings, [])
+
+
+# ---------------------------------------------------------------------------
+# Issues #7/#17 final-verifier regression: current status must not group
+# merged issues #6/#18 with future #9 or claim their committed APIs are absent.
+# The checker remains offline: repository docs and headers are the evidence.
+# ---------------------------------------------------------------------------
+
+class StaleIssue6Issue18StatusRegressionTests(unittest.TestCase):
+    OLD_STALE_WORDING = (
+        "Issues #6, #9, and #18 remain open/active -- this is the real "
+        "remaining scope.",
+        "No public starter-feature hook registry (#6) exists in this baseline yet.",
+        "No language-selection config API (#18) exists in this baseline yet.",
+    )
+
+    def test_old_status_and_absent_api_wording_is_flagged(self):
+        for phrase in self.OLD_STALE_WORDING:
+            with self.subTest(phrase=phrase), TempRepo() as repo:
+                write(repo.root, "doc.md", phrase + "\n")
+                findings = check_docs.check_stale_phrases(["doc.md"], repo.root)
+                self.assertTrue(findings, "expected a finding for: %r" % phrase)
+
+    def test_old_wrapped_audit_paragraph_is_flagged(self):
+        with TempRepo() as repo:
+            write(
+                repo.root,
+                "doc.md",
+                "Issues #6, #9, and #18 remain open/active -- this is the real\n"
+                "remaining scope of this bullet list. No public starter-feature\n"
+                "hook registry (#6), release/versioning tooling (#9), or\n"
+                "language-selection config API (#18) exists in this baseline yet.\n",
+            )
+            findings = check_docs.check_stale_phrases(["doc.md"], repo.root)
+            self.assertTrue(findings)
+
+    def test_accurate_current_wording_passes(self):
+        with TempRepo() as repo:
+            write(
+                repo.root,
+                "doc.md",
+                "Issues #6 starter features and #18 localization are closed/merged; "
+                "their committed public APIs exist. Only #9 remains future/unmerged.\n",
+            )
+            findings = check_docs.check_stale_phrases(["doc.md"], repo.root)
+            self.assertEqual(findings, [])
+
+    def test_explicitly_superseded_history_passes(self):
+        with TempRepo() as repo:
+            write(
+                repo.root,
+                "doc.md",
+                "Historical snapshot (superseded): before integration, the #6 hook "
+                "registry and #18 locale API had not landed.\n",
+            )
+            findings = check_docs.check_stale_phrases(["doc.md"], repo.root)
+            self.assertEqual(findings, [])
+
+    def test_current_report_docs_and_headers_prove_merged_status(self):
+        audit_path = os.path.join("reports", "issue17_documentation_audit.md")
+        audit = check_docs.read_text(os.path.join(REAL_REPO_ROOT, audit_path))
+        architecture = check_docs.read_text(os.path.join(
+            REAL_REPO_ROOT, "docs", "architecture.md"
+        ))
+        framework = check_docs.read_text(os.path.join(
+            REAL_REPO_ROOT, "docs", "framework-support.md"
+        ))
+        mechanics = check_docs.read_text(os.path.join(
+            REAL_REPO_ROOT, "include", "expansion_mechanics.h"
+        ))
+        locale = check_docs.read_text(os.path.join(
+            REAL_REPO_ROOT, "include", "expansion_locale.h"
+        ))
+
+        self.assertIn(
+            "#6 starter features and #18 localization are closed/merged", audit
+        )
+        self.assertIn("Only #9 remains future/unmerged", audit)
+        self.assertIn("## Starter extension layer (issue #6)", architecture)
+        self.assertIn("## Localization layer (issue #18)", architecture)
+        self.assertIn("## Merged framework contracts", framework)
+        self.assertIn("## Future versioned release work (issue #9)", framework)
+        self.assertIn("ExpansionMechanicsRegister(", mechanics)
+        self.assertIn("ExpansionLocale_SetCurrent(", locale)
+        self.assertEqual(
+            check_docs.check_stale_phrases([audit_path], REAL_REPO_ROOT), []
+        )
 
 
 # ---------------------------------------------------------------------------

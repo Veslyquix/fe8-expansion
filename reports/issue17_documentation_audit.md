@@ -1,12 +1,12 @@
 # Issue #17 closure evidence -- documentation audit
 
 **Status: candidate closure-mapping evidence for reviewer/verifier. GitHub
-issue #17's state is not asserted or changed by this document; no CI run
-URL, merged state, or "wiki checked online" claim is made here.** This
-report records the 100% Markdown-inventory audit, link/external-URL
-classification, authoritative/historical/generated/deprecated status
-accounting, and the checker/CI evidence backing it, plus the remaining
-follow-up work.
+issue #17's state is not asserted or changed by this document; no CI run URL,
+merged state, or claim that CI contacted GitHub is made here.** This report
+records the 100% Markdown-inventory audit, link/external-URL classification,
+authoritative/historical/generated/deprecated status accounting, and the
+offline checker/CI evidence backing it. A separately labeled, manually captured
+point-in-time GitHub wiki acceptance check appears below; it is not a CI gate.
 
 
 ## Current master-integration audit (supersedes all gate/status/count snapshots below)
@@ -16,26 +16,64 @@ their hardcoded file counts, pre-merge #6/#18 status, and any 12-gate wording
 are superseded. Current policy is set equality, not a frozen count:
 
 - recognized Markdown extensions are `.md`, `.markdown`, `.mdown`, `.mkd`,
-  and `.mkdn`, case-insensitive, discovered from Git's complete tracked plus
-  untracked-not-ignored set;
+  and `.mkdn`, case-insensitive; one closed-set predicate governs both Git's
+  complete tracked-plus-untracked-not-ignored discovery and cross-file anchor
+  validation, including uppercase/mixed-case targets;
 - inventory entries must match that set exactly and every HTTP(S) occurrence
   must match the offline external registry; no online link check is claimed;
-- #6 starter features and #18 localization are now integrated into current
-  navigation, source-of-truth/API/support tables, config/save/migration docs,
-  and positive/negative host/runtime/debug/release/shifted/save matrices;
+- #6 starter features and #18 localization are closed/merged and integrated
+  into current navigation, source-of-truth/API/support tables,
+  config/save/migration docs, and positive/negative
+  host/runtime/debug/release/shifted/save matrices; their committed public APIs
+  are documented in [`docs/starter_features.md`](../docs/starter_features.md)
+  and [`docs/localization.md`](../docs/localization.md); narrow offline
+  stale-status rules reject their former active/absent-API wording while
+  preserving explicitly superseded historical evidence;
 - upstream-port `verify` has all 11 current-master mirrored commands,
   including the localization host suite; the independent issues #7/#17 docs
   workflow gate is additional and intentionally absent from `verify.gates()`;
 - #9 remains future work: the template is not release automation or a current
   migration process.
 
+### Issue #17 wiki-scope acceptance mapping (manual, point-in-time)
+
+Issue #17's wiki scope has no missing migration deliverable. The project GitHub
+Wiki capability is enabled, but this project's wiki is uninitialized/nonexistent:
+there were no project wiki pages to migrate or update. Repository documentation
+is therefore the authoritative deliverable. Any external wiki links in repository
+docs are `[historical upstream]` (the offline registry status is
+`historical-upstream`), provenance only, and never this project's authority.
+
+The following commands and results were captured manually on
+2026-08-03T04:35Z as acceptance evidence:
+
+```text
+$ gh api repos/laqieer/fireemblem8-expansion \
+  --jq '{full_name: .full_name, has_wiki: .has_wiki}'
+{"full_name":"laqieer/fireemblem8-expansion","has_wiki":true}
+
+$ git ls-remote https://github.com/laqieer/fireemblem8-expansion.wiki.git
+remote: Repository not found.
+fatal: repository 'https://github.com/laqieer/fireemblem8-expansion.wiki.git/' not found
+# exit status: 128
+```
+
+These are manually captured network/metadata observations, not CI checks and
+not behavior of `scripts/check_docs.py`. The offline docs checker never contacts
+GitHub and only verifies exact recognized-Markdown inventory, internal
+link/anchor syntax and resolution, external-URL registry coverage, and
+classification (including `[historical upstream]`). It neither live-checks
+external URL availability nor asserts that an external wiki is reachable.
+
+
 ### Current audit validation evidence
 
 All results below were reproduced in this integration worktree; counts are
 point-in-time output, not policy constants:
 
-- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> 182 tests,
-  `OK`.
+- `python3 -m unittest discover -s scripts/docs_check_tests -v` -> 189 tests,
+  `OK`, including valid/broken `resolve_internal_link()` anchors for all five
+  extensions in lower/upper/mixed case and offline #6/#18 stale-status fixtures.
 - `python3 scripts/check_docs.py --check --check-examples` -> 72 recognized
   Markdown files, 0 findings; all three safe help examples passed. This made
   no network requests.
@@ -822,15 +860,19 @@ facts:**
   [CI host matrix](../tools/gba-playtest/README.md#supported-ci-host-matrix);
   macOS/Homebrew local-only support (not CI-exercised) is the one
   documented, narrow gap.
-- **Issues #6, #9, and #18 remain open/active -- this is the real
-  remaining scope of this bullet list.** No public starter-feature
-  hook registry (#6), release/versioning tooling (#9), or
-  language-selection config API (#18) exists in this baseline yet;
-  see
-  [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries)
+- **Current correction (supersedes this audit's pre-integration #6/#18
+  snapshot):** #6 starter features and #18 localization are closed/merged;
+  their public APIs exist in
+  [`include/expansion_mechanics.h`](../include/expansion_mechanics.h) and
+  [`include/expansion_locale.h`](../include/expansion_locale.h), with current
+  contracts in [`docs/starter_features.md`](../docs/starter_features.md),
+  [`docs/localization.md`](../docs/localization.md), and supporting evidence in
+  [`reports/issue6_closure.md`](issue6_closure.md) and
+  [`reports/issue18_localization_closure.md`](issue18_localization_closure.md).
+  **Only #9 remains future/unmerged:** there is no release/versioning tooling;
+  see [`docs/architecture.md`](../docs/architecture.md#public-extension-boundaries)
   and
-  [`docs/framework-support.md`](../docs/framework-support.md#merged-framework-contracts)
-  for the current merged-vs-active boundary.
+  [`docs/framework-support.md`](../docs/framework-support.md#future-versioned-release-work-issue-9).
 - This audit does not re-verify the factual accuracy of every
   historical/archival document against `master` -- only that it is
   inventoried, internally link-consistent, and

@@ -78,12 +78,18 @@ REGISTRY_PATH = "docs/external-link-registry.md"
 # recognized the same as ``readme.md``). Every check keyed off "the set of
 # Markdown files" (inventory exact-coverage, internal-link/anchor
 # resolution, external-URL registry coverage, stale-phrase/object-count
-# scanning) uses this same set via ``discover_markdown_files()`` below --
-# never a bare ``*.md`` glob, which would silently miss a real Markdown
-# file using one of the other four recognized extensions. This is
-# deliberately a fixed, closed set: an unrecognized extension (``.txt``,
-# ``.mdx``, ...) is never swept in just because it looks Markdown-adjacent.
+# scanning) uses ``is_recognized_markdown_path()`` below -- never a bare
+# ``*.md`` glob, which would silently miss a real Markdown file using one of
+# the other four recognized extensions. This is deliberately a fixed, closed
+# set: an unrecognized extension (``.txt``, ``.mdx``, ...) is never swept in
+# just because it looks Markdown-adjacent.
 RECOGNIZED_MARKDOWN_EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".mkdn")
+
+
+def is_recognized_markdown_path(path):
+    """Return whether ``path`` has a recognized Markdown extension."""
+    return os.path.splitext(path)[1].casefold() in RECOGNIZED_MARKDOWN_EXTENSIONS
+
 
 INVENTORY_BEGIN = "<!-- DOCS-INVENTORY:BEGIN -->"
 INVENTORY_END = "<!-- DOCS-INVENTORY:END -->"
@@ -211,6 +217,38 @@ STALE_PHRASE_RULES = [
         "output) does not accept MODERN_ABI=apcs-gnu -- modern.mk's linked-goal guard "
         "requires MODERN_ABI=aapcs and fails fast otherwise; apcs-gnu is compile-only "
         "(expansion-modern-cohort/-all layout comparison only)",
+    ),
+    # Issues #7/#17 independent-verifier finding: the issue #17 audit
+    # retained a current-status paragraph grouping merged issues #6/#18 with
+    # future issue #9 and asserting that the #6/#18 public APIs were absent.
+    # Keep these patterns narrow: explicitly point-in-time/superseded history
+    # remains valid evidence and must not be rejected.
+    (
+        re.compile(
+            r"Issues? #6(?:,\s*#9,?)?\s*(?:and\s+)?#18 remain "
+            r"(?:open/active|open|active)\b",
+            re.IGNORECASE,
+        ),
+        "stale claim: issues #6 starter features and #18 localization are "
+        "closed/merged and their public APIs exist; only #9 remains future/unmerged",
+    ),
+    (
+        re.compile(
+            r"No public starter-feature hook registry \(#6\) exists in this "
+            r"baseline(?: yet)?",
+            re.IGNORECASE,
+        ),
+        "stale claim: issue #6 is merged and include/expansion_mechanics.h "
+        "publishes ExpansionMechanicsRegister()",
+    ),
+    (
+        re.compile(
+            r"No language-selection config API \(#18\) exists in this "
+            r"baseline(?: yet)?",
+            re.IGNORECASE,
+        ),
+        "stale claim: issue #18 is merged and include/expansion_locale.h "
+        "publishes ExpansionLocale_GetCurrent()/ExpansionLocale_SetCurrent()",
     ),
     # Issues #7/#17 independent-verifier finding: docs/generated_data.md and
     # reports/generated_data_issue5_closure.md previously asserted GitHub
@@ -478,8 +516,9 @@ def discover_markdown_files(root):
     .gitignore excludes (build/, tool submodule content, etc.).
 
     Deliberately lists the *entire* tracked+untracked file set (no ``--
-    '*.md'`` pathspec glob) and filters by ``RECOGNIZED_MARKDOWN_EXTENSIONS``
-    in Python: a pathspec glob only ever matches a literal ``.md`` suffix,
+    '*.md'`` pathspec glob) and filters through
+    ``is_recognized_markdown_path()`` in Python: a pathspec glob only ever
+    matches a literal ``.md`` suffix,
     so it would silently miss a real ``.markdown``/``.mdown``/``.mkd``/``.mkdn`` file
     (or an uppercase ``.MD``) entirely -- never even reaching inventory
     coverage, link/anchor resolution, external-URL registry coverage, or
@@ -492,10 +531,7 @@ def discover_markdown_files(root):
         cwd=root, capture_output=True, check=True,
     )
     names = [n for n in out.stdout.decode("utf-8").split("\0") if n]
-    matched = [
-        n for n in names
-        if os.path.splitext(n)[1].casefold() in RECOGNIZED_MARKDOWN_EXTENSIONS
-    ]
+    matched = [n for n in names if is_recognized_markdown_path(n)]
     return sorted(set(matched))
 
 
@@ -822,7 +858,7 @@ def resolve_internal_link(root, source_rel_path, target, heading_slug_cache):
     if not os.path.exists(abs_target):
         return False, "internal link target does not exist: %s" % target
 
-    if anchor and target_path.endswith(".md"):
+    if anchor and is_recognized_markdown_path(target_path):
         if target_path not in heading_slug_cache:
             heading_slug_cache[target_path] = compute_heading_slugs(
                 strip_fenced_blocks(read_text(abs_target))
