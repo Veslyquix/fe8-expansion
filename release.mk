@@ -111,13 +111,51 @@
 #                                    exclusion, and provenance record must
 #                                    all agree exactly. Never fetches/
 #                                    initializes the submodule.
+# release-epoch-claims-check      : standalone direct invocation of
+#                                    scripts/release_rehearsal/epoch_claims.py
+#                                    (issue #9 verifier remediation) --
+#                                    scans release docs/headers for a
+#                                    stale current-state
+#                                    EXPANSION_SAVE_COMPAT_EPOCH claim
+#                                    (e.g. "epoch stays 1" after a later
+#                                    commit actually bumped it). Already
+#                                    folded into every `release-check`/
+#                                    `release-rehearse` report too (see
+#                                    manifest.py's "epoch_claims" sub-
+#                                    report) -- this target exists for a
+#                                    fast, standalone, non-JSON check.
+# release-stale-count-claims-check: standalone direct invocation of
+#                                    scripts/release_rehearsal/stale_count_claims.py
+#                                    (issue #9 verifier remediation) --
+#                                    scans release closure evidence/docs
+#                                    for a hardcoded aggregate test-count
+#                                    claim (e.g. "(860 tests)"). Already
+#                                    folded into every `release-check`/
+#                                    `release-rehearse` report too (see
+#                                    manifest.py's "stale_count_claims"
+#                                    sub-report).
 
 .PHONY: release-test release-migrations-check release-rehearse release-check \
         release-changelog-check release-check-require-eligible \
         release-rehearse-require-eligible release-check-expect-blocked \
         release-rehearse-expect-blocked release-workflow-guard \
         release-action-pins-check release-tree-coverage-check \
-        release-submodule-binding-check
+        release-submodule-binding-check release-epoch-claims-check \
+        release-stale-count-claims-check
+
+# RELEASE_TARGET_SHA -- issue #9 mandatory correction (exact target-SHA
+# binding): every publication-eligibility/rehearsal target below passes
+# this explicitly as `--target-sha`, rather than letting
+# scripts/release_rehearsal/manifest.py's own `resolve_target_sha`
+# implicitly fall back to a bare `git rev-parse HEAD` call. Locally, this
+# still resolves to the exact current HEAD by default (identical
+# behavior to before) -- but it is now an explicit, auditable value any
+# caller can see/override, and CI (.github/workflows/release-rehearsal.yml)
+# overrides it via a job-level `env: RELEASE_TARGET_SHA: ${{ github.sha }}`
+# so the *exact, immutable checked-out commit* is what every eligibility
+# check actually binds to, never an independently-resolved value that
+# could theoretically disagree with the checkout step.
+RELEASE_TARGET_SHA ?= $(shell git rev-parse HEAD)
 
 release-test:
 	$(PYTHON) -m unittest discover -s scripts/release_rehearsal/tests -v
@@ -130,22 +168,22 @@ release-changelog-check:
 	$(PYTHON) -m scripts.release_rehearsal.changelog check
 
 release-rehearse:
-	$(PYTHON) -m scripts.release_rehearsal.cli rehearse
+	$(PYTHON) -m scripts.release_rehearsal.cli rehearse --target-sha $(RELEASE_TARGET_SHA)
 
 release-check:
-	$(PYTHON) -m scripts.release_rehearsal.cli check
+	$(PYTHON) -m scripts.release_rehearsal.cli check --target-sha $(RELEASE_TARGET_SHA)
 
 release-check-require-eligible:
-	$(PYTHON) -m scripts.release_rehearsal.cli check --require-eligible
+	$(PYTHON) -m scripts.release_rehearsal.cli check --target-sha $(RELEASE_TARGET_SHA) --require-eligible
 
 release-rehearse-require-eligible:
-	$(PYTHON) -m scripts.release_rehearsal.cli rehearse --require-eligible
+	$(PYTHON) -m scripts.release_rehearsal.cli rehearse --target-sha $(RELEASE_TARGET_SHA) --require-eligible
 
 release-check-expect-blocked:
-	$(PYTHON) -m scripts.release_rehearsal.cli check --expect-status blocked
+	$(PYTHON) -m scripts.release_rehearsal.cli check --target-sha $(RELEASE_TARGET_SHA) --expect-status blocked
 
 release-rehearse-expect-blocked:
-	$(PYTHON) -m scripts.release_rehearsal.cli rehearse --expect-status blocked
+	$(PYTHON) -m scripts.release_rehearsal.cli rehearse --target-sha $(RELEASE_TARGET_SHA) --expect-status blocked
 
 release-workflow-guard:
 	$(PYTHON) -m scripts.release_rehearsal.cli workflow-guard .github/workflows/release-rehearsal.yml
@@ -158,3 +196,9 @@ release-tree-coverage-check:
 
 release-submodule-binding-check:
 	$(PYTHON) -m scripts.release_rehearsal.submodule_binding
+
+release-epoch-claims-check:
+	$(PYTHON) -m scripts.release_rehearsal.epoch_claims
+
+release-stale-count-claims-check:
+	$(PYTHON) -m scripts.release_rehearsal.stale_count_claims

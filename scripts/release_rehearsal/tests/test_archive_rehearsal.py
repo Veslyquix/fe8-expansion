@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.release_rehearsal import archive_rehearsal as ar
 from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import source_guard as sg
+from scripts.modernize import verify_rom_header as vrh
 
 
 def _git(*args, cwd):
@@ -864,6 +865,384 @@ class RunBuildTwiceFromImmutableSourceTests(unittest.TestCase):
                     ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
             self.assertIn("same directory", str(ctx.exception))
 
+    # --- issue #9 mandatory correction: EXPANSION_BUILD_ID env binding ----
+
+    def test_expansion_build_id_env_is_set_to_the_exact_target_sha(self):
+        """Every materialization lacking `.git` (every `git archive`
+        extraction this function ever produces) must receive exactly
+        `EXPANSION_BUILD_ID=<target_sha>` in its build environment."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import os; open('out.bin', 'w').write(os.environ.get('EXPANSION_BUILD_ID', ''))",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertTrue(result["match"], result)
+
+    def test_materialization_has_no_git_metadata_so_build_id_env_is_the_only_identity_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import pathlib; "
+                "assert not pathlib.Path('.git').exists(); "
+                "open('out.bin', 'w').write('ok')",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertEqual(result["returncode1"], 0, result["stderr1_tail"])
+            self.assertEqual(result["returncode2"], 0, result["stderr2_tail"])
+
+    # --- issue #9 mandatory correction: embedded short-SHA verification --
+
+    def test_embedded_metadata_matching_target_sha_reports_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "import os,struct;c=os.environ.get('EXPANSION_BUILD_ID','unknown').encode('ascii');d=struct.pack('<4sBBBBI16s41s17s8s12s13s5s3sBIIBB2s',b'FE8M',0,1,0,0,256,b'0.1.0',c,b'',b'release',b'aapcs',b'FIREEMBLEM2E',b'BE8E',b'01',0,0,0,0,0,b'');open('fake.elf','wb').write(d);open('fake.gba','wb').write(d)"]
+            result = ar.run_build_twice_from_immutable_source(
+                root, sha, build_command, ["fake.elf", "fake.gba"],
+            )
+            self.assertTrue(result["match"], result)
+            self.assertTrue(result["embedded_metadata_checked"])
+            self.assertEqual(result["embedded_metadata_mismatches"], [])
+            self.assertEqual(result["embedded_build_commit"], sha)
+            self.assertEqual(result["embedded_short_sha"], sha[:8])
+
+    def test_embedded_metadata_not_matching_target_sha_reports_no_match(self):
+        """A build that deterministically (byte-identically, across both
+        independent runs) embeds the WRONG identity must still never be
+        reported as a match -- run-to-run determinism alone is not proof
+        of correct identity binding."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "import struct;c=b'0000000000000000000000000000000000000000';d=struct.pack('<4sBBBBI16s41s17s8s12s13s5s3sBIIBB2s',b'FE8M',0,1,0,0,256,b'0.1.0',c,b'',b'release',b'aapcs',b'FIREEMBLEM2E',b'BE8E',b'01',0,0,0,0,0,b'');open('fake.elf','wb').write(d);open('fake.gba','wb').write(d)"]
+            result = ar.run_build_twice_from_immutable_source(
+                root, sha, build_command, ["fake.elf", "fake.gba"],
+            )
+            # The two runs ARE byte-identical to each other (deterministic)...
+            self.assertEqual(result["hashes1"], result["hashes2"])
+            # ...but the embedded identity is still wrong, so this must
+            # never be reported as an overall match.
+            self.assertFalse(result["match"])
+            self.assertTrue(result["embedded_metadata_checked"])
+            self.assertTrue(result["embedded_metadata_mismatches"])
+            self.assertIn(sha, result["embedded_metadata_mismatches"][0])
+
+    def test_output_without_any_embedded_metadata_is_never_flagged(self):
+        """A plain, non-ROM output (e.g. a synthetic test's own
+        'out.bin') simply has no ExpansionMetadata record at all -- this
+        is never itself a failure."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'plain bytes')"]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertTrue(result["match"], result)
+            self.assertFalse(result["embedded_metadata_checked"])
+            self.assertIsNone(result["embedded_build_commit"])
+
+    # --- issue #9 verifier remediation: output path safety ---------------
+
+    def test_absolute_output_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["/etc/passwd"])
+            self.assertIn("absolute", str(ctx.exception))
+
+    def test_path_traversal_output_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["../escape.bin"])
+            self.assertIn("traversal", str(ctx.exception))
+
+    def test_nested_path_traversal_output_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.run_build_twice_from_immutable_source(
+                    root, sha, build_command, ["sub/../../escape.bin"],
+                )
+            self.assertIn("traversal", str(ctx.exception))
+
+    def test_symlink_escape_output_path_is_rejected(self):
+        """A build that plants a symlink (inside its own materialization
+        root) pointing *outside* that root, then writes through it, must
+        be refused -- never silently followed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            external = Path(tmp) / "external-target.bin"
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                f"import os; os.symlink({str(external)!r}, 'escape-link.bin')",
+            ]
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["escape-link.bin"])
+            self.assertIn("escapes", str(ctx.exception))
+
+    def test_output_path_aliased_across_runs_via_shared_symlink_target_is_rejected(self):
+        """Two runs must never be allowed to resolve their *declared
+        output paths* to the exact same real filesystem target (e.g.
+        both symlinking to one shared external file) -- proven here via
+        a real symlink (planted deterministically, before either build
+        even executes, by a shared `extra_materialize` pass) rather than
+        merely asserted. In practice this exact scenario is caught by
+        the broader per-run 'escapes its own materialization root' guard
+        (any path a symlink like this resolves to necessarily sits
+        outside `run_root`) -- proving the *stronger*, more general
+        property (no run's output may ever resolve outside its own root)
+        subsumes and forecloses the narrower cross-run-alias case too."""
+        with tempfile.TemporaryDirectory() as tmp:
+            shared_target = Path(tmp) / "shared-external-target.bin"
+            shared_target.write_bytes(b"shared")
+            root, sha = self._make_repo(tmp)
+
+            def _plant_alias(run_root):
+                (run_root / "alias.bin").symlink_to(shared_target)
+
+            build_command = [sys.executable, "-c", "pass"]
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.run_build_twice_from_immutable_source(
+                    root, sha, build_command, ["alias.bin"], extra_materialize=_plant_alias,
+                )
+            self.assertIn("escapes", str(ctx.exception))
+
+    def test_cross_run_output_alias_guard_fires_when_paths_stay_inside_their_own_roots(self):
+        """A more surgical proof of the *distinct* cross-run-alias guard
+        itself (never merely the broader escape guard above): directly
+        exercises the same code path two real independent runs go
+        through, with two resolved paths that are both, individually,
+        legitimately inside their own run roots -- by forcing the
+        second run's own root to reuse the first run's already-resolved
+        real output path via a monkeypatched resolver. This proves the
+        `seen_output_paths` cross-run bookkeeping itself -- not just the
+        per-path escape check -- actually rejects a collision."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            calls = {"n": 0}
+            real_validate = ar._validate_output_relpath
+
+            def _fake_validate(run_root, relpath):
+                # First call (run 1) behaves normally; every subsequent
+                # call (run 2) is forced to resolve to run 1's own first
+                # validated path, simulating a would-be alias that never
+                # itself escapes any individual run's root.
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    _fake_validate.first_resolved = real_validate(run_root, relpath)
+                    return _fake_validate.first_resolved
+                return _fake_validate.first_resolved
+
+            with mock.patch.object(ar, "_validate_output_relpath", side_effect=_fake_validate):
+                with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                    ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertIn("aliased", str(ctx.exception))
+
+
+class RunBuildTwiceImmutableRunCleanupTests(unittest.TestCase):
+    """Fresh-review remediation: `run_build_twice_from_immutable_source`
+    must never leak an `fe8-rebuild-immutable-run-*` temp materialization
+    on ANY exit path -- success, mismatch, an actually-raised
+    subprocess/build exception, a pre-build validation rejection
+    (absolute/traversal path), a post-build symlink/output-escape
+    rejection, a cross-run alias rejection, or any other unexpected
+    exception -- while still preserving/propagating the original
+    failure (never silently swallowed just to make cleanup easier)."""
+
+    _GLOB_PATTERN = os.path.join(tempfile.gettempdir(), "fe8-rebuild-immutable-run-*")
+
+    def _make_repo(self, tmp) -> tuple:
+        root = Path(tmp) / "root"
+        root.mkdir()
+        _init_repo(root)
+        (root / "input.txt").write_text("hello\n")
+        _git("add", "-A", cwd=root)
+        _git("commit", "-q", "-m", "init", cwd=root)
+        sha = _git("rev-parse", "HEAD", cwd=root).strip()
+        return root, sha
+
+    def _leaked_run_dirs(self, before: set) -> set:
+        after = set(glob.glob(self._GLOB_PATTERN))
+        return after - before
+
+    def test_no_leak_on_success(self):
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertTrue(result["match"], result)
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_mismatch(self):
+        """A reported (non-exception) mismatch -- nondeterministic
+        build -- must still leave zero run directories behind."""
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import os; open('out.bin', 'wb').write(os.urandom(32))",
+            ]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertFalse(result["match"])
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_nonzero_build_exit(self):
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "import sys; sys.exit(1)"]
+            result = ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+            self.assertFalse(result["match"])
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_subprocess_raising_exception(self):
+        """A `build_command` that is itself unexecutable (e.g. a
+        nonexistent executable) makes `subprocess.run` raise
+        `FileNotFoundError` -- a genuine, unhandled exception path
+        distinct from a merely-nonzero exit code. Cleanup must still
+        happen, and the original exception must still propagate (never
+        be hidden/swallowed)."""
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = ["/no/such/executable-fe8-test", "irrelevant"]
+            with self.assertRaises(FileNotFoundError):
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_absolute_output_path_rejection(self):
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with self.assertRaises(ar.ArchiveRehearsalError):
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["/etc/passwd"])
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_path_traversal_output_path_rejection(self):
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with self.assertRaises(ar.ArchiveRehearsalError):
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["../escape.bin"])
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_post_build_symlink_escape_rejection(self):
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            external = Path(tmp) / "external-target.bin"
+            root, sha = self._make_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                f"import os; os.symlink({str(external)!r}, 'escape-link.bin')",
+            ]
+            with self.assertRaises(ar.ArchiveRehearsalError):
+                ar.run_build_twice_from_immutable_source(root, sha, build_command, ["escape-link.bin"])
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_cross_run_output_alias_rejection(self):
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            shared_target = Path(tmp) / "shared-external-target.bin"
+            shared_target.write_bytes(b"shared")
+            root, sha = self._make_repo(tmp)
+
+            def _plant_alias(run_root):
+                (run_root / "alias.bin").symlink_to(shared_target)
+
+            build_command = [sys.executable, "-c", "pass"]
+            with self.assertRaises(ar.ArchiveRehearsalError):
+                ar.run_build_twice_from_immutable_source(
+                    root, sha, build_command, ["alias.bin"], extra_materialize=_plant_alias,
+                )
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_shared_materialization_directory_rejection(self):
+        """The `run_dir in seen_run_dirs` guard fires before a single
+        byte is materialized -- still must not leak the directory it
+        already created before raising."""
+        before = set(glob.glob(self._GLOB_PATTERN))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            shared_dir = Path(tmp) / "forced-shared-run-dir"
+            shared_dir.mkdir()
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with mock.patch("tempfile.mkdtemp", return_value=str(shared_dir)):
+                with self.assertRaises(ar.ArchiveRehearsalError):
+                    ar.run_build_twice_from_immutable_source(root, sha, build_command, ["out.bin"])
+        # `shared_dir` here is a caller-owned fixture path (not one this
+        # module's own mkdtemp prefix would ever glob-match), so the
+        # cleanup contract this test actually proves is: no *additional*
+        # `fe8-rebuild-immutable-run-*` directory beyond what already
+        # existed leaks out from this rejection path.
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+    def test_no_leak_on_unexpected_exception_from_extra_materialize(self):
+        """A genuinely unexpected exception (not one of this module's own
+        `ArchiveRehearsalError`s) raised mid-materialization must still
+        trigger cleanup and must still propagate untouched -- cleanup
+        must never swallow or replace the original failure."""
+        before = set(glob.glob(self._GLOB_PATTERN))
+
+        class _SyntheticError(RuntimeError):
+            pass
+
+        def _boom(run_root):
+            raise _SyntheticError("synthetic unexpected failure")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._make_repo(tmp)
+            build_command = [sys.executable, "-c", "open('out.bin', 'wb').write(b'x')"]
+            with self.assertRaises(_SyntheticError):
+                ar.run_build_twice_from_immutable_source(
+                    root, sha, build_command, ["out.bin"], extra_materialize=_boom,
+                )
+        self.assertEqual(self._leaked_run_dirs(before), set())
+
+
+class DefaultRebuildProfileTests(unittest.TestCase):
+    """issue #9 mandatory correction #3: the committed, locked, public
+    rebuild profile actually wired through the eligible path -- a plain
+    argv list/tuple (never a shell string), naming this repository's own
+    real, already-existing `make` targets/knobs."""
+
+    def test_build_command_is_a_plain_argv_sequence_of_strings(self):
+        self.assertIsInstance(ar.DEFAULT_REBUILD_BUILD_COMMAND, tuple)
+        for token in ar.DEFAULT_REBUILD_BUILD_COMMAND:
+            self.assertIsInstance(token, str)
+
+    def test_build_command_never_contains_a_shell_metacharacter(self):
+        """Defense-in-depth: even though this is always passed as a
+        strict argv list (`shell=False`), no individual token should
+        ever look like an embedded shell command string -- proving this
+        was authored as a real argv list, not a single shell one-liner
+        someone later meant to `shlex.split`."""
+        for token in ar.DEFAULT_REBUILD_BUILD_COMMAND:
+            for meta in (";", "&&", "|", "`", "$(", ">"):
+                self.assertNotIn(meta, token)
+
+    def test_output_relpaths_are_relative_and_safe(self):
+        for relpath in ar.DEFAULT_REBUILD_OUTPUT_RELPATHS:
+            self.assertFalse(os.path.isabs(relpath))
+            self.assertNotIn("..", Path(relpath).parts)
+
+    def test_output_relpaths_reference_elf_and_rom(self):
+        joined = " ".join(ar.DEFAULT_REBUILD_OUTPUT_RELPATHS)
+        self.assertIn(".elf", joined)
+        self.assertIn(".gba", joined)
+
+    def test_profile_is_reachable_from_the_module_public_surface(self):
+        # Never a private/underscored name -- this is the documented
+        # public interface a future eligible rehearsal actually uses.
+        self.assertFalse(ar.DEFAULT_REBUILD_BUILD_COMMAND[0].startswith("_"))
+
 
 class RebuildRehearsalBlockerTests(unittest.TestCase):
     def test_documents_github_autoarchive_contradiction(self):
@@ -1052,6 +1431,86 @@ class RebuildRehearsalBlockerEndToEndBuildTests(unittest.TestCase):
                 with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
                     self._blocker(root, provenance_dir, build_command)
             self.assertIn("same directory", str(ctx.exception))
+
+    def test_hermetic_eligible_fixture_runs_two_builds_with_build_id_and_verifies_elf_and_rom(self):
+        """DONE criterion (issue #9 verifier remediation): a hermetic,
+        fully-synthetic eligible local source/submodule fixture, driven
+        entirely through the public `rebuild_rehearsal_blocker()` path
+        (never a lower-level function in isolation), that:
+
+          1. actually runs exactly two independent builds
+             (`returncode1`/`returncode2` both observed, from two
+             distinct `materialization_root*` values);
+          2. each received exactly `EXPANSION_BUILD_ID=<40-hex target
+             SHA>` (proven by the build script itself embedding
+             whatever it read from that env var, then asserting it
+             equals the real, resolved target SHA -- never merely
+             assumed);
+          3. verifies the mandatory embedded short SHA against both a
+             named `.elf` and a named `.gba` output (never only one);
+          4. compares deterministic ELF and ROM hashes (both outputs'
+             hashes1 == hashes2); and
+          5. proves temp-directory cleanup afterwards (no
+             `fe8-rebuild-immutable-run-*` directory survives)."""
+        before_tmp_dirs = set(glob.glob(os.path.join(tempfile.gettempdir(), "fe8-rebuild-immutable-run-*")))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            target_sha = _git("rev-parse", "HEAD", cwd=root).strip()
+            build_command = [sys.executable, "-c", "import os,struct;c=os.environ.get('EXPANSION_BUILD_ID','unknown').encode('ascii');d=struct.pack('<4sBBBBI16s41s17s8s12s13s5s3sBIIBB2s',b'FE8M',0,1,0,0,256,b'0.1.0',c,b'',b'release',b'aapcs',b'FIREEMBLEM2E',b'BE8E',b'01',0,0,0,0,0,b'');open('fireemblem8.elf','wb').write(d);open('fireemblem8.gba','wb').write(d)"]
+            report = ar.rebuild_rehearsal_blocker(
+                root, attempt_build=True, build_command=build_command,
+                output_relpaths=["fireemblem8.elf", "fireemblem8.gba"],
+                submodule_path="vendor", provenance_dir=provenance_dir,
+                target_sha=target_sha,
+            )
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_VERIFIED_SUCCESS, report)
+            result = report["build_result"]
+            # (1) two real, independent runs actually executed:
+            self.assertEqual(result["returncode1"], 0)
+            self.assertEqual(result["returncode2"], 0)
+            self.assertNotEqual(result["materialization_root1"], result["materialization_root2"])
+            # (2) + (3): mandatory embedded short SHA, verified against
+            # the exact target SHA, present for BOTH declared outputs:
+            self.assertTrue(result["embedded_metadata_checked"])
+            self.assertEqual(result["embedded_metadata_mismatches"], [])
+            self.assertEqual(result["embedded_build_commit"], target_sha)
+            self.assertEqual(result["embedded_short_sha"], target_sha[:8])
+            self.assertEqual(report["embedded_short_sha"], target_sha[:8])
+            # (4) deterministic ELF *and* ROM hash comparison, both named
+            # outputs, both runs byte-identical:
+            self.assertEqual(result["hashes1"]["fireemblem8.elf"], result["hashes2"]["fireemblem8.elf"])
+            self.assertEqual(result["hashes1"]["fireemblem8.gba"], result["hashes2"]["fireemblem8.gba"])
+            self.assertIsNotNone(result["hashes1"]["fireemblem8.elf"])
+            self.assertIsNotNone(result["hashes1"]["fireemblem8.gba"])
+        # (5) temp cleanup: no run directory from this test survives,
+        # regardless of the report having already been returned above.
+        after_tmp_dirs = set(glob.glob(os.path.join(tempfile.gettempdir(), "fe8-rebuild-immutable-run-*")))
+        self.assertEqual(after_tmp_dirs - before_tmp_dirs, set())
+
+    def test_hermetic_eligible_fixture_cleans_up_temp_dirs_even_on_mismatch_failure(self):
+        """The same cleanup guarantee, but for a run that ends in
+        REBUILD_STATUS_FAILED (embedded-identity mismatch) -- temp
+        materializations must never be left behind on failure either."""
+        before_tmp_dirs = set(glob.glob(os.path.join(tempfile.gettempdir(), "fe8-rebuild-immutable-run-*")))
+        with tempfile.TemporaryDirectory() as tmp:
+            root, provenance_dir = self._make_eligible_repo(tmp)
+            build_command = [
+                sys.executable, "-c",
+                "import struct;"
+                "c=b'0000000000000000000000000000000000000000';"
+                "d=struct.pack('<4sBBBBI16s41s17s8s12s13s5s3sBIIBB2s',"
+                "b'FE8M',0,1,0,0,256,b'0.1.0',c,b'',b'release',b'aapcs',"
+                "b'FIREEMBLEM2E',b'BE8E',b'01',0,0,0,0,0,b'');"
+                "open('fireemblem8.elf','wb').write(d);open('fireemblem8.gba','wb').write(d)",
+            ]
+            report = self._blocker(
+                root, provenance_dir, build_command,
+                output_relpaths=("fireemblem8.elf", "fireemblem8.gba"),
+            )
+            self.assertEqual(report["status"], ar.REBUILD_STATUS_FAILED)
+            self.assertTrue(report["build_result"]["embedded_metadata_mismatches"])
+        after_tmp_dirs = set(glob.glob(os.path.join(tempfile.gettempdir(), "fe8-rebuild-immutable-run-*")))
+        self.assertEqual(after_tmp_dirs - before_tmp_dirs, set())
 
 
 class SubmoduleDirtyWorktreeReproducerTests(unittest.TestCase):

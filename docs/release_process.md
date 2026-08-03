@@ -161,13 +161,53 @@ integration" below for the exact, per-target breakdown of what `make
   present, or an **explicit, exact 40-lowercase-hex `--target-sha`
   override** when it is not (an archive/non-git tree) -- a missing
   override in that case is an actionable error, never silently
-  `"unknown"`;
+  `"unknown"`. **Normal, non-archive usage (issue #9 mandatory
+  correction) never leaves this implicit either:** `release.mk`'s
+  `RELEASE_TARGET_SHA ?= $(shell git rev-parse HEAD)` is passed
+  explicitly as `--target-sha` by every `release-check`/`release-
+  rehearse` target (and their `-require-eligible`/`-expect-blocked`
+  siblings), and `.github/workflows/release-rehearsal.yml` overrides it
+  via a job-level `env: RELEASE_TARGET_SHA: ${{ github.sha }}` -- so CI
+  always binds to the *exact, immutable checked-out commit*, never an
+  independently-resolved value that could theoretically disagree with
+  the checkout step. `scripts/release_rehearsal/workflow_guard.py`'s
+  `check_release_target_sha_binding()` fails closed if a release
+  publication-eligibility step is ever added without this binding;
 * a **short-form derivation** (`target_sha[:8]`) matching
   `scripts/modernize/save_format_tool.py`'s own
   `ExpansionSaveMeta.buildCommitShort` derivation
   (`build_commit[:8]`), so an embedded short-form value can be verified
   against the full target SHA while the manifest/evidence always retains
   the full 40-character SHA;
+* a **mandatory embedded build-identity binding** (issue #9 mandatory
+  correction #2, `check_embedded_identity_binding()`): a *missing*
+  `embedded_short_sha` (nobody supplied/verified one at all) is folded
+  into `"reasons"` as its own always-present, never-mockable-away
+  finding -- exactly symmetric to the external-attestation gate below --
+  so a candidate can never be reported `"mechanically eligible"` while
+  its build-identity binding to `target_sha` was never actually verified
+  against a real embedded artifact. This is never conditional/optional
+  on any `check`/`rehearse`/`summary` invocation. A *supplied-but-wrong*
+  value is a stronger, distinct failure mode: `verify_short_sha()` raises
+  an actionable `ManifestError` before `build_manifest()` even reaches
+  its reasons/status computation, rather than being folded in as a soft
+  "blocked" reason. `cli.py`'s `cmd_rehearse` never requires a caller to
+  manually supply this -- it threads through the real, verified short SHA
+  automatically extracted from the rebuild it just executed (see
+  "Rebuild rehearsal" below) whenever that rebuild reaches
+  `"verified_success"`;
+* a **stale current-epoch-claim regression check**
+  (`check_epoch_claims()` -- `scripts/release_rehearsal/epoch_claims.py`)
+  over release docs/headers, catching the known "epoch stays 1"
+  falsehood shape without ever rejecting a legitimate historical
+  migration statement ("bumped 1 -> 2");
+* a **stale aggregate-test-count-claim regression check**
+  (`check_stale_count_claims()` --
+  `scripts/release_rehearsal/stale_count_claims.py`) over release
+  closure evidence/docs, catching a hardcoded frozen total in the shape
+  `(N tests)`/`Ran N tests` (N being any digit sequence) without ever
+  rejecting a legitimate small semantic constant or migration delta
+  ("2 new regression tests", "epoch 1 -> 2");
 * changelog validity + aggregate declared SemVer impact;
 * required-docs presence;
 * save-format compatibility epoch + migration-registry consistency, **and**
@@ -927,7 +967,89 @@ runs, it:
    deletes any of its own declared input files (instead of only ever
    writing new, genuinely separate output paths) is reported as a
    failure, never silently `"match": True`;
-5. hashes every declared output path.
+5. hashes every declared output path, and (issue #9 mandatory
+   correction #2) attempts to locate and parse an embedded
+   `ExpansionMetadata` record (`scripts/modernize/verify_rom_header.py`)
+   in each declared output; whenever one is actually present, its
+   `build_commit` field is verified against this exact `target_sha` --
+   **for both independent runs**. This is strictly stronger than "the
+   two runs' hashes matched each other": a build script that ignores its
+   own build-identity input and hardcodes a stale value would still
+   produce two byte-identical (and therefore superficially "matching")
+   runs, but would never be correctly bound to `target_sha` -- exactly
+   the gap this closes. An output with no embedded record at all (e.g.
+   a synthetic test fixture's own plain-bytes output, or a non-ROM
+   artifact) is never itself treated as a failure; only a *present but
+   wrong* record is, and it demotes the overall result from
+   `"verified_success"` to `"failed"` with an explicit, actionable
+   `"embedded_metadata_mismatches"` reason (never silently absorbed into
+   a generic hash-mismatch message).
+
+**Mandatory `EXPANSION_BUILD_ID` binding (issue #9 mandatory correction).**
+Every one of the two runs' materializations is a fresh `git archive
+<target_sha> | tar -x` extraction -- which, by construction, never
+carries `.git` metadata. `scripts/modernize/expansion_config.py`'s own
+`resolve_build_commit()` falls back to the fixed sentinel `"unknown"` for
+exactly this shape of tree unless an explicit override is supplied.
+`_controlled_build_environment()` therefore *always* sets
+`EXPANSION_BUILD_ID=<target_sha>` (the full 40-lowercase-hex commit) in
+both runs' build environment -- passed as a real environment variable to
+a `subprocess.run(..., shell=False)` argv list, never interpolated into
+a shell string -- so a real build's own embedded identity is correctly
+bound instead of silently degrading to `"unknown"`.
+
+**Output-path safety (issue #9 verifier remediation).** Every declared
+output path is validated (`_validate_output_relpath()`) both before and
+immediately after the build executes (the build script itself is
+untrusted and could plant a symlink among its own declared outputs that
+did not exist before it ran): an absolute path, a `..` traversal
+component, or a path that -- once any symlink components are resolved
+(`os.path.realpath`) -- would resolve outside that run's own
+materialization root is refused outright with an actionable
+`ArchiveRehearsalError`, before that path is ever read. The two runs'
+resolved real output paths are additionally cross-checked against one
+another so an output can never be aliased/shared/reused across the two
+independent runs.
+
+**The committed, locked, public rebuild profile (issue #9 mandatory
+correction #3).** `DEFAULT_REBUILD_BUILD_COMMAND`/`DEFAULT_REBUILD_
+OUTPUT_RELPATHS` (and the parameterized `build_default_rebuild_
+profile(config, abi, rom_size)`, which mirrors the exact same shape
+using `cli.py`'s own already-existing `--config`/`--abi`/`--rom-size`
+knobs) are the one, safe, public, documented, deterministic interface a
+future eligible candidate's rebuild rehearsal actually executes
+through -- a plain argv list (`["make", "-j1", "MODERN_CONFIG=...",
+"MODERN_ABI=...", "MODERN_ROM_SIZE=...", "expansion-modern-rom"]`,
+`shell=False`, never a shell string) naming this repository's own real,
+already-existing `make`/`modern.mk` targets, and a plain relative output
+path list (`fireemblem8.elf`/`fireemblem8.gba` under `build/expansion-
+modern/<config>/<abi>/`). `cli.py`'s `cmd_rehearse` wires this in and
+executes it **exactly once** (never a second, redundant real build --
+see `precomputed_rebuild_report` below); `rebuild_rehearsal_blocker()`
+itself still short-circuits to `"blocked"` before ever reading a single
+byte of this profile whenever `mgfembp`'s provenance remains unapproved
+(today, and until a human resolves it), so wiring this in cannot itself
+cause any fetch/build of `mgfembp` while this repository remains
+BLOCKED.
+
+**Single source of truth for the rehearsal's own rebuild result.** A
+fresh review found that `cli.py`'s `cmd_rehearse` previously computed
+its own, separate `rebuild_rehearsal_blocker()` call (with no
+`build_command` at all -- always reporting the eligibility-only result)
+for the JSON it printed, while `build_manifest()` *internally* computed
+a second, independent, always-`attempt_build=False` rebuild check for
+its own `"status"`/`"reasons"` computation -- so even a real, executed,
+successful double build would never have been able to flip the overall
+candidate status, because the status computation was never looking at
+its result at all. `build_manifest()` now accepts an optional
+`precomputed_rebuild_report` -- when given, it is used as-is (never
+re-invoking `rebuild_rehearsal_blocker()` a second time). `cmd_rehearse`
+computes the real rebuild result **once**, extracts its own verified
+`embedded_short_sha` from it (see "Mandatory embedded short-SHA binding"
+below), and threads both into the same `build_manifest()` call -- so the
+printed `"rebuild"` report and the overall `"status"`/`"reasons"` are
+always the exact same computation, never two independently-resolved
+values that could theoretically disagree.
 
 The two runs can never share a source or build directory: each is rooted
 at its own `tempfile.mkdtemp()` path, and an explicit guard rejects the
@@ -1058,7 +1180,17 @@ subcommand -- not a bare script invocation), run as a step inside the
 workflow. A dedicated step additionally runs `make
 release-check-expect-blocked` to **mechanically assert** the current
 expected status is `blocked`, rather than relying on `make
-release-check`'s always-exit-`0` prose. The job summary
+release-check`'s always-exit-`0` prose. Two further standalone
+regression-guard steps run `make release-epoch-claims-check` (stale
+current-epoch claims) and `make release-stale-count-claims-check` (stale
+aggregate test-count claims) -- both are already folded into every
+`release-check`/`release-rehearse` report too (`"epoch_claims"`/
+`"stale_count_claims"`), so these steps are redundant-but-fast standalone
+confirmations, not the only place either is checked. Every publication-
+eligibility step in this job runs under a job-level `env:
+RELEASE_TARGET_SHA: ${{ github.sha }}` (see "Release manifest and
+identity checks" above), mechanically cross-checked by
+`workflow_guard.check_release_target_sha_binding()`. The job summary
 (`$GITHUB_STEP_SUMMARY`) is rendered **dynamically** from
 `scripts.release_rehearsal.cli summary`'s own canonical JSON (stdlib
 `json`, no prose parsing) -- see `render_markdown_summary()` and

@@ -27,6 +27,18 @@ jobs:
   release-rehearsal:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # issue #9 mandatory correction (exact target-SHA binding): every
+    # publication-eligibility/rehearsal step below (via release.mk's own
+    # `RELEASE_TARGET_SHA ?= $(shell git rev-parse HEAD)` default) binds
+    # to this exact, immutable, checked-out commit -- never an
+    # independently-resolved value that could theoretically disagree
+    # with the checkout step above. Mechanically cross-checked by
+    # scripts/release_rehearsal/workflow_guard.py's own
+    # `check_release_target_sha_binding` (via `make release-workflow-
+    # guard`), which fails closed if this binding is ever removed while
+    # a release-check/release-rehearse step remains.
+    env:
+      RELEASE_TARGET_SHA: ${{ github.sha }}
 
     steps:
       # Pinned to an immutable, independently-verified 40-lowercase-hex commit SHA
@@ -51,6 +63,12 @@ jobs:
       - name: Run release migrations registry check
         run: make release-migrations-check
 
+      - name: Run stale save-compatibility-epoch claim regression check
+        run: make release-epoch-claims-check
+
+      - name: Run stale aggregate-test-count claim regression check
+        run: make release-stale-count-claims-check
+
       - name: Run deterministic archive + rebuild rehearsal
         run: make release-rehearse
 
@@ -62,4 +80,4 @@ jobs:
 
       - name: Job summary (rendered dynamically from canonical JSON -- never hardcoded)
         if: always()
-        run: python3 -m scripts.release_rehearsal.cli summary >> "$GITHUB_STEP_SUMMARY"
+        run: python3 -m scripts.release_rehearsal.cli summary --target-sha "$RELEASE_TARGET_SHA" >> "$GITHUB_STEP_SUMMARY"

@@ -47,12 +47,17 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from scripts.release_rehearsal import allowlist as al
 from scripts.release_rehearsal import git_source as gs
 from scripts.release_rehearsal import gitmodules as gm
 from scripts.release_rehearsal import provenance as prov
 from scripts.release_rehearsal import source_guard as sg
 from scripts.release_rehearsal import tree_coverage as tc
+from scripts.modernize import verify_rom_header as vrh
 
 CANONICAL_MTIME = 0
 CANONICAL_UID = 0
@@ -78,6 +83,75 @@ ALL_REBUILD_STATUSES = (
     REBUILD_STATUS_NOT_RUN, REBUILD_STATUS_BLOCKED, REBUILD_STATUS_FAILED,
     REBUILD_STATUS_VERIFIED_SUCCESS,
 )
+
+# --- Committed, locked default rebuild profile (issue #9 mandatory -------
+# correction #3 / verifier remediation) ------------------------------------
+#
+# The one, safe, public, documented, deterministic interface a future
+# eligible candidate's rebuild rehearsal actually executes through --
+# never a free-form shell string accepted from a CLI flag (which would
+# reopen the exact "shell command string" hazard issue #9 forbids). This
+# is a plain argv list (`subprocess.run(..., shell=False)` -- see
+# `run_build_twice_from_immutable_source`) naming the exact, already-
+# existing, ordinary `make` targets/knobs this repository's own
+# modern.mk defines (MODERN_CONFIG/MODERN_ABI/MODERN_ROM_SIZE -- the
+# same three knobs `cli.py`'s own `--config`/`--abi`/`--rom-size`
+# options already expose), never a new, bespoke build path invented only
+# for this rehearsal. `-j1` is deliberately pinned (never left to the
+# ambient `MAKEFLAGS`/nproc) so the rehearsal's own two independent runs
+# never depend on host parallelism/scheduling for determinism.
+#
+# This profile is only ever reached once `evaluate_rebuild_eligibility`
+# has already reported this candidate eligible (mgfembp initialized,
+# identity-matched, provenance-approved, clean) -- today, and until a
+# human resolves that provenance record, it is unconditionally
+# `REBUILD_STATUS_BLOCKED` before a single byte of this profile is ever
+# read, exactly as `docs/release_process.md`'s "Legal and provenance
+# boundary" documents. Wiring it in now (rather than leaving the
+# eligible path an unexecuted stub) is what makes a *future* eligible
+# run actually run two real, hermetic, independently-materialized builds
+# instead of merely describing that it would.
+DEFAULT_REBUILD_MODERN_CONFIG = "release"
+DEFAULT_REBUILD_MODERN_ABI = "aapcs"
+DEFAULT_REBUILD_MODERN_ROM_SIZE = "16M"
+DEFAULT_REBUILD_OUTPUT_DIR = "build/expansion-modern/{config}/{abi}".format(
+    config=DEFAULT_REBUILD_MODERN_CONFIG, abi=DEFAULT_REBUILD_MODERN_ABI,
+)
+DEFAULT_REBUILD_BUILD_COMMAND: Tuple[str, ...] = (
+    "make", "-j1",
+    f"MODERN_CONFIG={DEFAULT_REBUILD_MODERN_CONFIG}",
+    f"MODERN_ABI={DEFAULT_REBUILD_MODERN_ABI}",
+    f"MODERN_ROM_SIZE={DEFAULT_REBUILD_MODERN_ROM_SIZE}",
+    "expansion-modern-rom",
+)
+DEFAULT_REBUILD_OUTPUT_RELPATHS: Tuple[str, ...] = (
+    f"{DEFAULT_REBUILD_OUTPUT_DIR}/fireemblem8.elf",
+    f"{DEFAULT_REBUILD_OUTPUT_DIR}/fireemblem8.gba",
+)
+
+
+def build_default_rebuild_profile(
+    config: str = DEFAULT_REBUILD_MODERN_CONFIG,
+    abi: str = DEFAULT_REBUILD_MODERN_ABI,
+    rom_size: str = DEFAULT_REBUILD_MODERN_ROM_SIZE,
+) -> Tuple[List[str], List[str]]:
+    """Constructs the same locked-profile shape as `DEFAULT_REBUILD_
+    BUILD_COMMAND`/`DEFAULT_REBUILD_OUTPUT_RELPATHS`, but parameterized
+    by the exact same `--config`/`--abi`/`--rom-size` knobs `cli.py`'s
+    own subcommands already expose (never a new, separate free-form
+    input) -- so `make release-rehearse`'s own `--config`/`--abi`/
+    `--rom-size` selection is what a future eligible run's rebuild
+    itself actually uses, never silently pinned to a different preset
+    than the rest of that same invocation's manifest. Still always a
+    plain argv list (never a shell string) and a plain relative output
+    path list -- both returned as fresh, ordinary Python lists."""
+    output_dir = f"build/expansion-modern/{config}/{abi}"
+    build_command = [
+        "make", "-j1", f"MODERN_CONFIG={config}", f"MODERN_ABI={abi}", f"MODERN_ROM_SIZE={rom_size}",
+        "expansion-modern-rom",
+    ]
+    output_relpaths = [f"{output_dir}/fireemblem8.elf", f"{output_dir}/fireemblem8.gba"]
+    return build_command, output_relpaths
 
 GITHUB_AUTOARCHIVE_SUBMODULE_CONTRADICTION = (
     "GitHub's auto-generated 'Source code (zip)'/'Source code (tar.gz)' "
@@ -848,7 +922,7 @@ def materialize_immutable_source_tree(repo_root: Path, target_sha: str, dest_dir
         raise ArchiveRehearsalError(f"tar extraction of the {target_sha!r} archive into {dest_dir} failed")
 
 
-def _controlled_build_environment(run_dir: Path) -> Dict[str, str]:
+def _controlled_build_environment(run_dir: Path, target_sha: Optional[str] = None) -> Dict[str, str]:
     """A small, explicit, deterministic environment -- never a blind
     passthrough of this process's own full ambient environment (which
     can vary run-to-run, host-to-host, and is exactly the kind of
@@ -856,14 +930,107 @@ def _controlled_build_environment(run_dir: Path) -> Dict[str, str]:
     on). Only the handful of variables a real build genuinely needs
     (`PATH` to find its own toolchain) are carried through; everything
     else affecting output determinism (locale, timezone, a private
-    `HOME`) is pinned to a fixed value."""
-    return {
+    `HOME`) is pinned to a fixed value.
+
+    issue #9 mandatory correction (target-SHA/build-ID binding): every
+    materialization this function's environment feeds into
+    (`materialize_immutable_source_tree`'s `git archive | tar -x`
+    extraction) never carries `.git` metadata -- so the build's own
+    embedded identity (config.mk's `EXPANSION_BUILD_ID`, consumed by
+    `scripts/modernize/expansion_config.py`'s `resolve_build_commit`,
+    which otherwise falls back to the fixed sentinel `"unknown"` for any
+    tree with no `.git`) can only ever be bound correctly if it is
+    supplied here -- unconditionally, whenever `target_sha` is given,
+    never only "when convenient". This is the exact, strict env-var
+    binding form `EXPANSION_BUILD_ID=<40-hex target SHA>` this project's
+    own config.mk (`EXPANSION_BUILD_ID ?=`) and modern.mk already
+    understand -- passed as a real environment variable to a `shell=False`
+    `subprocess.run` argv list, never interpolated into a shell string."""
+    env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "HOME": str(run_dir),
         "LANG": "C",
         "LC_ALL": "C",
         "TZ": "UTC",
     }
+    if target_sha is not None:
+        env["EXPANSION_BUILD_ID"] = target_sha
+    return env
+
+
+def _validate_output_relpath(run_root: Path, relpath: str) -> Path:
+    """issue #9 verifier remediation: every declared build output path
+    must stay strictly within its own run's immutable materialization
+    directory -- never a path traversal (`..`), an absolute escape, a
+    symlink that resolves outside `run_root`, or (via the caller's own
+    cross-run comparison) a path aliased/shared with the *other*
+    independent run. Raises `ArchiveRehearsalError` naming the exact
+    unsafe path; never silently drops or "fixes" it.
+
+    A relative `relpath` component this strict is deliberately checked
+    via `os.path.relpath`-free, pure `Path`/string logic (no reliance on
+    a possibly-not-yet-existing symlink target resolving 'through' via
+    `Path.resolve()` in an unexpected order) -- the check has two
+    independent layers: (1) the *textual* relpath itself must contain no
+    `..` segment and must not be absolute, and (2) once joined, the
+    resulting path must still be a real descendant of `run_root` after
+    both are fully resolved (`os.path.realpath`), which additionally
+    catches a symlink placed by an untrusted build step pointing
+    somewhere outside `run_root`."""
+    if os.path.isabs(relpath):
+        raise ArchiveRehearsalError(
+            f"refusing unsafe declared output path {relpath!r}: absolute paths are never allowed "
+            "(every output must be a path relative to its own run's materialization root)"
+        )
+    parts = Path(relpath).parts
+    if any(part in ("..", "") for part in parts) or ".." in relpath.split("/"):
+        raise ArchiveRehearsalError(
+            f"refusing unsafe declared output path {relpath!r}: path traversal ('..') is never "
+            "allowed in a declared output path"
+        )
+    run_root_real = os.path.realpath(str(run_root))
+    candidate = run_root / relpath
+    # `os.path.realpath` resolves symlinks in every already-existing path
+    # component (and is safe to call even if the final component does not
+    # yet exist, e.g. before the build has run) -- so a symlink anywhere
+    # along the path that escapes `run_root` is caught here even though
+    # the textual relpath itself contained no literal `..`.
+    candidate_real = os.path.realpath(str(candidate))
+    if candidate_real != run_root_real and not candidate_real.startswith(run_root_real + os.sep):
+        raise ArchiveRehearsalError(
+            f"refusing unsafe declared output path {relpath!r}: resolves to {candidate_real!r}, "
+            f"which escapes its own run's materialization root {run_root_real!r} "
+            "(symlink escape or equivalent)"
+        )
+    return candidate
+
+
+def _extract_embedded_build_commits(paths_and_hashes: Dict[str, Optional[str]], run_root: Path) -> Dict[str, Optional[str]]:
+    """For each declared output that is present, attempts to locate and
+    parse an embedded `ExpansionMetadata` record (see
+    `scripts/modernize/verify_rom_header.py`) and returns its
+    `build_commit` field -- `None` for any output that either is not
+    present or simply does not itself carry that record (e.g. an
+    intermediate artifact, or a synthetic test fixture's own output that
+    was never meant to). Never raises for "no record found"; a genuinely
+    malformed/ambiguous embedded record (`ExpansionMetadataError`) IS
+    surfaced as a build-identity-binding failure -- silently accepting a
+    corrupt record would be exactly the "produced embedded metadata was
+    never actually verified" gap this function closes."""
+    commits: Dict[str, Optional[str]] = {}
+    for relpath, digest in paths_and_hashes.items():
+        if digest is None:
+            commits[relpath] = None
+            continue
+        data = (run_root / relpath).read_bytes()
+        try:
+            offset = vrh.find_expansion_metadata(data)
+        except vrh.ExpansionMetadataError:
+            commits[relpath] = None
+            continue
+        record = vrh.parse_expansion_metadata(data, offset)
+        commits[relpath] = record["build_commit"]
+    return commits
 
 
 def run_build_twice_from_immutable_source(
@@ -894,47 +1061,104 @@ def run_build_twice_from_immutable_source(
     with byte-identical content *after* it (`_verify_input_tree_
     unchanged`) -- `match` is only ever `True` when both runs exit `0`,
     every declared output is present and byte-identical between the two
-    runs, AND neither run's own input materialization was mutated."""
+    runs, AND neither run's own input materialization was mutated.
+
+    `build_command` is always executed as a strict argv list via
+    `subprocess.run(..., shell=False)` (the default) -- never a shell
+    string, never `shell=True`. Every `output_relpaths` entry is
+    validated (`_validate_output_relpath`) to stay strictly within its
+    own run's materialization root before it is ever read, for both
+    runs, and the two runs' resolved output paths are additionally
+    cross-checked to never alias one another (issue #9 verifier
+    remediation). Whenever an output carries a parseable embedded
+    `ExpansionMetadata` record, its `build_commit` field is extracted and
+    returned (`embedded_build_commits*`) so the caller (`rebuild_
+    rehearsal_blocker`) can verify it against the exact `target_sha` this
+    materialization was bound to -- never merely assumed correct because
+    the two runs' hashes matched each other (two runs can be
+    consistently, deterministically *wrong* about their own identity)."""
     resolved_env = env if env is not None else None  # per-run HOME still varies; see below
     seen_run_dirs: set = set()
+    seen_output_paths: set = set()
 
     def _one_run() -> Dict:
         run_dir = Path(tempfile.mkdtemp(prefix="fe8-rebuild-immutable-run-"))
-        # Explicit, direct "never share a source/build directory between
-        # the two runs" guard -- checked *before* anything is
-        # materialized into it, independent of any later mutation/
-        # cleanup timing. `tempfile.mkdtemp()` itself always returns a
-        # unique path in real operation; this only ever fires if that
-        # invariant is somehow violated (e.g. a test forcing it).
-        if run_dir in seen_run_dirs:
-            raise ArchiveRehearsalError(
-                f"refusing to run an independent materialization: {run_dir} is the same directory "
-                "already used by the other run -- a shared source/build directory can never be trusted"
+        # issue #9 fresh-review remediation: the *entire* body below is
+        # now wrapped in try/finally so `run_dir` -- the one and only
+        # temp root this function ever creates/owns -- is unconditionally
+        # removed on every exit path: normal success, a build failure
+        # (non-zero/raising `subprocess.run`), a pre-build validation
+        # rejection (`_validate_output_relpath` raising on an absolute/
+        # traversal path), a post-build symlink/output-escape rejection,
+        # a cross-run output-path alias rejection, or any other
+        # unexpected exception. The `finally` block never suppresses the
+        # original exception/return value -- it only ever adds a
+        # best-effort `ignore_errors=True` cleanup alongside it, and it
+        # only ever removes `run_dir` itself (never anything outside the
+        # exact temp root this run created), so a failure is still
+        # reported/propagated truthfully while leaving no
+        # `fe8-rebuild-immutable-run-*` directory behind.
+        try:
+            # Explicit, direct "never share a source/build directory
+            # between the two runs" guard -- checked *before* anything is
+            # materialized into it, independent of any later mutation/
+            # cleanup timing. `tempfile.mkdtemp()` itself always returns a
+            # unique path in real operation; this only ever fires if that
+            # invariant is somehow violated (e.g. a test forcing it).
+            if run_dir in seen_run_dirs:
+                raise ArchiveRehearsalError(
+                    f"refusing to run an independent materialization: {run_dir} is the same directory "
+                    "already used by the other run -- a shared source/build directory can never be trusted"
+                )
+            seen_run_dirs.add(run_dir)
+            run_root = run_dir / "src"
+            run_root.mkdir()
+            materialize_immutable_source_tree(repo_root, target_sha, run_root)
+            if extra_materialize is not None:
+                extra_materialize(run_root)
+            # Validate every declared output path's *textual* shape (no
+            # absolute path, no '..' traversal) before the build ever runs --
+            # an unsafe declared path is refused outright, before a single
+            # byte of the build command is executed.
+            validated_outputs = {relpath: _validate_output_relpath(run_root, relpath) for relpath in output_relpaths}
+            before = _hash_tree_snapshot(run_root)
+            run_env = resolved_env if resolved_env is not None else _controlled_build_environment(run_dir, target_sha)
+            result = subprocess.run(
+                build_command, cwd=str(run_root), capture_output=True, text=True, env=run_env,
             )
-        seen_run_dirs.add(run_dir)
-        run_root = run_dir / "src"
-        run_root.mkdir()
-        materialize_immutable_source_tree(repo_root, target_sha, run_root)
-        if extra_materialize is not None:
-            extra_materialize(run_root)
-        before = _hash_tree_snapshot(run_root)
-        run_env = resolved_env if resolved_env is not None else _controlled_build_environment(run_dir)
-        result = subprocess.run(
-            build_command, cwd=str(run_root), capture_output=True, text=True, env=run_env,
-        )
-        mutation_problems = _verify_input_tree_unchanged(run_root, before)
-        hashes: Dict[str, Optional[str]] = {}
-        for relpath in output_relpaths:
-            out_path = run_root / relpath
-            hashes[relpath] = hash_file(out_path) if out_path.is_file() and not out_path.is_symlink() else None
-        shutil.rmtree(run_dir, ignore_errors=True)
-        return {
-            "returncode": result.returncode,
-            "stderr_tail": result.stderr[-2000:],
-            "hashes": hashes,
-            "mutation_problems": mutation_problems,
-            "run_root": str(run_root),
-        }
+            mutation_problems = _verify_input_tree_unchanged(run_root, before)
+            # Re-validate *after* the build runs, immediately before ever
+            # reading one of these paths (issue #9 verifier remediation): the
+            # build command itself is untrusted -- it could plant a symlink
+            # (among its own declared outputs) that did not exist before it
+            # ran, pointing outside `run_root`. Re-checking here (never only
+            # pre-build) is what actually catches that, and this is also
+            # where the two runs' resolved real output paths are cross-
+            # checked to never alias one another.
+            for relpath, resolved in validated_outputs.items():
+                resolved = _validate_output_relpath(run_root, relpath)
+                resolved_real = os.path.realpath(str(resolved))
+                if resolved_real in seen_output_paths:
+                    raise ArchiveRehearsalError(
+                        f"refusing unsafe declared output path {relpath!r}: resolves to {resolved_real!r}, "
+                        "which is already claimed by the other independent run -- an output path can "
+                        "never be aliased/shared/reused across runs"
+                    )
+                seen_output_paths.add(resolved_real)
+            hashes: Dict[str, Optional[str]] = {}
+            for relpath, out_path in validated_outputs.items():
+                hashes[relpath] = hash_file(out_path) if out_path.is_file() and not out_path.is_symlink() else None
+            embedded_build_commits = _extract_embedded_build_commits(hashes, run_root)
+            return {
+                "returncode": result.returncode,
+                "stderr_tail": result.stderr[-2000:],
+                "hashes": hashes,
+                "mutation_problems": mutation_problems,
+                "run_root": str(run_root),
+                "embedded_build_commits": embedded_build_commits,
+            }
+        finally:
+            shutil.rmtree(run_dir, ignore_errors=True)
 
     run1 = _one_run()
     run2 = _one_run()
@@ -956,9 +1180,46 @@ def run_build_twice_from_immutable_source(
         and all(value is not None for value in run2["hashes"].values())
     )
     no_mutation = not run1["mutation_problems"] and not run2["mutation_problems"]
+
+    # issue #9 mandatory correction #2 (embedded short-SHA verification):
+    # whenever a declared output actually carries a parseable
+    # `ExpansionMetadata` record, its `build_commit` field must equal
+    # this exact `target_sha` -- for BOTH independent runs. This is a
+    # strictly stronger check than "the two runs' hashes matched" (two
+    # runs executing the exact same build script can be consistently,
+    # deterministically bound to the *wrong* identity, e.g. a build
+    # script that ignores `EXPANSION_BUILD_ID` and hardcodes a stale
+    # value -- byte-identical between the two runs, but never actually
+    # bound to `target_sha`). An output with no embedded record at all
+    # (`None` -- e.g. a synthetic test fixture's own plain-bytes output,
+    # or a non-ROM artifact) is never itself a failure; only a *present
+    # but wrong* record is.
+    embedded_commits_found = {
+        relpath: commit for relpath, commit in run1["embedded_build_commits"].items() if commit is not None
+    }
+    embedded_metadata_checked = bool(embedded_commits_found)
+    embedded_metadata_mismatches = []
+    for relpath, commit in embedded_commits_found.items():
+        if commit != target_sha:
+            embedded_metadata_mismatches.append(
+                f"{relpath}: embedded ExpansionMetadata build_commit {commit!r} does not match "
+                f"the exact target SHA {target_sha!r} this materialization was bound to"
+            )
+    for relpath, commit in run2["embedded_build_commits"].items():
+        if commit is not None and commit != target_sha:
+            msg = (
+                f"{relpath}: embedded ExpansionMetadata build_commit {commit!r} does not match "
+                f"the exact target SHA {target_sha!r} this materialization was bound to"
+            )
+            if msg not in embedded_metadata_mismatches:
+                embedded_metadata_mismatches.append(msg)
+
+    embedded_short_sha = next(iter(embedded_commits_found.values()), None)
+
     match = (
         run1["returncode"] == 0 and run2["returncode"] == 0
         and outputs_present and run1["hashes"] == run2["hashes"] and no_mutation
+        and not embedded_metadata_mismatches
     )
     return {
         "returncode1": run1["returncode"],
@@ -979,6 +1240,13 @@ def run_build_twice_from_immutable_source(
         # refuses to report anything at all if they were ever the same.
         "materialization_root1": run1["run_root"],
         "materialization_root2": run2["run_root"],
+        # issue #9 mandatory correction #2: the mandatory embedded
+        # short-SHA verification result -- never merely conditional on a
+        # caller happening to ask for it.
+        "embedded_metadata_checked": embedded_metadata_checked,
+        "embedded_metadata_mismatches": embedded_metadata_mismatches,
+        "embedded_build_commit": embedded_short_sha,
+        "embedded_short_sha": embedded_short_sha[:8] if embedded_short_sha else None,
     }
 
 
@@ -1090,7 +1358,10 @@ def rebuild_rehearsal_blocker(
     }
 
     if not eligible:
-        return {"status": REBUILD_STATUS_BLOCKED, "reasons": eligibility_report["reasons"], **base_report}
+        return {
+            "status": REBUILD_STATUS_BLOCKED, "reasons": eligibility_report["reasons"],
+            "embedded_short_sha": None, **base_report,
+        }
 
     if not attempt_build or not build_command or not output_relpaths:
         return {
@@ -1104,6 +1375,7 @@ def rebuild_rehearsal_blocker(
                     "pinned rebuild attempt"
                 )
             ],
+            "embedded_short_sha": None,
             **base_report,
         }
 
@@ -1113,6 +1385,7 @@ def rebuild_rehearsal_blocker(
         return {
             "status": REBUILD_STATUS_BLOCKED,
             "reasons": [f"could not resolve an immutable target SHA for rebuild materialization: {error}"],
+            "embedded_short_sha": None,
             **base_report,
         }
 
@@ -1126,11 +1399,31 @@ def rebuild_rehearsal_blocker(
         extra_materialize=_materialize_verified_submodule_content(repo_root, submodule_path, pinned_commit),
     )
     status = REBUILD_STATUS_VERIFIED_SUCCESS if build_result["match"] else REBUILD_STATUS_FAILED
-    reasons = [] if status == REBUILD_STATUS_VERIFIED_SUCCESS else [
-        "the pinned recursive rebuild was executed but did not reproduce verified-identical "
-        "outputs twice -- see 'build_result' for the exact returncodes/hashes"
-    ]
-    return {"status": status, "reasons": reasons, "build_result": build_result, **base_report}
+    if status == REBUILD_STATUS_VERIFIED_SUCCESS:
+        reasons = []
+    elif build_result.get("embedded_metadata_mismatches"):
+        # issue #9 mandatory correction #2: an embedded-identity mismatch
+        # is named explicitly and distinctly from a bare hash mismatch --
+        # a maintainer must never have to infer "the SHA binding was
+        # wrong" from a generic "outputs differed" message.
+        reasons = list(build_result["embedded_metadata_mismatches"])
+    else:
+        reasons = [
+            "the pinned recursive rebuild was executed but did not reproduce verified-identical "
+            "outputs twice -- see 'build_result' for the exact returncodes/hashes"
+        ]
+    return {
+        "status": status,
+        "reasons": reasons,
+        "build_result": build_result,
+        # issue #9 mandatory correction #2: surfaced at this report's own
+        # top level too (not just nested in 'build_result') so a caller
+        # (cli.py's cmd_rehearse) can thread it straight into the
+        # manifest's own mandatory embedded_short_sha binding without
+        # digging through a nested structure.
+        "embedded_short_sha": build_result.get("embedded_short_sha"),
+        **base_report,
+    }
 
 
 def main(argv=None) -> int:

@@ -34,6 +34,8 @@ from scripts.release_rehearsal import archive_rehearsal as ar  # noqa: E402
 from scripts.release_rehearsal import changelog as cl  # noqa: E402
 from scripts.release_rehearsal import consistency as cc  # noqa: E402
 from scripts.release_rehearsal import doc_links as dl  # noqa: E402
+from scripts.release_rehearsal import epoch_claims as epc  # noqa: E402
+from scripts.release_rehearsal import stale_count_claims as scc  # noqa: E402
 from scripts.release_rehearsal import git_source as gs  # noqa: E402
 from scripts.release_rehearsal import provenance as prov  # noqa: E402
 from scripts.release_rehearsal import source_guard as sg  # noqa: E402
@@ -422,11 +424,61 @@ def check_doc_links(repo_root: Path) -> Dict:
     return {"ok": not errors, "errors": errors}
 
 
+def check_epoch_claims(repo_root: Path) -> Dict:
+    """issue #9 verifier remediation: scans release docs/headers for a
+    stale *current-state* EXPANSION_SAVE_COMPAT_EPOCH claim (e.g. the
+    known "epoch stays 1" falsehood after a later commit actually bumped
+    it) -- see scripts/release_rehearsal/epoch_claims.py. A legitimate
+    historical migration statement ("bumped 1 -> 2") never matches this
+    check's pattern at all, so it is never flagged."""
+    return epc.check(repo_root)
+
+
+def check_stale_count_claims(repo_root: Path) -> Dict:
+    """issue #9 verifier remediation: scans release closure evidence/docs
+    for a hardcoded aggregate test-count claim (e.g. the known "(860
+    tests)"/"Ran 860 tests" falsehood that goes stale the moment a test
+    is added/renamed) -- see
+    scripts/release_rehearsal/stale_count_claims.py. A legitimate small
+    semantic constant or migration delta is never flagged."""
+    return scc.check(repo_root)
+
+
+def check_embedded_identity_binding(target_sha: str, embedded_short_sha: Optional[str]) -> Dict:
+    """issue #9 verifier remediation: a release candidate's build-identity
+    binding (the embedded short-form build commit -- see
+    verify_short_sha()/derive_short_sha() above) must never be an
+    optional/conditional fact on a publication-eligibility or rehearsal
+    path. Unlike a malformed/mismatched *supplied* value (which
+    verify_short_sha() itself already rejects as an actionable
+    ManifestError, well before this function is ever reached), a simply
+    *missing* embedded_short_sha (None -- nobody supplied one at all) is
+    not a tooling error; it is an honest, unresolved fact this function
+    turns into its own always-present, never-mockable-away reason, so a
+    candidate can never be reported "mechanically eligible" while its
+    build-identity binding to `target_sha` was never actually verified
+    against a real embedded artifact."""
+    if embedded_short_sha is None:
+        return {
+            "ok": False,
+            "reasons": [
+                "no embedded short-form build commit was supplied/verified for this "
+                f"candidate (target SHA {target_sha!r}); a release candidate's build-identity "
+                "binding can never be certified without verifying it against a real embedded "
+                "artifact (see --embedded-short-sha / the rehearsal rebuild's own automatic "
+                "embedded-metadata verification)"
+            ],
+        }
+    return {"ok": True, "reasons": []}
+
+
 def check_rebuild(
     repo_root: Path,
+    target_sha: str,
     attempt_build: bool = False,
     build_command: Optional[List[str]] = None,
     output_relpaths: Optional[List[str]] = None,
+    precomputed_rebuild_report: Optional[Dict] = None,
 ) -> Dict:
     """Folds scripts/release_rehearsal/archive_rehearsal.py's rebuild
     rehearsal into the manifest. `attempt_build` defaults to False here
@@ -436,10 +488,29 @@ def check_rebuild(
     compile-and-compare is opt-in. Never "mechanically eligible" while
     this reports anything other than `REBUILD_STATUS_VERIFIED_SUCCESS`
     (see build_manifest below) -- a blocked/not-run/failed rebuild always
-    forces the overall candidate status to "blocked"."""
+    forces the overall candidate status to "blocked".
+
+    `target_sha` is always threaded through explicitly (issue #9 verifier
+    remediation) -- never left for `rebuild_rehearsal_blocker` to
+    independently re-resolve via its own `gs.resolve_sha(repo_root,
+    "HEAD")` fallback, which could otherwise silently diverge from this
+    exact manifest's own already-resolved, possibly-overridden identity
+    (e.g. a historical-replay `--target-sha` against a real git repo
+    whose live HEAD differs).
+
+    `precomputed_rebuild_report`, if given, is returned as-is (never
+    re-invoking `rebuild_rehearsal_blocker` a second time) -- this is
+    what lets `cli.py`'s `cmd_rehearse` run the real, potentially-heavy
+    double build exactly **once** and still fold its exact result into
+    this same manifest (rather than this function independently
+    re-running it, which would either double the real build work or
+    silently disagree with an already-computed outer result)."""
+    if precomputed_rebuild_report is not None:
+        return precomputed_rebuild_report
     return ar.rebuild_rehearsal_blocker(
         repo_root, attempt_build=attempt_build,
         build_command=build_command, output_relpaths=output_relpaths,
+        target_sha=target_sha,
     )
 
 
@@ -453,6 +524,7 @@ def build_manifest(
     attempt_rebuild_build: bool = False,
     rebuild_build_command: Optional[List[str]] = None,
     rebuild_output_relpaths: Optional[List[str]] = None,
+    precomputed_rebuild_report: Optional[Dict] = None,
 ) -> Dict:
     repo_root = Path(repo_root)
     # Resolve the exact, immutable target SHA *first* (this is the single
@@ -478,8 +550,14 @@ def build_manifest(
         repo_root=repo_root,
         build_id_override=target_sha,
     )
+    # issue #9 verifier remediation: a *supplied-but-malformed/mismatched*
+    # embedded_short_sha is still an actionable tooling error (raised
+    # here, exactly as before); a simply *missing* one is instead folded
+    # into `identity_binding_report` below as an always-present, never-
+    # optional blocking reason -- never silently skipped.
     if embedded_short_sha is not None:
         verify_short_sha(target_sha, embedded_short_sha)
+    identity_binding_report = check_embedded_identity_binding(target_sha, embedded_short_sha)
 
     candidate_tag = build_candidate_tag(identity.version_string)
     missing_docs = check_required_docs(repo_root)
@@ -494,10 +572,13 @@ def build_manifest(
     ledger_report = check_version_ledger_and_semver(repo_root, identity, changelog_report)
     c_fallback_report = check_c_fallback(repo_root)
     migration_reachability_report = check_migration_reachability(identity.save_compat_epoch)
+    epoch_claims_report = check_epoch_claims(repo_root)
+    stale_count_claims_report = check_stale_count_claims(repo_root)
     doc_links_report = check_doc_links(repo_root)
     rebuild_report = check_rebuild(
-        repo_root, attempt_build=attempt_rebuild_build,
+        repo_root, target_sha, attempt_build=attempt_rebuild_build,
         build_command=rebuild_build_command, output_relpaths=rebuild_output_relpaths,
+        precomputed_rebuild_report=precomputed_rebuild_report,
     )
 
     ledger = ledger_report["ledger"]
@@ -529,6 +610,12 @@ def build_manifest(
         reasons.extend(migration_reachability_report["errors"])
     if not doc_links_report["ok"]:
         reasons.extend(doc_links_report["errors"])
+    if not epoch_claims_report["ok"]:
+        reasons.extend(epoch_claims_report["errors"])
+    if not stale_count_claims_report["ok"]:
+        reasons.extend(stale_count_claims_report["errors"])
+    if not identity_binding_report["ok"]:
+        reasons.extend(identity_binding_report["reasons"])
     if rebuild_report["status"] != ar.REBUILD_STATUS_VERIFIED_SUCCESS:
         reasons.extend(
             rebuild_report.get("reasons")
@@ -560,6 +647,10 @@ def build_manifest(
         "c_fallback_metadata": c_fallback_report,
         "migration_reachability": migration_reachability_report,
         "doc_links": doc_links_report,
+        "epoch_claims": epoch_claims_report,
+        "stale_count_claims": stale_count_claims_report,
+        "identity_binding": identity_binding_report,
+        "embedded_short_sha": embedded_short_sha,
         "rebuild": rebuild_report,
         "status": status,
         "reasons": reasons,

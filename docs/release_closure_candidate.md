@@ -911,7 +911,10 @@ evidence, not a closure claim.**
    before now), so the complete, exact set disclosed here is four
    commits, not three. `python3 -m scripts.release_rehearsal.provenance
    check` reports zero `check_blob_identity` findings at `f0e7a7fa`, and
-   the full `scripts/release_rehearsal` stdlib test suite (860 tests)
+   the full `scripts/release_rehearsal` stdlib test suite (re-run it yourself --
+   `python3 -m unittest discover -s scripts/release_rehearsal/tests -v`; the
+   exact current total is never frozen here, since it drifts every time a
+   test is added/renamed)
    passes cleanly there (see "Verification" below); it does **not**
    continue to pass "after every change in this disclosure round" the
    way an earlier draft of this report claimed -- some of that suite's
@@ -936,14 +939,18 @@ evidence, not a closure claim.**
    `tree_coverage check`, 1 from `allowlist check`, 4
    `check_blob_identity` findings from `provenance check`), which
    `RepositoryStateTests` surfaces as seven live test failures at
-   `18f63d4c` (`Ran 860 tests ... FAILED (failures=7)`), reproduced
+   `18f63d4c` (the suite's own summary line there read
+   `FAILED (failures=7)` -- the exact total test count preceding that is
+   deliberately not repeated here, since it drifts; re-run the command
+   above directly against that commit to see it live), reproduced
    directly against that commit (see "Verification" below). This
    report's own live, immutable tip is the final resync that closes that
    transient drift, run the same disciplined way `f0e7a7fa` closed the
    four earlier ones: correct this disclosure's own wording first, stage
    every text/data change, regenerate exclusions/allowlist/provenance
    against the staged index, and verify zero structural findings (and a
-   clean, all-860-passing suite run) before committing.
+   clean, all-tests-passing suite run -- re-run the command above; never a
+   frozen count) before committing.
 
    **This repository's branch/tag/support policy has never required,
    and this round does not newly require, every ancestor commit on a
@@ -1066,10 +1073,16 @@ evidence, not a closure claim.**
 
 ### Verification (integration-evidence disclosure round)
 
-* Full `scripts/release_rehearsal` stdlib test suite (860 tests)
+* Full `scripts/release_rehearsal` stdlib test suite (re-run
+  `python3 -m unittest discover -s scripts/release_rehearsal/tests -v`
+  yourself for the current, live pass/fail result and count -- never
+  frozen here)
   re-verified green at this report's own live tip -- item 1 above
   discloses that this claim was **not** true at this round's prior tip,
-  `18f63d4c` (`Ran 860 tests ... FAILED (failures=7)`, all seven
+  `18f63d4c` (that commit's own suite run summary line read
+  `FAILED (failures=7)`; the exact preceding total test count is
+  deliberately not repeated here since it drifts -- reproduce it directly
+  against that commit for the live number), all seven
   failures inside `RepositoryStateTests`, which probes the live tree
   directly rather than only disposable fixtures).
 * `18f63d4c` re-verified as live-red, exactly as item 1 above

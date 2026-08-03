@@ -203,6 +203,9 @@ _SUB_REPORT_OK_RULES = {
     "c_fallback_metadata": lambda value: value.get("ok"),
     "migration_reachability": lambda value: value.get("ok"),
     "doc_links": lambda value: value.get("ok"),
+    "epoch_claims": lambda value: value.get("ok"),
+    "stale_count_claims": lambda value: value.get("ok"),
+    "identity_binding": lambda value: value.get("ok"),
     "provenance": lambda value: value.get("status") == STATUS_MECHANICALLY_ELIGIBLE,
     "source_guard": lambda value: value.get("status") == "pass",
     "rebuild": lambda value: value.get("status") == "verified_success",
@@ -212,7 +215,8 @@ _SUB_REPORT_OK_RULES = {
 # given the same input report.
 _SUB_REPORT_ORDER = (
     "allowlist", "tree_coverage", "submodule_binding", "external_attestation", "changelog",
-    "version_ledger", "c_fallback_metadata", "migration_reachability", "doc_links", "migrations",
+    "version_ledger", "c_fallback_metadata", "migration_reachability", "doc_links",
+    "epoch_claims", "stale_count_claims", "identity_binding", "migrations",
     "provenance", "source_guard", "archive", "rebuild",
 )
 
@@ -295,6 +299,7 @@ def cmd_summary(args) -> int:
     manifest = rm.build_manifest(
         args.repo_root, args.config, args.abi, args.rom_size,
         target_sha_override=args.target_sha,
+        embedded_short_sha=args.embedded_short_sha,
     )
     sys.stdout.write(render_markdown_summary(manifest))
     print(f"release-summary: rendered for status {manifest['status']!r}", file=sys.stderr)
@@ -357,16 +362,50 @@ def cmd_rehearse(args) -> int:
         args.repo_root, allowlist, target_sha=target_sha, map_hex_exceptions=map_hex_exceptions,
     )
 
-    rebuild_report = ar.rebuild_rehearsal_blocker(args.repo_root)
+    # issue #9 mandatory correction #3 (executable future-eligible
+    # rebuild model): the one, safe, public, documented, deterministic
+    # rebuild interface (scripts/release_rehearsal/archive_rehearsal.py's
+    # committed, locked build profile -- a plain argv list, never a
+    # shell string), parameterized by this same invocation's own
+    # --config/--abi/--rom-size. `rebuild_rehearsal_blocker` itself
+    # short-circuits to REBUILD_STATUS_BLOCKED before ever reading a
+    # single byte of this profile whenever mgfembp's provenance remains
+    # unapproved (today, and until a human resolves it) -- so wiring
+    # this in does not, and cannot, cause any fetch/build of mgfembp
+    # while this repository remains BLOCKED. Executed here exactly
+    # **once** (never a second time inside build_manifest below -- see
+    # `precomputed_rebuild_report`).
+    rebuild_build_command, rebuild_output_relpaths = ar.build_default_rebuild_profile(
+        args.config, args.abi, args.rom_size,
+    )
+    rebuild_report = ar.rebuild_rehearsal_blocker(
+        args.repo_root, attempt_build=True,
+        build_command=rebuild_build_command, output_relpaths=rebuild_output_relpaths,
+        target_sha=target_sha,
+    )
+
+    # issue #9 mandatory correction #2: the embedded short-SHA binding is
+    # never optional/conditional on this path -- if the caller did not
+    # explicitly override it, and the real rebuild just executed above
+    # actually produced a verified, extracted short SHA (only possible
+    # once eligibility ever stops being BLOCKED), that real, extracted
+    # value is what is bound into the manifest below -- never a manual
+    # flag a caller might simply forget to pass.
+    embedded_short_sha = (
+        args.embedded_short_sha if args.embedded_short_sha is not None
+        else rebuild_report.get("embedded_short_sha")
+    )
 
     manifest = rm.build_manifest(
         args.repo_root, args.config, args.abi, args.rom_size,
         target_sha_override=target_sha,
+        embedded_short_sha=embedded_short_sha,
+        precomputed_rebuild_report=rebuild_report,
     )
 
     report = {
         "archive": archive_report,
-        "rebuild": rebuild_report,
+        "rebuild": manifest["rebuild"],
         "provenance": manifest["provenance"],
         "source_guard": manifest["source_guard"],
         "allowlist": manifest["allowlist"],
@@ -374,6 +413,10 @@ def cmd_rehearse(args) -> int:
         "submodule_binding": manifest["submodule_binding"],
         "external_attestation": manifest["external_attestation"],
         "version_ledger": manifest["version_ledger"],
+        "epoch_claims": manifest["epoch_claims"],
+        "stale_count_claims": manifest["stale_count_claims"],
+        "identity_binding": manifest["identity_binding"],
+        "embedded_short_sha": manifest["embedded_short_sha"],
         "status": manifest["status"],
         "reasons": manifest["reasons"],
     }
@@ -401,18 +444,26 @@ def cmd_workflow_guard(args) -> int:
     inventory cross-check (`action_pins.check` -- issue #9 mandatory
     correction #1: the workflow's pins and
     `docs/release_data/action_pins.json` must agree exactly, in both
-    directions). Both are folded into one JSON report and one shared
-    0/1/2 exit contract, since both are the same underlying "is this
-    workflow's own safety/pin contract intact" question `make
-    release-workflow-guard` answers -- see docs/release_process.md's
-    "Workflow guard is advisory, not authorization" section: a clean
-    result here is necessary, never sufficient, for eligibility."""
+    directions). A third, issue #9 verifier remediation check
+    (`workflow_guard.check_release_target_sha_binding` -- the exact
+    checked-out commit must be explicitly bound via `RELEASE_TARGET_SHA:
+    ${{ github.sha }}` wherever a release publication-eligibility target
+    is invoked) is folded in here too, rather than into `validate_
+    workflow_text`'s own shared aggregator (see that function's
+    docstring for why). All three are folded into one JSON report and
+    one shared 0/1/2 exit contract, since all three are the same
+    underlying "is this workflow's own safety/pin/identity-binding
+    contract intact" question `make release-workflow-guard` answers --
+    see docs/release_process.md's "Workflow guard is advisory, not
+    authorization" section: a clean result here is necessary, never
+    sufficient, for eligibility."""
     try:
         text = args.workflow.read_text(encoding="utf-8")
     except OSError as error:
         print(f"error: {error}", file=sys.stderr)
         return EXIT_TOOLING_ERROR
     violations = list(wg.validate_workflow_text(text))
+    violations.extend(wg.check_release_target_sha_binding(text))
     action_pin_inventory_path = REPO_ROOT / ap.DEFAULT_INVENTORY_PATH
     try:
         action_pin_violations = ap.check(

@@ -24,7 +24,7 @@ defaults (see "Legacy build path" below).
 | `EXPANSION_ROM_MAKER_CODE` | exactly 2 printable-ASCII bytes | `01` | ROM header, embedded metadata (fingerprint) |
 | `EXPANSION_ROM_REVISION` | integer, `[0, 255]` | `0` | ROM header "software version" byte (fingerprint) |
 | `EXPANSION_BUILD_ID` | empty, or 4-40 hex characters | empty | embedded build commit override |
-| `EXPANSION_SAVE_COMPAT_EPOCH` | integer, `[0, 65535]` | `1` | save-format compatibility gate (see `docs/save_format.md`); **not** part of the fingerprint above |
+| `EXPANSION_SAVE_COMPAT_EPOCH` | integer, `[0, 65535]` | `2` | save-format compatibility gate (see `docs/save_format.md`); **not** part of the fingerprint above |
 | `EXPANSION_ENABLED_LOCALES` | comma-separated subset of the stable `ExpansionLocaleId` list (`scripts/localization/schema.py`); must include `en` | `en` | issue #18 localization (fingerprint) -- which locales this ROM ships/enables at runtime |
 | `EXPANSION_DEFAULT_LOCALE` | must be a member of `EXPANSION_ENABLED_LOCALES` | `en` | issue #18 localization (fingerprint) -- the locale `src/expansion_locale.c`'s runtime resolver starts in |
 | `EXPANSION_PSEUDO_LOCALE` | `0` or `1`; must be `1` if and only if `qps-ploc` is in `EXPANSION_ENABLED_LOCALES` | `0` | issue #18 localization (fingerprint) -- enables the deterministic ASCII pseudo-locale test harness (`scripts/localization/pseudo.py`), never a real translation |

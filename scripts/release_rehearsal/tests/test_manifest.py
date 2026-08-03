@@ -246,7 +246,18 @@ class ExternalAttestationCannotBeSatisfiedByInRepoDataTests(unittest.TestCase):
     external attestation. No synthetic data, in-repo file, or candidate-
     controlled flag can ever flip this."""
 
-    def _fully_passing_manifest(self):
+    def _fully_passing_manifest(self, embedded_short_sha="__AUTO__"):
+        """`embedded_short_sha` defaults to the one remaining fact this
+        helper cannot mock away without defeating its own purpose: the
+        real, live target SHA's own correct derived short form (issue #9
+        verifier remediation added this as a second, equally
+        never-mockable-away mandatory binding -- see
+        `EmbeddedIdentityBindingMandatoryTests` below for the class that
+        isolates *that* one instead). Pass `None` explicitly to instead
+        prove the identity-binding reason alone surfaces here too."""
+        target_sha = rm.resolve_target_sha(ROOT, None)
+        if embedded_short_sha == "__AUTO__":
+            embedded_short_sha = rm.derive_short_sha(target_sha)
         with mock.patch.object(rm, "check_required_docs", return_value=[]), \
              mock.patch.object(rm, "check_changelog", return_value={"ok": True, "errors": [], "aggregate_impact": "none"}), \
              mock.patch.object(rm, "check_provenance", return_value={"status": "mechanically eligible", "reasons": []}), \
@@ -259,8 +270,9 @@ class ExternalAttestationCannotBeSatisfiedByInRepoDataTests(unittest.TestCase):
              mock.patch.object(rm, "check_c_fallback", return_value={"ok": True, "errors": []}), \
              mock.patch.object(rm, "check_migration_reachability", return_value={"ok": True, "errors": []}), \
              mock.patch.object(rm, "check_doc_links", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_epoch_claims", return_value={"ok": True, "errors": []}), \
              mock.patch.object(rm, "check_rebuild", return_value={"status": rm.ar.REBUILD_STATUS_VERIFIED_SUCCESS, "reasons": []}):
-            return rm.build_manifest(ROOT, "release", "aapcs", "16M")
+            return rm.build_manifest(ROOT, "release", "aapcs", "16M", embedded_short_sha=embedded_short_sha)
 
     def test_overall_status_remains_blocked_even_with_everything_else_synthetically_passing(self):
         manifest = self._fully_passing_manifest()
@@ -285,6 +297,93 @@ class ExternalAttestationCannotBeSatisfiedByInRepoDataTests(unittest.TestCase):
         `_apply_status_gates` reads `manifest["status"]` directly."""
         manifest = self._fully_passing_manifest()
         self.assertNotEqual(manifest["status"], "mechanically eligible")
+
+
+class EmbeddedIdentityBindingMandatoryTests(unittest.TestCase):
+    """issue #9 verifier remediation: symmetric to
+    `ExternalAttestationCannotBeSatisfiedByInRepoDataTests` above --
+    proves the *other* newly-mandatory, never-optional binding
+    (embedded_short_sha) is equally un-mockable-away. Reuses the same
+    fully-passing synthetic fixture (including a real, present external
+    attestation this time -- mocked True here only to isolate this one
+    dimension), so the only possible remaining reason is this module's
+    own identity-binding one."""
+
+    def _fully_passing_manifest_except_identity_binding(self):
+        with mock.patch.object(rm, "check_required_docs", return_value=[]), \
+             mock.patch.object(rm, "check_changelog", return_value={"ok": True, "errors": [], "aggregate_impact": "none"}), \
+             mock.patch.object(rm, "check_provenance", return_value={"status": "mechanically eligible", "reasons": []}), \
+             mock.patch.object(rm, "check_source_guard", return_value={"status": "pass", "violations": []}), \
+             mock.patch.object(rm, "check_migrations", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_allowlist", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_tree_coverage", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_submodule_binding", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_external_attestation", return_value={"status": "present", "reasons": []}), \
+             mock.patch.object(rm, "check_version_ledger_and_semver", return_value={"ok": True, "errors": [], "ledger": {}}), \
+             mock.patch.object(rm, "check_c_fallback", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_migration_reachability", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_doc_links", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_epoch_claims", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_rebuild", return_value={"status": rm.ar.REBUILD_STATUS_VERIFIED_SUCCESS, "reasons": []}):
+            # embedded_short_sha deliberately omitted (defaults to None) --
+            # the one fact this test isolates as still-missing.
+            return rm.build_manifest(ROOT, "release", "aapcs", "16M")
+
+    def test_overall_status_remains_blocked_solely_from_missing_identity_binding(self):
+        manifest = self._fully_passing_manifest_except_identity_binding()
+        self.assertEqual(manifest["status"], "blocked")
+        self.assertNotEqual(manifest["status"], "mechanically eligible")
+
+    def test_the_only_remaining_reason_is_the_identity_binding_one(self):
+        manifest = self._fully_passing_manifest_except_identity_binding()
+        self.assertTrue(any("embedded short-form build commit" in r for r in manifest["reasons"]))
+        other_reasons = [r for r in manifest["reasons"] if "embedded short-form build commit" not in r]
+        self.assertEqual(other_reasons, [])
+
+    def test_identity_binding_substatus_is_not_ok_in_the_report(self):
+        manifest = self._fully_passing_manifest_except_identity_binding()
+        self.assertFalse(manifest["identity_binding"]["ok"])
+        self.assertIsNone(manifest["embedded_short_sha"])
+
+    def test_supplying_a_correct_embedded_short_sha_clears_this_one_reason(self):
+        """Positive control: supplying the exact correct short SHA (the
+        first 8 hex chars of the real, live target SHA) makes this
+        candidate's identity binding itself report ok -- proving the
+        mandatory check is a real, satisfiable gate, never a permanent
+        dead end."""
+        target_sha = rm.resolve_target_sha(ROOT, None)
+        correct_short = rm.derive_short_sha(target_sha)
+        with mock.patch.object(rm, "check_required_docs", return_value=[]), \
+             mock.patch.object(rm, "check_changelog", return_value={"ok": True, "errors": [], "aggregate_impact": "none"}), \
+             mock.patch.object(rm, "check_provenance", return_value={"status": "mechanically eligible", "reasons": []}), \
+             mock.patch.object(rm, "check_source_guard", return_value={"status": "pass", "violations": []}), \
+             mock.patch.object(rm, "check_migrations", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_allowlist", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_tree_coverage", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_submodule_binding", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_external_attestation", return_value={"status": "present", "reasons": []}), \
+             mock.patch.object(rm, "check_version_ledger_and_semver", return_value={"ok": True, "errors": [], "ledger": {}}), \
+             mock.patch.object(rm, "check_c_fallback", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_migration_reachability", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_doc_links", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_epoch_claims", return_value={"ok": True, "errors": []}), \
+             mock.patch.object(rm, "check_rebuild", return_value={"status": rm.ar.REBUILD_STATUS_VERIFIED_SUCCESS, "reasons": []}):
+            manifest = rm.build_manifest(
+                ROOT, "release", "aapcs", "16M", embedded_short_sha=correct_short,
+            )
+        self.assertEqual(manifest["status"], "mechanically eligible")
+        self.assertTrue(manifest["identity_binding"]["ok"])
+        self.assertEqual(manifest["embedded_short_sha"], correct_short)
+
+    def test_mismatched_embedded_short_sha_is_an_actionable_tooling_error_not_a_soft_reason(self):
+        """A *supplied-but-wrong* embedded_short_sha is a distinct,
+        stronger failure mode than merely "missing" -- it must never be
+        silently folded into "blocked" as if it were just another
+        unresolved fact; verify_short_sha() raises before build_manifest
+        gets anywhere near computing reasons/status at all."""
+        with self.assertRaises(rm.ManifestError):
+            rm.build_manifest(ROOT, "release", "aapcs", "16M", embedded_short_sha="deadbeef")
+
 
 
 class BuildManifestTests(unittest.TestCase):
@@ -377,6 +476,17 @@ class BuildManifestTests(unittest.TestCase):
         manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
         self.assertIn("doc_links", manifest)
         self.assertTrue(manifest["doc_links"]["ok"], manifest["doc_links"]["errors"])
+
+    def test_manifest_includes_epoch_claims_report_and_it_is_clean(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("epoch_claims", manifest)
+        self.assertTrue(manifest["epoch_claims"]["ok"], manifest["epoch_claims"]["errors"])
+
+    def test_manifest_includes_identity_binding_report_missing_by_default(self):
+        manifest = rm.build_manifest(ROOT, "release", "aapcs", "16M")
+        self.assertIn("identity_binding", manifest)
+        self.assertFalse(manifest["identity_binding"]["ok"])
+        self.assertIsNone(manifest["embedded_short_sha"])
 
 
 class VersionLedgerManifestWiringTests(unittest.TestCase):

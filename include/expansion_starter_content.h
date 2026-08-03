@@ -37,9 +37,12 @@
  * never depends on this flag, so an expanded-cap build with the content flag
  * off is still a valid, independently testable platform build.
  *
- * Save format: untouched. No new save field, no epoch bump
- * (EXPANSION_SAVE_COMPAT_EPOCH stays 1). The item ID travels in the existing
- * 14-bit item fields the vanilla save/suspend/link records already use.
+ * Save format: untouched by this feature. It introduces no new save field
+ * and requires no epoch bump of its own -- EXPANSION_SAVE_COMPAT_EPOCH's
+ * live current value (config.mk; currently 2, independently bumped 1 -> 2
+ * for issue #18 sprint 2) is unaffected by this feature either way. The
+ * item ID travels in the existing 14-bit item fields the vanilla
+ * save/suspend/link records already use.
  *
  * C89/agbcc-safe, and (like the rest of the expansion headers) expects
  * global.h to have been included first.

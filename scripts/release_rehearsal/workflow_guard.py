@@ -550,6 +550,56 @@ def check_forbidden_patterns(text: str) -> List[str]:
     return violations
 
 
+# issue #9 verifier remediation: the normal release workflow's
+# publication-eligibility steps (`make release-check`/`make release-
+# rehearse`, and their `-require-eligible`/`-expect-blocked` siblings --
+# see release.mk) must bind the exact, immutable checked-out commit
+# (`${{ github.sha }}`) as this candidate's target SHA -- never silently
+# leave it to whatever `git rev-parse HEAD` happens to resolve to inside
+# the runner (correct in practice, but not itself an auditable, explicit
+# binding a reviewer can see without also trusting the checkout step's
+# own exact behavior). release.mk's own `RELEASE_TARGET_SHA ?= $(shell
+# git rev-parse HEAD)` accepts an environment-variable override with
+# exactly this name, so a single job-level (or step-level) `env:`
+# mapping is sufficient -- never required on every individual `run:`
+# line.
+RELEASE_ELIGIBILITY_TARGET_RE = re.compile(r"\bmake\s+release-(check|rehearse)(-require-eligible|-expect-blocked)?\b")
+GITHUB_SHA_BINDING_RE = re.compile(r"RELEASE_TARGET_SHA\s*:\s*\$\{\{\s*github\.sha\s*\}\}")
+
+
+def check_release_target_sha_binding(text: str) -> List[str]:
+    """Fails closed if this workflow ever invokes a release publication-
+    eligibility target (`make release-check`/`make release-rehearse` or
+    a `-require-eligible`/`-expect-blocked` sibling) without also
+    declaring an explicit `RELEASE_TARGET_SHA: ${{ github.sha }}` `env:`
+    binding somewhere in the same file -- this is what makes "bound to
+    the exact checked-out commit" an auditable fact in the workflow
+    file itself, not merely an assumption about `git rev-parse HEAD`'s
+    behavior inside the runner.
+
+    Deliberately NOT folded into `validate_workflow_text()`'s shared
+    aggregator (called directly by `cli.py`'s `cmd_workflow_guard`
+    instead, alongside `validate_workflow_text()`) -- that aggregator is
+    reused by ~170 other unit tests exercising small, isolated workflow-
+    text snippets for unrelated checks (permissions, pins, forbidden
+    patterns, variable-assembly) that were never meant to also carry a
+    full `RELEASE_TARGET_SHA` binding; keeping this issue-#9-specific
+    check separate avoids a false-positive blast radius across every
+    one of those unrelated fixtures."""
+    invokes_eligibility_target = bool(RELEASE_ELIGIBILITY_TARGET_RE.search(text))
+    if not invokes_eligibility_target:
+        return []
+    if not GITHUB_SHA_BINDING_RE.search(text):
+        return [
+            "invokes a release publication-eligibility target (make release-check/"
+            "release-rehearse or a -require-eligible/-expect-blocked sibling) without an "
+            "explicit 'RELEASE_TARGET_SHA: ${{ github.sha }}' env binding anywhere in this "
+            "workflow -- the exact checked-out commit must be bound explicitly, never left "
+            "implicit"
+        ]
+    return []
+
+
 def check_dangerous_uses_actions(text: str) -> List[str]:
     """Generalized, case-insensitive `uses:` action-name heuristic: any
     referenced action whose name contains "upload", "release", "publish",

@@ -191,6 +191,74 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertFalse(publish_path.exists())
 
 
+class ReleaseTargetShaBindingTests(unittest.TestCase):
+    """issue #9 verifier remediation: the normal release workflow's
+    publication-eligibility steps must bind the exact checked-out commit
+    (`${{ github.sha }}`) as `RELEASE_TARGET_SHA`. Deliberately not part
+    of `validate_workflow_text()`'s shared aggregator (see that
+    function's own module-level docstring) -- tested directly here, and
+    exercised end-to-end via `cli.py`'s `workflow-guard` subcommand (see
+    `scripts/release_rehearsal/tests/test_cli.py`)."""
+
+    def test_real_workflow_binds_release_target_sha(self):
+        path = ROOT / ".github" / "workflows" / "release-rehearsal.yml"
+        violations = wg.check_release_target_sha_binding(path.read_text(encoding="utf-8"))
+        self.assertEqual(violations, [])
+
+    def test_missing_binding_is_rejected(self):
+        text = (
+            "jobs:\n"
+            "  release-rehearsal:\n"
+            "    steps:\n"
+            "      - run: make release-check\n"
+        )
+        violations = wg.check_release_target_sha_binding(text)
+        self.assertTrue(violations)
+        self.assertTrue(any("RELEASE_TARGET_SHA" in v for v in violations))
+
+    def test_present_binding_is_accepted(self):
+        text = (
+            "jobs:\n"
+            "  release-rehearsal:\n"
+            "    env:\n"
+            "      RELEASE_TARGET_SHA: ${{ github.sha }}\n"
+            "    steps:\n"
+            "      - run: make release-check\n"
+        )
+        violations = wg.check_release_target_sha_binding(text)
+        self.assertEqual(violations, [])
+
+    def test_rehearse_variant_also_requires_binding(self):
+        text = (
+            "jobs:\n"
+            "  release-rehearsal:\n"
+            "    steps:\n"
+            "      - run: make release-rehearse\n"
+        )
+        violations = wg.check_release_target_sha_binding(text)
+        self.assertTrue(violations)
+
+    def test_require_eligible_variant_also_requires_binding(self):
+        text = (
+            "jobs:\n"
+            "  release-rehearsal:\n"
+            "    steps:\n"
+            "      - run: make release-check-require-eligible\n"
+        )
+        violations = wg.check_release_target_sha_binding(text)
+        self.assertTrue(violations)
+
+    def test_workflow_with_no_eligibility_target_at_all_is_never_flagged(self):
+        text = (
+            "jobs:\n"
+            "  other-job:\n"
+            "    steps:\n"
+            "      - run: echo hello\n"
+        )
+        violations = wg.check_release_target_sha_binding(text)
+        self.assertEqual(violations, [])
+
+
 # --- issue #9 verifier remediation: adversarial verifier-probe tests -------
 # Every probe below encodes one specific evasion/escalation class the
 # independent verifier's own findings called out by name. Each is a
