@@ -201,11 +201,27 @@ def _hard_deny_check_git_entry(
     map_hex_exceptions: FrozenSet[str] = frozenset(),
 ) -> None:
     """The git-blob-content equivalent of source_guard.py's
-    `_hard_deny_check_file`: same path/extension/magic rules, applied to
-    bytes read from an immutable git blob instead of a worktree path.
-    A tracked hardlink has no meaning for a content-addressed git blob
-    (two paths sharing identical content is normal/expected in git, not a
-    filesystem hazard), so that specific check does not apply here."""
+    `_hard_deny_check_file`: same path/extension/magic/structural rules,
+    applied to bytes read from an immutable git blob instead of a
+    worktree path. A tracked hardlink has no meaning for a
+    content-addressed git blob (two paths sharing identical content is
+    normal/expected in git, not a filesystem hazard), so that specific
+    check does not apply here.
+
+    issue #9 residual-gap fix: a tracked file whose *committed blob
+    content* is a structurally valid ZIP (including a prefixed/
+    self-extracting one -- see `source_guard.classify_zip_structure`)
+    must be denied exactly like the filesystem (`_hard_deny_check_file`)
+    and tar-member (`scan_archive_members`) paths already do. Before this
+    fix, a tracked blob whose first `MAGIC_READ_BYTES` bytes were not a
+    bare `PK\x03\x04`/`PK\x05\x06`/`PK\x07\x08` header -- e.g. any
+    nonzero-length prefix before the real ZIP data -- silently bypassed
+    every ZIP check on this, the dominant real-world release-archive
+    path (a real git-tracked blob), even though the exact same bytes
+    would already have been caught on the filesystem or tar-member
+    paths. `classify_zip_structure` accepts a `bytes`/`bytearray` blob
+    directly (wraps it in an in-memory `io.BytesIO`), so the already-read
+    full blob `data` is passed as-is -- no extra read, no extraction."""
     rel = entry.path
     if sg.is_unsafe_member_name(rel):
         violations.append((rel, "unsafe-member-name"))
@@ -221,6 +237,9 @@ def _hard_deny_check_git_entry(
     magic_rule = sg.classify_magic(data[: sg.MAGIC_READ_BYTES])
     if magic_rule:
         violations.append((rel, magic_rule))
+    zip_rule = sg.classify_zip_structure(data)
+    if zip_rule:
+        violations.append((rel, zip_rule))
 
 
 def _resolve_map_hex_exceptions(root: Path, map_hex_exceptions: Optional[FrozenSet[str]]) -> FrozenSet[str]:

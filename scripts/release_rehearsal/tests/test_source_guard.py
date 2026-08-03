@@ -4,11 +4,13 @@ import io
 import json
 import os
 import stat
+import struct
 import subprocess
 import sys
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -28,6 +30,63 @@ def _init_git_repo(root: Path) -> None:
     is required for ``git ls-files`` to see tracked files; no commit or
     configured identity is needed."""
     _git("init", "-q", cwd=root)
+
+
+# --- Structural, prefix-tolerant ZIP fixture helpers (issue #9: prefixed/
+# self-extracting ZIP detection) --------------------------------------
+def _make_zip_bytes(entries, comment=b""):
+    """A complete, valid, unprefixed ZIP byte blob with the given
+    ``(name, data)`` entries and an optional archive comment."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, data in entries:
+            zf.writestr(name, data)
+        zf.comment = comment
+    return buf.getvalue()
+
+
+def _make_zip64_bytes(name="big.bin", data=b"x" * 100):
+    """A structurally valid ZIP using an explicit Zip64 extension on its
+    one entry (``force_zip64=True``), even though the entry itself is
+    tiny -- Zip64 is a still-valid, still-prohibited ZIP structure under
+    this policy, never a reason to skip/bypass detection."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", allowZip64=True) as zf:
+        with zf.open(name, "w", force_zip64=True) as fh:
+            fh.write(data)
+    return buf.getvalue()
+
+
+def _flip_general_purpose_bit(zip_bytes: bytes, bit: int) -> bytes:
+    """Sets general-purpose flag `bit` (0 = traditional encryption; 3 =
+    data-descriptor-follows) on the first entry's *local* file header
+    and its matching *central directory* record. Flipping this bit alone
+    never invalidates the archive's central-directory structure (sizes/
+    CRC/offsets are untouched) -- it only changes how a real extractor
+    would interpret payload bytes this guard never reads in the first
+    place."""
+    data = bytearray(zip_bytes)
+    local_idx = data.find(b"PK\x03\x04")
+    central_idx = data.find(b"PK\x01\x02")
+    assert local_idx != -1 and central_idx != -1
+    for idx, flag_offset in ((local_idx, local_idx + 6), (central_idx, central_idx + 8)):
+        flag = struct.unpack_from("<H", data, flag_offset)[0]
+        struct.pack_into("<H", data, flag_offset, flag | (1 << bit))
+    return bytes(data)
+
+
+def _corrupt_central_directory_signature(zip_bytes: bytes) -> bytes:
+    """Flips one byte inside the *central directory* record's own
+    ``PK\x01\x02`` signature while leaving the EOCD record (and its
+    accurate ``size_cd``/``offset_cd`` fields) untouched -- a consistent,
+    structurally-claimed-ZIP EOCD whose central directory itself then
+    fails to parse (`zipfile.BadZipFile`: "Bad magic number for central
+    directory"), i.e. the deliberate fail-closed "malformed" case."""
+    data = bytearray(zip_bytes)
+    idx = data.find(b"PK\x01\x02")
+    assert idx != -1
+    data[idx + 3] ^= 0xFF
+    return bytes(data)
 
 
 class MagicClassificationTests(unittest.TestCase):
@@ -104,6 +163,125 @@ class MagicClassificationTests(unittest.TestCase):
         """A ZIP smuggled under an innocuous ".txt"/".c" name must still be
         caught by content, not just by extension."""
         self.assertEqual(sg.classify_magic(b"PK\x03\x04" + b"\x00" * 40), "prohibited-magic-zip-archive")
+
+
+class ZipStructureDetectionTests(unittest.TestCase):
+    """`classify_zip_structure` (issue #9: structural, prefix-tolerant ZIP
+    detection) operating directly on immutable ``bytes`` blobs -- the
+    same code path filesystem files and tar members below both route
+    through, per an in-memory `io.BytesIO` wrapper."""
+
+    def test_unprefixed_valid_zip_detected(self):
+        data = _make_zip_bytes([("hello.txt", b"hi")])
+        self.assertEqual(sg.classify_zip_structure(data), "prohibited-magic-zip-archive")
+
+    def test_prefixed_valid_zip_detected_various_prefix_lengths(self):
+        """A valid ZIP is still a valid ZIP -- and still just as
+        prohibited -- no matter how long an arbitrary prefix precedes it
+        (a self-extracting archive's native stub is the canonical
+        legitimate real-world example of exactly this shape)."""
+        zip_bytes = _make_zip_bytes([("hello.txt", b"hi")])
+        for prefix_len in (1, 2, 64, 4096, 65600):
+            with self.subTest(prefix_len=prefix_len):
+                prefixed = (b"P" * prefix_len) + zip_bytes
+                self.assertEqual(
+                    sg.classify_zip_structure(prefixed), "prohibited-magic-zip-archive"
+                )
+
+    def test_prefixed_zip_with_eocd_comment_detected(self):
+        """A ZIP with a non-empty archive comment (itself part of a valid
+        EOCD record) is still detected once prefixed."""
+        zip_bytes = _make_zip_bytes([("hello.txt", b"hi")], comment=b"c" * 500)
+        prefixed = b"SFX-STUB-BYTES" * 37 + zip_bytes
+        self.assertEqual(sg.classify_zip_structure(prefixed), "prohibited-magic-zip-archive")
+
+    def test_nested_zip_containing_prohibited_content_detected_regardless_of_prefix(self):
+        """The inner ZIP's own entry content (here, an ELF payload) is
+        irrelevant to detection -- the whole archive is denied outright
+        by structure alone, exactly like an unprefixed nested ZIP is; no
+        unwrapping/extraction of the inner entry is ever required or
+        performed to reach this verdict."""
+        zip_bytes = _make_zip_bytes([("payload.bin", b"\x7fELF" + b"\x00" * 32)])
+        prefixed = b"\x00" * 4096 + zip_bytes
+        self.assertEqual(sg.classify_zip_structure(prefixed), "prohibited-magic-zip-archive")
+
+    def test_encrypted_flag_entry_still_detected_never_decrypted(self):
+        zip_bytes = _flip_general_purpose_bit(_make_zip_bytes([("hello.txt", b"hi")]), bit=0)
+        self.assertEqual(sg.classify_zip_structure(zip_bytes), "prohibited-magic-zip-archive")
+
+    def test_data_descriptor_flag_entry_still_detected(self):
+        zip_bytes = _flip_general_purpose_bit(_make_zip_bytes([("hello.txt", b"hi")]), bit=3)
+        self.assertEqual(sg.classify_zip_structure(zip_bytes), "prohibited-magic-zip-archive")
+
+    def test_zip64_entry_still_detected(self):
+        self.assertEqual(sg.classify_zip_structure(_make_zip64_bytes()), "prohibited-magic-zip-archive")
+
+    def test_ordinary_text_not_misclassified(self):
+        data = b"just some ordinary C source code with no zip bytes at all\n" * 20
+        self.assertIsNone(sg.classify_zip_structure(data))
+
+    def test_stray_pk_bytes_without_eocd_not_misclassified(self):
+        """Random `PK`-prefixed bytes with no consistent EOCD anywhere in
+        the tail must remain ordinary data -- a naive substring/magic
+        check would false-positive here; structural EOCD validation must
+        not."""
+        data = b"PK just some coincidental letters, not a real header" * 50
+        self.assertIsNone(sg.classify_zip_structure(data))
+
+    def test_truncated_zip_missing_eocd_not_misclassified(self):
+        """Cutting off the tail of a real ZIP (destroying its EOCD
+        record entirely) must never masquerade as a valid archive --
+        with no EOCD signature present anywhere in the tail window at
+        all, this is correctly ordinary (if truncated/corrupt) data, not
+        a "claimed" ZIP to fail closed on."""
+        zip_bytes = _make_zip_bytes([("hello.txt", b"hi")])
+        self.assertIsNone(sg.classify_zip_structure(zip_bytes[: len(zip_bytes) - 30]))
+
+    def test_malformed_central_directory_signature_fails_closed(self):
+        """A consistent EOCD is present (the stream structurally *claims*
+        to be a ZIP), but its own declared central directory is corrupt
+        -- this must be denied (fail closed), never silently waved
+        through as ordinary data just because it also turns out to be
+        broken."""
+        zip_bytes = _corrupt_central_directory_signature(_make_zip_bytes([("hello.txt", b"hi")]))
+        self.assertEqual(
+            sg.classify_zip_structure(zip_bytes), "prohibited-magic-zip-archive-malformed"
+        )
+
+    def test_malformed_truncated_central_directory_fails_closed(self):
+        zip_bytes = _make_zip_bytes([("hello.txt", b"hi")])
+        idx = zip_bytes.find(b"PK\x01\x02")
+        # Remove 8 bytes from inside the central directory record while
+        # leaving the EOCD record (and its size_cd/offset_cd fields --
+        # now inconsistent with the shortened actual content) untouched.
+        mutated = zip_bytes[: idx + 2] + zip_bytes[idx + 10 :]
+        self.assertEqual(
+            sg.classify_zip_structure(mutated), "prohibited-magic-zip-archive-malformed"
+        )
+
+    def test_too_short_to_be_a_zip_not_misclassified(self):
+        self.assertIsNone(sg.classify_zip_structure(b"hi"))
+
+    def test_accepts_bytearray_blob_too(self):
+        zip_bytes = _make_zip_bytes([("hello.txt", b"hi")])
+        self.assertEqual(
+            sg.classify_zip_structure(bytearray(zip_bytes)), "prohibited-magic-zip-archive"
+        )
+
+    def test_accepts_open_seekable_file_object(self):
+        """The same function, given an already-open seekable binary file
+        object (as `_hard_deny_check_file`/`scan_archive_members` below
+        both pass it) rather than a raw `bytes` blob, behaves
+        identically -- this is the single shared code path both a
+        filesystem file and a tar member route through."""
+        zip_bytes = b"prefix-stub" * 10 + _make_zip_bytes([("hello.txt", b"hi")])
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Path(tmp) / "prefixed.bin"
+            fixture.write_bytes(zip_bytes)
+            with open(fixture, "rb") as handle:
+                self.assertEqual(
+                    sg.classify_zip_structure(handle), "prohibited-magic-zip-archive"
+                )
 
 
 class PathSegmentTests(unittest.TestCase):
@@ -385,6 +563,61 @@ class ScanTreeTests(unittest.TestCase):
             violations = sg.scan_tree(root, {"src/notes.txt"}, closed_world=False)
             self.assertIn(("src/notes.txt", "prohibited-magic-zip-archive"), violations)
 
+    def test_prefixed_zip_filesystem_file_detected(self):
+        """issue #9: a valid ZIP with an arbitrary (nonzero-offset)
+        prefix -- e.g. a self-extracting archive's native stub -- sitting
+        directly as a real filesystem file must be caught by structural
+        EOCD/central-directory detection, not just the offset-0 magic
+        check, which would silently miss it (the file's own byte 0 is
+        prefix data, never `PK\x03\x04`)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            zip_bytes = _make_zip_bytes([("hello.txt", b"hi")])
+            prefixed = b"MZ-SFX-STUB-NOT-A-REAL-PE-JUST-A-PREFIX" * 20 + zip_bytes
+            (root / "src" / "innocuous.dat").write_bytes(prefixed)
+            self.assertNotEqual(prefixed[:4], b"PK\x03\x04")
+            violations = sg.scan_tree(root, {"src/innocuous.dat"}, closed_world=False)
+            self.assertIn(("src/innocuous.dat", "prohibited-magic-zip-archive"), violations)
+
+    def test_prefixed_zip_containing_prohibited_content_filesystem_file_detected(self):
+        """A prefixed ZIP whose own inner entry holds prohibited content
+        (an ELF payload) is still denied as a whole by structure alone --
+        detection never needs to (and never does) unpack the inner entry
+        to reach this verdict."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            inner_zip = _make_zip_bytes([("payload.bin", b"\x7fELF" + b"\x00" * 32)])
+            prefixed = b"\x00" * 2048 + inner_zip
+            (root / "src" / "asset.dat").write_bytes(prefixed)
+            violations = sg.scan_tree(root, {"src/asset.dat"}, closed_world=False)
+            self.assertIn(("src/asset.dat", "prohibited-magic-zip-archive"), violations)
+
+    def test_malformed_prefixed_zip_filesystem_file_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            corrupted = _corrupt_central_directory_signature(_make_zip_bytes([("hello.txt", b"hi")]))
+            prefixed = b"stub" * 50 + corrupted
+            (root / "src" / "broken.dat").write_bytes(prefixed)
+            violations = sg.scan_tree(root, {"src/broken.dat"}, closed_world=False)
+            self.assertIn(("src/broken.dat", "prohibited-magic-zip-archive-malformed"), violations)
+
+    def test_prefixed_zip_scan_never_extracts_to_disk(self):
+        """Scanning a prefixed-ZIP filesystem file must never write any
+        new file/directory anywhere -- structural detection is strictly
+        read-only enumeration, never an extraction."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            zip_bytes = _make_zip_bytes([("hello.txt", b"hi"), ("nested/dir/entry.txt", b"x")])
+            (root / "src" / "asset.dat").write_bytes(b"prefix" * 10 + zip_bytes)
+            before = sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
+            sg.scan_tree(root, {"src/asset.dat"}, closed_world=False)
+            after = sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
+            self.assertEqual(before, after)
+
     def test_double_slash_path_rejected_defense_in_depth(self):
         """scan_tree's own per-file check applies is_unsafe_member_name to
         every relative path it computes, as defense-in-depth (a real
@@ -600,6 +833,68 @@ class ScanArchiveMembersTests(unittest.TestCase):
     def test_clean_archive_no_violations(self):
         tar = self._make_tar([("src/main.c", b"int main(void){return 0;}", tarfile.REGTYPE)])
         self.assertEqual(sg.scan_archive_members(tar, {"src/main.c"}), [])
+
+    def test_prefixed_zip_tar_member_detected(self):
+        """issue #9: a valid ZIP with an arbitrary prefix, embedded as a
+        tar member's own content under an innocuous name/extension, must
+        be caught by structural EOCD/central-directory detection just
+        like the offset-0 nested-ZIP case already is above."""
+        zip_bytes = _make_zip_bytes([("hello.txt", b"hi")])
+        prefixed = b"SFX-STUB-BYTES" * 30 + zip_bytes
+        self.assertNotEqual(prefixed[:4], b"PK\x03\x04")
+        tar = self._make_tar([("src/innocuous.dat", prefixed, tarfile.REGTYPE)])
+        violations = sg.scan_archive_members(tar, {"src/innocuous.dat"})
+        self.assertIn(("src/innocuous.dat", "prohibited-magic-zip-archive"), violations)
+
+    def test_prefixed_zip_containing_prohibited_content_tar_member_detected(self):
+        """A prefixed ZIP tar member whose own inner entry holds
+        prohibited content (an ELF payload) is still denied as a whole by
+        structure alone -- no unpacking of the inner entry is required or
+        performed."""
+        inner_zip = _make_zip_bytes([("payload.bin", b"\x7fELF" + b"\x00" * 32)])
+        prefixed = b"\x00" * 2048 + inner_zip
+        tar = self._make_tar([("src/asset.dat", prefixed, tarfile.REGTYPE)])
+        violations = sg.scan_archive_members(tar, {"src/asset.dat"})
+        self.assertIn(("src/asset.dat", "prohibited-magic-zip-archive"), violations)
+
+    def test_malformed_prefixed_zip_tar_member_fails_closed(self):
+        corrupted = _corrupt_central_directory_signature(_make_zip_bytes([("hello.txt", b"hi")]))
+        prefixed = b"stub" * 40 + corrupted
+        tar = self._make_tar([("src/broken.dat", prefixed, tarfile.REGTYPE)])
+        violations = sg.scan_archive_members(tar, {"src/broken.dat"})
+        self.assertIn(("src/broken.dat", "prohibited-magic-zip-archive-malformed"), violations)
+
+    def test_prefixed_zip_tar_scan_never_extracts_to_disk(self):
+        """Scanning a tar containing a prefixed-ZIP member must never
+        write any file/directory anywhere on disk -- only
+        `TarFile.extractfile()`'s own bounded, read-only, in-memory
+        member stream is ever used."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            zip_bytes = _make_zip_bytes([("hello.txt", b"hi"), ("nested/dir/entry.txt", b"x")])
+            tar = self._make_tar([("src/asset.dat", b"prefix" * 10 + zip_bytes, tarfile.REGTYPE)])
+            before = sorted(p.relative_to(cwd).as_posix() for p in cwd.rglob("*"))
+            sg.scan_archive_members(tar, {"src/asset.dat"})
+            after = sorted(p.relative_to(cwd).as_posix() for p in cwd.rglob("*"))
+            self.assertEqual(before, after)
+
+    def test_multiple_prefix_lengths_and_comment_lengths_in_tar_member(self):
+        base_zip = _make_zip_bytes([("hello.txt", b"hi")])
+        commented_zip = _make_zip_bytes([("hello.txt", b"hi")], comment=b"c" * 1000)
+        cases = [
+            (0, base_zip),
+            (1, base_zip),
+            (777, base_zip),
+            (0, commented_zip),
+            (500, commented_zip),
+        ]
+        for prefix_len, zip_bytes in cases:
+            with self.subTest(prefix_len=prefix_len, comment_len=len(zip_bytes)):
+                name = f"src/case_{prefix_len}_{len(zip_bytes)}.dat"
+                content = (b"P" * prefix_len) + zip_bytes
+                tar = self._make_tar([(name, content, tarfile.REGTYPE)])
+                violations = sg.scan_archive_members(tar, {name})
+                self.assertIn((name, "prohibited-magic-zip-archive"), violations)
 
 
 class GitTrackedAllowlistedFilesTests(unittest.TestCase):

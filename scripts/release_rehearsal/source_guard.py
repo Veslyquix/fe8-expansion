@@ -59,7 +59,12 @@ inside an otherwise-allowlisted directory is still caught: ELF, PE
 (``CAFEBABE``), ZIP (including JAR/WAR/EAR, which are ZIP files), Unix
 ``ar`` (``.a``/``.lib``/``.deb``), gzip, bzip2, xz, 7z, rar, zstd, POSIX/
 GNU ``tar`` (``ustar`` magic at offset 257), and the pre-existing GBA ROM
-header/patch-format magics.
+header/patch-format magics. ``classify_zip_structure`` additionally
+recognizes a ZIP **regardless of any arbitrary prefix** before its local
+file headers (e.g. a self-extracting archive) via bounded, read-only
+stdlib End-Of-Central-Directory/central-directory parsing -- never
+extraction -- so an offset-0-only magic check can never be the only
+thing standing between a prefixed ZIP and this guard.
 
 Deliberately dependency-free (Python stdlib only).
 
@@ -70,6 +75,7 @@ invocation/I/O error.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
@@ -77,6 +83,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import zipfile
 from pathlib import Path, PurePosixPath
 from typing import FrozenSet, Iterable, List, Optional, Tuple
 
@@ -202,6 +209,113 @@ def classify_magic(head: bytes):
     if _is_tar_magic(head):
         return "prohibited-magic-tar-archive"
     return None
+
+
+# --- Structural, prefix-tolerant ZIP detection (issue #9: prefixed/self-
+# extracting ZIPs) -----------------------------------------------------
+# `classify_magic` above only ever inspects the *first* `MAGIC_READ_BYTES`
+# bytes, so it only ever catches a ZIP whose local file header happens to
+# start at byte 0. The ZIP format itself never requires that: every real
+# ZIP reader (including this one) locates the archive purely by scanning
+# *backwards* from the end for the End-Of-Central-Directory (EOCD)
+# record, so an arbitrary prefix before the "real" ZIP data is always a
+# structurally valid ZIP -- a self-extracting archive (native stub, then
+# ZIP data appended) is the canonical legitimate real-world example of
+# exactly this shape. An offset-0-only magic check is therefore not
+# sufficient to catch a prohibited ZIP smuggled behind any nonzero-length
+# prefix, however it got there (full filesystem file, tar member, or any
+# other complete byte stream/blob).
+PROHIBITED_ZIP_STRUCTURE = "prohibited-magic-zip-archive"
+PROHIBITED_ZIP_STRUCTURE_MALFORMED = "prohibited-magic-zip-archive-malformed"
+
+
+def classify_zip_structure(source):
+    """Structural (never magic-byte/extension-only) ZIP detection that
+    recognizes a valid ZIP archive **regardless of any arbitrary prefix**
+    before its local file headers, using only bounded, read-only stdlib
+    `zipfile` EOCD/central-directory parsing -- never an extraction call,
+    and never proportional to `source`'s own size beyond the ZIP format's
+    own fixed caps (`zipfile.is_zipfile` only ever scans a <=64KiB+22-byte
+    tail window for a consistent End-Of-Central-Directory record --
+    including the Zip64 EOCD locator -- and the subsequent central-
+    directory parse below is itself bounded by, and validated against,
+    that same EOCD record's own declared offsets/sizes, so a forged EOCD
+    claiming an implausible size/offset fails fast rather than attempting
+    a large read; verified directly against a hostile crafted EOCD).
+
+    `source` may be a `bytes`/`bytearray` immutable blob (wrapped in an
+    in-memory `io.BytesIO`) or any already-open, seekable, readable binary
+    file-like object representing a *complete* byte range -- an ordinary
+    filesystem file opened with `open(path, "rb")`, or a
+    `tarfile.TarFile.extractfile()` member stream (itself fully seekable
+    over exactly that member's own bytes, never the whole enclosing tar).
+    Both forms share this exact same code path, so a raw blob, a
+    filesystem file, and a tar member are all recognized identically and
+    uniformly -- this is what `_hard_deny_check_file` and
+    `scan_archive_members` below both call. The stream's read position is
+    not guaranteed on return.
+
+    Returns one of two disjoint prohibited-rule strings, or ``None``:
+
+    * `PROHIBITED_ZIP_STRUCTURE` -- a fully valid ZIP central directory
+      was parsed. Identical rule name/severity to the pre-existing
+      offset-0 `classify_magic` ZIP finding: a prefixed ZIP is exactly as
+      prohibited as an unprefixed one, never a lesser finding.
+    * `PROHIBITED_ZIP_STRUCTURE_MALFORMED` -- a consistent EOCD record
+      was found (so `source` *structurally claims* to be a ZIP) but its
+      own declared central directory then failed to parse (corrupt/
+      truncated/inconsistent). This is a deliberate fail-closed verdict:
+      once something has structurally claimed to be a ZIP, it is never
+      silently reinterpreted as ordinary data merely because it also
+      turns out to be broken -- a malformed claim is still denied, not
+      waved through.
+    * ``None`` -- no EOCD record consistent with `source`'s own actual
+      length is present anywhere in the tail window at all, i.e. this is
+      ordinary, non-ZIP data. Data that merely happens to contain stray
+      `PK`/EOCD-*looking* bytes without ever satisfying the format's own
+      internal offset/size consistency rule is never misclassified as a
+      ZIP by this alone (though another independent rule, e.g. a
+      prohibited extension, may still separately deny it).
+
+    Never decrypts, decompresses, or reads a single byte of any entry's
+    actual payload data: `zipfile.ZipFile`'s constructor parses only EOCD
+    + central-directory *metadata* (names, compressed/uncompressed
+    sizes, CRCs, general-purpose flag bits, offsets) -- so an encrypted
+    entry (flag bit 0 set), a data-descriptor entry (flag bit 3 set,
+    meaning CRC/sizes trail the entry's *local* header instead of
+    preceding it -- irrelevant here since only the always-complete
+    *central*-directory copy of that same metadata is ever consulted),
+    and a Zip64-extended entry are all ordinary, still-valid -- still
+    just as prohibited -- ZIP structures under this policy; none of them
+    is ever a reason to attempt decryption/decompression, and none is
+    ever treated as a policy exemption."""
+    if isinstance(source, (bytes, bytearray)):
+        stream = io.BytesIO(source)
+    else:
+        stream = source
+    try:
+        is_zip = zipfile.is_zipfile(stream)
+    except OSError:
+        return None
+    finally:
+        try:
+            stream.seek(0)
+        except OSError:
+            pass
+    if not is_zip:
+        return None
+    try:
+        stream.seek(0)
+        with zipfile.ZipFile(stream):
+            pass  # constructor alone fully parses EOCD + central directory metadata; nothing further to do, and no entry payload is ever touched.
+    except (zipfile.BadZipFile, OSError, EOFError, NotImplementedError, MemoryError):
+        return PROHIBITED_ZIP_STRUCTURE_MALFORMED
+    finally:
+        try:
+            stream.seek(0)
+        except OSError:
+            pass
+    return PROHIBITED_ZIP_STRUCTURE
 
 
 def classify_path_segments(relpath: str, map_hex_exceptions: FrozenSet[str] = frozenset()) -> List[str]:
@@ -339,12 +453,22 @@ def _hard_deny_check_file(
     try:
         with open(full, "rb") as handle:
             head = handle.read(MAGIC_READ_BYTES)
+            # Structural, prefix-tolerant ZIP detection is applied on the
+            # very same already-open handle (bounded, read-only tail/
+            # central-directory parsing -- see classify_zip_structure)
+            # *in addition to* the offset-0 magic check above: detecting
+            # one is never a reason to skip the other, so an unprefixed
+            # ZIP is still independently caught both ways and a prefixed
+            # one is still caught at all.
+            zip_rule = classify_zip_structure(handle)
     except OSError as error:
         violations.append((rel, f"read-failed:{error}"))
         return
     magic_rule = classify_magic(head)
     if magic_rule:
         violations.append((rel, magic_rule))
+    if zip_rule:
+        violations.append((rel, zip_rule))
 
 
 def _allowlist_ancestor_dirs(allowlist: Iterable[str]) -> FrozenSet[str]:
@@ -606,6 +730,16 @@ def scan_archive_members(
         magic_rule = classify_magic(head)
         if magic_rule:
             violations.append((name, magic_rule))
+        # Same structural, prefix-tolerant ZIP detection as the
+        # filesystem-tree path above, applied to this member's own
+        # bounded, fully-seekable byte range (tarfile.TarFile.
+        # extractfile() -- never the whole enclosing tar, and never an
+        # extraction to disk): a prefixed/self-extracting ZIP smuggled
+        # as a tar member under an innocuous name/extension is caught
+        # exactly like one sitting directly in a checkout is.
+        zip_rule = classify_zip_structure(handle)
+        if zip_rule:
+            violations.append((name, zip_rule))
     return sorted(set(violations))
 
 

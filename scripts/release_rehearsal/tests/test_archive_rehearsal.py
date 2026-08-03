@@ -2,6 +2,7 @@
 
 import glob
 import hashlib
+import io
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -405,6 +407,36 @@ class GitBackedArchiveTests(unittest.TestCase):
             with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
                 ar.rehearse_archive_twice(root, {"src/real.c", "src/link.c"})
             self.assertIn("prohibited-symlink", str(ctx.exception))
+
+    def test_tracked_prefixed_zip_blob_rejected_through_real_git_repo_path(self):
+        """issue #9 residual-gap fix: this is the exact hermetic
+        reproduction of the combined self-review finding -- a *tracked*
+        (committed) git blob whose content is a structurally valid ZIP
+        with an arbitrary nonzero-length prefix (a self-extracting-style
+        archive, never a bare offset-0 `PK\x03\x04` header) must be
+        denied on this, the dominant real git-repo archive path, exactly
+        like the already-covered filesystem/tar-member paths. Before the
+        `_hard_deny_check_git_entry` fix this test targets, this exact
+        scenario silently archived cleanly (no `classify_zip_structure`
+        call existed on the git-blob path at all); it must now raise."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "root"
+            root.mkdir()
+            _init_repo(root)
+            (root / "src").mkdir()
+            (root / "src" / "main.c").write_text("int main(void){return 0;}\n")
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w") as zf:
+                zf.writestr("payload.txt", "not actually innocuous\n")
+            prefixed_zip = b"SFX-STUB-BYTES" * 37 + buf.getvalue()
+            self.assertNotEqual(prefixed_zip[:4], b"PK\x03\x04")
+            (root / "src" / "innocuous.dat").write_bytes(prefixed_zip)
+            _git("add", "-A", cwd=root)
+            _git("commit", "-q", "-m", "tracked prefixed zip blob", cwd=root)
+
+            with self.assertRaises(ar.ArchiveRehearsalError) as ctx:
+                ar.rehearse_archive_twice(root, {"src/main.c", "src/innocuous.dat"})
+            self.assertIn("prohibited-magic-zip-archive", str(ctx.exception))
 
     def test_gitlink_member_never_silently_archived_even_if_allowlisted(self):
         """issue #9 mandatory correction #2: a gitlink is never supposed
