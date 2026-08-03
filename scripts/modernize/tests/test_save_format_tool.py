@@ -883,6 +883,237 @@ class CliMigrateToEpochTests(unittest.TestCase):
             self.assertEqual(source.read_bytes(), source_bytes)
 
 
+class CliMigrateTargetPairTests(unittest.TestCase):
+    """formatVersion/compatEpoch pair modeling (issue #9 residual-
+    hardening, pair-modeling slice): --to-format-version/--to-compat-epoch
+    let a caller declare the two target fields independently, instead of
+    always assuming --to-epoch's shorthand (same numeric value for both)
+    is the only way to express a target -- and instead of silently
+    reinterpreting one flag combination as another."""
+
+    def test_to_format_version_and_to_compat_epoch_match_to_epoch_shorthand(self):
+        """--to-format-version N --to-compat-epoch N must produce a
+        byte-for-byte identical result to the --to-epoch N shorthand it
+        replaces for the common (numerically-equal) case."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest_pair = Path(tmp) / "pair.bin"
+            dest_shorthand = Path(tmp) / "shorthand.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            code_pair = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest_pair),
+                "--to-format-version", "1", "--to-compat-epoch", "1",
+            ])
+            code_shorthand = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest_shorthand),
+                "--to-epoch", "1",
+            ])
+            self.assertEqual(code_pair, 0)
+            self.assertEqual(code_shorthand, 0)
+            self.assertEqual(dest_pair.read_bytes(), dest_shorthand.read_bytes())
+
+    def test_to_format_version_and_to_compat_epoch_can_genuinely_differ(self):
+        """The actual point of this hardening: an explicit target pair is
+        never assumed numerically equal. formatVersion=1 (older, below
+        live current) with compatEpoch stamped at the *live* config
+        epoch (genuinely different from 1 whenever that live epoch is 2)
+        must be honored exactly as declared -- not silently coerced to
+        formatVersion == compatEpoch."""
+        live_epoch = sft.resolve_save_compat_epoch(ROOT)
+        if live_epoch == 1:
+            self.skipTest("live EXPANSION_SAVE_COMPAT_EPOCH is 1; cannot demonstrate a real (1, != 1) pair")
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "migrated.bin"
+            source.write_bytes(bytes(make_image(make_header(valid=True), make_meta(present=False))))
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-format-version", "1", "--to-compat-epoch", str(live_epoch),
+            ])
+            self.assertEqual(exit_code, 0)
+            produced = dest.read_bytes()
+            meta = sft.ExpansionSaveMeta.unpack(produced[sft.META_OFFSET:sft.META_OFFSET + sft.META_SIZE])
+            self.assertEqual(meta.format_version, 1)
+            self.assertEqual(meta.compat_epoch, live_epoch)
+            self.assertNotEqual(meta.format_version, meta.compat_epoch)
+            # formatVersion 1 < live current -> honestly MIGRATABLE_OLDER
+            # regardless of which compatEpoch was stamped (the classifier
+            # never even inspects compatEpoch until formatVersion already
+            # resolves to CURRENT).
+            self.assertEqual(sft.classify_image(produced, live_epoch), sft.SAVE_COMPAT_MIGRATABLE_OLDER)
+
+    def test_to_format_version_without_to_compat_epoch_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-format-version", "1",
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_to_compat_epoch_without_to_format_version_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-compat-epoch", "1",
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_to_epoch_combined_with_to_format_version_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-epoch", "1", "--to-format-version", "1", "--to-compat-epoch", "1",
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_to_compat_epoch_zero_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-format-version", "1", "--to-compat-epoch", "0",
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_to_compat_epoch_beyond_live_epoch_rejected(self):
+        live_epoch = sft.resolve_save_compat_epoch(ROOT)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            exit_code = sft.main([
+                "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                "--to-format-version", "1", "--to-compat-epoch", str(live_epoch + 1),
+            ])
+            self.assertEqual(exit_code, 8)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_default_behavior_omitting_all_target_args_is_unaffected(self):
+        """Adversarial-suite requirement ('CLI target pair arguments and
+        default behavior'): a bare `migrate SOURCE DEST` with none of
+        --to-epoch/--to-format-version/--to-compat-epoch given must still
+        behave exactly as before this hardening -- stamps the live
+        SAVE_FORMAT_VERSION_CURRENT/config.mk compatEpoch pair."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "migrated.bin"
+            source.write_bytes(bytes(make_image(make_header(valid=True), make_meta(present=False))))
+
+            exit_code = sft.main(["--repo-root", str(ROOT), "migrate", str(source), str(dest)])
+            self.assertEqual(exit_code, 0)
+            live_epoch = sft.resolve_save_compat_epoch(ROOT)
+            produced = dest.read_bytes()
+            meta = sft.ExpansionSaveMeta.unpack(produced[sft.META_OFFSET:sft.META_OFFSET + sft.META_SIZE])
+            self.assertEqual(meta.format_version, sft.SAVE_FORMAT_VERSION_CURRENT)
+            self.assertEqual(meta.compat_epoch, live_epoch)
+            self.assertEqual(sft.classify_image(produced, live_epoch), sft.SAVE_COMPAT_CURRENT)
+
+    def test_to_compat_epoch_verification_failure_is_detected_and_nothing_written(self):
+        """Symmetric to test_migrate_to_epoch_verification_failure_is_
+        detected_and_nothing_written (CliMigrateToEpochTests) but for a
+        hypothetical builder regression that stamps the wrong compatEpoch
+        specifically, formatVersion left correct -- proving compatEpoch is
+        independently re-verified, not merely inferred from a correct
+        formatVersion."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "should-not-exist.bin"
+            source_bytes = bytes(make_image(make_header(valid=True), make_meta(present=False)))
+            source.write_bytes(source_bytes)
+
+            real_builder = sft.build_expansion_save_meta_for_target
+
+            def _wrong_compat_epoch_builder(repo_root, format_version, compat_epoch, reserved=None):
+                # Simulate a builder bug: always stamps a compatEpoch one
+                # higher than what was actually requested, formatVersion
+                # left correct.
+                return real_builder(repo_root, format_version, compat_epoch + 1, reserved=reserved)
+
+            with mock.patch.object(sft, "build_expansion_save_meta_for_target", side_effect=_wrong_compat_epoch_builder):
+                exit_code = sft.main([
+                    "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                    "--to-format-version", "1", "--to-compat-epoch", "1",
+                ])
+            self.assertEqual(exit_code, 5)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), source_bytes)
+
+    def test_final_independent_republish_reread_catches_mismatch(self):
+        """Issue #9 residual-hardening requirement: cmd_migrate() must
+        re-read the *actually published* destination once more,
+        independently of _publish_atomically()'s own internal
+        pre/post-publish classify_image() checks, and independently
+        verify both raw target fields. Simulated here by making
+        _publish_atomically() itself report success while having written
+        a destination whose raw compatEpoch does not match the declared
+        target -- a scenario _publish_atomically()'s own internal checks
+        would not normally allow, standing in for a hypothetical future
+        regression in that function."""
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.bin"
+            dest = Path(tmp) / "migrated.bin"
+            source.write_bytes(bytes(make_image(make_header(valid=True), make_meta(present=False))))
+
+            forged_meta = sft.ExpansionSaveMeta(
+                magic=sft.META_MAGIC,
+                format_version=1,
+                compat_epoch=999,
+                abi_id=sft.SAVE_ABI_ID_AAPCS,
+                framework_version_packed=0x000100,
+                config_fingerprint=b"deadbeefcafebabe\x00",
+                build_commit_short=b"cafef00d\x00",
+                checksum=0,
+                reserved=b"\x00" * (sft.META_SIZE - sft.META_CHECKSUM_DOMAIN - 2),
+            )
+            forged_meta.checksum = forged_meta.computed_checksum()
+            forged_bytes = bytes(make_image(make_header(valid=True), forged_meta.pack()))
+
+            def _fake_publish(dest_arg, payload, save_compat_epoch, force, required_state=sft.SAVE_COMPAT_CURRENT):
+                Path(dest_arg).write_bytes(forged_bytes)
+                return None
+
+            with mock.patch.object(sft, "_publish_atomically", side_effect=_fake_publish):
+                exit_code = sft.main([
+                    "--repo-root", str(ROOT), "migrate", str(source), str(dest),
+                    "--to-format-version", "1", "--to-compat-epoch", "1",
+                ])
+            self.assertEqual(exit_code, 5)
+            self.assertIn(dest.read_bytes(), (forged_bytes,))
+
+
 class BuildCurrentExpansionSaveMetaTests(unittest.TestCase):
     def test_built_metadata_classifies_current_against_repo_epoch(self):
         meta = sft.build_current_expansion_save_meta(ROOT)

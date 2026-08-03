@@ -110,6 +110,58 @@ def forged_exact_epoch_image(format_version: int) -> bytes:
     return bytes(make_image(make_header(valid=True), meta.pack()))
 
 
+def forged_exact_pair_image(format_version: int, compat_epoch: int) -> bytes:
+    """Like `forged_exact_epoch_image()` above, but lets a test control
+    *both* the raw `format_version` and the raw `compat_epoch` fields of a
+    real, checksum-valid ExpansionSaveMeta record independently. Used to
+    reproduce the finding-D bypass shape this hardening closes: a
+    checksum-valid source whose raw `format_version` genuinely matches a
+    declared step's `epoch_from` (so the format-only check alone would
+    have accepted it) but whose raw `compat_epoch` is an arbitrary wrong
+    value -- e.g. `format_version=1, compat_epoch=999` -- must still be
+    rejected before any mutation, because `classify_save_compat_raw()`
+    itself never inspects `compat_epoch` at all once `format_version` has
+    already resolved the state to `SAVE_COMPAT_MIGRATABLE_OLDER`."""
+    meta = sft.ExpansionSaveMeta(
+        magic=sft.META_MAGIC,
+        format_version=format_version,
+        compat_epoch=compat_epoch,
+        abi_id=sft.SAVE_ABI_ID_AAPCS,
+        framework_version_packed=0x000100,
+        config_fingerprint=b"deadbeefcafebabe\x00",
+        build_commit_short=b"cafef00d\x00",
+        checksum=0,
+        reserved=b"\x00" * (sft.META_SIZE - sft.META_CHECKSUM_DOMAIN - 2),
+    )
+    meta.checksum = meta.computed_checksum()
+    return bytes(make_image(make_header(valid=True), meta.pack()))
+
+
+def make_step(
+    epoch_from=1,
+    epoch_to=2,
+    compat_epoch_from=1,
+    compat_epoch_to=2,
+    kind=reg.MECHANICAL,
+    description="test step",
+    manual_steps=(),
+):
+    """Convenience constructor for a standalone (not REGISTRY-registered)
+    MigrationStep in tests that only care about kind/description/manual-
+    step validation, not this registry's own real declared transitions --
+    defaults to a plausible, self-consistent 1/1 -> 2/2 pair so tests that
+    do not care about the exact numbers do not have to repeat all four."""
+    return reg.MigrationStep(
+        epoch_from=epoch_from,
+        epoch_to=epoch_to,
+        compat_epoch_from=compat_epoch_from,
+        compat_epoch_to=compat_epoch_to,
+        kind=kind,
+        description=description,
+        manual_steps=manual_steps,
+    )
+
+
 class RegistryStructureTests(unittest.TestCase):
     def test_registry_has_v0_to_1_mechanical_entry(self):
         step = reg.find_step(None, 1)
@@ -129,18 +181,28 @@ class RegistryStructureTests(unittest.TestCase):
 
     def test_manual_step_requires_steps(self):
         with self.assertRaises(ValueError):
-            reg.MigrationStep(epoch_from=1, epoch_to=2, kind=reg.MANUAL, description="x")
+            make_step(kind=reg.MANUAL, description="x")
 
     def test_mechanical_step_forbids_manual_steps(self):
         with self.assertRaises(ValueError):
-            reg.MigrationStep(
-                epoch_from=1, epoch_to=2, kind=reg.MECHANICAL, description="x",
-                manual_steps=("do something",),
-            )
+            make_step(kind=reg.MECHANICAL, description="x", manual_steps=("do something",))
 
     def test_invalid_kind_rejected(self):
         with self.assertRaises(ValueError):
-            reg.MigrationStep(epoch_from=1, epoch_to=2, kind="bogus", description="x")
+            make_step(kind="bogus", description="x")
+
+    def test_legacy_source_requires_both_fields_absent_together(self):
+        """The explicit legacy/absent sentinel is one unambiguous state:
+        epoch_from and compat_epoch_from must both be None together, or
+        both be real numbered values -- never guessed field-by-field."""
+        with self.assertRaises(ValueError):
+            make_step(epoch_from=None, compat_epoch_from=1, description="x")
+        with self.assertRaises(ValueError):
+            make_step(epoch_from=1, compat_epoch_from=None, description="x")
+
+    def test_compat_epoch_ordering_rejected_at_construction(self):
+        with self.assertRaises(ValueError):
+            make_step(compat_epoch_from=2, compat_epoch_to=1, description="x")
 
     def test_find_step_missing_returns_none(self):
         self.assertIsNone(reg.find_step(5, 6))
@@ -160,13 +222,70 @@ class CheckRegistryTests(unittest.TestCase):
         finally:
             reg.REGISTRY = original
 
+    @staticmethod
+    def _construct_bypassing_post_init(**fields):
+        """Builds a MigrationStep instance while bypassing its own
+        __post_init__ validation entirely (frozen dataclasses still allow
+        object.__new__ + object.__setattr__) -- used only to prove
+        check_registry()'s own independent re-audit still catches a
+        malformed entry that somehow ended up in REGISTRY without ever
+        going through the normal, validating constructor (defense in
+        depth: check_registry() must not simply assume every entry was
+        necessarily built the normal way)."""
+        defaults = dict(
+            epoch_from=1, epoch_to=2, compat_epoch_from=1, compat_epoch_to=2,
+            kind=reg.MECHANICAL, description="bad", manual_steps=(),
+        )
+        defaults.update(fields)
+        step = object.__new__(reg.MigrationStep)
+        for name, value in defaults.items():
+            object.__setattr__(step, name, value)
+        return step
+
     def test_bad_epoch_ordering_detected(self):
+        # Note: unlike compat_epoch_to/compat_epoch_from (enforced at
+        # construction time, see test_compat_epoch_ordering_rejected_at_
+        # construction below), format-version epoch_to/epoch_from
+        # ordering has only ever been a check_registry()-time concern
+        # (matching this module's pre-existing, unchanged design) -- a
+        # MigrationStep with a bad *format* ordering constructs without
+        # raising; check_registry() is what must catch it.
         original = reg.REGISTRY
         try:
-            bad_step = reg.MigrationStep(epoch_from=2, epoch_to=1, kind=reg.MECHANICAL, description="bad")
+            bad_step = self._construct_bypassing_post_init(epoch_from=2, epoch_to=1)
             reg.REGISTRY = (bad_step,)
             errors = reg.check_registry()
             self.assertTrue(any("epoch_to must be greater" in error for error in errors))
+        finally:
+            reg.REGISTRY = original
+
+    def test_bad_compat_epoch_ordering_detected(self):
+        """Symmetric to test_bad_epoch_ordering_detected, for the new
+        compat_epoch pair: check_registry() must independently re-audit
+        compat_epoch_to > compat_epoch_from too, not merely format
+        version ordering."""
+        with self.assertRaises(ValueError):
+            make_step(compat_epoch_from=2, compat_epoch_to=1, description="bad")
+        original = reg.REGISTRY
+        try:
+            bad_step = self._construct_bypassing_post_init(compat_epoch_from=2, compat_epoch_to=1)
+            reg.REGISTRY = (bad_step,)
+            errors = reg.check_registry()
+            self.assertTrue(any("compat_epoch_to must be greater" in error for error in errors))
+        finally:
+            reg.REGISTRY = original
+
+    def test_mismatched_legacy_sentinel_detected(self):
+        """check_registry() must independently re-audit the legacy/absent
+        sentinel invariant too: epoch_from/compat_epoch_from must both be
+        None together, never one None and the other a real number, even
+        for an entry that bypassed the normal constructor."""
+        original = reg.REGISTRY
+        try:
+            bad_step = self._construct_bypassing_post_init(epoch_from=None, compat_epoch_from=1, epoch_to=1)
+            reg.REGISTRY = (bad_step,)
+            errors = reg.check_registry()
+            self.assertTrue(any("legacy/absent sentinel" in error for error in errors))
         finally:
             reg.REGISTRY = original
 
@@ -218,8 +337,8 @@ class DryRunTests(unittest.TestCase):
             self.assertIn("NOT eligible", message)
 
     def test_dry_run_manual_step_refuses_without_reading_source(self):
-        manual_step = reg.MigrationStep(
-            epoch_from=1, epoch_to=2, kind=reg.MANUAL, description="future epoch bump",
+        manual_step = make_step(
+            kind=reg.MANUAL, description="future epoch bump",
             manual_steps=("do the thing by hand",),
         )
         code, message = reg.dry_run(manual_step, Path("/nonexistent/does/not/matter"))
@@ -336,11 +455,14 @@ class RunTests(unittest.TestCase):
             self.assertIn("formatVersion", message)
             self.assertIn("2", message)
 
-    def test_run_passes_declared_to_epoch_and_expect_to_the_tool(self):
+    def test_run_passes_declared_target_pair_and_expect_to_the_tool(self):
         """run()'s subprocess invocation must always carry an explicit
-        --to-epoch and --expect for the step being executed -- this is
-        the actual mechanism that makes the declared transition an
-        executable contract rather than an implicit, guessed one."""
+        --to-format-version, --to-compat-epoch, and --expect for the step
+        being executed -- this is the actual mechanism that makes the
+        declared transition an executable contract rather than an
+        implicit, guessed one. The conflating --to-epoch shorthand must
+        never be used here: formatVersion and compatEpoch targets are
+        always passed independently."""
         step = reg.find_step(1, 2)
         # Precompute the forged "current" destination bytes *before*
         # patching subprocess.run: current_image() itself shells out to a
@@ -362,8 +484,11 @@ class RunTests(unittest.TestCase):
             with mock.patch.object(reg.subprocess, "run", side_effect=_capture) as run_mock:
                 reg.run(step, source, dest, force=True)
             called_args = run_mock.call_args[0][0]
-            self.assertIn("--to-epoch", called_args)
-            self.assertEqual(called_args[called_args.index("--to-epoch") + 1], "2")
+            self.assertNotIn("--to-epoch", called_args)
+            self.assertIn("--to-format-version", called_args)
+            self.assertEqual(called_args[called_args.index("--to-format-version") + 1], "2")
+            self.assertIn("--to-compat-epoch", called_args)
+            self.assertEqual(called_args[called_args.index("--to-compat-epoch") + 1], "2")
             self.assertIn("--expect", called_args)
             self.assertEqual(
                 called_args[called_args.index("--expect") + 1], sft.SAVE_COMPAT_MIGRATABLE_OLDER
@@ -400,8 +525,8 @@ class RunTests(unittest.TestCase):
             self.assertEqual(dest_state, sft.SAVE_COMPAT_CURRENT)
 
     def test_run_manual_step_refuses(self):
-        manual_step = reg.MigrationStep(
-            epoch_from=1, epoch_to=2, kind=reg.MANUAL, description="future epoch bump",
+        manual_step = make_step(
+            kind=reg.MANUAL, description="future epoch bump",
             manual_steps=("step one", "step two"),
         )
         with tempfile.TemporaryDirectory() as tmp:
@@ -479,11 +604,11 @@ class ExactSourceEpochEnforcementTests(unittest.TestCase):
     def test_exact_epoch_check_never_applies_to_the_none_epoch_from_step(self):
         """The `None -> 1` step's own `SAVE_COMPAT_VALID_LEGACY_OR_
         VANILLA` precondition is already exact/unambiguous (no numbered
-        epoch to further narrow) -- `_exact_source_epoch_mismatch` must
+        epoch to further narrow) -- `_exact_source_state_mismatch` must
         always defer to it rather than inventing a spurious numbered
         check for a `None` epoch_from."""
         step = reg.find_step(None, 1)
-        self.assertIsNone(reg._exact_source_epoch_mismatch(step, Path("/nonexistent")))
+        self.assertIsNone(reg._exact_source_state_mismatch(step, Path("/nonexistent")))
 
     def test_dry_run_still_accepts_a_garbage_source_via_the_ordinary_path(self):
         """A source with no trustworthy on-media record at all (blank/
@@ -498,6 +623,210 @@ class ExactSourceEpochEnforcementTests(unittest.TestCase):
             code, message = reg.dry_run(step, source)
             self.assertNotEqual(code, 0)
             self.assertIn("NOT eligible", message)
+
+
+class ExactSourceCompatEpochEnforcementTests(unittest.TestCase):
+    """Issue #9 residual-hardening reproducer (finding D, the actual
+    exploit shape this task description names): a checksum-valid source
+    whose raw formatVersion genuinely matches a declared step's
+    epoch_from is NOT sufficient proof on its own -- its raw compatEpoch
+    must independently match too. `classify_save_compat_raw()` never even
+    inspects compatEpoch once formatVersion has already resolved the
+    state to SAVE_COMPAT_MIGRATABLE_OLDER, so a forged source with
+    formatVersion=1 (this registry's real, declared epoch_from for its
+    1 -> 2 entry) but compatEpoch=999 (nowhere close to the declared
+    compat_epoch_from=1) used to be silently accepted end to end -- both
+    the broad --expect bucket *and* the pre-hardening exact-epoch check
+    (formatVersion only) approved it."""
+
+    def test_dry_run_rejects_correct_format_wrong_compat_epoch(self):
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "format1-epoch999.sav"
+            source.write_bytes(forged_exact_pair_image(format_version=1, compat_epoch=999))
+            code, message = reg.dry_run(step, source)
+            self.assertNotEqual(code, 0)
+            self.assertIn("NOT eligible", message)
+            self.assertIn("compatEpoch is exactly 999", message)
+            self.assertIn("compat_epoch_from 1", message)
+
+    def test_run_rejects_correct_format_wrong_compat_epoch_before_any_mutation(self):
+        """The exact reproducer named by this hardening's own task
+        description: formatVersion=1 (genuinely matching epoch_from=1),
+        compatEpoch=999 (nowhere near compat_epoch_from=1). Must be
+        rejected by run() before any subprocess is invoked at all, with
+        no destination created and the source left byte-for-byte
+        untouched."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "format1-epoch999.sav"
+            forged = forged_exact_pair_image(format_version=1, compat_epoch=999)
+            source.write_bytes(forged)
+            dest = Path(tmp) / "migrated.sav"
+            with mock.patch.object(reg.subprocess, "run") as run_mock:
+                code, message = reg.run(step, source, dest)
+            run_mock.assert_not_called()
+            self.assertNotEqual(code, 0)
+            self.assertIn("compatEpoch is exactly 999", message)
+            self.assertIn("compat_epoch_from 1", message)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), forged)
+
+    def test_dry_run_rejects_wrong_format_correct_compat_epoch(self):
+        """Symmetric reproducer: formatVersion=0 (wrong -- this step
+        declares epoch_from=1), compatEpoch=1 (correct, matches
+        compat_epoch_from=1) -- the formatVersion mismatch alone must
+        still be caught (checked first), proving neither field alone is
+        trusted over the other."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "format0-epoch1.sav"
+            source.write_bytes(forged_exact_pair_image(format_version=0, compat_epoch=1))
+            code, message = reg.dry_run(step, source)
+            self.assertNotEqual(code, 0)
+            self.assertIn("NOT eligible", message)
+            self.assertIn("formatVersion is exactly 0", message)
+            self.assertIn("epoch_from 1", message)
+
+    def test_run_rejects_wrong_format_correct_compat_epoch_before_any_mutation(self):
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "format0-epoch1.sav"
+            forged = forged_exact_pair_image(format_version=0, compat_epoch=1)
+            source.write_bytes(forged)
+            dest = Path(tmp) / "migrated.sav"
+            with mock.patch.object(reg.subprocess, "run") as run_mock:
+                code, message = reg.run(step, source, dest)
+            run_mock.assert_not_called()
+            self.assertNotEqual(code, 0)
+            self.assertIn("formatVersion is exactly 0", message)
+            self.assertFalse(dest.exists())
+            self.assertEqual(source.read_bytes(), forged)
+
+    def test_run_still_accepts_the_genuine_exact_pair_source(self):
+        """Symmetric control: this hardening must never reject the real,
+        declared (epoch_from=1, compat_epoch_from=1) source it is
+        supposed to accept -- only a wrong-numbered-field forgery."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "genuine-1-1.sav"
+            source.write_bytes(forged_exact_pair_image(format_version=1, compat_epoch=1))
+            dest = Path(tmp) / "migrated.sav"
+            code, message = reg.run(step, source, dest)
+            self.assertEqual(code, 0, message)
+            produced_meta = sft.ExpansionSaveMeta.unpack(
+                dest.read_bytes()[sft.META_OFFSET:sft.META_OFFSET + sft.META_SIZE]
+            )
+            self.assertEqual(produced_meta.format_version, 2)
+            self.assertEqual(produced_meta.compat_epoch, 2)
+
+
+class EndToEndExactPairSuccessTests(unittest.TestCase):
+    """Adversarial-suite requirement: both real registered transitions,
+    end to end, verified on *both* fields (not just formatVersion) --
+    "exact legacy -> format1/epoch1 success" and "format1/epoch1 ->
+    format2/epoch2 success"."""
+
+    def test_legacy_to_format1_epoch1_success(self):
+        step = reg.find_step(None, 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "legacy.sav"
+            source.write_bytes(legacy_image())
+            dest = Path(tmp) / "migrated.sav"
+            code, message = reg.run(step, source, dest)
+            self.assertEqual(code, 0, message)
+            meta = sft.ExpansionSaveMeta.unpack(
+                dest.read_bytes()[sft.META_OFFSET:sft.META_OFFSET + sft.META_SIZE]
+            )
+            self.assertEqual(meta.format_version, 1)
+            self.assertEqual(meta.compat_epoch, 1)
+
+    def test_format1_epoch1_to_format2_epoch2_success(self):
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "older.sav"
+            source.write_bytes(older_migratable_image())
+            dest = Path(tmp) / "migrated.sav"
+            code, message = reg.run(step, source, dest)
+            self.assertEqual(code, 0, message)
+            meta = sft.ExpansionSaveMeta.unpack(
+                dest.read_bytes()[sft.META_OFFSET:sft.META_OFFSET + sft.META_SIZE]
+            )
+            self.assertEqual(meta.format_version, 2)
+            self.assertEqual(meta.compat_epoch, 2)
+
+
+class ForgedTargetOutputTests(unittest.TestCase):
+    """Adversarial-suite requirement: 'forged output target format2/
+    epoch999 and format999/epoch2 rejected' -- even when the underlying
+    subprocess reports success (exit 0) and one of the two target fields
+    is correct, run()'s own independent re-read/re-verify of the
+    *published* destination must catch a mismatch on either field alone
+    and fail, never trusting the subprocess's self-reported exit code or
+    just one of the two raw fields."""
+
+    def _forge_dest(self, dest: Path, format_version: int, compat_epoch: int) -> bytes:
+        meta = sft.ExpansionSaveMeta(
+            magic=sft.META_MAGIC,
+            format_version=format_version,
+            compat_epoch=compat_epoch,
+            abi_id=sft.SAVE_ABI_ID_AAPCS,
+            framework_version_packed=0x000100,
+            config_fingerprint=b"deadbeefcafebabe\x00",
+            build_commit_short=b"cafef00d\x00",
+            checksum=0,
+            reserved=b"\x00" * (sft.META_SIZE - sft.META_CHECKSUM_DOMAIN - 2),
+        )
+        meta.checksum = meta.computed_checksum()
+        forged_bytes = bytes(make_image(make_header(valid=True), meta.pack()))
+        dest.write_bytes(forged_bytes)
+        return forged_bytes
+
+    def test_forged_output_correct_format_wrong_compat_epoch_rejected(self):
+        """Declared target is (formatVersion=2, compatEpoch=2); the
+        forged output has the correct formatVersion (2) but a bogus
+        compatEpoch (999) -- must still be rejected."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "older.sav"
+            source.write_bytes(older_migratable_image())
+            dest = Path(tmp) / "migrated.sav"
+
+            def _capture(args, **kwargs):
+                self._forge_dest(dest, format_version=2, compat_epoch=999)
+                return mock.Mock(returncode=0, stdout="migrated (forged)\n", stderr="")
+
+            with mock.patch.object(reg.subprocess, "run", side_effect=_capture):
+                code, message = reg.run(step, source, dest, force=True)
+            self.assertNotEqual(code, 0, message)
+            self.assertIn("compatEpoch", message)
+            self.assertIn("999", message)
+            self.assertIn("compat_epoch_to", message)
+
+    def test_forged_output_wrong_format_correct_compat_epoch_rejected(self):
+        """Declared target is (formatVersion=2, compatEpoch=2); the
+        forged output has a bogus formatVersion (200 -- struct
+        ExpansionSaveMeta's on-media formatVersion is a single byte, so
+        the largest distinguishable-from-2 value is used here rather than
+        an out-of-byte-range 999) but the correct compatEpoch (2) -- must
+        still be rejected (formatVersion is checked first, so this is
+        caught by that check)."""
+        step = reg.find_step(1, 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "older.sav"
+            source.write_bytes(older_migratable_image())
+            dest = Path(tmp) / "migrated.sav"
+
+            def _capture(args, **kwargs):
+                self._forge_dest(dest, format_version=200, compat_epoch=2)
+                return mock.Mock(returncode=0, stdout="migrated (forged)\n", stderr="")
+
+            with mock.patch.object(reg.subprocess, "run", side_effect=_capture):
+                code, message = reg.run(step, source, dest, force=True)
+            self.assertNotEqual(code, 0, message)
+            self.assertIn("formatVersion", message)
+            self.assertIn("200", message)
+            self.assertIn("epoch_to", message)
 
 
 class CliTests(unittest.TestCase):

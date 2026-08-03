@@ -110,33 +110,70 @@ Exit codes
       OS-enforced os.link() publish itself losing a race against a
       concurrently created destination -- either way the destination is
       left completely untouched.
-  8   migrate: an explicit --to-epoch is out of the mechanically
-      supported range (must be between 1 and the live
-      SAVE_FORMAT_VERSION_CURRENT, inclusive); refused before any file is
-      read, nothing written.
+  8   migrate: an explicit --to-epoch/--to-format-version/
+      --to-compat-epoch is out of the mechanically supported range, or
+      an invalid combination of these three was given (e.g.
+      --to-format-version without --to-compat-epoch, or --to-epoch
+      combined with either); refused before any file is read, nothing
+      written.
 
---to-epoch / --expect (migrate, issue #9 residual-hardening)
---------------------------------------------------------------
+--to-epoch / --to-format-version / --to-compat-epoch / --expect (migrate,
+issue #9 residual-hardening + formatVersion/compatEpoch pair modeling)
+---------------------------------------------------------------------------
 
   By default, migrate always stamps whatever is *live* today
   (SAVE_FORMAT_VERSION_CURRENT / config.mk's own
   EXPANSION_SAVE_COMPAT_EPOCH) -- unchanged historic behavior for every
-  bare `migrate SOURCE DEST` invocation. An explicit `--to-epoch N`
-  instead stamps exactly formatVersion/compatEpoch N (1 <= N <=
-  SAVE_FORMAT_VERSION_CURRENT), decoupled from whatever config.mk
-  currently says; a target below the live current epoch classifies
+  bare `migrate SOURCE DEST` invocation.
+
+  formatVersion and compatEpoch are two independent on-media fields
+  (struct ExpansionSaveMeta, include/save_format.h) -- classify_save_
+  compat_raw() only ever compares compatEpoch at all once formatVersion
+  has already resolved to SAVE_COMPAT_CURRENT; nothing in this tool may
+  assume the two are numerically equal for any future transition just
+  because today's two registered registry entries happen to declare
+  matching pairs (formatVersion 1/compatEpoch 1, formatVersion
+  2/compatEpoch 2). Two independent, explicit ways to declare a target
+  are supported:
+
+  * `--to-format-version FV --to-compat-epoch CE` -- the precise,
+    decoupled contract: stamps exactly formatVersion FV and compatEpoch
+    CE, independently validated and independently re-verified after
+    migration. Must always be given together (an explicit target must
+    declare both fields exactly, never leave the other to be assumed);
+    FV must be between 1 and the live SAVE_FORMAT_VERSION_CURRENT
+    inclusive, CE between 1 and the live config.mk
+    EXPANSION_SAVE_COMPAT_EPOCH inclusive.
+  * `--to-epoch N` -- a backward-compatible shorthand, truthfully
+    documented as exactly that: stamps the same numeric value N into
+    *both* formatVersion and compatEpoch (1 <= N <= SAVE_FORMAT_VERSION_
+    CURRENT). Mutually exclusive with --to-format-version/
+    --to-compat-epoch -- never silently combined or reinterpreted.
+
+  Either way, a formatVersion target below the live current classifies
   SAVE_COMPAT_MIGRATABLE_OLDER (never SAVE_COMPAT_CURRENT -- that would
-  misrepresent an intentionally older, honest target) and is re-verified
-  by unpacking the produced formatVersion field directly, not merely by
-  an overall classifier state. `--expect STATE` (repeatable) narrows
-  which source classification(s) this specific invocation accepts,
-  instead of the generic MIGRATABLE_SOURCE_STATES default -- used by
-  scripts/modernize/migrations/registry.py to enforce one declared
-  transition's *exact* epoch_from precondition (e.g. exactly
+  misrepresent an intentionally older, honest target); a formatVersion
+  target at the live current whose compatEpoch does not match the live
+  config classifies SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE (truthfully,
+  never silently coerced to SAVE_COMPAT_CURRENT). Both the produced
+  formatVersion *and* compatEpoch raw fields are independently
+  re-verified against the declared target -- both before publish (the
+  in-memory rebuilt image) and once more after publish (the actual bytes
+  read back from the published destination) -- not merely an overall
+  classifier state, which alone cannot tell two different exact numbered
+  pairs sharing the same broad bucket apart. `--expect STATE` (repeatable)
+  narrows which source classification(s) this specific invocation
+  accepts, instead of the generic MIGRATABLE_SOURCE_STATES default --
+  used by scripts/modernize/migrations/registry.py to enforce one
+  declared transition's *exact* epoch_from precondition (e.g. exactly
   SAVE_COMPAT_VALID_LEGACY_OR_VANILLA for its "no epoch" -> 1 entry,
   never also SAVE_COMPAT_MIGRATABLE_OLDER or SAVE_COMPAT_CURRENT) rather
   than accepting any broadly-migratable source regardless of which
-  transition was asked for.
+  transition was asked for; registry.py additionally, independently
+  re-reads and compares the source's own raw formatVersion *and*
+  compatEpoch fields against the declared step's exact source pair
+  before ever invoking this tool at all -- a broad --expect bucket match
+  alone is not sufficient proof of the exact source epoch pair.
 """
 
 from __future__ import annotations
@@ -969,28 +1006,86 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         )
         return 7
 
-    to_epoch = args.to_epoch
-    if to_epoch is not None:
-        # Issue #9 residual-hardening: an explicit --to-epoch is a
-        # validated, non-negotiable transition target -- it must never be
-        # silently reinterpreted. It can only ever mechanically stamp a
-        # format_version this tool actually implements (1..SAVE_FORMAT_
-        # VERSION_CURRENT today); anything else is rejected before any
-        # file is even read, exactly like every other precondition
-        # failure in this function.
-        if to_epoch < 1:
+    # Resolve the live config epoch first (no source image read yet) --
+    # needed both to bound an explicit --to-compat-epoch/--to-epoch target
+    # and to classify the source below against today's real config.
+    try:
+        save_compat_epoch = resolve_save_compat_epoch(repo_root)
+    except ec.ConfigError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+
+    # Issue #9 residual-hardening + formatVersion/compatEpoch pair
+    # modeling: an explicit target is a validated, non-negotiable
+    # transition contract -- it must never be silently reinterpreted, and
+    # formatVersion/compatEpoch must never be assumed numerically equal
+    # just because --to-epoch's shorthand happens to stamp them equal.
+    # Exactly one of these two ways to declare a target may be used:
+    #   * --to-epoch N            (shorthand: both fields = N)
+    #   * --to-format-version FV --to-compat-epoch CE  (independent pair,
+    #     always given together -- never just one of the two)
+    if args.to_epoch is not None and (
+        args.to_format_version is not None or args.to_compat_epoch is not None
+    ):
+        print(
+            "error: --to-epoch cannot be combined with --to-format-version/"
+            "--to-compat-epoch -- --to-epoch is only a shorthand for stamping the "
+            "same numeric value into both fields; use --to-format-version/"
+            "--to-compat-epoch directly for an explicit, independently-declared "
+            "target pair instead; source left untouched, nothing written",
+            file=sys.stderr,
+        )
+        return 8
+
+    if (args.to_format_version is None) != (args.to_compat_epoch is None):
+        print(
+            "error: --to-format-version and --to-compat-epoch must be given "
+            "together -- an explicit target must declare both fields exactly, "
+            "never assume one equals the other; source left untouched, nothing "
+            "written",
+            file=sys.stderr,
+        )
+        return 8
+
+    to_format_version = args.to_format_version
+    to_compat_epoch = args.to_compat_epoch
+    if args.to_epoch is not None:
+        # Backward-compatible shorthand only -- truthfully documented as
+        # exactly that (stamp the same value into both fields), never an
+        # implicit assumption applied anywhere else in this function.
+        to_format_version = args.to_epoch
+        to_compat_epoch = args.to_epoch
+
+    if to_format_version is not None:
+        if to_format_version < 1:
             print(
-                f"error: --to-epoch must be >= 1 (no format version below 1 is ever "
-                f"stamped by this tool), got {to_epoch}",
+                f"error: --to-format-version/--to-epoch must be >= 1 (no format "
+                f"version below 1 is ever stamped by this tool), got {to_format_version}",
                 file=sys.stderr,
             )
             return 8
-        if to_epoch > SAVE_FORMAT_VERSION_CURRENT:
+        if to_format_version > SAVE_FORMAT_VERSION_CURRENT:
             print(
-                f"error: --to-epoch {to_epoch} exceeds the live SAVE_FORMAT_VERSION_CURRENT "
-                f"{SAVE_FORMAT_VERSION_CURRENT}; no mechanical migration can produce a format "
-                "version this tool does not itself implement yet; source left untouched, "
-                "nothing written",
+                f"error: --to-format-version/--to-epoch {to_format_version} exceeds "
+                f"the live SAVE_FORMAT_VERSION_CURRENT {SAVE_FORMAT_VERSION_CURRENT}; "
+                "no mechanical migration can produce a format version this tool does "
+                "not itself implement yet; source left untouched, nothing written",
+                file=sys.stderr,
+            )
+            return 8
+        if to_compat_epoch < 1:
+            print(
+                f"error: --to-compat-epoch/--to-epoch must be >= 1 (no compat epoch "
+                f"below 1 is ever stamped by this tool), got {to_compat_epoch}",
+                file=sys.stderr,
+            )
+            return 8
+        if to_compat_epoch > save_compat_epoch:
+            print(
+                f"error: --to-compat-epoch/--to-epoch {to_compat_epoch} exceeds the live "
+                f"config.mk EXPANSION_SAVE_COMPAT_EPOCH {save_compat_epoch}; no mechanical "
+                "migration can produce a compat epoch this build's live config does not "
+                "itself declare yet; source left untouched, nothing written",
                 file=sys.stderr,
             )
             return 8
@@ -998,9 +1093,8 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     expected_states = tuple(args.expect) if args.expect else MIGRATABLE_SOURCE_STATES
 
     try:
-        save_compat_epoch = resolve_save_compat_epoch(repo_root)
         image = bytearray(read_image(source))
-    except (SaveFormatError, ec.ConfigError) as error:
+    except SaveFormatError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
@@ -1049,7 +1143,7 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         else None  # v0/vanilla: no prior ExpansionSaveMeta at all to preserve from
     )
 
-    if to_epoch is None:
+    if to_format_version is None:
         # Historic, backward-compatible default: stamp whatever is live
         # today (SAVE_FORMAT_VERSION_CURRENT / config.mk's
         # EXPANSION_SAVE_COMPAT_EPOCH), unchanged for every pre-existing
@@ -1058,31 +1152,28 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         target_format_version = SAVE_FORMAT_VERSION_CURRENT
         target_compat_epoch = save_compat_epoch
     else:
-        # Issue #9 residual-hardening: an explicit --to-epoch stamps
-        # *exactly* that formatVersion/compatEpoch pair -- never
-        # whatever config.mk's live epoch happens to be -- so a
-        # registry-declared `epoch_to` is an executable contract rather
-        # than always collapsing onto the live current epoch.
+        # Issue #9 residual-hardening + formatVersion/compatEpoch pair
+        # modeling: an explicit target stamps *exactly* the declared
+        # formatVersion/compatEpoch pair -- never whatever config.mk's
+        # live epoch happens to be, and never assuming one field equals
+        # the other -- so a registry-declared (epoch_to, compat_epoch_to)
+        # is an executable contract rather than always collapsing onto
+        # the live current epoch or onto a single conflated number.
         new_meta = build_expansion_save_meta_for_target(
-            repo_root, to_epoch, to_epoch, reserved=preserved_reserved
+            repo_root, to_format_version, to_compat_epoch, reserved=preserved_reserved
         )
-        target_format_version = to_epoch
-        target_compat_epoch = to_epoch
+        target_format_version = to_format_version
+        target_compat_epoch = to_compat_epoch
 
     image[META_OFFSET:META_OFFSET + META_SIZE] = new_meta.pack()
 
     # Verify the in-memory rebuilt image is *exactly* the declared
-    # target, not merely "some migration happened": both the raw
-    # formatVersion field (the precise numbered contract --to-epoch/a
-    # registry step's epoch_to promises) and the overall classifier
-    # state must agree. A target equal to today's live current epoch
-    # must still classify SAVE_COMPAT_CURRENT (this tool's original,
-    # unweakened guarantee); an explicit, validated older target
-    # (to_epoch < SAVE_FORMAT_VERSION_CURRENT) can never classify
-    # SAVE_COMPAT_CURRENT against today's live config -- demanding that
-    # would make an honest older target unpublishable -- so it must
-    # instead classify SAVE_COMPAT_MIGRATABLE_OLDER, the truthful state
-    # for a real, valid, older-formatVersion image.
+    # target, not merely "some migration happened": the raw formatVersion
+    # field *and* the raw compatEpoch field (the precise numbered
+    # contract --to-format-version/--to-compat-epoch, or a registry
+    # step's own epoch_to/compat_epoch_to, promises) are both
+    # independently checked, never assumed equal to one another or
+    # inferred from just one of the two.
     produced_meta = ExpansionSaveMeta.unpack(bytes(image[META_OFFSET:META_OFFSET + META_SIZE]))
     if produced_meta.format_version != target_format_version:
         print(
@@ -1092,12 +1183,34 @@ def cmd_migrate(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 5
+    if produced_meta.compat_epoch != target_compat_epoch:
+        print(
+            f"error: post-migration verification failed (stamped compatEpoch "
+            f"{produced_meta.compat_epoch}, expected exactly {target_compat_epoch}); "
+            f"nothing written to {dest}",
+            file=sys.stderr,
+        )
+        return 5
 
-    required_state = (
-        SAVE_COMPAT_CURRENT if target_format_version == SAVE_FORMAT_VERSION_CURRENT
-        else SAVE_COMPAT_MIGRATABLE_OLDER
-    )
-    post_state = classify_image(bytes(image), target_compat_epoch)
+    # required_state/post_state are derived from the real classifier
+    # (classify_image), driven by the *live* save_compat_epoch -- never by
+    # target_compat_epoch itself, which would make the compatEpoch
+    # comparison a tautology (a produced image always trivially "matches"
+    # its own just-stamped compatEpoch). A formatVersion target below the
+    # live current is honestly SAVE_COMPAT_MIGRATABLE_OLDER regardless of
+    # compatEpoch (classify_save_compat_raw() never even inspects
+    # compatEpoch until formatVersion has already resolved to CURRENT); a
+    # formatVersion target at the live current whose compatEpoch does not
+    # match the live config is honestly SAVE_COMPAT_SAVE_CONFIG_
+    # INCOMPATIBLE, never silently coerced to SAVE_COMPAT_CURRENT.
+    if target_format_version < SAVE_FORMAT_VERSION_CURRENT:
+        required_state = SAVE_COMPAT_MIGRATABLE_OLDER
+    elif target_compat_epoch != save_compat_epoch:
+        required_state = SAVE_COMPAT_SAVE_CONFIG_INCOMPATIBLE
+    else:
+        required_state = SAVE_COMPAT_CURRENT
+
+    post_state = classify_image(bytes(image), save_compat_epoch)
     if post_state != required_state:
         print(
             f"error: post-migration verification failed (got {post_state}, expected "
@@ -1107,14 +1220,44 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         return 5
 
     publish_result = _publish_atomically(
-        dest_resolved, bytes(image), target_compat_epoch, args.force, required_state=required_state
+        dest_resolved, bytes(image), save_compat_epoch, args.force, required_state=required_state
     )
     if publish_result is not None:
         exit_code, message = publish_result
         print(f"error: {message}", file=sys.stderr)
         return exit_code
 
-    print(f"migrated {source} ({source_state}) -> {dest} ({required_state}, formatVersion {target_format_version})")
+    # Issue #9 residual-hardening (compatEpoch pair modeling): a final,
+    # fully independent re-read of the *actually published* destination
+    # bytes -- separate from _publish_atomically()'s own internal
+    # pre/post-publish classify_image() re-checks -- comparing the raw
+    # formatVersion *and* compatEpoch fields directly against the
+    # declared target. A subprocess/publish step that reports success
+    # while the real on-disk bytes disagree on either raw field (not just
+    # overall classification state) must still be caught here.
+    try:
+        final_published = dest_resolved.read_bytes()
+    except OSError as error:
+        print(
+            f"error: migration reported success but the published destination could "
+            f"not be re-read for final field verification: {error}",
+            file=sys.stderr,
+        )
+        return 1
+    final_meta = ExpansionSaveMeta.unpack(
+        final_published[META_OFFSET:META_OFFSET + META_SIZE]
+    )
+    if final_meta.format_version != target_format_version or final_meta.compat_epoch != target_compat_epoch:
+        print(
+            f"error: published {dest} failed final independent field verification "
+            f"(formatVersion {final_meta.format_version}, compatEpoch "
+            f"{final_meta.compat_epoch}; expected exactly formatVersion "
+            f"{target_format_version}, compatEpoch {target_compat_epoch})",
+            file=sys.stderr,
+        )
+        return 5
+
+    print(f"migrated {source} ({source_state}) -> {dest} ({required_state}, formatVersion {target_format_version}, compatEpoch {target_compat_epoch})")
     return 0
 
 
@@ -1162,13 +1305,39 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help=(
-            "explicit, validated transition target: stamp exactly this formatVersion/"
-            "compatEpoch (must be between 1 and the live SAVE_FORMAT_VERSION_CURRENT, "
-            "inclusive) instead of always the live config.mk epoch. Default (omitted): "
-            "unchanged historic behavior -- stamps whatever is live today. Used by "
-            "scripts/modernize/migrations/registry.py so a declared registry transition's "
-            "epoch_to is an executable contract, never silently re-derived from the live "
-            "epoch."
+            "backward-compatible shorthand: stamp exactly this same numeric value into "
+            "both formatVersion and compatEpoch (must be between 1 and the live "
+            "SAVE_FORMAT_VERSION_CURRENT, inclusive) instead of always the live config.mk "
+            "epoch. Default (omitted): unchanged historic behavior -- stamps whatever is "
+            "live today. Mutually exclusive with --to-format-version/--to-compat-epoch. "
+            "Prefer --to-format-version/--to-compat-epoch for a transition whose two "
+            "fields are not declared numerically equal."
+        ),
+    )
+    migrate_parser.add_argument(
+        "--to-format-version",
+        type=int,
+        default=None,
+        help=(
+            "explicit, validated target formatVersion (must be between 1 and the live "
+            "SAVE_FORMAT_VERSION_CURRENT, inclusive), independent of --to-compat-epoch. "
+            "Must be given together with --to-compat-epoch -- an explicit target must "
+            "declare both fields exactly, never assume one equals the other. Mutually "
+            "exclusive with --to-epoch. Used by scripts/modernize/migrations/registry.py "
+            "so a declared registry transition's exact target (format_version, "
+            "compat_epoch) pair is an executable contract, never silently re-derived "
+            "from the live epoch or from each other."
+        ),
+    )
+    migrate_parser.add_argument(
+        "--to-compat-epoch",
+        type=int,
+        default=None,
+        help=(
+            "explicit, validated target compatEpoch (must be between 1 and the live "
+            "config.mk EXPANSION_SAVE_COMPAT_EPOCH, inclusive), independent of "
+            "--to-format-version. Must be given together with --to-format-version. "
+            "Mutually exclusive with --to-epoch."
         ),
     )
     migrate_parser.add_argument(
