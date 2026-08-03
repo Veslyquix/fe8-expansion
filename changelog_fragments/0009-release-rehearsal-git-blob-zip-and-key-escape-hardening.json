@@ -1,0 +1,6 @@
+{
+  "issue": 9,
+  "category": "internal",
+  "summary": "Close two residual fail-open gaps found by a combined self-review of the read-only release/publication rehearsal system's four latest hardening slices: the structural, prefix-tolerant ZIP detector (`source_guard.classify_zip_structure`) is now wired into the dominant, real-git-repo archive path (`archive_rehearsal._hard_deny_check_git_entry`), so a tracked git blob whose committed content is a prefixed/self-extracting ZIP is rejected exactly like the filesystem and tar-member paths already reject it; and the workflow/action-pin `uses:` scanner no longer silently skips an undecodable (malformed-escape) quoted key sitting in genuine key position, which previously let a completely unpinned/mutable action reference (e.g. bare `checkout@main`) sail through unflagged whenever the key in front of it carried one bad escape byte -- it is now always surfaced as its own hard, fail-closed violation. Also corrects `docs/migration_registry.md`, which still described a single conflated \"epoch\" model, to accurately document the exact `(format_version, compat_epoch)` source/target pair model and the underlying tool's `--to-format-version`/`--to-compat-epoch` vs. `--to-epoch` semantics. Publication remains mechanically BLOCKED throughout.",
+  "semver_impact": "none"
+}
