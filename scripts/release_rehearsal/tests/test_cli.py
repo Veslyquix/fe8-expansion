@@ -566,6 +566,115 @@ class MalformedExtractedTreeTests(unittest.TestCase):
         self.assertEqual(rehearse_result.returncode, 0, rehearse_result.stderr)
 
 
+class MalformedAllowlistCliExitTests(unittest.TestCase):
+    """issue #9 trust-boundary fix (C): a structurally malformed
+    `docs/release_data/source_allowlist.json` -- truncated JSON, wrong
+    top-level type, malformed schema/entry, or a duplicate path entry --
+    must map to `EXIT_TOOLING_ERROR` (2) through the real, top-level
+    `check`/`rehearse` CLI, never a raw traceback and never
+    `EXIT_NOT_ELIGIBLE` (1) even under `--require-eligible`. A
+    well-formed-but-blocked document remains ordinary exit 0 (plain
+    report mode) / exit 1 (only via `--require-eligible`) -- the
+    valid-but-blocked distinction this fix exists to preserve."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.head_sha, _ = _shared_head_sha_and_tree()
+
+    def _extract(self) -> Path:
+        tree = _copy_of_shared_head_tree()
+        self.addCleanup(shutil.rmtree, tree, True)
+        return tree
+
+    def _assert_no_traceback(self, result):
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertNotIn("Traceback (most recent call last)", result.stdout)
+
+    def _allowlist_path(self, tree: Path) -> Path:
+        return tree / "docs" / "release_data" / "source_allowlist.json"
+
+    def test_truncated_json_exits_2_via_check(self):
+        tree = self._extract()
+        self._allowlist_path(tree).write_text("{not json", encoding="utf-8")
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("error:", result.stderr)
+
+    def test_truncated_json_never_exits_1_even_with_require_eligible(self):
+        """The exact regression this fix exists to close: a malformed
+        input must never be indistinguishable from a truthful, well-
+        formed EXIT_NOT_ELIGIBLE (1) result."""
+        tree = self._extract()
+        self._allowlist_path(tree).write_text("{not json", encoding="utf-8")
+        result = run_cli(
+            "check", "--repo-root", str(tree), "--target-sha", self.head_sha, "--require-eligible",
+        )
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+    def test_wrong_top_level_type_exits_2_via_check(self):
+        tree = self._extract()
+        self._allowlist_path(tree).write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+    def test_malformed_schema_version_exits_2_via_check(self):
+        tree = self._extract()
+        self._allowlist_path(tree).write_text(
+            json.dumps({"schema_version": 1, "paths": ["README.md"], "modes": {"README.md": "100644"}}),
+            encoding="utf-8",
+        )
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("schema_version", result.stderr)
+
+    def test_duplicate_path_entry_exits_2_via_check(self):
+        tree = self._extract()
+        self._allowlist_path(tree).write_text(
+            json.dumps({
+                "schema_version": 4,
+                "paths": ["README.md", "README.md"],
+                "modes": {"README.md": "100644"},
+            }),
+            encoding="utf-8",
+        )
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("duplicate", result.stderr)
+
+    def test_truncated_json_exits_2_via_rehearse(self):
+        tree = self._extract()
+        self._allowlist_path(tree).write_text("{not json", encoding="utf-8")
+        result = run_cli("rehearse", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 2)
+
+    def test_valid_but_blocked_allowlist_is_not_a_tooling_error(self):
+        """The valid-but-blocked distinction: a well-formed,
+        schema-valid document that genuinely disagrees with the real
+        tracked-file set (an extra, unlisted file) remains an ordinary
+        exit 0 (plain report) / exit 1 (only via --require-eligible)
+        business result -- never a tooling error."""
+        tree = self._extract()
+        (tree / "unreviewed_extra_file.c").write_text("int extra;\n")
+        result = run_cli("check", "--repo-root", str(tree), "--target-sha", self.head_sha)
+        self._assert_no_traceback(result)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "blocked")
+
+        require_eligible_result = run_cli(
+            "check", "--repo-root", str(tree), "--target-sha", self.head_sha, "--require-eligible",
+        )
+        self._assert_no_traceback(require_eligible_result)
+        self.assertEqual(require_eligible_result.returncode, 1)
+
+
+
 class NestedOuterRepositoryZeroGitCallsTests(unittest.TestCase):
     """issue #9 fresh-review remediation regression: a genuine non-git
     extracted candidate nested *inside* an unrelated outer Git

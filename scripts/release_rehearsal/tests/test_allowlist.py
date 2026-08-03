@@ -532,6 +532,50 @@ class CheckFunctionTests(unittest.TestCase):
                 al.load_allowlist_paths(path)
 
 
+class LoaderWrongTopLevelTypeTests(unittest.TestCase):
+    """issue #9 trust-boundary fix (C1): the loaders must never let a
+    syntactically-valid JSON document whose top-level value is not even
+    an object at all (a bare array/string/number) reach an unguarded
+    `.get()` call -- that would be an unhandled `AttributeError`
+    traceback, exactly as unacceptable as a raw `JSONDecodeError`."""
+
+    def test_load_allowlist_paths_rejects_array_top_level(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(json.dumps(["a.txt", "b.txt"]), encoding="utf-8")
+            with self.assertRaises(al.AllowlistError) as ctx:
+                al.load_allowlist_paths(path)
+            self.assertIn("must be an object", str(ctx.exception))
+
+    def test_load_allowlist_paths_rejects_string_top_level(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(json.dumps("not-an-object"), encoding="utf-8")
+            with self.assertRaises(al.AllowlistError) as ctx:
+                al.load_allowlist_paths(path)
+            self.assertIn("must be an object", str(ctx.exception))
+
+    def test_load_allowlist_modes_rejects_array_top_level(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+            with self.assertRaises(al.AllowlistError) as ctx:
+                al.load_allowlist_modes(path)
+            self.assertIn("must be an object", str(ctx.exception))
+
+    def test_load_allowlist_modes_wraps_truncated_json(self):
+        """Defense in depth (C1): `load_allowlist_modes` must wrap its
+        own JSON decode independently -- never rely on always being
+        called after `load_allowlist_paths` has already parsed the same
+        file once."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "allow.json"
+            path.write_text("{not json", encoding="utf-8")
+            with self.assertRaises(al.AllowlistError) as ctx:
+                al.load_allowlist_modes(path)
+            self.assertIn("not valid JSON", str(ctx.exception))
+
+
 class NonGitlinkExclusionReaderDelegatesToTreeCoverageTests(unittest.TestCase):
     """issue #9 closing-round fix -- the literal reviewer-reported
     asymmetry: `_load_non_gitlink_exclusion_paths` used to accept *any*

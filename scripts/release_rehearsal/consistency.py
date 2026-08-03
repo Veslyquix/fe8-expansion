@@ -32,9 +32,12 @@ Deliberately dependency-free (Python stdlib only).
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+from scripts.release_rehearsal import git_source as gs
 
 VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -284,6 +287,174 @@ def check_version_ledger(ledger: Dict, candidate_version: str) -> List[str]:
             _check_reference_topology(supported, label, referenced_version, compatible_statuses)
         )
 
+    return errors
+
+
+# --- Immutable annotated release-tag authority (issue #9 SemVer trust- ---
+# boundary fix) -------------------------------------------------------------
+#
+# `check_version_ledger` above only validates the ledger's own internal
+# shape/topology and its self-consistency -- it never asks whether
+# `previous_supported_version` is actually *true*. These two functions
+# are that separate, fail-closed authority cross-check: in a real git
+# repository, the true immediate predecessor is derived exclusively from
+# `git_source`'s immutable, annotated `expansion/MAJOR.MINOR.PATCH`
+# release-tag history (`check_release_tag_authority`); for a genuine
+# non-git/archive candidate tree, which has no local tag history to
+# derive anything from at all, an explicit, external, protected
+# release-history attestation file bound to the exact target commit and
+# current version is required instead (`check_release_tag_authority_non_git`)
+# -- a missing attestation is never silently treated as "no predecessor"
+# (that would let a non-git candidate fabricate an empty release history
+# for free); it is its own explicit, actionable finding.
+
+
+RELEASE_HISTORY_ATTESTATION_SCHEMA_VERSION = 1
+
+
+class ReleaseHistoryAttestationError(ValueError):
+    """A malformed/unreadable non-git external release-history
+    attestation file -- an actionable schema/IO defect, distinct from an
+    ordinary "attestation disagrees with this candidate" business
+    finding (which is reported as a plain string, not raised)."""
+
+
+def load_release_history_attestation(path: Path) -> Dict:
+    """Validated loader for a non-git candidate's external, protected
+    release-history attestation file: wraps JSON decode/IO/schema/type/
+    key errors into one actionable `ReleaseHistoryAttestationError` with
+    the file's own path in the message (never a raw traceback/
+    `JSONDecodeError`) -- the same defensive-loader discipline as
+    `allowlist.load_allowlist_paths`/`load_allowlist_modes`. Returns a
+    plain dict with exactly the three bound facts this attestation
+    exists to carry: `target_sha`, `current_version`,
+    `previous_supported_version` (`None` is a valid, explicit "first
+    release" attestation value for this last key -- it is never merely
+    absent-and-defaulted)."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ReleaseHistoryAttestationError(f"{path}: not valid JSON: {error}") from error
+    if not isinstance(data, dict):
+        raise ReleaseHistoryAttestationError(f"{path}: must be a JSON object")
+    schema_version = data.get("schema_version")
+    if schema_version != RELEASE_HISTORY_ATTESTATION_SCHEMA_VERSION:
+        raise ReleaseHistoryAttestationError(
+            f"{path}: unsupported schema_version {schema_version!r} (expected exactly "
+            f"{RELEASE_HISTORY_ATTESTATION_SCHEMA_VERSION!r})"
+        )
+    required_keys = ("target_sha", "current_version", "previous_supported_version")
+    missing_keys = [key for key in required_keys if key not in data]
+    if missing_keys:
+        raise ReleaseHistoryAttestationError(f"{path}: missing required key(s): {', '.join(missing_keys)}")
+    target_sha = data["target_sha"]
+    if not isinstance(target_sha, str) or not re.fullmatch(r"^[0-9a-f]{40}$", target_sha):
+        raise ReleaseHistoryAttestationError(f"{path}: 'target_sha' must be a 40-lowercase-hex commit SHA")
+    current_version = data["current_version"]
+    if not isinstance(current_version, str) or not VERSION_RE.fullmatch(current_version):
+        raise ReleaseHistoryAttestationError(f"{path}: 'current_version' must be a MAJOR.MINOR.PATCH string")
+    previous = data["previous_supported_version"]
+    if previous is not None and (not isinstance(previous, str) or not VERSION_RE.fullmatch(previous)):
+        raise ReleaseHistoryAttestationError(
+            f"{path}: 'previous_supported_version' must be a MAJOR.MINOR.PATCH string or null"
+        )
+    return {"target_sha": target_sha, "current_version": current_version, "previous_supported_version": previous}
+
+
+def check_release_tag_authority(
+    repo_root: Path,
+    target_sha: str,
+    current_version: str,
+    declared_previous_supported_version: Optional[str],
+) -> List[str]:
+    """The actual, fail-closed authority cross-check for a real git
+    repository: the version ledger's own `previous_supported_version`
+    (`declared_previous_supported_version`) is descriptive only -- this
+    derives the true immediate predecessor purely from `target_sha`'s own
+    reachable, immutable, annotated `expansion/MAJOR.MINOR.PATCH`
+    release-tag history (`git_source.derive_release_predecessor`) and
+    reports any disagreement. Also separately rejects the case where
+    `current_version` itself already has a real release tag (a
+    candidate must never reuse an already-tagged version), independent
+    of whether that tag's own commit happens to equal `target_sha`."""
+    errors: List[str] = []
+    try:
+        existing_current_tag = gs.find_release_tag_for_version(repo_root, current_version)
+    except gs.ReleaseTagAuthorityError as error:
+        return [str(error)]
+    if existing_current_tag is not None:
+        errors.append(
+            f"an annotated release tag {existing_current_tag.ref!r} already exists for the current "
+            f"candidate version {current_version!r} (commit {existing_current_tag.commit_sha!r}) -- "
+            "this version has already been released; a release candidate must never reuse an "
+            "already-tagged version"
+        )
+    try:
+        authoritative_previous = gs.derive_release_predecessor(repo_root, target_sha, current_version)
+    except gs.ReleaseTagAuthorityError as error:
+        errors.append(str(error))
+        return errors
+    if declared_previous_supported_version != authoritative_previous:
+        errors.append(
+            f"version ledger previous_supported_version {declared_previous_supported_version!r} does "
+            f"not match the true immediate predecessor {authoritative_previous!r} derived from this "
+            "repository's own immutable, annotated 'expansion/MAJOR.MINOR.PATCH' release-tag "
+            "history -- the ledger is descriptive only, never authoritative; correct/regenerate it "
+            "to match real release-tag history (or, if none exists yet, declare null)"
+        )
+    return errors
+
+
+def check_release_tag_authority_non_git(
+    attestation_path: Optional[Path],
+    target_sha: str,
+    current_version: str,
+    declared_previous_supported_version: Optional[str],
+) -> List[str]:
+    """The non-git/archive equivalent of `check_release_tag_authority`:
+    a genuine extracted candidate tree has no local `.git` release-tag
+    history to derive anything from at all, so an explicit, external,
+    protected release-history attestation file -- bound to this exact
+    `target_sha` and `current_version` -- is required instead. A missing
+    attestation is its own explicit, actionable finding (never silently
+    treated as a fabricated "no predecessor" pass); a present-but-
+    mismatched/tampered attestation (wrong target SHA, wrong version, or
+    a `previous_supported_version` that disagrees with the ledger's own
+    descriptive claim) is reported just as explicitly."""
+    if attestation_path is None:
+        return [
+            "no explicit, external, protected release-history attestation was supplied for this "
+            "non-git candidate tree (--release-tag-attestation) -- a non-git materialization has no "
+            "local, immutable annotated release-tag history to derive a true predecessor from, so a "
+            "release-history authority fact can never be fabricated as an empty/absent history here; "
+            "supply a real attestation file bound to this candidate's exact target SHA and version"
+        ]
+    try:
+        attestation = load_release_history_attestation(Path(attestation_path))
+    except ReleaseHistoryAttestationError as error:
+        return [str(error)]
+    errors: List[str] = []
+    if attestation["target_sha"] != target_sha:
+        errors.append(
+            f"external release-history attestation {str(attestation_path)!r} is bound to target SHA "
+            f"{attestation['target_sha']!r}, which does not match this candidate's own exact target "
+            f"SHA {target_sha!r} -- an attestation bound to a different commit can never validate "
+            "this candidate's release history"
+        )
+    if attestation["current_version"] != current_version:
+        errors.append(
+            f"external release-history attestation {str(attestation_path)!r} is bound to version "
+            f"{attestation['current_version']!r}, which does not match this candidate's own current "
+            f"version {current_version!r}"
+        )
+    if attestation["previous_supported_version"] != declared_previous_supported_version:
+        errors.append(
+            f"external release-history attestation {str(attestation_path)!r} declares "
+            f"previous_supported_version {attestation['previous_supported_version']!r}, which does "
+            f"not match the version ledger's own declared previous_supported_version "
+            f"{declared_previous_supported_version!r} -- the ledger and the bound external "
+            "attestation must agree exactly"
+        )
     return errors
 
 

@@ -67,12 +67,82 @@ def _is_git_repo(repo_root: Path) -> bool:
     return (repo_root / ".git").exists()
 
 
+def _verify_target_sha_is_exact_reachable_commit(repo_root: Path, target_sha: str) -> None:
+    """Issue #9 trust-boundary fix (target-object exactness): an explicit
+    ``--target-sha`` override, when `repo_root` actually is a git
+    repository, must never be accepted as a bare, format-validated-only
+    40-hex string -- it must be exactly a real, existing **commit**
+    object, not a tree, a blob, or (the subtle case) an **annotated tag
+    object's own SHA** (which peels successfully via ``^{commit}`` but
+    names a *different* object than the commit it points at).
+
+    Uses the same safe, argv-only git plumbing invocation
+    (``git rev-parse --verify <sha>^{commit}``) that ordinary revision
+    resolution already uses: for a tree/blob this fails outright (there
+    is no commit to peel to at all -- reported as an actionable
+    `ManifestError`, exactly like a missing/unreachable/fake SHA); for an
+    annotated tag object it *succeeds* but resolves to the commit the tag
+    points *at* -- a SHA different from the tag object's own -- so
+    requiring the resolved SHA to equal the exact SHA supplied is what
+    actually rejects "peelable" in favor of "is itself the commit".
+
+    Finally, enforces the same target/HEAD reachability semantics
+    already promised elsewhere in this module family (see
+    `git_source.check_generation_basis_is_commit`'s identical "HEAD or a
+    genuine ancestor of it" rule): an override naming a real, existing
+    commit that nonetheless sits on an unrelated/off-branch/dangling
+    history is still never a valid release target."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", f"{target_sha}^{{commit}}"],
+        cwd=str(repo_root), capture_output=True, text=True,
+    )
+    resolved = result.stdout.strip()
+    if result.returncode != 0 or not FULL_SHA_RE.fullmatch(resolved):
+        raise ManifestError(
+            f"--target-sha {target_sha!r} does not resolve to an exact, existing commit object in "
+            f"this repository (git rev-parse --verify {target_sha}^{{commit}} failed: "
+            f"{result.stderr.strip()}) -- a missing/unreachable/fake SHA, or one naming a tree/blob "
+            "(neither of which can ever be peeled to a commit), is never accepted"
+        )
+    if resolved != target_sha:
+        raise ManifestError(
+            f"--target-sha {target_sha!r} is not itself a commit object -- it resolves (peels) to a "
+            f"different commit {resolved!r}. This is exactly what an annotated tag object's own SHA "
+            "does: a real, valid, peelable object, but never itself the commit. Supply the exact "
+            "40-lowercase-hex commit SHA itself, never an annotated tag object's SHA"
+        )
+    if not gs.is_ancestor_commit(repo_root, target_sha, "HEAD"):
+        raise ManifestError(
+            f"--target-sha {target_sha!r} is a real, existing commit object in this repository, but "
+            "is not HEAD nor any ancestor of it -- an unreachable/off-branch/dangling commit (one a "
+            "future 'git gc' could prune, or one that never belongs to this branch's own history at "
+            "all) can never be a valid release target"
+        )
+
+
 def resolve_target_sha(repo_root: Path, override: Optional[str]) -> str:
+    repo_root = Path(repo_root)
     if override is not None:
         if not FULL_SHA_RE.fullmatch(override):
             raise ManifestError(
                 f"--target-sha {override!r} must be an exact 40-lowercase-hex commit SHA"
             )
+        if _is_git_repo(repo_root):
+            # A real git repository can, and must, actually verify this
+            # exact-commit-object claim locally -- see
+            # `_verify_target_sha_is_exact_reachable_commit` above.
+            _verify_target_sha_is_exact_reachable_commit(repo_root, override)
+        # else: a non-git materialization (a genuine extracted archive/
+        # non-git candidate tree) has no local object database to
+        # resolve/verify anything against at all (issue #9 trust-
+        # boundary fix A3) -- this exact 40-hex override is accepted
+        # purely as an externally-supplied, externally-attested
+        # exact-commit binding; this module never claims (and must
+        # never be read as claiming) any local object verification for
+        # it. See `check_release_tag_authority_non_git`'s own required,
+        # separately-bound external attestation, which is the only
+        # mechanism that can actually corroborate this binding for a
+        # non-git candidate.
         return override
     if not _is_git_repo(repo_root):
         raise ManifestError(
@@ -167,7 +237,20 @@ def check_provenance(repo_root: Path, target_sha: str) -> Dict:
     allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
     exclusions_path = repo_root / "docs" / "release_data" / "export_exclusions.json"
     if allowlist_path.is_file():
-        allowlist = json.loads(allowlist_path.read_text(encoding="utf-8")).get("paths", [])
+        # issue #9 trust-boundary fix (C): this used to be its own raw,
+        # unwrapped `json.loads(...).get("paths", [])` call against the
+        # same allowlist file `check_allowlist_exact` already validates
+        # elsewhere -- a truncated-JSON or wrong-top-level-type document
+        # would reach here (this check runs *before* `check_allowlist_
+        # exact` in `build_manifest`'s own execution order) and raise a
+        # raw `JSONDecodeError`/`AttributeError` traceback, never a
+        # controlled `ManifestError`. Routed through the same validated
+        # `al.load_allowlist_paths` loader now, exactly like every other
+        # allowlist read in this module family.
+        try:
+            allowlist = al.load_allowlist_paths(allowlist_path)
+        except al.AllowlistError as error:
+            raise ManifestError(str(error)) from error
         # issue #9 mandatory correction #2: the required-coverage set is
         # now the *combined* included (allowlist) + excluded
         # (export-exclusions) path set -- the `mgfembp` gitlink's own
@@ -304,9 +387,38 @@ def check_allowlist_exact(repo_root: Path, target_sha: str) -> Dict:
     `git_source.GitSourceError` here (propagated, never swallowed) --
     scripts/release_rehearsal/cli.py's single top-level exception
     boundary is what converts that into `EXIT_TOOLING_ERROR`, not this
-    function papering over it as a soft business reason."""
+    function papering over it as a soft business reason.
+
+    Issue #9 trust-boundary fix (malformed allowlist -> tooling exit,
+    never a soft "blocked" business reason): `al.check()` itself, by
+    design, folds a structurally malformed allowlist document (truncated
+    JSON, wrong top-level type, a missing/downgraded schema_version, a
+    deleted/malformed 'modes' mapping, a duplicate path entry, etc. --
+    see `al.load_allowlist_paths`/`al.load_allowlist_modes`) into its own
+    returned error-string list rather than raising, for its own
+    standalone-CLI/unit-test callers' convenience. That is exactly wrong
+    for *this* caller: a structurally malformed input document is a
+    tooling/schema defect (`EXIT_TOOLING_ERROR`), never an honestly-
+    recorded "candidate not eligible" business fact (`EXIT_NOT_ELIGIBLE`)
+    -- folding it into `reasons`/`"blocked"` would let a genuinely broken
+    allowlist file surface only via `--require-eligible`'s exit 1,
+    indistinguishable from a truthful, well-formed "blocked" result. So
+    the document's own load/schema shape is independently, explicitly
+    pre-validated here first (raising `ManifestError` -- converted by
+    cli.py's single top-level exception boundary into
+    `EXIT_TOOLING_ERROR`) *before* ever delegating to `al.check()`'s
+    content-level bijection/mode-identity business checks below, which
+    remain ordinary "blocked" reasons exactly as before (the
+    valid-but-blocked distinction: a well-formed document that simply
+    disagrees with the real tracked-file set is still just `"blocked"`,
+    never a tooling error)."""
     allowlist_path = repo_root / "docs" / "release_data" / "source_allowlist.json"
     exclusions_path = repo_root / "docs" / "release_data" / "export_exclusions.json"
+    try:
+        al.load_allowlist_paths(allowlist_path)
+        al.load_allowlist_modes(allowlist_path)
+    except al.AllowlistError as error:
+        raise ManifestError(str(error)) from error
     errors = al.check(repo_root, allowlist_path, target_sha, exclusions_path)
     return {"ok": not errors, "errors": errors}
 
@@ -387,11 +499,32 @@ def check_allowlist(repo_root: Path, target_sha: str) -> Dict:
     return check_allowlist_exact(repo_root, target_sha)
 
 
-def check_version_ledger_and_semver(repo_root: Path, identity, changelog_report: Dict) -> Dict:
+def check_version_ledger_and_semver(
+    repo_root: Path,
+    target_sha: str,
+    identity,
+    changelog_report: Dict,
+    release_tag_attestation_path: Optional[Path] = None,
+) -> Dict:
     """Folds together the version-ledger topology/candidate-agreement
-    check and the changelog-declared-impact-vs-actual-delta check (see
-    scripts/release_rehearsal/consistency.py) into one report, since both
-    read the same ledger file."""
+    check, the changelog-declared-impact-vs-actual-delta check, and the
+    immutable-annotated-release-tag SemVer-predecessor authority
+    cross-check (issue #9 SemVer trust-boundary fix -- see
+    scripts/release_rehearsal/consistency.py's
+    `check_release_tag_authority`/`check_release_tag_authority_non_git`)
+    into one report, since all three read/cross-check the same ledger
+    file's declared `previous_supported_version` claim.
+
+    The ledger's own `previous_supported_version` is never itself
+    authoritative: in a real git repository, it is cross-checked against
+    this repository's actual, immutable, annotated
+    `expansion/MAJOR.MINOR.PATCH` release-tag history; for a genuine
+    non-git/archive candidate tree (no local tag history exists at all),
+    an explicit, external, protected release-history attestation file
+    (`release_tag_attestation_path`) bound to this exact `target_sha` and
+    `identity.version_string` is required instead -- a missing one is
+    its own explicit, actionable finding, never a silently-fabricated
+    empty release history."""
     ledger_path = repo_root / "docs" / "release_data" / "version_ledger.json"
     if not ledger_path.is_file():
         return {"ok": False, "errors": [f"{ledger_path} not found"], "ledger": {}}
@@ -407,6 +540,16 @@ def check_version_ledger_and_semver(repo_root: Path, identity, changelog_report:
         changelog_report.get("aggregate_impact", "none"),
         identity.version_major,
     )
+    if gs.is_git_repo(repo_root):
+        errors += cc.check_release_tag_authority(
+            repo_root, target_sha, identity.version_string,
+            ledger.get("previous_supported_version"),
+        )
+    else:
+        errors += cc.check_release_tag_authority_non_git(
+            release_tag_attestation_path, target_sha, identity.version_string,
+            ledger.get("previous_supported_version"),
+        )
     return {"ok": not errors, "errors": errors, "ledger": ledger}
 
 
@@ -531,6 +674,7 @@ def build_manifest(
     rebuild_build_command: Optional[List[str]] = None,
     rebuild_output_relpaths: Optional[List[str]] = None,
     precomputed_rebuild_report: Optional[Dict] = None,
+    release_tag_attestation_path: Optional[Path] = None,
 ) -> Dict:
     repo_root = Path(repo_root)
     # Resolve the exact, immutable target SHA *first* (this is the single
@@ -575,7 +719,10 @@ def build_manifest(
     tree_coverage_report = check_tree_coverage(repo_root, target_sha)
     submodule_binding_report = check_submodule_binding(repo_root, target_sha)
     external_attestation_report = check_external_attestation()
-    ledger_report = check_version_ledger_and_semver(repo_root, identity, changelog_report)
+    ledger_report = check_version_ledger_and_semver(
+        repo_root, target_sha, identity, changelog_report,
+        release_tag_attestation_path=release_tag_attestation_path,
+    )
     c_fallback_report = check_c_fallback(repo_root)
     migration_reachability_report = check_migration_reachability(identity.save_compat_epoch)
     epoch_claims_report = check_epoch_claims(repo_root)
@@ -671,6 +818,12 @@ def main(argv=None) -> int:
     parser.add_argument("--rom-size", default="16M")
     parser.add_argument("--target-sha", default=None)
     parser.add_argument("--embedded-short-sha", default=None)
+    parser.add_argument(
+        "--release-tag-attestation", type=Path, default=None,
+        help="path to an external, protected release-history attestation JSON file, required "
+             "only for a non-git --repo-root (a genuine extracted archive/non-git candidate "
+             "tree) -- see consistency.check_release_tag_authority_non_git",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -681,6 +834,7 @@ def main(argv=None) -> int:
             args.rom_size,
             target_sha_override=args.target_sha,
             embedded_short_sha=args.embedded_short_sha,
+            release_tag_attestation_path=args.release_tag_attestation,
         )
     except (ManifestError, ec.ConfigError) as error:
         print(f"error: {error}", file=sys.stderr)

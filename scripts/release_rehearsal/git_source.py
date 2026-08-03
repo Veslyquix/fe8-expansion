@@ -38,7 +38,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional
+from typing import Dict, Iterable, Iterator, List, Optional, Tuple
 
 MODE_REGULAR = "100644"
 MODE_EXECUTABLE = "100755"
@@ -156,6 +156,179 @@ def is_ancestor_commit(repo_root: Path, ancestor_sha: str, descendant: str = "HE
     prune at any time without warning)."""
     result = _run_git(["merge-base", "--is-ancestor", ancestor_sha, descendant], repo_root, text=True)
     return result.returncode == 0
+
+
+# --- Immutable annotated release-tag authority (issue #9 SemVer trust- ---
+# boundary fix) -------------------------------------------------------------
+#
+# The version ledger's own `previous_supported_version` field
+# (docs/release_data/version_ledger.json) is candidate-controlled and
+# purely *descriptive* -- it must never itself be treated as the
+# authoritative source of "what was actually released before this
+# candidate". This section is that actual authority: it derives the true
+# immediate SemVer predecessor exclusively from this repository's own
+# real, immutable, **annotated** `refs/tags/expansion/MAJOR.MINOR.PATCH`
+# release-tag history (never from the ledger, never from any other
+# candidate-writable source) -- see consistency.py's
+# `check_release_tag_authority`, which cross-checks the ledger's
+# descriptive claim against this authority and fails closed on any
+# disagreement.
+#
+# A **lightweight** tag under this reserved namespace is never accepted
+# at all (it can be silently moved/recreated by anyone with push access,
+# unlike an annotated tag object, which is itself an immutable,
+# addressable Git object with its own SHA) -- nor is a malformed tag name
+# (anything other than an exact `MAJOR.MINOR.PATCH` version under the
+# namespace), nor an ambiguous duplicate-version alias (two refs whose
+# names both parse to the same version but name different commits). Any
+# of these is a release-tag *authority-integrity* defect -- raised as
+# `ReleaseTagAuthorityError`, never silently skipped/ignored in favor of
+# whatever tags *do* happen to be well-formed (that would let a single
+# malformed/lightweight tag quietly make an otherwise-real predecessor
+# invisible, or vice versa).
+#
+# Only a tag whose peeled commit is reachable from the candidate's own
+# `target_sha` (is `target_sha` itself, or a genuine ancestor of it) is
+# ever considered a real predecessor candidate -- a tag that exists but
+# sits on an unrelated/divergent history (e.g. a different release
+# branch, or history that has since been rewritten) is never silently
+# treated as this candidate's predecessor merely because its version
+# number is numerically lower.
+
+RELEASE_TAG_NAMESPACE = "expansion"
+RELEASE_TAG_REF_PREFIX = f"refs/tags/{RELEASE_TAG_NAMESPACE}/"
+_RELEASE_TAG_NAME_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+
+
+class ReleaseTagAuthorityError(GitSourceError):
+    """A tag actually present under the reserved
+    `refs/tags/expansion/` release-tag namespace is lightweight,
+    malformed, does not peel to a real commit, or is an ambiguous
+    duplicate-version alias -- an authority-integrity defect in the
+    release-tag history itself, distinct from an ordinary, honest
+    "no predecessor tag exists" fact (which is not an error at all --
+    see `derive_release_predecessor`, which returns `None` for that)."""
+
+
+@dataclass(frozen=True)
+class ReleaseTag:
+    """One validated, real, annotated `expansion/MAJOR.MINOR.PATCH`
+    release tag: `ref` is its full `refs/tags/...` name, `version` its
+    parsed `MAJOR.MINOR.PATCH` string, `version_tuple` the same as
+    `(int, int, int)` for ordering, and `commit_sha` the exact commit its
+    annotated tag object peels to (never the tag object's own SHA)."""
+
+    ref: str
+    version: str
+    version_tuple: Tuple[int, int, int]
+    commit_sha: str
+
+
+def _list_release_tag_refs(repo_root: Path) -> List[str]:
+    """Every ref name under `RELEASE_TAG_REF_PREFIX`, of *any* shape at
+    all (annotated, lightweight, or malformed) -- `load_release_tags`
+    below is what actually validates each one's shape; this is
+    deliberately just an unfiltered listing via `git for-each-ref`."""
+    result = _run_git(
+        ["for-each-ref", "--format=%(refname)", RELEASE_TAG_REF_PREFIX], repo_root, text=True
+    )
+    if result.returncode != 0:
+        raise GitSourceError(f"git for-each-ref failed: {result.stderr.strip()}")
+    return sorted(line for line in result.stdout.splitlines() if line)
+
+
+def load_release_tags(repo_root: Path) -> List[ReleaseTag]:
+    """Fail-closed load of every real, reserved-namespace release tag in
+    `repo_root` -- see the module section docstring above for exactly
+    what is rejected (and why) versus accepted. Returns an empty list
+    (never an error) when there are simply no tags under the namespace
+    at all -- a genuine, truthful "no release has ever been tagged from
+    this repository" fact, not a defect."""
+    tags: Dict[str, ReleaseTag] = {}
+    for ref in _list_release_tag_refs(repo_root):
+        name = ref[len(RELEASE_TAG_REF_PREFIX):]
+        match = _RELEASE_TAG_NAME_RE.fullmatch(name)
+        if not match:
+            raise ReleaseTagAuthorityError(
+                f"{ref!r} is under the reserved release-tag namespace {RELEASE_TAG_REF_PREFIX!r} "
+                "but its own name is not an exact 'MAJOR.MINOR.PATCH' version -- malformed "
+                "release-tag name"
+            )
+        kind = object_kind(repo_root, ref)
+        if kind != "tag":
+            raise ReleaseTagAuthorityError(
+                f"{ref!r} is a lightweight tag (its own Git object kind is {kind!r}, not 'tag') -- "
+                f"every reserved {RELEASE_TAG_REF_PREFIX!r} release tag must be an annotated tag "
+                "object; a lightweight tag can be silently moved/recreated by anyone with push "
+                "access and is never accepted as release-history authority"
+            )
+        try:
+            commit_sha = resolve_sha(repo_root, f"{ref}^{{commit}}")
+        except GitSourceError as error:
+            raise ReleaseTagAuthorityError(
+                f"{ref!r} is an annotated tag object but does not peel to a real, existing commit: "
+                f"{error}"
+            ) from error
+        version = name
+        version_tuple = tuple(int(part) for part in match.groups())
+        existing = tags.get(version)
+        if existing is not None and existing.commit_sha != commit_sha:
+            raise ReleaseTagAuthorityError(
+                f"duplicate-version release tag alias: version {version!r} names both commit "
+                f"{existing.commit_sha!r} (via {existing.ref!r}) and {commit_sha!r} (via {ref!r}) "
+                "-- ambiguous, conflicting release-tag history"
+            )
+        tags[version] = ReleaseTag(ref=ref, version=version, version_tuple=version_tuple, commit_sha=commit_sha)
+    return list(tags.values())
+
+
+def find_release_tag_for_version(repo_root: Path, version: str) -> Optional[ReleaseTag]:
+    """The single, real, validated release tag for exactly `version`, or
+    `None` if no such tag exists at all -- used to detect "this candidate
+    version has already been released/tagged" (see
+    consistency.check_release_tag_authority), a fact wholly distinct
+    from predecessor derivation below."""
+    for tag in load_release_tags(repo_root):
+        if tag.version == version:
+            return tag
+    return None
+
+
+def derive_release_predecessor(repo_root: Path, target_sha: str, current_version: str) -> Optional[str]:
+    """Derives the true immediate SemVer predecessor of `current_version`
+    purely from this repository's own immutable, annotated
+    `expansion/MAJOR.MINOR.PATCH` release-tag history -- never from any
+    candidate-controlled ledger claim. Only a tag whose peeled commit is
+    reachable from `target_sha` (is `target_sha` itself, or a genuine
+    ancestor of it) and whose version is strictly less than
+    `current_version` is ever a candidate; the highest such version is
+    the true predecessor. Returns `None` if there is no such tag at all
+    -- a truthful first-release/no-earlier-reachable-tag fact, never
+    itself an error.
+
+    Raises `ReleaseTagAuthorityError` if any tag actually present under
+    the reserved namespace is lightweight, malformed, or an ambiguous
+    duplicate-version alias (see `load_release_tags`) -- an authority-
+    integrity defect must never be silently skipped in favor of whatever
+    *other* tags happen to be well-formed."""
+    current_tuple = tuple(int(part) for part in str(current_version).split("."))
+    candidates: List[Tuple[Tuple[int, int, int], str]] = []
+    for tag in load_release_tags(repo_root):
+        if tag.version_tuple >= current_tuple:
+            # A tag equal to (or newer than) the current candidate
+            # version is never a predecessor candidate -- see
+            # consistency.check_release_tag_authority's own separate,
+            # explicit "already-tagged current version" finding, which
+            # reports this case on its own terms rather than this
+            # function silently coercing/ignoring it here.
+            continue
+        if not is_ancestor_commit(repo_root, tag.commit_sha, target_sha):
+            continue
+        candidates.append((tag.version_tuple, tag.version))
+    if not candidates:
+        return None
+    candidates.sort()
+    return candidates[-1][1]
 
 
 _GENERATION_BASIS_SHA_RE_SOURCE = r"^[0-9a-f]{40}$"

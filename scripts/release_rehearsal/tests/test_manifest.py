@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "modernize"))
 
 import expansion_config as ec  # noqa: E402
 
+from scripts.release_rehearsal import consistency as cc
 from scripts.release_rehearsal import manifest as rm
 
 
@@ -40,6 +41,156 @@ class ResolveTargetShaTests(unittest.TestCase):
     def test_real_repo_resolves_from_git(self):
         sha = rm.resolve_target_sha(ROOT, None)
         self.assertRegex(sha, r"^[0-9a-f]{40}$")
+
+
+class ExactCommitObjectTargetShaTests(unittest.TestCase):
+    """issue #9 trust-boundary fix (A): in a real git repository, an
+    explicit `--target-sha` override must be exactly a commit object --
+    never a bare, unverified 40-hex string that merely happens to match
+    the regex. A tree, a blob, and (most subtly) an annotated tag
+    object's own SHA (which peels successfully via `^{commit}` but names
+    a *different* object than the commit it points at) must all be
+    rejected."""
+
+    @staticmethod
+    def _git(*args, cwd):
+        result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
+        assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+        return result.stdout
+
+    @classmethod
+    def _init_repo(cls, root: Path) -> None:
+        cls._git("init", "-q", cwd=root)
+        cls._git("config", "user.email", "t@example.com", cwd=root)
+        cls._git("config", "user.name", "Tester", cwd=root)
+
+    def test_raw_commit_sha_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "init", cwd=root)
+            commit_sha = self._git("rev-parse", "HEAD", cwd=root).strip()
+            self.assertEqual(rm.resolve_target_sha(root, commit_sha), commit_sha)
+
+    def test_tree_sha_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "init", cwd=root)
+            tree_sha = self._git("rev-parse", "HEAD^{tree}", cwd=root).strip()
+            with self.assertRaises(rm.ManifestError) as ctx:
+                rm.resolve_target_sha(root, tree_sha)
+            self.assertIn(tree_sha, str(ctx.exception))
+
+    def test_blob_sha_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "init", cwd=root)
+            blob_sha = self._git("hash-object", "f.txt", cwd=root).strip()
+            with self.assertRaises(rm.ManifestError) as ctx:
+                rm.resolve_target_sha(root, blob_sha)
+            self.assertIn(blob_sha, str(ctx.exception))
+
+    def test_annotated_tag_object_sha_rejected_even_though_peelable(self):
+        """The exact, subtle case this fix exists for: an annotated tag
+        object's own SHA peels *successfully* (`^{commit}` resolves to
+        the commit it points at), but it is never itself the commit --
+        must still be rejected, never silently accepted as if peeling
+        proved it were the commit itself."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "init", cwd=root)
+            self._git("tag", "-a", "-m", "annotated", "v1.0.0", cwd=root)
+            tag_object_sha = self._git("rev-parse", "v1.0.0", cwd=root).strip()
+            commit_sha = self._git("rev-parse", "v1.0.0^{commit}", cwd=root).strip()
+            self.assertNotEqual(tag_object_sha, commit_sha)
+            with self.assertRaises(rm.ManifestError) as ctx:
+                rm.resolve_target_sha(root, tag_object_sha)
+            self.assertIn(tag_object_sha, str(ctx.exception))
+
+    def test_lightweight_tag_ref_string_fails_structural_input(self):
+        """A lightweight tag/ref *name* (not a 40-hex SHA at all) fails
+        the structural-input format check before any git plumbing is
+        ever invoked."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "init", cwd=root)
+            self._git("tag", "v1.0.0", cwd=root)
+            with self.assertRaises(rm.ManifestError) as ctx:
+                rm.resolve_target_sha(root, "v1.0.0")
+            self.assertIn("40-lowercase-hex", str(ctx.exception))
+
+    def test_missing_object_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "init", cwd=root)
+            fake_sha = "0123456789abcdef0123456789abcdef01234567"
+            with self.assertRaises(rm.ManifestError) as ctx:
+                rm.resolve_target_sha(root, fake_sha)
+            self.assertIn(fake_sha, str(ctx.exception))
+
+    def test_unreachable_real_commit_rejected(self):
+        """A real, existing commit object that sits on an unrelated
+        history (an orphan branch) HEAD never descends from must still
+        be rejected -- being a real commit is necessary, not sufficient."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "main-first", cwd=root)
+            self._git("checkout", "-q", "--orphan", "other", cwd=root)
+            (root / "g.txt").write_text("y")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "orphan-first", cwd=root)
+            orphan_sha = self._git("rev-parse", "HEAD", cwd=root).strip()
+            self._git("checkout", "-q", "master", cwd=root)
+            with self.assertRaises(rm.ManifestError) as ctx:
+                rm.resolve_target_sha(root, orphan_sha)
+            self.assertIn("not HEAD nor any ancestor", str(ctx.exception))
+
+    def test_ancestor_commit_older_than_head_is_accepted(self):
+        """A historical-replay override (a real, earlier commit that IS
+        an ancestor of the current HEAD) must remain accepted -- this
+        fix rejects wrong-object-kind/unreachable SHAs, never ordinary
+        historical replay."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._init_repo(root)
+            (root / "f.txt").write_text("x")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "first", cwd=root)
+            first_sha = self._git("rev-parse", "HEAD", cwd=root).strip()
+            (root / "f.txt").write_text("y")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "second", cwd=root)
+            self.assertEqual(rm.resolve_target_sha(root, first_sha), first_sha)
+
+    def test_non_git_tree_accepts_exact_40hex_without_local_verification(self):
+        """A.3: a non-git materialization has no local object database at
+        all -- the exact 40hex override is still accepted as an
+        externally-supplied, externally-attested exact-commit binding,
+        never claiming (or attempting) local object verification."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)  # deliberately never a git repo
+            external_sha = "b" * 40
+            self.assertEqual(rm.resolve_target_sha(root, external_sha), external_sha)
 
 
 class ShortShaTests(unittest.TestCase):
@@ -570,6 +721,101 @@ class BuildManifestTests(unittest.TestCase):
         self.assertIsNone(manifest["embedded_short_sha"])
 
 
+class CheckAllowlistExactMalformedSchemaTests(unittest.TestCase):
+    """issue #9 trust-boundary fix (C): a structurally malformed
+    allowlist document (truncated JSON, wrong top-level type, malformed
+    schema/entry, duplicate path) must raise `ManifestError` here --
+    never be folded into a soft "blocked" business reason -- so cli.py's
+    single top-level exception boundary converts it into
+    `EXIT_TOOLING_ERROR`, never `EXIT_NOT_ELIGIBLE`. A well-formed
+    document that simply disagrees with the real tracked-file set must
+    still be an ordinary "blocked" business finding (valid-but-blocked)."""
+
+    @staticmethod
+    def _git(*args, cwd):
+        result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
+        assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+        return result.stdout
+
+    def _repo(self, tmp):
+        root = Path(tmp)
+        self._git("init", "-q", cwd=root)
+        self._git("config", "user.email", "t@example.com", cwd=root)
+        self._git("config", "user.name", "Tester", cwd=root)
+        (root / "docs" / "release_data").mkdir(parents=True)
+        (root / "a.txt").write_text("a")
+        self._git("add", "-A", cwd=root)
+        self._git("commit", "-q", "-m", "init", cwd=root)
+        sha = self._git("rev-parse", "HEAD", cwd=root).strip()
+        return root, sha
+
+    def test_truncated_json_raises_manifest_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._repo(tmp)
+            (root / "docs" / "release_data" / "source_allowlist.json").write_text(
+                "{not json", encoding="utf-8"
+            )
+            with self.assertRaises(rm.ManifestError):
+                rm.check_allowlist_exact(root, sha)
+
+    def test_wrong_top_level_type_raises_manifest_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._repo(tmp)
+            (root / "docs" / "release_data" / "source_allowlist.json").write_text(
+                json.dumps([1, 2, 3]), encoding="utf-8"
+            )
+            with self.assertRaises(rm.ManifestError):
+                rm.check_allowlist_exact(root, sha)
+
+    def test_malformed_schema_version_raises_manifest_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._repo(tmp)
+            (root / "docs" / "release_data" / "source_allowlist.json").write_text(
+                json.dumps({"schema_version": 1, "paths": ["a.txt"], "modes": {"a.txt": "100644"}}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(rm.ManifestError):
+                rm.check_allowlist_exact(root, sha)
+
+    def test_duplicate_path_entry_raises_manifest_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._repo(tmp)
+            (root / "docs" / "release_data" / "source_allowlist.json").write_text(
+                json.dumps({
+                    "schema_version": 4,
+                    "paths": ["a.txt", "a.txt"],
+                    "modes": {"a.txt": "100644"},
+                }),
+                encoding="utf-8",
+            )
+            with self.assertRaises(rm.ManifestError):
+                rm.check_allowlist_exact(root, sha)
+
+    def test_valid_but_blocked_document_returns_report_never_raises(self):
+        """A well-formed, schema-valid document that simply disagrees
+        with the real tracked-file set (a genuinely new, unlisted file)
+        is still just an ordinary blocked business finding -- never a
+        raised exception."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root, sha = self._repo(tmp)
+            (root / "b.txt").write_text("b")
+            self._git("add", "-A", cwd=root)
+            self._git("commit", "-q", "-m", "add b", cwd=root)
+            sha2 = self._git("rev-parse", "HEAD", cwd=root).strip()
+            (root / "docs" / "release_data" / "source_allowlist.json").write_text(
+                json.dumps({
+                    "schema_version": 4,
+                    "paths": ["a.txt"],
+                    "modes": {"a.txt": "100644"},
+                }),
+                encoding="utf-8",
+            )
+            report = rm.check_allowlist_exact(root, sha2)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("b.txt" in e for e in report["errors"]))
+
+
+
 class VersionLedgerManifestWiringTests(unittest.TestCase):
     """issue #9 residual-hardening: a fresh, independent verifier
     reproduced the version-ledger topology gaps directly against the
@@ -594,16 +840,49 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
         release_data.mkdir(parents=True, exist_ok=True)
         (release_data / "version_ledger.json").write_text(json.dumps(ledger), encoding="utf-8")
 
+    # issue #9 SemVer trust-boundary fix: `check_version_ledger_and_semver`
+    # now also cross-checks `previous_supported_version` against real
+    # release-tag authority; for a non-git tmp dir (as every test in this
+    # class below uses), that means an external release-history
+    # attestation is required (see
+    # consistency.check_release_tag_authority_non_git) -- these tests
+    # exist purely to exercise `consistency.check_version_ledger`'s own
+    # topology findings via the live manifest-layer function, so a
+    # trivially matching attestation is written here to keep that
+    # concern out of scope for every test below.
+    _ATTESTATION_TARGET_SHA = "a" * 40
+
+    @classmethod
+    def _write_matching_attestation(cls, repo_root: Path, ledger: dict) -> Path:
+        attestation_path = repo_root / "release_tag_attestation.json"
+        attestation_path.write_text(json.dumps({
+            "schema_version": cc.RELEASE_HISTORY_ATTESTATION_SCHEMA_VERSION,
+            "target_sha": cls._ATTESTATION_TARGET_SHA,
+            "current_version": ledger["current_version"],
+            "previous_supported_version": ledger["previous_supported_version"],
+        }), encoding="utf-8")
+        return attestation_path
+
+    @classmethod
+    def _check(cls, root: Path, ledger: dict, changelog_report=None):
+        cls._write_ledger(root, ledger)
+        attestation_path = cls._write_matching_attestation(root, ledger)
+        return rm.check_version_ledger_and_semver(
+            root, cls._ATTESTATION_TARGET_SHA, cls._identity(ledger["current_version"]),
+            changelog_report or {"aggregate_impact": "none"},
+            release_tag_attestation_path=attestation_path,
+        )
+
     def test_live_manifest_path_rejects_current_entry_with_eol(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_ledger(root, {
+            ledger = {
                 "current_version": "0.1.0",
                 "previous_supported_version": None,
                 "next_supported_version": None,
                 "supported": [{"version": "0.1.0", "status": "current", "eol": "2024-01-01"}],
-            })
-            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            }
+            report = self._check(root, ledger)
             self.assertFalse(report["ok"])
             self.assertTrue(
                 any("status:'current'" in error and "eol" in error.lower() for error in report["errors"]),
@@ -613,13 +892,13 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
     def test_live_manifest_path_rejects_previous_supported_version_absent_from_supported(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_ledger(root, {
+            ledger = {
                 "current_version": "0.1.0",
                 "previous_supported_version": "0.0.9",
                 "next_supported_version": None,
                 "supported": [{"version": "0.1.0", "status": "current", "eol": None}],
-            })
-            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            }
+            report = self._check(root, ledger)
             self.assertFalse(report["ok"])
             self.assertTrue(
                 any("previous_supported_version" in error and "0.0.9" in error and "does not appear" in error
@@ -630,13 +909,13 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
     def test_live_manifest_path_rejects_next_supported_version_absent_from_supported(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_ledger(root, {
+            ledger = {
                 "current_version": "0.1.0",
                 "previous_supported_version": None,
                 "next_supported_version": "0.2.0",
                 "supported": [{"version": "0.1.0", "status": "current", "eol": None}],
-            })
-            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            }
+            report = self._check(root, ledger)
             self.assertFalse(report["ok"])
             self.assertTrue(
                 any("next_supported_version" in error and "0.2.0" in error and "does not appear" in error
@@ -647,7 +926,7 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
     def test_live_manifest_path_rejects_next_supported_version_status_eol(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_ledger(root, {
+            ledger = {
                 "current_version": "0.1.0",
                 "previous_supported_version": None,
                 "next_supported_version": "0.2.0",
@@ -655,8 +934,8 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
                     {"version": "0.1.0", "status": "current", "eol": None},
                     {"version": "0.2.0", "status": "eol", "eol": "2024-01-01"},
                 ],
-            })
-            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            }
+            report = self._check(root, ledger)
             self.assertFalse(report["ok"])
             self.assertTrue(
                 any("next_supported_version" in error and "not a compatible status" in error
@@ -667,7 +946,7 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
     def test_live_manifest_path_accepts_valid_full_topology(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self._write_ledger(root, {
+            ledger = {
                 "current_version": "0.1.0",
                 "previous_supported_version": "0.0.9",
                 "next_supported_version": "0.2.0",
@@ -676,8 +955,8 @@ class VersionLedgerManifestWiringTests(unittest.TestCase):
                     {"version": "0.1.0", "status": "current", "eol": None},
                     {"version": "0.2.0", "status": "supported", "eol": None},
                 ],
-            })
-            report = rm.check_version_ledger_and_semver(root, self._identity(), {"aggregate_impact": "none"})
+            }
+            report = self._check(root, ledger)
             self.assertEqual(report["errors"], [])
             self.assertTrue(report["ok"])
 

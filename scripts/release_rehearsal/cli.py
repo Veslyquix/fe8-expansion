@@ -300,6 +300,7 @@ def cmd_summary(args) -> int:
         args.repo_root, args.config, args.abi, args.rom_size,
         target_sha_override=args.target_sha,
         embedded_short_sha=args.embedded_short_sha,
+        release_tag_attestation_path=args.release_tag_attestation,
     )
     sys.stdout.write(render_markdown_summary(manifest))
     print(f"release-summary: rendered for status {manifest['status']!r}", file=sys.stderr)
@@ -320,6 +321,7 @@ def cmd_check(args) -> int:
         args.rom_size,
         target_sha_override=args.target_sha,
         embedded_short_sha=args.embedded_short_sha,
+        release_tag_attestation_path=args.release_tag_attestation,
     )
 
     print(json.dumps(manifest, indent=2, sort_keys=True))
@@ -401,6 +403,7 @@ def cmd_rehearse(args) -> int:
         target_sha_override=target_sha,
         embedded_short_sha=embedded_short_sha,
         precomputed_rebuild_report=rebuild_report,
+        release_tag_attestation_path=args.release_tag_attestation,
     )
 
     report = {
@@ -508,6 +511,12 @@ def _add_common_arguments(subparser) -> None:
     subparser.add_argument("--rom-size", default="16M")
     subparser.add_argument("--target-sha", default=None)
     subparser.add_argument("--embedded-short-sha", default=None)
+    subparser.add_argument(
+        "--release-tag-attestation", type=Path, default=None,
+        help="path to an external, protected release-history attestation JSON file, required "
+             "only for a non-git --repo-root (a genuine extracted archive/non-git candidate "
+             "tree) -- see consistency.check_release_tag_authority_non_git",
+    )
 
 
 def main(argv=None) -> int:

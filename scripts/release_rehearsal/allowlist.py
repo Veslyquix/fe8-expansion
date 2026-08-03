@@ -189,6 +189,14 @@ def load_allowlist_paths(path: Path) -> List[str]:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise AllowlistError(f"{path}: not valid JSON: {error}") from error
+    # issue #9 trust-boundary fix: a syntactically-valid JSON document
+    # whose top-level value is not even an object at all (e.g. a bare
+    # array/string/number) must never reach an unguarded `.get()` call
+    # (an `AttributeError` traceback, exactly as unacceptable as a raw
+    # `JSONDecodeError`) -- report it as the same actionable
+    # `AllowlistError` every other malformed-shape case here already is.
+    if not isinstance(data, dict):
+        raise AllowlistError(f"{path}: top-level JSON value must be an object, found {type(data).__name__}")
     paths = data.get("paths")
     if not isinstance(paths, list) or not paths:
         raise AllowlistError(f"{path}: must contain a non-empty 'paths' array")
@@ -230,8 +238,20 @@ def load_allowlist_modes(path: Path) -> Dict[str, str]:
     non-empty JSON object mapping an exact path to one of
     `VALID_ALLOWLIST_MODES` -- a malformed shape or an unsupported mode
     value is a hard `AllowlistError`, exactly like a malformed `"paths"`
-    array."""
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    array.
+
+    Issue #9 trust-boundary fix (defense in depth): wraps its own
+    JSON decode/IO exactly like `load_allowlist_paths` does, rather than
+    relying on being called only ever *after* `load_allowlist_paths` has
+    already parsed the same file once (a caller invoking this function
+    on its own -- directly, or after some future refactor -- must never
+    see a raw `json.JSONDecodeError`/`OSError` traceback either)."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise AllowlistError(f"{path}: not valid JSON: {error}") from error
+    if not isinstance(data, dict):
+        raise AllowlistError(f"{path}: top-level JSON value must be an object, found {type(data).__name__}")
     schema_version = data.get("schema_version")
     if schema_version != SCHEMA_VERSION:
         raise AllowlistError(

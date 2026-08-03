@@ -456,5 +456,149 @@ class CheckGenerationBasisIsCommitTests(unittest.TestCase):
             self.assertEqual(gs.check_generation_basis_is_commit(root, doc_path), [])
 
 
+class ReleaseTagAuthorityTests(unittest.TestCase):
+    """issue #9 SemVer trust-boundary fix (B): the immutable, annotated
+    `expansion/MAJOR.MINOR.PATCH` release-tag history is the real
+    authority for a candidate's SemVer predecessor -- never the ledger's
+    own descriptive claim. See consistency.py's
+    `check_release_tag_authority` for the cross-check that actually
+    wires this into the manifest."""
+
+    def _commit(self, root: Path, name: str = "f.txt", content: str = "x") -> str:
+        (root / name).write_text(content)
+        _git("add", "-A", cwd=root)
+        _git("commit", "-q", "-m", name, cwd=root)
+        return gs.resolve_sha(root, "HEAD")
+
+    def test_no_tags_returns_empty_list(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root)
+            self.assertEqual(gs.load_release_tags(root), [])
+
+    def test_annotated_tag_is_loaded_and_peeled_to_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            _git("tag", "-a", "-m", "release", "expansion/1.0.0", cwd=root)
+            tags = gs.load_release_tags(root)
+            self.assertEqual(len(tags), 1)
+            self.assertEqual(tags[0].version, "1.0.0")
+            self.assertEqual(tags[0].version_tuple, (1, 0, 0))
+            self.assertEqual(tags[0].commit_sha, sha)
+
+    def test_lightweight_tag_under_namespace_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root)
+            _git("tag", "expansion/1.0.0", cwd=root)
+            with self.assertRaises(gs.ReleaseTagAuthorityError) as ctx:
+                gs.load_release_tags(root)
+            self.assertIn("lightweight", str(ctx.exception))
+
+    def test_malformed_tag_name_under_namespace_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root)
+            _git("tag", "-a", "-m", "bad", "expansion/1.0", cwd=root)
+            with self.assertRaises(gs.ReleaseTagAuthorityError) as ctx:
+                gs.load_release_tags(root)
+            self.assertIn("malformed release-tag name", str(ctx.exception))
+
+    def test_tag_not_pointing_at_a_commit_is_rejected(self):
+        """An annotated tag object pointing directly at a tree (never a
+        commit at all) fails to peel outright."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root)
+            tree_sha = _git("rev-parse", "HEAD^{tree}", cwd=root).strip()
+            _git("tag", "-a", "-m", "bad", "expansion/1.0.0", tree_sha, cwd=root)
+            with self.assertRaises(gs.ReleaseTagAuthorityError):
+                gs.load_release_tags(root)
+
+    def test_find_release_tag_for_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            _git("tag", "-a", "-m", "release", "expansion/1.0.0", cwd=root)
+            found = gs.find_release_tag_for_version(root, "1.0.0")
+            self.assertIsNotNone(found)
+            self.assertEqual(found.commit_sha, sha)
+            self.assertIsNone(gs.find_release_tag_for_version(root, "9.9.9"))
+
+    def test_derive_predecessor_no_tags_first_release(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            self.assertIsNone(gs.derive_release_predecessor(root, sha, "1.0.0"))
+
+    def test_derive_predecessor_finds_true_immediate_predecessor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            self._commit(root, "b.txt")
+            _git("tag", "-a", "-m", "r2", "expansion/1.5.0", cwd=root)
+            head = self._commit(root, "c.txt")
+            self.assertEqual(gs.derive_release_predecessor(root, head, "2.0.0"), "1.5.0")
+
+    def test_derive_predecessor_excludes_tag_not_reachable_from_target(self):
+        """A well-formed, annotated tag exists, but sits on a history the
+        target commit never descends from (an unrelated orphan branch)
+        -- it must never be treated as this candidate's predecessor."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            _git("checkout", "-q", "--orphan", "other", cwd=root)
+            target_sha = self._commit(root, "b.txt")
+            self.assertIsNone(gs.derive_release_predecessor(root, target_sha, "2.0.0"))
+
+    def test_derive_predecessor_excludes_current_and_newer_versions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/2.0.0", cwd=root)
+            head = self._commit(root, "b.txt")
+            # a tag equal to (or above) current_version is never itself
+            # a predecessor candidate.
+            self.assertIsNone(gs.derive_release_predecessor(root, head, "2.0.0"))
+
+    def test_duplicate_version_alias_across_two_refs_is_rejected(self):
+        """Two distinct annotated tags whose names both parse to the
+        same version (constructed here by tagging, deleting, and
+        re-tagging the *namespace ref name* against a different commit
+        would collide at the git ref level -- this instead exercises the
+        shared duplicate-detection guard directly against
+        `load_release_tags`'s own internal accumulation logic using two
+        distinctly-named refs is not possible for this exact namespace/
+        regex pairing, so this test documents -- and locks in -- that a
+        real git ref namespace can never actually construct this
+        case: creating a second annotated tag with the exact same
+        reserved name is rejected by git itself before this module ever
+        sees it)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            result = subprocess.run(
+                ["git", "tag", "-a", "-m", "r1-again", "expansion/1.0.0"],
+                cwd=str(root), capture_output=True, text=True,
+            )
+            self.assertNotEqual(result.returncode, 0, "git itself must refuse a duplicate tag ref name")
+
+
+
 if __name__ == "__main__":
     unittest.main()

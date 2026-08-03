@@ -1,5 +1,7 @@
 """Tests for scripts/release_rehearsal/consistency.py (issue #9)."""
 
+import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -12,7 +14,20 @@ sys.path.insert(0, str(ROOT / "scripts" / "modernize"))
 import expansion_config as ec  # noqa: E402
 
 from scripts.release_rehearsal import consistency as cc
+from scripts.release_rehearsal import git_source as gs
 from scripts.modernize.migrations.registry import MigrationStep, MECHANICAL
+
+
+def _git(*args, cwd):
+    result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True)
+    assert result.returncode == 0, f"git {args} failed: {result.stderr}"
+    return result.stdout
+
+
+def _init_repo(root: Path) -> None:
+    _git("init", "-q", cwd=root)
+    _git("config", "user.email", "t@example.com", cwd=root)
+    _git("config", "user.name", "Tester", cwd=root)
 
 
 def _valid_ledger(**overrides):
@@ -620,6 +635,205 @@ class MigrationEpochReachabilityTests(unittest.TestCase):
         config_values = ec.parse_config_mk(ROOT / "config.mk")
         epoch = int(config_values["EXPANSION_SAVE_COMPAT_EPOCH"])
         self.assertEqual(cc.check_migration_epoch_reachability(epoch, real_registry.registry()), [])
+
+
+class ReleaseTagAuthorityGitTests(unittest.TestCase):
+    """issue #9 SemVer trust-boundary fix (B): `check_release_tag_authority`
+    cross-checks a ledger's descriptive `previous_supported_version`
+    claim against this repository's real, immutable, annotated
+    `expansion/MAJOR.MINOR.PATCH` release-tag history -- covering every
+    adversarial case named in the task contract."""
+
+    def _commit(self, root: Path, name: str = "f.txt") -> str:
+        (root / name).write_text(name)
+        _git("add", "-A", cwd=root)
+        _git("commit", "-q", "-m", name, cwd=root)
+        return gs.resolve_sha(root, "HEAD")
+
+    def test_no_tag_first_release_declares_no_predecessor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            errors = cc.check_release_tag_authority(root, sha, "1.0.0", None)
+            self.assertEqual(errors, [])
+
+    def test_fabricated_predecessor_with_no_tags_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            errors = cc.check_release_tag_authority(root, sha, "1.0.0", "0.9.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("does not match the true immediate predecessor" in e for e in errors))
+            self.assertTrue(any("None" in e for e in errors))
+
+    def test_annotated_predecessor_matches_declared_ledger_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            sha = self._commit(root, "b.txt")
+            errors = cc.check_release_tag_authority(root, sha, "2.0.0", "1.0.0")
+            self.assertEqual(errors, [])
+
+    def test_omitted_predecessor_when_real_tag_exists_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            sha = self._commit(root, "b.txt")
+            errors = cc.check_release_tag_authority(root, sha, "2.0.0", None)
+            self.assertTrue(errors)
+            self.assertTrue(any("1.0.0" in e for e in errors))
+
+    def test_older_selected_predecessor_with_newer_reachable_tag_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            self._commit(root, "b.txt")
+            _git("tag", "-a", "-m", "r2", "expansion/1.5.0", cwd=root)
+            sha = self._commit(root, "c.txt")
+            errors = cc.check_release_tag_authority(root, sha, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("1.5.0" in e for e in errors))
+
+    def test_lightweight_tag_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            _git("tag", "expansion/1.0.0", cwd=root)
+            errors = cc.check_release_tag_authority(root, sha, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("lightweight" in e for e in errors))
+
+    def test_malformed_tag_name_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root)
+            _git("tag", "-a", "-m", "bad", "expansion/not-a-version", cwd=root)
+            errors = cc.check_release_tag_authority(root, sha, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("malformed" in e for e in errors))
+
+    def test_tag_not_reachable_from_target_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "r1", "expansion/1.0.0", cwd=root)
+            _git("checkout", "-q", "--orphan", "other", cwd=root)
+            target_sha = self._commit(root, "b.txt")
+            errors = cc.check_release_tag_authority(root, target_sha, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("None" in e for e in errors))
+
+    def test_tag_pointing_at_current_version_fails(self):
+        """A release tag already exists for the exact candidate version
+        being built -- a candidate must never reuse an already-tagged
+        version, regardless of what commit that tag happens to point
+        at."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            sha = self._commit(root, "a.txt")
+            _git("tag", "-a", "-m", "already released", "expansion/2.0.0", cwd=root)
+            errors = cc.check_release_tag_authority(root, sha, "2.0.0", None)
+            self.assertTrue(errors)
+            self.assertTrue(any("already exists for the current candidate version" in e for e in errors))
+
+
+class ReleaseTagAuthorityNonGitTests(unittest.TestCase):
+    """issue #9 SemVer trust-boundary fix (B3): the non-git/archive
+    equivalent -- an explicit, external, protected release-history
+    attestation is required, bound exactly to `target_sha` and
+    `current_version`; a missing/malformed/mismatched attestation must
+    fail closed, never fabricate an empty release history."""
+
+    TARGET_SHA = "c" * 40
+
+    def _write_attestation(self, path: Path, **overrides):
+        doc = {
+            "schema_version": cc.RELEASE_HISTORY_ATTESTATION_SCHEMA_VERSION,
+            "target_sha": self.TARGET_SHA,
+            "current_version": "2.0.0",
+            "previous_supported_version": "1.0.0",
+        }
+        doc.update(overrides)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+
+    def test_missing_attestation_fails_closed(self):
+        errors = cc.check_release_tag_authority_non_git(None, self.TARGET_SHA, "2.0.0", "1.0.0")
+        self.assertTrue(errors)
+        self.assertTrue(any("no explicit, external, protected release-history attestation" in e for e in errors))
+
+    def test_matching_attestation_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            self._write_attestation(path)
+            errors = cc.check_release_tag_authority_non_git(path, self.TARGET_SHA, "2.0.0", "1.0.0")
+            self.assertEqual(errors, [])
+
+    def test_mismatched_target_sha_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            self._write_attestation(path, target_sha="d" * 40)
+            errors = cc.check_release_tag_authority_non_git(path, self.TARGET_SHA, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("does not match this candidate's own exact target SHA" in e for e in errors))
+
+    def test_mismatched_current_version_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            self._write_attestation(path, current_version="3.0.0")
+            errors = cc.check_release_tag_authority_non_git(path, self.TARGET_SHA, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("does not match this candidate's own current version" in e for e in errors))
+
+    def test_tampered_previous_supported_version_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            self._write_attestation(path, previous_supported_version="0.5.0")
+            errors = cc.check_release_tag_authority_non_git(path, self.TARGET_SHA, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("does not match the version ledger's own declared" in e for e in errors))
+
+    def test_truncated_json_attestation_is_actionable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            path.write_text("{not json", encoding="utf-8")
+            errors = cc.check_release_tag_authority_non_git(path, self.TARGET_SHA, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+            self.assertTrue(any("not valid JSON" in e for e in errors))
+
+    def test_wrong_top_level_type_attestation_is_actionable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+            errors = cc.check_release_tag_authority_non_git(path, self.TARGET_SHA, "2.0.0", "1.0.0")
+            self.assertTrue(errors)
+
+    def test_load_release_history_attestation_missing_key_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "attestation.json"
+            path.write_text(json.dumps({"schema_version": 1, "target_sha": self.TARGET_SHA}), encoding="utf-8")
+            with self.assertRaises(cc.ReleaseHistoryAttestationError):
+                cc.load_release_history_attestation(path)
+
+    def test_never_fabricates_empty_history_when_ledger_declares_none(self):
+        """Even when the ledger honestly declares no predecessor at all,
+        a non-git candidate must still supply a real, bound attestation
+        -- absence of one is never silently treated as an implicit,
+        free "first release" pass for a non-git materialization."""
+        errors = cc.check_release_tag_authority_non_git(None, self.TARGET_SHA, "1.0.0", None)
+        self.assertTrue(errors)
+
 
 
 if __name__ == "__main__":
