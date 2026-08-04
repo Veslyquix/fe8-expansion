@@ -59,6 +59,29 @@ static int CheckOne(
     return 1;
 }
 
+static int CheckSettings(
+    u32 enabledMask,
+    ExpansionLocaleId current,
+    int direction,
+    enum ExpansionLanguageSettingsAction expectedAction,
+    ExpansionLocaleId expectedLocale,
+    const char *label)
+{
+    ExpansionLocaleId locale = 0xEE;
+    enum ExpansionLanguageSettingsAction action =
+        ExpansionLanguageMenu_DecideSettingsAction(enabledMask, current, direction, &locale);
+
+    if (action != expectedAction || locale != expectedLocale)
+    {
+        fprintf(stderr,
+            "EXPANSION_LANGUAGE_MENU_DECISION_HOST_TEST: FAIL: %s: action=%d/%d locale=%u/%u\n",
+            label, (int)action, (int)expectedAction, (unsigned)locale, (unsigned)expectedLocale);
+        return 0;
+    }
+
+    return 1;
+}
+
 int main(void)
 {
     int ok = 1;
@@ -125,6 +148,58 @@ int main(void)
             ExpansionLanguageMenu_DecideStartupAction(EXPANSION_USER_PREFS_UNSET, TRUE, 1, NULL);
         CHECK(action == EXPANSION_LANGUAGE_STARTUP_AUTO_SELECT, "NULL outPromptReason must still return a valid action");
     }
+
+    /* One locale is display-only: Left/Right never opens a redundant menu. */
+    ok &= CheckSettings(1u << EXPANSION_LOCALE_EN, EXPANSION_LOCALE_EN, +1,
+        EXPANSION_LANGUAGE_SETTINGS_NONE, EXPANSION_LOCALE_EN,
+        "settings/one/right-noop");
+
+    /* Two and three locales are selected entirely inline. */
+    ok &= CheckSettings(
+        (1u << EXPANSION_LOCALE_EN) | (1u << EXPANSION_LOCALE_QPS_PLOC),
+        EXPANSION_LOCALE_EN, +1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_QPS_PLOC,
+        "settings/two/right");
+    ok &= CheckSettings(
+        (1u << EXPANSION_LOCALE_EN) | (1u << EXPANSION_LOCALE_QPS_PLOC),
+        EXPANSION_LOCALE_QPS_PLOC, -1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_EN,
+        "settings/two/left");
+    ok &= CheckSettings(
+        (1u << EXPANSION_LOCALE_EN) | (1u << EXPANSION_LOCALE_QPS_PLOC),
+        EXPANSION_LOCALE_QPS_PLOC, +1,
+        EXPANSION_LANGUAGE_SETTINGS_NONE, EXPANSION_LOCALE_QPS_PLOC,
+        "settings/two/right-end");
+    ok &= CheckSettings(0x07u, 1, +1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 2,
+        "settings/three/right");
+    ok &= CheckSettings(0x07u, 2, +1,
+        EXPANSION_LANGUAGE_SETTINGS_NONE, 2,
+        "settings/three/right-end");
+
+    /* Four or more locales expose first, second, More. */
+    ok &= CheckSettings(0x0Fu, 0, +1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 1,
+        "settings/four/first-right");
+    ok &= CheckSettings(0x0Fu, 1, +1,
+        EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU, EXPANSION_LOCALE_INVALID,
+        "settings/four/second-right-more");
+    ok &= CheckSettings(0x0Fu, 3, +1,
+        EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU, EXPANSION_LOCALE_INVALID,
+        "settings/four/out-of-line-right-more");
+    ok &= CheckSettings(0x0Fu, 3, -1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 1,
+        "settings/four/out-of-line-left");
+    ok &= CheckSettings(0x0Fu, 1, -1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 0,
+        "settings/four/second-left");
+
+    /* Defensive invalid current locale adopts the first enabled choice. */
+    ok &= CheckSettings(
+        (1u << EXPANSION_LOCALE_EN) | (1u << EXPANSION_LOCALE_QPS_PLOC),
+        EXPANSION_LOCALE_INVALID, +1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_EN,
+        "settings/invalid-current");
 
     CHECK(ok, "one or more decision-table cases failed (see FAIL lines above)");
 

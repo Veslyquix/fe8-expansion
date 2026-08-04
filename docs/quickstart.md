@@ -365,11 +365,11 @@ before the rest of overlay 0; the verifier checks the full
 Configuration's added Language row is the fourteenth option, whose two-tile
 render starts at BG row 31; its icon and text drawing explicitly wrap the
 second tile row to row 0 instead of writing past the 32x32 tilemap buffer.
-The language submenu shares BG0/BG1 with Configuration, so its on-end callback
-redraws the six visible option rows and help text from the preserved
-selection/scroll state after either selection or B-cancel. Each opening also
-resets the text-tile allocator so repeated visits cannot reuse stale
-Configuration glyph tiles.
+The Language row selects up to three enabled locales inline (compact locale
+labels share the same value row). Builds with more than three locales show the
+first two plus `More`; only `More` opens the full submenu. While that submenu
+is active Configuration's own hand/scroll sprites are suppressed, and its
+on-end callback redraws the six visible rows and help text after cleanup.
 
 `UnpackUiFrameBuffered()` decompresses UI-frame graphics into the scratch
 range ending at `gFadeComponentStep`. The modern linker therefore places that

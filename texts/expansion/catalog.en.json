@@ -26,6 +26,9 @@
     "debug.action.convoy_inspect": "Convoy Inspect",
     "debug.action.flag_chapter": "Flag/Chapter",
     "debug.action.rng_inspect": "RNG Inspect",
-    "debug.action.save_state": "Save State"
+    "debug.action.save_state": "Save State",
+    "framework.locale_short_name.en": "EN",
+    "framework.locale_short_name.qps_ploc": "QPS",
+    "language.settings_more": "More"
   }
 }

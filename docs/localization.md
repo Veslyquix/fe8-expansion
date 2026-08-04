@@ -41,7 +41,7 @@ The framework is layered, each layer independently testable:
    `UNKNOWN_LOCALE` / `DISABLED_LOCALE`), and written via `_Store()`.
    Deliberately excludes vanilla `struct SoundRoomSaveData` and every
    other pre-existing SRAM field -- see the "no-wipe" contract below.
-5. **First-start selector + settings submenu**
+5. **First-start selector + Config language row**
    (`src/expansion_language_menu.c`, `include/expansion_language_menu.h`,
    Sprint 3): `ExpansionLanguageMenu_DecideStartupAction()` is a pure,
    host-testable function mapping `(prefs state, enabled locale count)` to
@@ -50,10 +50,12 @@ The framework is layered, each layer independently testable:
    after `ProcScr_GameEarlyStartUI` and before `ProcScr_OpAnim` (`#ifdef
    MODERN`-guarded call site in `src/gamecontrol.c`); with exactly one
    enabled locale it silently auto-selects and never shows a UI. The
-   independent settings submenu (`ExpansionLanguageMenu_OpenSettings`) is
-   reachable from the Config screen and only calls `ExpansionUserPrefs_
-   Store()`/invalidates the resolver cache when the chosen locale actually
-   differs from the current one; `Back` leaves everything untouched. A
+   Config row selects all enabled locales inline when there are at most
+   three. With more than three it shows the first two compact locale labels
+   plus `More`; only `More` opens `ExpansionLanguageMenu_OpenSettings()`.
+   Inline or submenu selection calls `ExpansionUserPrefs_Store()` and
+   invalidates the resolver cache only when the locale actually changes;
+   `Back` leaves everything untouched. A
    `struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe` (EWRAM,
    `include/expansion_language_menu.h`) exposes `active`/`settingsActive`/
    `promptShown`/`autoSelected`/`promptReason`/`prefsState`/
@@ -61,6 +63,11 @@ The framework is layered, each layer independently testable:
    `startupRunCount`/`settingsOpenCount`/`settingsChangeCount` for exactly
    this kind of diagnostic read -- a plain, bounded, fixed-layout struct,
    never a raw/arbitrary pointer oracle.
+
+   Current validated profiles enable at most `en,qps-ploc`, so the 4+
+   `More` threshold is host-executed through
+   `ExpansionLanguageMenu_DecideSettingsAction()`; the 1- and 2-locale
+   product paths are additionally captured in real release/debug ROMs.
 
 ## Config
 
@@ -116,10 +123,10 @@ mechanical transform of the English catalog (accenting/padding/bracketing
 ASCII test markers), generated at build time from `catalog.en.json` --
 **never a translation, never hand-authored foreign text, and never
 represents any real language**. Every user-facing surface that can display
-it (the selector list, the settings submenu, `ExpansionLanguageMenu_
-GetCurrentLocaleDisplayName`) labels it `"Pseudo (Test)"`, never a language
-name. Its own display name is resolved against `EXPANSION_LOCALE_EN` (a
-proper noun), never through itself. This repository has authored **no**
+it (the selector list and the More submenu) labels it `"Pseudo (Test)"`;
+the compact Config-row label is the cataloged code `QPS`. Locale names/codes
+are resolved against `EXPANSION_LOCALE_EN` (proper nouns/identifiers), never
+through themselves. This repository has authored **no**
 foreign-language content anywhere in this framework; every non-English
 stable locale ID beyond `en`/`qps-ploc` is a reserved, unpopulated slot for
 future sprints.
@@ -168,7 +175,8 @@ fingerprints in the matching `tools/gba-playtest/fingerprints/` file):
 | `locale-prefs-unknown-locale-no-wipe-modern-debug` | Same, for an unknown-locale-id prefs record. |
 | `locale-prefs-disabled-locale-no-wipe-modern-debug` | Same, for a prefs record naming a locale not compiled into this build. |
 | `locale-repair-{unset,corrupt,unknown,disabled}-multi-modern-{debug,release}` | Issue #18 sprint 7: the real 4x2 repair matrix. Unlike the three `-no-wipe-modern-debug` rows above (single-locale build, debug-only, repair collapses to silent `AUTO_SELECT`), these 8 scenarios boot the same `en,qps-ploc` multi-locale ROM as the rest of this table, in **both** debug and release, so the real blocking selector (`active=1`, `autoSelected=0`, `needsPreferenceRepair=1`, per-state `promptReason`/`prefsState`) is what actually gets exercised and repaired. Each scenario: hashes the whole SRAM image at boot; shows the prompt; explicitly navigates down to `qps-ploc` and back up to `en` (proving a real cursor round-trip, not a scripted single keypress) before confirming the *default* English row -- the sprint-6 `mustRepair` fix (`src/expansion_language_menu.c`) is what makes `ExpansionUserPrefs_Store()` fire even though the chosen locale equals the runtime own current fallback; re-hashes the whole SRAM image (minus the same three exclusions as the no-wipe rows) to prove no-wipe across the repair; then sends a real `A+B+SELECT+START` soft reset and, on the resulting genuine second boot, proves the persisted record now classifies `VALID` and the selector/prompt stay suppressed. Superseding claim: the pre-existing `-no-wipe-modern-debug` scenarios remain honestly named (they still real-capture their own single-locale/debug/no-wipe claim) but are not, and never were, a substitute for this matrix. |
-| `locale-settings-real-navigation-multi-modern-debug` | **Real** navigation from a live Prep Map -> Options -> Configuration screen (never a direct `ExpansionLanguageMenu_OpenSettings()` call/fixture) to the Language row, opening the real settings submenu (`settingsActive` 0->1), selecting `qps-ploc` (locale/cache-generation/change-count all move), and proving a `B`-cancel (no selection) leaves `currentLocale`/`cacheGeneration`/`settingsChangeCount` and all 6 persisted `ExpansionUserPrefs` SRAM bytes byte-identical while `settingsOpenCount` still increments -- real proof that Back never mutates prefs. Also carries the visible pseudo-marker region/pixel checkpoints below. |
+| `locale-settings-inline-single-modern-release` | Real release navigation to the single-locale Language row; Right is a no-op and never opens a redundant submenu (`settingsActive`/`settingsOpenCount` stay zero). |
+| `locale-settings-real-navigation-multi-modern-debug` | Real Prep Map -> Options -> Configuration navigation in the two-locale build. RIGHT/LEFT/RIGHT selects `QPS`/`EN`/`QPS` inline, persists every change, and proves `settingsActive`/`settingsOpenCount` stay zero. |
 | `locale-softreset-persistence-multi-modern-debug` | Real first-run selector chooses `qps-ploc`, then a genuine A+B+SELECT+START soft-reset key combo (held ~20-24 frames through libmGBA's own HLE BIOS -- a real hardware reboot, not a fixture swap) reboots the ROM; continuous, never-swapped SRAM: selector is skipped post-reset (`promptShown`/`active` stay 0) and `currentLocale` is `qps-ploc` again without re-selection. |
 
 Every save/load and suspend/resume regression coverage for locale prefs
@@ -281,22 +289,18 @@ never inside the `ifeq ($(MODERN_CONFIG),debug)` guard) -- it fails if a
 release pair goes missing or a scenario silently regresses to
 `AUTO_SELECT`.
 
-### Real settings navigation, real soft-reset persistence, visible pseudo marker
+### Real inline settings navigation and soft-reset persistence
 
 `locale-settings-real-navigation-multi-modern-debug` drives the actual,
 reachable in-game UI path a player uses -- Prep Map -> `Options` ->
-Configuration screen -> the `Language` row -> `RIGHT` opens the real
-`ExpansionLanguageMenu_OpenSettings()` submenu -- entirely through
-replayed controller input; it never calls `OpenSettings()` directly and
-never substitutes a fixture for the entry point. It proves, via real
-`gExpansionLanguageMenuProbe` fields: `settingsActive` toggles 0->1 on
-real entry; selecting `qps-ploc` moves `currentLocale`/`cacheGeneration`/
-`settingsChangeCount` and auto-closes the submenu; reopening the submenu
-and pressing `B` (Back, no selection) leaves `currentLocale`/
-`cacheGeneration`/`settingsChangeCount` and all 6 persisted
-`ExpansionUserPrefs` SRAM bytes byte-identical while `settingsOpenCount`
-still increments -- real, capture-verified proof that Back never mutates
-prefs.
+Configuration -> `Language` -- entirely through replayed controller input.
+In the two-locale build the row displays compact `EN` and `QPS` choices:
+RIGHT/LEFT/RIGHT selects QPS/English/QPS without opening a submenu.
+`currentLocale`, `cacheGeneration`, `settingsChangeCount`, and the persisted
+prefs bytes move with each real selection, while `settingsActive` and
+`settingsOpenCount` remain zero. The release-only
+`locale-settings-inline-single-modern-release` route proves Right is a no-op
+when English is the sole enabled locale.
 
 `locale-softreset-persistence-multi-modern-debug` proves persistence
 across an actual reboot, not a fixture swap: it replays the real
@@ -311,31 +315,9 @@ swapped or replaced. Post-reboot, the selector does not reappear
 without any re-selection -- real persistence across a real reboot on
 continuous SRAM.
 
-**Visible pseudo-locale marker**: the settings submenu's `Back` row is the
-one row in this menu resolved in the *current* locale (`ExpansionLocale_
-ResolveCurrent(EXP_MSG_FRAMEWORK_BACK)` -- `src/expansion_language_menu.c`'s
-`ExpansionLanguageMenu_RowDraw`; every locale-name row is always resolved
-in English regardless of current locale, since it is a menu of language
-*names*, not translated UI chrome). `tools/gba-playtest` gained a new,
-host-schema-tested backend feature for this (`backend.c`/`gba_playtest.py`
-plan format version 3): per-checkpoint named rectangular framebuffer
-`regions` (independently FNV-1a-hashed, never the whole-screen hash) and
-individual `pixel_probes` (exact 24-bit RGB byte triples at a single
-(x, y) coordinate) -- see `tools/gba-playtest/tests/test_region_pixel_
-schema.py` (32 host-only tests) and `tools/gba-playtest/tests/region_hash_
-mirror.py`. `locale-settings-real-navigation-multi-modern-debug`'s own
-`settings-submenu-opened` (English, `currentLocale=0`) and
-`settings-reopened-second-time` (`currentLocale=qps-ploc`, after the real
-in-menu switch above) checkpoints each carry a `back_row_label` region
-(the exact on-screen tile row the Back label draws to) plus two pixel
-probes inside it. Real capture proves the region hash differs between the
-two checkpoints and that concrete pixel bytes flip between dark ink and
-light background/white at the same screen coordinate -- real,
-screen-region/pixel-level proof that the qps-ploc decoration marker
-(`scripts/localization/pseudo.py`'s deterministic bracket-wrapped,
-alternating-case, vowel-doubled transform, e.g. `"Back"` -> `"[[BaaCk]]"`)
-is visible and differs from English at the same location, never merely a
-whole-framebuffer hash difference.
+The inline scenario's framebuffer checkpoints visibly distinguish the blue
+selected `EN`/`QPS` value while its EWRAM/SRAM probes establish the semantic
+selection and persistence contract independently of pixels.
 
 ### Probe schema/bounds host tests
 

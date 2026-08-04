@@ -2928,7 +2928,8 @@ endif
 expansion-modern-localization-runtime-release-check: expansion-modern-boot-preflight \
 		expansion-modern-rom \
 		$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav \
-		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav
 ifeq ($(MODERN_CONFIG),release)
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-release.json" \
@@ -2938,7 +2939,11 @@ ifeq ($(MODERN_CONFIG),release)
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-release.json" \
 		--expected "$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-release.json" \
 		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
-	@printf 'Modern ROM localization-runtime release-check passed (blank-sram + auto-select): %s\n' "$(MODERN_ROM)"
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-settings-inline-single-modern-release.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-settings-inline-single-modern-release.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime release-check passed (blank-sram + auto-select + inline settings): %s\n' "$(MODERN_ROM)"
 else
 	@printf 'Modern ROM localization-runtime release-check skipped for config=%s (release-only)\n' '$(MODERN_CONFIG)'
 endif

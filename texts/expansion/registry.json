@@ -206,6 +206,30 @@
       "surface": "debug_overlay",
       "max_width": 24,
       "max_decoded_bytes": 40
+    },
+    {
+      "id": 26,
+      "key": "framework.locale_short_name.en",
+      "status": "active",
+      "surface": "locale_name",
+      "max_width": 8,
+      "max_decoded_bytes": 8
+    },
+    {
+      "id": 27,
+      "key": "framework.locale_short_name.qps_ploc",
+      "status": "active",
+      "surface": "locale_name",
+      "max_width": 8,
+      "max_decoded_bytes": 8
+    },
+    {
+      "id": 28,
+      "key": "language.settings_more",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 10,
+      "max_decoded_bytes": 16
     }
   ]
 }

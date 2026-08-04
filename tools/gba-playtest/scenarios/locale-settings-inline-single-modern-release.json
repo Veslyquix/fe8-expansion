@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "name": "locale-settings-inline-single-modern-release",
+  "description": "Real release-build navigation to Configuration's Language row with exactly one enabled locale. The route reaches Options through ordinary title, map, and menu input, moves to the final Language row, then presses Right. All checkpoints prove the row remains inline and unchanged: settingsActive/settingsOpenCount/settingsChangeCount stay zero, currentLocale stays English, and no redundant submenu is created.",
+  "frames": [
+    {"start": 90, "end": 95, "keys": ["A"]},
+    {"start": 155, "end": 160, "keys": ["START"]},
+    {"start": 220, "end": 225, "keys": ["A"]},
+    {"start": 285, "end": 290, "keys": ["START"]},
+    {"start": 350, "end": 355, "keys": ["A"]},
+    {"start": 415, "end": 420, "keys": ["START"]},
+    {"start": 480, "end": 485, "keys": ["A"]},
+    {"start": 545, "end": 550, "keys": ["START"]},
+    {"start": 950, "end": 956, "keys": ["A"]},
+    {"start": 1020, "end": 1026, "keys": ["DOWN"]},
+    {"start": 1090, "end": 1096, "keys": ["A"]},
+    {"start": 1380, "end": 1386, "keys": ["A"]},
+    {"start": 1487, "end": 1493, "keys": ["START"]},
+    {"start": 1583, "end": 1589, "keys": ["START"]},
+    {"start": 1748, "end": 1754, "keys": ["START"]},
+    {"start": 1844, "end": 1850, "keys": ["START"]},
+    {"start": 2085, "end": 2091, "keys": ["START"]},
+    {"start": 2238, "end": 2244, "keys": ["START"]},
+    {"start": 2347, "end": 2353, "keys": ["START"]},
+    {"start": 2588, "end": 2594, "keys": ["START"]},
+    {"start": 2829, "end": 2835, "keys": ["START"]},
+    {"start": 3070, "end": 3076, "keys": ["START"]},
+    {"start": 3311, "end": 3317, "keys": ["START"]},
+    {"start": 3600, "end": 3605, "keys": ["LEFT"]},
+    {"start": 3660, "end": 3665, "keys": ["A"]},
+    {"start": 3720, "end": 3725, "keys": ["DOWN"]},
+    {"start": 3780, "end": 3785, "keys": ["DOWN"]},
+    {"start": 3840, "end": 3845, "keys": ["DOWN"]},
+    {"start": 3900, "end": 3905, "keys": ["A"]},
+    {"start": 4300, "end": 4305, "keys": ["DOWN"]},
+    {"start": 4360, "end": 4365, "keys": ["DOWN"]},
+    {"start": 4420, "end": 4425, "keys": ["DOWN"]},
+    {"start": 4480, "end": 4485, "keys": ["DOWN"]},
+    {"start": 4540, "end": 4545, "keys": ["DOWN"]},
+    {"start": 4600, "end": 4605, "keys": ["DOWN"]},
+    {"start": 4660, "end": 4665, "keys": ["DOWN"]},
+    {"start": 4720, "end": 4725, "keys": ["DOWN"]},
+    {"start": 4780, "end": 4785, "keys": ["DOWN"]},
+    {"start": 4840, "end": 4845, "keys": ["DOWN"]},
+    {"start": 4900, "end": 4905, "keys": ["DOWN"]},
+    {"start": 4960, "end": 4965, "keys": ["DOWN"]},
+    {"start": 5020, "end": 5025, "keys": ["DOWN"]},
+    {"start": 5400, "end": 5405, "keys": ["RIGHT"]}
+  ],
+  "checkpoints": [
+    {
+      "name": "single-locale-row-before-right",
+      "frame": 5200,
+      "framebuffer": true,
+      "probes": [
+        {"address": "0x02031588", "size": 1, "expected": "0x00"},
+        {"address": "0x02031589", "size": 1, "expected": "0x00"},
+        {"address": "0x0203158f", "size": 1, "expected": "0x00"},
+        {"address": "0x02031592", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031596", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031598", "size": 2, "expected": "0x0000"}
+      ]
+    },
+    {
+      "name": "single-locale-right-is-noop",
+      "frame": 5500,
+      "framebuffer": true,
+      "probes": [
+        {"address": "0x02031588", "size": 1, "expected": "0x00"},
+        {"address": "0x02031589", "size": 1, "expected": "0x00"},
+        {"address": "0x0203158f", "size": 1, "expected": "0x00"},
+        {"address": "0x02031592", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031596", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031598", "size": 2, "expected": "0x0000"}
+      ]
+    },
+    {
+      "name": "single-locale-row-remains-stable",
+      "frame": 5650,
+      "framebuffer": true,
+      "probes": [
+        {"address": "0x02031588", "size": 1, "expected": "0x00"},
+        {"address": "0x02031589", "size": 1, "expected": "0x00"},
+        {"address": "0x0203158f", "size": 1, "expected": "0x00"},
+        {"address": "0x02031592", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031596", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031598", "size": 2, "expected": "0x0000"}
+      ]
+    }
+  ]
+}

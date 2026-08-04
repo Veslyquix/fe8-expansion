@@ -96,6 +96,108 @@ enum ExpansionLanguageMenuStartupAction ExpansionLanguageMenu_DecideStartupActio
     return action;
 }
 
+enum ExpansionLanguageSettingsAction ExpansionLanguageMenu_DecideSettingsAction(
+    u32 enabledLocaleMask,
+    ExpansionLocaleId currentLocale,
+    int direction,
+    ExpansionLocaleId *outLocale)
+{
+    ExpansionLocaleId locales[EXPANSION_LOCALE_COUNT];
+    ExpansionLocaleId locale;
+    int currentIndex;
+    int count;
+
+    count = 0;
+    currentIndex = -1;
+
+    for (locale = 0; locale < EXPANSION_LOCALE_COUNT; ++locale)
+    {
+        if (!(enabledLocaleMask & (1u << locale)))
+            continue;
+
+        locales[count] = locale;
+
+        if (locale == currentLocale)
+            currentIndex = count;
+
+        count++;
+    }
+
+    if (outLocale != NULL)
+        *outLocale = currentLocale;
+
+    if (direction == 0 || count <= 1)
+        return EXPANSION_LANGUAGE_SETTINGS_NONE;
+
+    if (currentIndex < 0)
+    {
+        if (direction > 0)
+        {
+            if (outLocale != NULL)
+                *outLocale = locales[0];
+
+            return EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE;
+        }
+
+        return EXPANSION_LANGUAGE_SETTINGS_NONE;
+    }
+
+    if (count <= EXPANSION_LANGUAGE_INLINE_MAX)
+    {
+        if (direction < 0 && currentIndex > 0)
+        {
+            if (outLocale != NULL)
+                *outLocale = locales[currentIndex - 1];
+
+            return EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE;
+        }
+
+        if (direction > 0 && currentIndex + 1 < count)
+        {
+            if (outLocale != NULL)
+                *outLocale = locales[currentIndex + 1];
+
+            return EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE;
+        }
+
+        return EXPANSION_LANGUAGE_SETTINGS_NONE;
+    }
+
+    if (currentIndex == 0)
+    {
+        if (direction > 0)
+        {
+            if (outLocale != NULL)
+                *outLocale = locales[1];
+
+            return EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE;
+        }
+
+        return EXPANSION_LANGUAGE_SETTINGS_NONE;
+    }
+
+    if (currentIndex == 1 || currentIndex >= 2)
+    {
+        if (direction < 0)
+        {
+            if (outLocale != NULL)
+                *outLocale = (currentIndex == 1) ? locales[0] : locales[1];
+
+            return EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE;
+        }
+
+        if (direction > 0)
+        {
+            if (outLocale != NULL)
+                *outLocale = EXPANSION_LOCALE_INVALID;
+
+            return EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU;
+        }
+    }
+
+    return EXPANSION_LANGUAGE_SETTINGS_NONE;
+}
+
 /* --- Bounded diagnostic probe (issue #13) -------------------------------- */
 
 /* Always linked, in every build -- see include/expansion_language_menu.h.
@@ -170,6 +272,18 @@ static const ExpansionMsgId sLocaleNameMsgIds[EXPANSION_LOCALE_COUNT] =
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_ES (reserved) */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_IT (reserved) */
     EXP_MSG_FRAMEWORK_LOCALE_NAME_QPS_PLOC, /* EXPANSION_LOCALE_QPS_PLOC */
+};
+
+static const ExpansionMsgId sLocaleShortNameMsgIds[EXPANSION_LOCALE_COUNT] =
+{
+    EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_EN,       /* EXPANSION_LOCALE_EN */
+    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_JA (reserved) */
+    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_ZH_HANS (reserved) */
+    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_FR (reserved) */
+    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_DE (reserved) */
+    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_ES (reserved) */
+    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_IT (reserved) */
+    EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_QPS_PLOC, /* EXPANSION_LOCALE_QPS_PLOC */
 };
 
 /* RAM-resident MenuItemDef adapter, rebuilt every time either MenuDef
@@ -269,18 +383,14 @@ static int ExpansionLanguageMenu_RowDraw(struct MenuProc *menu, struct MenuItemP
  * MenuProc is alive, never during the later settings submenu) so the
  * settings submenu's own unconditional "same locale = no-op" contract
  * is never affected by this repair path. */
-static u8 ExpansionLanguageMenu_RowSelected(struct MenuProc *menu, struct MenuItemProc *item)
+static bool8 ExpansionLanguageMenu_StoreSelection(
+    ExpansionLocaleId locale,
+    bool8 mustRepair,
+    bool8 settingsSelection)
 {
-    ExpansionLocaleId locale = (ExpansionLocaleId)item->def->helpMsgId;
     ExpansionLocaleId previous = ExpansionLocale_GetCurrent();
-    bool8 mustRepair;
-
-    (void)menu;
 
     gExpansionLanguageMenuProbe.selectedLocale = locale;
-
-    mustRepair = (bool8)(gExpansionLanguageMenuProbe.active
-                       && gExpansionLanguageMenuProbe.needsPreferenceRepair);
 
     if (locale != previous || mustRepair)
     {
@@ -289,12 +399,33 @@ static u8 ExpansionLanguageMenu_RowSelected(struct MenuProc *menu, struct MenuIt
             gExpansionLanguageMenuProbe.cacheGeneration++;
             gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;
 
-            if (gExpansionLanguageMenuProbe.settingsActive)
+            if (settingsSelection)
                 gExpansionLanguageMenuProbe.settingsChangeCount++;
+
+            gExpansionLanguageMenuProbe.currentLocale = ExpansionLocale_GetCurrent();
+            return TRUE;
         }
     }
 
     gExpansionLanguageMenuProbe.currentLocale = ExpansionLocale_GetCurrent();
+
+    return FALSE;
+}
+
+static u8 ExpansionLanguageMenu_RowSelected(struct MenuProc *menu, struct MenuItemProc *item)
+{
+    ExpansionLocaleId locale = (ExpansionLocaleId)item->def->helpMsgId;
+    bool8 mustRepair;
+
+    (void)menu;
+
+    mustRepair = (bool8)(gExpansionLanguageMenuProbe.active
+                       && gExpansionLanguageMenuProbe.needsPreferenceRepair);
+
+    ExpansionLanguageMenu_StoreSelection(
+        locale,
+        mustRepair,
+        gExpansionLanguageMenuProbe.settingsActive);
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_CLEAR | MENU_ACT_SND6A;
 }
@@ -528,6 +659,11 @@ PROC_LABEL(LBL_EXPANSION_LANGUAGE_SELECTOR_DONE),
 
 void ExpansionLanguageMenu_OpenSettings(ProcPtr parent)
 {
+    struct MenuProc *menu;
+    ExpansionLocaleId current;
+    ExpansionLocaleId locale;
+    u8 itemIndex;
+
     ExpansionLanguageMenu_BuildLocaleRows(sLanguageMenuItemDefs, TRUE);
 
     gExpansionLanguageMenuProbe.settingsActive = TRUE;
@@ -538,14 +674,44 @@ void ExpansionLanguageMenu_OpenSettings(ProcPtr parent)
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
     ResetTextFont();
-    StartMenu(&gExpansionLanguageSettingsMenuDef, parent);
+    menu = StartMenu(&gExpansionLanguageSettingsMenuDef, parent);
+
+    current = ExpansionLocale_GetCurrent();
+    itemIndex = 0;
+
+    for (locale = 0; locale < EXPANSION_LOCALE_COUNT; ++locale)
+    {
+        if (!ExpansionLocale_IsEnabled(locale))
+            continue;
+
+        if (locale == current)
+        {
+            menu->itemCurrent = itemIndex;
+            break;
+        }
+
+        itemIndex++;
+    }
 }
 
-const char *ExpansionLanguageMenu_ResolveCurrentLocaleName(void)
+const char *ExpansionLanguageMenu_ResolveLocaleName(ExpansionLocaleId locale, bool8 compact)
 {
-    ExpansionLocaleId current = ExpansionLocale_GetCurrent();
+    ExpansionMsgId msgId;
 
-    return ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, sLocaleNameMsgIds[current]);
+    if (!ExpansionLocale_IsSupported(locale))
+        locale = ExpansionLocale_GetDefault();
+
+    msgId = compact ? sLocaleShortNameMsgIds[locale] : sLocaleNameMsgIds[locale];
+
+    if (msgId == EXPANSION_MSG_ID_INVALID)
+        msgId = sLocaleNameMsgIds[locale];
+
+    return ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, msgId);
+}
+
+bool8 ExpansionLanguageMenu_SelectSettingsLocale(ExpansionLocaleId locale)
+{
+    return ExpansionLanguageMenu_StoreSelection(locale, FALSE, TRUE);
 }
 
 #endif /* MODERN */

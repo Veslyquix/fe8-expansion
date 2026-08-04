@@ -642,25 +642,21 @@ struct GameOption CONST_DATA gGameOptions[] =
 #ifdef MODERN
     ,
 
-    /* Issue #18 sprint 3: not a value-cycling toggle -- Left/Right just
-     * opens the independent language settings submenu (see
-     * LanguageOptionEntryHandler below and Config_Loop_KeyHandler's
-     * unconditional `.func(proc)` call on DPAD_LEFT/DPAD_RIGHT). The
-     * label/value/help text are all resolved through guarded
-     * GAME_OPTION_LANGUAGE special cases in DrawGameOptionText/
-     * DrawOptionValueTexts/DrawGameOptionHelpText below, so msgId and
-     * the selectors[] entries here are unused placeholders -- kept at
-     * the vanilla MSG_000/fixed size (never expanded) purely to satisfy
-     * struct GameOption's unchanged layout. */
+    /* Up to three enabled locales are selected inline. A build with more
+     * than three shows its first two locales plus More, which alone opens
+     * the full settings menu. Labels remain expansion-catalog strings
+     * drawn by GAME_OPTION_LANGUAGE special cases below; these selectors
+     * only provide the three hand/cursor x positions without changing
+     * struct GameOption's fixed selectors[4] ABI. */
     [GAME_OPTION_LANGUAGE] =
     {
         .msgId = MSG_000,
         .selectors =
         {
             { MSG_000, MSG_000, 112, 0 },
-            { MSG_000, MSG_000, 112, 0 },
-            { MSG_000, MSG_000, 112, 0 },
-            { MSG_000, MSG_000, 112, 0 },
+            { MSG_000, MSG_000, 152, 0 },
+            { MSG_000, MSG_000, 192, 0 },
+            { MSG_000, MSG_000, 192, 0 },
         },
         .icon = 0x16, // reused from GAME_OPTION_SUBTITLE_HELP; no new asset
         .func = LanguageOptionEntryHandler,
@@ -745,6 +741,112 @@ static void PutConfigTextWrapped(struct Text * text, int x, int y)
     {
         gBG1TilemapBuffer[TILEMAP_INDEX(x + i, 0x1F)] = tm[i];
         gBG1TilemapBuffer[TILEMAP_INDEX(x + i, 0)] = tm[0x20 + i];
+    }
+}
+
+static u8 GetLanguageEnabledLocales(ExpansionLocaleId *locales)
+{
+    ExpansionLocaleId locale;
+    u8 count = 0;
+
+    for (locale = 0; locale < EXPANSION_LOCALE_COUNT; locale++)
+    {
+        if (ExpansionLocale_IsEnabled(locale))
+            locales[count++] = locale;
+    }
+
+    return count;
+}
+
+static u32 GetLanguageEnabledLocaleMask(void)
+{
+    ExpansionLocaleId locale;
+    u32 mask = 0;
+
+    for (locale = 0; locale < EXPANSION_LOCALE_COUNT; locale++)
+    {
+        if (ExpansionLocale_IsEnabled(locale))
+            mask |= 1u << locale;
+    }
+
+    return mask;
+}
+
+static u8 GetLanguageInlineSelectedIndex(void)
+{
+    ExpansionLocaleId locales[EXPANSION_LOCALE_COUNT];
+    ExpansionLocaleId current = ExpansionLocale_GetCurrent();
+    u8 count = GetLanguageEnabledLocales(locales);
+    u8 i;
+
+    for (i = 0; i < count; i++)
+    {
+        if (locales[i] != current)
+            continue;
+
+        if (count > EXPANSION_LANGUAGE_INLINE_MAX && i >= 2)
+            return 2;
+
+        return i;
+    }
+
+    return 0;
+}
+
+static void DrawLanguageOptionLabel(struct Text *text, const char *label, int maxWidth)
+{
+    char clipped[EXPANSION_LOCALE_SCRATCH_SLOT_BYTES];
+    int length = 0;
+
+    clipped[0] = '\0';
+
+    while (label[length] != '\0' && length + 1 < (int)sizeof(clipped))
+    {
+        clipped[length] = label[length];
+        clipped[length + 1] = '\0';
+
+        if (GetStringTextLenASCII(clipped) > maxWidth)
+        {
+            clipped[length] = '\0';
+            break;
+        }
+
+        length++;
+    }
+
+    Text_DrawStringASCII(text, clipped);
+}
+
+static void DrawLanguageOptionValueTexts(struct Text *text)
+{
+    ExpansionLocaleId locales[EXPANSION_LOCALE_COUNT];
+    ExpansionLocaleId current = ExpansionLocale_GetCurrent();
+    u8 count = GetLanguageEnabledLocales(locales);
+    u8 displayCount = count;
+    u8 i;
+
+    if (displayCount > EXPANSION_LANGUAGE_INLINE_MAX)
+        displayCount = EXPANSION_LANGUAGE_INLINE_MAX;
+
+    for (i = 0; i < displayCount; i++)
+    {
+        const char *label;
+        bool8 selected;
+
+        if (count > EXPANSION_LANGUAGE_INLINE_MAX && i == 2)
+        {
+            label = ExpansionLocale_ResolveCurrent(EXP_MSG_LANGUAGE_SETTINGS_MORE);
+            selected = (current != locales[0] && current != locales[1]);
+        }
+        else
+        {
+            label = ExpansionLanguageMenu_ResolveLocaleName(locales[i], count > 1);
+            selected = (current == locales[i]);
+        }
+
+        Text_SetCursor(text, i * 40);
+        Text_SetColor(text, selected ? TEXT_COLOR_SYSTEM_BLUE : TEXT_COLOR_SYSTEM_GRAY);
+        DrawLanguageOptionLabel(text, label, (i == 2) ? 31 : 38);
     }
 }
 #endif
@@ -859,13 +961,9 @@ void DrawOptionValueTexts(int selectedIdx, int textIdx, int y)
     ClearText(&gConfigUiState->valueTexts[textIdx]);
 
 #ifdef MODERN
-    /* Not a 0-3 selectors[] value cycle -- shows the current locale's own
-     * (self-referential, never-translated) display name instead. */
     if (optionIdx == GAME_OPTION_LANGUAGE)
     {
-        Text_SetCursor(&gConfigUiState->valueTexts[textIdx], 0);
-        Text_SetColor(&gConfigUiState->valueTexts[textIdx], TEXT_COLOR_SYSTEM_BLUE);
-        Text_DrawStringASCII(&gConfigUiState->valueTexts[textIdx], ExpansionLanguageMenu_ResolveCurrentLocaleName());
+        DrawLanguageOptionValueTexts(&gConfigUiState->valueTexts[textIdx]);
         PutConfigTextWrapped(&gConfigUiState->valueTexts[textIdx], x, y);
 
         return;
@@ -902,10 +1000,16 @@ void ConfigSprites_Init(void)
 void DrawConfigUiSprites(void)
 {
     int y;
+    int optionIdx;
+    u8 time;
 
-    int optionIdx = gGameOptionsUiOrder[gConfigUiState->selectedOptionIdx];
+#ifdef MODERN
+    if (gExpansionLanguageMenuProbe.settingsActive)
+        return;
+#endif
 
-    u8 time = (GetGameClock() % 16) & 8;
+    optionIdx = gGameOptionsUiOrder[gConfigUiState->selectedOptionIdx];
+    time = (GetGameClock() % 16) & 8;
 
     CallARM_PushToSecondaryOAM(18, 8, gSprite_ConfigurationUiHeader, OAM2_CHR(0xC0) + OAM2_PAL(2));
 
@@ -1114,20 +1218,38 @@ bool GenericOptionChangeHandler(ProcPtr proc)
 }
 
 #ifdef MODERN
-/*
- * Issue #18 sprint 3: the real, product-reachable Config-screen entry
- * point for the language settings submenu. Called unconditionally by
- * Config_Loop_KeyHandler on DPAD_LEFT/DPAD_RIGHT for whichever option row
- * is currently selected (its return value is discarded there, matching
- * every other .func handler's call site) -- never a hidden debug-only
- * entry. Opens ExpansionLanguageMenu_OpenSettings as a blocking child of
- * the already-running ConfigProc; does not touch struct GameOption's
- * selectors[4]/size, GetGameOption/SetGameOption, or any #11 debug
- * hotkey/Title_IDLE lifecycle.
- */
 bool LanguageOptionEntryHandler(ProcPtr proc)
 {
-    ExpansionLanguageMenu_OpenSettings(proc);
+    ExpansionLocaleId locale;
+    enum ExpansionLanguageSettingsAction action;
+    int direction;
+    int selectedIdx;
+
+    direction = (gKeyStatusPtr->newKeys & DPAD_LEFT) ? -1 : 1;
+    action = ExpansionLanguageMenu_DecideSettingsAction(
+        GetLanguageEnabledLocaleMask(),
+        ExpansionLocale_GetCurrent(),
+        direction,
+        &locale);
+
+    if (action == EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU)
+    {
+        ExpansionLanguageMenu_OpenSettings(proc);
+        return false;
+    }
+
+    if (action != EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE)
+        return false;
+
+    if (!ExpansionLanguageMenu_SelectSettingsLocale(locale))
+        return false;
+
+    selectedIdx = gConfigUiState->selectedOptionIdx;
+
+    Proc_Start(gProcScr_RedrawConfigHelpText, proc);
+    DrawOptionValueTexts(selectedIdx, selectedIdx % 7, selectedIdx * 2 + 5);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+    PlaySoundEffect(SONG_SE_SYS_CURSOR_LR1);
 
     return false;
 }
@@ -1229,6 +1351,13 @@ u8 GetGameOption(u8 index)
         value = gPlaySt.config.rankDisplay;
 
         break;
+
+#ifdef MODERN
+    case GAME_OPTION_LANGUAGE:
+        value = GetLanguageInlineSelectedIndex();
+
+        break;
+#endif
     }
 
     return value;

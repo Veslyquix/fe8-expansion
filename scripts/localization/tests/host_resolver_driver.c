@@ -99,14 +99,11 @@ int main(void)
     ExpansionLocale_InvalidateCache();
 
     ExpansionLocale_GetCatalogStats(&stats);
-    /* Issue #18 sprint 3: registry.json/catalog.en.json now carry 25
-     * active messages (ids 0-25, minus the 1 pre-existing tombstone) --
-     * see the new language, framework.back, save_compat.menu_erase_all
-     * and debug.action.NNN keys in texts/expansion/registry.json. This
-     * is the catalog's own real, current active count -- not a
-     * fingerprint -- so it is expected to change whenever legitimate
-     * new catalog entries are authored. */
-    CHECK(stats.activeMessageCount == 25);
+    /* The registry currently carries 28 active messages (ids 0-28,
+     * minus the one tombstone), including compact locale labels and the
+     * Config row's More action. This is the catalog's real active count,
+     * not a fingerprint, so legitimate authored entries update it. */
+    CHECK(stats.activeMessageCount == 28);
     CHECK(stats.tombstoneCount == 1);
     CHECK(stats.scratchBudgetBytes == EXPANSION_LOCALE_SCRATCH_SLOT_BYTES);
     CHECK(stats.scratchBytes == EXPANSION_LOCALE_SCRATCH_SLOT_BYTES);

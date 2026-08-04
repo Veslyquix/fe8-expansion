@@ -6,11 +6,9 @@ src/debugtools_registry.c).
 
 Two kinds of proof, both executable with no ARM/GBA/mgba environment:
 
-1. Behavioral -- compiles and *executes* the real, unmodified
-   ExpansionLanguageMenu_DecideStartupAction (the one function in
-   src/expansion_language_menu.c deliberately left unguarded/dual-linked)
-   against every (prefsState, requiresPrompt, enabledLocaleCount)
-   combination a real caller can produce.
+1. Behavioral -- compiles and *executes* the real pure startup and
+   settings-row decision functions against startup state combinations
+   and the 1/2/3/>3-locale inline/More thresholds.
 
 2. Structural/static -- proves, by scanning the real shipped .c/.h files,
    that this sprint's guardrails hold: the selector Proc is spliced
@@ -21,10 +19,9 @@ Two kinds of proof, both executable with no ARM/GBA/mgba environment:
    legacy branches of save_compat_menu.c/debugtools_registry.c keep their
    exact original vanilla-MSG rendering untouched.
 
-Full runtime behavior (the blocking selector actually showing/hiding,
-settings submenu round-trips, cache invalidation) is proven separately by
-tools/gba-playtest scenarios -- out of this sprint's scope per the task
-contract (no new/updated fingerprints this sprint).
+Full runtime behavior (blocking selector, inline Config choices, More
+submenu lifecycle, cache invalidation) is proven separately by
+tools/gba-playtest scenarios.
 """
 
 import re
@@ -90,10 +87,7 @@ def _strip_c_comments(text: str) -> str:
 
 
 class ExpansionLanguageMenuDecisionHostTests(unittest.TestCase):
-    """Compiles and executes the real, unguarded
-    ExpansionLanguageMenu_DecideStartupAction against every prefs-state /
-    prompt / enabled-locale-count combination (tools/gba-playtest/tests/c/
-    expansion_language_menu_decision_driver.c)."""
+    """Compiles and executes the real unguarded startup/settings decisions."""
 
     @classmethod
     def setUpClass(cls):
@@ -219,7 +213,7 @@ class RowSelectedPreferenceRepairStructureTests(unittest.TestCase):
             "AUTO_SELECT must not clear needsPreferenceRepair outside the Store()-succeeded guard",
         )
 
-    def test_row_selected_must_repair_guard_and_clear_ordering(self):
+    def test_row_selected_routes_repair_state_through_store_helper(self):
         match = re.search(
             r"static u8 ExpansionLanguageMenu_RowSelected\(struct MenuProc \*menu, "
             r"struct MenuItemProc \*item\)\s*\{(.*?)\n\}",
@@ -238,18 +232,35 @@ class RowSelectedPreferenceRepairStructureTests(unittest.TestCase):
             "mustRepair must be derived from (active && needsPreferenceRepair), "
             "gating the repair-write path on the first-start selector's own liveness",
         )
+        self.assertIn("ExpansionLanguageMenu_StoreSelection(", body)
+        self.assertIn("gExpansionLanguageMenuProbe.settingsActive", body)
 
-        if_match = re.search(r"if\s*\(locale != previous \|\| mustRepair\)\s*\{(.*?)\n    \}", body, re.DOTALL)
+        store_match = re.search(
+            r"static bool8 ExpansionLanguageMenu_StoreSelection\(.*?\)\s*\{(.*?)\n\}",
+            self.stripped_src,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(store_match)
+        store_body = store_match.group(1)
+
+        if_match = re.search(
+            r"if\s*\(locale != previous \|\| mustRepair\)\s*\{(.*?)\n    \}",
+            store_body,
+            re.DOTALL,
+        )
         self.assertIsNotNone(
             if_match,
-            "RowSelected must commit when locale changed OR mustRepair is set",
+            "StoreSelection must commit when locale changed OR mustRepair is set",
         )
         guarded_body = if_match.group(1)
 
         store_if_match = re.search(
             r"if\s*\(ExpansionUserPrefs_Store\([^)]*\)\)\s*\{(.*?)\n        \}", guarded_body, re.DOTALL
         )
-        self.assertIsNotNone(store_if_match, "RowSelected must guard its repair-clear on a successful Store()")
+        self.assertIsNotNone(
+            store_if_match,
+            "StoreSelection must guard its repair-clear on a successful Store()",
+        )
         self.assertIn(
             "gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;",
             store_if_match.group(1),
@@ -258,7 +269,7 @@ class RowSelectedPreferenceRepairStructureTests(unittest.TestCase):
         after_guard = guarded_body[store_if_match.end():]
         self.assertNotIn(
             "needsPreferenceRepair = FALSE", after_guard,
-            "RowSelected must not clear needsPreferenceRepair outside the Store()-succeeded guard",
+            "StoreSelection must not clear needsPreferenceRepair outside the Store()-succeeded guard",
         )
 
     def test_open_settings_never_sets_active(self):
@@ -440,16 +451,30 @@ class UiConfigLanguageEntryStructureTests(unittest.TestCase):
         following = self.text[entry_idx:entry_idx + 600]
         self.assertIn("LanguageOptionEntryHandler", following)
         self.assertIn(".icon = 0x16", following)
+        self.assertIn("{ MSG_000, MSG_000, 112, 0 }", following)
+        self.assertIn("{ MSG_000, MSG_000, 152, 0 }", following)
+        self.assertIn("{ MSG_000, MSG_000, 192, 0 }", following)
 
-    def test_entry_handler_opens_settings_submenu_and_never_touches_selectors(self):
+    def test_entry_handler_selects_inline_or_opens_more_submenu(self):
         match = re.search(
-            r"bool LanguageOptionEntryHandler\(ProcPtr proc\)\s*\{(.*?)\}",
+            r"bool LanguageOptionEntryHandler\(ProcPtr proc\)\s*\{(.*?)\n\}",
             self.text, re.DOTALL,
         )
         self.assertIsNotNone(match)
         body = match.group(1)
+        self.assertIn("ExpansionLanguageMenu_DecideSettingsAction", body)
+        self.assertIn("ExpansionLanguageMenu_SelectSettingsLocale", body)
         self.assertIn("ExpansionLanguageMenu_OpenSettings(proc)", body)
-        self.assertNotIn("selectors", body)
+        self.assertIn("EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU", body)
+
+    def test_config_hands_are_hidden_while_more_submenu_is_active(self):
+        match = re.search(
+            r"void DrawConfigUiSprites\(void\)\s*\{(.*?)\n\}",
+            self.text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        self.assertIn("gExpansionLanguageMenuProbe.settingsActive", match.group(1))
 
 
 class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
@@ -479,6 +504,17 @@ class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
         self.assertLess(body.index("BG_Fill(gBG0TilemapBuffer, 0)"), body.index("StartMenu"))
         self.assertLess(body.index("BG_Fill(gBG1TilemapBuffer, 0)"), body.index("StartMenu"))
         self.assertLess(body.index("ResetTextFont()"), body.index("StartMenu"))
+
+    def test_more_submenu_defaults_cursor_to_current_locale(self):
+        match = re.search(
+            r"void ExpansionLanguageMenu_OpenSettings\(ProcPtr parent\)\s*\{(.*?)\n\}",
+            self.language_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+        self.assertIn("current = ExpansionLocale_GetCurrent();", body)
+        self.assertIn("menu->itemCurrent = itemIndex;", body)
 
     def test_settings_end_defers_configuration_redraw_past_menu_clear(self):
         self.assertRegex(

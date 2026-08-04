@@ -33,7 +33,7 @@
     },
     {
       "frame": 5550,
-      "framebuffer_hash": "fnv1a64-rgb24:ef0a26204df989ab",
+      "framebuffer_hash": "fnv1a64-rgb24:81bfdac15a261e80",
       "name": "cursor-on-language-row",
       "probes": [
         {
@@ -50,52 +50,30 @@
     },
     {
       "frame": 5800,
-      "framebuffer_hash": "fnv1a64-rgb24:07a24d66a7a116e6",
-      "name": "settings-submenu-opened",
-      "pixel_probes": [
-        {
-          "value": "0x88a1ba",
-          "x": 66,
-          "y": 93
-        },
-        {
-          "value": "0x7c95b0",
-          "x": 142,
-          "y": 91
-        }
-      ],
+      "framebuffer_hash": "fnv1a64-rgb24:1921c878e00c052f",
+      "name": "qps-inline-selected",
       "probes": [
         {
           "address": "0x02031a95",
           "size": 1,
-          "value": "0x01"
+          "value": "0x00"
         },
         {
           "address": "0x02031a9b",
           "size": 1,
-          "value": "0x00"
+          "value": "0x07"
         },
         {
           "address": "0x02031aa2",
           "size": 2,
-          "value": "0x0001"
-        }
-      ],
-      "regions": [
-        {
-          "hash": "fnv1a64-region:7b0ad1835119eaa4",
-          "height": 8,
-          "name": "back_row_label",
-          "width": 136,
-          "x": 56,
-          "y": 88
+          "value": "0x0000"
         }
       ]
     },
     {
       "frame": 6200,
-      "framebuffer_hash": "fnv1a64-rgb24:311caa3a9ed178cd",
-      "name": "qps-ploc-selected",
+      "framebuffer_hash": "fnv1a64-rgb24:553ff0c50dab8a2e",
+      "name": "english-inline-selected",
       "probes": [
         {
           "address": "0x02031a95",
@@ -110,43 +88,43 @@
         {
           "address": "0x02031a9b",
           "size": 1,
-          "value": "0x07"
+          "value": "0x00"
         },
         {
           "address": "0x02031a9e",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0002"
         },
         {
           "address": "0x02031aa2",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0000"
         },
         {
           "address": "0x02031aa4",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0002"
         }
       ]
     },
     {
       "frame": 6350,
-      "name": "prefs-before-second-open",
+      "name": "prefs-before-third-inline-change",
       "probes": [
         {
           "address": "0x02031a9b",
           "size": 1,
-          "value": "0x07"
+          "value": "0x00"
         },
         {
           "address": "0x02031a9e",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0002"
         },
         {
           "address": "0x02031aa4",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0002"
         },
         {
           "address": "0x0e0073d4",
@@ -161,7 +139,7 @@
         {
           "address": "0x0e0073d6",
           "size": 1,
-          "value": "0x07"
+          "value": "0x00"
         },
         {
           "address": "0x0e0073d7",
@@ -171,7 +149,7 @@
         {
           "address": "0x0e0073dc",
           "size": 1,
-          "value": "0x4e"
+          "value": "0x4a"
         },
         {
           "address": "0x0e0073dd",
@@ -182,25 +160,13 @@
     },
     {
       "frame": 6500,
-      "framebuffer_hash": "fnv1a64-rgb24:3323a6c96e138dd3",
-      "name": "settings-reopened-second-time",
-      "pixel_probes": [
-        {
-          "value": "0xffffff",
-          "x": 66,
-          "y": 93
-        },
-        {
-          "value": "0x7a9db8",
-          "x": 142,
-          "y": 91
-        }
-      ],
+      "framebuffer_hash": "fnv1a64-rgb24:dd27bc270fd477f0",
+      "name": "qps-inline-reselected",
       "probes": [
         {
           "address": "0x02031a95",
           "size": 1,
-          "value": "0x01"
+          "value": "0x00"
         },
         {
           "address": "0x02031a9a",
@@ -210,24 +176,14 @@
         {
           "address": "0x02031aa2",
           "size": 2,
-          "value": "0x0002"
-        }
-      ],
-      "regions": [
-        {
-          "hash": "fnv1a64-region:59e111c746dd8e8a",
-          "height": 8,
-          "name": "back_row_label",
-          "width": 136,
-          "x": 56,
-          "y": 88
+          "value": "0x0000"
         }
       ]
     },
     {
       "frame": 6800,
-      "framebuffer_hash": "fnv1a64-rgb24:63d2c1a0fa7d351d",
-      "name": "back-cancel-no-mutation",
+      "framebuffer_hash": "fnv1a64-rgb24:e45f7d1a8adbf23a",
+      "name": "config-exited-inline-prefs-persist",
       "probes": [
         {
           "address": "0x02031a95",
@@ -242,17 +198,17 @@
         {
           "address": "0x02031a9e",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0003"
         },
         {
           "address": "0x02031aa2",
           "size": 2,
-          "value": "0x0002"
+          "value": "0x0000"
         },
         {
           "address": "0x02031aa4",
           "size": 2,
-          "value": "0x0001"
+          "value": "0x0003"
         },
         {
           "address": "0x0e0073d4",
@@ -290,7 +246,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "9aa42c914a9a94cdc0d7e88dc6d7277993dc2bb2",
+    "sha1": "81cbf31146e0fbb7e737f5bdb343abafd898f09f",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

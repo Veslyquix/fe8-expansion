@@ -20,9 +20,8 @@
  * id, or gMsgTable -- only include/expansion_locale.h's
  * ExpansionLocale_ family and include/expansion_save_prefs.h's
  * ExpansionUserPrefs_ family (both consumed, never modified, by this
- * module). Does not touch
- * struct GameOption's `selectors[4]` array or resize that struct, and
- * does not touch Title_IDLE or any issue #11 debug hotkey.
+ * module). Does not resize struct GameOption's fixed `selectors[4]`
+ * array, and does not touch Title_IDLE or any issue #11 debug hotkey.
  */
 
 #include "global.h"
@@ -65,6 +64,15 @@ enum ExpansionLanguageMenuPromptReason
     EXPANSION_LANGUAGE_PROMPT_DISABLED_LOCALE = 4,
 };
 
+enum ExpansionLanguageSettingsAction
+{
+    EXPANSION_LANGUAGE_SETTINGS_NONE = 0,
+    EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE = 1,
+    EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU = 2,
+};
+
+#define EXPANSION_LANGUAGE_INLINE_MAX 3
+
 /*
  * Pure scalar-only decision function -- no SRAM/Proc/GBA-hardware
  * dependency, fully unit-testable on host. `prefsState`/`requiresPrompt`
@@ -81,6 +89,22 @@ enum ExpansionLanguageMenuStartupAction ExpansionLanguageMenu_DecideStartupActio
     bool8 requiresPrompt,
     u8 enabledLocaleCount,
     enum ExpansionLanguageMenuPromptReason *outPromptReason);
+
+/*
+ * Pure settings-row decision logic. Builds with up to three enabled
+ * locales select all languages inline. Builds with more than three show
+ * the first two locales plus More: moving right from the second locale
+ * (or from a current locale outside the first two) opens the full menu,
+ * while moving left from an out-of-line locale selects the second inline
+ * locale. `direction` is negative for Left and positive for Right.
+ * `outLocale` receives the locale to select, or
+ * EXPANSION_LOCALE_INVALID when the full menu should open.
+ */
+enum ExpansionLanguageSettingsAction ExpansionLanguageMenu_DecideSettingsAction(
+    u32 enabledLocaleMask,
+    ExpansionLocaleId currentLocale,
+    int direction,
+    ExpansionLocaleId *outLocale);
 
 /* --- Bounded diagnostic probe (issue #13) -------------------------------- */
 
@@ -148,10 +172,8 @@ struct ExpansionLanguageMenuProbe
     /* Number of times the settings submenu has been opened. */
     u16 settingsOpenCount;
 
-    /* Number of times a settings-submenu selection actually changed the
-     * current locale (i.e. how many times cacheGeneration was bumped
-     * from within the settings submenu specifically, as opposed to from
-     * the startup path). */
+    /* Number of times the Config language row or its More submenu
+     * actually changed the current locale (as opposed to startup). */
     u16 settingsChangeCount;
 
     /*
@@ -192,25 +214,25 @@ extern struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe;
 extern struct ProcCmd CONST_DATA ProcScr_ExpansionLanguageSelector[];
 
 /*
- * Opens the independent settings submenu as a blocking child of `parent`
- * (typically the Config screen's own ConfigProc) -- never touches
- * struct GameOption/its selectors[4] array. Selecting a locale here
- * calls ExpansionUserPrefs_Store() (persisting + invalidating the
- * runtime resolver cache) only when it actually differs from the
- * current locale; Back leaves prefs/current locale untouched.
+ * Opens the full settings submenu as a blocking child of `parent`
+ * (typically the Config screen's own ConfigProc). The Config row calls
+ * this only through More when more than three locales are enabled.
+ * Selecting a locale here calls ExpansionUserPrefs_Store() (persisting
+ * + invalidating the runtime resolver cache) only when it actually
+ * differs from the current locale; Back leaves prefs/current locale
+ * untouched.
  */
 void ExpansionLanguageMenu_OpenSettings(ProcPtr parent);
 
 /*
- * Resolves the *current* ExpansionLocale_GetCurrent()'s own
- * self-referential display name (e.g. "English"/"Pseudo (Test)"),
- * always against EXPANSION_LOCALE_EN (a proper noun, never
- * translated) -- used by src/uiconfig.c's guarded
- * GAME_OPTION_LANGUAGE value-column special case so the Config
- * screen shows which locale is active without duplicating this
- * module's private locale-name table. Never GetStringFromIndex/
- * vanilla MSG_*.
+ * Resolves one locale's self-referential full or compact display name,
+ * always against EXPANSION_LOCALE_EN (proper names/codes, never
+ * translated). Compact names are used when multiple languages share the
+ * Config value row. Never GetStringFromIndex/vanilla MSG_*.
  */
-const char *ExpansionLanguageMenu_ResolveCurrentLocaleName(void);
+const char *ExpansionLanguageMenu_ResolveLocaleName(ExpansionLocaleId locale, bool8 compact);
+
+/* Persists one inline settings-row selection and updates diagnostics. */
+bool8 ExpansionLanguageMenu_SelectSettingsLocale(ExpansionLocaleId locale);
 
 #endif /* GUARD_EXPANSION_LANGUAGE_MENU_H */

@@ -1,6 +1,6 @@
 {
   "issue": 19,
   "category": "fixed",
-  "summary": "Preserve modern asset, scratch, and overlay layouts so UI, player attacks, battle animation, and resume remain valid.",
+  "summary": "Fix modern UI and memory layouts so inline Language selection, player attacks, battle animation, and resume remain valid.",
   "semver_impact": "patch"
 }
