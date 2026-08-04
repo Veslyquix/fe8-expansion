@@ -10298,7 +10298,7 @@
       "domain": "item",
       "key": "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemId",
       "kind": "function-signature",
-      "line": 96,
+      "line": 99,
       "path": "include/expansion_starter_content.h",
       "reason": null,
       "record_count": 206,
@@ -10317,7 +10317,7 @@
       "domain": "item",
       "key": "include/expansion_starter_content.h|function-signature|item|ExpansionStarterContentItemName",
       "kind": "function-signature",
-      "line": 125,
+      "line": 128,
       "path": "include/expansion_starter_content.h",
       "reason": null,
       "record_count": 206,
@@ -20537,7 +20537,7 @@
   "contract_note": "Committed DEFAULT contract: the vanilla cap/count every checkout and the archival lane compile against. It is deliberately env-independent -- a build that opts into FE8_ITEM_ID_CAP>=0xCE reads the build-local ACTIVE contract (build/generated/data/id_space_active_audit.json and id_space_active.h) instead, and never rewrites this file.",
   "default_item_cap": 205,
   "default_item_record_count": 206,
-  "digest": "47665d324b711901000caa162d26b74507f378f0a6c6a00fe68cebc906198747",
+  "digest": "7231e4c45e5367200be8bd729e4c6d45b491331ecf63952e490ff464986debbf",
   "domain_record_counts": {
     "chapter": {
       "default_record_count": null,
