@@ -2,7 +2,7 @@
   "checkpoints": [
     {
       "frame": 18200,
-      "framebuffer_hash": "fnv1a64-rgb24:55b17ce76de1eb3a",
+      "framebuffer_hash": "fnv1a64-rgb24:0d2b59d730734452",
       "name": "suspend-confirmed",
       "probes": [
         {
@@ -106,7 +106,7 @@
     },
     {
       "frame": 19360,
-      "framebuffer_hash": "fnv1a64-rgb24:6ca1dda94c6af57c",
+      "framebuffer_hash": "fnv1a64-rgb24:ef58d23450c36638",
       "name": "resumed-chapter2",
       "probes": [
         {
@@ -161,7 +161,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "985dca39aeee065bdefd8a32b561c4b8cbcaddc4",
+    "sha1": "1a44b54ab39586bc421a3979ebf6f7f1e4f77f01",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

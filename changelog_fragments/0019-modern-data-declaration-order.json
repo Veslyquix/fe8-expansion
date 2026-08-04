@@ -1,0 +1,6 @@
+{
+  "issue": 19,
+  "category": "fixed",
+  "summary": "Preserve modern asset declaration order so palettes and battle data remain valid.",
+  "semver_impact": "patch"
+}

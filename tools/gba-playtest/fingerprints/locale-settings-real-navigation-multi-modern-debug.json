@@ -33,7 +33,7 @@
     },
     {
       "frame": 5550,
-      "framebuffer_hash": "fnv1a64-rgb24:bc755bb262a7d3b1",
+      "framebuffer_hash": "fnv1a64-rgb24:e7f561928ecf80e2",
       "name": "cursor-on-language-row",
       "probes": [
         {
@@ -50,7 +50,7 @@
     },
     {
       "frame": 5800,
-      "framebuffer_hash": "fnv1a64-rgb24:7421c9de684ac8a4",
+      "framebuffer_hash": "fnv1a64-rgb24:c417719165fe567a",
       "name": "settings-submenu-opened",
       "pixel_probes": [
         {
@@ -94,7 +94,7 @@
     },
     {
       "frame": 6200,
-      "framebuffer_hash": "fnv1a64-rgb24:c94a033713ff0c5a",
+      "framebuffer_hash": "fnv1a64-rgb24:699d8fd1fd35c234",
       "name": "qps-ploc-selected",
       "probes": [
         {
@@ -182,7 +182,7 @@
     },
     {
       "frame": 6500,
-      "framebuffer_hash": "fnv1a64-rgb24:bad5e8367bcbf298",
+      "framebuffer_hash": "fnv1a64-rgb24:3323a6c96e138dd3",
       "name": "settings-reopened-second-time",
       "pixel_probes": [
         {
@@ -226,7 +226,7 @@
     },
     {
       "frame": 6800,
-      "framebuffer_hash": "fnv1a64-rgb24:798cce2fd97b8566",
+      "framebuffer_hash": "fnv1a64-rgb24:3a480b41f9a2c463",
       "name": "back-cancel-no-mutation",
       "probes": [
         {
@@ -290,7 +290,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "f444d3b825bacada6b0cbcb74decc11a99e1c1db",
+    "sha1": "7d557a43cb6800827895090a8050ca536ae24b76",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

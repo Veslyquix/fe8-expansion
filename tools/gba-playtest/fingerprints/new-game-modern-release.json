@@ -2,15 +2,67 @@
   "checkpoints": [
     {
       "frame": 1000,
-      "framebuffer_hash": "fnv1a64-rgb24:f156836a9a9aefe4",
+      "framebuffer_hash": "fnv1a64-rgb24:c1782fcfd6b890e0",
       "name": "new-game-menu-selected",
-      "probes": []
+      "probes": [],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:aa96daf3a0f71595",
+          "height": 20,
+          "name": "difficult-row",
+          "width": 104,
+          "x": 28,
+          "y": 112
+        },
+        {
+          "hash": "fnv1a64-region:0735fc734c3b97e4",
+          "height": 20,
+          "name": "easy-row",
+          "width": 104,
+          "x": 28,
+          "y": 52
+        },
+        {
+          "hash": "fnv1a64-region:08dd7c42d5c886d4",
+          "height": 20,
+          "name": "normal-row",
+          "width": 104,
+          "x": 28,
+          "y": 82
+        }
+      ]
     },
     {
       "frame": 1140,
-      "framebuffer_hash": "fnv1a64-rgb24:542665d6c06a779d",
+      "framebuffer_hash": "fnv1a64-rgb24:51a8f2f15f178af0",
       "name": "empty-slot-list-shown",
       "probes": [],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:b03a40bd40d6cb4f",
+          "height": 20,
+          "name": "slot-0",
+          "width": 184,
+          "x": 31,
+          "y": 48
+        },
+        {
+          "hash": "fnv1a64-region:3f08c0fd27eada1d",
+          "height": 20,
+          "name": "slot-1",
+          "width": 184,
+          "x": 31,
+          "y": 78
+        },
+        {
+          "hash": "fnv1a64-region:7fb2791ec4bf49a9",
+          "height": 20,
+          "name": "slot-2",
+          "width": 184,
+          "x": 31,
+          "y": 108
+        }
+      ],
       "sram_hash": "fnv1a64-sram-normalized:e6b01462da475735"
     },
     {
@@ -35,7 +87,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "529eb11d805f6788894056512426162ff37f346f",
+    "sha1": "5fad136b1db6abc6e4885a121c49c576993bda69",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

@@ -108,6 +108,17 @@ class NewGameScenarioFilesTests(unittest.TestCase):
         self.assertIn(0x020210B2, probed_addresses)
         self.assertIn(0x020210B3, probed_addresses)
 
+    def test_palette_regression_regions_cover_mode_and_slot_rows(self):
+        by_name = {checkpoint.name: checkpoint for checkpoint in self.scenario.checkpoints}
+        self.assertEqual(
+            {region.name for region in by_name["new-game-menu-selected"].regions},
+            {"easy-row", "normal-row", "difficult-row"},
+        )
+        self.assertEqual(
+            {region.name for region in by_name["empty-slot-list-shown"].regions},
+            {"slot-0", "slot-1", "slot-2"},
+        )
+
     def test_empty_slot_list_and_created_checkpoints_exclude_the_same_diagnostic_bytes(self):
         # Matches docs/save_format.md's "SRAM hash policy: exact vs.
         # normalized": both checkpoints must use the identical normalized

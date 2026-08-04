@@ -615,6 +615,91 @@ class ModernBuildTests(unittest.TestCase):
                     f"{symbols.stdout}",
                 )
 
+    def test_preprocessed_data_order_is_preserved_in_all_modern_modes(self):
+        """Some legacy asset consumers intentionally span adjacent symbols.
+
+        The difficulty menu, for example, copies four palettes beginning at
+        Pal_DifficultyMenuObjs and then six palettes from the immediately
+        following gMenuMainObjs_0. GCC's default top-level reordering reverses
+        declarations like these and makes the copy consume unrelated bytes.
+        """
+        overrides = self.tool_overrides()
+        if overrides is None:
+            self.skipTest("arm-none-eabi GCC and objdump are not available")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_path = Path(temporary)
+            root = self.make_all_fixture(temporary_path)
+            source = root / "src" / "data" / "data_fixture.c"
+            output_root = temporary_path / "top-level-order-objects"
+            source.write_text(
+                '#include "global.h"\n'
+                "unsigned short modern_order_first[4] "
+                '__attribute__((section(".data"))) = {1, 2, 3, 4};\n'
+                "unsigned short modern_order_second[6] "
+                '__attribute__((section(".data"))) = {5, 6, 7, 8, 9, 10};\n',
+                encoding="utf-8",
+            )
+
+            for config in ("debug", "release"):
+                for abi in ("aapcs", "apcs-gnu"):
+                    result = self.make(
+                        root,
+                        "expansion-modern-all",
+                        f"MODERN_CONFIG={config}",
+                        f"MODERN_ABI={abi}",
+                        f"MODERN_BUILD_ROOT={output_root}",
+                        "MODERN_ALL_C_SOURCES=",
+                        "MODERN_ALL_DATA_C_SOURCES=src/data/data_fixture.c",
+                        "MODERN_ALL_ASM_SOURCES=",
+                        *overrides,
+                    )
+                    self.assertEqual(
+                        result.returncode,
+                        0,
+                        f"{config}/{abi} top-level order probe failed:\n"
+                        f"{result.stdout}",
+                    )
+
+            objects = sorted(output_root.rglob("*.o"))
+            self.assertEqual(len(objects), 4)
+
+            objdump = next(
+                value.split("=", 1)[1]
+                for value in overrides
+                if value.startswith("MODERN_OBJDUMP=")
+            )
+            for object_file in objects:
+                symbols = subprocess.run(
+                    [objdump, "-t", str(object_file)],
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=False,
+                )
+                self.assertEqual(symbols.returncode, 0, symbols.stdout)
+
+                offsets = {}
+                for line in symbols.stdout.splitlines():
+                    for name in ("modern_order_first", "modern_order_second"):
+                        if line.rstrip().endswith(name):
+                            offsets[name] = int(line.split()[0], 16)
+
+                self.assertEqual(
+                    set(offsets),
+                    {
+                        "modern_order_first",
+                        "modern_order_second",
+                    },
+                )
+                self.assertEqual(
+                    offsets["modern_order_second"] - offsets["modern_order_first"],
+                    8,
+                    "top-level arrays no longer remain adjacent in source order; "
+                    "-fno-toplevel-reorder may be missing from "
+                    "MODERN_DATA_LAYOUT_FLAGS",
+                )
+
     def test_real_objects_are_isolated_architectural_and_dependency_aware(self):
         overrides = self.tool_overrides()
         if overrides is None:

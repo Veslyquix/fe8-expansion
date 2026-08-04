@@ -266,7 +266,7 @@
     },
     {
       "frame": 950,
-      "framebuffer_hash": "fnv1a64-rgb24:3baeaa7cd3337e61",
+      "framebuffer_hash": "fnv1a64-rgb24:e674df1325ea6f14",
       "name": "gamecontrol-consumed-launch",
       "probes": [
         {
@@ -448,7 +448,7 @@
     },
     {
       "frame": 14000,
-      "framebuffer_hash": "fnv1a64-rgb24:a4d143fde1ba555d",
+      "framebuffer_hash": "fnv1a64-rgb24:5307903e0972df34",
       "name": "chapter2-interactive-stable",
       "probes": [
         {
@@ -576,7 +576,7 @@
     },
     {
       "frame": 14900,
-      "framebuffer_hash": "fnv1a64-rgb24:b868038280b15c48",
+      "framebuffer_hash": "fnv1a64-rgb24:55db07680456d59e",
       "name": "post-interactive-cursor-response",
       "probes": [
         {
@@ -705,7 +705,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "13c0d76934ff168a6dc8a2233406a6c3c5ba9b4b",
+    "sha1": "1a44b54ab39586bc421a3979ebf6f7f1e4f77f01",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

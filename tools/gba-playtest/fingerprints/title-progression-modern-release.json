@@ -14,7 +14,7 @@
     },
     {
       "frame": 600,
-      "framebuffer_hash": "fnv1a64-rgb24:0fc6c7ae1650cddb",
+      "framebuffer_hash": "fnv1a64-rgb24:a2aad45ff8fc122e",
       "name": "intro-menu-progression",
       "probes": []
     },
@@ -28,7 +28,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "de318a79ea25020cb4830c7bf9d934b54ee8626b",
+    "sha1": "5fad136b1db6abc6e4885a121c49c576993bda69",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

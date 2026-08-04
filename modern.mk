@@ -122,6 +122,10 @@ MODERN_RUNTIME_FLAGS := \
 MODERN_LAYOUT_FLAGS := \
 	-fno-function-sections -fno-data-sections \
 	-fno-merge-constants -fno-merge-all-constants
+# Preprocessed asset/data sources still contain deliberate declaration-order
+# contracts. For example, difficulty-menu code copies Pal_DifficultyMenuObjs
+# and the immediately following gMenuMainObjs_0 as one ten-palette span.
+MODERN_DATA_LAYOUT_FLAGS := -fno-toplevel-reorder
 MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1
 
 # Issue #10: the item ID cap is a single build input shared by the data
@@ -796,10 +800,12 @@ $(MODERN_OUTPUT_DIR)/src/bmb-weapontriangle.o: $(GENERATED_DATA_WEAPONTRIANGLE_C
 	@mkdir -p $(@D)
 	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
-# IWRAM-placed symbols need per-symbol BSS sections.
+# IWRAM-placed symbols need per-symbol BSS sections. agb_sram.c additionally
+# subtracts adjacent function addresses when copying routines into IWRAM.
 $(MODERN_OUTPUT_DIR)/src/agb_sram.o: MODERN_CFLAGS += -fdata-sections -fno-toplevel-reorder -fno-reorder-functions
 $(MODERN_OUTPUT_DIR)/src/m4a.o: MODERN_CFLAGS += -fdata-sections
 $(MODERN_OUTPUT_DIR)/src/bmshop.o: MODERN_CFLAGS += -fdata-sections
+$(MODERN_ALL_DATA_OBJECTS): MODERN_CFLAGS += $(MODERN_DATA_LAYOUT_FLAGS)
 
 # GAS's own --MD tracks uppercase .INCLUDE directives (e.g. macro.inc,
 # gba.inc), so no cpp preprocessing or scaninc invocation is needed here.
@@ -1511,12 +1517,11 @@ endif
 # embedding the *old* values in the next ROM and failing verify_rom_header.py
 # against the freshly regenerated (and now mismatched) metadata JSON/header.
 #
-# Content mirrors MODERN_EXPANSION_DEFINES_ACTIVE exactly (the same single
-# source of truth gating the -D flags themselves above), so the stamp only
-# changes when the actual compiled defines would change: the trivial
-# constant "unsupported" whenever those defines are not being added at all
-# (config-less fixture, or a direct object-path invocation bypassing
-# MODERN_CONFIG_RESOLVE_GOALS), and the real resolved values otherwise.
+# Content mirrors MODERN_EXPANSION_DEFINES_ACTIVE's resolved defines plus the
+# layout flags whose semantics are part of the modern runtime contract. This
+# makes a layout-flag change rebuild an existing real modern tree without a
+# manual clean. Config-less fixtures still use the stable "unsupported"
+# placeholder below.
 MODERN_COMPILE_SETTINGS := $(MODERN_GENERATED_DIR)/compile_settings.txt
 
 .PHONY: FORCE_MODERN_COMPILE_SETTINGS
@@ -1550,6 +1555,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
+		printf '%s\n' 'layout_flags=$(MODERN_LAYOUT_FLAGS)'; \
+		printf '%s\n' 'data_layout_flags=$(MODERN_DATA_LAYOUT_FLAGS)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"

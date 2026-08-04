@@ -153,6 +153,10 @@ class SaveCompatEpochModernBuildTests(unittest.TestCase):
             self.assertTrue(stamp.exists(), first.stdout)
             first_lines = stamp.read_text(encoding="utf-8").splitlines()
             self.assertIn("save_compat_epoch=1", first_lines)
+            self.assertIn(
+                "data_layout_flags=-fno-toplevel-reorder",
+                first_lines,
+            )
             first_fingerprint = next(
                 line for line in first_lines
                 if line.startswith("config_fingerprint=")
@@ -166,6 +170,10 @@ class SaveCompatEpochModernBuildTests(unittest.TestCase):
             self.assertTrue(stamp.exists(), second.stdout)
             second_lines = stamp.read_text(encoding="utf-8").splitlines()
             self.assertIn("save_compat_epoch=2", second_lines)
+            self.assertIn(
+                "data_layout_flags=-fno-toplevel-reorder",
+                second_lines,
+            )
             second_fingerprint = next(
                 line for line in second_lines
                 if line.startswith("config_fingerprint=")

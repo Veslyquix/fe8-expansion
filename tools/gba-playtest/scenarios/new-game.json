@@ -4,13 +4,59 @@
       "frame": 1000,
       "framebuffer": true,
       "name": "new-game-menu-selected",
-      "probes": []
+      "probes": [],
+      "regions": [
+        {
+          "height": 20,
+          "name": "easy-row",
+          "width": 104,
+          "x": 28,
+          "y": 52
+        },
+        {
+          "height": 20,
+          "name": "normal-row",
+          "width": 104,
+          "x": 28,
+          "y": 82
+        },
+        {
+          "height": 20,
+          "name": "difficult-row",
+          "width": 104,
+          "x": 28,
+          "y": 112
+        }
+      ]
     },
     {
       "frame": 1140,
       "framebuffer": true,
       "name": "empty-slot-list-shown",
       "probes": [],
+      "regions": [
+        {
+          "height": 20,
+          "name": "slot-0",
+          "width": 184,
+          "x": 31,
+          "y": 48
+        },
+        {
+          "height": 20,
+          "name": "slot-1",
+          "width": 184,
+          "x": 31,
+          "y": 78
+        },
+        {
+          "height": 20,
+          "name": "slot-2",
+          "width": 184,
+          "x": 31,
+          "y": 108
+        }
+      ],
       "sram_hash": true,
       "sram_hash_exclude_ranges": [
         {

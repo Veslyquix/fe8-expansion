@@ -338,13 +338,23 @@ for which sources carry the override and may grow as more symbols move to
 IWRAM; search that file for `-fdata-sections` (e.g.
 `grep -n -- '-fdata-sections' modern.mk`) rather than trusting a fixed list
 written here.
-`src/agb_sram.o` additionally receives `-fno-toplevel-reorder
--fno-reorder-functions`: `SetSramFastFunc()` copies `ReadSramFast_Core`/
-`VerifySramFast_Core` into IWRAM scratch buffers at runtime by subtracting
-adjacent function addresses, a legacy-agbcc idiom that assumes those
-functions stay contiguous in source-declaration order. Modern GCC's default
-`-O2` `-freorder-functions` reorders them, corrupting the computed copy size
-and eventually crashing at runtime; the two flags restore source order.
+All preprocessed asset/data C compiles use `-fno-toplevel-reorder`. Those
+sources still contain deliberate declaration-order contracts: for example,
+`InitDifficultySelectScreen()` copies the four palettes at
+`Pal_DifficultyMenuObjs` and the six immediately following palettes at
+`gMenuMainObjs_0` as one contiguous span. GCC's default top-level reordering
+reversed those arrays, so the copy consumed unrelated TSA bytes and corrupted
+mode/save/unit palettes (issue #19). Preserving source order on the data
+cohort protects these legacy adjacency contracts without relocating ordinary
+runtime EWRAM state.
+
+`src/agb_sram.o` separately receives `-fno-toplevel-reorder
+-fno-reorder-functions`: `SetSramFastFunc()` copies
+`ReadSramFast_Core`/`VerifySramFast_Core` into IWRAM scratch buffers at
+runtime by subtracting adjacent function addresses, a legacy-agbcc idiom
+that assumes those functions stay contiguous in source-declaration order.
+The explicit function-order flags keep that runtime copy-size calculation
+safe.
 
 ### Modern ROM and deterministic boot-check targets
 
