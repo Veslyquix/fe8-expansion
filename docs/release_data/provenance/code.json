@@ -80,8 +80,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored build tooling/config/source surface (or, for asm/, decompiled disassembly derived from the original ROM). No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "fb43d2c2d400c3ea57e8caa4302a884f9cc6b94f",
-    "sha256": "28eed03f2b7063739866a1edf558d3e00ea6cb14fc0ada64a992741f98aee0fa"
+    "oid": "8bbb5976cfc46bfb1e6f14020a0b40114013d4b1",
+    "sha256": "03778d390d8e0588462b52eb793c7cbd797d30029f93837cdd1ca0e7aebdfbba"
   },
   {
     "path": ".github/workflows/upstream-port-drift.yml",
