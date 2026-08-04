@@ -1384,6 +1384,37 @@ void PutGameOptionRow(ProcPtr proc, int selectedIdx, int c)
     return;
 }
 
+#ifdef MODERN
+void Config_RedrawAfterLanguageMenu(void)
+{
+    int i;
+
+    BG_Fill(gBG0TilemapBuffer, 0);
+    BG_Fill(gBG1TilemapBuffer, 0);
+
+    for (i = 0; i < 6; i++)
+    {
+        int selectedIdx = gConfigUiState->headOptionIdx + i;
+        int textIdx;
+        int y;
+
+        if (selectedIdx >= gConfigUiState->maxOption)
+            break;
+
+        textIdx = selectedIdx % 7;
+        y = ((selectedIdx * 2) + 5) & 0x1F;
+
+        DrawGameOptionIcon(selectedIdx, 5);
+        DrawGameOptionText(selectedIdx, textIdx, y);
+        DrawOptionValueTexts(selectedIdx, textIdx, y);
+    }
+
+    DrawGameOptionHelpText();
+    BG_SetPosition(BG_1, 0, gConfigUiState->bg1YOffset);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+}
+#endif
+
 //! FE8U: 0x080B220C
 void Config_Loop_KeyHandler(struct ConfigProc * proc)
 {

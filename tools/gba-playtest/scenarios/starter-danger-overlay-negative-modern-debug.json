@@ -262,11 +262,6 @@
           "expected": "0x17"
         },
         {
-          "address": "0x02038040",
-          "size": 4,
-          "expected": "0x00000000"
-        },
-        {
           "address": "0x02038044",
           "size": 4,
           "expected": "0x00000000"
@@ -283,6 +278,11 @@
         },
         {
           "address": "0x02038050",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02038054",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -349,11 +349,6 @@
           "expected": "0x17"
         },
         {
-          "address": "0x02038040",
-          "size": 4,
-          "expected": "0x00000000"
-        },
-        {
           "address": "0x02038044",
           "size": 4,
           "expected": "0x00000000"
@@ -370,6 +365,11 @@
         },
         {
           "address": "0x02038050",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02038054",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -436,11 +436,6 @@
           "expected": "0x17"
         },
         {
-          "address": "0x02038040",
-          "size": 4,
-          "expected": "0x00000000"
-        },
-        {
           "address": "0x02038044",
           "size": 4,
           "expected": "0x00000000"
@@ -457,6 +452,11 @@
         },
         {
           "address": "0x02038050",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02038054",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -523,11 +523,6 @@
           "expected": "0x17"
         },
         {
-          "address": "0x02038040",
-          "size": 4,
-          "expected": "0x00000000"
-        },
-        {
           "address": "0x02038044",
           "size": 4,
           "expected": "0x00000000"
@@ -544,6 +539,11 @@
         },
         {
           "address": "0x02038050",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02038054",
           "size": 4,
           "expected": "0x00000000"
         }
@@ -610,11 +610,6 @@
           "expected": "0x17"
         },
         {
-          "address": "0x02038040",
-          "size": 4,
-          "expected": "0x00000000"
-        },
-        {
           "address": "0x02038044",
           "size": 4,
           "expected": "0x00000000"
@@ -631,6 +626,11 @@
         },
         {
           "address": "0x02038050",
+          "size": 4,
+          "expected": "0x00000000"
+        },
+        {
+          "address": "0x02038054",
           "size": 4,
           "expected": "0x00000000"
         }

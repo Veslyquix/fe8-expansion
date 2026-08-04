@@ -4,7 +4,13 @@
 #include "ctc.h"
 #include "hardware.h"
 
-s8 EWRAM_DATA gFadeComponentStep[0x20] = { 0 };
+#ifdef MODERN
+#define UI_FRAME_SCRATCH_END SECTION("ewram_data.ui_frame_scratch_end")
+#else
+#define UI_FRAME_SCRATCH_END EWRAM_DATA
+#endif
+
+s8 UI_FRAME_SCRATCH_END gFadeComponentStep[0x20] = { 0 };
 s8 EWRAM_DATA gFadeComponents[0x600] = { 0 };
 u16 EWRAM_DATA gPaletteBuffer[0x200] = { 0 };
 u16 EWRAM_DATA gBG0TilemapBuffer[32 * 32] = { 0 };
@@ -23,6 +29,8 @@ struct KeyStatusBuffer * CONST_DATA gKeyStatusPtr = &sKeyStatusBuffer;
 
 struct Struct02024CD4 EWRAM_DATA gFrameTmRegisterConfig = { 0 };
 struct TileDataTransfer EWRAM_DATA gFrameTmRegister[32] = { 0 };
+
+#undef UI_FRAME_SCRATCH_END
 
 struct KeyProc {
     /* 00 */ PROC_HEADER

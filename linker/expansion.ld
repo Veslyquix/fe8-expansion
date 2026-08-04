@@ -163,6 +163,7 @@ SECTIONS
         . = ALIGN(4);
         PROVIDE(gGenericBuffer = .); . += 0x2000;
         PROVIDE(gOpAnimSt = .); . += 0x100;
+        *(ewram_data.ui_frame_scratch_end)
 
         . = ALIGN(4);
         PROVIDE(gLinkArenaSt = .); . += 0x54;
@@ -291,6 +292,12 @@ SECTIONS
     ASSERT(SIZEOF(ROM) <= __rom_size, "ROM content exceeds configured ROM size")
     ASSERT(SIZEOF(IWRAM) <= 32K, "IWRAM overflow")
     ASSERT(__ewram_used_end <= ORIGIN(ewram) + LENGTH(ewram), "EWRAM overflow")
+    ASSERT(gOpAnimSt - gGenericBuffer == 0x2000,
+        "gGenericBuffer must immediately precede gOpAnimSt")
+    ASSERT(gFadeComponentStep - gOpAnimSt == 0x100,
+        "gFadeComponentStep must terminate the buffered UI-frame scratch region")
+    ASSERT(gMainCallback < gGenericBuffer || gMainCallback >= gFadeComponentStep,
+        "gMainCallback overlaps the buffered UI-frame scratch region")
     ASSERT(ADDR(ewram_data) >= __ewram_start + __ewram_overlay_peak_size,
         "Persistent EWRAM overlaps an overlay")
     ASSERT(__floating_end <= 0x08C00000, "Floating ROM content overlaps pinned banim region at 0x08C00000")

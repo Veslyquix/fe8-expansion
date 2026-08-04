@@ -22,6 +22,7 @@ Game" creation round trip end-to-end.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -196,6 +197,97 @@ class NewGameRuntimeTests(unittest.TestCase):
 
     def test_release_rom_matches_committed_fingerprint(self):
         self._run("release")
+
+    def test_release_tutorial_attack_keeps_main_loop_alive(self):
+        """Issue #19: closing the first real forecast must not let buffered
+        UI-frame decompression overwrite gMainCallback."""
+        config = "release"
+        rom = MODERN_ROMS[config]
+        elf = host_mode.modern_elf(config)
+        host_mode.require_built_rom(rom, "modern release ROM")
+        host_mode.require_built_rom(elf, "modern release ELF")
+
+        nm = subprocess.run(
+            ["arm-none-eabi-nm", "-n", "--defined-only", str(elf)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        symbols = {
+            parts[2]: int(parts[0], 16)
+            for line in nm.stdout.splitlines()
+            if len(parts := line.split(maxsplit=2)) == 3
+        }
+        callback_address = symbols["gMainCallback"]
+
+        base = gba_playtest.load_scenario(SCENARIO_PATH)
+        attack_inputs = tuple(
+            gba_playtest.InputRange(frame, frame + 2, gba_playtest.KEY_BITS["A"])
+            for frame in range(1400, 23001, 15)
+        )
+
+        def checkpoint(name: str, frame: int, framebuffer: bool):
+            return gba_playtest.Checkpoint(
+                name=name,
+                frame=frame,
+                framebuffer=framebuffer,
+                expected_framebuffer_hash=None,
+                sram_hash=False,
+                expected_sram_hash=None,
+                sram_hash_exclude_ranges=(),
+                probes=(gba_playtest.Probe(callback_address, 4, None),),
+                regions=(),
+                pixel_probes=(),
+            )
+
+        scenario = gba_playtest.Scenario(
+            name="issue19-release-tutorial-attack",
+            description=(
+                "Create an Easy-mode save through real menus, confirm the first "
+                "player-selected tutorial attack, and prove the main callback "
+                "survives forecast cleanup while combat continues."
+            ),
+            disabled=False,
+            blocker=None,
+            inputs=base.inputs + attack_inputs,
+            checkpoints=(
+                checkpoint("forecast-tutorial", 20000, True),
+                checkpoint("confirmed-attack-progress", 21000, True),
+                checkpoint("post-attack-dialogue", 23020, True),
+            ),
+        )
+
+        with tempfile.TemporaryDirectory(prefix="gba-playtest-issue19-attack-") as tmp:
+            fixture_path = sf.write_deterministic_current_fixture(
+                Path(tmp) / "current.sav"
+            )
+            actual = host_mode.capture_live_or_skip(
+                rom,
+                scenario,
+                fixture_path,
+                label="issue #19 release tutorial attack",
+            )
+
+        checkpoints = actual["checkpoints"]
+        callback_values = [
+            int(checkpoint_data["probes"][0]["value"], 0)
+            for checkpoint_data in checkpoints
+        ]
+        self.assertTrue(
+            all(callback_values),
+            f"gMainCallback was cleared during attack: {callback_values}",
+        )
+        self.assertEqual(callback_values[0], symbols["OnMain"] | 1)
+        self.assertNotEqual(
+            checkpoints[0]["framebuffer_hash"],
+            checkpoints[1]["framebuffer_hash"],
+            "the route never advanced beyond the forecast tutorial",
+        )
+        self.assertNotEqual(
+            checkpoints[1]["framebuffer_hash"],
+            checkpoints[2]["framebuffer_hash"],
+            "combat/event progression stopped after the confirmed attack",
+        )
 
 
 if __name__ == "__main__":

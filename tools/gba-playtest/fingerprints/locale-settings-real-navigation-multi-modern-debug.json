@@ -50,16 +50,16 @@
     },
     {
       "frame": 5800,
-      "framebuffer_hash": "fnv1a64-rgb24:fea617b0034f9f35",
+      "framebuffer_hash": "fnv1a64-rgb24:07a24d66a7a116e6",
       "name": "settings-submenu-opened",
       "pixel_probes": [
         {
-          "value": "0x393129",
+          "value": "0x88a1ba",
           "x": 66,
           "y": 93
         },
         {
-          "value": "0x393129",
+          "value": "0x7c95b0",
           "x": 142,
           "y": 91
         }
@@ -83,7 +83,7 @@
       ],
       "regions": [
         {
-          "hash": "fnv1a64-region:970bb5149da574e5",
+          "hash": "fnv1a64-region:7b0ad1835119eaa4",
           "height": 8,
           "name": "back_row_label",
           "width": 136,
@@ -94,7 +94,7 @@
     },
     {
       "frame": 6200,
-      "framebuffer_hash": "fnv1a64-rgb24:699d8fd1fd35c234",
+      "framebuffer_hash": "fnv1a64-rgb24:311caa3a9ed178cd",
       "name": "qps-ploc-selected",
       "probes": [
         {
@@ -226,7 +226,7 @@
     },
     {
       "frame": 6800,
-      "framebuffer_hash": "fnv1a64-rgb24:3a480b41f9a2c463",
+      "framebuffer_hash": "fnv1a64-rgb24:63d2c1a0fa7d351d",
       "name": "back-cancel-no-mutation",
       "probes": [
         {
@@ -290,7 +290,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "739b85ecd36cd659d95161c2a7b49da5d8ca948a",
+    "sha1": "9aa42c914a9a94cdc0d7e88dc6d7277993dc2bb2",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

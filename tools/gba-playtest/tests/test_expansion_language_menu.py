@@ -452,6 +452,55 @@ class UiConfigLanguageEntryStructureTests(unittest.TestCase):
         self.assertNotIn("selectors", body)
 
 
+class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
+    """The settings submenu shares Configuration's BG0/BG1 surfaces, so it
+    needs a real terminator and a redraw after MenuProc's final clear."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.language_text = LANGUAGE_MENU_SRC.read_text(encoding="utf-8")
+        cls.uiconfig_text = UICONFIG_SRC.read_text(encoding="utf-8")
+
+    def test_settings_rows_reserve_back_and_terminator_slots(self):
+        self.assertRegex(
+            self.language_text,
+            r"#define\s+EXPANSION_LANGUAGE_MENU_MAX_ROWS\s+\\?\s*"
+            r"\(FE8_EXPANSION_ENABLED_LOCALE_COUNT\s*\+\s*2\)",
+        )
+
+    def test_settings_open_clears_the_shared_configuration_backgrounds(self):
+        match = re.search(
+            r"void ExpansionLanguageMenu_OpenSettings\(ProcPtr parent\)\s*\{(.*?)\n\}",
+            self.language_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+        self.assertLess(body.index("BG_Fill(gBG0TilemapBuffer, 0)"), body.index("StartMenu"))
+        self.assertLess(body.index("BG_Fill(gBG1TilemapBuffer, 0)"), body.index("StartMenu"))
+        self.assertLess(body.index("ResetTextFont()"), body.index("StartMenu"))
+
+    def test_settings_end_defers_configuration_redraw_past_menu_clear(self):
+        self.assertRegex(
+            self.language_text,
+            r"(?s)gProcScr_RedrawConfigAfterLanguageMenu\[\].*?"
+            r"PROC_SLEEP\(1\).*?"
+            r"PROC_CALL\(Config_RedrawAfterLanguageMenu\)",
+        )
+        match = re.search(
+            r"static void ExpansionLanguageMenu_SettingsOnEnd\(struct MenuProc \*proc\)"
+            r"\s*\{(.*?)\n\}",
+            self.language_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        self.assertIn(
+            "Proc_Start(gProcScr_RedrawConfigAfterLanguageMenu, proc->proc_parent)",
+            match.group(1),
+        )
+        self.assertIn("Config_RedrawAfterLanguageMenu", self.uiconfig_text)
+
+
 class SaveCompatMenuLegacyPathUnchangedTests(unittest.TestCase):
     """The legacy (#else) branch of gSaveCompatMenuItems must keep the
     exact original vanilla MSG_SAVE_COMPAT_BACK/MSG_SAVE_COMPAT_ERASE_ALL

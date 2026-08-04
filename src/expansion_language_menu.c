@@ -114,6 +114,7 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
 #include "hardware.h"
 #include "uiutils.h"
 #include "bm.h"
+#include "uiconfig.h"
 
 /* One row per BUILD-ENABLED locale slot, plus one reserved Back row
  * (settings submenu only) -- mirrors DEBUGTOOLS_HUB_MENU_SLOTS' own
@@ -132,11 +133,10 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
  * exactly one enabled locale, so the full 8-slot reservation this used
  * to carry was ten times more than any real build ever needed. No extra
  * cushion row is added beyond the exact popcount(mask)+1 (locale rows +
- * one Back row) bound proven above: BuildLocaleRows can never write
- * more than that, by construction, and every byte here is now
- * accounted for (see the same itemexpansion-check comment). Growing to
- * a multi-locale build simply grows this same expression -- it is not
- * a fixed constant to maintain by hand. Issue #18 sprint 6: this popcount
+ * one Back row) plus the zeroed MenuItemDef sentinel StartMenu requires
+ * after the last visible row. Growing to a multi-locale build simply grows
+ * this same expression -- it is not a fixed constant to maintain by hand.
+ * Issue #18 sprint 6: this popcount
  * is no longer computed locally -- it is the exact same
  * FE8_EXPANSION_ENABLED_LOCALE_COUNT single source of truth
  * (include/expansion_config.h) src/bmsave-lib.c's
@@ -144,7 +144,7 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
  * can never quietly drift apart on "how many locales does this build
  * enable". */
 #define EXPANSION_LANGUAGE_MENU_MAX_ROWS \
-    (FE8_EXPANSION_ENABLED_LOCALE_COUNT + 1)
+    (FE8_EXPANSION_ENABLED_LOCALE_COUNT + 2)
 
 /* Sentinel stashed in a locale-row MenuItemDef's otherwise-unused
  * helpMsgId field (u16) to mark the settings submenu's own reserved Back
@@ -317,9 +317,8 @@ static u8 ExpansionLanguageMenu_BuildLocaleRows(struct MenuItemDef *defs, bool8 
         if (!ExpansionLocale_IsEnabled(locale))
             continue;
 
-        /* Cannot overflow: at most EXPANSION_LOCALE_COUNT locale rows,
-         * and EXPANSION_LANGUAGE_MENU_MAX_ROWS reserves room for all of
-         * them plus the Back row below. */
+        /* Cannot overflow: EXPANSION_LANGUAGE_MENU_MAX_ROWS reserves all
+         * enabled locale rows, the optional Back row, and one sentinel. */
         defs[count].name = "";
         defs[count].nameMsgId = 0;
         defs[count].helpMsgId = locale;
@@ -390,11 +389,17 @@ CONST_DATA struct MenuDef gExpansionLanguageSelectorMenuDef =
     0,
 };
 
+static CONST_DATA struct ProcCmd gProcScr_RedrawConfigAfterLanguageMenu[] =
+{
+    PROC_SLEEP(1),
+    PROC_CALL(Config_RedrawAfterLanguageMenu),
+    PROC_END,
+};
+
 static void ExpansionLanguageMenu_SettingsOnEnd(struct MenuProc *proc)
 {
-    (void)proc;
-
     gExpansionLanguageMenuProbe.settingsActive = FALSE;
+    Proc_Start(gProcScr_RedrawConfigAfterLanguageMenu, proc->proc_parent);
 }
 
 CONST_DATA struct MenuDef gExpansionLanguageSettingsMenuDef =
@@ -528,6 +533,11 @@ void ExpansionLanguageMenu_OpenSettings(ProcPtr parent)
     gExpansionLanguageMenuProbe.settingsActive = TRUE;
     gExpansionLanguageMenuProbe.settingsOpenCount++;
 
+    BG_Fill(gBG0TilemapBuffer, 0);
+    BG_Fill(gBG1TilemapBuffer, 0);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+
+    ResetTextFont();
     StartMenu(&gExpansionLanguageSettingsMenuDef, parent);
 }
 

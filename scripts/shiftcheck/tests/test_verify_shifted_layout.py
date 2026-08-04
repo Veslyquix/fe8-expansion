@@ -8,6 +8,7 @@ from scripts.shiftcheck.verify_shifted_layout import (
     BANIM_OVERLAY_SPANS,
     PINNED_SYMBOL_ADDRESSES,
     SAVE_PALETTE_SPANS,
+    UI_FRAME_SCRATCH_SPANS,
     UNITLIST_OVERLAY_SPANS,
     verify_layout,
 )
@@ -38,6 +39,12 @@ class VerifyShiftedLayoutTests(unittest.TestCase):
             symbols.setdefault(start, cursor)
             symbols[end] = symbols[start] + size
             cursor = symbols[end]
+        cursor = 0x02020000
+        for start, end, size in UI_FRAME_SCRATCH_SPANS:
+            symbols.setdefault(start, cursor)
+            symbols[end] = symbols[start] + size
+            cursor = symbols[end]
+        symbols["gMainCallback"] = symbols["gGenericBuffer"] - 4
         return symbols
 
     def test_exact_shift_passes(self):
@@ -136,6 +143,20 @@ class VerifyShiftedLayoutTests(unittest.TestCase):
                 "base relative span gSortedUnitsBuf->gSortedUnits" in error
                 for error in errors
             )
+        )
+
+    def test_live_callback_inside_ui_frame_scratch_fails(self):
+        shift = 0x40000
+        base = self.symbols()
+        base["gMainCallback"] = base["gFadeComponentStep"] - 4
+        shifted = dict(base)
+        shifted["__shift_end"] += shift
+        shifted["ReadSramFast_Core"] += shift
+        shifted["__floating_end"] += shift
+        errors = verify_layout(base, shifted, shift)
+        self.assertTrue(
+            any("base gMainCallback" in error and "UI-frame scratch" in error
+                for error in errors)
         )
 
 

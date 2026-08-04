@@ -365,6 +365,18 @@ before the rest of overlay 0; the verifier checks the full
 Configuration's added Language row is the fourteenth option, whose two-tile
 render starts at BG row 31; its icon and text drawing explicitly wrap the
 second tile row to row 0 instead of writing past the 32x32 tilemap buffer.
+The language submenu shares BG0/BG1 with Configuration, so its on-end callback
+redraws the six visible option rows and help text from the preserved
+selection/scroll state after either selection or B-cancel. Each opening also
+resets the text-tile allocator so repeated visits cannot reuse stale
+Configuration glyph tiles.
+
+`UnpackUiFrameBuffered()` decompresses UI-frame graphics into the scratch
+range ending at `gFadeComponentStep`. The modern linker therefore places that
+symbol immediately after `gGenericBuffer` and `gOpAnimSt`, and asserts that
+`gMainCallback` is outside the range. If GCC places the callback immediately
+before the fade array instead, closing the battle forecast overwrites it with
+decompressed frame data and every player-confirmed attack appears to hang.
 
 `src/agb_sram.o` separately receives `-fno-toplevel-reorder
 -fno-reorder-functions`: `SetSramFastFunc()` copies

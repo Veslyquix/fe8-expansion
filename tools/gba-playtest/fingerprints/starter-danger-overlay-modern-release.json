@@ -60,11 +60,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000000"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000000"
@@ -81,6 +76,11 @@
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000000"
         }
@@ -146,11 +146,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000000"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000000"
@@ -167,6 +162,11 @@
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000000"
         }
@@ -232,11 +232,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000001"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000001"
@@ -244,15 +239,20 @@
         {
           "address": "0x02037d28",
           "size": 4,
-          "value": "0x00000027"
+          "value": "0x00000001"
         },
         {
           "address": "0x02037d2c",
           "size": 4,
-          "value": "0x00000001"
+          "value": "0x00000027"
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000000"
         }
@@ -318,11 +318,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000001"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000001"
@@ -330,15 +325,20 @@
         {
           "address": "0x02037d28",
           "size": 4,
-          "value": "0x00000027"
+          "value": "0x00000001"
         },
         {
           "address": "0x02037d2c",
           "size": 4,
-          "value": "0x00000000"
+          "value": "0x00000027"
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000001"
         }
@@ -404,11 +404,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000002"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000002"
@@ -416,15 +411,20 @@
         {
           "address": "0x02037d28",
           "size": 4,
-          "value": "0x00000027"
+          "value": "0x00000002"
         },
         {
           "address": "0x02037d2c",
           "size": 4,
-          "value": "0x00000001"
+          "value": "0x00000027"
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000001"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000001"
         }
@@ -490,11 +490,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000002"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000002"
@@ -502,15 +497,20 @@
         {
           "address": "0x02037d28",
           "size": 4,
-          "value": "0x00000027"
+          "value": "0x00000002"
         },
         {
           "address": "0x02037d2c",
           "size": 4,
-          "value": "0x00000000"
+          "value": "0x00000027"
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000002"
         }
@@ -576,11 +576,6 @@
           "value": "0x17"
         },
         {
-          "address": "0x02037d20",
-          "size": 4,
-          "value": "0x00000002"
-        },
-        {
           "address": "0x02037d24",
           "size": 4,
           "value": "0x00000002"
@@ -588,15 +583,20 @@
         {
           "address": "0x02037d28",
           "size": 4,
-          "value": "0x00000027"
+          "value": "0x00000002"
         },
         {
           "address": "0x02037d2c",
           "size": 4,
-          "value": "0x00000000"
+          "value": "0x00000027"
         },
         {
           "address": "0x02037d30",
+          "size": 4,
+          "value": "0x00000000"
+        },
+        {
+          "address": "0x02037d34",
           "size": 4,
           "value": "0x00000002"
         }
@@ -606,7 +606,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "7f634531dfa2f585384fbf6a1fb6b1c96e8576c1",
+    "sha1": "d8c37471b2eb0483c818a052f8629837fdb00138",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

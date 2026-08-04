@@ -60,10 +60,15 @@ UNITLIST_OVERLAY_SPANS = (
     ("gUnitlistscreen_7", "gUnitlistscreen_8", 0x1000),
     ("gUnitlistscreen_8", "gUnitlistscreen_9", 0x04),
 )
+UI_FRAME_SCRATCH_SPANS = (
+    ("gGenericBuffer", "gOpAnimSt", 0x2000),
+    ("gOpAnimSt", "gFadeComponentStep", 0x100),
+)
 RELATIVE_SPANS = (
     BANIM_OVERLAY_SPANS
     + SAVE_PALETTE_SPANS
     + UNITLIST_OVERLAY_SPANS
+    + UI_FRAME_SCRATCH_SPANS
 )
 REQUIRED_SYMBOLS = (
     "Init",
@@ -71,6 +76,7 @@ REQUIRED_SYMBOLS = (
     "__shift_end",
     "ReadSramFast_Core",
     "__floating_end",
+    "gMainCallback",
     *PINNED_SYMBOL_ADDRESSES,
     *(symbol for span in RELATIVE_SPANS for symbol in span[:2]),
 )
@@ -135,6 +141,18 @@ def verify_layout(base: dict[str, int], shifted: dict[str, int], shift: int) -> 
                     f"{label} relative span {start}->{end} is "
                     f"{actual:#x}, expected {size:#x}"
                 )
+
+        if (
+            symbols["gGenericBuffer"]
+            <= symbols["gMainCallback"]
+            < symbols["gFadeComponentStep"]
+        ):
+            errors.append(
+                f"{label} gMainCallback at {symbols['gMainCallback']:#010x} "
+                "overlaps buffered UI-frame scratch "
+                f"{symbols['gGenericBuffer']:#010x}.."
+                f"{symbols['gFadeComponentStep']:#010x}"
+            )
 
     for symbol in ("__shift_end", "ReadSramFast_Core"):
         expected = base[symbol] + shift

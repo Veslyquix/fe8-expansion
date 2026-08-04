@@ -113,6 +113,9 @@ bool LanguageOptionEntryHandler(ProcPtr proc);
 u8 GetGameOption(u8 index);
 void SetGameOption(u8 index, u8 newValue);
 void PutGameOptionRow(ProcPtr proc, int selectedIdx, int c);
+#ifdef MODERN
+void Config_RedrawAfterLanguageMenu(void);
+#endif
 void Config_Loop_KeyHandler(struct ConfigProc * proc);
 bool Config_HandleExit(struct ConfigProc * proc);
 void Config_SetSourceFromPrep(void);
