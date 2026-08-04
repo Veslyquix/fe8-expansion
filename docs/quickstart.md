@@ -339,14 +339,23 @@ IWRAM; search that file for `-fdata-sections` (e.g.
 `grep -n -- '-fdata-sections' modern.mk`) rather than trusting a fixed list
 written here.
 All preprocessed asset/data C compiles use `-fno-toplevel-reorder`. Those
-sources still contain deliberate declaration-order contracts: for example,
-`InitDifficultySelectScreen()` copies the four palettes at
-`Pal_DifficultyMenuObjs` and the six immediately following palettes at
-`gMenuMainObjs_0` as one contiguous span. GCC's default top-level reordering
-reversed those arrays, so the copy consumed unrelated TSA bytes and corrupted
-mode/save/unit palettes (issue #19). Preserving source order on the data
-cohort protects these legacy adjacency contracts without relocating ordinary
-runtime EWRAM state.
+sources still contain deliberate declaration-order and byte-adjacency
+contracts: difficulty-menu palettes span neighboring symbols, while the
+chapter-title/save-slot palette block also requires explicit 2-byte symbol
+alignment so modern GCC cannot insert padding into the logical palette table.
+Violating either contract makes palette copies consume unrelated bytes
+(issue #19). The pinned battle-animation table objects are also selected by
+basename in `linker/expansion.ld`; this is required because `EXCLUDE_FILE`
+matches input basenames, while modern object paths live under the build root.
+The shifted-layout verifier pins the table heads and arrays at their legacy
+`0x08C00000`/`0x08EE0000`/`0x08EF8000` addresses.
+
+`src/banim-ekrbattle.o` also uses `-fno-toplevel-reorder`: its overlaid EWRAM
+buffers have runtime cross-symbol offset contracts (`gBanimOaml + 0x5800`,
+`gBanimScrLeft + 0x2A00`, and the four adjacent `0x1000` image buffers).
+Reversing those declarations makes battle-intro sprite conversion overrun its
+stack buffer and enter the undefined-instruction vector. The shifted-layout
+verifier checks these relative spans in both base and shifted ELFs.
 
 `src/agb_sram.o` separately receives `-fno-toplevel-reorder
 -fno-reorder-functions`: `SetSramFastFunc()` copies

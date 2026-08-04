@@ -20,7 +20,7 @@
     },
     {
       "frame": 900,
-      "framebuffer_hash": "fnv1a64-rgb24:5f399a14e294409b",
+      "framebuffer_hash": "fnv1a64-rgb24:4ac5244de619e88c",
       "name": "post-title-progression",
       "probes": []
     }
@@ -28,7 +28,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "1a44b54ab39586bc421a3979ebf6f7f1e4f77f01",
+    "sha1": "6abff5bad8dfec7da83396a465241a8009bc7f66",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

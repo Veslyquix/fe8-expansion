@@ -1,6 +1,6 @@
 {
   "issue": 19,
   "category": "fixed",
-  "summary": "Preserve modern asset declaration order so palettes and battle data remain valid.",
+  "summary": "Preserve modern asset and overlay layouts so palettes, battle animation, and resume remain valid.",
   "semver_impact": "patch"
 }

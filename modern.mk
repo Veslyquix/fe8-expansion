@@ -126,6 +126,9 @@ MODERN_LAYOUT_FLAGS := \
 # contracts. For example, difficulty-menu code copies Pal_DifficultyMenuObjs
 # and the immediately following gMenuMainObjs_0 as one ten-palette span.
 MODERN_DATA_LAYOUT_FLAGS := -fno-toplevel-reorder
+# The battle overlay uses fixed cross-symbol offsets (for example
+# gBanimOaml + 0x5800 and gBanimScrLeft + 0x2A00) as part of its runtime ABI.
+MODERN_BANIM_OVERLAY_LAYOUT_FLAGS := -fno-toplevel-reorder
 MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1
 
 # Issue #10: the item ID cap is a single build input shared by the data
@@ -806,6 +809,7 @@ $(MODERN_OUTPUT_DIR)/src/agb_sram.o: MODERN_CFLAGS += -fdata-sections -fno-tople
 $(MODERN_OUTPUT_DIR)/src/m4a.o: MODERN_CFLAGS += -fdata-sections
 $(MODERN_OUTPUT_DIR)/src/bmshop.o: MODERN_CFLAGS += -fdata-sections
 $(MODERN_ALL_DATA_OBJECTS): MODERN_CFLAGS += $(MODERN_DATA_LAYOUT_FLAGS)
+$(MODERN_OUTPUT_DIR)/src/banim-ekrbattle.o: MODERN_CFLAGS += $(MODERN_BANIM_OVERLAY_LAYOUT_FLAGS)
 
 # GAS's own --MD tracks uppercase .INCLUDE directives (e.g. macro.inc,
 # gba.inc), so no cpp preprocessing or scaninc invocation is needed here.
@@ -1557,6 +1561,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
 		printf '%s\n' 'layout_flags=$(MODERN_LAYOUT_FLAGS)'; \
 		printf '%s\n' 'data_layout_flags=$(MODERN_DATA_LAYOUT_FLAGS)'; \
+		printf '%s\n' 'banim_overlay_layout_flags=$(MODERN_BANIM_OVERLAY_LAYOUT_FLAGS)'; \
 	} > "$@.tmp"
 else
 	@printf '%s\n' 'unsupported' > "$@.tmp"

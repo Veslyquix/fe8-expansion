@@ -11,13 +11,51 @@ from pathlib import Path
 
 
 NM_LINE_RE = re.compile(r"^([0-9A-Fa-f]+)\s+\S\s+(\S+)$")
+PINNED_SYMBOL_ADDRESSES = {
+    "banim_number": 0x08C00000,
+    "banim_data": 0x08C00008,
+    "banim_terrain_head": 0x08EE0000,
+    "battle_terrain_table": 0x08EE0008,
+    "_banim_pal_start": 0x08EF8000,
+    "banim_pal_head": 0x08EF8000,
+    "character_battle_animation_palette_table": 0x08EF8008,
+}
+BANIM_OVERLAY_SPANS = (
+    ("gBanimLeftImgSheetBuf", "gEkrKakudaiSomeBufLeft", 0x1000),
+    ("gEkrKakudaiSomeBufLeft", "gBanimRightImgSheetBuf", 0x1000),
+    ("gBanimRightImgSheetBuf", "gEkrKakudaiSomeBufRight", 0x1000),
+    ("gBanimOaml", "gBanimOamr2", 0x5800),
+    ("gBanimOamr2", "gBanimScrLeft", 0x5800),
+    ("gBanimScrLeft", "gBanimScrRight", 0x2A00),
+)
+SAVE_PALETTE_SPANS = (
+    ("Pal_ChapterTitleAlt", "gPal_SaveSlotHardSelectedBlendA", 0x12),
+    (
+        "gPal_SaveSlotHardSelectedBlendA",
+        "gPal_SaveSlotHardUnselectedBlendA",
+        0x20,
+    ),
+    (
+        "gPal_SaveSlotHardUnselectedBlendA",
+        "gPal_SaveSlotHardSelectedBlendB",
+        0xE0,
+    ),
+    (
+        "gPal_SaveSlotHardSelectedBlendB",
+        "gPal_SaveSlotHardUnselectedBlendB",
+        0x20,
+    ),
+    ("gPal_SaveSlotHardUnselectedBlendB", "Pal_ChapterTitleMain", 0x4E),
+)
+RELATIVE_SPANS = BANIM_OVERLAY_SPANS + SAVE_PALETTE_SPANS
 REQUIRED_SYMBOLS = (
     "Init",
     "__shift_start",
     "__shift_end",
     "ReadSramFast_Core",
     "__floating_end",
-    "_banim_pal_start",
+    *PINNED_SYMBOL_ADDRESSES,
+    *(symbol for span in RELATIVE_SPANS for symbol in span[:2]),
 )
 
 
@@ -58,12 +96,28 @@ def verify_layout(base: dict[str, int], shifted: dict[str, int], shift: int) -> 
             f"__shift_end={base['__shift_end']:#010x}"
         )
 
-    for symbol in ("Init", "__shift_start", "_banim_pal_start"):
+    for symbol in ("Init", "__shift_start", *PINNED_SYMBOL_ADDRESSES):
         if shifted[symbol] != base[symbol]:
             errors.append(
                 f"pinned symbol {symbol} moved: "
                 f"{base[symbol]:#010x} -> {shifted[symbol]:#010x}"
             )
+
+    for label, symbols in (("base", base), ("shifted", shifted)):
+        for symbol, expected in PINNED_SYMBOL_ADDRESSES.items():
+            if symbols[symbol] != expected:
+                errors.append(
+                    f"{label} pinned symbol {symbol} is "
+                    f"{symbols[symbol]:#010x}, expected {expected:#010x}"
+                )
+
+        for start, end, size in RELATIVE_SPANS:
+            actual = symbols[end] - symbols[start]
+            if actual != size:
+                errors.append(
+                    f"{label} relative span {start}->{end} is "
+                    f"{actual:#x}, expected {size:#x}"
+                )
 
     for symbol in ("__shift_end", "ReadSramFast_Core"):
         expected = base[symbol] + shift

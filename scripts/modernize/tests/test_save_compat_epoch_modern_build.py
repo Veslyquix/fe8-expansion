@@ -157,6 +157,10 @@ class SaveCompatEpochModernBuildTests(unittest.TestCase):
                 "data_layout_flags=-fno-toplevel-reorder",
                 first_lines,
             )
+            self.assertIn(
+                "banim_overlay_layout_flags=-fno-toplevel-reorder",
+                first_lines,
+            )
             first_fingerprint = next(
                 line for line in first_lines
                 if line.startswith("config_fingerprint=")
@@ -172,6 +176,10 @@ class SaveCompatEpochModernBuildTests(unittest.TestCase):
             self.assertIn("save_compat_epoch=2", second_lines)
             self.assertIn(
                 "data_layout_flags=-fno-toplevel-reorder",
+                second_lines,
+            )
+            self.assertIn(
+                "banim_overlay_layout_flags=-fno-toplevel-reorder",
                 second_lines,
             )
             second_fingerprint = next(

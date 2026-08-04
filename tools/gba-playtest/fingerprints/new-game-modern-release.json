@@ -34,12 +34,12 @@
     },
     {
       "frame": 1140,
-      "framebuffer_hash": "fnv1a64-rgb24:51a8f2f15f178af0",
+      "framebuffer_hash": "fnv1a64-rgb24:64e964ca59cead2e",
       "name": "empty-slot-list-shown",
       "probes": [],
       "regions": [
         {
-          "hash": "fnv1a64-region:b03a40bd40d6cb4f",
+          "hash": "fnv1a64-region:8c9fea83ec05b99e",
           "height": 20,
           "name": "slot-0",
           "width": 184,
@@ -47,7 +47,7 @@
           "y": 48
         },
         {
-          "hash": "fnv1a64-region:3f08c0fd27eada1d",
+          "hash": "fnv1a64-region:042282bbb8793514",
           "height": 20,
           "name": "slot-1",
           "width": 184,
@@ -55,7 +55,7 @@
           "y": 78
         },
         {
-          "hash": "fnv1a64-region:7fb2791ec4bf49a9",
+          "hash": "fnv1a64-region:37ade7889f8f50d2",
           "height": 20,
           "name": "slot-2",
           "width": 184,
@@ -87,7 +87,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "5fad136b1db6abc6e4885a121c49c576993bda69",
+    "sha1": "06a07a4dba97c20731570923a8518dadccd921d7",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

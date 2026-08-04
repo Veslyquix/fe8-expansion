@@ -223,7 +223,8 @@ SECTIONS
         __shift_end = .;
 
         /* === FLOATING: moves by shift amount === */
-        *(EXCLUDE_FILE (*src/rom_header.o *src/crt0.o *asm/arm.o *asm/arm_call.o) .text .text.* .glue_7 .glue_7t)
+        EXCLUDE_FILE (*src/rom_header.o *src/crt0.o *asm/arm.o *asm/arm_call.o)
+            *(.text .text.* .glue_7 .glue_7t)
         *asm/arm_call.o(.text)
         *(.vfp11_veneer .v4_bx .iplt)
 
@@ -231,25 +232,25 @@ SECTIONS
         *(.rodata .rodata.* .rodata.str1.* .rodata.cst*)
 
         . = ALIGN(4);
-        *(EXCLUDE_FILE (
-            *src/banim_data.o
+        EXCLUDE_FILE (
+            *banim_data.o
             banim/data_banim.o
-            *src/banim_terrain_data.o
-            *src/data/data_banim_terrain.o
-            *src/banim_pal_chara.o
-            *src/data/data_banim_pal.o
-            *src/data/data_FE0000.o
-            *src/data/data_FFF000.o
-        ) .data .data.*)
+            *banim_terrain_data.o
+            *data_banim_terrain.o
+            *banim_pal_chara.o
+            *data_banim_pal.o
+            *data_FE0000.o
+            *data_FFF000.o
+        ) *(.data .data.*)
         *(.igot.plt)
         __floating_end = .;
 
         /* === PINNED: banim regions (never shift) === */
         FILL(0xFF);
         . = 0xC00000;
-        *src/banim_data.o(.data)
-        *src/banim_data.o(.data.banim_array_len)
-        *src/banim_data.o(.data.banim_array)
+        *banim_data.o(.data)
+        *banim_data.o(.data.banim_array_len)
+        *banim_data.o(.data.banim_array)
 
         FILL(0x00);
         . = 0xC02000;
@@ -257,32 +258,32 @@ SECTIONS
 
         FILL(0xFF);
         . = 0xEE0000;
-        *src/banim_terrain_data.o(.data)
-        *src/banim_terrain_data.o(.data.banim_terrain_head)
-        *src/banim_terrain_data.o(.data.banim_terrain_ptr_table)
+        *banim_terrain_data.o(.data)
+        *banim_terrain_data.o(.data.banim_terrain_head)
+        *banim_terrain_data.o(.data.banim_terrain_ptr_table)
 
         FILL(0x00);
         . = 0xEE0C00;
-        *src/data/data_banim_terrain.o(.data)
+        *data_banim_terrain.o(.data)
 
         FILL(0xFF);
         _banim_pal_start = 0xEF8000;
         . = _banim_pal_start;
-        *src/banim_pal_chara.o(.data)
-        *src/banim_pal_chara.o(.data.banim_pal_head)
-        *src/banim_pal_chara.o(.data.banim_pal_ptr_table)
+        *banim_pal_chara.o(.data)
+        *banim_pal_chara.o(.data.banim_pal_head)
+        *banim_pal_chara.o(.data.banim_pal_ptr_table)
 
         FILL(0x00);
         . = _banim_pal_start + 0x1000;
-        *src/data/data_banim_pal.o(.data)
+        *data_banim_pal.o(.data)
         _banim_pal_end = .;
         _banim_pal_size = . - _banim_pal_start;
 
         FILL(0xFF);
         . = 0xFE0000;
-        *src/data/data_FE0000.o(.data)
+        *data_FE0000.o(.data)
         . = 0xFFF000;
-        *src/data/data_FFF000.o(.data)
+        *data_FFF000.o(.data)
     } > rom = 0xFF
 
     ASSERT(SIZEOF(ROM) <= __rom_size, "ROM content exceeds configured ROM size")
