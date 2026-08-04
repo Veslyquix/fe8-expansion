@@ -24,6 +24,7 @@ SECTIONS
 {
     ewram_overlay_0 __ewram_start (NOLOAD) : ALIGN(4)
     {
+        *(SORT_BY_NAME(ewram_overlay_0.unitlist.*))
         *(ewram_overlay_0)
 
         . = 0x01F148;
@@ -232,6 +233,7 @@ SECTIONS
         *(.rodata .rodata.* .rodata.str1.* .rodata.cst*)
 
         . = ALIGN(4);
+        /* Outside the section list so the exclusion covers .data and .data.*. */
         EXCLUDE_FILE (
             *banim_data.o
             banim/data_banim.o

@@ -33,7 +33,7 @@
     },
     {
       "frame": 5550,
-      "framebuffer_hash": "fnv1a64-rgb24:e7f561928ecf80e2",
+      "framebuffer_hash": "fnv1a64-rgb24:ef0a26204df989ab",
       "name": "cursor-on-language-row",
       "probes": [
         {
@@ -50,7 +50,7 @@
     },
     {
       "frame": 5800,
-      "framebuffer_hash": "fnv1a64-rgb24:c417719165fe567a",
+      "framebuffer_hash": "fnv1a64-rgb24:fea617b0034f9f35",
       "name": "settings-submenu-opened",
       "pixel_probes": [
         {
@@ -290,7 +290,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "7d557a43cb6800827895090a8050ca536ae24b76",
+    "sha1": "739b85ecd36cd659d95161c2a7b49da5d8ca948a",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

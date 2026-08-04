@@ -357,6 +357,15 @@ Reversing those declarations makes battle-intro sprite conversion overrun its
 stack buffer and enter the undefined-instruction vector. The shifted-layout
 verifier checks these relative spans in both base and shifted ELFs.
 
+Unit List's sorting, tilemap, text, page-change and icon buffers are one
+ordered overlay. Modern builds emit them into numbered
+`ewram_overlay_0.unitlist.*` subsections, and the linker sorts those names
+before the rest of overlay 0; the verifier checks the full
+`gSortedUnitsBuf` through `gUnitlistscreen_9` span chain. Modern
+Configuration's added Language row is the fourteenth option, whose two-tile
+render starts at BG row 31; its icon and text drawing explicitly wrap the
+second tile row to row 0 instead of writing past the 32x32 tilemap buffer.
+
 `src/agb_sram.o` separately receives `-fno-toplevel-reorder
 -fno-reorder-functions`: `SetSramFastFunc()` copies
 `ReadSramFast_Core`/`VerifySramFast_Core` into IWRAM scratch buffers at

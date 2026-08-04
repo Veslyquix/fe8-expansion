@@ -23,18 +23,27 @@
 #include "unitlistscreen.h"
 #include "constants/songs.h"
 
-EWRAM_OVERLAY(0) struct SortedUnitEnt gSortedUnitsBuf[0x40] = {};
-EWRAM_OVERLAY(0) struct SortedUnitEnt * gSortedUnits[0x40] = {};
-EWRAM_OVERLAY(0) u16 gUnitlistscreen_0[0x20][0x20] = {};
-EWRAM_OVERLAY(0) u16 gUnitlistscreen_1[2][0x20] = {};
-EWRAM_OVERLAY(0) struct Text gUnitlistscreen_2[7] = {};
-EWRAM_OVERLAY(0) struct Text gUnitlistscreen_3[7][3] = {};
-EWRAM_OVERLAY(0) struct Text gUnitlistscreen_4 = {};
-EWRAM_OVERLAY(0) struct Text gUnitlistscreen_5 = {};
-EWRAM_OVERLAY(0) struct Text gUnitlistscreen_6 = {};
-EWRAM_OVERLAY(0) u8 gUnitlistscreen_7[0x1000] = {};
-EWRAM_OVERLAY(0) u8 gUnitlistscreen_8 = 0;
-EWRAM_OVERLAY(0) u32 gUnitlistscreen_9[8] = {}; // equipped item icons
+#ifdef MODERN
+/* GCC otherwise reorders this overlay by alignment instead of source order. */
+#define UNITLIST_EWRAM(order) SECTION("ewram_overlay_0.unitlist." order)
+#else
+#define UNITLIST_EWRAM(order) EWRAM_OVERLAY(0)
+#endif
+
+UNITLIST_EWRAM("00") struct SortedUnitEnt gSortedUnitsBuf[0x40] = {};
+UNITLIST_EWRAM("01") struct SortedUnitEnt * gSortedUnits[0x40] = {};
+UNITLIST_EWRAM("02") u16 gUnitlistscreen_0[0x20][0x20] = {};
+UNITLIST_EWRAM("03") u16 gUnitlistscreen_1[2][0x20] = {};
+UNITLIST_EWRAM("04") struct Text gUnitlistscreen_2[7] = {};
+UNITLIST_EWRAM("05") struct Text gUnitlistscreen_3[7][3] = {};
+UNITLIST_EWRAM("06") struct Text gUnitlistscreen_4 = {};
+UNITLIST_EWRAM("07") struct Text gUnitlistscreen_5 = {};
+UNITLIST_EWRAM("08") struct Text gUnitlistscreen_6 = {};
+UNITLIST_EWRAM("09") u8 gUnitlistscreen_7[0x1000] = {};
+UNITLIST_EWRAM("10") u8 gUnitlistscreen_8 = 0;
+UNITLIST_EWRAM("11") u32 gUnitlistscreen_9[8] = {}; // equipped item icons
+
+#undef UNITLIST_EWRAM
 
 // clang-format off
 

@@ -182,18 +182,26 @@ void UnitList_PutRow(struct UnitListScreenProc * proc, u8 unitNum, u16 * tm, u8 
 int SortUnitList_GetUnitSoloAnimation(struct Unit * unit);
 bool SortUnitList(u8 key, u8 order);
 
-extern EWRAM_OVERLAY(0) struct SortedUnitEnt gSortedUnitsBuf[0x40];
-extern EWRAM_OVERLAY(0) struct SortedUnitEnt * gSortedUnits[0x40];
-extern EWRAM_OVERLAY(0) u16 gUnitlistscreen_0[0x20][0x20];
-extern EWRAM_OVERLAY(0) u16 gUnitlistscreen_1[2][0x20];
-extern EWRAM_OVERLAY(0) struct Text gUnitlistscreen_2[7];
-extern EWRAM_OVERLAY(0) struct Text gUnitlistscreen_3[7][3];
-extern struct Text gUnitlistscreen_4;
-extern struct Text gUnitlistscreen_5;
-extern struct Text gUnitlistscreen_6;
-extern u8 gUnitlistscreen_7[0x1000];
-extern u8 gUnitlistscreen_8;
-extern EWRAM_OVERLAY(0) u32 gUnitlistscreen_9[8];
+#ifdef MODERN
+#define UNITLIST_EWRAM_EXTERN(order) SECTION("ewram_overlay_0.unitlist." order)
+#else
+#define UNITLIST_EWRAM_EXTERN(order) EWRAM_OVERLAY(0)
+#endif
+
+extern UNITLIST_EWRAM_EXTERN("00") struct SortedUnitEnt gSortedUnitsBuf[0x40];
+extern UNITLIST_EWRAM_EXTERN("01") struct SortedUnitEnt * gSortedUnits[0x40];
+extern UNITLIST_EWRAM_EXTERN("02") u16 gUnitlistscreen_0[0x20][0x20];
+extern UNITLIST_EWRAM_EXTERN("03") u16 gUnitlistscreen_1[2][0x20];
+extern UNITLIST_EWRAM_EXTERN("04") struct Text gUnitlistscreen_2[7];
+extern UNITLIST_EWRAM_EXTERN("05") struct Text gUnitlistscreen_3[7][3];
+extern UNITLIST_EWRAM_EXTERN("06") struct Text gUnitlistscreen_4;
+extern UNITLIST_EWRAM_EXTERN("07") struct Text gUnitlistscreen_5;
+extern UNITLIST_EWRAM_EXTERN("08") struct Text gUnitlistscreen_6;
+extern UNITLIST_EWRAM_EXTERN("09") u8 gUnitlistscreen_7[0x1000];
+extern UNITLIST_EWRAM_EXTERN("10") u8 gUnitlistscreen_8;
+extern UNITLIST_EWRAM_EXTERN("11") u32 gUnitlistscreen_9[8];
+
+#undef UNITLIST_EWRAM_EXTERN
 
 // extern ??? ProcScr_UnitListScreen_Field
 extern struct ProcCmd ProcScr_UnitListScreen_PrepMenu[];

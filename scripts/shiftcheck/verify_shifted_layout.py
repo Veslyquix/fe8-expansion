@@ -47,7 +47,24 @@ SAVE_PALETTE_SPANS = (
     ),
     ("gPal_SaveSlotHardUnselectedBlendB", "Pal_ChapterTitleMain", 0x4E),
 )
-RELATIVE_SPANS = BANIM_OVERLAY_SPANS + SAVE_PALETTE_SPANS
+UNITLIST_OVERLAY_SPANS = (
+    ("gSortedUnitsBuf", "gSortedUnits", 0x300),
+    ("gSortedUnits", "gUnitlistscreen_0", 0x100),
+    ("gUnitlistscreen_0", "gUnitlistscreen_1", 0x800),
+    ("gUnitlistscreen_1", "gUnitlistscreen_2", 0x80),
+    ("gUnitlistscreen_2", "gUnitlistscreen_3", 0x38),
+    ("gUnitlistscreen_3", "gUnitlistscreen_4", 0xA8),
+    ("gUnitlistscreen_4", "gUnitlistscreen_5", 0x08),
+    ("gUnitlistscreen_5", "gUnitlistscreen_6", 0x08),
+    ("gUnitlistscreen_6", "gUnitlistscreen_7", 0x08),
+    ("gUnitlistscreen_7", "gUnitlistscreen_8", 0x1000),
+    ("gUnitlistscreen_8", "gUnitlistscreen_9", 0x04),
+)
+RELATIVE_SPANS = (
+    BANIM_OVERLAY_SPANS
+    + SAVE_PALETTE_SPANS
+    + UNITLIST_OVERLAY_SPANS
+)
 REQUIRED_SYMBOLS = (
     "Init",
     "__shift_start",

@@ -8,6 +8,7 @@ from scripts.shiftcheck.verify_shifted_layout import (
     BANIM_OVERLAY_SPANS,
     PINNED_SYMBOL_ADDRESSES,
     SAVE_PALETTE_SPANS,
+    UNITLIST_OVERLAY_SPANS,
     verify_layout,
 )
 
@@ -29,6 +30,11 @@ class VerifyShiftedLayoutTests(unittest.TestCase):
             cursor = symbols[end]
         cursor = 0x08600000
         for start, end, size in SAVE_PALETTE_SPANS:
+            symbols.setdefault(start, cursor)
+            symbols[end] = symbols[start] + size
+            cursor = symbols[end]
+        cursor = 0x02010000
+        for start, end, size in UNITLIST_OVERLAY_SPANS:
             symbols.setdefault(start, cursor)
             symbols[end] = symbols[start] + size
             cursor = symbols[end]
@@ -112,6 +118,22 @@ class VerifyShiftedLayoutTests(unittest.TestCase):
                 "base relative span "
                 "Pal_ChapterTitleAlt->gPal_SaveSlotHardSelectedBlendA"
                 in error
+                for error in errors
+            )
+        )
+
+    def test_reordered_unit_list_overlay_fails(self):
+        shift = 0x40000
+        base = self.symbols()
+        base["gSortedUnits"] = base["gSortedUnitsBuf"] - 0x100
+        shifted = dict(base)
+        shifted["__shift_end"] += shift
+        shifted["ReadSramFast_Core"] += shift
+        shifted["__floating_end"] += shift
+        errors = verify_layout(base, shifted, shift)
+        self.assertTrue(
+            any(
+                "base relative span gSortedUnitsBuf->gSortedUnits" in error
                 for error in errors
             )
         )

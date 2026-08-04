@@ -726,9 +726,33 @@ static inline int GetGameOptionIconChr(int icon)
         + ((icon << 1) & 0xFFC0);
 }
 
+#ifdef MODERN
+/* The fourteenth option starts on tile row 31 and wraps onto row 0. */
+static void PutConfigTextWrapped(struct Text * text, int x, int y)
+{
+    int i;
+    u16 tm[0x40] = { 0 };
+
+    if (y != 0x1F)
+    {
+        PutText(text, TILEMAP_LOCATED(gBG1TilemapBuffer, x, y));
+        return;
+    }
+
+    PutText(text, tm);
+
+    for (i = 0; i < text->tile_width; i++)
+    {
+        gBG1TilemapBuffer[TILEMAP_INDEX(x + i, 0x1F)] = tm[i];
+        gBG1TilemapBuffer[TILEMAP_INDEX(x + i, 0)] = tm[0x20 + i];
+    }
+}
+#endif
+
 //! FE8U: 0x080B1700
 void DrawGameOptionIcon(int selectedIdx, int yBase)
 {
+#ifndef MODERN
     int y = 0x20 * ((selectedIdx * 2 + yBase) & 0x1f);
 
     int icon = gGameOptions[gGameOptionsUiOrder[selectedIdx]].icon;
@@ -741,6 +765,23 @@ void DrawGameOptionIcon(int selectedIdx, int yBase)
     gBG1TilemapBuffer[TILEMAP_INDEX(3, 0) + y] = icon + 1;
     gBG1TilemapBuffer[TILEMAP_INDEX(2, 1) + y] = icon + 0x20;
     gBG1TilemapBuffer[TILEMAP_INDEX(3, 1) + y] = icon + 0x21;
+#else
+    int yRow = (selectedIdx * 2 + yBase) & 0x1F;
+
+    int icon = gGameOptions[gGameOptionsUiOrder[selectedIdx]].icon;
+    int chr = GetGameOptionIconChr(icon);
+
+    // Variable reuse seems to be required to match
+    icon = TILEREF(chr, 4);
+
+    gBG1TilemapBuffer[TILEMAP_INDEX(2, yRow)] = icon + 0;
+    gBG1TilemapBuffer[TILEMAP_INDEX(3, yRow)] = icon + 1;
+
+    yRow = (yRow + 1) & 0x1F;
+
+    gBG1TilemapBuffer[TILEMAP_INDEX(2, yRow)] = icon + 0x20;
+    gBG1TilemapBuffer[TILEMAP_INDEX(3, yRow)] = icon + 0x21;
+#endif
 
     return;
 }
@@ -793,7 +834,7 @@ void DrawGameOptionText(int selectedIdx, int textIdx, int y)
         Text_SetCursor(&gConfigUiState->optionTexts[textIdx], 0);
         Text_SetColor(&gConfigUiState->optionTexts[textIdx], TEXT_COLOR_SYSTEM_WHITE);
         Text_DrawStringASCII(&gConfigUiState->optionTexts[textIdx], str);
-        PutText(&gConfigUiState->optionTexts[textIdx], TILEMAP_LOCATED(gBG1TilemapBuffer, 4, y));
+        PutConfigTextWrapped(&gConfigUiState->optionTexts[textIdx], 4, y);
 
         return;
     }
@@ -825,7 +866,7 @@ void DrawOptionValueTexts(int selectedIdx, int textIdx, int y)
         Text_SetCursor(&gConfigUiState->valueTexts[textIdx], 0);
         Text_SetColor(&gConfigUiState->valueTexts[textIdx], TEXT_COLOR_SYSTEM_BLUE);
         Text_DrawStringASCII(&gConfigUiState->valueTexts[textIdx], ExpansionLanguageMenu_ResolveCurrentLocaleName());
-        PutText(&gConfigUiState->valueTexts[textIdx], TILEMAP_LOCATED(gBG1TilemapBuffer, x, y));
+        PutConfigTextWrapped(&gConfigUiState->valueTexts[textIdx], x, y);
 
         return;
     }
@@ -1307,6 +1348,7 @@ void PutGameOptionRow(ProcPtr proc, int selectedIdx, int c)
 
     int y = ((selectedIdx * 2) + 5) & 0x1f;
 
+#ifndef MODERN
     int yTmp = 0x20 * y;
 
     for (i = 0; i <= 26; i++)
@@ -1314,6 +1356,17 @@ void PutGameOptionRow(ProcPtr proc, int selectedIdx, int c)
         gBG1TilemapBuffer[yTmp + 0x02 + i] = 0;
         gBG1TilemapBuffer[yTmp + 0x22 + i] = 0;
     }
+#else
+    int yNext = y + 1;
+
+    yNext &= 0x1F;
+
+    for (i = 0; i <= 26; i++)
+    {
+        gBG1TilemapBuffer[TILEMAP_INDEX(2 + i, y)] = 0;
+        gBG1TilemapBuffer[TILEMAP_INDEX(2 + i, yNext)] = 0;
+    }
+#endif
 
     textIdx = selectedIdx % 7;
 

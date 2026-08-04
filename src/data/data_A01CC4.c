@@ -43,6 +43,7 @@ u8 Img_ConfigUiSprites[] = INCBIN_U8("graphics/misc/Img_ConfigUiSprites.4bpp.lz"
 u8 Img_ConfigUiIcons[] = INCBIN_U8("graphics/misc/Img_ConfigUiIcons.4bpp.lz");
 u8 Tsa_ConfigUiFrame[] = INCBIN_U8("graphics/misc/Tsa_ConfigUiFrame.tsa.bin.lz");
 u16 Pal_ConfigUiSprites[] = INCBIN_U16("graphics/misc/Pal_ConfigUiSprites.gbapal");
+/* ApplyChapterTitlePal treats these six symbols as one packed 0x300-byte table. */
 u16 ALIGNED(2) Pal_ChapterTitleAlt[] = INCBIN_U16("graphics/misc/gPal_08A07AD8.gbapal");
 u8 ALIGNED(2) gPal_SaveSlotHardSelectedBlendA[] = INCBIN_U8("graphics/misc/gUnknown_08A07AEA.4bpp");
 u8 ALIGNED(2) gPal_SaveSlotHardUnselectedBlendA[] = INCBIN_U8("graphics/misc/gUnknown_08A07B0A.4bpp");
