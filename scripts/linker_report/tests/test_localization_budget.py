@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import sys
 import unittest
 from pathlib import Path
@@ -94,6 +95,152 @@ class LocaleBankBudgetTests(unittest.TestCase):
         self.assertEqual(report["locale_bank"]["occupied_bytes"], 0x200)
         self.assertEqual(report["locale_bank"]["headroom_bytes"], 0x00FFFE00)
         self.assertTrue(report["locale_bank"]["section_present"])
+
+
+def source_budget(locales):
+    return {
+        "active_message_count": 32,
+        "tombstone_count": 1,
+        "locales_generated": list(locales),
+        "catalog_string_bytes": {"total": 0},
+        "catalog_index_bytes": 0,
+        "scratch_budget_bytes": 96,
+        "scratch_slot_bytes_used_max": 1,
+        "scratch_headroom_bytes": 95,
+        "codepoints": {"glyphs_used_count": 0},
+    }
+
+
+INDEX_SYMBOLS = {
+    "gExpansionLocaleMsgIds": 64,
+    "gExpansionLocaleMsgCount": 2,
+    "gExpansionLocaleTombstoneCount": 2,
+}
+DESCRIPTOR_SYMBOLS = {
+    "gExpansionLocaleCatalogs": 96,
+    "gExpansionLocalePopulatedCount": 1,
+}
+
+
+class CatalogSymbolBudgetTests(unittest.TestCase):
+    def build_report(self, sizes, locales):
+        with mock.patch.object(lb, "_nm_sizes", return_value=sizes):
+            return lb.build_report(
+                base_map_report(), "fixture.elf", source_budget(locales)
+            )
+
+    def test_four_locale_arrays_and_descriptor_metadata_counted_once(self):
+        sizes = {
+            **INDEX_SYMBOLS,
+            **DESCRIPTOR_SYMBOLS,
+            "gExpansionCatalog_en": 128,
+            "gExpansionCatalog_ja": 128,
+            "gExpansionCatalog_zh_Hans": 128,
+            "gExpansionCatalog_qps_ploc": 128,
+        }
+        report = self.build_report(
+            sizes, ("en", "ja", "zh-Hans", "qps-ploc", "ja")
+        )
+
+        self.assertEqual(report["rom_catalog_index"]["total_bytes"], 68)
+        self.assertEqual(report["rom_catalog_descriptors"]["total_bytes"], 97)
+        self.assertEqual(
+            report["rom_catalog_strings"]["symbols"],
+            {
+                "gExpansionCatalog_en": 128,
+                "gExpansionCatalog_ja": 128,
+                "gExpansionCatalog_zh_Hans": 128,
+                "gExpansionCatalog_qps_ploc": 128,
+            },
+        )
+        self.assertEqual(report["rom_catalog_strings"]["total_bytes"], 512)
+        self.assertEqual(report["rom_catalog_strings"]["missing"], [])
+        self.assertEqual(report["rom_catalog_strings"]["unexpected"], [])
+        self.assertEqual(lb._catalog_symbol_errors(report), [])
+
+    def test_missing_required_generic_symbols_are_actionable(self):
+        sizes = {
+            **INDEX_SYMBOLS,
+            "gExpansionCatalog_en": 128,
+            "gExpansionCatalog_ja": 128,
+            "gExpansionCatalog_zh_Hans": 128,
+            "gExpansionCatalog_qps_ploc": 128,
+        }
+        report = self.build_report(
+            sizes, ("en", "ja", "zh-Hans", "qps-ploc")
+        )
+
+        self.assertEqual(
+            report["rom_catalog_descriptors"]["missing"],
+            [
+                "gExpansionLocaleCatalogs",
+                "gExpansionLocalePopulatedCount",
+            ],
+        )
+        self.assertEqual(
+            lb._catalog_symbol_errors(report),
+            [
+                "rom_catalog_descriptors missing required symbols: "
+                "gExpansionLocaleCatalogs, gExpansionLocalePopulatedCount"
+            ],
+        )
+
+    def test_old_two_locale_fixture_fails_on_missing_descriptor_metadata(self):
+        sizes = {
+            **INDEX_SYMBOLS,
+            "gExpansionCatalog_en": 112,
+            "gExpansionCatalog_qps_ploc": 112,
+        }
+        report = self.build_report(sizes, ("en", "qps-ploc"))
+
+        self.assertEqual(report["rom_catalog_strings"]["total_bytes"], 224)
+        self.assertEqual(report["rom_catalog_strings"]["missing"], [])
+        errors = lb._catalog_symbol_errors(report)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("gExpansionLocaleCatalogs", errors[0])
+        self.assertIn("gExpansionLocalePopulatedCount", errors[0])
+
+    def test_catalog_prefix_is_limited_by_generated_locale_allowlist(self):
+        sizes = {
+            **INDEX_SYMBOLS,
+            **DESCRIPTOR_SYMBOLS,
+            "gExpansionCatalog_en": 128,
+            "gExpansionCatalog_debug": 4096,
+        }
+        report = self.build_report(sizes, ("en",))
+
+        self.assertEqual(report["rom_catalog_strings"]["total_bytes"], 128)
+        self.assertEqual(
+            report["rom_catalog_strings"]["unexpected"],
+            ["gExpansionCatalog_debug"],
+        )
+        self.assertIn(
+            "outside the generated-locale allowlist",
+            lb._catalog_symbol_errors(report)[0],
+        )
+
+    def test_explicit_missing_source_budget_fails_before_report_generation(self):
+        stderr = io.StringIO()
+        with mock.patch("sys.stderr", stderr):
+            with self.assertRaises(SystemExit) as raised:
+                lb.main(
+                    [
+                        "--map",
+                        "unused.map",
+                        "--elf",
+                        "unused.elf",
+                        "--localization-budget",
+                        "missing-budget.json",
+                        "--output",
+                        "unused-output.json",
+                    ]
+                )
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn(
+            "--localization-budget does not exist: missing-budget.json",
+            stderr.getvalue(),
+        )
 
 
 if __name__ == "__main__":

@@ -18,12 +18,22 @@
     },
     "total_bytes": 20
   },
+  "locale_bank": {
+    "capacity_bytes": 0,
+    "end_address": 150994944,
+    "headroom_bytes": 0,
+    "limit_address": 150994944,
+    "occupied_bytes": 0,
+    "overflow": false,
+    "section_present": true,
+    "start_address": 150994944
+  },
   "map_overflow": false,
   "regions_headroom": {
     "ewram": {
       "capacity_bytes": 262144,
-      "free_bytes": 1820,
-      "occupied_bytes": 260324,
+      "free_bytes": 1844,
+      "occupied_bytes": 260300,
       "overflow": false
     },
     "iwram": {
@@ -39,35 +49,50 @@
       "overflow": false
     }
   },
+  "rom_catalog_descriptors": {
+    "missing": [],
+    "symbols": {
+      "gExpansionLocaleCatalogs": 96,
+      "gExpansionLocalePopulatedCount": 1
+    },
+    "total_bytes": 97
+  },
   "rom_catalog_index": {
     "missing": [],
     "symbols": {
       "gExpansionLocaleMsgCount": 2,
-      "gExpansionLocaleMsgIds": 56,
+      "gExpansionLocaleMsgIds": 64,
       "gExpansionLocaleTombstoneCount": 2
     },
-    "total_bytes": 60
+    "total_bytes": 68
   },
   "rom_catalog_strings": {
     "missing": [],
     "symbols": {
-      "gExpansionCatalog_en": 112,
-      "gExpansionCatalog_qps_ploc": 112
+      "gExpansionCatalog_en": 128,
+      "gExpansionCatalog_ja": 128,
+      "gExpansionCatalog_qps_ploc": 128,
+      "gExpansionCatalog_zh_Hans": 128
     },
-    "total_bytes": 224
+    "total_bytes": 512,
+    "unexpected": []
   },
   "schema_version": 1,
   "source_catalog_budget": {
-    "active_message_count": 28,
-    "catalog_index_bytes": 280,
+    "active_message_count": 32,
+    "catalog_index_bytes": 672,
     "catalog_string_bytes": {
-      "en": 342,
-      "qps-ploc": 556,
-      "total": 898
+      "en": 376,
+      "ja": 435,
+      "qps-ploc": 618,
+      "total": 1797,
+      "zh-Hans": 368
     },
-    "glyphs_used_count": 57,
+    "glyphs_used_count": 198,
     "locales_generated": [
       "en",
+      "ja",
+      "zh-Hans",
       "qps-ploc"
     ],
     "scratch_budget_bytes": 96,
