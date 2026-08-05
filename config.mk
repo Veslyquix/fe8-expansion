@@ -74,13 +74,11 @@ EXPANSION_SAVE_COMPAT_EPOCH ?= 2
 # --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
 #   scripts/localization/schema.py's LOCALE_IDS) enabled for this build; must
-#   include "en" and must not repeat an id. The production allowlist is "en"
-#   plus "qps-ploc" (an ASCII pseudo-locale test harness, never a real
-#   translation -- see scripts/localization/pseudo.py). Stable ids "ja" and
-#   "zh-Hans" remain reserved and fail validation until their catalogs, menu
-#   strings, fonts/codecs, renderer, and runtime integration are populated.
-#   MODERN_ROM_SIZE=32M prepares a dedicated upper-ROM locale bank but does
-#   not make either CJK id selectable.
+#   include "en" and must not repeat an id. The production allowlist is
+#   "en", "ja", "zh-Hans", plus "qps-ploc" (an ASCII pseudo-locale test
+#   harness, never a real translation -- see scripts/localization/pseudo.py).
+#   Enabling "ja" or "zh-Hans" requires MODERN_ROM_SIZE=32M so their full-game
+#   catalogs and CJK fonts live in the dedicated upper-ROM locale bank.
 #   Normalized into the fixed stable-id order regardless of the order given
 #   here (see scripts/modernize/expansion_config.py's validate_enabled_locales).
 EXPANSION_ENABLED_LOCALES ?= en

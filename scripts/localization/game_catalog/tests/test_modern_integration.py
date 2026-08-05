@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 import subprocess
 import unittest
@@ -20,7 +21,13 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
         if BUILD_ROOT.exists():
             shutil.rmtree(BUILD_ROOT)
 
-    def _metadata_for(self, name, cjk_mask=None):
+    def _metadata_for(
+        self,
+        name,
+        enabled_locales="en",
+        default_locale="en",
+        pseudo_locale="0",
+    ):
         build_root = BUILD_ROOT / name
         command = [
             "make",
@@ -28,9 +35,10 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
             "expansion-modern-game-localization-config-check",
             "MODERN_ROM_SIZE=32M",
             f"MODERN_BUILD_ROOT={build_root}",
+            f"EXPANSION_ENABLED_LOCALES={enabled_locales}",
+            f"EXPANSION_DEFAULT_LOCALE={default_locale}",
+            f"EXPANSION_PSEUDO_LOCALE={pseudo_locale}",
         ]
-        if cjk_mask is not None:
-            command.append(f"MODERN_GAME_LOCALIZATION_CJK_MASK={cjk_mask}")
         result = subprocess.run(
             command,
             cwd=ROOT,
@@ -50,7 +58,7 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
         self.assertTrue(metadata_path.is_file(), result.stdout)
         return json.loads(metadata_path.read_text(encoding="utf-8")), result.stdout
 
-    def _generated_catalog_for(self, name, cjk_mask):
+    def _generated_catalog_for(self, name, enabled_locales):
         build_root = BUILD_ROOT / name
         generated_dir = build_root / "game-localization" / "generated"
         source_path = generated_dir / "game_localization_catalog.c"
@@ -61,7 +69,7 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
                 str(source_path),
                 "MODERN_ROM_SIZE=32M",
                 f"MODERN_BUILD_ROOT={build_root}",
-                f"MODERN_GAME_LOCALIZATION_CJK_MASK={cjk_mask}",
+                f"EXPANSION_ENABLED_LOCALES={enabled_locales}",
             ],
             cwd=ROOT,
             text=True,
@@ -77,24 +85,42 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
             ),
         }
 
-    def test_synthetic_cjk_metadata_and_fingerprint_match_effective_profiles(self):
+    def test_real_cjk_metadata_and_fingerprint_match_effective_profiles(self):
         english, english_output = self._metadata_for("english")
-        ja, ja_output = self._metadata_for("ja", "0x02")
-        zh, zh_output = self._metadata_for("zh", "0x04")
-        both, both_output = self._metadata_for("both", "0x06")
+        ja, ja_output = self._metadata_for("ja", "en,ja", default_locale="ja")
+        zh, zh_output = self._metadata_for(
+            "zh", "en,zh-Hans", default_locale="zh-Hans"
+        )
+        both, both_output = self._metadata_for("both", "zh-Hans,en,ja")
+        with_qps, qps_output = self._metadata_for(
+            "both-qps",
+            "qps-ploc,zh-Hans,en,ja",
+            pseudo_locale="1",
+        )
 
         self.assertEqual(english["enabled_locales"], ["en"])
         self.assertEqual(english["enabled_locale_mask"], 1)
         self.assertEqual(ja["enabled_locales"], ["en", "ja"])
         self.assertEqual(ja["enabled_locale_mask"], 3)
+        self.assertEqual(ja["default_locale"], "ja")
+        self.assertEqual(ja["default_locale_id"], 1)
         self.assertEqual(zh["enabled_locales"], ["en", "zh-Hans"])
         self.assertEqual(zh["enabled_locale_mask"], 5)
+        self.assertEqual(zh["default_locale"], "zh-Hans")
+        self.assertEqual(zh["default_locale_id"], 2)
         self.assertEqual(both["enabled_locales"], ["en", "ja", "zh-Hans"])
         self.assertEqual(both["enabled_locale_mask"], 7)
+        self.assertEqual(
+            with_qps["enabled_locales"],
+            ["en", "ja", "zh-Hans", "qps-ploc"],
+        )
+        self.assertEqual(with_qps["enabled_locale_mask"], 0x87)
+        self.assertEqual(with_qps["pseudo_locale_enabled"], 1)
 
         self.assertNotEqual(english["config_fingerprint"], ja["config_fingerprint"])
         self.assertNotEqual(english["config_fingerprint"], zh["config_fingerprint"])
         self.assertNotEqual(english["config_fingerprint"], both["config_fingerprint"])
+        self.assertNotEqual(both["config_fingerprint"], with_qps["config_fingerprint"])
         self.assertIn(
             f"fingerprint={english['config_fingerprint']} mask=1 locales=en",
             english_output,
@@ -111,11 +137,18 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
             f"fingerprint={both['config_fingerprint']} mask=7 locales=en,ja,zh-Hans",
             both_output,
         )
+        self.assertIn(
+            f"fingerprint={with_qps['config_fingerprint']} mask=135 "
+            "locales=en,ja,zh-Hans,qps-ploc",
+            qps_output,
+        )
 
     def test_modern_generation_passes_the_selected_catalog_profile(self):
-        ja = self._generated_catalog_for("catalog-ja", "0x02")
-        zh = self._generated_catalog_for("catalog-zh", "0x04")
-        both = self._generated_catalog_for("catalog-both", "0x06")
+        ja = self._generated_catalog_for("catalog-ja", "en,ja")
+        zh = self._generated_catalog_for("catalog-zh", "en,zh-Hans")
+        both = self._generated_catalog_for(
+            "catalog-both", "qps-ploc,zh-Hans,en,ja"
+        )
 
         self.assertIn("gGameLocalizationEnglishCompressedBlob[]", ja["source"])
         self.assertIn("gGameLocalizationJaCompressedBlob[]", ja["source"])
@@ -133,6 +166,49 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
         self.assertEqual(
             both["source"].count("gGameLocalizationEnglishCompressedBlob[]"), 1
         )
+
+    def test_synthetic_identity_override_is_retired(self):
+        self.assertFalse(
+            (ROOT / "scripts/localization/game_catalog/synthetic_identity.py").exists()
+        )
+        modern_mk = (ROOT / "modern.mk").read_text(encoding="utf-8")
+        self.assertNotIn("MODERN_GAME_LOCALIZATION_CJK_MASK", modern_mk)
+        self.assertNotIn("synthetic_identity", modern_mk)
+
+    def test_named_production_profiles_use_32m_and_real_locale_config(self):
+        modern_mk = (ROOT / "modern.mk").read_text(encoding="utf-8")
+        expected = {
+            "expansion-modern-localization-profile-en-ja": (
+                "EXPANSION_ENABLED_LOCALES=en,ja",
+                "EXPANSION_PSEUDO_LOCALE=1",
+            ),
+            "expansion-modern-localization-profile-en-zh-hans": (
+                "EXPANSION_ENABLED_LOCALES=en,zh-Hans",
+                "EXPANSION_PSEUDO_LOCALE=1",
+            ),
+            "expansion-modern-localization-profile-en-ja-zh-hans": (
+                "EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans",
+                "EXPANSION_PSEUDO_LOCALE=1",
+            ),
+            "expansion-modern-localization-profile-en-ja-zh-hans-qps": (
+                "EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans,qps-ploc",
+                "EXPANSION_PSEUDO_LOCALE=1",
+            ),
+        }
+        for target, (locale_arg, qps_arg) in expected.items():
+            with self.subTest(target=target):
+                match = re.search(
+                    rf"(?m)^{target}:\n(?P<body>(?:\t[^\n]*\n)+)",
+                    modern_mk,
+                )
+                self.assertIsNotNone(match)
+                body = match.group("body")
+                self.assertIn("MODERN_ROM_SIZE=32M", body)
+                self.assertIn(locale_arg, body)
+                if target.endswith("-qps"):
+                    self.assertIn(qps_arg, body)
+                else:
+                    self.assertNotIn(qps_arg, body)
 
 
 if __name__ == "__main__":

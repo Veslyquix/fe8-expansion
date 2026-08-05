@@ -1,6 +1,6 @@
 {
   "issue": 18,
   "category": "added",
-  "summary": "Add the expansion locale catalog/config/runtime resolver, EXPANSION_ENABLED_LOCALES/EXPANSION_DEFAULT_LOCALE/EXPANSION_PSEUDO_LOCALE config.mk fields, localization.mk's host-test/generation/budget targets, and the blocking first-start language selector plus settings submenu (see docs/localization.md).",
+  "summary": "Add the expansion locale catalog/config/runtime resolver, production 32 MiB Japanese and Simplified Chinese profiles, UTF-8 language UI, persisted first-start/Config switching, localization host/build/runtime gates, and captured CJK playtest scenarios (see docs/localization.md).",
   "semver_impact": "minor"
 }

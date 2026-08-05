@@ -328,12 +328,9 @@ static ExpansionLocaleId ExpansionLanguageMenu_FindSoleEnabledLocale(void)
 
 /* Shared onDraw for every locale-name/Back row in both the first-start
  * selector and the settings submenu: resolves the row's own label via
- * ExpansionLocale_Resolve/ExpansionLocale_ResolveCurrent and draws it
- * with Text_DrawStringASCII -- never GetStringFromIndex/vanilla MSG_*,
- * and never Text_DrawString (which only ever decodes via the vanilla
- * Huffman/GetStringFromIndex pipeline for a non-zero nameMsgId, or
- * item->def->name otherwise -- neither of which is what this row's
- * helpMsgId-keyed catalog lookup needs). */
+ * ExpansionLocale_Resolve/ExpansionLocale_ResolveCurrent and draws the
+ * already-resolved UTF-8 bytes directly through Text_DrawString -- never
+ * GetStringFromIndex/vanilla MSG_* or an ASCII-only renderer. */
 static int ExpansionLanguageMenu_RowDraw(struct MenuProc *menu, struct MenuItemProc *item)
 {
     u16 rowKey = item->def->helpMsgId;
@@ -350,7 +347,7 @@ static int ExpansionLanguageMenu_RowDraw(struct MenuProc *menu, struct MenuItemP
     else
         label = ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, sLocaleNameMsgIds[(ExpansionLocaleId)rowKey]);
 
-    Text_DrawStringASCII(&item->text, label);
+    Text_DrawString(&item->text, label);
 
     PutText(
         &item->text,

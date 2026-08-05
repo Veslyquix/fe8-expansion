@@ -74,7 +74,12 @@ class ExpansionUserPrefsNativeMatrixTests(unittest.TestCase):
             ROOT / "include" / "expansion_save_prefs.h"
         ).read_text(encoding="utf-8")
 
-    def _build_probe_binary(self, tmp_path: Path) -> Path:
+    def _build_probe_binary(
+        self,
+        tmp_path: Path,
+        enabled_mask=ENABLED_MASK,
+        default_locale_id=DEFAULT_LOCALE_ID,
+    ) -> Path:
         struct_def = _extract_struct_with_trailing_attribute(
             self.expansion_save_prefs_h, "ExpansionUserPrefs"
         )
@@ -114,8 +119,8 @@ typedef u8 ExpansionLocaleId;
 #define EXPANSION_USER_PREFS_META_OFFSET 0
 
 #define EXPANSION_LOCALE_COUNT {LOCALE_COUNT}
-#define FE8_EXPANSION_ENABLED_LOCALE_MASK {ENABLED_MASK}u
-#define FE8_EXPANSION_DEFAULT_LOCALE_ID {DEFAULT_LOCALE_ID}
+#define FE8_EXPANSION_ENABLED_LOCALE_MASK {enabled_mask}u
+#define FE8_EXPANSION_DEFAULT_LOCALE_ID {default_locale_id}
 
 {struct_def};
 
@@ -273,6 +278,45 @@ int main(void)
                     self.assertEqual(c_state, py_state, f"{name}: state mismatch")
                     self.assertEqual(c_locale_id, py_locale_id, f"{name}: normalized locale id mismatch")
                     self.assertEqual(c_requires_prompt, py_requires_prompt, f"{name}: requires_prompt mismatch")
+
+    def test_cjk_records_and_defaults_normalize_without_vanilla_language_state(self):
+        enabled_mask = 0x7
+        default_locale_id = 2
+
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = self._build_probe_binary(
+                Path(tmp),
+                enabled_mask=enabled_mask,
+                default_locale_id=default_locale_id,
+            )
+
+            for locale_id in (1, 2):
+                with self.subTest(locale_id=locale_id):
+                    prefs = sft.build_default_user_prefs(
+                        locale_id,
+                        explicit_selection=True,
+                    )
+                    c_state, c_locale_id, c_requires_prompt = self._run_case(
+                        binary,
+                        prefs.pack(),
+                        False,
+                    )
+                    self.assertEqual(c_state, "EXPANSION_USER_PREFS_VALID")
+                    self.assertEqual(c_locale_id, locale_id)
+                    self.assertFalse(c_requires_prompt)
+
+            disabled = sft.build_default_user_prefs(7, explicit_selection=True)
+            c_state, c_locale_id, c_requires_prompt = self._run_case(
+                binary,
+                disabled.pack(),
+                False,
+            )
+            self.assertEqual(
+                c_state,
+                "EXPANSION_USER_PREFS_DISABLED_LOCALE",
+            )
+            self.assertEqual(c_locale_id, default_locale_id)
+            self.assertTrue(c_requires_prompt)
 
 
 if __name__ == "__main__":

@@ -156,9 +156,8 @@ bool8 ExpansionLocale_IsSupported(ExpansionLocaleId locale);
 
 /* A locale id is "enabled" if the configured EXPANSION_ENABLED_LOCALES
  * build setting (config.mk / scripts/modernize/expansion_config.py) marks
- * it enabled for this build. Product configuration currently allows EN
- * and optional QPS_PLOC only, independently of generated catalog
- * population. */
+ * it enabled for this build. Product configuration allows EN, JA,
+ * ZH_HANS, and optional QPS_PLOC; real CJK profiles require a 32 MiB ROM. */
 bool8 ExpansionLocale_IsEnabled(ExpansionLocaleId locale);
 
 ExpansionLocaleId ExpansionLocale_GetDefault(void);
@@ -184,10 +183,10 @@ const char *ExpansionLocale_Resolve(ExpansionLocaleId locale, ExpansionMsgId msg
 /* Convenience wrapper: ExpansionLocale_Resolve(ExpansionLocale_GetCurrent(), msgId). */
 const char *ExpansionLocale_ResolveCurrent(ExpansionMsgId msgId);
 
-/* Invalidates the resolver's single bounded scratch cache slot. Called
- * automatically by ExpansionLocale_SetCurrent on an actual locale change;
- * exposed directly for host tests and for any future caller that mutates
- * catalog state out from under a live cache entry. */
+/* Invalidates the resolver's single bounded scratch cache slot and, in a CJK
+ * profile, the full-game localized-message cache. Called automatically by
+ * ExpansionLocale_SetCurrent on an actual locale change; exposed directly
+ * for tests and callers that mutate catalog state under a live cache. */
 void ExpansionLocale_InvalidateCache(void);
 
 void ExpansionLocale_GetCatalogStats(struct ExpansionLocaleCatalogStats *out);

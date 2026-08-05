@@ -1,0 +1,53 @@
+{
+  "checkpoints": [
+    {
+      "frame": 5550,
+      "framebuffer_hash": "fnv1a64-rgb24:f7b76b59b85084d1",
+      "name": "cursor-on-three-language-row",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "value": "0x00"},
+        {"address": "0x02031a95", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9b", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9c", "size": 1, "value": "0x03"},
+        {"address": "0x02031aa2", "size": 2, "value": "0x0000"}
+      ]
+    },
+    {
+      "frame": 5800,
+      "framebuffer_hash": "fnv1a64-rgb24:695b25fd17d89159",
+      "name": "japanese-inline-selected",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "value": "0x00"},
+        {"address": "0x02031a95", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "value": "0x01"},
+        {"address": "0x02031a9b", "size": 1, "value": "0x01"},
+        {"address": "0x02031a9e", "size": 2, "value": "0x0001"},
+        {"address": "0x02031aa2", "size": 2, "value": "0x0000"},
+        {"address": "0x02031aa4", "size": 2, "value": "0x0001"}
+      ]
+    },
+    {
+      "frame": 6200,
+      "framebuffer_hash": "fnv1a64-rgb24:678b27f3ab7e77ee",
+      "name": "simplified-chinese-inline-selected",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "value": "0x00"},
+        {"address": "0x02031a95", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "value": "0x02"},
+        {"address": "0x02031a9b", "size": 1, "value": "0x02"},
+        {"address": "0x02031a9e", "size": 2, "value": "0x0002"},
+        {"address": "0x02031aa2", "size": 2, "value": "0x0000"},
+        {"address": "0x02031aa4", "size": 2, "value": "0x0002"},
+        {"address": "0x0e0073d6", "size": 1, "value": "0x02"}
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "04c3b20dd41f62f915002bdf58e11dc7bac6785b",
+    "size": 33554432,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-cjk-settings-inline-modern-debug"
+}

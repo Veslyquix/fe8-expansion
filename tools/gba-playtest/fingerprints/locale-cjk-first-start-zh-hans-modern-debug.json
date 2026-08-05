@@ -1,0 +1,42 @@
+{
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer_hash": "fnv1a64-rgb24:65f958f504e04a76",
+      "name": "three-language-selector-shown",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "value": "0x01"},
+        {"address": "0x02031a96", "size": 1, "value": "0x01"},
+        {"address": "0x02031a97", "size": 1, "value": "0x00"},
+        {"address": "0x02031a98", "size": 1, "value": "0x01"},
+        {"address": "0x02031a99", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9b", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9c", "size": 1, "value": "0x03"},
+        {"address": "0x02031a9e", "size": 2, "value": "0x0000"},
+        {"address": "0x02031aa0", "size": 2, "value": "0x0001"},
+        {"address": "0x02031aa6", "size": 1, "value": "0x01"}
+      ]
+    },
+    {
+      "frame": 840,
+      "framebuffer_hash": "fnv1a64-rgb24:c412d0bed07d9a13",
+      "name": "simplified-chinese-committed",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "value": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "value": "0x02"},
+        {"address": "0x02031a9b", "size": 1, "value": "0x02"},
+        {"address": "0x02031a9c", "size": 1, "value": "0x03"},
+        {"address": "0x02031a9e", "size": 2, "value": "0x0001"},
+        {"address": "0x02031aa6", "size": 1, "value": "0x00"}
+      ]
+    }
+  ],
+  "format_version": 2,
+  "rom": {
+    "game_code": "BE8E",
+    "sha1": "04c3b20dd41f62f915002bdf58e11dc7bac6785b",
+    "size": 33554432,
+    "title": "FIREEMBLEM2E"
+  },
+  "scenario": "locale-cjk-first-start-zh-hans-modern-debug"
+}

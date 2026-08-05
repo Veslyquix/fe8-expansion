@@ -1,6 +1,7 @@
 #include "global.h"
 #include <string.h>
 #include "expansion_locale.h"
+#include "localized_game_text.h"
 
 /*
  * Runtime message resolver (issue #18). Reads only the
@@ -154,6 +155,10 @@ void ExpansionLocale_InvalidateCache(void)
     sCacheValid = FALSE;
     sCacheLocale = EXPANSION_LOCALE_INVALID;
     sCacheMsgId = EXPANSION_MSG_ID_INVALID;
+
+#if (FE8_EXPANSION_ENABLED_LOCALE_MASK & 0x06u) != 0
+    LocalizedGameText_InvalidateCache();
+#endif
 }
 
 const char *ExpansionLocale_Resolve(ExpansionLocaleId locale, ExpansionMsgId msgId)

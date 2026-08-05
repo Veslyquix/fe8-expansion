@@ -538,6 +538,66 @@ class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
         self.assertIn("Config_RedrawAfterLanguageMenu", self.uiconfig_text)
 
 
+class FrameworkUtf8DrawingTests(unittest.TestCase):
+    """Every framework string resolved from the expansion catalog must use
+    the UTF-8-aware renderer; clipping must advance whole rendered
+    characters instead of splitting a multibyte scalar."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sources = {
+            "language": LANGUAGE_MENU_SRC.read_text(encoding="utf-8"),
+            "uiconfig": UICONFIG_SRC.read_text(encoding="utf-8"),
+            "save_compat": SAVE_COMPAT_MENU_SRC.read_text(encoding="utf-8"),
+            "debugtools": DEBUGTOOLS_REGISTRY_SRC.read_text(encoding="utf-8"),
+        }
+
+    def test_framework_locale_surfaces_do_not_use_ascii_only_draws(self):
+        for name, text in self.sources.items():
+            with self.subTest(source=name):
+                self.assertNotIn("Text_DrawStringASCII", text)
+
+    def test_framework_locale_surfaces_use_utf8_draws(self):
+        for name, text in self.sources.items():
+            with self.subTest(source=name):
+                if "ExpansionLocale_Resolve" in text:
+                    self.assertIn("Text_DrawString", text)
+
+    def test_config_value_clipping_advances_complete_characters(self):
+        text = self.sources["uiconfig"]
+        match = re.search(
+            r"static void DrawLanguageOptionLabel\(.*?\)\s*\{(.*?)\n\}",
+            text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+        self.assertIn("GetCharTextLen(cursor, &charWidth)", body)
+        self.assertIn("byteCount = (int)(next - cursor);", body)
+        self.assertIn("Text_DrawString(text, clipped);", body)
+        self.assertNotIn("GetStringTextLenASCII", body)
+
+
+class ExpansionLocaleVanillaIsolationTests(unittest.TestCase):
+    """Production locale selection stays independent of vanilla language
+    mode and XMAP save semantics across the owned runtime/UI files."""
+
+    def test_owned_runtime_files_have_no_vanilla_language_or_xmap_calls(self):
+        for path in (
+            REPO_ROOT / "src" / "expansion_locale.c",
+            REPO_ROOT / "src" / "expansion_save_prefs.c",
+            LANGUAGE_MENU_SRC,
+            UICONFIG_SRC,
+        ):
+            text = _strip_c_comments(path.read_text(encoding="utf-8"))
+            with self.subTest(path=path.name):
+                for token in ("GetLang", "SetLang", "gLanguageMode", "XMAP"):
+                    self.assertIsNone(
+                        re.search(rf"\b{re.escape(token)}\b", text),
+                        f"{path.name} references forbidden vanilla symbol {token}",
+                    )
+
+
 class SaveCompatMenuLegacyPathUnchangedTests(unittest.TestCase):
     """The legacy (#else) branch of gSaveCompatMenuItems must keep the
     exact original vanilla MSG_SAVE_COMPAT_BACK/MSG_SAVE_COMPAT_ERASE_ALL

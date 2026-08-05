@@ -17,7 +17,13 @@ typedef u8 bool8;
 #include "expansion_locale.h"
 
 static int failures = 0;
+static int gameCacheInvalidations = 0;
 #define CHECK(cond) do { if (!(cond)) { printf("FAIL: %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } } while (0)
+
+void LocalizedGameText_InvalidateCache(void)
+{
+    gameCacheInvalidations++;
+}
 
 int main(void)
 {
@@ -37,6 +43,7 @@ int main(void)
 
     CHECK(ExpansionLocale_GetDefault() == EXPANSION_LOCALE_EN);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_EN);
+    CHECK(gameCacheInvalidations == 0);
 
     /* Resolve id 0 in English -- must be a real, non-missing string.
      * Copy out of the shared scratch buffer immediately: per the documented
@@ -98,6 +105,9 @@ int main(void)
      * re-resolving the same id must return the new locale's string. */
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_JA) == TRUE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_JA);
+    CHECK(gameCacheInvalidations == 1);
+    CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_JA) == TRUE);
+    CHECK(gameCacheInvalidations == 1);
     s = ExpansionLocale_ResolveCurrent(1);
     CHECK(strcmp(s, "バージョン:") == 0);
 
@@ -105,17 +115,21 @@ int main(void)
      * cache entry. SetCurrent invalidates the cache before this lookup. */
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_ZH_HANS) == TRUE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_ZH_HANS);
+    CHECK(gameCacheInvalidations == 2);
     s = ExpansionLocale_ResolveCurrent(1);
     CHECK(strcmp(s, "版本:") == 0);
 
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_FR) == FALSE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_ZH_HANS);
+    CHECK(gameCacheInvalidations == 2);
 
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_QPS_PLOC) == TRUE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_QPS_PLOC);
+    CHECK(gameCacheInvalidations == 3);
 
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_EN) == TRUE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_EN);
+    CHECK(gameCacheInvalidations == 4);
 
     /* Cache correctness: resolve same (locale,id) twice, must be stable
      * pointer contents (same bytes) both times. */
@@ -126,6 +140,7 @@ int main(void)
     }
 
     ExpansionLocale_InvalidateCache();
+    CHECK(gameCacheInvalidations == 5);
 
     ExpansionLocale_GetCatalogStats(&stats);
     CHECK(stats.activeMessageCount == 34);

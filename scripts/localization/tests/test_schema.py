@@ -32,7 +32,14 @@ class LocaleIdStabilityTests(unittest.TestCase):
         self.assertEqual(set(schema.INITIALLY_SUPPORTED_LOCALES), {"en", "qps-ploc"})
 
     def test_configurable_locales_match_the_production_allowlist(self):
-        self.assertEqual(schema.CONFIGURABLE_LOCALES, schema.INITIALLY_SUPPORTED_LOCALES)
+        self.assertEqual(
+            schema.CONFIGURABLE_LOCALES,
+            ("en", "ja", "zh-Hans", "qps-ploc"),
+        )
+        self.assertEqual(
+            schema.CONFIGURABLE_LOCALES,
+            schema.POPULATED_CATALOG_LOCALES,
+        )
 
     def test_authored_catalog_locales_include_real_cjk(self):
         self.assertEqual(schema.AUTHORED_CATALOG_LOCALES, ("en", "ja", "zh-Hans"))

@@ -217,13 +217,13 @@ def validate_enabled_locales(value) -> Tuple[str, ...]:
 
     Fails early (ConfigError) on: an empty list, any locale id outside the
     stable locale_schema.LOCALE_IDS set, a repeated locale id, a missing
-    'en', a reserved/unpopulated CJK id, or any other locale not yet
-    configurable. The production allowlist is currently 'en' and 'qps-ploc';
-    ja/zh-Hans retain stable IDs and future 32 MiB layout infrastructure but
-    are not selectable. On success, returns the enabled set normalized into
-    the fixed stable-id order (locale_schema.LOCALE_IDS' order), independent
-    of the input order, so two configs naming the same set in a different
-    order are identical from here on (fingerprint included).
+    'en', or any locale not yet configurable. Japanese and Simplified Chinese
+    are production-configurable; validate_locale_rom_size separately requires
+    their builds to use the 32 MiB profile. On success, returns the enabled
+    set normalized into the fixed stable-id order (locale_schema.LOCALE_IDS'
+    order), independent of the input order, so two configs naming the same
+    set in a different order are identical from here on (fingerprint
+    included).
     """
     items = _normalize_locale_list(value)
     if not items:
@@ -245,17 +245,6 @@ def validate_enabled_locales(value) -> Tuple[str, ...]:
     if duplicates:
         raise ConfigError(
             f"EXPANSION_ENABLED_LOCALES contains duplicate locale id(s) {duplicates!r}"
-        )
-
-    unpopulated_cjk = sorted(
-        item for item in seen if item in locale_schema.REAL_CJK_LOCALES
-    )
-    if unpopulated_cjk:
-        raise ConfigError(
-            f"EXPANSION_ENABLED_LOCALES contains reserved locale id(s) not yet "
-            f"populated: {unpopulated_cjk!r}. The 32 MiB locale-bank layout is "
-            f"prepared, but catalogs, menu strings, fonts/codecs, renderer, and "
-            f"runtime integration must land before these locale ids can be enabled"
         )
 
     if "en" not in seen:

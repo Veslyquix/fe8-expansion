@@ -45,13 +45,12 @@ PSEUDO_LOCALE = "qps-ploc"
 AUTHORED_CATALOG_LOCALES: Tuple[str, ...] = ("en", "ja", "zh-Hans")
 POPULATED_CATALOG_LOCALES: Tuple[str, ...] = AUTHORED_CATALOG_LOCALES + (PSEUDO_LOCALE,)
 
-# Product configuration remains intentionally narrower than catalog
-# population. Japanese and Simplified Chinese have expansion-framework
-# catalogs, but stay gated until the common CJK font/renderer and full game
-# locale runtime are ready.
+# Product configuration includes the populated expansion catalogs plus the
+# derived pseudo locale. ROM-size validation remains separate: production
+# builds enabling either real CJK locale require the 32 MiB profile.
 INITIALLY_SUPPORTED_LOCALES: Tuple[str, ...] = ("en", PSEUDO_LOCALE)
 REAL_CJK_LOCALES: Tuple[str, ...] = ("ja", "zh-Hans")
-CONFIGURABLE_LOCALES: Tuple[str, ...] = INITIALLY_SUPPORTED_LOCALES
+CONFIGURABLE_LOCALES: Tuple[str, ...] = POPULATED_CATALOG_LOCALES
 
 DEFAULT_LOCALE = "en"
 

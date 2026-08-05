@@ -62,22 +62,21 @@ English-only modern and archival builds do not generate or link this catalog.
 They retain the historical 4 KiB `MsgBuffer`, English `gMsgTable`, and ARM
 decoder path with zero modern English/CJK payload.
 
-Until production Japanese/Chinese configuration is enabled by a later sprint,
-an internal link test can exercise this slice:
+Production CJK assets are selected directly from the validated locale profile:
 
 ```bash
-make expansion-modern-rom \
-  MODERN_ROM_SIZE=32M \
-  MODERN_GAME_LOCALIZATION_CJK_MASK=0x06 \
-  MODERN_BUILD_ROOT=build/gamecat-modern
+make expansion-modern-localization-profile-en-ja
+make expansion-modern-localization-profile-en-zh-hans
+make expansion-modern-localization-profile-en-ja-zh-hans
 ```
 
-The synthetic mask accepts `0x02` (Japanese), `0x04` (Simplified Chinese), or
-`0x06` (both). Each mask generates one shared English bundle and only its
-selected CJK bundle(s). The effective synthetic locale list is resolved
-through the normal expansion identity pipeline before metadata and fingerprint
-generation, while `config.mk` and production locale validation remain
-unchanged.
+Equivalent direct builds use `EXPANSION_ENABLED_LOCALES=en,ja`,
+`en,zh-Hans`, or `en,ja,zh-Hans` with `MODERN_ROM_SIZE=32M`. The same
+effective profile drives identity metadata/fingerprint/mask, the selected CJK
+catalog bundle(s), and localized font compilation. There is no synthetic
+identity or separate CJK mask. Every CJK profile emits one shared English
+bundle and only its selected CJK bundle(s); adding `qps-ploc` changes the
+framework profile but does not duplicate full-game English data.
 
 CJK profiles use one explicit message-storage overlay. The historical helper
 scratch fields keep their offsets inside the overlay; total capacity is at

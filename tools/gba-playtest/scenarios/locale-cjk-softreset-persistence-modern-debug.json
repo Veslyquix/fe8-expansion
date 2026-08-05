@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "name": "locale-cjk-softreset-persistence-modern-debug",
+  "description": "Production-profile persistence evidence for the 32 MiB en,ja,zh-Hans debug ROM. The first-start selector chooses Simplified Chinese, a real A+B+SELECT+START soft reset clears EWRAM while SRAM retains locale id 2, and the second boot restores zh-Hans without showing the selector again.",
+  "frames": [
+    {"start": 90, "end": 95, "keys": ["A"]},
+    {"start": 155, "end": 160, "keys": ["START"]},
+    {"start": 220, "end": 225, "keys": ["A"]},
+    {"start": 285, "end": 290, "keys": ["START"]},
+    {"start": 650, "end": 656, "keys": ["DOWN"]},
+    {"start": 680, "end": 686, "keys": ["DOWN"]},
+    {"start": 730, "end": 736, "keys": ["A"]},
+    {"start": 950, "end": 974, "keys": ["A", "B", "SELECT", "START"]},
+    {"start": 1140, "end": 1145, "keys": ["A"]},
+    {"start": 1205, "end": 1210, "keys": ["START"]},
+    {"start": 1270, "end": 1275, "keys": ["A"]},
+    {"start": 1335, "end": 1340, "keys": ["START"]}
+  ],
+  "checkpoints": [
+    {
+      "frame": 840,
+      "framebuffer": false,
+      "name": "pre-reset-zh-hans-committed",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "expected": "0x02"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x02"},
+        {"address": "0x02031a9e", "size": 2, "expected": "0x0001"}
+      ]
+    },
+    {
+      "frame": 1000,
+      "framebuffer": false,
+      "name": "post-reset-ewram-fresh-sram-retained",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x00"},
+        {"address": "0x02031aa0", "size": 2, "expected": "0x0000"},
+        {"address": "0x0e0073d6", "size": 1, "expected": "0x02"}
+      ]
+    },
+    {
+      "frame": 1690,
+      "framebuffer": true,
+      "name": "post-reset-selector-skipped-zh-hans-restored",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a96", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a97", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x02"},
+        {"address": "0x02031a9c", "size": 1, "expected": "0x03"},
+        {"address": "0x02031aa0", "size": 2, "expected": "0x0001"}
+      ]
+    }
+  ]
+}
