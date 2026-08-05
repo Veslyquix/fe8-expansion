@@ -70,7 +70,34 @@ localized or English fallback lookup. Bounded English fallback uses a
 cache-independent C decoder with explicit input, output, node, and caller
 capacity checks; it never stages through the active `MsgBuffer` overlay, so an
 InBuffer lookup cannot invalidate or overwrite a pointer returned by an
-earlier `GetStringFromIndex` call.
+earlier `GetStringFromIndex` call. When and only when a Japanese or Simplified
+Chinese request falls back to that legacy English stream, the decoder also
+normalizes printable FE8U glyph encodings before the strict UTF-8 renderer sees
+them:
+
+- `0x7F` (`[DashedLine]`) becomes ASCII `-`;
+- `0x81 0x40` (`[TAB]`, the legacy full-width space) becomes UTF-8 U+3000,
+  which both committed CJK renderers provide as an explicit spacing glyph;
+- `0x93` / `0x94` (`[LQuote]` / `[RQuote]`) become ASCII `"`;
+- `0xE9` (`[AccentedE]`) becomes ASCII `e`.
+
+The ASCII quote and `e` substitutions are intentional: U+201C/U+201D are not
+covered by the committed Japanese fonts, and U+00E9 is not covered by either
+CJK font set. Engine controls remain byte-exact. In particular, `0x10` copies
+both following face-ID bytes without interpreting them as text, and `0x80`
+copies its following extended-control payload byte. Truncated controls,
+unknown legacy high bytes, malformed spacing pairs, and capacity exhaustion
+return a visible localization marker.
+
+The committed audit covers all 1,828 explicit English-fallback IDs. Its current
+fallback subset contains 28 dashed-line bytes and eight pairs of legacy quote
+bytes across seven IDs, including `MSG_809`. The complete FE8U English corpus
+also contains the single `0xE9` in `MSG_D0E`; the normalizer covers it because
+an unavailable CJK catalog can make any English ID reachable as fallback. No
+`0x81 0x40` pair currently occurs in the corpus, but the defined legacy token
+is regression-tested so future fallback text cannot reintroduce invalid input.
+English and qps-ploc requests bypass normalization and retain their original
+bytes.
 
 `StringInsertSpecialPrefixByCtrl`, `StrInsertTact`, and other renderer-side
 walkers remain byte-oriented. They must not process long UTF-8 overlay content

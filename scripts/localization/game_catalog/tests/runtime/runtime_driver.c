@@ -140,6 +140,66 @@ static void TestAbsentFallback(void)
     CHECK(sArmDecompCalls == 0);
 }
 
+static void TestLegacyGlyphFallbackNormalization(void)
+{
+    static const u8 expectedQuote[] = {
+        'R', 'e', 'n', 'n', 'a', 'c', ',', ' ', 'R', 'i', 'c', 'h', ' ',
+        '"', 'M', 'e', 'r', 'c', 'h', 'a', 'n', 't', '"', 0
+    };
+    static const u8 expectedLegacy[] = {
+        'A', '-', 'B', 'e', 'C', 0xE3, 0x80, 0x80, 'D', 0
+    };
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    result = GetStringFromIndex(6);
+    CHECK(memcmp(result, expectedQuote, sizeof(expectedQuote)) == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT);
+
+    result = GetStringFromIndexInBufferWithLimit(
+        7, gBufPrep, (u32)sizeof(gBufPrep));
+    CHECK(memcmp(result, expectedLegacy, sizeof(expectedLegacy)) == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT);
+    CHECK(sArmDecompCalls == 0);
+}
+
+static void TestFallbackControlsAndFaceIdsRemainExact(void)
+{
+    static const u8 expected[] = {0x10, 0x93, 0x94, 0x80, 0xE9, 'X', 0};
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    result = GetStringFromIndexInBufferWithLimit(
+        8, gBufPrep, (u32)sizeof(gBufPrep));
+    CHECK(memcmp(result, expected, sizeof(expected)) == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT);
+    CHECK(sArmDecompCalls == 0);
+}
+
+static void TestMalformedFallbackStreamsFailVisibly(void)
+{
+    const char *result;
+    int index;
+
+    for (index = 9; index <= 12; index++)
+    {
+        ResetHarness(EXPANSION_LOCALE_JA);
+        result = GetStringFromIndexInBufferWithLimit(
+            index, gBufPrep, (u32)sizeof(gBufPrep));
+        CHECK(strcmp(result, LOCALIZED_GAME_TEXT_MARKER_CORRUPT) == 0);
+        CHECK(
+            LocalizedGameText_GetLastStatus()
+            == LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT);
+        CHECK(sArmDecompCalls == 0);
+    }
+}
+
 static void TestAbsentFallbackHonorsBufferCapacity(void)
 {
     u8 storage[18];
@@ -163,6 +223,24 @@ static void TestAbsentFallbackHonorsBufferCapacity(void)
     CHECK(sArmDecompCalls == 0);
 }
 
+static void TestNormalizedFallbackOverflowIsVisible(void)
+{
+    u8 storage[12];
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    memset(storage, 0xA5, sizeof(storage));
+    result = GetStringFromIndexInBufferWithLimit(7, (char *)(storage + 1), 9);
+    CHECK(strcmp(result, "<!LOC_OV") == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW);
+    CHECK(storage[0] == 0xA5);
+    CHECK(storage[10] == 0xA5);
+    CHECK(storage[11] == 0xA5);
+    CHECK(sArmDecompCalls == 0);
+}
+
 static void TestInBufferPreservesActivePointer(void)
 {
     char local[32];
@@ -181,13 +259,39 @@ static void TestInBufferPreservesActivePointer(void)
     CHECK(sArmDecompCalls == 0);
 }
 
+static void TestNormalizedFallbackCacheSurvivesInBuffer(void)
+{
+    char local[32];
+    const char *active;
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    active = GetStringFromIndex(6);
+    CHECK(strcmp(active, "Rennac, Rich \"Merchant\"") == 0);
+
+    result = GetStringFromIndexInBufferWithLimit(7, local, sizeof(local));
+    CHECK(strcmp(result, "A-BeC\xE3\x80\x80" "D") == 0);
+    CHECK(GetStringFromIndex(6) == active);
+    CHECK(strcmp(active, "Rennac, Rich \"Merchant\"") == 0);
+    CHECK(sArmDecompCalls == 0);
+}
+
 static void TestQpsFallback(void)
 {
+    static const u8 legacyBytes[] = {
+        'A', 0x7F, 'B', 0xE9, 'C', 0x81, 0x40, 'D', 0
+    };
     const char *result;
 
     ResetHarness(EXPANSION_LOCALE_QPS_PLOC);
     result = GetStringFromIndex(0);
     CHECK(strcmp(result, "Cat") == 0);
+    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
+    CHECK(sArmDecompCalls == 0);
+
+    result = GetStringFromIndexInBufferWithLimit(
+        7, gBufPrep, (u32)sizeof(gBufPrep));
+    CHECK(memcmp(result, legacyBytes, sizeof(legacyBytes)) == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
     CHECK(sArmDecompCalls == 0);
 }
@@ -199,6 +303,13 @@ static void TestUnpopulatedFallback(void)
     ResetHarness(EXPANSION_LOCALE_ZH_HANS);
     result = GetStringFromIndex(0);
     CHECK(strcmp(result, "Cat") == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED);
+    CHECK(sArmDecompCalls == 0);
+
+    result = GetStringFromIndex(6);
+    CHECK(strcmp(result, "Rennac, Rich \"Merchant\"") == 0);
     CHECK(
         LocalizedGameText_GetLastStatus()
         == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED);
@@ -268,11 +379,20 @@ static void TestCacheLocaleSwitchAndExplicitInvalidation(void)
 
 static void TestDefaultEnglishBehavior(void)
 {
+    static const u8 legacyBytes[] = {
+        'A', 0x7F, 'B', 0xE9, 'C', 0x81, 0x40, 'D', 0
+    };
     const char *result;
 
     ResetHarness(EXPANSION_LOCALE_EN);
     result = GetStringFromIndex(4);
     CHECK(strcmp(result, "Plain English") == 0);
+    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
+    CHECK(sArmDecompCalls == 0);
+
+    result = GetStringFromIndexInBufferWithLimit(
+        7, gBufPrep, (u32)sizeof(gBufPrep));
+    CHECK(memcmp(result, legacyBytes, sizeof(legacyBytes)) == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
     CHECK(sArmDecompCalls == 0);
 }
@@ -283,7 +403,7 @@ static void TestInvalidIndicesDoNotReadEnglishTable(void)
     const char *result;
 
     ResetHarness(EXPANSION_LOCALE_EN);
-    result = GetStringFromIndex(6);
+    result = GetStringFromIndex(13);
     CHECK(strcmp(result, LOCALIZED_GAME_TEXT_MARKER_INVALID) == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID);
     CHECK(sArmDecompCalls == 0);
@@ -294,7 +414,7 @@ static void TestInvalidIndicesDoNotReadEnglishTable(void)
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID);
     CHECK(sArmDecompCalls == 0);
 
-    result = GetStringFromIndexInBuffer(6, local);
+    result = GetStringFromIndexInBuffer(13, local);
     CHECK(strcmp(result, "") == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID);
     CHECK(sArmDecompCalls == 0);
@@ -316,8 +436,13 @@ int main(void)
     TestPresentDecode();
     TestPresentDecodeViaKnownLegacyPrepBuffer();
     TestAbsentFallback();
+    TestLegacyGlyphFallbackNormalization();
+    TestFallbackControlsAndFaceIdsRemainExact();
+    TestMalformedFallbackStreamsFailVisibly();
     TestAbsentFallbackHonorsBufferCapacity();
+    TestNormalizedFallbackOverflowIsVisible();
     TestInBufferPreservesActivePointer();
+    TestNormalizedFallbackCacheSurvivesInBuffer();
     TestQpsFallback();
     TestUnpopulatedFallback();
     TestCorruptMarker();

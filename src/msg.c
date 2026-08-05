@@ -20,6 +20,12 @@
 #define MSG_HUFFMAN_LEAF_MASK 0xFFFF0000u
 #define MSG_ENGLISH_INPUT_LIMIT_BYTES FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
 #define MSG_ENGLISH_OUTPUT_LIMIT_BYTES FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
+#define MSG_ENGLISH_LEGACY_DASH 0x7Fu
+#define MSG_ENGLISH_LEGACY_SPACE_LEAD 0x81u
+#define MSG_ENGLISH_LEGACY_SPACE_TRAIL 0x40u
+#define MSG_ENGLISH_LEGACY_LEFT_QUOTE 0x93u
+#define MSG_ENGLISH_LEGACY_RIGHT_QUOTE 0x94u
+#define MSG_ENGLISH_LEGACY_ACCENTED_E 0xE9u
 #else
 #define MSG_BUFFER1 (sMsgString.buffer1)
 #define MSG_BUFFER2 (sMsgString.buffer2)
@@ -65,6 +71,13 @@ static int LocalizedGameText_ShouldUseEnglish(enum LocalizedGameTextStatus statu
     }
 }
 
+static int LocalizedGameText_ShouldNormalizeEnglish(
+    enum LocalizedGameTextStatus status)
+{
+    return status == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT
+        || status == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED;
+}
+
 static char *DecodeEnglishString(int index, char *buffer)
 {
     CallARM_DecompText((const char *)gMsgTable[index], buffer);
@@ -72,10 +85,130 @@ static char *DecodeEnglishString(int index, char *buffer)
     return buffer;
 }
 
+enum EnglishFallbackNormalizeState
+{
+    ENGLISH_FALLBACK_NORMALIZE_TEXT = 0,
+    ENGLISH_FALLBACK_NORMALIZE_FACE_ID_LOW = 1,
+    ENGLISH_FALLBACK_NORMALIZE_FACE_ID_HIGH = 2,
+    ENGLISH_FALLBACK_NORMALIZE_EXTENDED_PAYLOAD = 3,
+    ENGLISH_FALLBACK_NORMALIZE_SPACE_TRAIL = 4
+};
+
+static enum LocalizedGameTextStatus AppendNormalizedEnglishBytes(
+    char *buffer,
+    u32 bufferCapacity,
+    u32 *outputLength,
+    const u8 *bytes,
+    u32 count)
+{
+    u32 i;
+
+    if (*outputLength > bufferCapacity || count > bufferCapacity - *outputLength)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW;
+
+    for (i = 0; i < count; i++)
+        buffer[(*outputLength)++] = bytes[i];
+
+    return LOCALIZED_GAME_TEXT_STATUS_OK;
+}
+
+static enum LocalizedGameTextStatus NormalizeEnglishFallbackByte(
+    u8 byte,
+    char *buffer,
+    u32 bufferCapacity,
+    u32 *outputLength,
+    enum EnglishFallbackNormalizeState *state)
+{
+    static const u8 sUtf8IdeographicSpace[] = {0xE3, 0x80, 0x80};
+    u8 replacement;
+
+    switch (*state)
+    {
+    case ENGLISH_FALLBACK_NORMALIZE_FACE_ID_LOW:
+        if (byte == 0)
+            return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+        *state = ENGLISH_FALLBACK_NORMALIZE_FACE_ID_HIGH;
+        return AppendNormalizedEnglishBytes(
+            buffer, bufferCapacity, outputLength, &byte, 1);
+
+    case ENGLISH_FALLBACK_NORMALIZE_FACE_ID_HIGH:
+    case ENGLISH_FALLBACK_NORMALIZE_EXTENDED_PAYLOAD:
+        if (byte == 0)
+            return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+        *state = ENGLISH_FALLBACK_NORMALIZE_TEXT;
+        return AppendNormalizedEnglishBytes(
+            buffer, bufferCapacity, outputLength, &byte, 1);
+
+    case ENGLISH_FALLBACK_NORMALIZE_SPACE_TRAIL:
+        if (byte != MSG_ENGLISH_LEGACY_SPACE_TRAIL)
+            return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+        *state = ENGLISH_FALLBACK_NORMALIZE_TEXT;
+        return AppendNormalizedEnglishBytes(
+            buffer,
+            bufferCapacity,
+            outputLength,
+            sUtf8IdeographicSpace,
+            ARRAY_COUNT(sUtf8IdeographicSpace));
+
+    case ENGLISH_FALLBACK_NORMALIZE_TEXT:
+    default:
+        break;
+    }
+
+    if (byte == 0)
+        return AppendNormalizedEnglishBytes(
+            buffer, bufferCapacity, outputLength, &byte, 1);
+
+    if (byte < 0x20)
+    {
+        if (byte == CHFE_L_LoadFace)
+            *state = ENGLISH_FALLBACK_NORMALIZE_FACE_ID_LOW;
+        return AppendNormalizedEnglishBytes(
+            buffer, bufferCapacity, outputLength, &byte, 1);
+    }
+
+    if (byte < MSG_ENGLISH_LEGACY_DASH)
+        return AppendNormalizedEnglishBytes(
+            buffer, bufferCapacity, outputLength, &byte, 1);
+
+    switch (byte)
+    {
+    case MSG_ENGLISH_LEGACY_DASH:
+        replacement = '-';
+        break;
+
+    case 0x80:
+        *state = ENGLISH_FALLBACK_NORMALIZE_EXTENDED_PAYLOAD;
+        return AppendNormalizedEnglishBytes(
+            buffer, bufferCapacity, outputLength, &byte, 1);
+
+    case MSG_ENGLISH_LEGACY_SPACE_LEAD:
+        *state = ENGLISH_FALLBACK_NORMALIZE_SPACE_TRAIL;
+        return LOCALIZED_GAME_TEXT_STATUS_OK;
+
+    case MSG_ENGLISH_LEGACY_LEFT_QUOTE:
+    case MSG_ENGLISH_LEGACY_RIGHT_QUOTE:
+        replacement = '"';
+        break;
+
+    case MSG_ENGLISH_LEGACY_ACCENTED_E:
+        replacement = 'e';
+        break;
+
+    default:
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+    }
+
+    return AppendNormalizedEnglishBytes(
+        buffer, bufferCapacity, outputLength, &replacement, 1);
+}
+
 static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
     int index,
     char *buffer,
-    u32 bufferCapacity)
+    u32 bufferCapacity,
+    int normalize,
+    u32 *outDecodedLength)
 {
     const u8 *input;
     const u32 *current;
@@ -83,6 +216,7 @@ static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
     u32 nodeCount;
     u32 inputByteIndex;
     u32 bitIndex;
+    u32 decodedInputLength;
     u32 outputLength;
     u32 steps;
     u32 node;
@@ -93,9 +227,14 @@ static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
     u8 bit;
     u8 low;
     u8 high;
+    enum EnglishFallbackNormalizeState normalizeState;
+    enum LocalizedGameTextStatus status;
 
     if (buffer == NULL || bufferCapacity == 0)
         return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    if (outDecodedLength != NULL)
+        *outDecodedLength = 0;
 
     input = gMsgTable[index];
     if (input == NULL || gMsgHuffmanTableRoot < gMsgHuffmanTable)
@@ -109,8 +248,10 @@ static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
     current = gMsgHuffmanTableRoot;
     inputByteIndex = 0;
     bitIndex = 8;
+    decodedInputLength = 0;
     outputLength = 0;
     inputByte = 0;
+    normalizeState = ENGLISH_FALLBACK_NORMALIZE_TEXT;
 
     for (;;)
     {
@@ -157,23 +298,62 @@ static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
         if (high && low == 0)
             return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
 
-        if (needed > bufferCapacity - outputLength
-            || needed > MSG_ENGLISH_OUTPUT_LIMIT_BYTES - outputLength)
+        if (decodedInputLength > MSG_ENGLISH_OUTPUT_LIMIT_BYTES
+            || needed > MSG_ENGLISH_OUTPUT_LIMIT_BYTES - decodedInputLength)
             return LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW;
 
-        buffer[outputLength++] = low;
+        decodedInputLength++;
+        if (normalize)
+        {
+            status = NormalizeEnglishFallbackByte(
+                low,
+                buffer,
+                bufferCapacity,
+                &outputLength,
+                &normalizeState);
+        }
+        else
+        {
+            status = AppendNormalizedEnglishBytes(
+                buffer, bufferCapacity, &outputLength, &low, 1);
+        }
+        if (status != LOCALIZED_GAME_TEXT_STATUS_OK)
+            return status;
+
         if (high)
         {
-            buffer[outputLength++] = high;
+            decodedInputLength++;
+            if (normalize)
+            {
+                status = NormalizeEnglishFallbackByte(
+                    high,
+                    buffer,
+                    bufferCapacity,
+                    &outputLength,
+                    &normalizeState);
+            }
+            else
+            {
+                status = AppendNormalizedEnglishBytes(
+                    buffer, bufferCapacity, &outputLength, &high, 1);
+            }
+            if (status != LOCALIZED_GAME_TEXT_STATUS_OK)
+                return status;
         }
         else if (low == 0)
         {
+            if (normalizeState != ENGLISH_FALLBACK_NORMALIZE_TEXT)
+                return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+            if (outDecodedLength != NULL)
+                *outDecodedLength = outputLength;
             return LOCALIZED_GAME_TEXT_STATUS_OK;
         }
 
         current = gMsgHuffmanTableRoot;
     }
 }
+
+static void SetLocalizedMsgTerminator(char *buffer, u32 decodedLength);
 
 static void WriteBoundedMsgMarker(
     char *buffer,
@@ -198,14 +378,21 @@ static void WriteBoundedMsgMarker(
 static char *DecodeEnglishStringWithLimit(
     int index,
     char *buffer,
-    u32 bufferCapacity)
+    u32 bufferCapacity,
+    int normalize)
 {
     enum LocalizedGameTextStatus status;
+    u32 decodedLength;
 
-    status = DecodeEnglishStringBounded(index, buffer, bufferCapacity);
+    decodedLength = 0;
+    status = DecodeEnglishStringBounded(
+        index, buffer, bufferCapacity, normalize, &decodedLength);
     if (status == LOCALIZED_GAME_TEXT_STATUS_OK)
     {
-        SetMsgTerminator((signed char *)buffer);
+        if (normalize)
+            SetLocalizedMsgTerminator(buffer, decodedLength);
+        else
+            SetMsgTerminator((signed char *)buffer);
         return buffer;
     }
 
@@ -315,7 +502,13 @@ static char *ResolveStringIntoBuffer(int index, char *buffer, u32 bufferCapacity
     sLastMsgStatus = status;
 
     if (LocalizedGameText_ShouldUseEnglish(status))
-        return DecodeEnglishStringWithLimit(index, buffer, bufferCapacity);
+    {
+        return DecodeEnglishStringWithLimit(
+            index,
+            buffer,
+            bufferCapacity,
+            LocalizedGameText_ShouldNormalizeEnglish(status));
+    }
 
     if (status == LOCALIZED_GAME_TEXT_STATUS_OK)
         SetLocalizedMsgTerminator(buffer, decodedLength);

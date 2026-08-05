@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,7 @@ ENGLISH_PROBE = TEST_DIR / "layout_english_probe.c"
 CJK_FLOOR_PROBE = TEST_DIR / "layout_cjk_floor_probe.c"
 CJK_GROWTH_PROBE = TEST_DIR / "layout_cjk_growth_probe.c"
 FUNCTION_MACRO_PROBE = TEST_DIR / "function_macro_probe.c"
+FALLBACK_CORPUS_DRIVER = TEST_DIR / "fallback_corpus_driver.c"
 
 JA_MESSAGES = (
     "猫\x1f\x00".encode("utf-8"),
@@ -27,6 +29,13 @@ JA_MESSAGES = (
     "壊\x1f\x00".encode("utf-8"),
     None,
     "\u3000\x1f\x00".encode("utf-8"),
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
 )
 
 ENGLISH_MESSAGES = (
@@ -36,6 +45,13 @@ ENGLISH_MESSAGES = (
     b"Broken\x1f\x00",
     b"Plain English\x1f\x00",
     b"Space\x1f\x00",
+    b"Rennac, Rich \x93Merchant\x94\x1f\x00",
+    b"A\x7fB\xe9C\x81\x40D\x1f\x00",
+    b"\x10\x93\x94\x80\xe9X\x1f\x00",
+    b"\x10\x93\x00",
+    b"\x80\x00",
+    b"\x82\x00",
+    b"\x81\x41\x00",
 )
 
 
@@ -186,7 +202,7 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             "    gJaNodes, {node_count}u, {root_index}u,\n"
             "    gJaCompressed, {compressed_size}u,\n"
             "    gJaEntries, {entry_count}u, {max_decoded}u,\n"
-            "    4u, 2u, 0u\n"
+            "    {present_count}u, {fallback_count}u, 0u\n"
             "}};\n\n"
             "const struct GameLocalizationLocaleCatalog *const\n"
             "    gGameLocalizationCatalogs[GAME_LOCALIZATION_LOCALE_COUNT] = {{\n"
@@ -206,19 +222,23 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             entry_count=len(JA_MESSAGES),
             compressed_size=len(catalog.compressed_blob),
             max_decoded=max_decoded,
+            present_count=sum(message is not None for message in JA_MESSAGES),
+            fallback_count=sum(message is None for message in JA_MESSAGES),
         )
         source.write_text(source_text, encoding="ascii")
         return config_header, source
 
-    def _write_probe_header(self, build_dir: Path, max_decoded: int):
+    def _write_probe_header(
+        self, build_dir: Path, max_decoded: int, target_count: int = 5
+    ):
         header = build_dir / "localized_game_text_data.h"
         header.write_text(
             "#ifndef GUARD_LOCALIZED_GAME_TEXT_DATA_H\n"
             "#define GUARD_LOCALIZED_GAME_TEXT_DATA_H\n\n"
             "#define FE8_GAME_LOCALIZATION_DATA_PRESENT 1\n"
-            "#define FE8_GAME_LOCALIZATION_TARGET_COUNT 5u\n"
+            "#define FE8_GAME_LOCALIZATION_TARGET_COUNT {}u\n"
             "#define FE8_GAME_LOCALIZATION_MAX_DECODED_BYTES {}u\n\n"
-            "#endif\n".format(max_decoded),
+            "#endif\n".format(target_count, max_decoded),
             encoding="ascii",
         )
         return header
@@ -257,6 +277,61 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
         )
         run_result = self._run([str(binary)])
         self.assertEqual(run_result.stdout.strip(), "localized_game_text_runtime_driver: ok")
+
+    def test_committed_fallback_corpus_through_c_runtime(self):
+        build_dir = BUILD_ROOT / "fallback-corpus"
+        build_dir.mkdir()
+        self._write_probe_header(build_dir, 0x14D0, target_count=3414)
+        mapping = json.loads(
+            (ROOT / "texts" / "locales" / "mapping" / "fe8u_target_map.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        fallback_ids = [
+            int(row["target_id"], 16)
+            for row in mapping["rows"]
+            if row["source"]["kind"] == "english_fallback"
+        ]
+        self.assertEqual(len(fallback_ids), 1828)
+        (build_dir / "fallback_corpus_ids.h").write_text(
+            "static const int sFallbackIds[] = {\n"
+            + "".join(
+                "    0x{:03X},\n".format(msg_id) for msg_id in fallback_ids
+            )
+            + "};\n",
+            encoding="ascii",
+        )
+        binary = build_dir / "fallback_corpus_driver"
+
+        self._run(
+            [
+                "cc",
+                "-std=gnu89",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-Werror=declaration-after-statement",
+                "-fcf-protection=none",
+                "-DMODERN=1",
+                "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x07u",
+                "-I",
+                str(HOST_INCLUDE),
+                "-I",
+                str(ROOT / "include"),
+                "-I",
+                str(build_dir),
+                str(ROOT / "src" / "msg.c"),
+                str(ROOT / "src" / "msg_data.c"),
+                str(FALLBACK_CORPUS_DRIVER),
+                "-o",
+                str(binary),
+            ]
+        )
+        run_result = self._run([str(binary)])
+        self.assertEqual(
+            run_result.stdout.strip(),
+            "fallback_corpus_driver: 1828 renderer-valid streams",
+        )
 
     def test_profile_compiles_and_layout_probes(self):
         english_dir = BUILD_ROOT / "english"
