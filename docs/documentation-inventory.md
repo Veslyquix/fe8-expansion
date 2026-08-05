@@ -69,6 +69,7 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/generated_data_tutorial.md | laqieer | current | Contributor-facing generated-data authoring walkthrough
 - docs/starter_features.md | laqieer | current | Four default-off starter flags, typed mechanics/content API, QoL, and runtime matrices (issue #6)
 - docs/localization.md | laqieer | current | Stable locale/message IDs, catalog authoring, prefs/UI, budgets, and runtime matrices (issue #18)
+- docs/game_localization_catalog.md | laqieer | current | Full-game FE8U-indexed CJK catalog generation, bounded runtime, and synthetic link gate
 - docs/upstream-porting.md | laqieer | current | Canonical upstream-port tracking tooling reference (issue #12)
 - docs/issue-resolution-policy.md | laqieer | current | Wave 0 issue closure / review / legal-boundary governance baseline
 - docs/release_process.md | laqieer | current | Authoritative release-rehearsal/publication-eligibility process contract (issue #9)

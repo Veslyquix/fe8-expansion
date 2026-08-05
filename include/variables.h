@@ -48,7 +48,7 @@ extern u8 gUnk_6[];
 extern u16 gUnk_OpSubtitle_0[]; // used as a palette buffer in opsubtitle
 // extern ??? gUnk_Opinfo_0
 // extern ??? gUnk_OpInfo_0
-extern char gBufPrep[];
+extern char gBufPrep[0x2000];
 
 // TODO: define this in hardware.c?
 extern u8 gGenericBuffer[0x2000];

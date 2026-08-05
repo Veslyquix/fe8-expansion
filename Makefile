@@ -79,6 +79,11 @@ include generated_data.mk
 # (validate/generate/check/test/budget); see localization.mk for details.
 include localization.mk
 
+# Issue #18 full-game catalog slice: opt-in Python-only generator targets.
+# The fragment does not add prerequisites to `all`; bare/default builds stay
+# English-only and never generate or link CJK game-message payloads.
+include game_localization.mk
+
 #### Files ####
 
 C_SUBDIR = src
@@ -516,7 +521,9 @@ graphics/map/%.bin: graphics/map/%.S graphics/map/tile_config.inc
 
 MAKEDEP = mkdir -p $(DEPS_DIR)/$(dir $*) && $(CPP) $(CPPFLAGS) $< -MM -MG -MT $*.o > $(DEPS_DIR)/$*.d
 
-MAKECMDGOALS_NODEP := clean tag $(MODERN_GOALS)
+MAKECMDGOALS_NODEP := clean tag $(MODERN_GOALS) \
+	game-localization-validate game-localization-generate \
+	game-localization-check game-localization-test game-localization-budget
 
 ifeq (,$(filter $(MAKECMDGOALS),$(MAKECMDGOALS_NODEP)))
 -include $(addprefix $(DEPS_DIR)/,$(CFILES:.c=.d))

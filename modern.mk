@@ -371,6 +371,49 @@ MODERN_LOCALIZATION_CATALOG_C := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_
 MODERN_LOCALIZATION_MSG_IDS_H := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_msg_ids.h
 MODERN_LOCALIZATION_BUDGET_JSON := $(MODERN_LOCALIZATION_GENERATED_DIR)/budget.json
 
+# --- Full-game CJK catalog (issue #18 game-catalog slice) -------------------
+# Production ja/zh configuration remains deliberately gated. This internal,
+# opt-in mask exists only so the catalog/runtime slice can be compiled and
+# linked end-to-end before the renderer/config sprint enables a product
+# profile. Supported values are the stable CJK locale bits 0x02 (ja), 0x04
+# (zh-Hans), or 0x06 (both); English is added to the compiled effective mask
+# below so fallback remains available. Empty means no generated CJK payload,
+# no decoder/runtime code, and no enlarged message buffer.
+MODERN_GAME_LOCALIZATION_CJK_MASK ?=
+MODERN_GAME_LOCALIZATION_AVAILABLE := $(and \
+	$(wildcard scripts/localization/game_catalog/cli.py),\
+	$(wildcard texts/locales/mapping/fe8u_target_map.json))
+MODERN_GAME_LOCALIZATION_ROOT := $(MODERN_BUILD_ROOT)/game-localization
+MODERN_GAME_LOCALIZATION_GENERATED_DIR := $(MODERN_GAME_LOCALIZATION_ROOT)/generated
+MODERN_GAME_LOCALIZATION_CONFIG_H := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/localized_game_text_data.h
+MODERN_GAME_LOCALIZATION_HEADER := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_catalog.h
+MODERN_GAME_LOCALIZATION_C := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_catalog.c
+MODERN_GAME_LOCALIZATION_REPORT_JSON := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_report.json
+MODERN_GAME_LOCALIZATION_BUDGET_JSON := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_budget.json
+
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CJK_MASK)),)
+ ifeq ($(strip $(MODERN_GAME_LOCALIZATION_AVAILABLE)),)
+  $(error Full-game localization inputs/generator are unavailable)
+ endif
+ ifneq ($(filter $(MODERN_GAME_LOCALIZATION_CJK_MASK),0x02 0x04 0x06),$(MODERN_GAME_LOCALIZATION_CJK_MASK))
+  $(error MODERN_GAME_LOCALIZATION_CJK_MASK must be empty, 0x02, 0x04, or 0x06)
+ endif
+ ifneq ($(MODERN_ROM_SIZE),32M)
+  $(error MODERN_GAME_LOCALIZATION_CJK_MASK requires MODERN_ROM_SIZE=32M)
+ endif
+ ifeq ($(MODERN_GAME_LOCALIZATION_CJK_MASK),0x02)
+  MODERN_GAME_LOCALIZATION_COMPILED_MASK := 0x03
+  MODERN_GAME_LOCALIZATION_ENABLED_LOCALES := en,ja
+ else ifeq ($(MODERN_GAME_LOCALIZATION_CJK_MASK),0x04)
+  MODERN_GAME_LOCALIZATION_COMPILED_MASK := 0x05
+  MODERN_GAME_LOCALIZATION_ENABLED_LOCALES := en,zh-Hans
+ else
+  MODERN_GAME_LOCALIZATION_COMPILED_MASK := 0x07
+  MODERN_GAME_LOCALIZATION_ENABLED_LOCALES := en,ja,zh-Hans
+ endif
+ MODERN_CFLAGS += -I$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)
+endif
+
 # Lets a future sprint's C source #include "expansion_msg_ids.h" (the
 # generated EXP_MSG_* numeric-id header) without a further modern.mk change;
 # sprint 1 itself has no such consumer yet (src/expansion_locale.c only
@@ -563,6 +606,10 @@ endif
 # defined further below, alongside the generation stamp.
 ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
 MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o
+endif
+
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CJK_MASK)),)
+MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/localized_game_text-catalog.o
 endif
 
 MODERN_ALL_DATA_PRE := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.pre.c))
@@ -1374,6 +1421,10 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CJK_MASK)),)
+	@python3 -c 'import json, pathlib, sys; p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text(encoding="utf-8")); d["enabled_locale_mask"] = int(sys.argv[2], 0); d["enabled_locales"] = sys.argv[3].split(","); p.write_text(json.dumps(d, indent=2, sort_keys=True) + "\n", encoding="utf-8")' \
+		"$@" "$(MODERN_GAME_LOCALIZATION_COMPILED_MASK)" "$(MODERN_GAME_LOCALIZATION_ENABLED_LOCALES)"
+endif
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
 endif
@@ -1469,6 +1520,11 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
     $(error modern.mk: failed to resolve MODERN_EXPANSION_ENABLED_LOCALE_MASK from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
 
+  MODERN_COMPILED_ENABLED_LOCALE_MASK := $(MODERN_EXPANSION_ENABLED_LOCALE_MASK)
+  ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CJK_MASK)),)
+    MODERN_COMPILED_ENABLED_LOCALE_MASK := $(MODERN_GAME_LOCALIZATION_COMPILED_MASK)
+  endif
+
   # Modern-only compiler defines feeding include/expansion_config.h. These
   # are never added to the legacy Makefile's CFLAGS, so the legacy build
   # keeps that header's hardcoded #ifndef fallbacks (today's exact ROM
@@ -1488,7 +1544,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_ROM_REVISION=$(EXPANSION_ROM_REVISION) \
 	-DFE8_EXPANSION_ROM_SIZE_BYTES=$(MODERN_ROM_SIZE_BYTES) \
 	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
-	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)u \
+	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_COMPILED_ENABLED_LOCALE_MASK)u \
 	-DFE8_EXPANSION_DEFAULT_LOCALE_ID=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID) \
 	-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED) \
 	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
@@ -1552,7 +1608,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rom_revision=$(EXPANSION_ROM_REVISION)'; \
 		printf '%s\n' 'rom_size_bytes=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'save_compat_epoch=$(MODERN_SAVE_COMPAT_EPOCH)'; \
-		printf '%s\n' 'enabled_locale_mask=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)'; \
+		printf '%s\n' 'enabled_locale_mask=$(MODERN_COMPILED_ENABLED_LOCALE_MASK)'; \
+		printf '%s\n' 'game_localization_cjk_mask=$(MODERN_GAME_LOCALIZATION_CJK_MASK)'; \
 		printf '%s\n' 'default_locale_id=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID)'; \
 		printf '%s\n' 'pseudo_locale_enabled=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)'; \
 		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
@@ -1672,6 +1729,31 @@ endif
 # reachable, since nothing adds this path to MODERN_ALL_C_OBJECTS in that
 # case.
 $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o: $(MODERN_LOCALIZATION_CATALOG_C)
+	@mkdir -p $(@D)
+	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
+
+# The full-game CJK catalog is generated and linked only for the explicit
+# internal synthetic mask above. Grouped outputs prevent parallel compiles
+# from racing the deterministic writer when the runtime headers and generated
+# source are requested at the same time.
+.PHONY: FORCE_MODERN_GAME_LOCALIZATION
+FORCE_MODERN_GAME_LOCALIZATION:
+
+$(MODERN_GAME_LOCALIZATION_CONFIG_H) $(MODERN_GAME_LOCALIZATION_HEADER) \
+$(MODERN_GAME_LOCALIZATION_C) $(MODERN_GAME_LOCALIZATION_REPORT_JSON) \
+$(MODERN_GAME_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_GAME_LOCALIZATION
+	@mkdir -p "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)"
+	@python3 -m scripts.localization.game_catalog generate \
+		--out-dir "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)"
+
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CJK_MASK)),)
+$(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): \
+	$(MODERN_GAME_LOCALIZATION_CONFIG_H) $(MODERN_GAME_LOCALIZATION_HEADER)
+game_localization_catalog.h: $(MODERN_GAME_LOCALIZATION_HEADER) ;
+localized_game_text_data.h: $(MODERN_GAME_LOCALIZATION_CONFIG_H) ;
+endif
+
+$(MODERN_OUTPUT_DIR)/src/localized_game_text-catalog.o: $(MODERN_GAME_LOCALIZATION_C)
 	@mkdir -p $(@D)
 	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 

@@ -6,16 +6,259 @@
 #include "bmunit.h"
 #include "bmlib.h"
 #include "bmmind.h"
+#include "localized_game_text.h"
 #include "scene.h"
+
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+#undef GetStringFromIndexInBuffer
+#define MSG_BUFFER1 (sMsgString.storage.legacy.buffer1)
+#define MSG_BUFFER2 (sMsgString.storage.legacy.buffer2)
+#define MSG_BUFFER3 (sMsgString.storage.legacy.buffer3)
+#define MSG_BUFFER4 (sMsgString.storage.legacy.buffer4)
+#define MSG_BUFFER5 (sMsgString.storage.legacy.buffer5)
+#define MSG_LOCALIZED_STORAGE (sMsgString.storage.localized)
+#else
+#define MSG_BUFFER1 (sMsgString.buffer1)
+#define MSG_BUFFER2 (sMsgString.buffer2)
+#define MSG_BUFFER3 (sMsgString.buffer3)
+#define MSG_BUFFER4 (sMsgString.buffer4)
+#define MSG_BUFFER5 (sMsgString.buffer5)
+#endif
 
 EWRAM_DATA struct MsgBuffer sMsgString = {0};
 EWRAM_DATA int sActiveMsg = 0;
+
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+static EWRAM_DATA bool8 sActiveMsgValid = FALSE;
+static EWRAM_DATA ExpansionLocaleId sActiveMsgLocale;
+static EWRAM_DATA enum LocalizedGameTextStatus sActiveMsgStatus;
+static EWRAM_DATA enum LocalizedGameTextStatus sLastMsgStatus;
+#endif
 
 const char *gStrPrefix[][2] =
 {
     {"a ", "A "},
     {"an ", "An "},
 };
+
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+static ExpansionLocaleId GetMsgLocale(void)
+{
+    return ExpansionLocale_GetCurrent();
+}
+
+static int LocalizedGameText_ShouldUseEnglish(enum LocalizedGameTextStatus status)
+{
+    switch (status)
+    {
+    case LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT:
+    case LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT:
+    case LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED:
+    case LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED:
+        return TRUE;
+
+    default:
+        return FALSE;
+    }
+}
+
+static char *DecodeEnglishString(int index, char *buffer)
+{
+    CallARM_DecompText((const char *)gMsgTable[index], buffer);
+    SetMsgTerminator((signed char *)buffer);
+    return buffer;
+}
+
+static void WriteBoundedMsgMarker(
+    char *buffer,
+    u32 bufferCapacity,
+    const char *marker)
+{
+    u32 i;
+
+    if (buffer == NULL || bufferCapacity == 0)
+        return;
+
+    i = 0;
+    while (i + 1 < bufferCapacity && marker[i] != '\0')
+    {
+        buffer[i] = marker[i];
+        i++;
+    }
+
+    buffer[i] = '\0';
+}
+
+static char *DecodeEnglishStringWithLimit(
+    int index,
+    char *buffer,
+    u32 bufferCapacity)
+{
+    char *scratch;
+    u32 length;
+    u32 i;
+
+    if (buffer == (char *)MSG_LOCALIZED_STORAGE)
+        return DecodeEnglishString(index, buffer);
+
+    scratch = (char *)MSG_BUFFER1;
+    sActiveMsgValid = FALSE;
+    DecodeEnglishString(index, scratch);
+
+    length = 0;
+    while (length < FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER1_BYTES
+        && scratch[length] != '\0')
+        length++;
+
+    if (length == FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER1_BYTES)
+    {
+        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+        WriteBoundedMsgMarker(
+            buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_CORRUPT);
+        return buffer;
+    }
+
+    length++;
+    if (length > bufferCapacity)
+    {
+        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW;
+        WriteBoundedMsgMarker(
+            buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_OVERFLOW);
+        return buffer;
+    }
+
+    for (i = 0; i < length; i++)
+        buffer[i] = scratch[i];
+
+    return buffer;
+}
+
+static int LocalizedMsgEndsWithUtf8Scalar(const char *buffer, u32 endOffset)
+{
+    u32 startOffset;
+    u32 scalarLength;
+    u32 i;
+    u8 lead;
+    u8 second;
+
+    if (endOffset == 0)
+        return FALSE;
+
+    startOffset = endOffset - 1;
+    if (((u8)buffer[startOffset] & 0xC0) != 0x80)
+        return FALSE;
+
+    while (startOffset > 0
+        && ((u8)buffer[startOffset - 1] & 0xC0) == 0x80)
+        startOffset--;
+
+    if (startOffset == 0)
+        return FALSE;
+    startOffset--;
+
+    lead = (u8)buffer[startOffset];
+    if (lead >= 0xC2 && lead <= 0xDF)
+        scalarLength = 2;
+    else if (lead >= 0xE0 && lead <= 0xEF)
+        scalarLength = 3;
+    else if (lead >= 0xF0 && lead <= 0xF4)
+        scalarLength = 4;
+    else
+        return FALSE;
+
+    if (startOffset + scalarLength != endOffset)
+        return FALSE;
+
+    for (i = startOffset + 1; i < endOffset; i++)
+        if (((u8)buffer[i] & 0xC0) != 0x80)
+            return FALSE;
+
+    second = (u8)buffer[startOffset + 1];
+    if ((lead == 0xE0 && second < 0xA0)
+        || (lead == 0xED && second >= 0xA0)
+        || (lead == 0xF0 && second < 0x90)
+        || (lead == 0xF4 && second >= 0x90))
+        return FALSE;
+
+    return TRUE;
+}
+
+static void SetLocalizedMsgTerminator(char *buffer, u32 decodedLength)
+{
+    u32 terminatorOffset;
+
+    if (decodedLength == 0)
+        return;
+
+    terminatorOffset = decodedLength - 1;
+    while (terminatorOffset > 0 && (u8)buffer[terminatorOffset - 1] == 0x1F)
+    {
+        if (terminatorOffset > 1 && (u8)buffer[terminatorOffset - 2] == 0x80
+            && !LocalizedMsgEndsWithUtf8Scalar(buffer, terminatorOffset - 1))
+            return;
+
+        terminatorOffset--;
+        buffer[terminatorOffset] = '\0';
+    }
+}
+
+static char *ResolveStringIntoBuffer(int index, char *buffer, u32 bufferCapacity)
+{
+    enum LocalizedGameTextStatus status;
+    u32 decodedLength;
+
+    if (buffer == NULL || bufferCapacity == 0)
+    {
+        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+        return buffer;
+    }
+
+    decodedLength = 0;
+    status = LocalizedGameText_ResolveCurrentToBuffer(
+        index, buffer, bufferCapacity, &decodedLength);
+    sLastMsgStatus = status;
+
+    if (LocalizedGameText_ShouldUseEnglish(status))
+        return DecodeEnglishStringWithLimit(index, buffer, bufferCapacity);
+
+    if (status == LOCALIZED_GAME_TEXT_STATUS_OK)
+        SetLocalizedMsgTerminator(buffer, decodedLength);
+
+    return buffer;
+}
+
+static char *ResolveStringIntoUnboundedBuffer(int index, char *buffer)
+{
+    enum LocalizedGameTextStatus status;
+    char probe[1];
+
+    if (buffer == NULL)
+    {
+        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+        return buffer;
+    }
+
+    if (buffer == gBufPrep)
+        return ResolveStringIntoBuffer(index, buffer, (u32)sizeof(gBufPrep));
+
+    if (index < 0 || (u32)index >= FE8_GAME_LOCALIZATION_TARGET_COUNT)
+    {
+        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+        buffer[0] = '\0';
+        return buffer;
+    }
+
+    status = LocalizedGameText_ResolveCurrentToBuffer(index, probe, (u32)sizeof(probe), NULL);
+    if (LocalizedGameText_ShouldUseEnglish(status))
+    {
+        sLastMsgStatus = status;
+        return DecodeEnglishString(index, buffer);
+    }
+
+    sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED;
+    return DecodeEnglishString(index, buffer);
+}
+#endif
 
 const char * GetStrPrefix(s8 * str, bool capital)
 {
@@ -44,7 +287,7 @@ void InsertPrefix(char * str, const char * prefix, bool capital)
     s16 i;
 
     if (prefix == NULL)
-        _prefix = GetStrPrefix(str, capital);
+        _prefix = GetStrPrefix((s8 *)str, capital);
     else
         _prefix = prefix;
 
@@ -67,7 +310,7 @@ void SetMsgTerminator(signed char * str)
         if (ch == CHFE_L_LoadFace)   /* [LoadFace] */
             off += 2;
 
-        if (ch == '\x80')   /* [HalfCloseEyes] */
+        if (ch == 0x80)   /* [HalfCloseEyes] */
             off += 1;
         off++;
     }
@@ -76,46 +319,97 @@ void SetMsgTerminator(signed char * str)
     while (off >= 0)
     {
         ch = str[off];
-        if (ch != '\x1F')   /* [.] */
+        if (ch != 0x1F)   /* [.] */
             return;
 
         /* <!> [.] --> \x0 */
         ch = str[off - 1];
-        if (ch != '\x80')   /* [HalfCloseEyes] */
+        if (ch != 0x80)   /* [HalfCloseEyes] */
             str[off] = '\0';
 
         off--;
     }
 }
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+void LocalizedGameText_InvalidateCache(void)
+{
+    sActiveMsgValid = FALSE;
+    sActiveMsg = 0;
+    sActiveMsgLocale = EXPANSION_LOCALE_INVALID;
+    sActiveMsgStatus = LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT;
+    sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT;
+}
+
+enum LocalizedGameTextStatus LocalizedGameText_GetLastStatus(void)
+{
+    return sLastMsgStatus;
+}
+
 char * GetStringFromIndex(int index)
 {
-    if (index == sActiveMsg)
-        return sMsgString.buffer1;
-    CallARM_DecompText(gMsgTable[index], sMsgString.buffer1);
-    SetMsgTerminator(sMsgString.buffer1);
+    ExpansionLocaleId locale;
+
+    locale = GetMsgLocale();
+    if (sActiveMsgValid && index == sActiveMsg && locale == sActiveMsgLocale)
+    {
+        sLastMsgStatus = sActiveMsgStatus;
+        return (char *)MSG_BUFFER1;
+    }
+
+    ResolveStringIntoBuffer(index, (char *)MSG_LOCALIZED_STORAGE,
+        (u32)sizeof(MSG_LOCALIZED_STORAGE));
     sActiveMsg = index;
-    return sMsgString.buffer1;
+    sActiveMsgLocale = locale;
+    sActiveMsgStatus = sLastMsgStatus;
+    sActiveMsgValid = TRUE;
+    return (char *)MSG_LOCALIZED_STORAGE;
+}
+
+char * GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCapacity)
+{
+    return ResolveStringIntoBuffer(index, buffer, bufferCapacity);
 }
 
 char * GetStringFromIndexInBuffer(int index, char *buffer)
 {
-    CallARM_DecompText(gMsgTable[index], buffer);
-    SetMsgTerminator(buffer);
-    return buffer;
+    return ResolveStringIntoUnboundedBuffer(index, buffer);
+}
+#else
+char * GetStringFromIndex(int index)
+{
+    if (index == sActiveMsg)
+        return (char *)MSG_BUFFER1;
+    CallARM_DecompText((const char *)gMsgTable[index], (char *)MSG_BUFFER1);
+    SetMsgTerminator((signed char *)MSG_BUFFER1);
+    sActiveMsg = index;
+    return (char *)MSG_BUFFER1;
 }
 
+char * GetStringFromIndexInBuffer(int index, char *buffer)
+{
+    CallARM_DecompText((const char *)gMsgTable[index], buffer);
+    SetMsgTerminator((signed char *)buffer);
+    return buffer;
+}
+#endif
+
+/* These walkers deliberately remain byte-oriented: 0x80 is still treated as
+ * the legacy control prefix, not as a UTF-8 continuation byte. In CJK
+ * profiles the full decoded message overlays these historical scratch
+ * offsets; callers must not run these walkers over long UTF-8 text until the
+ * renderer sprint replaces their byte-wise semantics. */
 char * StringInsertSpecialPrefixByCtrl(void)
 {
-    u8 * r5 = sMsgString.buffer2;
-    u8 * dst = sMsgString.buffer3;
+    u8 * r5 = MSG_BUFFER2;
+    u8 * dst = MSG_BUFFER3;
 
-    CopyString(r5, sMsgString.buffer1);
+    CopyString((char *)r5, (const char *)MSG_BUFFER1);
     while (*r5 != 0)
     {
         if (*r5 < '\x20')
             *dst++ = *r5++;
-        else if (*r5 != '\x80') /* Normal string */
+        else if (*r5 != 0x80) /* Normal string */
             *dst++ = *r5++;
         else
         {
@@ -137,17 +431,19 @@ char * StringInsertSpecialPrefixByCtrl(void)
                 r1 = 3;
                 break;
             case '\x20':    /* [Tact]: "\x20\x80" */
-                CopyString(dst, GetTacticianName());
+                CopyString((char *)dst, GetTacticianName());
                 goto label;
             case '\x22':    /* [Item]: "\x22\x80" */
-                CopyString(dst, GetItemName(gActionData.item));
+                CopyString((char *)dst, GetItemName(gActionData.item));
                 goto label;
             default:
                 *dst++ = 0x80;
                 *dst++ = *r5++;
                 continue;
             }
-            CopyString(dst, GetStringFromIndex(GetCharacterData(gPlaySt.unk1C[r1])->nameTextId));
+            CopyString(
+                (char *)dst,
+                GetStringFromIndex(GetCharacterData(gPlaySt.unk1C[r1])->nameTextId));
         label:
             while (*dst != 0)
                 dst++;
@@ -155,17 +451,17 @@ char * StringInsertSpecialPrefixByCtrl(void)
         }
     }
     *dst = 0;
-    return sMsgString.buffer3;
+    return (char *)MSG_BUFFER3;
 }
 
 char * StrInsertTact(void)
 {
-    u8 * r5 = sMsgString.buffer4;
-    u8 * r4 = sMsgString.buffer5;
+    u8 * r5 = MSG_BUFFER4;
+    u8 * r4 = MSG_BUFFER5;
     u8 r1;
     u32 r0;
 
-    CopyString(r5, sMsgString.buffer1);
+    CopyString((char *)r5, (const char *)MSG_BUFFER1);
 
     while ((r0 = *r5))
     {
@@ -195,7 +491,7 @@ char * StrInsertTact(void)
             else
             {
                 /* [Tact]: "\x20\x80" */
-                CopyString(r4, GetTacticianName());
+                CopyString((char *)r4, GetTacticianName());
                 while (*r4 != 0)
                     r4++;
                 r5++;
@@ -203,5 +499,5 @@ char * StrInsertTact(void)
         }
     }
     *r4 = 0;
-    return sMsgString.buffer5;
+    return (char *)MSG_BUFFER5;
 }
