@@ -17,21 +17,6 @@ char gBufPrep[0x2000];
 struct ActionData gActionData = { 0 };
 struct PlaySt gPlaySt = { {0}, {0, 0, 0, 0} };
 
-static const u8 sEnglish0[] = "Cat\x1F";
-static const u8 sEnglish1[] = "Fallback\x1F";
-static const u8 sEnglish2[] = "Long English\x1F";
-static const u8 sEnglish3[] = "Broken\x1F";
-static const u8 sEnglish4[] = "Plain English\x1F";
-static const u8 sEnglish5[] = "Space\x1F";
-const u8 *const gMsgTable[] = {
-    sEnglish0,
-    sEnglish1,
-    sEnglish2,
-    sEnglish3,
-    sEnglish4,
-    sEnglish5,
-};
-
 #define CHECK(cond) do { if (!(cond)) { \
     printf("FAIL: %s:%d: %s\n", __FILE__, __LINE__, #cond); \
     failures++; \
@@ -44,8 +29,51 @@ ExpansionLocaleId ExpansionLocale_GetCurrent(void)
 
 void CallARM_DecompText(const char *input, char *output)
 {
+    const u8 *source;
+    const u32 *current;
+    u32 inputByteIndex;
+    u32 bitIndex;
+    u32 node;
+    u32 childIndex;
+    u32 symbol;
+    u8 inputByte;
+
     sArmDecompCalls++;
-    strcpy(output, input);
+    source = (const u8 *)input;
+    current = gMsgHuffmanTableRoot;
+    inputByteIndex = 0;
+    bitIndex = 8;
+    inputByte = 0;
+
+    for (;;)
+    {
+        node = *current;
+        if (bitIndex == 8)
+        {
+            inputByte = source[inputByteIndex++];
+            bitIndex = 0;
+        }
+
+        if ((inputByte >> bitIndex) & 1)
+            childIndex = (node >> 16) & 0xFFFF;
+        else
+            childIndex = node & 0xFFFF;
+        bitIndex++;
+
+        current = &gMsgHuffmanTable[childIndex];
+        node = *current;
+        if ((node & 0xFFFF0000u) != 0xFFFF0000u)
+            continue;
+
+        symbol = node & 0xFFFF;
+        *output++ = symbol & 0xFF;
+        if ((symbol >> 8) & 0xFF)
+            *output++ = (symbol >> 8) & 0xFF;
+        else if ((symbol & 0xFF) == 0)
+            return;
+
+        current = gMsgHuffmanTableRoot;
+    }
 }
 
 void CopyString(void *dst, const void *src)
@@ -109,7 +137,7 @@ static void TestAbsentFallback(void)
     result = GetStringFromIndex(1);
     CHECK(strcmp(result, "Fallback") == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT);
-    CHECK(sArmDecompCalls == 1);
+    CHECK(sArmDecompCalls == 0);
 }
 
 static void TestAbsentFallbackHonorsBufferCapacity(void)
@@ -124,7 +152,7 @@ static void TestAbsentFallbackHonorsBufferCapacity(void)
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT);
     CHECK(storage[0] == 0xA5);
     CHECK(storage[17] == 0xA5);
-    CHECK(sArmDecompCalls == 1);
+    CHECK(sArmDecompCalls == 0);
 
     memset(storage, 0xA5, sizeof(storage));
     result = GetStringFromIndexInBufferWithLimit(1, (char *)(storage + 1), 8);
@@ -132,7 +160,25 @@ static void TestAbsentFallbackHonorsBufferCapacity(void)
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW);
     CHECK(storage[0] == 0xA5);
     CHECK(storage[9] == 0xA5);
-    CHECK(sArmDecompCalls == 2);
+    CHECK(sArmDecompCalls == 0);
+}
+
+static void TestInBufferPreservesActivePointer(void)
+{
+    char local[32];
+    const char *active;
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    active = GetStringFromIndex(0);
+    CHECK(strcmp(active, "猫") == 0);
+
+    result = GetStringFromIndexInBufferWithLimit(1, local, sizeof(local));
+    CHECK(strcmp(result, "Fallback") == 0);
+    CHECK(strcmp(active, "猫") == 0);
+    CHECK(GetStringFromIndex(0) == active);
+    CHECK(strcmp(active, "猫") == 0);
+    CHECK(sArmDecompCalls == 0);
 }
 
 static void TestQpsFallback(void)
@@ -143,7 +189,7 @@ static void TestQpsFallback(void)
     result = GetStringFromIndex(0);
     CHECK(strcmp(result, "Cat") == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
-    CHECK(sArmDecompCalls == 1);
+    CHECK(sArmDecompCalls == 0);
 }
 
 static void TestUnpopulatedFallback(void)
@@ -156,7 +202,7 @@ static void TestUnpopulatedFallback(void)
     CHECK(
         LocalizedGameText_GetLastStatus()
         == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED);
-    CHECK(sArmDecompCalls == 1);
+    CHECK(sArmDecompCalls == 0);
 }
 
 static void TestCorruptMarker(void)
@@ -211,13 +257,13 @@ static void TestCacheLocaleSwitchAndExplicitInvalidation(void)
     result = GetStringFromIndex(0);
     CHECK(strcmp(result, "Cat") == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
-    CHECK(sArmDecompCalls == 1);
+    CHECK(sArmDecompCalls == 0);
 
     strcpy((char *)sMsgString.storage.localized, "stale-en");
     LocalizedGameText_InvalidateCache();
     result = GetStringFromIndex(0);
     CHECK(strcmp(result, "Cat") == 0);
-    CHECK(sArmDecompCalls == 2);
+    CHECK(sArmDecompCalls == 0);
 }
 
 static void TestDefaultEnglishBehavior(void)
@@ -228,7 +274,7 @@ static void TestDefaultEnglishBehavior(void)
     result = GetStringFromIndex(4);
     CHECK(strcmp(result, "Plain English") == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT);
-    CHECK(sArmDecompCalls == 1);
+    CHECK(sArmDecompCalls == 0);
 }
 
 static void TestInvalidIndicesDoNotReadEnglishTable(void)
@@ -271,6 +317,7 @@ int main(void)
     TestPresentDecodeViaKnownLegacyPrepBuffer();
     TestAbsentFallback();
     TestAbsentFallbackHonorsBufferCapacity();
+    TestInBufferPreservesActivePointer();
     TestQpsFallback();
     TestUnpopulatedFallback();
     TestCorruptMarker();

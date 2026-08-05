@@ -14,6 +14,12 @@ make game-localization-test
 make game-localization-budget
 ```
 
+These targets generate both CJK bundles by default. To inspect one build
+profile in isolation, set `GAME_LOCALIZATION_ENABLED_LOCALES=ja` or
+`GAME_LOCALIZATION_ENABLED_LOCALES=zh-Hans`. A single-locale profile emits no
+nodes, compressed blob, entries, or catalog descriptor for the disabled
+locale; its fixed `gGameLocalizationCatalogs[]` slot is null.
+
 The generator reads the canonical `texts/locales/` sources and the verified
 `texts/locales/mapping/fe8u_target_map.json` decisions. It never infers a
 positional mapping. Explicit English fallback decisions produce absent
@@ -50,15 +56,21 @@ make expansion-modern-rom \
 ```
 
 The synthetic mask accepts `0x02` (Japanese), `0x04` (Simplified Chinese), or
-`0x06` (both). It does not change `config.mk` or production locale validation.
+`0x06` (both). Each mask generates and links only its selected game-catalog
+bundle(s). The effective synthetic locale list is resolved through the normal
+expansion identity pipeline before metadata and fingerprint generation, while
+`config.mk` and production locale validation remain unchanged.
 
 CJK profiles use one explicit message-storage overlay. The historical helper
 scratch fields keep their offsets inside the overlay; total capacity is at
 least `0x1600` bytes and grows if the generated maximum (including NUL)
 requires more. Decode overflow or corrupt input returns a visible marker and
 an explicit `LocalizedGameTextStatus`. Message indexes are checked before
-localized or English fallback lookup, and bounded English fallback is staged
-through the historical primary scratch capacity before copying to the caller.
+localized or English fallback lookup. Bounded English fallback uses a
+cache-independent C decoder with explicit input, output, node, and caller
+capacity checks; it never stages through the active `MsgBuffer` overlay, so an
+InBuffer lookup cannot invalidate or overwrite a pointer returned by an
+earlier `GetStringFromIndex` call.
 
 `StringInsertSpecialPrefixByCtrl`, `StrInsertTact`, and other renderer-side
 walkers remain byte-oriented. They must not process long UTF-8 overlay content

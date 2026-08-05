@@ -17,6 +17,9 @@
 #define MSG_BUFFER4 (sMsgString.storage.legacy.buffer4)
 #define MSG_BUFFER5 (sMsgString.storage.legacy.buffer5)
 #define MSG_LOCALIZED_STORAGE (sMsgString.storage.localized)
+#define MSG_HUFFMAN_LEAF_MASK 0xFFFF0000u
+#define MSG_ENGLISH_INPUT_LIMIT_BYTES FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
+#define MSG_ENGLISH_OUTPUT_LIMIT_BYTES FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
 #else
 #define MSG_BUFFER1 (sMsgString.buffer1)
 #define MSG_BUFFER2 (sMsgString.buffer2)
@@ -69,6 +72,109 @@ static char *DecodeEnglishString(int index, char *buffer)
     return buffer;
 }
 
+static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
+    int index,
+    char *buffer,
+    u32 bufferCapacity)
+{
+    const u8 *input;
+    const u32 *current;
+    u32 rootIndex;
+    u32 nodeCount;
+    u32 inputByteIndex;
+    u32 bitIndex;
+    u32 outputLength;
+    u32 steps;
+    u32 node;
+    u32 childIndex;
+    u32 symbol;
+    u32 needed;
+    u8 inputByte;
+    u8 bit;
+    u8 low;
+    u8 high;
+
+    if (buffer == NULL || bufferCapacity == 0)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    input = gMsgTable[index];
+    if (input == NULL || gMsgHuffmanTableRoot < gMsgHuffmanTable)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    rootIndex = (u32)(gMsgHuffmanTableRoot - gMsgHuffmanTable);
+    if (rootIndex >= 0xFFFFu)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    nodeCount = rootIndex + 1;
+    current = gMsgHuffmanTableRoot;
+    inputByteIndex = 0;
+    bitIndex = 8;
+    outputLength = 0;
+    inputByte = 0;
+
+    for (;;)
+    {
+        steps = 0;
+        for (;;)
+        {
+            if (steps++ >= nodeCount)
+                return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+
+            node = *current;
+            if ((node & MSG_HUFFMAN_LEAF_MASK) == MSG_HUFFMAN_LEAF_MASK)
+                return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+
+            if (bitIndex == 8)
+            {
+                if (inputByteIndex >= MSG_ENGLISH_INPUT_LIMIT_BYTES)
+                    return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+
+                inputByte = input[inputByteIndex++];
+                bitIndex = 0;
+            }
+
+            bit = (inputByte >> bitIndex) & 1;
+            bitIndex++;
+            if (bit)
+                childIndex = (node >> 16) & 0xFFFF;
+            else
+                childIndex = node & 0xFFFF;
+
+            if (childIndex >= nodeCount)
+                return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+
+            current = &gMsgHuffmanTable[childIndex];
+            node = *current;
+            if ((node & MSG_HUFFMAN_LEAF_MASK) == MSG_HUFFMAN_LEAF_MASK)
+                break;
+        }
+
+        symbol = node & 0xFFFF;
+        low = symbol & 0xFF;
+        high = (symbol >> 8) & 0xFF;
+        needed = high ? 2 : 1;
+
+        if (high && low == 0)
+            return LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
+
+        if (needed > bufferCapacity - outputLength
+            || needed > MSG_ENGLISH_OUTPUT_LIMIT_BYTES - outputLength)
+            return LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW;
+
+        buffer[outputLength++] = low;
+        if (high)
+        {
+            buffer[outputLength++] = high;
+        }
+        else if (low == 0)
+        {
+            return LOCALIZED_GAME_TEXT_STATUS_OK;
+        }
+
+        current = gMsgHuffmanTableRoot;
+    }
+}
+
 static void WriteBoundedMsgMarker(
     char *buffer,
     u32 bufferCapacity,
@@ -94,42 +200,32 @@ static char *DecodeEnglishStringWithLimit(
     char *buffer,
     u32 bufferCapacity)
 {
-    char *scratch;
-    u32 length;
-    u32 i;
+    enum LocalizedGameTextStatus status;
 
-    if (buffer == (char *)MSG_LOCALIZED_STORAGE)
-        return DecodeEnglishString(index, buffer);
-
-    scratch = (char *)MSG_BUFFER1;
-    sActiveMsgValid = FALSE;
-    DecodeEnglishString(index, scratch);
-
-    length = 0;
-    while (length < FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER1_BYTES
-        && scratch[length] != '\0')
-        length++;
-
-    if (length == FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER1_BYTES)
+    status = DecodeEnglishStringBounded(index, buffer, bufferCapacity);
+    if (status == LOCALIZED_GAME_TEXT_STATUS_OK)
     {
-        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT;
-        WriteBoundedMsgMarker(
-            buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_CORRUPT);
+        SetMsgTerminator((signed char *)buffer);
         return buffer;
     }
 
-    length++;
-    if (length > bufferCapacity)
+    sLastMsgStatus = status;
+    if (status == LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW)
     {
-        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW;
         WriteBoundedMsgMarker(
             buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_OVERFLOW);
         return buffer;
     }
 
-    for (i = 0; i < length; i++)
-        buffer[i] = scratch[i];
+    if (status == LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT)
+    {
+        WriteBoundedMsgMarker(
+            buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_CORRUPT);
+        return buffer;
+    }
 
+    WriteBoundedMsgMarker(
+        buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_INVALID);
     return buffer;
 }
 

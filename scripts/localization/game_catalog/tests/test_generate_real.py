@@ -74,6 +74,93 @@ class RealGenerateTests(unittest.TestCase):
             self.assertIn("gGameLocalizationCatalogs[GAME_LOCALIZATION_LOCALE_COUNT]", source)
             self.assertIn("gGameLocalizationJaCompressedBlob +", source)
 
+    def test_profile_specific_outputs_exclude_disabled_payloads_and_size_capacity(self):
+        with (
+            self._tmpdir() as ja_tmp,
+            self._tmpdir() as ja_repeat_tmp,
+            self._tmpdir() as zh_tmp,
+            self._tmpdir() as both_tmp,
+        ):
+            ja = generate(output_dir=Path(ja_tmp), enabled_locales=("ja",))
+            ja_repeat = generate(
+                output_dir=Path(ja_repeat_tmp), enabled_locales=("ja",)
+            )
+            zh = generate(output_dir=Path(zh_tmp), enabled_locales=("zh-Hans",))
+            both = generate(
+                output_dir=Path(both_tmp), enabled_locales=("ja", "zh-Hans")
+            )
+
+            for name in ja:
+                self.assertEqual(ja[name].read_bytes(), ja_repeat[name].read_bytes(), name)
+
+            ja_source = ja["source"].read_text(encoding="utf-8")
+            zh_source = zh["source"].read_text(encoding="utf-8")
+            both_source = both["source"].read_text(encoding="utf-8")
+            ja_header = ja["header"].read_text(encoding="utf-8")
+            zh_header = zh["header"].read_text(encoding="utf-8")
+            ja_config = ja["config_header"].read_text(encoding="utf-8")
+            zh_config = zh["config_header"].read_text(encoding="utf-8")
+
+            self.assertIn("gGameLocalizationJaCompressedBlob[]", ja_source)
+            self.assertNotIn("gGameLocalizationZhHansCompressedBlob[]", ja_source)
+            self.assertIn("gGameLocalizationZhHansCompressedBlob[]", zh_source)
+            self.assertNotIn("gGameLocalizationJaCompressedBlob[]", zh_source)
+            self.assertIn("gGameLocalizationJaCompressedBlob[]", both_source)
+            self.assertIn("gGameLocalizationZhHansCompressedBlob[]", both_source)
+            self.assertEqual(ja_source.count(
+                "(const struct GameLocalizationLocaleCatalog *)0,"
+            ), 1)
+            self.assertEqual(zh_source.count(
+                "(const struct GameLocalizationLocaleCatalog *)0,"
+            ), 1)
+            self.assertNotIn(
+                "(const struct GameLocalizationLocaleCatalog *)0,", both_source
+            )
+
+            self.assertIn("GAME_LOCALIZATION_JA_ENABLED 1u", ja_header)
+            self.assertIn("GAME_LOCALIZATION_ZH_HANS_ENABLED 0u", ja_header)
+            self.assertNotIn("extern const u32 gGameLocalizationZhHansNodes[];", ja_header)
+            self.assertIn("GAME_LOCALIZATION_JA_ENABLED 0u", zh_header)
+            self.assertIn("GAME_LOCALIZATION_ZH_HANS_ENABLED 1u", zh_header)
+            self.assertNotIn("extern const u32 gGameLocalizationJaNodes[];", zh_header)
+            self.assertIn(
+                "FE8_GAME_LOCALIZATION_MAX_DECODED_BYTES 5328u", ja_config
+            )
+            self.assertIn(
+                "FE8_GAME_LOCALIZATION_MAX_DECODED_BYTES 4260u", zh_config
+            )
+
+            ja_report = json.loads(ja["report_json"].read_text(encoding="utf-8"))
+            zh_report = json.loads(zh["report_json"].read_text(encoding="utf-8"))
+            both_report = json.loads(
+                both["report_json"].read_text(encoding="utf-8")
+            )
+            ja_budget = json.loads(ja["budget_json"].read_text(encoding="utf-8"))
+            zh_budget = json.loads(zh["budget_json"].read_text(encoding="utf-8"))
+            both_budget = json.loads(
+                both["budget_json"].read_text(encoding="utf-8")
+            )
+
+            self.assertEqual(ja_report["enabled_locales"], ["ja"])
+            self.assertEqual(set(ja_report["locales"]), {"ja"})
+            self.assertEqual(zh_report["enabled_locales"], ["zh-Hans"])
+            self.assertEqual(set(zh_report["locales"]), {"zh-Hans"})
+            self.assertEqual(
+                both_report["enabled_locales"], ["ja", "zh-Hans"]
+            )
+            self.assertEqual(ja_budget["locales"]["ja"]["max_decoded_bytes"], 5328)
+            self.assertEqual(
+                zh_budget["locales"]["zh-Hans"]["max_decoded_bytes"], 4260
+            )
+            self.assertLess(
+                ja_budget["totals"]["estimated_total_c_bytes"],
+                both_budget["totals"]["estimated_total_c_bytes"],
+            )
+            self.assertLess(
+                zh_budget["totals"]["estimated_total_c_bytes"],
+                both_budget["totals"]["estimated_total_c_bytes"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

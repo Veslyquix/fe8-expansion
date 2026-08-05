@@ -198,8 +198,8 @@ extern const char gUnknown_080D7954[];
 // extern ??? Vectors_DanceringFx
 // extern ??? gBmdifficulty_6
 
-// extern ??? gMsgHuffmanTable
-// extern ??? gMsgHuffmanTableRoot
+extern const u32 gMsgHuffmanTable[];
+extern const u32 *const gMsgHuffmanTableRoot;
 extern const u8 *const gMsgTable[];
 
 extern u16 gPal_StoneShatterAnim[];

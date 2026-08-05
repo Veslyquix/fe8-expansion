@@ -29,6 +29,15 @@ JA_MESSAGES = (
     "\u3000\x1f\x00".encode("utf-8"),
 )
 
+ENGLISH_MESSAGES = (
+    b"Cat\x1f\x00",
+    b"Fallback\x1f\x00",
+    b"Long English\x1f\x00",
+    b"Broken\x1f\x00",
+    b"Plain English\x1f\x00",
+    b"Space\x1f\x00",
+)
+
 
 def _c_bytes(data: bytes) -> str:
     return ", ".join("0x{:02X}".format(value) for value in data)
@@ -71,8 +80,11 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
 
     def _write_runtime_fixture(self, build_dir: Path):
         catalog = build_catalog(JA_MESSAGES)
+        english_catalog = build_catalog(ENGLISH_MESSAGES)
         if catalog.root_index is None:
             raise AssertionError("fixture catalog unexpectedly missing root")
+        if english_catalog.root_index is None:
+            raise AssertionError("English fixture catalog unexpectedly missing root")
 
         max_decoded = max(len(msg) for msg in JA_MESSAGES if msg is not None)
         config_header = build_dir / "localized_game_text_data.h"
@@ -144,10 +156,28 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             "#endif\n",
             encoding="ascii",
         )
+        english_nodes = ", ".join(
+            "0x{:08X}u".format(node) for node in english_catalog.nodes
+        )
+        english_pointers = []
+        for entry in english_catalog.entries:
+            if entry.pointer_offset is None:
+                raise AssertionError("English fixture unexpectedly has an absent entry")
+            english_pointers.append(
+                "    gEnglishCompressed + {}u,".format(entry.pointer_offset)
+            )
+
         source_text = (
             "#include \"global.h\"\n"
             "#include \"localized_game_text.h\"\n"
             "#include \"game_localization_catalog.h\"\n\n"
+            "const u32 gMsgHuffmanTable[] = {{{english_nodes}}};\n"
+            "const u32 *const gMsgHuffmanTableRoot = "
+            "gMsgHuffmanTable + {english_root}u;\n"
+            "static const u8 gEnglishCompressed[] = {{{english_blob}}};\n"
+            "const u8 *const gMsgTable[] = {{\n"
+            "{english_pointers}\n"
+            "}};\n\n"
             "static const u32 gJaNodes[] = {{{nodes}}};\n"
             "static const u8 gJaCompressed[] = {{{blob}}};\n"
             "static const struct GameLocalizationCatalogEntry gJaEntries[] = "
@@ -164,6 +194,10 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             "        0\n"
             "    }};\n"
         ).format(
+            english_nodes=english_nodes,
+            english_root=english_catalog.root_index,
+            english_blob=_c_bytes(english_catalog.compressed_blob),
+            english_pointers="\n".join(english_pointers),
             nodes=nodes,
             blob=_c_bytes(catalog.compressed_blob),
             entries_text="\n".join(entries),

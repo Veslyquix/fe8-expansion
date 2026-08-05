@@ -68,6 +68,8 @@ struct CharacterData
 };
 
 extern char gBufPrep[0x2000];
+extern const u32 gMsgHuffmanTable[];
+extern const u32 *const gMsgHuffmanTableRoot;
 extern const u8 *const gMsgTable[];
 extern struct ActionData gActionData;
 extern struct PlaySt gPlaySt;

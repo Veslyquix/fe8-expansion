@@ -47,6 +47,10 @@ class GameCatalogBuild:
     budget: Dict[str, Any]
     suffix_share: bool
 
+    @property
+    def enabled_locales(self) -> Tuple[str, ...]:
+        return tuple(bundle.locale for bundle in self.locales)
+
     def locale_bundle(self, locale: str) -> LocaleCatalogBundle:
         for bundle in self.locales:
             if bundle.locale == locale:

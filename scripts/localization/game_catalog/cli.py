@@ -51,6 +51,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="disable immediate-predecessor compressed suffix sharing",
     )
+    parser.add_argument(
+        "--enabled-locales",
+        default="ja,zh-Hans",
+        help="comma-separated game-catalog payload locales (ja and/or zh-Hans)",
+    )
 
 
 def _suffix_share(args: argparse.Namespace) -> bool:
@@ -59,12 +64,19 @@ def _suffix_share(args: argparse.Namespace) -> bool:
 
 def _build_summary(build) -> str:
     mapping = build.report["mapping_source_counts"]
-    ja = build.report["locales"]["ja"]
-    zh = build.report["locales"]["zh-Hans"]
+    locale_counts = []
+    for locale in ("ja", "zh-Hans"):
+        report = build.report["locales"].get(locale)
+        locale_counts.append(
+            "{}.present={}".format(
+                "zh" if locale == "zh-Hans" else locale,
+                report["present_count"] if report is not None else "disabled",
+            )
+        )
     return (
         "targets={targets} indexed={indexed} raw={raw} authored={authored} "
         "fallback={fallback} unresolved={unresolved} "
-        "ja.present={ja_present} zh.present={zh_present}"
+        "{locale_counts}"
     ).format(
         targets=build.target_count,
         indexed=mapping["indexed"],
@@ -72,8 +84,7 @@ def _build_summary(build) -> str:
         authored=mapping["authored"],
         fallback=mapping["english_fallback"],
         unresolved=mapping["unresolved"],
-        ja_present=ja["present_count"],
-        zh_present=zh["present_count"],
+        locale_counts=" ".join(locale_counts),
     )
 
 
@@ -85,6 +96,7 @@ def _build_from_args(args: argparse.Namespace):
         mapping_path=args.mapping,
         target_header_path=args.target_header,
         authored_paths=_locale_path_map(args.authored),
+        enabled_locales=args.enabled_locales,
         suffix_share=_suffix_share(args),
     )
 

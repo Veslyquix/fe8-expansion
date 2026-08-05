@@ -7,7 +7,7 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 from scripts.localization.game_locales.controls import (
     ControlSyntaxError,
@@ -234,6 +234,30 @@ def encode_canonical_text(text: str) -> bytes:
 def _mapping_source_counts(mapping) -> Dict[str, int]:
     counts = Counter(row.source_kind for row in mapping.rows)
     return {kind: counts.get(kind, 0) for kind in SOURCE_KINDS}
+
+
+def _normalize_enabled_locales(enabled_locales: Sequence[str]) -> Tuple[str, ...]:
+    if isinstance(enabled_locales, str):
+        requested = tuple(
+            item.strip() for item in enabled_locales.split(",") if item.strip()
+        )
+    else:
+        requested = tuple(enabled_locales)
+
+    if not requested:
+        raise GameCatalogError("enabled locales must not be empty")
+
+    unsupported = sorted(set(requested) - set(LOCALE_IDS))
+    if unsupported:
+        raise GameCatalogError(
+            f"unsupported enabled game-catalog locale(s) {unsupported!r}; "
+            f"expected a subset of {LOCALE_IDS!r}"
+        )
+
+    if len(set(requested)) != len(requested):
+        raise GameCatalogError("enabled game-catalog locales must not repeat")
+
+    return tuple(locale for locale in LOCALE_IDS if locale in requested)
 
 
 def _entry_for_locale(
@@ -466,6 +490,7 @@ def _build_report(
             "unresolved": 0,
         },
         "storage_target_bytes": TARGET_STORAGE_BYTES,
+        "enabled_locales": list(locale_reports),
         "locales": locale_reports,
     }
 
@@ -529,6 +554,7 @@ def _build_budget(
         "schema_version": BUDGET_SCHEMA_VERSION,
         "kind": BUDGET_KIND,
         "storage_target_bytes": TARGET_STORAGE_BYTES,
+        "enabled_locales": [bundle.locale for bundle in locale_bundles],
         "mapping_source_counts": {
             **{kind: mapping_source_counts.get(kind, 0) for kind in SOURCE_KINDS},
             "unresolved": 0,
@@ -561,15 +587,20 @@ def build_game_catalog(
     mapping_path: Path = DEFAULT_MAPPING_PATH,
     target_header_path: Path = DEFAULT_TARGET_HEADER_PATH,
     authored_paths: Optional[Mapping[str, Path]] = None,
+    enabled_locales: Sequence[str] = LOCALE_IDS,
     suffix_share: bool = True,
 ) -> GameCatalogBuild:
+    enabled_locales = _normalize_enabled_locales(enabled_locales)
     target_count = len(load_fe8u_target_ids(target_header_path))
     mapping = _load_mapping(mapping_path, target_count=target_count)
-    indexed_sources = {
-        "ja": _load_indexed(ja_indexed_path),
-        "zh-Hans": _load_indexed(zh_indexed_path),
-    }
-    raw_records = _load_raw_records(zh_raw_path)
+    indexed_sources = {}
+    if "ja" in enabled_locales:
+        indexed_sources["ja"] = _load_indexed(ja_indexed_path)
+    if "zh-Hans" in enabled_locales:
+        indexed_sources["zh-Hans"] = _load_indexed(zh_indexed_path)
+    raw_records = (
+        _load_raw_records(zh_raw_path) if "zh-Hans" in enabled_locales else {}
+    )
     authored_records = _load_authored_catalogs(authored_paths)
     mapping_source_counts = _mapping_source_counts(mapping)
     locale_bundles = tuple(
@@ -581,7 +612,7 @@ def build_game_catalog(
             authored_records=authored_records,
             suffix_share=suffix_share,
         )
-        for locale in LOCALE_IDS
+        for locale in enabled_locales
     )
     locale_reports = {
         bundle.locale: _locale_report(bundle, suffix_share=suffix_share)
@@ -656,6 +687,7 @@ def generate(
     mapping_path: Path = DEFAULT_MAPPING_PATH,
     target_header_path: Path = DEFAULT_TARGET_HEADER_PATH,
     authored_paths: Optional[Mapping[str, Path]] = None,
+    enabled_locales: Sequence[str] = LOCALE_IDS,
     suffix_share: bool = True,
 ) -> Dict[str, Path]:
     build = build_game_catalog(
@@ -665,6 +697,7 @@ def generate(
         mapping_path=mapping_path,
         target_header_path=target_header_path,
         authored_paths=authored_paths,
+        enabled_locales=enabled_locales,
         suffix_share=suffix_share,
     )
     return write_build(build, output_dir=output_dir)
