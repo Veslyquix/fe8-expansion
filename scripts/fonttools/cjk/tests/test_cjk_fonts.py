@@ -1,6 +1,7 @@
 import hashlib
 import json
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -16,7 +17,7 @@ from scripts.fonttools.cjk.inventory import (
 )
 from scripts.fonttools.cjk.package import (
     archive_package,
-    build_compact_assets,
+    check_compact_assets,
 )
 
 
@@ -25,29 +26,19 @@ class CjkFontTests(unittest.TestCase):
 
     def test_inventory_counts_tokens_and_spacing_contract(self):
         inventory = json.loads((ROOT / "fonts/cjk/inventory.json").read_text())
-        self.assertEqual(
-            (
-                inventory["locales"]["ja"]["source_non_ascii_scalar_count"],
-                inventory["locales"]["ja"]["glyph_scalar_count"],
-            ),
-            (1847, 1846),
-        )
-        self.assertEqual(
-            (
-                inventory["locales"]["zh-Hans"]["source_non_ascii_scalar_count"],
-                inventory["locales"]["zh-Hans"]["glyph_scalar_count"],
-            ),
-            (2459, 2459),
-        )
-        self.assertEqual(
-            (
-                inventory["union"]["source_non_ascii_scalar_count"],
-                inventory["union"]["glyph_scalar_count"],
-            ),
-            (3330, 3329),
-        )
         self.assertEqual(inventory["union"]["spacing_scalars"], ["U+3000"])
+        locale_scalars = {}
         for locale in ("ja", "zh-Hans"):
+            record = inventory["locales"][locale]
+            expected_source_count = (
+                record["glyph_scalar_count"]
+                + len(record["spacing_scalars"])
+                + len(record["nonrendering_scalars"])
+            )
+            self.assertEqual(
+                record["source_non_ascii_scalar_count"],
+                expected_source_count,
+            )
             for style in ("system", "talk"):
                 corpus = (
                     ROOT / f"fonts/cjk/corpora/{locale}.{style}.txt"
@@ -59,6 +50,23 @@ class CjkFontTests(unittest.TestCase):
                     tuple(sorted(set(map(ord, corpus)))),
                 )
                 self.assertNotIn("[CTRL:", corpus)
+                self.assertEqual(len(corpus), record["glyph_scalar_count"])
+            locale_scalars[locale] = set(
+                map(ord, (ROOT / f"fonts/cjk/corpora/{locale}.system.txt").read_text())
+            )
+
+        union = set(map(ord, (ROOT / "fonts/cjk/corpora/union.txt").read_text()))
+        self.assertEqual(union, set().union(*locale_scalars.values()))
+        self.assertEqual(len(union), inventory["union"]["glyph_scalar_count"])
+        self.assertEqual(
+            inventory["union"]["source_non_ascii_scalar_count"],
+            inventory["union"]["glyph_scalar_count"]
+            + len(inventory["union"]["spacing_scalars"]),
+        )
+        self.assertIn(0x5019, locale_scalars["ja"])
+        self.assertIn(0x5019, locale_scalars["zh-Hans"])
+        self.assertIn(0x8A3A, locale_scalars["ja"])
+        self.assertIn(0x8BCA, locale_scalars["zh-Hans"])
 
     def test_inventory_regeneration_is_byte_identical(self):
         generated = build_generated_files(ROOT)
@@ -86,27 +94,29 @@ class CjkFontTests(unittest.TestCase):
                 expected["source_url"],
             )
 
-    def test_package_import_is_deterministic_and_matches_committed_assets(self):
-        package = ROOT / "fonts/cjk/packages/febuilder-schema-v1.zip"
-        report = ROOT / "fonts/cjk/reports/febuilder-generation-report.json"
-        first = build_compact_assets(ROOT, package, report)
-        second = build_compact_assets(ROOT, package, report)
+    def test_compact_asset_validation_is_deterministic(self):
+        first = check_compact_assets(ROOT)
+        second = check_compact_assets(ROOT)
         self.assertEqual(first, second)
-        for relative_path, expected in first.items():
-            self.assertEqual(
-                (ROOT / relative_path).read_bytes(),
-                expected,
-                relative_path,
-            )
+
+    def test_febuilder_gate_counts_follow_current_manifest(self):
+        manifest = json.loads(
+            (ROOT / "fonts/cjk/febuilder-manifest.json").read_text()
+        )
+        gates = json.loads(
+            (ROOT / "fonts/cjk/reports/febuilder-gates.json").read_text()
+        )
+        expected_rows = sum(
+            len((ROOT / "fonts/cjk" / job["corpus"]["path"]).read_text())
+            for job in manifest["jobs"]
+        )
+        for gate in gates["gates"].values():
+            self.assertEqual(gate["job_count"], len(manifest["jobs"]))
+            self.assertEqual(gate["row_count"], expected_rows)
 
     def test_aggregate_maps_widths_and_bitmaps_are_valid(self):
         manifest = json.loads(
             (ROOT / "graphics/fonts/cjk/manifest.json").read_text()
-        )
-        self.assertEqual(manifest["rom_budget"]["payload_bytes"], 594090)
-        self.assertEqual(
-            manifest["rom_budget"]["four_byte_aligned_blob_bytes"],
-            594096,
         )
         self.assertEqual(
             manifest["spacing_scalars"],
@@ -120,6 +130,8 @@ class CjkFontTests(unittest.TestCase):
                 }
             ],
         )
+        payload_total = 0
+        aligned_total = 0
         for name, asset in manifest["assets"].items():
             count = asset["glyph_count"]
             codepoints = (ROOT / asset["codepoints"]["path"]).read_bytes()
@@ -136,10 +148,45 @@ class CjkFontTests(unittest.TestCase):
             )
             for kind in ("codepoints", "widths", "bitmap"):
                 data = (ROOT / asset[kind]["path"]).read_bytes()
+                payload_total += len(data)
+                aligned_total += (len(data) + 3) & ~3
                 self.assertEqual(
                     hashlib.sha256(data).hexdigest(),
                     asset[kind]["sha256"],
                 )
+        self.assertEqual(manifest["rom_budget"]["payload_bytes"], payload_total)
+        self.assertEqual(
+            manifest["rom_budget"]["four_byte_aligned_blob_bytes"],
+            aligned_total,
+        )
+
+    def test_font_domain_contains_no_committed_package_archive(self):
+        tracked = subprocess.run(
+            (
+                "git",
+                "ls-files",
+                "-z",
+                "--",
+                "fonts/cjk",
+                "graphics/fonts/cjk",
+                "scripts/fonttools/cjk",
+                "cjk_fonts.mk",
+                "docs/cjk_fonts.md",
+            ),
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+        ).stdout.decode("utf-8")
+        for relative_path in filter(None, tracked.split("\0")):
+            path = ROOT / relative_path
+            self.assertNotEqual(path.suffix.lower(), ".zip", path)
+            with path.open("rb") as source:
+                signature = source.read(4)
+            self.assertNotIn(
+                signature,
+                (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"),
+                path,
+            )
 
     def test_package_zip_writer_is_byte_deterministic(self):
         self.SCRATCH.mkdir(parents=True, exist_ok=True)

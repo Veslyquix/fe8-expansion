@@ -33,9 +33,9 @@ Current deterministic counts:
 
 | Locale | Source non-ASCII | Bitmap scalars per style | Styles |
 | --- | ---: | ---: | --- |
-| `ja` | 1,847 | 1,846 | System/item, Talk/text |
-| `zh-Hans` | 2,459 | 2,459 | System/item, Talk/text |
-| union | 3,330 | 3,329 | U+3000 is the one spacing scalar |
+| `ja` | 1,849 | 1,848 | System/item, Talk/text |
+| `zh-Hans` | 2,460 | 2,460 | System/item, Talk/text |
+| union | 3,332 | 3,331 | U+3000 is the one spacing scalar |
 
 The sorted corpora are in `fonts/cjk/corpora/`; human-readable scalar maps are
 in `fonts/cjk/maps/`; counts, input hashes, output hashes, token rules, and
@@ -91,19 +91,22 @@ make -f cjk_fonts.mk cjk-fonts-febuilder-all \
 The explicit maintainer sequence is:
 
 1. dry-run provenance and capacity planning;
-2. generate 4 jobs / 8,610 rows;
+2. generate the manifest jobs and their derived corpus row count;
 3. validate with the immutable external generation report;
 4. non-rasterizing byte-for-byte roundtrip;
-5. archive the validated package with fixed ZIP metadata and no compression;
-6. import and check the compact assets.
+5. record the generation report and gate evidence after all commands exit zero;
+6. create a deterministic temporary archive under `build/tmp/cjk-fonts/`,
+   import it twice to prove deterministic compact output, and check the assets.
 
 The committed run used FEBuilderGBA commit
 `c1700532b27c579511585ca63e2d63222b9ea646` and .NET SDK 10.0.302.
 Machine-readable evidence is in
 `fonts/cjk/reports/febuilder-gates.json`; the full immutable oracle is
-`fonts/cjk/reports/febuilder-generation-report.json`. The canonical package
-archive is `fonts/cjk/packages/febuilder-schema-v1.zip`. No loose PNG package
-tree is committed.
+`fonts/cjk/reports/febuilder-generation-report.json`. FEBuilder package
+directories and archives are temporary maintainer artifacts under
+`build/tmp/cjk-fonts/`; neither loose PNG package trees nor ZIP archives are
+committed. Delete that ignored directory at any time and rerun the command
+above to reproduce the gate.
 
 ## Sprint 3 aggregate asset contract
 
@@ -118,7 +121,7 @@ Binary-search the codepoint table. The matching index selects one width byte
 and one fixed-stride bitmap. `graphics/fonts/cjk/manifest.json` pins every
 asset hash and all package/report provenance.
 
-The four locale/style payloads total **594,090 bytes**, or **594,096 bytes**
+The four locale/style payloads total **594,504 bytes**, or **594,504 bytes**
 when every blob is independently aligned to four bytes. This budget includes
 the bitmap, width, and Unicode index data, but not future linker/table
 wrappers.
@@ -132,8 +135,10 @@ python3 -m scripts.fonttools.cjk check
 python3 -m unittest discover -s scripts/fonttools/cjk/tests -p 'test_*.py' -v
 ```
 
-These checks regenerate the inventory, canonically rebuild the package ZIP,
-re-import all 8,610 package rows, verify package/report hashes, require
-nonzero 64-byte glyphs, validate widths and sorted unique maps, compare every
-aggregate hash, and prove byte-identical import output. They do not invoke
-FEBuilderGBA or download anything.
+These checks regenerate the inventory, derive expected job/row counts from the
+manifest and corpora, verify the recorded FEBuilder gates and report hashes,
+require nonzero 64-byte glyphs, validate widths and exact catalog/game scalar
+coverage, compare every aggregate hash, and reject ZIP files or ZIP magic in
+the committed font domain. They do not invoke FEBuilderGBA or download
+anything. The explicit maintainer gate above performs the temporary package
+generation, validation, roundtrip, and deterministic import.

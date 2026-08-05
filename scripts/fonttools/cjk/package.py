@@ -22,8 +22,9 @@ from .inventory import (
     sha256_bytes,
 )
 
-PACKAGE_ARCHIVE = "fonts/cjk/packages/febuilder-schema-v1.zip"
+PACKAGE_ARCHIVE = "build/tmp/cjk-fonts/febuilder-schema-v1.zip"
 GENERATION_REPORT = "fonts/cjk/reports/febuilder-generation-report.json"
+GATE_REPORT = "fonts/cjk/reports/febuilder-gates.json"
 ASSET_ROOT = "graphics/fonts/cjk"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 SLOTS_HEADER = (
@@ -132,7 +133,7 @@ def check_package_archive(package_path: Path) -> None:
     with PackageReader(package_path) as package:
         rebuilt = _archive_bytes((name, package.read(name)) for name in package.names())
     if rebuilt != committed:
-        raise CjkFontError("committed FEBuilder package ZIP is not canonical")
+        raise CjkFontError("FEBuilder package ZIP is not canonical")
 
 
 def _read_png_indices(png: bytes) -> bytes:
@@ -286,6 +287,174 @@ def _expected_jobs(root: Path) -> Dict[str, Dict[str, object]]:
     return jobs
 
 
+def _job_corpora(
+    root: Path,
+    jobs: Mapping[str, Mapping[str, object]],
+) -> Dict[str, Tuple[Path, bytes, Tuple[int, ...]]]:
+    corpora = {}
+    for job_id, job in jobs.items():
+        corpus_path = root / "fonts/cjk" / job["corpus"]["path"]
+        corpus_data = corpus_path.read_bytes()
+        try:
+            corpus = corpus_data.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise CjkFontError(f"{corpus_path}: corpus is not UTF-8") from error
+        scalars = tuple(ord(character) for character in corpus)
+        if scalars != tuple(sorted(set(scalars))):
+            raise CjkFontError(f"{corpus_path}: scalars must be sorted and unique")
+        if sha256_bytes(corpus_data) != job["corpus"]["sha256"]:
+            raise CjkFontError(f"{corpus_path}: corpus SHA-256 mismatch")
+        corpora[job_id] = (corpus_path, corpus_data, scalars)
+    return corpora
+
+
+def _load_report(
+    root: Path,
+    report_data: bytes,
+    expected_mode: str,
+) -> Tuple[
+    Dict[str, object],
+    Dict[str, Dict[str, object]],
+    Dict[str, Tuple[Path, bytes, Tuple[int, ...]]],
+]:
+    try:
+        report = json.loads(report_data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise CjkFontError("FEBuilder report is not valid UTF-8 JSON") from error
+    if report.get("schemaVersion") != 1 or report.get("mode") != expected_mode:
+        raise CjkFontError(f"FEBuilder report is not schema-v1 {expected_mode} output")
+
+    manifest_data = (root / "fonts/cjk/febuilder-manifest.json").read_bytes()
+    if report.get("manifestSha256") != sha256_bytes(manifest_data):
+        raise CjkFontError("FEBuilder report manifest SHA-256 mismatch")
+    if report.get("outcomes") != []:
+        raise CjkFontError("FEBuilder report records non-success outcomes")
+
+    jobs = _expected_jobs(root)
+    corpora = _job_corpora(root, jobs)
+    report_rows = report.get("jobs", [])
+    if not isinstance(report_rows, list):
+        raise CjkFontError("FEBuilder report jobs must be a list")
+    report_jobs = {}
+    for row in report_rows:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            raise CjkFontError("FEBuilder report job is invalid")
+        job_id = row["id"]
+        if job_id in report_jobs:
+            raise CjkFontError(f"duplicate FEBuilder report job id {job_id}")
+        report_jobs[job_id] = row
+    if set(report_jobs) != set(jobs):
+        raise CjkFontError("FEBuilder report does not cover exactly the manifest jobs")
+    for job_id, job in jobs.items():
+        row = report_jobs[job_id]
+        _, corpus_data, scalars = corpora[job_id]
+        if row.get("scalarCount") != len(scalars):
+            raise CjkFontError(f"{job_id}: FEBuilder scalar count mismatch")
+        if row.get("rowCount") != len(scalars):
+            raise CjkFontError(f"{job_id}: FEBuilder row count mismatch")
+        if row.get("corpusSha256") != sha256_bytes(corpus_data):
+            raise CjkFontError(f"{job_id}: FEBuilder corpus SHA-256 mismatch")
+        if row.get("locale") != job["locale"] or row.get("format") != job["format"]:
+            raise CjkFontError(f"{job_id}: FEBuilder job contract mismatch")
+    return report, jobs, corpora
+
+
+def _gate_record(
+    report: Mapping[str, object],
+    *,
+    mode: str,
+    oracle: str,
+    job_count: int,
+    row_count: int,
+) -> Dict[str, object]:
+    return {
+        "full_tree_sha256": report.get("fullTreeSha256", ""),
+        "job_count": job_count,
+        "manifest_sha256": report["manifestSha256"],
+        "mode": mode,
+        "oracle": oracle,
+        "outcomes": report["outcomes"],
+        "payload_tree_sha256": report.get("payloadTreeSha256", ""),
+        "row_count": row_count,
+    }
+
+
+def record_gate_evidence(
+    root: Path,
+    dry_run_report_path: Path,
+    generation_report_path: Path,
+    output_report_path: Path,
+    gate_report_path: Path,
+    *,
+    cli_command: str,
+    commit: str,
+    dotnet_sdk: str,
+    repository: str,
+) -> Dict[str, object]:
+    dry_run_data = dry_run_report_path.read_bytes()
+    generation_data = generation_report_path.read_bytes()
+    dry_run, dry_jobs, dry_corpora = _load_report(root, dry_run_data, "dry-run")
+    generation, jobs, corpora = _load_report(root, generation_data, "generate")
+    if set(dry_jobs) != set(jobs):
+        raise CjkFontError("dry-run and generation reports cover different jobs")
+    if {
+        job_id: values[2] for job_id, values in dry_corpora.items()
+    } != {
+        job_id: values[2] for job_id, values in corpora.items()
+    }:
+        raise CjkFontError("dry-run and generation report corpora differ")
+
+    job_count = len(jobs)
+    row_count = sum(len(values[2]) for values in corpora.values())
+    manifest_data = (root / "fonts/cjk/febuilder-manifest.json").read_bytes()
+    generated_gate = _gate_record(
+        generation,
+        mode="generate",
+        oracle="generation",
+        job_count=job_count,
+        row_count=row_count,
+    )
+    evidence = {
+        "febuilder": {
+            "cli_command": cli_command,
+            "commit": commit,
+            "dotnet_sdk": dotnet_sdk,
+            "repository": repository,
+        },
+        "files": {
+            "generation_report_sha256": sha256_bytes(generation_data),
+            "manifest_sha256": sha256_bytes(manifest_data),
+        },
+        "gates": {
+            "dry_run": _gate_record(
+                dry_run,
+                mode="dry-run",
+                oracle="plan-and-provenance-only",
+                job_count=job_count,
+                row_count=row_count,
+            ),
+            "generate": generated_gate,
+            "roundtrip": {
+                **generated_gate,
+                "mode": "roundtrip",
+                "oracle": "immutable-external-report",
+            },
+            "validate": {
+                **generated_gate,
+                "mode": "validate",
+                "oracle": "immutable-external-report",
+            },
+        },
+        "result": "all FEBuilder schema-v1 gates exited 0",
+        "schema_version": 1,
+    }
+    output_report_path.parent.mkdir(parents=True, exist_ok=True)
+    gate_report_path.parent.mkdir(parents=True, exist_ok=True)
+    output_report_path.write_bytes(generation_data)
+    gate_report_path.write_bytes(json_bytes(evidence))
+    return evidence
+
+
 def _tree_sha256(package: PackageReader, names: Iterable[str]) -> str:
     digest = hashlib.sha256()
     for name in sorted(names):
@@ -314,20 +483,11 @@ def build_compact_assets(
     package_path: Path,
     report_path: Path,
 ) -> Dict[str, bytes]:
-    jobs = _expected_jobs(root)
     manifest_data = (root / "fonts/cjk/febuilder-manifest.json").read_bytes()
     inventory_data = (root / "fonts/cjk/inventory.json").read_bytes()
     report_data = report_path.read_bytes()
-    try:
-        report = json.loads(report_data.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise CjkFontError(f"{report_path}: invalid generation report") from error
-    if report.get("schemaVersion") != 1 or report.get("mode") != "generate":
-        raise CjkFontError("generation report is not FEBuilder schema-v1 generate output")
-    if report.get("manifestSha256") != sha256_bytes(manifest_data):
-        raise CjkFontError("generation report manifest SHA-256 mismatch")
+    report, jobs, corpora = _load_report(root, report_data, "generate")
 
-    package_data = package_path.read_bytes() if package_path.is_file() else b""
     outputs: Dict[str, bytes] = {}
     asset_records: Dict[str, object] = {}
     payload_total = 0
@@ -360,13 +520,7 @@ def build_compact_assets(
         for job_id in sorted(jobs):
             job = jobs[job_id]
             locale, runtime_style, package_style = _job_contract(job)
-            corpus_path = root / "fonts/cjk" / job["corpus"]["path"]
-            corpus = corpus_path.read_text(encoding="utf-8")
-            expected_scalars = tuple(ord(character) for character in corpus)
-            if expected_scalars != tuple(sorted(set(expected_scalars))):
-                raise CjkFontError(f"{corpus_path}: scalars must be sorted and unique")
-            if sha256_bytes(corpus.encode("utf-8")) != job["corpus"]["sha256"]:
-                raise CjkFontError(f"{corpus_path}: corpus SHA-256 mismatch")
+            _, _, expected_scalars = corpora[job_id]
 
             slots_name = f"{job_id}/slots.tsv"
             fontall_name = f"{job_id}/{job_id}.fontall.txt"
@@ -479,9 +633,9 @@ def build_compact_assets(
                 "sha256": sha256_bytes(manifest_data),
             },
             "febuilder_package": {
-                "path": PACKAGE_ARCHIVE,
-                "sha256": sha256_bytes(package_data) if package_data else "",
-                "byte_count": len(package_data),
+                "disposition": (
+                    "temporary maintainer artifact under build/tmp; not committed"
+                ),
                 "package_report_sha256": sha256_bytes(package_report_data),
                 "payload_tree_sha256": package_report.get("payloadTreeSha256"),
                 "full_tree_sha256": report.get("fullTreeSha256"),
@@ -510,6 +664,9 @@ def write_compact_assets(
     report_path: Path,
 ) -> Dict[str, bytes]:
     outputs = build_compact_assets(root, package_path, report_path)
+    repeated = build_compact_assets(root, package_path, report_path)
+    if repeated != outputs:
+        raise CjkFontError("FEBuilder package import is not deterministic")
     for relative_path, data in outputs.items():
         path = root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -518,37 +675,167 @@ def write_compact_assets(
 
 
 def check_compact_assets(root: Path) -> Dict[str, bytes]:
-    package_path = root / PACKAGE_ARCHIVE
     report_path = root / GENERATION_REPORT
-    check_package_archive(package_path)
-    gate_path = root / "fonts/cjk/reports/febuilder-gates.json"
+    report_data = report_path.read_bytes()
+    report, jobs, corpora = _load_report(root, report_data, "generate")
+    manifest_data = (root / "fonts/cjk/febuilder-manifest.json").read_bytes()
+    inventory_data = (root / "fonts/cjk/inventory.json").read_bytes()
+
+    gate_path = root / GATE_REPORT
     gate = json.loads(gate_path.read_text(encoding="utf-8"))
     if gate.get("result") != "all FEBuilder schema-v1 gates exited 0":
         raise CjkFontError("FEBuilder gate evidence does not record a passing run")
-    manifest_hash = sha256_bytes(
-        (root / "fonts/cjk/febuilder-manifest.json").read_bytes()
-    )
-    for name in ("dry_run", "generate", "validate", "roundtrip"):
+    if gate.get("schema_version") != 1:
+        raise CjkFontError("FEBuilder gate evidence schema is invalid")
+    manifest_hash = sha256_bytes(manifest_data)
+    expected_job_count = len(jobs)
+    expected_row_count = sum(len(values[2]) for values in corpora.values())
+    expected_gate_contracts = {
+        "dry_run": ("dry-run", "plan-and-provenance-only", "", ""),
+        "generate": (
+            "generate",
+            "generation",
+            report.get("payloadTreeSha256"),
+            report.get("fullTreeSha256"),
+        ),
+        "validate": (
+            "validate",
+            "immutable-external-report",
+            report.get("payloadTreeSha256"),
+            report.get("fullTreeSha256"),
+        ),
+        "roundtrip": (
+            "roundtrip",
+            "immutable-external-report",
+            report.get("payloadTreeSha256"),
+            report.get("fullTreeSha256"),
+        ),
+    }
+    for name, contract in expected_gate_contracts.items():
+        mode, oracle, payload_tree, full_tree = contract
         result = gate.get("gates", {}).get(name, {})
         if (
             result.get("manifest_sha256") != manifest_hash
-            or result.get("job_count") != 4
-            or result.get("row_count") != 8610
+            or result.get("job_count") != expected_job_count
+            or result.get("row_count") != expected_row_count
+            or result.get("mode") != mode
+            or result.get("oracle") != oracle
             or result.get("outcomes") != []
+            or result.get("payload_tree_sha256") != payload_tree
+            or result.get("full_tree_sha256") != full_tree
         ):
             raise CjkFontError(f"FEBuilder {name} gate evidence is invalid")
-    if gate["files"]["generation_report_sha256"] != sha256_bytes(
-        report_path.read_bytes()
+    if gate.get("files", {}).get("manifest_sha256") != manifest_hash:
+        raise CjkFontError("FEBuilder gate manifest hash drifted")
+    if gate.get("files", {}).get("generation_report_sha256") != sha256_bytes(
+        report_data
     ):
         raise CjkFontError("FEBuilder gate generation-report hash drifted")
-    outputs = build_compact_assets(root, package_path, report_path)
-    mismatches = []
-    for relative_path, expected in outputs.items():
-        path = root / relative_path
-        if not path.is_file() or path.read_bytes() != expected:
-            mismatches.append(relative_path)
-    if mismatches:
-        raise CjkFontError(
-            "committed compact font assets drifted: " + ", ".join(mismatches)
+
+    asset_manifest_path = root / ASSET_ROOT / "manifest.json"
+    asset_manifest_data = asset_manifest_path.read_bytes()
+    asset_manifest = json.loads(asset_manifest_data.decode("utf-8"))
+    sources = asset_manifest.get("sources", {})
+    if sources.get("inventory") != {
+        "path": "fonts/cjk/inventory.json",
+        "sha256": sha256_bytes(inventory_data),
+    }:
+        raise CjkFontError("compact asset inventory provenance drifted")
+    if sources.get("febuilder_manifest") != {
+        "path": "fonts/cjk/febuilder-manifest.json",
+        "sha256": manifest_hash,
+    }:
+        raise CjkFontError("compact asset FEBuilder manifest provenance drifted")
+    generation_source = sources.get("febuilder_generation_report", {})
+    if (
+        generation_source.get("path") != GENERATION_REPORT
+        or generation_source.get("sha256") != sha256_bytes(report_data)
+        or generation_source.get("byte_count") != len(report_data)
+    ):
+        raise CjkFontError("compact asset generation-report provenance drifted")
+    package_source = sources.get("febuilder_package", {})
+    if (
+        package_source.get("disposition")
+        != "temporary maintainer artifact under build/tmp; not committed"
+        or package_source.get("payload_tree_sha256")
+        != report.get("payloadTreeSha256")
+        or package_source.get("full_tree_sha256") != report.get("fullTreeSha256")
+    ):
+        raise CjkFontError("compact asset temporary-package provenance drifted")
+    package_report_hash = package_source.get("package_report_sha256", "")
+    if len(package_report_hash) != 64 or any(
+        character not in "0123456789abcdef" for character in package_report_hash
+    ):
+        raise CjkFontError("compact asset package-report hash is invalid")
+
+    outputs: Dict[str, bytes] = {}
+    expected_assets = set()
+    payload_total = 0
+    aligned_total = 0
+    for job_id in sorted(jobs):
+        job = jobs[job_id]
+        locale, runtime_style, package_style = _job_contract(job)
+        _, _, expected_scalars = corpora[job_id]
+        prefix = f"{locale}.{runtime_style}"
+        expected_assets.add(prefix)
+        asset = asset_manifest.get("assets", {}).get(prefix)
+        if not isinstance(asset, dict):
+            raise CjkFontError(f"compact asset manifest is missing {prefix}")
+        if (
+            asset.get("locale") != locale
+            or asset.get("runtime_style") != runtime_style
+            or asset.get("febuilder_job") != job_id
+            or asset.get("febuilder_style") != package_style
+            or asset.get("glyph_count") != len(expected_scalars)
+        ):
+            raise CjkFontError(f"{prefix}: compact asset contract drifted")
+
+        expected_paths = {
+            "codepoints": f"{ASSET_ROOT}/{prefix}.codepoints.bin",
+            "widths": f"{ASSET_ROOT}/{prefix}.widths.bin",
+            "bitmap": f"{ASSET_ROOT}/{prefix}.glyphs.2bpp",
+        }
+        data_by_kind = {}
+        for kind, relative_path in expected_paths.items():
+            record = asset.get(kind, {})
+            if record.get("path") != relative_path:
+                raise CjkFontError(f"{prefix}: {kind} path drifted")
+            data = (root / relative_path).read_bytes()
+            if (
+                record.get("byte_count") != len(data)
+                or record.get("sha256") != sha256_bytes(data)
+            ):
+                raise CjkFontError(f"{prefix}: {kind} hash or size drifted")
+            outputs[relative_path] = data
+            data_by_kind[kind] = data
+            payload_total += len(data)
+            aligned_total += (len(data) + 3) & ~3
+
+        expected_codepoints = b"".join(
+            struct.pack("<I", scalar) for scalar in expected_scalars
         )
+        if data_by_kind["codepoints"] != expected_codepoints:
+            raise CjkFontError(f"{prefix}: codepoints do not cover the corpus")
+        widths = data_by_kind["widths"]
+        glyphs = data_by_kind["bitmap"]
+        if len(widths) != len(expected_scalars) or any(
+            not 1 <= width <= 16 for width in widths
+        ):
+            raise CjkFontError(f"{prefix}: widths are invalid")
+        if len(glyphs) != len(expected_scalars) * 64 or any(
+            not any(glyphs[offset : offset + 64])
+            for offset in range(0, len(glyphs), 64)
+        ):
+            raise CjkFontError(f"{prefix}: glyph payload is invalid")
+
+    if set(asset_manifest.get("assets", {})) != expected_assets:
+        raise CjkFontError("compact asset manifest has unexpected locale/style assets")
+    budget = asset_manifest.get("rom_budget", {})
+    if (
+        budget.get("payload_bytes") != payload_total
+        or budget.get("four_byte_aligned_blob_bytes") != aligned_total
+        or budget.get("bytes_per_glyph") != 69
+    ):
+        raise CjkFontError("compact asset ROM budget drifted")
+    outputs[f"{ASSET_ROOT}/manifest.json"] = asset_manifest_data
     return outputs

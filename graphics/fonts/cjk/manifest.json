@@ -2,106 +2,106 @@
   "assets": {
     "ja.system": {
       "bitmap": {
-        "byte_count": 118144,
+        "byte_count": 118272,
         "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
         "path": "graphics/fonts/cjk/ja.system.glyphs.2bpp",
-        "sha256": "bba4754aede8517aa671f54d18aa35bf3307e6b691749b9c5455b4904a9d1cf9",
+        "sha256": "04c391dad1c7526cc84c84f423ed4f7524ef54e12cc3e1c1b7cc6341e430c6aa",
         "stride_bytes": 64
       },
       "codepoints": {
-        "byte_count": 7384,
+        "byte_count": 7392,
         "format": "sorted unique little-endian uint32 Unicode scalars",
         "path": "graphics/fonts/cjk/ja.system.codepoints.bin",
-        "sha256": "f0b9f4b21220f65a17e2737636eab0a433f8ce8f948a8aea9fb7c8103bc07c57"
+        "sha256": "231dc726d09322323b7898a396acba93d894dccc63baba969d3f5001f8433169"
       },
       "febuilder_job": "ja-system",
       "febuilder_style": "item",
-      "glyph_count": 1846,
+      "glyph_count": 1848,
       "locale": "ja",
       "runtime_style": "system",
       "widths": {
-        "byte_count": 1846,
+        "byte_count": 1848,
         "format": "one unsigned byte per glyph; valid range 1..16",
         "path": "graphics/fonts/cjk/ja.system.widths.bin",
-        "sha256": "7a8f1d165707fadee5829cb51817d95feff4e5ddd70f5596deb1fd18f77de6fd"
+        "sha256": "afc94433ef480762c4090a3bc7d91c845e4f6a176df9ed6fda0e7b6ed2a813ff"
       }
     },
     "ja.talk": {
       "bitmap": {
-        "byte_count": 118144,
+        "byte_count": 118272,
         "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
         "path": "graphics/fonts/cjk/ja.talk.glyphs.2bpp",
-        "sha256": "159a285def6fa5bfd707f5a88dda1980b8635fb17f44b00cc6b9d6d5ba9674bd",
+        "sha256": "0be51e87ce92daee6e6f27307c7b79a705fdf19a5002494e4047975fffe45d0c",
         "stride_bytes": 64
       },
       "codepoints": {
-        "byte_count": 7384,
+        "byte_count": 7392,
         "format": "sorted unique little-endian uint32 Unicode scalars",
         "path": "graphics/fonts/cjk/ja.talk.codepoints.bin",
-        "sha256": "f0b9f4b21220f65a17e2737636eab0a433f8ce8f948a8aea9fb7c8103bc07c57"
+        "sha256": "231dc726d09322323b7898a396acba93d894dccc63baba969d3f5001f8433169"
       },
       "febuilder_job": "ja-talk",
       "febuilder_style": "text",
-      "glyph_count": 1846,
+      "glyph_count": 1848,
       "locale": "ja",
       "runtime_style": "talk",
       "widths": {
-        "byte_count": 1846,
+        "byte_count": 1848,
         "format": "one unsigned byte per glyph; valid range 1..16",
         "path": "graphics/fonts/cjk/ja.talk.widths.bin",
-        "sha256": "3239c461e37005b84f8268df47ebc6b15cfc2c6154fd749ca0309980c2093cda"
+        "sha256": "3549fdf3599c8cc34e3a6bba094a1df7b7d227252c9b50d6c4bb5c1f9ba4de4b"
       }
     },
     "zh-Hans.system": {
       "bitmap": {
-        "byte_count": 157376,
+        "byte_count": 157440,
         "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
         "path": "graphics/fonts/cjk/zh-Hans.system.glyphs.2bpp",
-        "sha256": "85670c707493f24f81dea0082dcd2433998655fd4b27226c9e041dcefb7e12ca",
+        "sha256": "850da168b49882b96be9d4552245ff73d3f1b98742d33d94832b69826f941645",
         "stride_bytes": 64
       },
       "codepoints": {
-        "byte_count": 9836,
+        "byte_count": 9840,
         "format": "sorted unique little-endian uint32 Unicode scalars",
         "path": "graphics/fonts/cjk/zh-Hans.system.codepoints.bin",
-        "sha256": "7cc8cf09359dff283483db0b4e3e40f99c335646bafcac36a9d62483933132bb"
+        "sha256": "add7c909c8ddf248ba95e2a6490dd417cbf527e0e95ce3c2378524b906f88f8f"
       },
       "febuilder_job": "zh-hans-system",
       "febuilder_style": "item",
-      "glyph_count": 2459,
+      "glyph_count": 2460,
       "locale": "zh-Hans",
       "runtime_style": "system",
       "widths": {
-        "byte_count": 2459,
+        "byte_count": 2460,
         "format": "one unsigned byte per glyph; valid range 1..16",
         "path": "graphics/fonts/cjk/zh-Hans.system.widths.bin",
-        "sha256": "0e67bcfd69134646687ab75e7ea9cc3f85b7a6aae4b90256477e1df637b7cce6"
+        "sha256": "ad34d24b5d40247e4c09460cd3761e5f083067f14dcf5178734ef6185556bac3"
       }
     },
     "zh-Hans.talk": {
       "bitmap": {
-        "byte_count": 157376,
+        "byte_count": 157440,
         "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
         "path": "graphics/fonts/cjk/zh-Hans.talk.glyphs.2bpp",
-        "sha256": "1d1961130a2ef8653d2ea7ca329178354d5e5041966f4e55af94302c9edc7144",
+        "sha256": "f653cd5e1bba591d098ba26a789b1978797931d79e17b16f839aeed86036064c",
         "stride_bytes": 64
       },
       "codepoints": {
-        "byte_count": 9836,
+        "byte_count": 9840,
         "format": "sorted unique little-endian uint32 Unicode scalars",
         "path": "graphics/fonts/cjk/zh-Hans.talk.codepoints.bin",
-        "sha256": "7cc8cf09359dff283483db0b4e3e40f99c335646bafcac36a9d62483933132bb"
+        "sha256": "add7c909c8ddf248ba95e2a6490dd417cbf527e0e95ce3c2378524b906f88f8f"
       },
       "febuilder_job": "zh-hans-talk",
       "febuilder_style": "text",
-      "glyph_count": 2459,
+      "glyph_count": 2460,
       "locale": "zh-Hans",
       "runtime_style": "talk",
       "widths": {
-        "byte_count": 2459,
+        "byte_count": 2460,
         "format": "one unsigned byte per glyph; valid range 1..16",
         "path": "graphics/fonts/cjk/zh-Hans.talk.widths.bin",
-        "sha256": "933a69288f553d46f032bb38aa8d0dc092440cb38d0b5d03e20e10109ea67d17"
+        "sha256": "2256a73af0554a4af9444f2e28bade455b4209385088ddfedea12dd429e8cf5a"
       }
     }
   },
@@ -112,32 +112,30 @@
   },
   "rom_budget": {
     "bytes_per_glyph": 69,
-    "four_byte_aligned_blob_bytes": 594096,
+    "four_byte_aligned_blob_bytes": 594504,
     "includes": "64-byte bitmap + 1-byte width + 4-byte Unicode scalar",
-    "payload_bytes": 594090
+    "payload_bytes": 594504
   },
   "schema_version": 1,
   "sources": {
     "febuilder_generation_report": {
-      "byte_count": 2867060,
+      "byte_count": 2869055,
       "path": "fonts/cjk/reports/febuilder-generation-report.json",
-      "sha256": "101b16b4206552a21691ca31ab53a3a7372afeb2586733b1972cc62f20f6a506"
+      "sha256": "95a55f9100e03c30f54d67f3a1e702e99352e619589d444f5ce61150b2904f03"
     },
     "febuilder_manifest": {
       "path": "fonts/cjk/febuilder-manifest.json",
-      "sha256": "8bf7a159befa9b3c936622e2f2e109ced67ff5187c32a29abf6dc9d963072c37"
+      "sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe"
     },
     "febuilder_package": {
-      "byte_count": 7196250,
-      "full_tree_sha256": "9be4dedd6e4111b765a7cc0a400c97b0cdea0a693cdf5fa9b0fb0375baad5b34",
-      "package_report_sha256": "22651709bb5a5fb548a1eda63e581d52e0c0a227efbf687c35d18a5910692509",
-      "path": "fonts/cjk/packages/febuilder-schema-v1.zip",
-      "payload_tree_sha256": "d8e23f41211245b086be9a9605ccfba9816c0c2d82dc43c332ef2d3d2efb3115",
-      "sha256": "74e09c8708d90c06229aba3165a8950a957774b1a6c34e551ef71f81ef162674"
+      "disposition": "temporary maintainer artifact under build/tmp; not committed",
+      "full_tree_sha256": "f9b999d70da7df6dbf13339b7d0d46ea68a66faac3c5a77a7a5c3dddac3763c4",
+      "package_report_sha256": "55b8be13ba5ec352fef97b34204da633bafea8f946d7c81627415484e0598d42",
+      "payload_tree_sha256": "ab6b1ee883737cbb0bf3ca7e6e4b1b3d0f1adcf874aa2a6a4f28b961e80e0758"
     },
     "inventory": {
       "path": "fonts/cjk/inventory.json",
-      "sha256": "a36a0ee88ca4a176fab858dc95276c4c3870d2b5b66721f192494b50111ab60b"
+      "sha256": "296e0fa8856324e656845b0484dd37477b9394ecf05f7b8a116d5411ff13029c"
     }
   },
   "spacing_scalars": [
