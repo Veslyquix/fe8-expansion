@@ -2,20 +2,20 @@
   "font_asset_scope": "non-ASCII visible Unicode scalars",
   "inputs": {
     "texts/expansion/catalog.en.json": {
-      "byte_count": 1603,
-      "sha256": "25904ac14c423a807ae81ac61a85bfe4d75e58f240c50f5eedba0aafe129a272"
+      "byte_count": 1707,
+      "sha256": "6d0710dcb9a7f922b93f3da2dfbf696c6c4c6f0c5a83db29d08f49e8657f6c96"
     },
     "texts/expansion/catalog.ja.json": {
-      "byte_count": 1662,
-      "sha256": "e9ba59596a2e014b10c52701ce79a8a7a323ea74ac2286d3d981fb1a0db30bd4"
+      "byte_count": 1766,
+      "sha256": "9666bf73cf052149f86d0563d5785506f62ac4534262ce201df7b9027d894878"
     },
     "texts/expansion/catalog.zh-Hans.json": {
-      "byte_count": 1600,
-      "sha256": "8821c50a222d3239967eb0bca35fc82b3ccf72232e3449230b983bdb2ae4aff6"
+      "byte_count": 1704,
+      "sha256": "9d11e19644cf6280b73d7c4e01d9dc378cdb6d56cd4fbe22eec72c5a4d2c6d89"
     },
     "texts/expansion/registry.json": {
-      "byte_count": 6161,
-      "sha256": "1fc87b67735f4613bcdfbdbf29b9b5a4e67205e579f31d0ee2b6504dba329c0e"
+      "byte_count": 6941,
+      "sha256": "705dd6b4161e58f02e39845b1bb72f03869b2a1234b9d5a5cc4ed54eb1913782"
     },
     "texts/locales/ja/indexed.txt": {
       "byte_count": 1719196,
@@ -34,8 +34,8 @@
     "ja": {
       "contributions": {
         "expansion": {
-          "non_ascii_scalar_count": 85,
-          "record_count": 32
+          "non_ascii_scalar_count": 89,
+          "record_count": 34
         },
         "indexed": {
           "non_ascii_scalar_count": 1847,
@@ -43,7 +43,7 @@
         }
       },
       "expansion": {
-        "active_key_count": 32,
+        "active_key_count": 34,
         "catalogs": [
           "texts/expansion/catalog.en.json",
           "texts/expansion/catalog.ja.json",
@@ -75,8 +75,8 @@
     "zh-Hans": {
       "contributions": {
         "expansion": {
-          "non_ascii_scalar_count": 72,
-          "record_count": 32
+          "non_ascii_scalar_count": 76,
+          "record_count": 34
         },
         "indexed": {
           "non_ascii_scalar_count": 2459,
@@ -88,7 +88,7 @@
         }
       },
       "expansion": {
-        "active_key_count": 32,
+        "active_key_count": 34,
         "catalogs": [
           "texts/expansion/catalog.en.json",
           "texts/expansion/catalog.ja.json",

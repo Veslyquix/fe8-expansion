@@ -24,6 +24,45 @@ from scripts.fonttools.cjk.package import (
 class CjkFontTests(unittest.TestCase):
     SCRATCH = Path(__file__).resolve().parent / ".scratch"
 
+    def test_expansion_catalog_inventory_provenance_matches_current_34_keys(self):
+        inventory = json.loads((ROOT / "fonts/cjk/inventory.json").read_text())
+        registry_path = ROOT / "texts/expansion/registry.json"
+        registry = json.loads(registry_path.read_text())
+        active_keys = {
+            record["key"]
+            for record in registry["messages"]
+            if record["status"] == "active"
+        }
+        self.assertEqual(len(active_keys), 34)
+
+        catalog_paths = sorted((ROOT / "texts/expansion").glob("catalog.*.json"))
+        source_paths = [registry_path, *catalog_paths]
+        for path in source_paths:
+            relative_path = path.relative_to(ROOT).as_posix()
+            data = path.read_bytes()
+            self.assertEqual(
+                inventory["inputs"][relative_path],
+                {
+                    "byte_count": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                },
+            )
+
+        for path in catalog_paths:
+            catalog = json.loads(path.read_text())
+            self.assertEqual(set(catalog["strings"]), active_keys)
+
+        expected_catalogs = [
+            path.relative_to(ROOT).as_posix() for path in catalog_paths
+        ]
+        for locale in ("ja", "zh-Hans"):
+            expansion = inventory["locales"][locale]["expansion"]
+            self.assertEqual(
+                expansion["active_key_count"],
+                len(active_keys),
+            )
+            self.assertEqual(expansion["catalogs"], expected_catalogs)
+
     def test_inventory_counts_tokens_and_spacing_contract(self):
         inventory = json.loads((ROOT / "fonts/cjk/inventory.json").read_text())
         self.assertEqual(inventory["union"]["spacing_scalars"], ["U+3000"])
