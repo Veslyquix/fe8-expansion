@@ -8,6 +8,12 @@ import sys
 from pathlib import Path
 
 from .coverage import build_coverage_report, load_fe8u_target_ids
+from .crosswalk import (
+    build_crosswalk_coverage_report,
+    build_release_mapping,
+    canonical_json_bytes,
+    harvest_structural_evidence,
+)
 from .importer import (
     check_vendored_locale_sources,
     import_locale_sources,
@@ -23,6 +29,13 @@ def _load_mapping(path: Path, target_count: int):
     except json.JSONDecodeError as error:
         raise MappingError(f"{path}: invalid JSON: {error}") from error
     return validate_mapping_document(data, target_count=target_count)
+
+
+def _load_json(path: Path):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise MappingError(f"{path}: invalid JSON: {error}") from error
 
 
 def _cmd_import(args: argparse.Namespace) -> int:
@@ -95,6 +108,78 @@ def _cmd_coverage(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_crosswalk_artifacts(args: argparse.Namespace):
+    target_count = len(load_fe8u_target_ids(args.target_header))
+    evidence = _load_json(args.evidence)
+    candidates = _load_json(args.candidates)
+    mapping = build_release_mapping(
+        evidence,
+        target_count=target_count,
+        candidate_data=candidates,
+    )
+    report = build_crosswalk_coverage_report(mapping, target_count=target_count)
+    return {
+        args.mapping: canonical_json_bytes(mapping),
+        args.report: canonical_json_bytes(report),
+    }
+
+
+def _cmd_harvest_crosswalk(args: argparse.Namespace) -> int:
+    target_count = len(load_fe8u_target_ids(args.target_header))
+    evidence = harvest_structural_evidence(
+        fe8u_root=args.fe8u_root,
+        fe8j_root=args.fe8j_root,
+        raw_path=args.raw_source,
+        target_count=target_count,
+    )
+    args.evidence.parent.mkdir(parents=True, exist_ok=True)
+    args.evidence.write_bytes(canonical_json_bytes(evidence))
+    print(
+        f"harvested {len(evidence['records'])} structural evidence slots "
+        f"with {len(evidence['gaps'])} explicit gaps"
+    )
+    return 0
+
+
+def _cmd_build_crosswalk(args: argparse.Namespace) -> int:
+    artifacts = _build_crosswalk_artifacts(args)
+    for path, content in artifacts.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    mapping = json.loads(artifacts[args.mapping].decode("utf-8"))
+    report = json.loads(artifacts[args.report].decode("utf-8"))
+    print(
+        f"built {len(mapping['rows'])} FE8U target decisions: "
+        f"translated={report['translation_coverage']['count']} "
+        f"fallback={report['explicit_fallback_coverage']['count']} "
+        f"unresolved={report['unresolved_count']}"
+    )
+    return 0
+
+
+def _cmd_check_crosswalk(args: argparse.Namespace) -> int:
+    artifacts = _build_crosswalk_artifacts(args)
+    mismatches = [
+        str(path)
+        for path, expected in artifacts.items()
+        if not path.is_file() or path.read_bytes() != expected
+    ]
+    if mismatches:
+        raise MappingError(
+            "crosswalk artifacts differ from deterministic rebuild: "
+            + ", ".join(mismatches)
+        )
+    mapping = json.loads(artifacts[args.mapping].decode("utf-8"))
+    report = json.loads(artifacts[args.report].decode("utf-8"))
+    print(
+        f"crosswalk artifacts match committed bytes: decisions={len(mapping['rows'])} "
+        f"translated={report['translation_coverage']['count']} "
+        f"fallback={report['explicit_fallback_coverage']['count']} "
+        f"unresolved={report['unresolved_count']}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -159,6 +244,69 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("include/constants/msg.h"),
     )
     coverage_parser.set_defaults(handler=_cmd_coverage)
+
+    harvest_parser = subparsers.add_parser(
+        "harvest-crosswalk",
+        help="harvest structural FE8U/FE8J evidence from authorized reference trees",
+    )
+    harvest_parser.add_argument("--fe8u-root", type=Path, required=True)
+    harvest_parser.add_argument("--fe8j-root", type=Path, required=True)
+    harvest_parser.add_argument(
+        "--raw-source",
+        type=Path,
+        default=Path("texts/locales/zh-Hans/raw.json"),
+    )
+    harvest_parser.add_argument(
+        "--evidence",
+        type=Path,
+        default=Path("texts/locales/mapping/fe8u_structural_evidence.json"),
+    )
+    harvest_parser.add_argument(
+        "--target-header",
+        type=Path,
+        default=Path("include/constants/msg.h"),
+    )
+    harvest_parser.set_defaults(handler=_cmd_harvest_crosswalk)
+
+    for command, help_text, handler in (
+        (
+            "build-crosswalk",
+            "build the authoritative map and coverage report from committed evidence",
+            _cmd_build_crosswalk,
+        ),
+        (
+            "check-crosswalk",
+            "compare committed crosswalk artifacts with a deterministic rebuild",
+            _cmd_check_crosswalk,
+        ),
+    ):
+        crosswalk_parser = subparsers.add_parser(command, help=help_text)
+        crosswalk_parser.add_argument(
+            "--evidence",
+            type=Path,
+            default=Path("texts/locales/mapping/fe8u_structural_evidence.json"),
+        )
+        crosswalk_parser.add_argument(
+            "--candidates",
+            type=Path,
+            default=Path("texts/locales/mapping/fe8j_to_fe8u.candidates.json"),
+        )
+        crosswalk_parser.add_argument(
+            "--mapping",
+            type=Path,
+            default=Path("texts/locales/mapping/fe8u_target_map.json"),
+        )
+        crosswalk_parser.add_argument(
+            "--report",
+            type=Path,
+            default=Path("texts/locales/mapping/fe8u_target_map.coverage.json"),
+        )
+        crosswalk_parser.add_argument(
+            "--target-header",
+            type=Path,
+            default=Path("include/constants/msg.h"),
+        )
+        crosswalk_parser.set_defaults(handler=handler)
 
     return parser
 

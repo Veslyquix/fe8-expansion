@@ -19,8 +19,15 @@ from scripts.localization.game_locales.mapping import (
 
 def _verified_source_rows():
     verification = {
+        "confidence": "high",
         "method": "human-semantic-review",
         "evidence": "fixture evidence",
+        "evidence_kind": "fixture",
+        "source_table": "fixture table",
+        "source_symbol": "gFixture",
+        "source_key": "fixture.key",
+        "subsystem": "fixture",
+        "rationale": "fixture rationale",
     }
     return [
         {

@@ -16,6 +16,7 @@ ROW_CANDIDATE = "candidate"
 ROW_VERIFIED = "verified"
 SOURCE_KINDS = ("indexed", "raw", "authored", "english_fallback")
 LOCALE_IDS = ("ja", "zh-Hans")
+VERIFICATION_CONFIDENCE = ("high", "manual", "explicit")
 
 _ID_RE = re.compile(r"0x([0-9A-F]{4})")
 _RAW_IMPORT_ID_RE = re.compile(r"fe8cn\.raw\.import-[0-9]{4}")
@@ -93,6 +94,43 @@ def _validate_source(source: Dict[str, Any], field: str) -> str:
             raise MappingError(
                 f"{field} must not use address-derived identity or embed provenance"
             )
+        alternate_import_ids = source.get("alternate_import_ids", [])
+        if not isinstance(alternate_import_ids, list) or any(
+            not isinstance(value, str) or not _RAW_IMPORT_ID_RE.fullmatch(value)
+            for value in alternate_import_ids
+        ):
+            raise MappingError(
+                f"{field}.alternate_import_ids must contain stable import IDs"
+            )
+        if len(set(alternate_import_ids)) != len(alternate_import_ids):
+            raise MappingError(f"{field}.alternate_import_ids must be unique")
+        regional_sources = source.get("regional_sources")
+        if regional_sources is not None:
+            regional_sources = _require_dict(
+                regional_sources, f"{field}.regional_sources"
+            )
+            ja_source = _require_dict(
+                regional_sources.get("ja"), f"{field}.regional_sources.ja"
+            )
+            if ja_source.get("kind") != "symbol":
+                raise MappingError(
+                    f"{field}.regional_sources.ja.kind must be 'symbol'"
+                )
+            _require_nonempty_string(
+                ja_source.get("symbol"), f"{field}.regional_sources.ja.symbol"
+            )
+            cn_source = _require_dict(
+                regional_sources.get("zh-Hans"),
+                f"{field}.regional_sources.zh-Hans",
+            )
+            if cn_source.get("kind") != "import":
+                raise MappingError(
+                    f"{field}.regional_sources.zh-Hans.kind must be 'import'"
+                )
+            if cn_source.get("import_id") != import_id:
+                raise MappingError(
+                    f"{field}.regional_sources.zh-Hans.import_id must match import_id"
+                )
     elif kind == "authored":
         _require_nonempty_string(source.get("translation_key"), f"{field}.translation_key")
     elif kind == "english_fallback":
@@ -131,8 +169,6 @@ def validate_mapping_document(
         raise MappingError(f"mapping.locale_ids must contain only {LOCALE_IDS}")
     if len(set(raw_locale_ids)) != len(raw_locale_ids):
         raise MappingError("mapping.locale_ids must not contain duplicates")
-    if authority == AUTHORITY_VERIFIED and len(raw_locale_ids) != 1:
-        raise MappingError("verified mappings must cover exactly one locale")
 
     note = _require_nonempty_string(document.get("note"), "mapping.note")
     if authority == AUTHORITY_CANDIDATE:
@@ -220,6 +256,23 @@ def validate_mapping_document(
                 verified.get("evidence"),
                 f"{field}.verification.evidence",
             )
+            for verification_field in (
+                "evidence_kind",
+                "source_table",
+                "source_symbol",
+                "source_key",
+                "subsystem",
+                "rationale",
+            ):
+                _require_nonempty_string(
+                    verified.get(verification_field),
+                    f"{field}.verification.{verification_field}",
+                )
+            if verified.get("confidence") not in VERIFICATION_CONFIDENCE:
+                raise MappingError(
+                    f"{field}.verification.confidence must be one of "
+                    f"{VERIFICATION_CONFIDENCE}"
+                )
 
         rows.append(
             MappingRow(
