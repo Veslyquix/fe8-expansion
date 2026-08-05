@@ -31,6 +31,9 @@ class LocaleIdStabilityTests(unittest.TestCase):
     def test_initially_supported_locales_are_exactly_en_and_pseudo(self):
         self.assertEqual(set(schema.INITIALLY_SUPPORTED_LOCALES), {"en", "qps-ploc"})
 
+    def test_configurable_locales_match_the_production_allowlist(self):
+        self.assertEqual(schema.CONFIGURABLE_LOCALES, schema.INITIALLY_SUPPORTED_LOCALES)
+
     def test_every_initially_supported_locale_is_a_stable_id(self):
         for locale in schema.INITIALLY_SUPPORTED_LOCALES:
             self.assertIn(locale, schema.LOCALE_IDS)

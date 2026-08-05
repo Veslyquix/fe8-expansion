@@ -28,8 +28,11 @@ fabricating or hardcoding a byte count:
   4. The optional linker-defined `.locale_data` upper-ROM bank. When a
      current map contains its section and/or `__locale_bank_start` /
      `__locale_bank_end` symbols, the report derives real occupancy and
-     headroom to 0x0A000000. Older maps without that linker foundation
-     simply omit the field.
+     headroom bounded by the actual mapped ROM region end (and never beyond
+     the architectural 0x0A000000 limit). Thus an empty 16 MiB build reports
+     zero upper-bank capacity/headroom, while a 32 MiB build reports the real
+     upper-bank capacity. Older maps without that linker foundation simply
+     omit the field.
 
 This script never invents numbers: every field is either copied verbatim
 from (1)/(2), or is a real `nm`-derived integer for (3). If a named symbol
@@ -138,16 +141,33 @@ def _locale_bank_rollup(map_report: dict[str, Any]) -> dict[str, Any] | None:
     if start is None or end is None:
         return None
 
+    rom_region = next(
+        (
+            entry
+            for entry in map_report.get("regions", ())
+            if entry.get("name") == "rom"
+        ),
+        None,
+    )
+    if (
+        rom_region is None
+        or "origin" not in rom_region
+        or "capacity_bytes" not in rom_region
+    ):
+        return None
+
+    rom_region_end = rom_region["origin"] + rom_region["capacity_bytes"]
+    limit = min(LOCALE_BANK_LIMIT, rom_region_end)
     occupied = max(0, end - start)
-    capacity = max(0, LOCALE_BANK_LIMIT - start)
+    capacity = max(0, limit - start)
     return {
         "start_address": start,
         "end_address": end,
-        "limit_address": LOCALE_BANK_LIMIT,
+        "limit_address": limit,
         "capacity_bytes": capacity,
         "occupied_bytes": occupied,
         "headroom_bytes": max(0, capacity - occupied),
-        "overflow": end > LOCALE_BANK_LIMIT or end < start,
+        "overflow": end > limit or end < start,
         "section_present": section is not None,
     }
 

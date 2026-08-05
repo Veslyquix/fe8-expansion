@@ -508,11 +508,14 @@ class ValidateEnabledLocalesTests(unittest.TestCase):
     def test_list_input_accepted(self):
         self.assertEqual(ec.validate_enabled_locales(["en", "qps-ploc"]), ("en", "qps-ploc"))
 
-    def test_real_cjk_locales_are_legal_and_stably_normalized(self):
-        self.assertEqual(
-            ec.validate_enabled_locales("zh-Hans,en,ja"),
-            ("en", "ja", "zh-Hans"),
-        )
+    def test_real_cjk_locales_are_reserved_and_not_yet_populated(self):
+        for configured in ("en,ja", "en,zh-Hans", "zh-Hans,en,ja"):
+            with self.subTest(configured=configured):
+                with self.assertRaises(ec.ConfigError) as ctx:
+                    ec.validate_enabled_locales(configured)
+                self.assertIn("reserved locale id(s)", str(ctx.exception))
+                self.assertIn("not yet populated", str(ctx.exception))
+                self.assertIn("32 MiB locale-bank layout is prepared", str(ctx.exception))
 
     def test_empty_rejected(self):
         with self.assertRaises(ec.ConfigError):
@@ -660,71 +663,24 @@ class LoadIdentityLocaleTests(unittest.TestCase):
                     rom_size="16M", repo_root=Path(tmp),
                 )
 
-    def test_cjk_profiles_fail_at_16m_and_validate_at_32m(self):
-        for configured, normalized in (
-            ("en,ja", ("en", "ja")),
-            ("en,zh-Hans", ("en", "zh-Hans")),
-            ("zh-Hans,en,ja", ("en", "ja", "zh-Hans")),
-        ):
-            with self.subTest(configured=configured):
-                with tempfile.TemporaryDirectory() as tmp:
-                    config_mk = write_config_mk(
-                        Path(tmp), enabled_locales=configured
-                    )
-                    with self.assertRaises(ec.ConfigError) as ctx:
-                        ec.load_identity(
-                            config_mk_path=config_mk,
-                            config_preset="debug",
-                            abi="aapcs",
-                            rom_size="16M",
-                            repo_root=Path(tmp),
+    def test_cjk_profiles_fail_as_unpopulated_at_16m_and_32m(self):
+        for configured in ("en,ja", "en,zh-Hans", "zh-Hans,en,ja"):
+            for rom_size in ("16M", "32M"):
+                with self.subTest(configured=configured, rom_size=rom_size):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        config_mk = write_config_mk(
+                            Path(tmp), enabled_locales=configured
                         )
-                    self.assertIn("MODERN_ROM_SIZE=32M", str(ctx.exception))
-
-                    identity = ec.load_identity(
-                        config_mk_path=config_mk,
-                        config_preset="debug",
-                        abi="aapcs",
-                        rom_size="32M",
-                        repo_root=Path(tmp),
-                    )
-                    self.assertEqual(identity.enabled_locales, normalized)
-
-    def test_cjk_default_locale_must_still_be_enabled(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            config_mk = write_config_mk(
-                Path(tmp),
-                enabled_locales="en,ja",
-                default_locale="zh-Hans",
-            )
-            with self.assertRaises(ec.ConfigError) as ctx:
-                ec.load_identity(
-                    config_mk_path=config_mk,
-                    config_preset="debug",
-                    abi="aapcs",
-                    rom_size="32M",
-                    repo_root=Path(tmp),
-                )
-        self.assertIn("EXPANSION_DEFAULT_LOCALE", str(ctx.exception))
-
-    def test_cjk_input_order_does_not_change_fingerprint(self):
-        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
-            config_a = write_config_mk(
-                Path(tmp_a), enabled_locales="en,ja,zh-Hans"
-            )
-            config_b = write_config_mk(
-                Path(tmp_b), enabled_locales="zh-Hans,en,ja"
-            )
-            identity_a = ec.load_identity(
-                config_mk_path=config_a, config_preset="debug", abi="aapcs",
-                rom_size="32M", repo_root=Path(tmp_a),
-            )
-            identity_b = ec.load_identity(
-                config_mk_path=config_b, config_preset="debug", abi="aapcs",
-                rom_size="32M", repo_root=Path(tmp_b),
-            )
-        self.assertEqual(identity_a.enabled_locales, ("en", "ja", "zh-Hans"))
-        self.assertEqual(identity_a.config_fingerprint, identity_b.config_fingerprint)
+                        with self.assertRaises(ec.ConfigError) as ctx:
+                            ec.load_identity(
+                                config_mk_path=config_mk,
+                                config_preset="debug",
+                                abi="aapcs",
+                                rom_size=rom_size,
+                                repo_root=Path(tmp),
+                            )
+                    self.assertIn("reserved locale id(s)", str(ctx.exception))
+                    self.assertIn("not yet populated", str(ctx.exception))
 
     def test_locale_config_changes_fingerprint(self):
         with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
@@ -963,32 +919,28 @@ class CliTests(unittest.TestCase):
         self.assertIn("error:", result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_resolve_cjk_profile_requires_32m_with_actionable_error(self):
+    def test_resolve_cjk_profiles_are_gated_at_both_rom_sizes(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_mk = write_config_mk(Path(tmp))
-            rejected = self.run_cli(
-                "resolve",
-                "--config-mk", str(config_mk),
-                "--config", "debug",
-                "--abi", "aapcs",
-                "--rom-size", "16M",
-                "--repo-root", tmp,
-                "--enabled-locales", "en,ja",
-            )
-            accepted = self.run_cli(
-                "resolve",
-                "--config-mk", str(config_mk),
-                "--config", "debug",
-                "--abi", "aapcs",
-                "--rom-size", "32M",
-                "--repo-root", tmp,
-                "--enabled-locales", "zh-Hans,en,ja",
-            )
-        self.assertEqual(rejected.returncode, 1)
-        self.assertIn("MODERN_ROM_SIZE=32M", rejected.stderr)
-        self.assertEqual(rejected.stdout, "")
-        self.assertEqual(accepted.returncode, 0, accepted.stderr)
-        self.assertIn("MODERN_EXPANSION_ENABLED_LOCALE_MASK=7", accepted.stdout)
+            for rom_size, locales in (
+                ("16M", "en,ja"),
+                ("32M", "zh-Hans,en,ja"),
+            ):
+                with self.subTest(rom_size=rom_size, locales=locales):
+                    result = self.run_cli(
+                        "resolve",
+                        "--config-mk", str(config_mk),
+                        "--config", "debug",
+                        "--abi", "aapcs",
+                        "--rom-size", rom_size,
+                        "--repo-root", tmp,
+                        "--enabled-locales", locales,
+                    )
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("reserved locale id(s)", result.stderr)
+                    self.assertIn("not yet populated", result.stderr)
+                    self.assertEqual(result.stdout, "")
+
     def test_generate_writes_metadata_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_mk = write_config_mk(Path(tmp))

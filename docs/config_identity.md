@@ -25,7 +25,7 @@ defaults (see "Legacy build path" below).
 | `EXPANSION_ROM_REVISION` | integer, `[0, 255]` | `0` | ROM header "software version" byte (fingerprint) |
 | `EXPANSION_BUILD_ID` | empty, or 4-40 hex characters | empty | embedded build commit override |
 | `EXPANSION_SAVE_COMPAT_EPOCH` | integer, `[0, 65535]` | `2` | save-format compatibility gate (see `docs/save_format.md`); **not** part of the fingerprint above |
-| `EXPANSION_ENABLED_LOCALES` | comma-separated subset of `en`, `ja`, `zh-Hans`, `qps-ploc`; must include `en`; `ja`/`zh-Hans` require `MODERN_ROM_SIZE=32M` | `en` | issue #18 localization (fingerprint) -- which locale profile this ROM enables |
+| `EXPANSION_ENABLED_LOCALES` | comma-separated subset of the production allowlist `en`, `qps-ploc`; must include `en`; stable `ja`/`zh-Hans` IDs remain reserved/not yet populated and are rejected | `en` | issue #18 localization (fingerprint) -- which locale profile this ROM enables |
 | `EXPANSION_DEFAULT_LOCALE` | must be a member of `EXPANSION_ENABLED_LOCALES` | `en` | issue #18 localization (fingerprint) -- the locale `src/expansion_locale.c`'s runtime resolver starts in |
 | `EXPANSION_PSEUDO_LOCALE` | `0` or `1`; must be `1` if and only if `qps-ploc` is in `EXPANSION_ENABLED_LOCALES` | `0` | issue #18 localization (fingerprint) -- enables the deterministic ASCII pseudo-locale test harness (`scripts/localization/pseudo.py`), never a real translation |
 | `EXPANSION_MECHANICS_HOOKS` | `0` or `1` | `0` | issue #6 starter feature (fingerprint) -- link the public battle-stat mechanics hook registry |
@@ -66,19 +66,20 @@ make expansion-modern-rom \
   EXPANSION_PSEUDO_LOCALE=1
 ```
 
-Japanese and Simplified Chinese profile IDs opt into the already-supported
-32 MiB ROM layout:
+The 32 MiB ROM layout and upper locale bank are prepared independently of
+runtime CJK enablement:
 
 ```bash
 make expansion-modern-rom \
-  EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans \
   MODERN_ROM_SIZE=32M
 ```
 
-This last command is the configuration/linker-bank foundation only. It does
-not yet mean CJK catalogs, fonts, codecs, or runtime rendering are complete.
-The validator rejects any `ja`/`zh-Hans` profile paired with 16 MiB before
-compilation and tells the caller to use `MODERN_ROM_SIZE=32M`.
+This command exercises the configuration/linker-bank foundation with the
+normal English profile. It does not enable Japanese or Simplified Chinese.
+The validator rejects `ja`/`zh-Hans` in `EXPANSION_ENABLED_LOCALES` at both
+16 MiB and 32 MiB as reserved/not yet populated; their catalogs, menu strings,
+fonts/codecs, renderer, and runtime integration must land before those stable
+IDs become selectable.
 
 `MODERN_ABI=apcs-gnu` is accepted only by the compile-only
 `expansion-modern-cohort`/`expansion-modern-all` object targets, for
@@ -283,8 +284,9 @@ verified ROM with a distinct, deterministic `config_fingerprint`.
 `scripts/modernize/expansion_config.py` validates every field (title,
 game code, maker code, revision, ROM size, semantic version, build-id
 override, preset, ABI, locale/default/pseudo consistency, and the
-`ja`/`zh-Hans`-requires-32-MiB cross-setting rule) and rejects any malformed
-value or incompatible combination with a specific, actionable `ConfigError` message, entirely
+production locale allowlist; the internal future-CJK size guard remains
+available for the prepared 32 MiB bank) and rejects any malformed value or
+incompatible combination with a specific, actionable `ConfigError` message, entirely
 **before** any C/assembly compilation or linking is attempted (`modern.mk`
 runs `validate`/`resolve` as part of evaluating the makefile itself, so a
 bad value fails the `make` invocation immediately) and before any ROM
