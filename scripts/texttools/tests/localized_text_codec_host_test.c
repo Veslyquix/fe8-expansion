@@ -45,6 +45,77 @@ static int TestCorpus(void)
     return CheckGuards(storage, HOST_FIXTURE_EXPECTED_SIZE);
 }
 
+static int TestExactBoundaryTerminator(void)
+{
+    static const u32 nodes[] = {0xFFFF0000, 0xFFFF0041, 0x00010000};
+    static const u8 input[] = {1};
+    u8 storage[4];
+    u32 decodedLength;
+    enum LocalizedTextCodecStatus status;
+
+    memset(storage, GUARD_VALUE, sizeof(storage));
+    status = LocalizedTextCodec_Decode(
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 2,
+        storage + 1, 2, &decodedLength);
+
+    return status == LOCALIZED_TEXT_CODEC_OK
+        && decodedLength == 2
+        && storage[1] == 'A'
+        && storage[2] == 0
+        && CheckGuards(storage, 2);
+}
+
+static int TestPaddingOutsideBoundary(void)
+{
+    static const u32 nodes[] = {0xFFFF0000, 0xFFFF0041, 0x00010000};
+    static const u8 input[] = {0xFD};
+    u8 storage[4];
+    u32 decodedLength;
+    enum LocalizedTextCodecStatus status;
+
+    memset(storage, GUARD_VALUE, sizeof(storage));
+    status = LocalizedTextCodec_Decode(
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 2,
+        storage + 1, 2, &decodedLength);
+
+    return status == LOCALIZED_TEXT_CODEC_OK
+        && decodedLength == 2
+        && storage[1] == 'A'
+        && storage[2] == 0
+        && CheckGuards(storage, 2);
+}
+
+static int TestTrailingMeaningfulBits(void)
+{
+    static const u32 nodes[] = {0xFFFF0000, 0xFFFF0041, 0x00010000};
+    static const u8 input[] = {1};
+    u8 storage[4];
+    u32 decodedLength;
+    enum LocalizedTextCodecStatus status;
+
+    memset(storage, GUARD_VALUE, sizeof(storage));
+    status = LocalizedTextCodec_Decode(
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 3,
+        storage + 1, 2, &decodedLength);
+    if (status != LOCALIZED_TEXT_CODEC_TRAILING_DATA
+        || decodedLength != 2
+        || storage[1] != 'A'
+        || storage[2] != 0
+        || !CheckGuards(storage, 2))
+        return 0;
+
+    memset(storage, GUARD_VALUE, sizeof(storage));
+    status = LocalizedTextCodec_Decode(
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 8,
+        storage + 1, 2, &decodedLength);
+
+    return status == LOCALIZED_TEXT_CODEC_TRAILING_DATA
+        && decodedLength == 2
+        && storage[1] == 'A'
+        && storage[2] == 0
+        && CheckGuards(storage, 2);
+}
+
 static int TestMalformedChild(void)
 {
     static const u32 nodes[] = {0x00020002, 0xFFFF0000};
@@ -190,22 +261,28 @@ int main(void)
 {
     if (!TestCorpus())
         return 1;
-    if (!TestMalformedChild())
+    if (!TestExactBoundaryTerminator())
         return 2;
-    if (!TestTruncatedInput())
+    if (!TestPaddingOutsideBoundary())
         return 3;
-    if (!TestMissingTerminator())
+    if (!TestTrailingMeaningfulBits())
         return 4;
-    if (!TestPaddingIsNotTerminator())
+    if (!TestMalformedChild())
         return 5;
-    if (!TestBitLengthOutsideByteBound())
+    if (!TestTruncatedInput())
         return 6;
-    if (!TestOutputOverflow())
+    if (!TestMissingTerminator())
         return 7;
-    if (!TestInvalidPairedZero())
+    if (!TestPaddingIsNotTerminator())
         return 8;
-    if (!TestNodeConvention())
+    if (!TestBitLengthOutsideByteBound())
         return 9;
+    if (!TestOutputOverflow())
+        return 10;
+    if (!TestInvalidPairedZero())
+        return 11;
+    if (!TestNodeConvention())
+        return 12;
 
     puts("localized_text_codec_host_test: ok");
     return 0;

@@ -24,9 +24,11 @@ The C decoder in `include/localized_text_codec.h` is table-independent and is
 compiled only for modern profiles whose generated locale mask enables Japanese
 or Simplified Chinese. Legacy and default English-only profiles emit no codec
 declarations or implementation. The decoder requires a terminating NUL within
-the exact meaningful bit length; byte padding is never consumed. Its decoded
-length includes the terminating NUL; on failure it is the number of bytes
-safely written before the failure.
+the exact meaningful bit length, and that NUL must consume its final bit. Bits
+declared meaningful after NUL return the explicit `TRAILING_DATA` corruption
+status; padding outside the bit-length boundary remains ignored. The decoded
+length includes the terminating NUL on success and on trailing-data failure;
+on other failures it is the number of bytes safely written before the failure.
 
 Run the focused Python and host-native C tests from the repository root:
 

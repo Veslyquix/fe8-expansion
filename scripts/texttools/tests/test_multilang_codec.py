@@ -166,6 +166,13 @@ class CatalogTests(unittest.TestCase):
         ):
             truncated.decode_entry(0)
 
+        trailing = replace(
+            catalog,
+            entries=(replace(entry, bit_length=entry.bit_length + 1),),
+        )
+        with self.assertRaisesRegex(ValueError, "TRAILING_DATA"):
+            trailing.decode_entry(0)
+
     def test_catalog_rejects_unreachable_bytes_after_nul(self):
         with self.assertRaisesRegex(ValueError, "end with NUL"):
             build_catalog((b"missing",))
@@ -174,6 +181,36 @@ class CatalogTests(unittest.TestCase):
 
 
 class BoundedHostDecoderTests(unittest.TestCase):
+    def test_exact_boundary_terminator_succeeds(self):
+        nodes = (0xFFFF0000, 0xFFFF0041, 0x00010000)
+        result = decompress_bounded(nodes, len(nodes), 2, b"\x01", 1, 2, 2)
+
+        self.assertEqual(result.status, DecodeStatus.OK)
+        self.assertEqual(result.data, b"A\x00")
+        self.assertEqual(result.decoded_length, 2)
+        self.assertEqual(result.consumed_bytes, 1)
+
+    def test_byte_padding_outside_meaningful_boundary_is_ignored(self):
+        nodes = (0xFFFF0000, 0xFFFF0041, 0x00010000)
+        result = decompress_bounded(nodes, len(nodes), 2, b"\xFD", 1, 2, 2)
+
+        self.assertEqual(result.status, DecodeStatus.OK)
+        self.assertEqual(result.data, b"A\x00")
+        self.assertEqual(result.decoded_length, 2)
+        self.assertEqual(result.consumed_bytes, 1)
+
+    def test_meaningful_bits_after_terminator_are_trailing_data(self):
+        nodes = (0xFFFF0000, 0xFFFF0041, 0x00010000)
+        for bit_length in (3, 8):
+            with self.subTest(bit_length=bit_length):
+                result = decompress_bounded(
+                    nodes, len(nodes), 2, b"\x01", 1, bit_length, 2
+                )
+                self.assertEqual(result.status, DecodeStatus.TRAILING_DATA)
+                self.assertEqual(result.data, b"A\x00")
+                self.assertEqual(result.decoded_length, 2)
+                self.assertEqual(result.consumed_bytes, 1)
+
     def test_malformed_child_index_is_explicit(self):
         result = decompress_bounded(
             (0x00020002, 0xFFFF0000), 2, 0, b"\x00", 1, 1, 8

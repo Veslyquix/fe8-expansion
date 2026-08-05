@@ -35,6 +35,7 @@ class DecodeStatus(IntEnum):
     TRUNCATED_INPUT = 5
     MISSING_TERMINATOR = 6
     OUTPUT_OVERFLOW = 7
+    TRAILING_DATA = 8
 
 
 @dataclass(frozen=True)
@@ -430,7 +431,7 @@ def decompress_bounded(
     input_bit_length: int,
     output_capacity: int,
 ) -> DecodeResult:
-    """Decode meaningful bits with explicit byte/output bounds."""
+    """Decode exactly the declared meaningful bits with explicit bounds."""
 
     output = bytearray()
     byte_index = 0
@@ -505,7 +506,12 @@ def decompress_bounded(
         if high:
             output.append(high)
         elif low == 0:
-            return _decode_result(DecodeStatus.OK, output, byte_index, bit_index)
+            status = (
+                DecodeStatus.OK
+                if byte_index * 8 + bit_index == input_bit_length
+                else DecodeStatus.TRAILING_DATA
+            )
+            return _decode_result(status, output, byte_index, bit_index)
 
         current_index = root_index
 

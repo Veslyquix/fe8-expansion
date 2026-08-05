@@ -15,9 +15,12 @@
  * byte. A single-byte zero symbol is the only successful terminator.
  *
  * inputBitLength is the exact meaningful bit count and must fit within
- * inputByteLength. Padding bits are never consumed. outDecodedLength includes
- * the terminating NUL on success. On failure it is the number of bytes safely
- * written before the failure. outputCapacity also includes space for the NUL.
+ * inputByteLength. The terminating NUL must consume the final meaningful bit;
+ * a NUL followed by bits inside inputBitLength is trailing-data corruption.
+ * Byte padding outside inputBitLength is never consumed. outDecodedLength
+ * includes the terminating NUL on success and on trailing-data failure. On
+ * other failures it is the number of bytes safely written before the failure.
+ * outputCapacity also includes space for the NUL.
  */
 
 /*
@@ -38,7 +41,8 @@ enum LocalizedTextCodecStatus
     LOCALIZED_TEXT_CODEC_INVALID_SYMBOL = 4,
     LOCALIZED_TEXT_CODEC_TRUNCATED_INPUT = 5,
     LOCALIZED_TEXT_CODEC_MISSING_TERMINATOR = 6,
-    LOCALIZED_TEXT_CODEC_OUTPUT_OVERFLOW = 7
+    LOCALIZED_TEXT_CODEC_OUTPUT_OVERFLOW = 7,
+    LOCALIZED_TEXT_CODEC_TRAILING_DATA = 8
 };
 
 enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(

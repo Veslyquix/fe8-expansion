@@ -132,6 +132,8 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
         else if (low == 0)
         {
             *outDecodedLength = outputLength;
+            if (bitsConsumed != inputBitLength)
+                return LOCALIZED_TEXT_CODEC_TRAILING_DATA;
             return LOCALIZED_TEXT_CODEC_OK;
         }
 
