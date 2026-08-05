@@ -12,6 +12,13 @@ static int LocalizedGameText_UsesCjkCatalog(ExpansionLocaleId locale)
     return locale == EXPANSION_LOCALE_JA || locale == EXPANSION_LOCALE_ZH_HANS;
 }
 
+struct LocalizedGameTextSelection
+{
+    const struct GameLocalizationLocaleCatalog *catalog;
+    const struct GameLocalizationCatalogEntry *entry;
+    enum LocalizedGameTextStatus successStatus;
+};
+
 static void LocalizedGameText_WriteMarker(
     char *buffer,
     u32 bufferCapacity,
@@ -59,6 +66,60 @@ static const struct GameLocalizationLocaleCatalog *LocalizedGameText_GetCatalog(
     return catalog;
 }
 
+static enum LocalizedGameTextStatus LocalizedGameText_Select(
+    int msgIndex,
+    struct LocalizedGameTextSelection *selection)
+{
+    ExpansionLocaleId locale;
+    const struct GameLocalizationLocaleCatalog *catalog;
+    const struct GameLocalizationCatalogEntry *entry;
+    enum LocalizedGameTextStatus successStatus;
+
+    if (selection == 0 || msgIndex < 0
+        || (u32)msgIndex >= FE8_GAME_LOCALIZATION_TARGET_COUNT)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    locale = ExpansionLocale_GetCurrent();
+    if (!LocalizedGameText_UsesCjkCatalog(locale))
+    {
+        catalog = &gGameLocalizationEnglishCatalog;
+        successStatus = LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT;
+    }
+    else
+    {
+        catalog = LocalizedGameText_GetCatalog(locale);
+        if (catalog == 0)
+        {
+            catalog = &gGameLocalizationEnglishCatalog;
+            successStatus =
+                LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED;
+        }
+        else if ((u32)msgIndex >= catalog->entryCount
+            || !catalog->entries[msgIndex].present
+            || catalog->entries[msgIndex].data == 0)
+        {
+            catalog = &gGameLocalizationEnglishCatalog;
+            successStatus = LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT;
+        }
+        else
+        {
+            successStatus = LOCALIZED_GAME_TEXT_STATUS_OK;
+        }
+    }
+
+    if (catalog->entries == 0 || (u32)msgIndex >= catalog->entryCount)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    entry = &catalog->entries[msgIndex];
+    if (!entry->present || entry->data == 0)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    selection->catalog = catalog;
+    selection->entry = entry;
+    selection->successStatus = successStatus;
+    return LOCALIZED_GAME_TEXT_STATUS_OK;
+}
+
 static enum LocalizedGameTextStatus LocalizedGameText_MapCodecStatus(
     enum LocalizedTextCodecStatus status)
 {
@@ -83,13 +144,12 @@ static enum LocalizedGameTextStatus LocalizedGameText_MapCodecStatus(
     }
 }
 
-enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
-    int msgIndex,
+static enum LocalizedGameTextStatus LocalizedGameText_DecodeSelection(
+    const struct LocalizedGameTextSelection *selection,
     char *buffer,
     u32 bufferCapacity,
     u32 *outDecodedLength)
 {
-    ExpansionLocaleId locale;
     const struct GameLocalizationLocaleCatalog *catalog;
     const struct GameLocalizationCatalogEntry *entry;
     enum LocalizedTextCodecStatus codecStatus;
@@ -97,33 +157,11 @@ enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
     u32 localDecodedLength;
     u32 *decodedLengthOut;
 
-    if (outDecodedLength != 0)
-        *outDecodedLength = 0;
-
-    if (msgIndex < 0 || (u32)msgIndex >= FE8_GAME_LOCALIZATION_TARGET_COUNT)
-    {
-        LocalizedGameText_WriteMarker(
-            buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_INVALID, outDecodedLength);
-        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
-    }
-
-    locale = ExpansionLocale_GetCurrent();
-    if (!LocalizedGameText_UsesCjkCatalog(locale))
-        return LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT;
-
-    catalog = LocalizedGameText_GetCatalog(locale);
-    if (catalog == 0)
-        return LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED;
-
-    if (buffer == 0 || bufferCapacity == 0)
+    if (selection == 0 || buffer == 0 || bufferCapacity == 0)
         return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
 
-    if ((u32)msgIndex >= catalog->entryCount)
-        return LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT;
-
-    entry = &catalog->entries[msgIndex];
-    if (!entry->present || entry->data == 0)
-        return LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT;
+    catalog = selection->catalog;
+    entry = selection->entry;
 
     if (entry->compressedSize == 0 || entry->bitLength == 0
         || entry->maxDecodedBytes == 0 || catalog->nodes == 0
@@ -158,7 +196,7 @@ enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
 
     mappedStatus = LocalizedGameText_MapCodecStatus(codecStatus);
     if (mappedStatus == LOCALIZED_GAME_TEXT_STATUS_OK)
-        return mappedStatus;
+        return selection->successStatus;
 
     if (mappedStatus == LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW)
     {
@@ -177,6 +215,61 @@ enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
     LocalizedGameText_WriteMarker(
         buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_INVALID, outDecodedLength);
     return mappedStatus;
+}
+
+enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
+    int msgIndex,
+    char *buffer,
+    u32 bufferCapacity,
+    u32 *outDecodedLength)
+{
+    struct LocalizedGameTextSelection selection;
+    enum LocalizedGameTextStatus status;
+
+    if (outDecodedLength != 0)
+        *outDecodedLength = 0;
+
+    status = LocalizedGameText_Select(msgIndex, &selection);
+    if (status != LOCALIZED_GAME_TEXT_STATUS_OK)
+    {
+        LocalizedGameText_WriteMarker(
+            buffer,
+            bufferCapacity,
+            LOCALIZED_GAME_TEXT_MARKER_INVALID,
+            outDecodedLength);
+        return status;
+    }
+
+    return LocalizedGameText_DecodeSelection(
+        &selection, buffer, bufferCapacity, outDecodedLength);
+}
+
+enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToUnboundedBuffer(
+    int msgIndex,
+    char *buffer,
+    u32 *outDecodedLength)
+{
+    struct LocalizedGameTextSelection selection;
+    enum LocalizedGameTextStatus status;
+
+    if (outDecodedLength != 0)
+        *outDecodedLength = 0;
+
+    if (buffer == 0)
+        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
+
+    status = LocalizedGameText_Select(msgIndex, &selection);
+    if (status != LOCALIZED_GAME_TEXT_STATUS_OK)
+    {
+        buffer[0] = '\0';
+        return status;
+    }
+
+    return LocalizedGameText_DecodeSelection(
+        &selection,
+        buffer,
+        selection.entry->maxDecodedBytes,
+        outDecodedLength);
 }
 
 #endif /* FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED */

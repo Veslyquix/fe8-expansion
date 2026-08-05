@@ -1,5 +1,6 @@
 # game_localization.mk -- focused developer/CI targets for the
-# deterministic full-game localized catalog generator.
+# deterministic full-game localized catalog generator. Every selected CJK
+# profile also emits one shared modern English source bundle.
 #
 # Included by the top-level Makefile, but standalone on purpose: none of these
 # targets is a prerequisite of `all`, so default English builds never generate

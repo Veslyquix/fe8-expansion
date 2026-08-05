@@ -16,10 +16,12 @@ from .constants import (
     PROVIDER_KIND_VALUES,
     TARGET_STORAGE_BYTES,
 )
-from .model import GameCatalogBuild, LocaleCatalogBundle
+from .model import EnglishCatalogBundle, GameCatalogBuild, LocaleCatalogBundle
 
 
 def _locale_suffix(locale: str) -> str:
+    if locale == "en":
+        return "English"
     parts = locale.replace("-", "_").split("_")
     return "".join(part[:1].upper() + part[1:] for part in parts if part)
 
@@ -53,7 +55,8 @@ def _wrap_values(values: Iterable[str], *, indent: str, per_line: int) -> List[s
 
 def render_config_header(build: GameCatalogBuild) -> str:
     max_decoded = max(
-        bundle.catalog.budget.max_decoded_bytes for bundle in build.locales
+        bundle.catalog.budget.max_decoded_bytes
+        for bundle in (build.english, *build.locales)
     )
     return "\n".join(
         [
@@ -92,6 +95,8 @@ def render_header(build: GameCatalogBuild) -> str:
         "#define GAME_LOCALIZATION_TARGET_COUNT %uu" % build.target_count,
         "#define GAME_LOCALIZATION_LOCALE_COUNT %uu" % len(LOCALE_IDS),
         "#define GAME_LOCALIZATION_ENABLED_LOCALE_COUNT %uu" % len(build.locales),
+        "#define GAME_LOCALIZATION_COMPILED_LOCALE_COUNT %uu"
+        % (len(build.locales) + 1),
         "#define GAME_LOCALIZATION_STORAGE_TARGET_BYTES 0x%04Xu" % TARGET_STORAGE_BYTES,
         "#define GAME_LOCALIZATION_NULL_OFFSET %s" % _hex_u32(NULL_OFFSET),
         "#define GAME_LOCALIZATION_NULL_ROOT_INDEX %s" % _hex_u32(NULL_ROOT_INDEX),
@@ -139,6 +144,29 @@ def render_header(build: GameCatalogBuild) -> str:
             "    u32 explicitFallbackCount;",
             "    u32 providerUnavailableCount;",
             "};",
+            "",
+        ]
+    )
+    english_max_decoded = build.english.catalog.budget.max_decoded_bytes
+    english_assertion_bytes = max(TARGET_STORAGE_BYTES, english_max_decoded)
+    lines.extend(
+        [
+            "#define GAME_LOCALIZATION_SHARED_ENGLISH_ENABLED 1u",
+            "#define GAME_LOCALIZATION_ENGLISH_STORAGE_REQUIREMENT_BYTES %uu"
+            % english_max_decoded,
+            "#define GAME_LOCALIZATION_ENGLISH_STORAGE_ASSERTION_BYTES %uu"
+            % english_assertion_bytes,
+            "typedef char GameLocalizationStorageAssertEnglish[",
+            "    (GAME_LOCALIZATION_ENGLISH_STORAGE_ASSERTION_BYTES",
+            "        >= GAME_LOCALIZATION_ENGLISH_STORAGE_REQUIREMENT_BYTES)",
+            "    ? 1 : -1];",
+            "",
+            "extern const u32 gGameLocalizationEnglishNodes[];",
+            "extern const u8 gGameLocalizationEnglishCompressedBlob[];",
+            "extern const struct GameLocalizationCatalogEntry",
+            "    gGameLocalizationEnglishEntries[];",
+            "extern const struct GameLocalizationLocaleCatalog",
+            "    gGameLocalizationEnglishCatalog;",
             "",
         ]
     )
@@ -192,7 +220,9 @@ def render_header(build: GameCatalogBuild) -> str:
     return "\n".join(lines)
 
 
-def _render_node_array(bundle: LocaleCatalogBundle) -> List[str]:
+def _render_node_array(
+    bundle: EnglishCatalogBundle | LocaleCatalogBundle,
+) -> List[str]:
     suffix = _locale_suffix(bundle.locale)
     lines = [
         "const u32 GAME_LOCALIZATION_SECTION gGameLocalization%sNodes[] =" % suffix,
@@ -207,7 +237,9 @@ def _render_node_array(bundle: LocaleCatalogBundle) -> List[str]:
     return lines
 
 
-def _render_blob_array(bundle: LocaleCatalogBundle) -> List[str]:
+def _render_blob_array(
+    bundle: EnglishCatalogBundle | LocaleCatalogBundle,
+) -> List[str]:
     suffix = _locale_suffix(bundle.locale)
     lines = [
         "const u8 GAME_LOCALIZATION_SECTION gGameLocalization%sCompressedBlob[] =" % suffix,
@@ -224,7 +256,9 @@ def _render_blob_array(bundle: LocaleCatalogBundle) -> List[str]:
     return lines
 
 
-def _render_entry_array(bundle: LocaleCatalogBundle) -> List[str]:
+def _render_entry_array(
+    bundle: EnglishCatalogBundle | LocaleCatalogBundle,
+) -> List[str]:
     suffix = _locale_suffix(bundle.locale)
     lines = [
         "const struct GameLocalizationCatalogEntry GAME_LOCALIZATION_SECTION",
@@ -232,8 +266,12 @@ def _render_entry_array(bundle: LocaleCatalogBundle) -> List[str]:
         "{",
     ]
     for meta, entry in zip(bundle.entries, bundle.catalog.entries):
-        provider_kind = PROVIDER_KIND_VALUES[meta.locale_provider_kind]
-        fallback_kind = FALLBACK_KIND_VALUES[meta.fallback_kind]
+        if bundle.locale == "en":
+            provider_kind = PROVIDER_KIND_VALUES[None]
+            fallback_kind = 0
+        else:
+            provider_kind = PROVIDER_KIND_VALUES[meta.locale_provider_kind]
+            fallback_kind = FALLBACK_KIND_VALUES[meta.fallback_kind]
         data_pointer = (
             "(const u8 *)0"
             if entry.pointer_offset is None
@@ -247,7 +285,7 @@ def _render_entry_array(bundle: LocaleCatalogBundle) -> List[str]:
                 entry.compressed_size,
                 entry.bit_length,
                 entry.decoded_size,
-                1 if meta.present else 0,
+                1 if bundle.locale == "en" or meta.present else 0,
                 provider_kind,
                 fallback_kind,
                 meta.target_id,
@@ -257,19 +295,32 @@ def _render_entry_array(bundle: LocaleCatalogBundle) -> List[str]:
     return lines
 
 
-def _render_locale_catalog(bundle: LocaleCatalogBundle) -> List[str]:
+def _render_locale_catalog(
+    bundle: EnglishCatalogBundle | LocaleCatalogBundle,
+) -> List[str]:
     suffix = _locale_suffix(bundle.locale)
-    explicit_fallback_count = sum(
-        1 for meta in bundle.entries if meta.fallback_kind == FALLBACK_KIND_EXPLICIT_ENGLISH
+    catalog_name = (
+        "gGameLocalizationEnglishCatalog"
+        if bundle.locale == "en"
+        else "gGameLocalizationCatalog%s" % suffix
     )
-    provider_unavailable_count = sum(
-        1
-        for meta in bundle.entries
-        if meta.fallback_kind == FALLBACK_KIND_PROVIDER_UNAVAILABLE
-    )
+    if bundle.locale == "en":
+        explicit_fallback_count = 0
+        provider_unavailable_count = 0
+    else:
+        explicit_fallback_count = sum(
+            1
+            for meta in bundle.entries
+            if meta.fallback_kind == FALLBACK_KIND_EXPLICIT_ENGLISH
+        )
+        provider_unavailable_count = sum(
+            1
+            for meta in bundle.entries
+            if meta.fallback_kind == FALLBACK_KIND_PROVIDER_UNAVAILABLE
+        )
     lines = [
         "const struct GameLocalizationLocaleCatalog GAME_LOCALIZATION_SECTION",
-        "    gGameLocalizationCatalog%s =" % suffix,
+        "    %s =" % catalog_name,
         "{",
         "    gGameLocalization%sNodes," % suffix,
         "    %uu," % len(bundle.catalog.nodes),
@@ -284,7 +335,12 @@ def _render_locale_catalog(bundle: LocaleCatalogBundle) -> List[str]:
         "    gGameLocalization%sEntries," % suffix,
         "    %uu," % len(bundle.entries),
         "    %uu," % bundle.catalog.budget.max_decoded_bytes,
-        "    %uu," % sum(1 for meta in bundle.entries if meta.present),
+        "    %uu,"
+        % (
+            len(bundle.entries)
+            if bundle.locale == "en"
+            else sum(1 for meta in bundle.entries if meta.present)
+        ),
         "    %uu," % explicit_fallback_count,
         "    %uu," % provider_unavailable_count,
         "};",
@@ -301,6 +357,10 @@ def render_source(build: GameCatalogBuild) -> str:
         '#include "%s"' % OUTPUT_HEADER_NAME,
         "",
     ]
+    lines.extend(_render_node_array(build.english))
+    lines.extend(_render_blob_array(build.english))
+    lines.extend(_render_entry_array(build.english))
+    lines.extend(_render_locale_catalog(build.english))
     for bundle in build.locales:
         lines.extend(_render_node_array(bundle))
         lines.extend(_render_blob_array(bundle))

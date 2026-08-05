@@ -17,15 +17,6 @@
 #define MSG_BUFFER4 (sMsgString.storage.legacy.buffer4)
 #define MSG_BUFFER5 (sMsgString.storage.legacy.buffer5)
 #define MSG_LOCALIZED_STORAGE (sMsgString.storage.localized)
-#define MSG_HUFFMAN_LEAF_MASK 0xFFFF0000u
-#define MSG_ENGLISH_INPUT_LIMIT_BYTES FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
-#define MSG_ENGLISH_OUTPUT_LIMIT_BYTES FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
-#define MSG_ENGLISH_LEGACY_DASH 0x7Fu
-#define MSG_ENGLISH_LEGACY_SPACE_LEAD 0x81u
-#define MSG_ENGLISH_LEGACY_SPACE_TRAIL 0x40u
-#define MSG_ENGLISH_LEGACY_LEFT_QUOTE 0x93u
-#define MSG_ENGLISH_LEGACY_RIGHT_QUOTE 0x94u
-#define MSG_ENGLISH_LEGACY_ACCENTED_E 0xE9u
 #else
 #define MSG_BUFFER1 (sMsgString.buffer1)
 #define MSG_BUFFER2 (sMsgString.buffer2)
@@ -56,6 +47,12 @@ static ExpansionLocaleId GetMsgLocale(void)
     return ExpansionLocale_GetCurrent();
 }
 
+static void SetLocalizedMsgTerminator(char *buffer, u32 decodedLength);
+
+#if 0
+/* Legacy gMsgTable fallback decoding is intentionally dead in CJK profiles.
+ * Every English/default/fallback entry is generated with exact byte and bit
+ * bounds in gGameLocalizationEnglishCatalog. */
 static int LocalizedGameText_ShouldUseEnglish(enum LocalizedGameTextStatus status)
 {
     switch (status)
@@ -353,8 +350,6 @@ static enum LocalizedGameTextStatus DecodeEnglishStringBounded(
     }
 }
 
-static void SetLocalizedMsgTerminator(char *buffer, u32 decodedLength);
-
 static void WriteBoundedMsgMarker(
     char *buffer,
     u32 bufferCapacity,
@@ -415,6 +410,7 @@ static char *DecodeEnglishStringWithLimit(
         buffer, bufferCapacity, LOCALIZED_GAME_TEXT_MARKER_INVALID);
     return buffer;
 }
+#endif
 
 static int LocalizedMsgEndsWithUtf8Scalar(const char *buffer, u32 endOffset)
 {
@@ -485,6 +481,22 @@ static void SetLocalizedMsgTerminator(char *buffer, u32 decodedLength)
     }
 }
 
+static int LocalizedGameText_DecodeSucceeded(
+    enum LocalizedGameTextStatus status)
+{
+    switch (status)
+    {
+    case LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT:
+    case LOCALIZED_GAME_TEXT_STATUS_OK:
+    case LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT:
+    case LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED:
+        return TRUE;
+
+    default:
+        return FALSE;
+    }
+}
+
 static char *ResolveStringIntoBuffer(int index, char *buffer, u32 bufferCapacity)
 {
     enum LocalizedGameTextStatus status;
@@ -501,16 +513,7 @@ static char *ResolveStringIntoBuffer(int index, char *buffer, u32 bufferCapacity
         index, buffer, bufferCapacity, &decodedLength);
     sLastMsgStatus = status;
 
-    if (LocalizedGameText_ShouldUseEnglish(status))
-    {
-        return DecodeEnglishStringWithLimit(
-            index,
-            buffer,
-            bufferCapacity,
-            LocalizedGameText_ShouldNormalizeEnglish(status));
-    }
-
-    if (status == LOCALIZED_GAME_TEXT_STATUS_OK)
+    if (LocalizedGameText_DecodeSucceeded(status))
         SetLocalizedMsgTerminator(buffer, decodedLength);
 
     return buffer;
@@ -519,7 +522,7 @@ static char *ResolveStringIntoBuffer(int index, char *buffer, u32 bufferCapacity
 static char *ResolveStringIntoUnboundedBuffer(int index, char *buffer)
 {
     enum LocalizedGameTextStatus status;
-    char probe[1];
+    u32 decodedLength;
 
     if (buffer == NULL)
     {
@@ -530,22 +533,13 @@ static char *ResolveStringIntoUnboundedBuffer(int index, char *buffer)
     if (buffer == gBufPrep)
         return ResolveStringIntoBuffer(index, buffer, (u32)sizeof(gBufPrep));
 
-    if (index < 0 || (u32)index >= FE8_GAME_LOCALIZATION_TARGET_COUNT)
-    {
-        sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
-        buffer[0] = '\0';
-        return buffer;
-    }
-
-    status = LocalizedGameText_ResolveCurrentToBuffer(index, probe, (u32)sizeof(probe), NULL);
-    if (LocalizedGameText_ShouldUseEnglish(status))
-    {
-        sLastMsgStatus = status;
-        return DecodeEnglishString(index, buffer);
-    }
-
-    sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED;
-    return DecodeEnglishString(index, buffer);
+    decodedLength = 0;
+    status = LocalizedGameText_ResolveCurrentToUnboundedBuffer(
+        index, buffer, &decodedLength);
+    sLastMsgStatus = status;
+    if (LocalizedGameText_DecodeSucceeded(status))
+        SetLocalizedMsgTerminator(buffer, decodedLength);
+    return buffer;
 }
 #endif
 

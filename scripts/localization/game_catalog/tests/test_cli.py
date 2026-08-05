@@ -33,6 +33,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("fallback=1828", result.stdout)
         self.assertIn("unresolved=0", result.stdout)
+        self.assertIn("en.present=3414", result.stdout)
 
     def test_generate_writes_outputs(self):
         with self._tmpdir() as tmp:
@@ -50,6 +51,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
             data = json.loads(result.stdout)
             self.assertEqual(data["mapping_source_counts"]["english_fallback"], 1828)
+            self.assertEqual(data["shared_english"]["present_count"], 3414)
 
     def test_validate_rejects_duplicate_authored_mapping(self):
         result = run_cli([

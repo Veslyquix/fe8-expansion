@@ -139,16 +139,30 @@ class NativeCompileTests(unittest.TestCase):
             )
 
             self.assertIn("gGameLocalizationJaCompressedBlob", ja_symbols)
+            self.assertIn("gGameLocalizationEnglishCompressedBlob", ja_symbols)
             self.assertNotIn("gGameLocalizationZhHansCompressedBlob", ja_symbols)
             self.assertEqual(
                 ja_symbols["gGameLocalizationJaCompressedBlob"],
                 ja_budget["locales"]["ja"]["compressed_bytes"],
             )
+            self.assertEqual(
+                ja_symbols["gGameLocalizationEnglishCompressedBlob"],
+                ja_budget["shared_english"]["compressed_bytes"],
+            )
             self.assertIn("gGameLocalizationZhHansCompressedBlob", zh_symbols)
+            self.assertIn("gGameLocalizationEnglishCompressedBlob", zh_symbols)
             self.assertNotIn("gGameLocalizationJaCompressedBlob", zh_symbols)
             self.assertEqual(
                 zh_symbols["gGameLocalizationZhHansCompressedBlob"],
                 zh_budget["locales"]["zh-Hans"]["compressed_bytes"],
+            )
+            self.assertEqual(
+                zh_symbols["gGameLocalizationEnglishCompressedBlob"],
+                zh_budget["shared_english"]["compressed_bytes"],
+            )
+            self.assertEqual(
+                ja_symbols["gGameLocalizationEnglishCompressedBlob"],
+                zh_symbols["gGameLocalizationEnglishCompressedBlob"],
             )
 
 

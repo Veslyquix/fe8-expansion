@@ -16,6 +16,25 @@ class FixtureBuildTests(unittest.TestCase):
             shutil.rmtree(self.fixture_dir)
         self.fixture_dir.mkdir()
 
+        (self.fixture_dir / "textdefs.txt").write_text(
+            "[X] = 0\n"
+            "[LF] = 1\n"
+            "[DashedLine] = 0x7F\n"
+            "[TAB] = 0x81, 0x40\n"
+            "[LQuote] = 0x93\n"
+            "[RQuote] = 0x94\n"
+            "[AccentedE] = 0xE9\n",
+            encoding="utf-8",
+        )
+        (self.fixture_dir / "texts.txt").write_text(
+            "#0x0\n"
+            "English zero[X]\n"
+            "## MSG_FIXTURE_ONE\n"
+            "[LQuote]English[DashedLine]one[RQuote][X]\n"
+            "## MSG_FIXTURE_TWO\n"
+            "English[TAB]two[AccentedE][X]\n",
+            encoding="utf-8",
+        )
         (self.fixture_dir / "ja_indexed.txt").write_text(
             "\n".join(
                 (
@@ -143,6 +162,8 @@ class FixtureBuildTests(unittest.TestCase):
 
     def test_fixture_build_preserves_fallback_absence_and_raw_locale_gap(self):
         build = build_game_catalog(
+            english_texts_path=self.fixture_dir / "texts.txt",
+            english_definitions_path=self.fixture_dir / "textdefs.txt",
             ja_indexed_path=self.fixture_dir / "ja_indexed.txt",
             zh_indexed_path=self.fixture_dir / "zh_indexed.txt",
             zh_raw_path=self.fixture_dir / "zh_raw.json",
@@ -152,6 +173,14 @@ class FixtureBuildTests(unittest.TestCase):
         ja = build.locale_bundle("ja")
         zh = build.locale_bundle("zh-Hans")
 
+        self.assertEqual(build.english.catalog.decode_entry(0), b"English zero\x00")
+        self.assertEqual(
+            build.english.catalog.decode_entry(1), b'"English-one"\x00'
+        )
+        self.assertEqual(
+            build.english.catalog.decode_entry(2),
+            b"English" + "\u3000".encode("utf-8") + b"twoe\x00",
+        )
         self.assertEqual(ja.catalog.decode_entry(0), "日".encode("utf-8") + b"\x80\x20\x00")
         self.assertIsNone(ja.catalog.decode_entry(1))
         self.assertEqual(zh.catalog.decode_entry(1), "原始".encode("utf-8") + b"\x00")

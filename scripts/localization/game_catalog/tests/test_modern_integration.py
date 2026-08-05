@@ -117,14 +117,22 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
         zh = self._generated_catalog_for("catalog-zh", "0x04")
         both = self._generated_catalog_for("catalog-both", "0x06")
 
+        self.assertIn("gGameLocalizationEnglishCompressedBlob[]", ja["source"])
         self.assertIn("gGameLocalizationJaCompressedBlob[]", ja["source"])
         self.assertNotIn("gGameLocalizationZhHansCompressedBlob[]", ja["source"])
         self.assertIn("FE8_GAME_LOCALIZATION_MAX_DECODED_BYTES 5328u", ja["config"])
         self.assertIn("gGameLocalizationZhHansCompressedBlob[]", zh["source"])
         self.assertNotIn("gGameLocalizationJaCompressedBlob[]", zh["source"])
         self.assertIn("FE8_GAME_LOCALIZATION_MAX_DECODED_BYTES 4260u", zh["config"])
+        self.assertIn("gGameLocalizationEnglishCompressedBlob[]", zh["source"])
         self.assertIn("gGameLocalizationJaCompressedBlob[]", both["source"])
         self.assertIn("gGameLocalizationZhHansCompressedBlob[]", both["source"])
+        self.assertEqual(
+            ja["source"].count("gGameLocalizationEnglishCompressedBlob[]"), 1
+        )
+        self.assertEqual(
+            both["source"].count("gGameLocalizationEnglishCompressedBlob[]"), 1
+        )
 
 
 if __name__ == "__main__":

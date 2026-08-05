@@ -75,13 +75,10 @@ LOCALIZED_GAME_TEXT_STATIC_ASSERT(
 #define LOCALIZED_GAME_TEXT_MARKER_INVALID  "<!LOC_INV!>"
 
 /* Explicit resolution status for renderer/integration work:
- * - ENGLISH_DEFAULT: current locale is English or a non-CJK profile.
- * - ENGLISH_FALLBACK_*: current CJK locale chose English before decode.
- * - DECODE_*: a present localized entry was attempted and wrote a visible
- *   marker instead of silently succeeding.
- * - LEGACY_BUFFER_UNBOUNDED: the historical two-argument msg wrapper had no
- *   proven caller buffer bound, so it intentionally preserved English-only
- *   semantics rather than pretending the buffer was safe for CJK decode. */
+ * - ENGLISH_DEFAULT: the modern English bundle decoded for English/qps.
+ * - ENGLISH_FALLBACK_*: a CJK request decoded the shared English bundle.
+ * - DECODE_*: a generated entry was attempted and wrote a visible marker
+ *   instead of silently succeeding. */
 enum LocalizedGameTextStatus
 {
     LOCALIZED_GAME_TEXT_STATUS_ENGLISH_DEFAULT = 0,
@@ -90,14 +87,17 @@ enum LocalizedGameTextStatus
     LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED = 3,
     LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW = 4,
     LOCALIZED_GAME_TEXT_STATUS_DECODE_CORRUPT = 5,
-    LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID = 6,
-    LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED = 7
+    LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID = 6
 };
 
 enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
     int msgIndex,
     char *buffer,
     u32 bufferCapacity,
+    u32 *outDecodedLength);
+enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToUnboundedBuffer(
+    int msgIndex,
+    char *buffer,
     u32 *outDecodedLength);
 
 void LocalizedGameText_InvalidateCache(void);

@@ -4,62 +4,12 @@
 #include <string.h>
 
 #include "fallback_corpus_ids.h"
-
-char *GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCapacity);
-
-char gBufPrep[0x2000];
-struct ActionData gActionData = { 0 };
-struct PlaySt gPlaySt = { {0}, {0, 0, 0, 0} };
-
-static struct CharacterData sCharacterData = { 4 };
+#include "game_localization_catalog.h"
+#include "localized_text_codec.h"
 
 ExpansionLocaleId ExpansionLocale_GetCurrent(void)
 {
     return EXPANSION_LOCALE_JA;
-}
-
-enum LocalizedGameTextStatus LocalizedGameText_ResolveCurrentToBuffer(
-    int msgIndex,
-    char *buffer,
-    u32 bufferCapacity,
-    u32 *outDecodedLength)
-{
-    (void)buffer;
-    (void)bufferCapacity;
-
-    if (outDecodedLength != NULL)
-        *outDecodedLength = 0;
-    if (msgIndex < 0 || (u32)msgIndex >= FE8_GAME_LOCALIZATION_TARGET_COUNT)
-        return LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
-    return LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT;
-}
-
-void CallARM_DecompText(const char *input, char *output)
-{
-    (void)input;
-    (void)output;
-}
-
-void CopyString(void *dst, const void *src)
-{
-    strcpy((char *)dst, (const char *)src);
-}
-
-char *GetTacticianName(void)
-{
-    return "Tact";
-}
-
-char *GetItemName(int item)
-{
-    (void)item;
-    return "Item";
-}
-
-const struct CharacterData *GetCharacterData(int id)
-{
-    (void)id;
-    return &sCharacterData;
 }
 
 static int IsContinuation(u8 byte)
@@ -79,7 +29,7 @@ static int IsRendererValid(const u8 *text, u32 capacity)
     {
         first = text[index];
         if (first == 0)
-            return TRUE;
+            return index + 1 == capacity;
 
         if (first < 0x20)
         {
@@ -142,9 +92,13 @@ static int IsRendererValid(const u8 *text, u32 capacity)
 
 int main(void)
 {
-    static const char expectedMsg809[] = "Rennac, Rich \"Merchant\"";
-    char buffer[FE8_LOCALIZED_GAME_TEXT_REQUIRED_STORAGE_BYTES];
-    const char *result;
+    char actual[FE8_LOCALIZED_GAME_TEXT_REQUIRED_STORAGE_BYTES];
+    char expected[FE8_LOCALIZED_GAME_TEXT_REQUIRED_STORAGE_BYTES];
+    const struct GameLocalizationCatalogEntry *entry;
+    enum LocalizedGameTextStatus status;
+    enum LocalizedTextCodecStatus codecStatus;
+    u32 actualLength;
+    u32 expectedLength;
     u32 index;
     int msgId;
 
@@ -154,29 +108,49 @@ int main(void)
     for (index = 0; index < ARRAY_COUNT(sFallbackIds); index++)
     {
         msgId = sFallbackIds[index];
-        memset(buffer, 0xA5, sizeof(buffer));
-        result = GetStringFromIndexInBufferWithLimit(
-            msgId, buffer, (u32)sizeof(buffer));
-        if (result != buffer || !IsRendererValid((const u8 *)buffer, sizeof(buffer)))
+        memset(actual, 0xA5, sizeof(actual));
+        memset(expected, 0x5A, sizeof(expected));
+        actualLength = 0;
+        expectedLength = 0;
+
+        status = LocalizedGameText_ResolveCurrentToBuffer(
+            msgId, actual, (u32)sizeof(actual), &actualLength);
+        if (status != LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT)
         {
-            printf(
-                "invalid fallback MSG_%03X status=%d bytes=%02X %02X %02X %02X %02X\n",
-                msgId,
-                LocalizedGameText_GetLastStatus(),
-                (u8)buffer[0],
-                (u8)buffer[1],
-                (u8)buffer[2],
-                (u8)buffer[3],
-                (u8)buffer[4]);
+            printf("fallback status MSG_%03X=%d\n", msgId, status);
             return 2;
+        }
+
+        entry = &gGameLocalizationEnglishEntries[msgId];
+        codecStatus = LocalizedTextCodec_Decode(
+            gGameLocalizationEnglishCatalog.nodes,
+            gGameLocalizationEnglishCatalog.nodeCount,
+            gGameLocalizationEnglishCatalog.rootIndex,
+            entry->data,
+            entry->compressedSize,
+            entry->bitLength,
+            (u8 *)expected,
+            (u32)sizeof(expected),
+            &expectedLength);
+        if (codecStatus != LOCALIZED_TEXT_CODEC_OK)
+        {
+            printf("English decode MSG_%03X=%d\n", msgId, codecStatus);
+            return 3;
+        }
+
+        if (actualLength != expectedLength
+            || memcmp(actual, expected, actualLength) != 0)
+        {
+            printf("fallback mismatch MSG_%03X\n", msgId);
+            return 4;
+        }
+        if (!IsRendererValid((const u8 *)actual, actualLength))
+        {
+            printf("invalid renderer stream MSG_%03X\n", msgId);
+            return 5;
         }
     }
 
-    result = GetStringFromIndexInBufferWithLimit(
-        0x809, buffer, (u32)sizeof(buffer));
-    if (strcmp(result, expectedMsg809) != 0)
-        return 3;
-
-    puts("fallback_corpus_driver: 1828 renderer-valid streams");
+    puts("fallback_corpus_driver: 1828 exact shared-English streams");
     return 0;
 }

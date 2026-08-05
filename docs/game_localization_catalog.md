@@ -14,17 +14,28 @@ make game-localization-test
 make game-localization-budget
 ```
 
-These targets generate both CJK bundles by default. To inspect one build
-profile in isolation, set `GAME_LOCALIZATION_ENABLED_LOCALES=ja` or
+These targets generate both CJK bundles by default. Every generated CJK
+profile also emits exactly one shared modern English bundle covering all 3,414
+FE8U message IDs. To inspect one build profile in isolation, set
+`GAME_LOCALIZATION_ENABLED_LOCALES=ja` or
 `GAME_LOCALIZATION_ENABLED_LOCALES=zh-Hans`. A single-locale profile emits no
-nodes, compressed blob, entries, or catalog descriptor for the disabled
-locale; its fixed `gGameLocalizationCatalogs[]` slot is null.
+nodes, compressed blob, entries, or catalog descriptor for the disabled CJK
+locale; its fixed `gGameLocalizationCatalogs[]` slot is null, while the shared
+English bundle remains present once.
 
-The generator reads the canonical `texts/locales/` sources and the verified
-`texts/locales/mapping/fe8u_target_map.json` decisions. It never infers a
-positional mapping. Explicit English fallback decisions produce absent
-entries; a verified provider without a committed payload is also absent and
-reported separately as `provider_unavailable`.
+The generator reads committed `texts/texts.txt` plus `texts/textdefs.txt` for
+English, and the canonical `texts/locales/` sources plus verified
+`texts/locales/mapping/fe8u_target_map.json` decisions for CJK. The English
+parser handles explicit `#` IDs, `##` macro IDs, relative includes, named
+controls/FIDs, and source comments deterministically. It encodes literal text
+as UTF-8 while preserving engine control payload bytes. Legacy printable
+tokens are normalized during generation: `DashedLine` to `-`, `TAB` to UTF-8
+U+3000, `LQuote`/`RQuote` to `"`, and `AccentedE` to `e`. An unknown high-byte
+printable token is rejected rather than emitted as invalid UTF-8.
+
+The CJK mapping never infers a positional match. Explicit English fallback
+decisions produce absent CJK entries; a verified provider without a committed
+payload is also absent and reported separately as `provider_unavailable`.
 
 Outputs are generated under `build/game-localization/generated/`:
 
@@ -33,17 +44,20 @@ Outputs are generated under `build/game-localization/generated/`:
 - `game_localization_catalog.c`: Huffman nodes, blobs, metadata, and entries
   in `.locale_data`;
 - `game_localization_report.json`: entry-level provenance and hashes;
-- `game_localization_budget.json`: coverage, storage, and ROM estimates.
+- `game_localization_budget.json`: coverage, storage, shared-English, and
+  profile-specific ROM estimates.
 
 Every present message is strict UTF-8 plus canonical engine control bytes and
-one trailing NUL. Generation rejects unknown controls, embedded NUL bytes,
+one trailing NUL. Each descriptor records both compressed byte length and
+exact meaningful bit length; the standalone NUL is the final Huffman symbol at
+that bit boundary. Generation rejects unknown controls, embedded NUL bytes,
 unresolved mapping decisions, and codec round-trip mismatches.
 
 ## Runtime and build gating
 
-English/default and archival builds do not generate or link this catalog.
+English-only modern and archival builds do not generate or link this catalog.
 They retain the historical 4 KiB `MsgBuffer`, English `gMsgTable`, and ARM
-decoder path.
+decoder path with zero modern English/CJK payload.
 
 Until production Japanese/Chinese configuration is enabled by a later sprint,
 an internal link test can exercise this slice:
@@ -56,48 +70,30 @@ make expansion-modern-rom \
 ```
 
 The synthetic mask accepts `0x02` (Japanese), `0x04` (Simplified Chinese), or
-`0x06` (both). Each mask generates and links only its selected game-catalog
-bundle(s). The effective synthetic locale list is resolved through the normal
-expansion identity pipeline before metadata and fingerprint generation, while
-`config.mk` and production locale validation remain unchanged.
+`0x06` (both). Each mask generates one shared English bundle and only its
+selected CJK bundle(s). The effective synthetic locale list is resolved
+through the normal expansion identity pipeline before metadata and fingerprint
+generation, while `config.mk` and production locale validation remain
+unchanged.
 
 CJK profiles use one explicit message-storage overlay. The historical helper
 scratch fields keep their offsets inside the overlay; total capacity is at
 least `0x1600` bytes and grows if the generated maximum (including NUL)
 requires more. Decode overflow or corrupt input returns a visible marker and
 an explicit `LocalizedGameTextStatus`. Message indexes are checked before
-localized or English fallback lookup. Bounded English fallback uses a
-cache-independent C decoder with explicit input, output, node, and caller
-capacity checks; it never stages through the active `MsgBuffer` overlay, so an
-InBuffer lookup cannot invalidate or overwrite a pointer returned by an
-earlier `GetStringFromIndex` call. When and only when a Japanese or Simplified
-Chinese request falls back to that legacy English stream, the decoder also
-normalizes printable FE8U glyph encodings before the strict UTF-8 renderer sees
-them:
+localized or English lookup. In every CJK-enabled build, English and qps-ploc
+decode the modern English descriptor directly; absent/unpopulated Japanese or
+Simplified Chinese entries select that same descriptor. No active CJK path
+reads `gMsgTable`, guesses a 4 KiB compressed-input bound, or depends on
+adjacent compressed arrays. Bounded InBuffer lookup remains
+cache-independent, so it cannot invalidate or overwrite a pointer returned by
+an earlier `GetStringFromIndex` call.
 
-- `0x7F` (`[DashedLine]`) becomes ASCII `-`;
-- `0x81 0x40` (`[TAB]`, the legacy full-width space) becomes UTF-8 U+3000,
-  which both committed CJK renderers provide as an explicit spacing glyph;
-- `0x93` / `0x94` (`[LQuote]` / `[RQuote]`) become ASCII `"`;
-- `0xE9` (`[AccentedE]`) becomes ASCII `e`.
-
-The ASCII quote and `e` substitutions are intentional: U+201C/U+201D are not
-covered by the committed Japanese fonts, and U+00E9 is not covered by either
-CJK font set. Engine controls remain byte-exact. In particular, `0x10` copies
-both following face-ID bytes without interpreting them as text, and `0x80`
-copies its following extended-control payload byte. Truncated controls,
-unknown legacy high bytes, malformed spacing pairs, and capacity exhaustion
-return a visible localization marker.
-
-The committed audit covers all 1,828 explicit English-fallback IDs. Its current
-fallback subset contains 28 dashed-line bytes and eight pairs of legacy quote
-bytes across seven IDs, including `MSG_809`. The complete FE8U English corpus
-also contains the single `0xE9` in `MSG_D0E`; the normalizer covers it because
-an unavailable CJK catalog can make any English ID reachable as fallback. No
-`0x81 0x40` pair currently occurs in the corpus, but the defined legacy token
-is regression-tested so future fallback text cannot reintroduce invalid input.
-English and qps-ploc requests bypass normalization and retain their original
-bytes.
+The exhaustive audit independently decodes all 3,414 English entries, checks
+source equality, renderer-valid UTF-8/control structure, and exact NUL bit
+boundaries. It separately guards `0xD4D`, `0xD4E`, `0xD4F`, `0xD50`, and
+`0xD54`, and compares all 1,828 explicit CJK fallbacks byte-for-byte with the
+corresponding shared English descriptor.
 
 `StringInsertSpecialPrefixByCtrl`, `StrInsertTact`, and other renderer-side
 walkers remain byte-oriented. They must not process long UTF-8 overlay content

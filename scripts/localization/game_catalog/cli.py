@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 
 from .build import (
+    DEFAULT_ENGLISH_DEFINITIONS_PATH,
+    DEFAULT_ENGLISH_TEXTS_PATH,
     DEFAULT_JA_INDEXED_PATH,
     DEFAULT_MAPPING_PATH,
     DEFAULT_TARGET_HEADER_PATH,
@@ -34,6 +36,14 @@ def _locale_path_map(values):
 
 
 def _add_common_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--english-texts", type=Path, default=DEFAULT_ENGLISH_TEXTS_PATH
+    )
+    parser.add_argument(
+        "--english-definitions",
+        type=Path,
+        default=DEFAULT_ENGLISH_DEFINITIONS_PATH,
+    )
     parser.add_argument("--ja-indexed", type=Path, default=DEFAULT_JA_INDEXED_PATH)
     parser.add_argument("--zh-indexed", type=Path, default=DEFAULT_ZH_INDEXED_PATH)
     parser.add_argument("--zh-raw", type=Path, default=DEFAULT_ZH_RAW_PATH)
@@ -76,7 +86,7 @@ def _build_summary(build) -> str:
     return (
         "targets={targets} indexed={indexed} raw={raw} authored={authored} "
         "fallback={fallback} unresolved={unresolved} "
-        "{locale_counts}"
+        "en.present={english_present} {locale_counts}"
     ).format(
         targets=build.target_count,
         indexed=mapping["indexed"],
@@ -84,12 +94,15 @@ def _build_summary(build) -> str:
         authored=mapping["authored"],
         fallback=mapping["english_fallback"],
         unresolved=mapping["unresolved"],
+        english_present=build.report["shared_english"]["present_count"],
         locale_counts=" ".join(locale_counts),
     )
 
 
 def _build_from_args(args: argparse.Namespace):
     return build_game_catalog(
+        english_texts_path=args.english_texts,
+        english_definitions_path=args.english_definitions,
         ja_indexed_path=args.ja_indexed,
         zh_indexed_path=args.zh_indexed,
         zh_raw_path=args.zh_raw,

@@ -35,6 +35,11 @@ class RealGenerateTests(unittest.TestCase):
             self.assertEqual(report["mapping_source_counts"]["authored"], 0)
             self.assertEqual(report["mapping_source_counts"]["english_fallback"], 1828)
             self.assertEqual(report["mapping_source_counts"]["unresolved"], 0)
+            self.assertEqual(report["shared_english"]["present_count"], 3414)
+            self.assertEqual(report["shared_english"]["absent_count"], 0)
+            self.assertEqual(
+                report["shared_english"]["storage"]["required_bytes"], 4000
+            )
             self.assertEqual(report["locales"]["ja"]["present_count"], 1472)
             self.assertEqual(report["locales"]["ja"]["provider_unavailable_count"], 114)
             self.assertEqual(report["locales"]["zh-Hans"]["present_count"], 1586)
@@ -55,6 +60,8 @@ class RealGenerateTests(unittest.TestCase):
             self.assertIn("compressed_blob_hex", report["locales"]["zh-Hans"]["huffman"])
             self.assertIn("codec_budget", budget["locales"]["ja"])
             self.assertIn("codec_budget", budget["locales"]["zh-Hans"])
+            self.assertIn("codec_budget", budget["shared_english"])
+            self.assertEqual(budget["compiled_locales"], ["en", "ja", "zh-Hans"])
 
     def test_generated_c_uses_locale_data_section_and_has_target_entries(self):
         with self._tmpdir() as tmp:
@@ -69,6 +76,8 @@ class RealGenerateTests(unittest.TestCase):
                 "FE8_GAME_LOCALIZATION_MAX_DECODED_BYTES 5328u",
                 config_header,
             )
+            self.assertIn("gGameLocalizationEnglishEntries[]", source)
+            self.assertIn("gGameLocalizationEnglishCatalog", source)
             self.assertIn("gGameLocalizationJaEntries[]", source)
             self.assertIn("gGameLocalizationZhHansEntries[]", source)
             self.assertIn("gGameLocalizationCatalogs[GAME_LOCALIZATION_LOCALE_COUNT]", source)
@@ -102,8 +111,10 @@ class RealGenerateTests(unittest.TestCase):
             zh_config = zh["config_header"].read_text(encoding="utf-8")
 
             self.assertIn("gGameLocalizationJaCompressedBlob[]", ja_source)
+            self.assertIn("gGameLocalizationEnglishCompressedBlob[]", ja_source)
             self.assertNotIn("gGameLocalizationZhHansCompressedBlob[]", ja_source)
             self.assertIn("gGameLocalizationZhHansCompressedBlob[]", zh_source)
+            self.assertIn("gGameLocalizationEnglishCompressedBlob[]", zh_source)
             self.assertNotIn("gGameLocalizationJaCompressedBlob[]", zh_source)
             self.assertIn("gGameLocalizationJaCompressedBlob[]", both_source)
             self.assertIn("gGameLocalizationZhHansCompressedBlob[]", both_source)
@@ -118,6 +129,9 @@ class RealGenerateTests(unittest.TestCase):
             )
 
             self.assertIn("GAME_LOCALIZATION_JA_ENABLED 1u", ja_header)
+            self.assertIn(
+                "GAME_LOCALIZATION_SHARED_ENGLISH_ENABLED 1u", ja_header
+            )
             self.assertIn("GAME_LOCALIZATION_ZH_HANS_ENABLED 0u", ja_header)
             self.assertNotIn("extern const u32 gGameLocalizationZhHansNodes[];", ja_header)
             self.assertIn("GAME_LOCALIZATION_JA_ENABLED 0u", zh_header)
@@ -142,11 +156,26 @@ class RealGenerateTests(unittest.TestCase):
             )
 
             self.assertEqual(ja_report["enabled_locales"], ["ja"])
+            self.assertEqual(ja_report["compiled_locales"], ["en", "ja"])
             self.assertEqual(set(ja_report["locales"]), {"ja"})
             self.assertEqual(zh_report["enabled_locales"], ["zh-Hans"])
+            self.assertEqual(
+                zh_report["compiled_locales"], ["en", "zh-Hans"]
+            )
             self.assertEqual(set(zh_report["locales"]), {"zh-Hans"})
             self.assertEqual(
                 both_report["enabled_locales"], ["ja", "zh-Hans"]
+            )
+            self.assertEqual(
+                both_report["compiled_locales"], ["en", "ja", "zh-Hans"]
+            )
+            self.assertEqual(
+                ja_budget["shared_english"]["estimated_total_c_bytes"],
+                zh_budget["shared_english"]["estimated_total_c_bytes"],
+            )
+            self.assertEqual(
+                ja_budget["shared_english"]["estimated_total_c_bytes"],
+                both_budget["shared_english"]["estimated_total_c_bytes"],
             )
             self.assertEqual(ja_budget["locales"]["ja"]["max_decoded_bytes"], 5328)
             self.assertEqual(
@@ -159,6 +188,10 @@ class RealGenerateTests(unittest.TestCase):
             self.assertLess(
                 zh_budget["totals"]["estimated_total_c_bytes"],
                 both_budget["totals"]["estimated_total_c_bytes"],
+            )
+            self.assertEqual(
+                ja_budget["totals"]["shared_english_bytes"],
+                both_budget["totals"]["shared_english_bytes"],
             )
 
 

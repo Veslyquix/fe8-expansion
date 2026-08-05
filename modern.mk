@@ -377,9 +377,10 @@ MODERN_LOCALIZATION_BUDGET_JSON := $(MODERN_LOCALIZATION_GENERATED_DIR)/budget.j
 # opt-in mask exists only so the catalog/runtime slice can be compiled and
 # linked end-to-end before the renderer/config sprint enables a product
 # profile. Supported values are the stable CJK locale bits 0x02 (ja), 0x04
-# (zh-Hans), or 0x06 (both); English is added to the compiled effective mask
-# below so fallback remains available. Empty means no generated CJK payload,
-# no decoder/runtime code, and no enlarged message buffer.
+# (zh-Hans), or 0x06 (both). Every nonzero mask generates one shared modern
+# English bundle in addition to the selected CJK bundle(s), and English is
+# added to the compiled effective mask below. Empty means no generated
+# English/CJK payload, no decoder/runtime code, and no enlarged message buffer.
 MODERN_GAME_LOCALIZATION_CJK_MASK ?=
 MODERN_GAME_LOCALIZATION_SYNTHETIC_IDENTITY := scripts/localization/game_catalog/synthetic_identity.py
 MODERN_GAME_LOCALIZATION_AVAILABLE := $(and \
@@ -1750,10 +1751,10 @@ $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o: $(MODERN_LOCALIZATION_CATAL
 	@mkdir -p $(@D)
 	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
-# The full-game CJK catalog is generated and linked only for the explicit
-# internal synthetic mask above. Grouped outputs prevent parallel compiles
-# from racing the deterministic writer when the runtime headers and generated
-# source are requested at the same time.
+# The full-game CJK catalog plus its single shared modern English bundle are
+# generated and linked only for the explicit internal synthetic mask above.
+# Grouped outputs prevent parallel compiles from racing the deterministic
+# writer when the runtime headers and generated source are requested together.
 .PHONY: FORCE_MODERN_GAME_LOCALIZATION
 FORCE_MODERN_GAME_LOCALIZATION:
 

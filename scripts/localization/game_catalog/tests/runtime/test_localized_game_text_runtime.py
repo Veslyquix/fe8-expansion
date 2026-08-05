@@ -14,6 +14,9 @@ BUILD_ROOT = TEST_DIR / ".build"
 sys.path.insert(0, str(ROOT))
 
 from scripts.texttools.multilang_codec import build_catalog  # noqa: E402
+from scripts.localization.game_catalog.build import (  # noqa: E402
+    generate as generate_game_catalog,
+)
 
 RUNTIME_DRIVER = TEST_DIR / "runtime_driver.c"
 ENGLISH_PROBE = TEST_DIR / "layout_english_probe.c"
@@ -45,13 +48,13 @@ ENGLISH_MESSAGES = (
     b"Broken\x1f\x00",
     b"Plain English\x1f\x00",
     b"Space\x1f\x00",
-    b"Rennac, Rich \x93Merchant\x94\x1f\x00",
-    b"A\x7fB\xe9C\x81\x40D\x1f\x00",
+    b'Rennac, Rich "Merchant"\x1f\x00',
+    b"A-BeC" + "\u3000".encode("utf-8") + b"D\x1f\x00",
     b"\x10\x93\x94\x80\xe9X\x1f\x00",
-    b"\x10\x93\x00",
-    b"\x80\x00",
-    b"\x82\x00",
-    b"\x81\x41\x00",
+    b"English nine\x00",
+    b"English ten\x00",
+    b"English eleven\x00",
+    b"English twelve\x00",
 )
 
 
@@ -62,7 +65,7 @@ def _c_bytes(data: bytes) -> str:
 class LocalizedGameTextRuntimeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        for tool in ("cc", "size"):
+        for tool in ("cc", "size", "nm"):
             try:
                 subprocess.run(
                     [tool, "--version"],
@@ -102,7 +105,10 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
         if english_catalog.root_index is None:
             raise AssertionError("English fixture catalog unexpectedly missing root")
 
-        max_decoded = max(len(msg) for msg in JA_MESSAGES if msg is not None)
+        max_decoded = max(
+            max(len(msg) for msg in JA_MESSAGES if msg is not None),
+            max(len(msg) for msg in ENGLISH_MESSAGES),
+        )
         config_header = build_dir / "localized_game_text_data.h"
         catalog_header = build_dir / "game_localization_catalog.h"
         source = build_dir / "localized_game_text_fixture.c"
@@ -169,30 +175,45 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             "};\n\n"
             "extern const struct GameLocalizationLocaleCatalog *const\n"
             "    gGameLocalizationCatalogs[GAME_LOCALIZATION_LOCALE_COUNT];\n\n"
+            "extern const struct GameLocalizationLocaleCatalog\n"
+            "    gGameLocalizationEnglishCatalog;\n\n"
             "#endif\n",
             encoding="ascii",
         )
         english_nodes = ", ".join(
             "0x{:08X}u".format(node) for node in english_catalog.nodes
         )
-        english_pointers = []
-        for entry in english_catalog.entries:
+        english_entries = []
+        for index, entry in enumerate(english_catalog.entries):
             if entry.pointer_offset is None:
                 raise AssertionError("English fixture unexpectedly has an absent entry")
-            english_pointers.append(
-                "    gEnglishCompressed + {}u,".format(entry.pointer_offset)
+            bit_length = entry.bit_length - 1 if index == 9 else entry.bit_length
+            english_entries.append(
+                "    {{ gEnglishCompressed + {offset}u, {size}u, {bits}u, "
+                "{decoded}u, 1u, 0u, 0u, 0u }},".format(
+                    offset=entry.pointer_offset,
+                    size=entry.compressed_size,
+                    bits=bit_length,
+                    decoded=entry.decoded_size,
+                )
             )
 
         source_text = (
             "#include \"global.h\"\n"
             "#include \"localized_game_text.h\"\n"
             "#include \"game_localization_catalog.h\"\n\n"
-            "const u32 gMsgHuffmanTable[] = {{{english_nodes}}};\n"
-            "const u32 *const gMsgHuffmanTableRoot = "
-            "gMsgHuffmanTable + {english_root}u;\n"
+            "static const u32 gEnglishNodes[] = {{{english_nodes}}};\n"
             "static const u8 gEnglishCompressed[] = {{{english_blob}}};\n"
-            "const u8 *const gMsgTable[] = {{\n"
-            "{english_pointers}\n"
+            "static const struct GameLocalizationCatalogEntry "
+            "gEnglishEntries[] = {{\n"
+            "{english_entries}\n"
+            "}};\n\n"
+            "const struct GameLocalizationLocaleCatalog "
+            "gGameLocalizationEnglishCatalog = {{\n"
+            "    gEnglishNodes, {english_node_count}u, {english_root}u,\n"
+            "    gEnglishCompressed, {english_compressed_size}u,\n"
+            "    gEnglishEntries, {english_entry_count}u, {english_max_decoded}u,\n"
+            "    {english_entry_count}u, 0u, 0u\n"
             "}};\n\n"
             "static const u32 gJaNodes[] = {{{nodes}}};\n"
             "static const u8 gJaCompressed[] = {{{blob}}};\n"
@@ -213,7 +234,11 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             english_nodes=english_nodes,
             english_root=english_catalog.root_index,
             english_blob=_c_bytes(english_catalog.compressed_blob),
-            english_pointers="\n".join(english_pointers),
+            english_entries="\n".join(english_entries),
+            english_node_count=len(english_catalog.nodes),
+            english_compressed_size=len(english_catalog.compressed_blob),
+            english_entry_count=len(ENGLISH_MESSAGES),
+            english_max_decoded=max(len(msg) for msg in ENGLISH_MESSAGES),
             nodes=nodes,
             blob=_c_bytes(catalog.compressed_blob),
             entries_text="\n".join(entries),
@@ -281,7 +306,9 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
     def test_committed_fallback_corpus_through_c_runtime(self):
         build_dir = BUILD_ROOT / "fallback-corpus"
         build_dir.mkdir()
-        self._write_probe_header(build_dir, 0x14D0, target_count=3414)
+        written = generate_game_catalog(
+            output_dir=build_dir, enabled_locales=("ja",)
+        )
         mapping = json.loads(
             (ROOT / "texts" / "locales" / "mapping" / "fe8u_target_map.json").read_text(
                 encoding="utf-8"
@@ -320,8 +347,9 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
                 str(ROOT / "include"),
                 "-I",
                 str(build_dir),
-                str(ROOT / "src" / "msg.c"),
-                str(ROOT / "src" / "msg_data.c"),
+                str(ROOT / "src" / "localized_text_codec.c"),
+                str(ROOT / "src" / "localized_game_text.c"),
+                str(written["source"]),
                 str(FALLBACK_CORPUS_DRIVER),
                 "-o",
                 str(binary),
@@ -330,7 +358,7 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
         run_result = self._run([str(binary)])
         self.assertEqual(
             run_result.stdout.strip(),
-            "fallback_corpus_driver: 1828 renderer-valid streams",
+            "fallback_corpus_driver: 1828 exact shared-English streams",
         )
 
     def test_profile_compiles_and_layout_probes(self):
@@ -525,6 +553,33 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
                 str(floor_dir / "function_macro_probe.o"),
             ]
         )
+        self._run(
+            [
+                "cc",
+                "-std=gnu89",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-Werror=declaration-after-statement",
+                "-fcf-protection=none",
+                "-DMODERN=1",
+                "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x07u",
+                "-I",
+                str(HOST_INCLUDE),
+                "-I",
+                str(floor_dir),
+                "-I",
+                str(ROOT / "include"),
+                "-c",
+                str(ROOT / "src" / "msg.c"),
+                "-o",
+                str(floor_dir / "msg.o"),
+            ]
+        )
+        undefined = self._run(["nm", "-u", str(floor_dir / "msg.o")]).stdout
+        self.assertNotIn("gMsgTable", undefined)
+        self.assertNotIn("gMsgHuffmanTable", undefined)
+        self.assertNotIn("CallARM_DecompText", undefined)
 
         growth_dir = BUILD_ROOT / "cjk-growth"
         growth_dir.mkdir()

@@ -31,6 +31,21 @@ class EntryPayloadMeta:
 
 
 @dataclass(frozen=True)
+class EnglishSourceEntry:
+    target_id: int
+    definition: Optional[str]
+    source_text: str
+    encoded_bytes: bytes
+
+
+@dataclass(frozen=True)
+class EnglishCatalogBundle:
+    locale: str
+    entries: Tuple[EnglishSourceEntry, ...]
+    catalog: Catalog
+
+
+@dataclass(frozen=True)
 class LocaleCatalogBundle:
     locale: str
     entries: Tuple[EntryPayloadMeta, ...]
@@ -42,6 +57,7 @@ class GameCatalogBuild:
     target_count: int
     mapping: MappingDocument
     mapping_source_counts: Mapping[str, int]
+    english: EnglishCatalogBundle
     locales: Tuple[LocaleCatalogBundle, ...]
     report: Dict[str, Any]
     budget: Dict[str, Any]

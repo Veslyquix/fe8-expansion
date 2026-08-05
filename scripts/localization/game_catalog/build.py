@@ -45,8 +45,17 @@ from .constants import (
     SOURCE_KINDS,
     TARGET_STORAGE_BYTES,
 )
-from .model import EntryPayloadMeta, GameCatalogBuild, GameCatalogError, LocaleCatalogBundle
+from .english_source import load_english_source_entries
+from .model import (
+    EnglishCatalogBundle,
+    EntryPayloadMeta,
+    GameCatalogBuild,
+    GameCatalogError,
+    LocaleCatalogBundle,
+)
 
+DEFAULT_ENGLISH_TEXTS_PATH = Path("texts/texts.txt")
+DEFAULT_ENGLISH_DEFINITIONS_PATH = Path("texts/textdefs.txt")
 DEFAULT_JA_INDEXED_PATH = Path("texts/locales/ja/indexed.txt")
 DEFAULT_ZH_INDEXED_PATH = Path("texts/locales/zh-Hans/indexed.txt")
 DEFAULT_ZH_RAW_PATH = Path("texts/locales/zh-Hans/raw.json")
@@ -469,8 +478,59 @@ def _locale_report(bundle: LocaleCatalogBundle, *, suffix_share: bool) -> Dict[s
     }
 
 
+def _english_report(
+    bundle: EnglishCatalogBundle, *, suffix_share: bool
+) -> Dict[str, Any]:
+    entry_reports = []
+    for meta, entry in zip(bundle.entries, bundle.catalog.entries):
+        entry_reports.append(
+            {
+                "target_id": format_message_id(meta.target_id),
+                "definition": meta.definition,
+                "present": True,
+                "pointer_offset": entry.pointer_offset,
+                "compressed_size": entry.compressed_size,
+                "bit_length": entry.bit_length,
+                "max_decoded_bytes": entry.decoded_size,
+                "shared_from": entry.shared_from,
+                "decoded_sha256": entry.decoded_sha256,
+            }
+        )
+    requirement_bytes = bundle.catalog.budget.max_decoded_bytes
+    return {
+        "codec_schema": CODEC_SCHEMA,
+        "entry_count": len(bundle.entries),
+        "present_count": len(bundle.entries),
+        "absent_count": 0,
+        "storage": {
+            "target_bytes": TARGET_STORAGE_BYTES,
+            "required_bytes": requirement_bytes,
+            "assertion_bytes": max(TARGET_STORAGE_BYTES, requirement_bytes),
+            "target_fits": requirement_bytes <= TARGET_STORAGE_BYTES,
+        },
+        "hashes": {
+            "source_framed_sha256": bundle.catalog.budget.source_sha256,
+            "round_trip_framed_sha256": bundle.catalog.budget.round_trip_sha256,
+            "compressed_blob_sha256": bundle.catalog.budget.compressed_sha256,
+            "node_table_sha256": bundle.catalog.budget.node_table_sha256,
+            "entry_table_sha256": _entry_table_hash(entry_reports),
+        },
+        "huffman": {
+            "root_index": bundle.catalog.root_index,
+            "node_count": len(bundle.catalog.nodes),
+            "nodes": list(bundle.catalog.nodes),
+            "compressed_blob_hex": bundle.catalog.compressed_blob.hex(),
+            "compressed_bytes": len(bundle.catalog.compressed_blob),
+            "suffix_share": suffix_share,
+        },
+        "budget": bundle.catalog.budget.to_dict(),
+        "entries": entry_reports,
+    }
+
+
 def _build_report(
     *,
+    english_report,
     mapping_source_counts,
     target_count,
     mapping,
@@ -491,6 +551,8 @@ def _build_report(
         },
         "storage_target_bytes": TARGET_STORAGE_BYTES,
         "enabled_locales": list(locale_reports),
+        "compiled_locales": ["en", *locale_reports],
+        "shared_english": english_report,
         "locales": locale_reports,
     }
 
@@ -498,13 +560,23 @@ def _build_report(
 def _build_budget(
     *,
     mapping_source_counts,
+    english_bundle: EnglishCatalogBundle,
     locale_bundles: Sequence[LocaleCatalogBundle],
 ) -> Dict[str, Any]:
     locale_budget = {}
-    total_node_bytes = 0
-    total_compressed_bytes = 0
-    total_entry_bytes = 0
-    total_present = 0
+    english_node_bytes = len(english_bundle.catalog.nodes) * 4
+    english_compressed_bytes = len(english_bundle.catalog.compressed_blob)
+    english_entry_bytes = len(english_bundle.entries) * ENTRY_STRUCT_SIZE_BYTES
+    english_estimated_bytes = (
+        english_node_bytes
+        + english_compressed_bytes
+        + english_entry_bytes
+        + LOCALE_CATALOG_STRUCT_SIZE_BYTES
+    )
+    total_node_bytes = english_node_bytes
+    total_compressed_bytes = english_compressed_bytes
+    total_entry_bytes = english_entry_bytes
+    total_present = len(english_bundle.entries)
     total_absent = 0
     for bundle in locale_bundles:
         explicit_fallback_count = sum(
@@ -555,9 +627,30 @@ def _build_budget(
         "kind": BUDGET_KIND,
         "storage_target_bytes": TARGET_STORAGE_BYTES,
         "enabled_locales": [bundle.locale for bundle in locale_bundles],
+        "compiled_locales": ["en", *[bundle.locale for bundle in locale_bundles]],
         "mapping_source_counts": {
             **{kind: mapping_source_counts.get(kind, 0) for kind in SOURCE_KINDS},
             "unresolved": 0,
+        },
+        "shared_english": {
+            "present_count": len(english_bundle.entries),
+            "absent_count": 0,
+            "max_decoded_bytes": english_bundle.catalog.budget.max_decoded_bytes,
+            "storage_target_bytes": TARGET_STORAGE_BYTES,
+            "storage_assertion_bytes": max(
+                TARGET_STORAGE_BYTES,
+                english_bundle.catalog.budget.max_decoded_bytes,
+            ),
+            "storage_target_fits": (
+                english_bundle.catalog.budget.max_decoded_bytes
+                <= TARGET_STORAGE_BYTES
+            ),
+            "node_bytes": english_node_bytes,
+            "compressed_bytes": english_compressed_bytes,
+            "entry_bytes": english_entry_bytes,
+            "catalog_struct_bytes": LOCALE_CATALOG_STRUCT_SIZE_BYTES,
+            "estimated_total_c_bytes": english_estimated_bytes,
+            "codec_budget": english_bundle.catalog.budget.to_dict(),
         },
         "locales": locale_budget,
         "totals": {
@@ -567,12 +660,14 @@ def _build_budget(
             "compressed_bytes": total_compressed_bytes,
             "entry_bytes": total_entry_bytes,
             "locale_catalog_struct_bytes": len(locale_bundles) * LOCALE_CATALOG_STRUCT_SIZE_BYTES,
+            "shared_english_catalog_struct_bytes": LOCALE_CATALOG_STRUCT_SIZE_BYTES,
             "locale_pointer_array_bytes": LOCALE_POINTER_ARRAY_BYTES,
+            "shared_english_bytes": english_estimated_bytes,
             "estimated_total_c_bytes": (
                 total_node_bytes
                 + total_compressed_bytes
                 + total_entry_bytes
-                + len(locale_bundles) * LOCALE_CATALOG_STRUCT_SIZE_BYTES
+                + (len(locale_bundles) + 1) * LOCALE_CATALOG_STRUCT_SIZE_BYTES
                 + LOCALE_POINTER_ARRAY_BYTES
             ),
         },
@@ -581,6 +676,8 @@ def _build_budget(
 
 def build_game_catalog(
     *,
+    english_texts_path: Path = DEFAULT_ENGLISH_TEXTS_PATH,
+    english_definitions_path: Path = DEFAULT_ENGLISH_DEFINITIONS_PATH,
     ja_indexed_path: Path = DEFAULT_JA_INDEXED_PATH,
     zh_indexed_path: Path = DEFAULT_ZH_INDEXED_PATH,
     zh_raw_path: Path = DEFAULT_ZH_RAW_PATH,
@@ -592,6 +689,19 @@ def build_game_catalog(
 ) -> GameCatalogBuild:
     enabled_locales = _normalize_enabled_locales(enabled_locales)
     target_count = len(load_fe8u_target_ids(target_header_path))
+    english_entries = load_english_source_entries(
+        english_texts_path,
+        english_definitions_path,
+        target_count=target_count,
+    )
+    english_bundle = EnglishCatalogBundle(
+        locale="en",
+        entries=english_entries,
+        catalog=build_catalog(
+            tuple(entry.encoded_bytes for entry in english_entries),
+            suffix_share=suffix_share,
+        ),
+    )
     mapping = _load_mapping(mapping_path, target_count=target_count)
     indexed_sources = {}
     if "ja" in enabled_locales:
@@ -618,7 +728,9 @@ def build_game_catalog(
         bundle.locale: _locale_report(bundle, suffix_share=suffix_share)
         for bundle in locale_bundles
     }
+    english_report = _english_report(english_bundle, suffix_share=suffix_share)
     report = _build_report(
+        english_report=english_report,
         mapping_source_counts=mapping_source_counts,
         target_count=target_count,
         mapping=mapping,
@@ -627,12 +739,14 @@ def build_game_catalog(
     )
     budget = _build_budget(
         mapping_source_counts=mapping_source_counts,
+        english_bundle=english_bundle,
         locale_bundles=locale_bundles,
     )
     return GameCatalogBuild(
         target_count=target_count,
         mapping=mapping,
         mapping_source_counts=mapping_source_counts,
+        english=english_bundle,
         locales=locale_bundles,
         report=report,
         budget=budget,
@@ -681,6 +795,8 @@ def write_build(build: GameCatalogBuild, *, output_dir: Path) -> Dict[str, Path]
 def generate(
     *,
     output_dir: Path,
+    english_texts_path: Path = DEFAULT_ENGLISH_TEXTS_PATH,
+    english_definitions_path: Path = DEFAULT_ENGLISH_DEFINITIONS_PATH,
     ja_indexed_path: Path = DEFAULT_JA_INDEXED_PATH,
     zh_indexed_path: Path = DEFAULT_ZH_INDEXED_PATH,
     zh_raw_path: Path = DEFAULT_ZH_RAW_PATH,
@@ -691,6 +807,8 @@ def generate(
     suffix_share: bool = True,
 ) -> Dict[str, Path]:
     build = build_game_catalog(
+        english_texts_path=english_texts_path,
+        english_definitions_path=english_definitions_path,
         ja_indexed_path=ja_indexed_path,
         zh_indexed_path=zh_indexed_path,
         zh_raw_path=zh_raw_path,
