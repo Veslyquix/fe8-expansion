@@ -40,11 +40,20 @@ LOCALE_INVALID = 0xFF
 # translation, so it can never be mistaken for actual localized content.
 PSEUDO_LOCALE = "qps-ploc"
 
-# Sprint 1 only ships real content for English, plus the derived pseudo
-# locale. Every other stable locale ID above is reserved (a stable slot
-# future sprints can populate) but is never a legal value for
-# EXPANSION_ENABLED_LOCALES / EXPANSION_DEFAULT_LOCALE today.
+# The current catalog/runtime implementation ships English content plus the
+# derived pseudo locale. The 32 MiB locale-profile foundation also permits
+# Japanese and Simplified Chinese in build configuration so future text/font
+# assets have stable, validated bank assignments without renumbering IDs.
+# This is configuration/layout support only: it does not claim that the CJK
+# catalogs, glyphs, codec, or renderer are complete.
 INITIALLY_SUPPORTED_LOCALES: Tuple[str, ...] = ("en", PSEUDO_LOCALE)
+REAL_CJK_LOCALES: Tuple[str, ...] = ("ja", "zh-Hans")
+CONFIGURABLE_LOCALES: Tuple[str, ...] = (
+    "en",
+    "ja",
+    "zh-Hans",
+    PSEUDO_LOCALE,
+)
 
 DEFAULT_LOCALE = "en"
 

@@ -25,6 +25,11 @@ fabricating or hardcoding a byte count:
      EWRAM state/cache) -- this is what WHAT #5 calls "EWRAM scratch+UI
      state"; there is no separate synthetic struct here, only whatever
      `nm` reports for this exact build.
+  4. The optional linker-defined `.locale_data` upper-ROM bank. When a
+     current map contains its section and/or `__locale_bank_start` /
+     `__locale_bank_end` symbols, the report derives real occupancy and
+     headroom to 0x0A000000. Older maps without that linker foundation
+     simply omit the field.
 
 This script never invents numbers: every field is either copied verbatim
 from (1)/(2), or is a real `nm`-derived integer for (3). If a named symbol
@@ -73,6 +78,10 @@ ROM_CATALOG_STRING_SYMBOLS = (
     "gExpansionCatalog_en",
     "gExpansionCatalog_qps_ploc",
 )
+LOCALE_BANK_SECTION = ".locale_data"
+LOCALE_BANK_START_SYMBOL = "__locale_bank_start"
+LOCALE_BANK_END_SYMBOL = "__locale_bank_end"
+LOCALE_BANK_LIMIT = 0x0A000000
 
 
 def _nm_sizes(elf: str) -> dict[str, int]:
@@ -103,6 +112,43 @@ def _symbol_rollup(sizes: dict[str, int], names: tuple[str, ...]) -> dict[str, A
         "symbols": present,
         "total_bytes": sum(present.values()),
         "missing": missing,
+    }
+
+
+def _locale_bank_rollup(map_report: dict[str, Any]) -> dict[str, Any] | None:
+    assignments = {
+        entry["name"]: entry["address"]
+        for entry in map_report.get("pinned_assignments", ())
+        if entry.get("name") in (LOCALE_BANK_START_SYMBOL, LOCALE_BANK_END_SYMBOL)
+    }
+    section = next(
+        (
+            entry
+            for entry in map_report.get("sections", ())
+            if entry.get("name") == LOCALE_BANK_SECTION
+        ),
+        None,
+    )
+
+    start = assignments.get(LOCALE_BANK_START_SYMBOL)
+    end = assignments.get(LOCALE_BANK_END_SYMBOL)
+    if section is not None:
+        start = start if start is not None else section["address"]
+        end = end if end is not None else section["address"] + section["size_bytes"]
+    if start is None or end is None:
+        return None
+
+    occupied = max(0, end - start)
+    capacity = max(0, LOCALE_BANK_LIMIT - start)
+    return {
+        "start_address": start,
+        "end_address": end,
+        "limit_address": LOCALE_BANK_LIMIT,
+        "capacity_bytes": capacity,
+        "occupied_bytes": occupied,
+        "headroom_bytes": max(0, capacity - occupied),
+        "overflow": end > LOCALE_BANK_LIMIT or end < start,
+        "section_present": section is not None,
     }
 
 
@@ -144,6 +190,9 @@ def build_report(
             "scratch_headroom_bytes": localization_budget["scratch_headroom_bytes"],
             "glyphs_used_count": localization_budget["codepoints"]["glyphs_used_count"],
         }
+    locale_bank = _locale_bank_rollup(map_report)
+    if locale_bank is not None:
+        report["locale_bank"] = locale_bank
     return report
 
 

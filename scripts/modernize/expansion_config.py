@@ -213,13 +213,13 @@ def _normalize_locale_list(value) -> Tuple[str, ...]:
 
 def validate_enabled_locales(value) -> Tuple[str, ...]:
     """Validate EXPANSION_ENABLED_LOCALES (see config.mk and
-    scripts/localization/schema.py's LOCALE_IDS/INITIALLY_SUPPORTED_LOCALES).
+    scripts/localization/schema.py's LOCALE_IDS/CONFIGURABLE_LOCALES).
 
     Fails early (ConfigError) on: an empty list, any locale id outside the
     stable locale_schema.LOCALE_IDS set, a repeated locale id, a missing
-    'en', or any locale not yet supported in sprint 1 (only 'en' and
-    'qps-ploc' may be enabled today -- every other stable id is a reserved
-    slot for a future sprint). On success, returns the enabled set
+    'en', or any locale not yet configurable (currently 'en', 'ja',
+    'zh-Hans', and 'qps-ploc'; every other stable id remains reserved).
+    On success, returns the enabled set
     normalized into the fixed stable-id order (locale_schema.LOCALE_IDS'
     order), independent of the input order, so two configs naming the same
     set in a different order are identical from here on (fingerprint
@@ -251,14 +251,14 @@ def validate_enabled_locales(value) -> Tuple[str, ...]:
         raise ConfigError("EXPANSION_ENABLED_LOCALES must include 'en'")
 
     unsupported = sorted(
-        item for item in seen if item not in locale_schema.INITIALLY_SUPPORTED_LOCALES
+        item for item in seen if item not in locale_schema.CONFIGURABLE_LOCALES
     )
     if unsupported:
         raise ConfigError(
-            f"EXPANSION_ENABLED_LOCALES contains locale id(s) not yet supported in "
-            f"sprint 1: {unsupported!r}; only {locale_schema.INITIALLY_SUPPORTED_LOCALES} "
-            f"may be enabled today -- every other stable locale id is a reserved slot "
-            f"for a future sprint"
+            f"EXPANSION_ENABLED_LOCALES contains locale id(s) not yet configurable: "
+            f"{unsupported!r}; expected a subset of "
+            f"{locale_schema.CONFIGURABLE_LOCALES}. Other stable locale ids remain "
+            f"reserved for future profiles"
         )
 
     return tuple(sorted(seen, key=lambda name: locale_schema.LOCALE_INDEX[name]))
@@ -307,6 +307,25 @@ def validate_pseudo_locale(value, enabled_locales: Tuple[str, ...]) -> int:
             f"or remove it from EXPANSION_ENABLED_LOCALES"
         )
     return flag
+
+
+def validate_locale_rom_size(
+    enabled_locales: Tuple[str, ...], rom_size_bytes: int
+) -> None:
+    """Require the dedicated upper-ROM bank for real CJK locale profiles."""
+    cjk_locales = tuple(
+        locale
+        for locale in locale_schema.REAL_CJK_LOCALES
+        if locale in enabled_locales
+    )
+    required_size = NAMED_ROM_SIZES["32M"]
+    if cjk_locales and rom_size_bytes != required_size:
+        raise ConfigError(
+            f"EXPANSION_ENABLED_LOCALES enables real CJK locale(s) "
+            f"{cjk_locales!r}, which require MODERN_ROM_SIZE=32M "
+            f"({required_size} bytes); got {rom_size_bytes} bytes. "
+            f"Use MODERN_ROM_SIZE=32M or remove {cjk_locales!r}"
+        )
 
 
 def validate_feature_flag(name: str, value) -> int:
@@ -760,6 +779,7 @@ def load_identity(
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
+    validate_locale_rom_size(resolved_enabled_locales, resolved_rom_size)
     resolved_preset = validate_preset(config_preset)
     resolved_abi = validate_abi(abi)
     resolved_text_shift = validate_text_shift(text_shift)

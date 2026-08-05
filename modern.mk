@@ -1283,7 +1283,9 @@ MODERN_CLEAN_LDSCRIPT := linker/expansion.ld
 MODERN_CLEAN_IWRAM := linker/iwram.ld
 $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 
-# ROM size configuration: 16M (default) or 32M.
+# ROM size configuration: 16M (English/pseudo default) or 32M. The expansion
+# config validator below requires 32M whenever ja or zh-Hans is enabled so
+# future CJK text/font data can occupy linker/expansion.ld's upper locale bank.
 MODERN_ROM_SIZE ?= 16M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000

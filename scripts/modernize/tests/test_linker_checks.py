@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import unittest
 from pathlib import Path
@@ -12,6 +13,11 @@ MODERN_MK = ROOT / "modern.mk"
 
 
 class LinkerCheckTargetTests(unittest.TestCase):
+    PROFILE_SCRATCH = ROOT / "build" / "test-scratch" / "locale-profile-dry-run"
+
+    def tearDown(self):
+        shutil.rmtree(self.PROFILE_SCRATCH, ignore_errors=True)
+
     def make(self, *args):
         overrides = []
         toolchain_root = ROOT / "build" / "toolchain-root" / "usr"
@@ -77,6 +83,64 @@ class LinkerCheckTargetTests(unittest.TestCase):
         )
         self.assertIn("title-progression-modern-debug.json", debug.stdout)
         self.assertIn("title-progression-modern-release.json", release.stdout)
+
+    def test_english_and_pseudo_profiles_dry_run_at_16m(self):
+        profiles = (
+            ("en", "0"),
+            ("en,qps-ploc", "1"),
+        )
+        for index, (locales, pseudo) in enumerate(profiles):
+            with self.subTest(locales=locales):
+                result = self.make(
+                    "-n",
+                    "expansion-modern-rom",
+                    "MODERN_ROM_SIZE=16M",
+                    f"EXPANSION_ENABLED_LOCALES={locales}",
+                    f"EXPANSION_PSEUDO_LOCALE={pseudo}",
+                    f"MODERN_BUILD_ROOT={self.PROFILE_SCRATCH / str(index)}",
+                )
+                self.assertEqual(result.returncode, 0, result.stdout[-2000:])
+
+    def test_real_cjk_profiles_fail_fast_at_16m(self):
+        for index, locales in enumerate(
+            ("en,ja", "en,zh-Hans", "en,ja,zh-Hans")
+        ):
+            with self.subTest(locales=locales):
+                result = self.make(
+                    "-n",
+                    "expansion-modern-rom",
+                    "MODERN_ROM_SIZE=16M",
+                    f"EXPANSION_ENABLED_LOCALES={locales}",
+                    f"MODERN_BUILD_ROOT={self.PROFILE_SCRATCH / str(index)}",
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("MODERN_ROM_SIZE=32M", result.stdout)
+
+    def test_real_cjk_profiles_dry_run_at_32m(self):
+        for index, locales in enumerate(
+            ("en,ja", "en,zh-Hans", "zh-Hans,en,ja")
+        ):
+            with self.subTest(locales=locales):
+                result = self.make(
+                    "-n",
+                    "expansion-modern-rom",
+                    "MODERN_ROM_SIZE=32M",
+                    f"EXPANSION_ENABLED_LOCALES={locales}",
+                    f"MODERN_BUILD_ROOT={self.PROFILE_SCRATCH / str(index)}",
+                )
+                self.assertEqual(result.returncode, 0, result.stdout[-2000:])
+
+    def test_invalid_default_locale_still_fails_dry_run(self):
+        result = self.make(
+            "-n",
+            "expansion-modern-rom",
+            "MODERN_ROM_SIZE=32M",
+            "EXPANSION_ENABLED_LOCALES=en,ja",
+            "EXPANSION_DEFAULT_LOCALE=zh-Hans",
+            f"MODERN_BUILD_ROOT={self.PROFILE_SCRATCH / 'invalid-default'}",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("EXPANSION_DEFAULT_LOCALE", result.stdout)
 
 
 if __name__ == "__main__":

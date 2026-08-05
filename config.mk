@@ -71,13 +71,15 @@ EXPANSION_BUILD_ID ?=
 # `reserved` tail.
 EXPANSION_SAVE_COMPAT_EPOCH ?= 2
 
-# --- Localization (issue #18 sprint 1) --------------------------------------
+# --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
 #   scripts/localization/schema.py's LOCALE_IDS) enabled for this build; must
-#   include "en", must not repeat an id, and sprint 1 supports only "en" and
-#   "qps-ploc" (an ASCII pseudo-locale test harness, never a real
-#   translation -- see scripts/localization/pseudo.py). Every other stable
-#   locale id is a reserved slot for a future sprint and is rejected today.
+#   include "en" and must not repeat an id. Legal profile ids are "en", "ja",
+#   "zh-Hans", and "qps-ploc" (an ASCII pseudo-locale test harness, never a
+#   real translation -- see scripts/localization/pseudo.py). Enabling "ja" or
+#   "zh-Hans" requires MODERN_ROM_SIZE=32M for the dedicated upper-ROM locale
+#   bank; this is configuration/layout foundation only, not a claim that CJK
+#   catalogs, fonts, codecs, or runtime rendering are complete.
 #   Normalized into the fixed stable-id order regardless of the order given
 #   here (see scripts/modernize/expansion_config.py's validate_enabled_locales).
 EXPANSION_ENABLED_LOCALES ?= en

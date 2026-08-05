@@ -289,6 +289,21 @@ SECTIONS
         *data_FFF000.o(.data)
     } > rom = 0xFF
 
+    /* === UPPER ROM: locale bank (32 MiB profiles only) === */
+    __locale_bank_start = 0x09000000;
+    .locale_data __locale_bank_start : ALIGN(4)
+    {
+        *(.locale_data .locale_data.*)
+        . = ALIGN(4);
+    } > rom = 0xFF
+    __locale_bank_end = __locale_bank_start + SIZEOF(.locale_data);
+    __locale_bank_size = SIZEOF(.locale_data);
+    ASSERT(__locale_bank_size == 0 || __rom_size == 0x02000000,
+        "Locale data requires MODERN_ROM_SIZE=32M")
+    ASSERT(__locale_bank_end <= 0x0A000000,
+        "Locale data exceeds the 32 MiB ROM boundary")
+    /* === END UPPER ROM LOCALE BANK === */
+
     ASSERT(SIZEOF(ROM) <= __rom_size, "ROM content exceeds configured ROM size")
     ASSERT(SIZEOF(IWRAM) <= 32K, "IWRAM overflow")
     ASSERT(__ewram_used_end <= ORIGIN(ewram) + LENGTH(ewram), "EWRAM overflow")

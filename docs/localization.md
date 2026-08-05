@@ -1,9 +1,13 @@
 # In-game localization framework (issue #18)
 
-Status: the issue #18 implementation and its real libmGBA evidence are
-merged into the current source tree. This is an architecture/authoring/testing
-reference, not a GitHub issue-state or closure claim; historical sprint
-evidence remains in `reports/issue18_localization_closure.md`.
+Status: the existing English/pseudo-locale framework and its libmGBA evidence
+are merged. Japanese (`ja`) and Simplified Chinese (`zh-Hans`) now have legal,
+validated 32 MiB configuration profiles and a dedicated upper-ROM linker bank,
+but this is **configuration/layout foundation only**: no CJK text/font assets,
+codec integration, or completed runtime renderer support are claimed here.
+This is an architecture/authoring/testing reference, not a GitHub issue-state
+or closure claim; historical English/pseudo sprint evidence remains in
+`reports/issue18_localization_closure.md`.
 
 ## Architecture
 
@@ -64,25 +68,48 @@ The framework is layered, each layer independently testable:
    this kind of diagnostic read -- a plain, bounded, fixed-layout struct,
    never a raw/arbitrary pointer oracle.
 
-   Current validated profiles enable at most `en,qps-ploc`, so the 4+
-   `More` threshold is host-executed through
-   `ExpansionLanguageMenu_DecideSettingsAction()`; the 1- and 2-locale
-   product paths are additionally captured in real release/debug ROMs.
+   The currently completed runtime evidence remains English/pseudo-focused.
+   Although `ja`/`zh-Hans` profile validation can now exercise 3+ stable IDs,
+   those profiles are capacity/layout foundations rather than completed CJK
+   product paths.
 
 ## Config
 
 Set at `modern.mk`/`make` invocation time (see
 `scripts/modernize/expansion_config.py` for validation):
 
-- `EXPANSION_ENABLED_LOCALES` -- comma-separated subset of the stable
-  locale-ID list (default: `en`). Sprint 1-4 only ship real content for
-  `en`, plus the derived pseudo locale.
+- `EXPANSION_ENABLED_LOCALES` -- comma-separated subset of `en`, `ja`,
+  `zh-Hans`, and `qps-ploc` (default: `en`), always including `en` for
+  fallback. Input order is normalized to stable locale-ID order.
 - `EXPANSION_DEFAULT_LOCALE` -- must be a member of
   `EXPANSION_ENABLED_LOCALES` (default: `en`).
 - `EXPANSION_PSEUDO_LOCALE` -- `1` enables `qps-ploc`, and requires
   `qps-ploc` to actually be present in `EXPANSION_ENABLED_LOCALES` (the two
   can never silently disagree -- `validate_pseudo_locale` rejects that
   combination outright).
+- `MODERN_ROM_SIZE` -- remains `16M` by default. Any profile containing
+  `ja` or `zh-Hans` must set `32M`; English-only and English+pseudo remain
+  valid at 16 MiB.
+
+Profile examples:
+
+```bash
+# Supported default: unchanged English-only 16 MiB ROM.
+make expansion-modern-rom
+
+# Existing pseudo-locale test profile, still 16 MiB.
+make expansion-modern-rom \
+  EXPANSION_ENABLED_LOCALES=en,qps-ploc \
+  EXPANSION_PSEUDO_LOCALE=1
+
+# CJK configuration/layout foundation: validates and reserves upper-ROM space.
+make expansion-modern-rom \
+  EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans \
+  MODERN_ROM_SIZE=32M
+```
+
+The last command does not by itself provide translated game text or CJK
+rendering. Actual locale assets/runtime integration remain later work.
 
 These are baked into the ROM's embedded `ExpansionMetadata` (build-commit,
 enabled-locale mask, default-locale id, pseudo-locale flag) so a given ROM's
@@ -126,10 +153,9 @@ represents any real language**. Every user-facing surface that can display
 it (the selector list and the More submenu) labels it `"Pseudo (Test)"`;
 the compact Config-row label is the cataloged code `QPS`. Locale names/codes
 are resolved against `EXPANSION_LOCALE_EN` (proper nouns/identifiers), never
-through themselves. This repository has authored **no**
-foreign-language content anywhere in this framework; every non-English
-stable locale ID beyond `en`/`qps-ploc` is a reserved, unpopulated slot for
-future sprints.
+through themselves. This repository has authored **no** CJK content in this foundation.
+`ja`/`zh-Hans` are configurable, unpopulated real-locale profile IDs;
+`fr`/`de`/`es`/`it` remain reserved and are rejected by configuration.
 
 ## Authoring
 
@@ -143,13 +169,13 @@ future sprints.
    'test_*.py' -v` (or `make localization-test`) re-validates schema,
    catalog parsing, pseudo transform, generated output, host-native resolver
    behavior, and vanilla-isolation audits.
-4. To enable another real (non-English) locale in the future: populate its
-   `catalog.<locale>.json`, add it to `EXPANSION_ENABLED_LOCALES`, and
-   extend the runtime/host test matrix analogous to `en`/`qps-ploc` --
-   never hand-copy or paraphrase copyrighted third-party translation text
-   into this repository (see issue #18's own non-goals; also see
-   `CONTRIBUTING.md`/#6/#10's manual-copy prohibition, which this sprint
-   does not touch).
+4. `ja`/`zh-Hans` may already be selected for a 32 MiB capacity/layout
+   build, but completing either locale still requires its catalog, codec,
+   glyph/font, renderer, and runtime test work. Other real locale IDs must
+   first be made configurable. Never hand-copy or paraphrase copyrighted
+   third-party translation text into this repository (see issue #18's own
+   non-goals; also see `CONTRIBUTING.md`/#6/#10's manual-copy prohibition,
+   which this sprint does not touch).
 
 ## Testing -- real libmGBA runtime evidence (Sprint 4)
 
@@ -402,3 +428,7 @@ sub-`$(MAKE)` invocations; always verify the full gate sequentially).
   itself; there is no fixed byte threshold anywhere in this tool (in
   particular, no hardcoded "2820"/"3508" pass criterion from earlier
   research notes -- those numbers were never load-bearing here).
+- `locale_bank` (when the current linker map exposes `.locale_data` and/or
+  `__locale_bank_start`/`__locale_bank_end`): actual upper-bank start/end,
+  occupancy, and headroom to `0x0A000000`. Older reports/maps without those
+  symbols remain readable and simply omit this optional field.
