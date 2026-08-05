@@ -8,6 +8,7 @@
   ],
   "note": "UNVERIFIED candidate seed only. Numeric FE8J positions and provenance tags do not establish semantic correctness for FE8U targets.",
   "provenance": {
+    "committed_snapshot": "texts/locales/source/fe8j/msg_map.tsv",
     "input_id": "fe8j_mapping_seed",
     "logical_path": "fireemblem8j/layout/msg_map.tsv",
     "sha256": "9acb014c27148366cec70ce7bf2c64e021bf10bfc4e55df7cfe99d12ad40c751"
@@ -36024,6 +36025,6 @@
       "target_id": "0x0D08"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "source_layout": "FE8J"
 }

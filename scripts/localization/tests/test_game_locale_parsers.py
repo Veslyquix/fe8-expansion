@@ -58,6 +58,14 @@ class GameLocaleParserTests(unittest.TestCase):
         with self.assertRaisesRegex(LocaleSourceError, "expected indexed marker"):
             parse_fe8cn(source, expected_last_id=1)
 
+    def test_noncanonical_bare_hex_token_cannot_silently_become_payload(self):
+        source = "[00]\nzero\n[0001]\npayload\n[08001234]\nraw\n"
+        with self.assertRaisesRegex(
+            LocaleSourceError,
+            "bare hex tokens cannot be payload",
+        ):
+            parse_fe8cn(source, expected_last_id=0)
+
     def test_conflicting_duplicate_raw_addresses_are_rejected(self):
         source = "\n".join(
             (
@@ -78,15 +86,23 @@ class GameLocaleParserTests(unittest.TestCase):
             (ROOT / "texts/locales/zh-Hans/raw.json").read_text(encoding="utf-8")
         )
         self.assertEqual(data["record_count"], 152)
+        self.assertEqual(data["unique_import_count"], 143)
         self.assertEqual(data["unique_address_count"], 143)
         self.assertEqual(len(data["records"]), 143)
+        self.assertTrue(
+            all("address" not in record and "key" not in record for record in data["records"])
+        )
         duplicates = [
-            record for record in data["records"] if len(record["provenance"]) > 1
+            record
+            for record in data["records"]
+            if len(record["provenance"]["occurrences"]) > 1
         ]
         self.assertEqual(len(duplicates), 9)
-        self.assertTrue(all(len(record["provenance"]) == 2 for record in duplicates))
+        self.assertTrue(
+            all(len(record["provenance"]["occurrences"]) == 2 for record in duplicates)
+        )
         self.assertEqual(
-            {record["address"] for record in duplicates},
+            {record["provenance"]["address"] for record in duplicates},
             {
                 "0x08AC1A0C",
                 "0x08AC1A30",
@@ -99,6 +115,22 @@ class GameLocaleParserTests(unittest.TestCase):
                 "0x08AC1B78",
             },
         )
+        self.assertEqual(
+            [record["import_id"] for record in data["records"]],
+            [f"fe8cn.raw.import-{index:04d}" for index in range(143)],
+        )
+
+    def test_raw_import_ids_do_not_change_when_addresses_change(self):
+        first = parse_fe8cn(
+            "[00]\nindexed\n[08001234]\nraw\n",
+            expected_last_id=0,
+        )
+        second = parse_fe8cn(
+            "[00]\nindexed\n[08ABCDEF]\nraw\n",
+            expected_last_id=0,
+        )
+        self.assertEqual(first.raw_strings[0].import_id, second.raw_strings[0].import_id)
+        self.assertNotEqual(first.raw_strings[0].address, second.raw_strings[0].address)
 
 
 if __name__ == "__main__":

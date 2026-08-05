@@ -34,8 +34,7 @@ def _verified_source_rows():
             "state": "verified",
             "source": {
                 "kind": "raw",
-                "key": "fe8cn.raw.08001234",
-                "address": "0x08001234",
+                "import_id": "fe8cn.raw.import-0000",
             },
             "verification": verification,
         },
@@ -95,6 +94,25 @@ class GameLocaleMappingTests(unittest.TestCase):
         with self.assertRaisesRegex(MappingError, "64 lowercase hex digits"):
             validate_mapping_document(data, target_count=3414)
 
+    def test_raw_mapping_identity_is_stable_and_address_free(self):
+        data = {
+            "schema_version": 2,
+            "kind": "fe8u-locale-mapping",
+            "locale_ids": ["zh-Hans"],
+            "authority": "verified",
+            "authoritative": True,
+            "note": "raw import fixture",
+            "rows": [_verified_source_rows()[1]],
+        }
+        mapping = validate_mapping_document(data, target_count=2)
+        self.assertEqual(
+            mapping.rows[0].source["import_id"],
+            "fe8cn.raw.import-0000",
+        )
+        data["rows"][0]["source"]["address"] = "0x08001234"
+        with self.assertRaisesRegex(MappingError, "must not use address-derived"):
+            validate_mapping_document(data, target_count=2)
+
     def test_candidate_coverage_is_honestly_unresolved(self):
         mapping = validate_mapping_document(self._candidate_data(), target_count=3414)
         report = build_coverage_report(mapping, range(3414), locale="ja")
@@ -106,7 +124,7 @@ class GameLocaleMappingTests(unittest.TestCase):
 
     def test_verified_mapping_classifies_all_supported_source_kinds(self):
         data = {
-            "schema_version": 1,
+            "schema_version": 2,
             "kind": "fe8u-locale-mapping",
             "locale_ids": ["ja"],
             "authority": "verified",
@@ -130,7 +148,7 @@ class GameLocaleMappingTests(unittest.TestCase):
 
     def test_verified_mapping_requires_evidence(self):
         data = {
-            "schema_version": 1,
+            "schema_version": 2,
             "kind": "fe8u-locale-mapping",
             "locale_ids": ["ja"],
             "authority": "verified",

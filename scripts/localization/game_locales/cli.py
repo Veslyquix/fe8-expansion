@@ -8,7 +8,11 @@ import sys
 from pathlib import Path
 
 from .coverage import build_coverage_report, load_fe8u_target_ids
-from .importer import import_locale_sources
+from .importer import (
+    check_vendored_locale_sources,
+    import_locale_sources,
+    regenerate_vendored_locale_sources,
+)
 from .mapping import MappingError, validate_mapping_document
 from .parsers import LocaleSourceError
 
@@ -35,8 +39,40 @@ def _cmd_import(args: argparse.Namespace) -> int:
         f"JP={manifest['locales']['ja']['indexed']['message_count']} "
         f"CN-indexed={manifest['locales']['zh-Hans']['indexed']['message_count']} "
         f"CN-raw={manifest['locales']['zh-Hans']['raw']['record_count']}/"
-        f"{manifest['locales']['zh-Hans']['raw']['unique_address_count']} "
+        f"{manifest['locales']['zh-Hans']['raw']['unique_import_count']} "
         f"into {args.out_dir}"
+    )
+    return 0
+
+
+def _cmd_regenerate(args: argparse.Namespace) -> int:
+    written = regenerate_vendored_locale_sources(
+        source_dir=args.source_dir,
+        output_dir=args.out_dir,
+    )
+    manifest = json.loads(written["manifest.json"].read_text(encoding="utf-8"))
+    print(
+        "regenerated committed locale artifacts "
+        f"JP={manifest['locales']['ja']['indexed']['message_count']} "
+        f"CN={manifest['locales']['zh-Hans']['indexed']['message_count']} "
+        f"raw={manifest['locales']['zh-Hans']['raw']['record_count']}/"
+        f"{manifest['locales']['zh-Hans']['raw']['unique_import_count']}"
+    )
+    return 0
+
+
+def _cmd_check(args: argparse.Namespace) -> int:
+    artifacts = check_vendored_locale_sources(
+        source_dir=args.source_dir,
+        output_dir=args.out_dir,
+    )
+    manifest = json.loads(artifacts["manifest.json"].decode("utf-8"))
+    print(
+        "locale artifacts match vendored raw snapshots byte-for-byte "
+        f"JP={manifest['locales']['ja']['indexed']['message_count']} "
+        f"CN={manifest['locales']['zh-Hans']['indexed']['message_count']} "
+        f"raw={manifest['locales']['zh-Hans']['raw']['record_count']}/"
+        f"{manifest['locales']['zh-Hans']['raw']['unique_import_count']}"
     )
     return 0
 
@@ -73,6 +109,31 @@ def build_parser() -> argparse.ArgumentParser:
     import_parser.add_argument("--mapping-seed", type=Path, required=True)
     import_parser.add_argument("--out-dir", type=Path, required=True)
     import_parser.set_defaults(handler=_cmd_import)
+
+    for command, help_text, handler in (
+        (
+            "regenerate",
+            "regenerate artifacts from the committed raw input snapshots",
+            _cmd_regenerate,
+        ),
+        (
+            "check",
+            "compare regenerated artifacts with committed bytes",
+            _cmd_check,
+        ),
+    ):
+        source_parser = subparsers.add_parser(command, help=help_text)
+        source_parser.add_argument(
+            "--source-dir",
+            type=Path,
+            default=Path("texts/locales/source"),
+        )
+        source_parser.add_argument(
+            "--out-dir",
+            type=Path,
+            default=Path("texts/locales"),
+        )
+        source_parser.set_defaults(handler=handler)
 
     validate_parser = subparsers.add_parser(
         "validate-mapping",

@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from .parsers import FE8J_MAX_INDEXED_ID
 
-MAPPING_SCHEMA_VERSION = 1
+MAPPING_SCHEMA_VERSION = 2
 MAPPING_KIND = "fe8u-locale-mapping"
 AUTHORITY_CANDIDATE = "candidate"
 AUTHORITY_VERIFIED = "verified"
@@ -18,8 +18,7 @@ SOURCE_KINDS = ("indexed", "raw", "authored", "english_fallback")
 LOCALE_IDS = ("ja", "zh-Hans")
 
 _ID_RE = re.compile(r"0x([0-9A-F]{4})")
-_ADDRESS_RE = re.compile(r"0x([0-9A-F]{8})")
-_RAW_KEY_RE = re.compile(r"fe8cn\.raw\.[0-9A-F]{8}")
+_RAW_IMPORT_ID_RE = re.compile(r"fe8cn\.raw\.import-[0-9]{4}")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
@@ -85,14 +84,15 @@ def _validate_source(source: Dict[str, Any], field: str) -> str:
                 f"{field}.id exceeds the FE8J indexed maximum 0x{FE8J_MAX_INDEXED_ID:04X}"
             )
     elif kind == "raw":
-        key = source.get("key")
-        address = source.get("address")
-        if not isinstance(key, str) or not _RAW_KEY_RE.fullmatch(key):
-            raise MappingError(f"{field}.key must be a stable fe8cn.raw.ADDRESS key")
-        if not isinstance(address, str) or not _ADDRESS_RE.fullmatch(address):
-            raise MappingError(f"{field}.address must use canonical 0xNNNNNNNN form")
-        if key.rsplit(".", 1)[1] != address[2:]:
-            raise MappingError(f"{field}.key and address must name the same record")
+        import_id = source.get("import_id")
+        if not isinstance(import_id, str) or not _RAW_IMPORT_ID_RE.fullmatch(import_id):
+            raise MappingError(
+                f"{field}.import_id must use stable fe8cn.raw.import-NNNN form"
+            )
+        if "key" in source or "address" in source:
+            raise MappingError(
+                f"{field} must not use address-derived identity or embed provenance"
+            )
     elif kind == "authored":
         _require_nonempty_string(source.get("translation_key"), f"{field}.translation_key")
     elif kind == "english_fallback":
@@ -146,6 +146,10 @@ def validate_mapping_document(
         _require_nonempty_string(
             provenance.get("logical_path"),
             "mapping.provenance.logical_path",
+        )
+        _require_nonempty_string(
+            provenance.get("committed_snapshot"),
+            "mapping.provenance.committed_snapshot",
         )
         sha256 = provenance.get("sha256")
         if not isinstance(sha256, str) or not _SHA256_RE.fullmatch(sha256):

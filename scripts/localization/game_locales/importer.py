@@ -8,14 +8,26 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Tuple
 
+from .controls import (
+    CANONICAL_CONTROL_GRAMMAR,
+    FE8CN_NAMED_CONTROL_ALIASES,
+    SOURCE_DIALECT_CHINESE,
+    SOURCE_DIALECT_JAPANESE,
+    ControlSyntaxError,
+    canonical_control_token,
+    normalize_source_controls,
+    validate_canonical_text,
+)
 from .mapping import MAPPING_KIND, MAPPING_SCHEMA_VERSION, validate_mapping_document
 from .parsers import (
     FE8J_INDEXED_COUNT,
     FE8J_MAX_INDEXED_ID,
+    ChineseSource,
     ControlDefinition,
     IndexedMessage,
     LocaleSourceError,
     MappingSeedRow,
+    RawOccurrence,
     RawString,
     parse_control_definitions,
     parse_fe8cn,
@@ -40,6 +52,13 @@ SOURCE_LOGICAL_PATHS = {
     JP_CONTROLS_SOURCE_ID: "fireemblem8j/texts/jp_textdefs.txt",
     CN_SOURCE_ID: "FE8CN.txt",
     MAPPING_SOURCE_ID: "fireemblem8j/layout/msg_map.tsv",
+}
+
+VENDORED_SOURCE_PATHS = {
+    JP_SOURCE_ID: Path("fe8j/jp_texts.txt"),
+    JP_CONTROLS_SOURCE_ID: Path("fe8j/jp_textdefs.txt"),
+    CN_SOURCE_ID: Path("fe8cn/FE8CN.txt"),
+    MAPPING_SOURCE_ID: Path("fe8j/msg_map.tsv"),
 }
 
 EXPECTED_JP_COUNT = 3339
@@ -100,10 +119,110 @@ def _load_sources(
             raise LocaleSourceError(f"{source_id}: input must be valid UTF-8") from error
         metadata[source_id] = {
             "logical_path": SOURCE_LOGICAL_PATHS[source_id],
+            "committed_snapshot": (
+                "texts/locales/source/" + VENDORED_SOURCE_PATHS[source_id].as_posix()
+            ),
             "sha256": sha256_bytes(data),
             "byte_count": len(data),
         }
     return texts, metadata
+
+
+def vendored_source_paths(source_dir: Path) -> Dict[str, Path]:
+    source_dir = Path(source_dir)
+    return {
+        source_id: source_dir / relative_path
+        for source_id, relative_path in VENDORED_SOURCE_PATHS.items()
+    }
+
+
+def _normalize_payload(
+    text: str,
+    *,
+    dialect: str,
+    aliases: Mapping[str, Tuple[int, ...]],
+    source_name: str,
+    source_line: int,
+) -> str:
+    try:
+        normalized = normalize_source_controls(
+            text,
+            dialect=dialect,
+            aliases=aliases,
+        )
+        validate_canonical_text(normalized)
+        return normalized
+    except ControlSyntaxError as error:
+        raise LocaleSourceError(f"{source_name}:{source_line}: {error}") from error
+
+
+def _normalize_indexed_messages(
+    messages: Iterable[IndexedMessage],
+    *,
+    dialect: str,
+    aliases: Mapping[str, Tuple[int, ...]],
+    source_name: str,
+) -> Tuple[IndexedMessage, ...]:
+    return tuple(
+        IndexedMessage(
+            message.id,
+            _normalize_payload(
+                message.text,
+                dialect=dialect,
+                aliases=aliases,
+                source_name=source_name,
+                source_line=message.marker_line + 1,
+            ),
+            message.marker_line,
+        )
+        for message in messages
+    )
+
+
+def _normalize_chinese_source(
+    source: ChineseSource,
+    *,
+    aliases: Mapping[str, Tuple[int, ...]],
+    source_name: str,
+) -> ChineseSource:
+    indexed = _normalize_indexed_messages(
+        source.indexed,
+        dialect=SOURCE_DIALECT_CHINESE,
+        aliases=aliases,
+        source_name=source_name,
+    )
+    occurrences = tuple(
+        RawOccurrence(
+            occurrence.record_index,
+            occurrence.address,
+            _normalize_payload(
+                occurrence.text,
+                dialect=SOURCE_DIALECT_CHINESE,
+                aliases=aliases,
+                source_name=source_name,
+                source_line=occurrence.payload_start_line,
+            ),
+            occurrence.marker_line,
+            occurrence.payload_start_line,
+        )
+        for occurrence in source.raw_occurrences
+    )
+    occurrence_by_index = {
+        occurrence.record_index: occurrence for occurrence in occurrences
+    }
+    raw_strings = tuple(
+        RawString(
+            raw_string.import_id,
+            raw_string.address,
+            occurrence_by_index[raw_string.occurrences[0].record_index].text,
+            tuple(
+                occurrence_by_index[occurrence.record_index]
+                for occurrence in raw_string.occurrences
+            ),
+        )
+        for raw_string in source.raw_strings
+    )
+    return ChineseSource(indexed, occurrences, raw_strings)
 
 
 def _write_indexed(
@@ -129,24 +248,26 @@ def _write_controls(
     source_sha256: str,
 ) -> bytes:
     lines = [
-        "# Normalized FE8J message control definitions.",
+        "# FE8J source aliases mapped to the canonical control grammar.",
+        "# This is an alias table, not normalized locale payload.",
+        f"# Canonical grammar: {CANONICAL_CONTROL_GRAMMAR}",
         f"# Input SHA-256: {source_sha256}",
         "",
     ]
     for definition in definitions:
-        values = " ".join(f"0x{value:04X}" for value in definition.values)
-        lines.append(f"[{definition.name}] = {values}")
+        values = "".join(canonical_control_token(value) for value in definition.values)
+        lines.append(f"{definition.name} = {values}")
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 def _raw_document(raw_strings: Iterable[RawString]) -> Dict[str, Any]:
     records = []
     record_count = 0
-    for raw_string in sorted(raw_strings, key=lambda item: item.address):
-        provenance = []
+    for raw_string in sorted(raw_strings, key=lambda item: item.import_id):
+        occurrences = []
         for occurrence in raw_string.occurrences:
             record_count += 1
-            provenance.append(
+            occurrences.append(
                 {
                     "record_index": occurrence.record_index,
                     "marker_line": occurrence.marker_line,
@@ -155,17 +276,20 @@ def _raw_document(raw_strings: Iterable[RawString]) -> Dict[str, Any]:
             )
         records.append(
             {
-                "key": raw_string.key,
-                "address": f"0x{raw_string.address:08X}",
+                "import_id": raw_string.import_id,
                 "text": raw_string.text,
-                "provenance": provenance,
+                "provenance": {
+                    "address": f"0x{raw_string.address:08X}",
+                    "occurrences": occurrences,
+                },
             }
         )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "locale_id": "zh-Hans",
         "source_layout": "FE8CN-raw-address",
         "record_count": record_count,
+        "unique_import_count": len(records),
         "unique_address_count": len(records),
         "records": records,
     }
@@ -189,6 +313,7 @@ def _candidate_mapping_document(
         "provenance": {
             "input_id": MAPPING_SOURCE_ID,
             "logical_path": source_metadata["logical_path"],
+            "committed_snapshot": source_metadata["committed_snapshot"],
             "sha256": source_metadata["sha256"],
         },
         "rows": [
@@ -241,11 +366,12 @@ def _raw_statistics(raw_strings: Iterable[RawString]) -> Dict[str, Any]:
         unique,
         key=lambda raw_string: (
             len(raw_string.text.encode("utf-8")),
-            -raw_string.address,
+            raw_string.import_id,
         ),
     )
     return {
         "record_count": len(occurrences),
+        "unique_import_count": len(unique),
         "unique_address_count": len(unique),
         "duplicate_record_count": len(occurrences) - len(unique),
         "duplicate_address_count": sum(
@@ -259,7 +385,7 @@ def _raw_statistics(raw_strings: Iterable[RawString]) -> Dict[str, Any]:
         ),
         "unique_payload_codepoint_count": len(set(all_unique_text)),
         "max_utf8_payload_bytes": len(max_raw.text.encode("utf-8")),
-        "max_utf8_payload_key": max_raw.key,
+        "max_utf8_payload_import_id": max_raw.import_id,
     }
 
 
@@ -273,15 +399,14 @@ def _artifact_metadata(artifacts: Mapping[str, bytes]) -> Dict[str, Dict[str, An
     }
 
 
-def import_locale_sources(
+def build_locale_artifacts(
     *,
     jp_text_path: Path,
     jp_controls_path: Path,
     cn_text_path: Path,
     mapping_seed_path: Path,
-    output_dir: Path,
     expected_hashes: Mapping[str, str] = PINNED_SOURCE_SHA256,
-) -> Dict[str, Path]:
+) -> Dict[str, bytes]:
     paths = {
         JP_SOURCE_ID: Path(jp_text_path),
         JP_CONTROLS_SOURCE_ID: Path(jp_controls_path),
@@ -290,7 +415,7 @@ def import_locale_sources(
     }
     source_texts, source_metadata = _load_sources(paths, expected_hashes)
 
-    japanese = parse_hash_indexed(
+    japanese_source = parse_hash_indexed(
         source_texts[JP_SOURCE_ID],
         source_name=SOURCE_LOGICAL_PATHS[JP_SOURCE_ID],
     )
@@ -298,8 +423,21 @@ def import_locale_sources(
         source_texts[JP_CONTROLS_SOURCE_ID],
         source_name=SOURCE_LOGICAL_PATHS[JP_CONTROLS_SOURCE_ID],
     )
-    chinese = parse_fe8cn(
-        source_texts[CN_SOURCE_ID],
+    aliases = {definition.name: definition.values for definition in controls}
+    japanese = _normalize_indexed_messages(
+        japanese_source,
+        dialect=SOURCE_DIALECT_JAPANESE,
+        aliases=aliases,
+        source_name=SOURCE_LOGICAL_PATHS[JP_SOURCE_ID],
+    )
+    chinese_aliases = dict(aliases)
+    chinese_aliases.update(FE8CN_NAMED_CONTROL_ALIASES)
+    chinese = _normalize_chinese_source(
+        parse_fe8cn(
+            source_texts[CN_SOURCE_ID],
+            source_name=SOURCE_LOGICAL_PATHS[CN_SOURCE_ID],
+        ),
+        aliases=chinese_aliases,
         source_name=SOURCE_LOGICAL_PATHS[CN_SOURCE_ID],
     )
     mapping_rows = parse_mapping_seed_tsv(
@@ -357,8 +495,15 @@ def import_locale_sources(
         raise AssertionError("artifact set drifted from the importer contract")
 
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "locale_ids": ["ja", "zh-Hans"],
+        "control_grammar": {
+            "canonical_token": CANONICAL_CONTROL_GRAMMAR,
+            "control_unit": "u16",
+            "byte_order": "little",
+            "source_alias_count": len(controls),
+            "fe8cn_additional_alias_count": len(FE8CN_NAMED_CONTROL_ALIASES),
+        },
         "source_layout": {
             "indexed": "FE8J",
             "fe8j_indexed_count": FE8J_INDEXED_COUNT,
@@ -392,7 +537,13 @@ def import_locale_sources(
         "artifacts": _artifact_metadata(artifacts),
     }
     artifacts["manifest.json"] = _json_bytes(manifest)
+    return artifacts
 
+
+def write_locale_artifacts(
+    artifacts: Mapping[str, bytes],
+    output_dir: Path,
+) -> Dict[str, Path]:
     output_dir = Path(output_dir)
     written = {}
     for relative_path, content in sorted(artifacts.items()):
@@ -402,3 +553,65 @@ def import_locale_sources(
             destination.write_bytes(content)
         written[relative_path] = destination
     return written
+
+
+def import_locale_sources(
+    *,
+    jp_text_path: Path,
+    jp_controls_path: Path,
+    cn_text_path: Path,
+    mapping_seed_path: Path,
+    output_dir: Path,
+    expected_hashes: Mapping[str, str] = PINNED_SOURCE_SHA256,
+) -> Dict[str, Path]:
+    artifacts = build_locale_artifacts(
+        jp_text_path=jp_text_path,
+        jp_controls_path=jp_controls_path,
+        cn_text_path=cn_text_path,
+        mapping_seed_path=mapping_seed_path,
+        expected_hashes=expected_hashes,
+    )
+    return write_locale_artifacts(artifacts, output_dir)
+
+
+def regenerate_vendored_locale_sources(
+    *,
+    source_dir: Path,
+    output_dir: Path,
+) -> Dict[str, Path]:
+    paths = vendored_source_paths(source_dir)
+    return import_locale_sources(
+        jp_text_path=paths[JP_SOURCE_ID],
+        jp_controls_path=paths[JP_CONTROLS_SOURCE_ID],
+        cn_text_path=paths[CN_SOURCE_ID],
+        mapping_seed_path=paths[MAPPING_SOURCE_ID],
+        output_dir=output_dir,
+    )
+
+
+def check_vendored_locale_sources(
+    *,
+    source_dir: Path,
+    output_dir: Path,
+) -> Dict[str, bytes]:
+    paths = vendored_source_paths(source_dir)
+    expected = build_locale_artifacts(
+        jp_text_path=paths[JP_SOURCE_ID],
+        jp_controls_path=paths[JP_CONTROLS_SOURCE_ID],
+        cn_text_path=paths[CN_SOURCE_ID],
+        mapping_seed_path=paths[MAPPING_SOURCE_ID],
+    )
+    mismatches = []
+    output_dir = Path(output_dir)
+    for relative_path, expected_bytes in sorted(expected.items()):
+        destination = output_dir / relative_path
+        if not destination.is_file():
+            mismatches.append(f"missing {relative_path}")
+        elif destination.read_bytes() != expected_bytes:
+            mismatches.append(f"differs {relative_path}")
+    if mismatches:
+        raise LocaleSourceError(
+            "committed locale artifacts do not match vendored raw snapshots: "
+            + ", ".join(mismatches)
+        )
+    return expected

@@ -45,7 +45,7 @@ class RawOccurrence:
 
 @dataclass(frozen=True)
 class RawString:
-    key: str
+    import_id: str
     address: int
     text: str
     occurrences: Tuple[RawOccurrence, ...]
@@ -229,6 +229,10 @@ def parse_fe8cn(
                 indexed_payload = []
                 expected += 1
                 continue
+            raise LocaleSourceError(
+                f"{source_name}:{line_number}: non-canonical indexed marker "
+                f"{line!r}; bare hex tokens cannot be payload"
+            )
 
         if in_raw:
             if current_raw_address is None:
@@ -271,7 +275,7 @@ def parse_fe8cn(
         occurrences_by_address[occurrence.address].append(occurrence)
 
     raw_strings: List[RawString] = []
-    for address in address_order:
+    for import_index, address in enumerate(address_order):
         occurrences = occurrences_by_address[address]
         texts = {occurrence.text for occurrence in occurrences}
         if len(texts) != 1:
@@ -282,7 +286,7 @@ def parse_fe8cn(
             )
         raw_strings.append(
             RawString(
-                key=f"fe8cn.raw.{address:08X}",
+                import_id=f"fe8cn.raw.import-{import_index:04d}",
                 address=address,
                 text=occurrences[0].text,
                 occurrences=tuple(occurrences),
