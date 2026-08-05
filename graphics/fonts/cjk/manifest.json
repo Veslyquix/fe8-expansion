@@ -1,0 +1,157 @@
+{
+  "assets": {
+    "ja.system": {
+      "bitmap": {
+        "byte_count": 118144,
+        "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
+        "path": "graphics/fonts/cjk/ja.system.glyphs.2bpp",
+        "sha256": "bba4754aede8517aa671f54d18aa35bf3307e6b691749b9c5455b4904a9d1cf9",
+        "stride_bytes": 64
+      },
+      "codepoints": {
+        "byte_count": 7384,
+        "format": "sorted unique little-endian uint32 Unicode scalars",
+        "path": "graphics/fonts/cjk/ja.system.codepoints.bin",
+        "sha256": "f0b9f4b21220f65a17e2737636eab0a433f8ce8f948a8aea9fb7c8103bc07c57"
+      },
+      "febuilder_job": "ja-system",
+      "febuilder_style": "item",
+      "glyph_count": 1846,
+      "locale": "ja",
+      "runtime_style": "system",
+      "widths": {
+        "byte_count": 1846,
+        "format": "one unsigned byte per glyph; valid range 1..16",
+        "path": "graphics/fonts/cjk/ja.system.widths.bin",
+        "sha256": "7a8f1d165707fadee5829cb51817d95feff4e5ddd70f5596deb1fd18f77de6fd"
+      }
+    },
+    "ja.talk": {
+      "bitmap": {
+        "byte_count": 118144,
+        "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
+        "path": "graphics/fonts/cjk/ja.talk.glyphs.2bpp",
+        "sha256": "159a285def6fa5bfd707f5a88dda1980b8635fb17f44b00cc6b9d6d5ba9674bd",
+        "stride_bytes": 64
+      },
+      "codepoints": {
+        "byte_count": 7384,
+        "format": "sorted unique little-endian uint32 Unicode scalars",
+        "path": "graphics/fonts/cjk/ja.talk.codepoints.bin",
+        "sha256": "f0b9f4b21220f65a17e2737636eab0a433f8ce8f948a8aea9fb7c8103bc07c57"
+      },
+      "febuilder_job": "ja-talk",
+      "febuilder_style": "text",
+      "glyph_count": 1846,
+      "locale": "ja",
+      "runtime_style": "talk",
+      "widths": {
+        "byte_count": 1846,
+        "format": "one unsigned byte per glyph; valid range 1..16",
+        "path": "graphics/fonts/cjk/ja.talk.widths.bin",
+        "sha256": "3239c461e37005b84f8268df47ebc6b15cfc2c6154fd749ca0309980c2093cda"
+      }
+    },
+    "zh-Hans.system": {
+      "bitmap": {
+        "byte_count": 157376,
+        "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
+        "path": "graphics/fonts/cjk/zh-Hans.system.glyphs.2bpp",
+        "sha256": "85670c707493f24f81dea0082dcd2433998655fd4b27226c9e041dcefb7e12ca",
+        "stride_bytes": 64
+      },
+      "codepoints": {
+        "byte_count": 9836,
+        "format": "sorted unique little-endian uint32 Unicode scalars",
+        "path": "graphics/fonts/cjk/zh-Hans.system.codepoints.bin",
+        "sha256": "7cc8cf09359dff283483db0b4e3e40f99c335646bafcac36a9d62483933132bb"
+      },
+      "febuilder_job": "zh-hans-system",
+      "febuilder_style": "item",
+      "glyph_count": 2459,
+      "locale": "zh-Hans",
+      "runtime_style": "system",
+      "widths": {
+        "byte_count": 2459,
+        "format": "one unsigned byte per glyph; valid range 1..16",
+        "path": "graphics/fonts/cjk/zh-Hans.system.widths.bin",
+        "sha256": "0e67bcfd69134646687ab75e7ea9cc3f85b7a6aae4b90256477e1df637b7cce6"
+      }
+    },
+    "zh-Hans.talk": {
+      "bitmap": {
+        "byte_count": 157376,
+        "format": "16x16 row-major 2bpp, four pixels per byte, low-bit-first",
+        "path": "graphics/fonts/cjk/zh-Hans.talk.glyphs.2bpp",
+        "sha256": "1d1961130a2ef8653d2ea7ca329178354d5e5041966f4e55af94302c9edc7144",
+        "stride_bytes": 64
+      },
+      "codepoints": {
+        "byte_count": 9836,
+        "format": "sorted unique little-endian uint32 Unicode scalars",
+        "path": "graphics/fonts/cjk/zh-Hans.talk.codepoints.bin",
+        "sha256": "7cc8cf09359dff283483db0b4e3e40f99c335646bafcac36a9d62483933132bb"
+      },
+      "febuilder_job": "zh-hans-talk",
+      "febuilder_style": "text",
+      "glyph_count": 2459,
+      "locale": "zh-Hans",
+      "runtime_style": "talk",
+      "widths": {
+        "byte_count": 2459,
+        "format": "one unsigned byte per glyph; valid range 1..16",
+        "path": "graphics/fonts/cjk/zh-Hans.talk.widths.bin",
+        "sha256": "933a69288f553d46f032bb38aa8d0dc092440cb38d0b5d03e20e10109ea67d17"
+      }
+    }
+  },
+  "contract": {
+    "ascii": "continue using the existing runtime ASCII font",
+    "lookup": "binary-search codepoints; use the same index for widths and the fixed 64-byte bitmap stride",
+    "spacing": "U+3000 is inventoried as a spacing scalar, not a bitmap; Sprint 3 must give it an explicit advance"
+  },
+  "rom_budget": {
+    "bytes_per_glyph": 69,
+    "four_byte_aligned_blob_bytes": 594096,
+    "includes": "64-byte bitmap + 1-byte width + 4-byte Unicode scalar",
+    "payload_bytes": 594090
+  },
+  "schema_version": 1,
+  "sources": {
+    "febuilder_generation_report": {
+      "byte_count": 2867060,
+      "path": "fonts/cjk/reports/febuilder-generation-report.json",
+      "sha256": "101b16b4206552a21691ca31ab53a3a7372afeb2586733b1972cc62f20f6a506"
+    },
+    "febuilder_manifest": {
+      "path": "fonts/cjk/febuilder-manifest.json",
+      "sha256": "8bf7a159befa9b3c936622e2f2e109ced67ff5187c32a29abf6dc9d963072c37"
+    },
+    "febuilder_package": {
+      "byte_count": 7196250,
+      "full_tree_sha256": "9be4dedd6e4111b765a7cc0a400c97b0cdea0a693cdf5fa9b0fb0375baad5b34",
+      "package_report_sha256": "22651709bb5a5fb548a1eda63e581d52e0c0a227efbf687c35d18a5910692509",
+      "path": "fonts/cjk/packages/febuilder-schema-v1.zip",
+      "payload_tree_sha256": "d8e23f41211245b086be9a9605ccfba9816c0c2d82dc43c332ef2d3d2efb3115",
+      "sha256": "74e09c8708d90c06229aba3165a8950a957774b1a6c34e551ef71f81ef162674"
+    },
+    "inventory": {
+      "path": "fonts/cjk/inventory.json",
+      "sha256": "a36a0ee88ca4a176fab858dc95276c4c3870d2b5b66721f192494b50111ab60b"
+    }
+  },
+  "spacing_scalars": [
+    {
+      "advance": 16,
+      "bitmap": null,
+      "locales": [
+        "ja"
+      ],
+      "runtime_styles": [
+        "system",
+        "talk"
+      ],
+      "scalar": "U+3000"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "fonts": {
+    "ja": {
+      "byte_length": 4533028,
+      "copyright": "© 2014-2021 Adobe (http://www.adobe.com/).",
+      "embedded_license": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
+      "embedded_license_url": "http://scripts.sil.org/OFL",
+      "family": "Noto Sans JP",
+      "full_name": "Noto Sans JP",
+      "license_id": "OFL-1.1",
+      "path": "fonts/cjk/upstream/NotoSansJP-Regular.otf",
+      "sha256": "dff723ba59d57d136764a04b9b2d03205544f7cd785a711442d6d2d085ac5073",
+      "source_url": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/JP/NotoSansJP-Regular.otf",
+      "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+    },
+    "zh-Hans": {
+      "byte_length": 8331336,
+      "copyright": "© 2014-2021 Adobe (http://www.adobe.com/).",
+      "embedded_license": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
+      "embedded_license_url": "http://scripts.sil.org/OFL",
+      "family": "Noto Sans SC",
+      "full_name": "Noto Sans SC",
+      "license_id": "OFL-1.1",
+      "path": "fonts/cjk/upstream/NotoSansSC-Regular.otf",
+      "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+      "source_url": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf",
+      "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+    }
+  },
+  "license": {
+    "byte_count": 4301,
+    "license_id": "OFL-1.1",
+    "path": "fonts/cjk/licenses/Noto-CJK-OFL-1.1.txt",
+    "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+    "source_url": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+  },
+  "normal_build_dependency": "vendored files only; no network or system font lookup",
+  "schema_version": 1
+}
