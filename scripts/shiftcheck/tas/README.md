@@ -152,6 +152,9 @@ the ending.
 - `.gbmv` = BizHawk BK2 zip (`Header.txt` / `Input Log.txt` / `SyncSettings.json`).
 - Files must live under a `C:\` working dir (`/mnt/c/...`); the Windows `GBAHawk.exe`
   can't conveniently read the WSL filesystem. Use Windows-style path args.
+- `run_tas.sh` creates one dummy-audio GBAHawk config per tag
+  (`C:\gbahawk_test\config-<tag>.ini`) so stale/concurrent emulator processes
+  cannot contend on the portable install's shared `config.ini`.
 - GBAHawk's accurate core runs ~80 fps; `invisibleemulation` only saves ~10%, so the
   cost is the ~254k frames. Two parallel instances (separate extracted dirs to avoid
   `config.ini` clashes) halve wall-clock.
