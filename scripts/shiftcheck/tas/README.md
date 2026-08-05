@@ -29,6 +29,7 @@ valid oracle — it holds relocated pointers (= shifted addresses); only the
 | `collect_vba_fingerprint.py` | Hash GD snapshots, verify the manifest/end marker, and emit deterministic JSON with ROM provenance. |
 | `run_vba_tas.sh` | Stage an isolated ROM/movie run and drive native VBA-rr SDL with dummy audio/video drivers. |
 | `compare_vba.py` | Compare vanilla vs modern JSON fingerprints and require both runs to reach the public movie endpoint. |
+| `retime_gbahawk_movie.py` | Apply a reviewed JSON edit manifest (set/add/remove/move keys, insert/delete frames) to produce a reproducible modern-specific GBMV resync. |
 
 ## How to run
 
@@ -90,6 +91,34 @@ python3 scripts/shiftcheck/tas/compare_vba.py \
 The default `exact` policy compares every captured diagnostic checkpoint.
 `--policy endpoint` only requires both runs and their final frame to match. A short
 calibration run can pass an explicit fourth argument, for example `3000`.
+
+## Modern-specific GBAHawk resync
+
+Compiler-cycle changes alter GBAHawk lag frames, so a movie recorded against the
+vanilla binary may need a reviewed input resync even when game behavior is correct.
+Record each TAStudio edit in a JSON manifest instead of hand-editing the GBMV:
+
+```json
+{
+  "schema_version": 1,
+  "operations": [
+    {"op": "move", "from": 1428, "to": 1430, "keys": ["START"]},
+    {"op": "insert", "frame": 2000, "count": 1, "keys": []}
+  ]
+}
+```
+
+```bash
+python3 scripts/shiftcheck/tas/retime_gbahawk_movie.py \
+    vanilla.gbmv modern.gba modern-resync.json modern-resync.gbmv
+```
+
+Operations are applied sequentially, so frame numbers include all preceding
+inserts/deletes. Supported operations are `set`, `add`, `remove`, `move`,
+`insert`, and `delete`. Use TAStudio/greenzone to locate each semantic
+divergence, update the manifest, regenerate the GBMV, and replay from the last
+stable checkpoint. Completion still requires the full credits endpoint; movie
+frame exhaustion alone is not success.
 
 ## Confirmed setup (this run)
 
