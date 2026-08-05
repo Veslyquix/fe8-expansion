@@ -129,7 +129,9 @@ MODERN_DATA_LAYOUT_FLAGS := -fno-toplevel-reorder
 # The battle overlay uses fixed cross-symbol offsets (for example
 # gBanimOaml + 0x5800 and gBanimScrLeft + 0x2A00) as part of its runtime ABI.
 MODERN_BANIM_OVERLAY_LAYOUT_FLAGS := -fno-toplevel-reorder
-MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1
+# Modern framework builds favor corrected behavior; the archival lane leaves
+# BUGFIX undefined to preserve byte-identical original behavior.
+MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1 -DBUGFIX=1
 
 # Issue #10: the item ID cap is a single build input shared by the data
 # generator (scripts/generated_data/idspace.py resolve_item_id_cap, via the

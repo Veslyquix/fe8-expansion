@@ -72,6 +72,11 @@ already used by `include/gba/isagbprint.h`'s `AGB_ASSERT`/`AGB_WARNING`
 macros; subsystems added later should gate development-only code on
 `FE8_EXPANSION_DEBUG` rather than re-deriving it from `NDEBUG` themselves.
 
+Both modern configurations define `BUGFIX=1`, enabling the decompilation's
+reviewed correctness fixes alongside `MODERN=1` and `NONMATCHING=1`. The
+archival agbcc lane deliberately leaves `BUGFIX` undefined so its original
+behavior and byte-identical layout remain unchanged.
+
 ## Build-ID resolution (deterministic, no timestamps/branch names)
 
 The embedded build commit is resolved with this precedence, entirely in

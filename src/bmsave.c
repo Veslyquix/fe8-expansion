@@ -314,8 +314,8 @@ void WriteGameSavePackedUnit(struct Unit *unit, void *sram_dest)
     }
 #if BUGFIX
     else {
-        unitp.pid = unit->pinfo->id;
-        unitp.jid = unit->jinfo->id;
+        unitp.pid = unit->pCharacterData->number;
+        unitp.jid = unit->pClassData->number;
     }
 #endif
 
