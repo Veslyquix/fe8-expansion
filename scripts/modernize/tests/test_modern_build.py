@@ -1462,6 +1462,7 @@ class ModernBuildTests(unittest.TestCase):
                 ".bss.VerifySramFast",
                 ".bss.readSramFast_Work",
                 ".bss.verifySramFast_Work",
+                ".bss.verifySramValueFast_Work",
             ):
                 self.assertIn(
                     sect, agb.stdout,

@@ -89,7 +89,8 @@ _MODERN_IWRAM_ALIASES = {
 _AGBSRAM_BSS_ANCHOR = ". = ALIGN(4); src/agb_sram.o(.bss);"
 _AGBSRAM_BSS_REPLACEMENT = (
     ". = ALIGN(4); {obj}(.bss.readSramFast_Work);\n"
-    "        . = ALIGN(4); {obj}(.bss.verifySramFast_Work);"
+    "        . = ALIGN(4); {obj}(.bss.verifySramFast_Work);\n"
+    "        . = ALIGN(4); {obj}(.bss.verifySramValueFast_Work);"
 )
 
 _WIDEN_SECTIONS = {

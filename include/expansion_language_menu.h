@@ -214,6 +214,13 @@ extern struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe;
 extern struct ProcCmd CONST_DATA ProcScr_ExpansionLanguageSelector[];
 
 /*
+ * Single-enabled-locale boot path: applies/repairs prefs and populates the
+ * startup probe synchronously before StartGame, so no blocking child is
+ * inserted between the early UI and intro skip listener.
+ */
+void ExpansionLanguageMenu_InitializeSingleLocaleBoot(void);
+
+/*
  * Opens the full settings submenu as a blocking child of `parent`
  * (typically the Config screen's own ConfigProc). The Config row calls
  * this only through More when more than three locales are enabled.

@@ -178,7 +178,7 @@ class RowSelectedPreferenceRepairStructureTests(unittest.TestCase):
 
     def test_runtime_init_sets_flag_from_requires_prompt_before_branching(self):
         match = re.search(
-            r"static void ExpansionLanguageMenu_RuntimeInit\(ProcPtr procPtr\)\s*\{(.*?)\n\}",
+            r"static void ExpansionLanguageMenu_RuntimeInitCore\(ProcPtr procPtr\)\s*\{(.*?)\n\}",
             self.stripped_src, re.DOTALL,
         )
         self.assertIsNotNone(match)
@@ -194,7 +194,8 @@ class RowSelectedPreferenceRepairStructureTests(unittest.TestCase):
 
     def test_auto_select_clears_flag_only_inside_store_succeeded_guard(self):
         match = re.search(
-            r"case EXPANSION_LANGUAGE_STARTUP_AUTO_SELECT:\s*\{(.*?)\n        \}\n\n        Proc_Goto",
+            r"case EXPANSION_LANGUAGE_STARTUP_AUTO_SELECT:\s*\{(.*?)\n        \}"
+            r"\n\n        if \(procPtr != NULL\)",
             self.stripped_src, re.DOTALL,
         )
         self.assertIsNotNone(match, "could not locate the AUTO_SELECT case body")

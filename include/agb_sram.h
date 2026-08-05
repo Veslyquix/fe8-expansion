@@ -7,6 +7,9 @@ void SetSramFastFunc(void);
 void WriteSramFast(const u8 *src, u8 *dest, u32 size);
 extern void (*ReadSramFast)(void const * src, void * dest, u32 size);
 extern u32 (*VerifySramFast)(void const * src, void * dest, u32 size);
+#ifdef MODERN
+extern u32 (*VerifySramValueFast)(void const * src, u8 value, u32 size);
+#endif
 u32 WriteAndVerifySramFast(void const * src, void * dest, u32 size);
 
 #define CART_SRAM_ADDR 0x0E000000

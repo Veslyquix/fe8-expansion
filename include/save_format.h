@@ -24,6 +24,8 @@
 
 #include "global.h"
 
+struct GlobalSaveInfo;
+
 /* Not NUL-terminated; compared byte-for-byte. */
 #define EXPANSION_SAVE_META_MAGIC "FSAV"
 #define EXPANSION_SAVE_META_MAGIC_SIZE 4
@@ -90,15 +92,16 @@ struct ExpansionSaveMeta {
 #define EXPANSION_SAVE_META_SIZE_FOR_CHECKSUM 0x2E
 
 /*
- * Raw-byte save compatibility classification. Every state is decided from
- * only the global save header (struct GlobalSaveInfo) and this metadata
- * record -- never from any current save-block struct (game/suspend/arena/
- * xmap), so classification is always safe to run before any of those are
- * touched. See docs/save_format.md for the full precedence order.
+ * Raw-byte save compatibility classification. All non-EMPTY states are
+ * decided from only the global save header (struct GlobalSaveInfo) and this
+ * metadata record -- never by interpreting any current save-block struct.
+ * Live EMPTY detection additionally verifies the remaining SRAM as opaque
+ * bytes before any block is touched. See docs/save_format.md.
  */
 enum SaveCompatState {
-    /* Global header and metadata regions are both the documented blank
-     * (0xFF-filled) SRAM state. This is the ONLY state that may trigger an
+    /* Live SRAM has one uniform erased fill (hardware-style 0xFF or
+     * deterministic emulator/movie-style 0x00), excluding only SramInit's
+     * four-byte hardware probe. This is the ONLY state that may trigger an
      * automatic full-SRAM wipe/initialize. */
     SAVE_COMPAT_EMPTY,
 
@@ -141,20 +144,20 @@ void BuildCurrentExpansionSaveMeta(struct ExpansionSaveMeta *meta);
 u16 ExpansionSaveMetaChecksum(struct ExpansionSaveMeta const *meta);
 
 /* Pure classifier: decides compatibility from an already-read header and
- * metadata pair plus whether each of their raw byte regions is the
- * documented blank (0xFF) pattern. Does not touch SRAM -- safe to unit
- * test / statically reason about in isolation. */
+ * metadata pair plus whether each raw region is uniformly erased (hardware
+ * 0xFF or deterministic emulator/movie 0x00). Does not touch SRAM. Its
+ * blank flags are trusted inputs; destructive live callers must use
+ * ClassifySramSaveCompat(), which verifies the complete chip first. */
 enum SaveCompatState ClassifySaveCompatRaw(
     struct GlobalSaveInfo const *header,
     bool headerRegionBlank,
     struct ExpansionSaveMeta const *meta,
     bool metaRegionBlank);
 
-/* Reads the live SRAM global header and metadata record and classifies
- * them. If SRAM is not confirmed working (IsSramWorking() == false) this
- * conservatively returns SAVE_COMPAT_HEADER_CORRUPT rather than EMPTY, so a
- * hardware fault can never be mistaken for a genuinely blank cart and
- * trigger an automatic wipe. */
+/* Reads live SRAM and classifies it. EMPTY requires one uniform fill across
+ * the complete chip except SramInit's four-byte probe. If SRAM is not
+ * confirmed working (IsSramWorking() == false), conservatively returns
+ * SAVE_COMPAT_HEADER_CORRUPT rather than risking an automatic wipe. */
 enum SaveCompatState ClassifySramSaveCompat(void);
 
 #endif /* GUARD_SAVE_FORMAT_H */

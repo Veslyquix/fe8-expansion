@@ -342,6 +342,7 @@ class PrepareModernLinkTests(unittest.TestCase):
         self.assertNotIn('src/agb_sram.o(.bss);', result)
         self.assertIn("build/mod/src/agb_sram.o(.bss.readSramFast_Work);", result)
         self.assertIn("build/mod/src/agb_sram.o(.bss.verifySramFast_Work);", result)
+        self.assertIn("build/mod/src/agb_sram.o(.bss.verifySramValueFast_Work);", result)
 
     def test_iwram_pin_missing_raises(self):
         broken = _FIXTURE_IWRAM.replace(". = 0x005410; gSoundInfo = .;\n", "")

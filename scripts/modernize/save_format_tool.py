@@ -208,6 +208,8 @@ META_OFFSET = 0x73A4  # SRAM_OFFSET_EXPANSION_SAVE_META
 META_SIZE = 0x5C  # SRAM_SIZE_EXPANSION_SAVE_META / sizeof(struct ExpansionSaveMeta)
 META_CHECKSUM_DOMAIN = 0x2E  # EXPANSION_SAVE_META_SIZE_FOR_CHECKSUM
 META_MAGIC = b"FSAV"  # EXPANSION_SAVE_META_MAGIC
+SRAM_PROBE_OFFSET = META_OFFSET - 4  # gSram->reserved, overwritten by SramInit()
+SRAM_PROBE_SIZE = 4
 
 # Bumped 1 -> 2 for issue #18 sprint 2 alongside
 # include/save_format.h's SAVE_FORMAT_VERSION_CURRENT: struct
@@ -289,6 +291,30 @@ def is_region_all_zero(data: bytes) -> bool:
     pattern every pre-sprint-2 build left in ExpansionSaveMeta's
     `reserved` tail."""
     return all(byte == 0x00 for byte in data)
+
+
+def is_region_erased(data: bytes) -> bool:
+    """Runtime-compatible erased-region check: hardware uses all-0xFF,
+    while deterministic emulator/movie resets commonly use all-0x00."""
+    return is_region_blank(data) or is_region_all_zero(data)
+
+
+def erased_fill_value(*regions: bytes) -> Optional[int]:
+    """Returns the one erased fill shared by every region, or None."""
+    for value in (0xFF, 0x00):
+        if all(all(byte == value for byte in region) for region in regions):
+            return value
+    return None
+
+
+def is_sram_image_erased(image: bytes) -> bool:
+    """True only when every byte has one erased fill, except SramInit's
+    four-byte hardware probe which boot deliberately overwrites."""
+    if len(image) != SRAM_SIZE:
+        return False
+
+    retained = image[:SRAM_PROBE_OFFSET] + image[SRAM_PROBE_OFFSET + SRAM_PROBE_SIZE:]
+    return erased_fill_value(retained) is not None
 
 
 # --- ExpansionUserPrefs record (issue #18 sprint 2) --------------------------
@@ -684,10 +710,7 @@ def classify_save_compat_raw(
     if len(meta_bytes) != META_SIZE:
         raise SaveFormatError(f"metadata region must be exactly {META_SIZE} bytes")
 
-    header_blank = is_region_blank(header_bytes)
-    meta_blank = is_region_blank(meta_bytes)
-
-    if header_blank and meta_blank:
+    if erased_fill_value(header_bytes, meta_bytes) is not None:
         return SAVE_COMPAT_EMPTY
 
     if not _header_valid(header_bytes):
@@ -718,6 +741,14 @@ def classify_image(image: bytes, save_compat_epoch: int) -> str:
         raise SaveFormatError(f"SRAM image must be exactly {SRAM_SIZE} bytes, got {len(image)}")
     header_bytes = image[HEADER_OFFSET:HEADER_OFFSET + HEADER_SIZE]
     meta_bytes = image[META_OFFSET:META_OFFSET + META_SIZE]
+
+    if (
+        erased_fill_value(header_bytes, meta_bytes) is not None
+        and not is_sram_image_erased(image)
+    ):
+        # Erased-looking classifier records cannot hide surviving blocks.
+        return SAVE_COMPAT_HEADER_CORRUPT
+
     return classify_save_compat_raw(header_bytes, meta_bytes, save_compat_epoch)
 
 
@@ -755,12 +786,13 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
     header_bytes = image[HEADER_OFFSET:HEADER_OFFSET + HEADER_SIZE]
     meta_bytes = image[META_OFFSET:META_OFFSET + META_SIZE]
-    state = classify_save_compat_raw(header_bytes, meta_bytes, save_compat_epoch)
+    state = classify_image(image, save_compat_epoch)
 
     print(f"path: {args.path}")
     print(f"classification: {state}")
-    print(f"header_blank: {is_region_blank(header_bytes)}")
-    print(f"meta_blank: {is_region_blank(meta_bytes)}")
+    print(f"header_blank: {is_region_erased(header_bytes)}")
+    print(f"meta_blank: {is_region_erased(meta_bytes)}")
+    print(f"sram_erased: {is_sram_image_erased(image)}")
 
     if state not in (SAVE_COMPAT_EMPTY, SAVE_COMPAT_HEADER_CORRUPT):
         meta = ExpansionSaveMeta.unpack(meta_bytes)

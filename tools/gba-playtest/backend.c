@@ -22,6 +22,7 @@
 
 #define GBA_SRAM_BASE 0x0E000000u
 #define GBA_SRAM_SIZE 0x8000u
+#define MAX_INPUT_RANGES 1000000u
 
 struct InputRange {
 	uint32_t start;
@@ -124,7 +125,7 @@ static bool read_plan(const char* path, struct Plan* plan)
 		goto fail;
 	}
 	if (fscanf(file, "%31s %zu", word, &plan->range_count) != 2 ||
-	    strcmp(word, "RANGES") != 0 || plan->range_count > 10000) {
+	    strcmp(word, "RANGES") != 0 || plan->range_count > MAX_INPUT_RANGES) {
 		fprintf(stderr, "malformed RANGES record\n");
 		goto fail;
 	}

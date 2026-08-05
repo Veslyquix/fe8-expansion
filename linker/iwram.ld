@@ -85,6 +85,7 @@
 . = 0x002A68;
 . = ALIGN(4); *src/agb_sram.o(.bss.readSramFast_Work);
         . = ALIGN(4); *src/agb_sram.o(.bss.verifySramFast_Work);
+        . = ALIGN(4); *src/agb_sram.o(.bss.verifySramValueFast_Work);
 . = ALIGN(4);
 
 /* COMMON */

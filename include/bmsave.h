@@ -450,6 +450,11 @@ extern struct MultiArenaSaveTeam EWRAM_DATA gMultiArenaSaveTeamBufA;
 extern struct MultiArenaSaveTeam EWRAM_DATA gMultiArenaSaveTeamBufB;
 
 extern EWRAM_DATA bool gBoolSramWorking;
+#ifdef MODERN
+#define SRAM_BOOT_FLAG_DATA_INITIALIZED (1 << 0)
+#define SRAM_BOOT_FLAG_WRITES_ALLOWED   (1 << 1)
+extern EWRAM_DATA u8 gSramBootFlags;
+#endif
 extern CONST_DATA struct SaveBlocks *gSram;
 extern u32 gBonusContentClaimFlags;
 extern u8 gSuspendSaveIdOffset;    /* gSaveSuBaseSlot */

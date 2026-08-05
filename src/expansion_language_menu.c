@@ -216,6 +216,7 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
 #include "hardware.h"
 #include "uiutils.h"
 #include "bm.h"
+#include "bmsave.h"
 #include "uiconfig.h"
 
 /* One row per BUILD-ENABLED locale slot, plus one reserved Back row
@@ -546,7 +547,7 @@ CONST_DATA struct MenuDef gExpansionLanguageSettingsMenuDef =
     0,
 };
 
-static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
+static void ExpansionLanguageMenu_RuntimeInitCore(ProcPtr procPtr)
 {
     struct ExpansionUserPrefs prefs;
     enum ExpansionUserPrefsState state;
@@ -558,6 +559,56 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
     ExpansionLocaleId i;
 
     gExpansionLanguageMenuProbe.startupRunCount++;
+
+#if FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1 && !FE8_EXPANSION_DEBUG
+    /*
+     * A genuinely erased single-locale save was just stamped with a valid
+     * default prefs record by InitGlobalSaveInfodata(). Avoid an immediate
+     * redundant SRAM read while preserving the selector's probe contract.
+     */
+    if (gSramBootFlags & SRAM_BOOT_FLAG_DATA_INITIALIZED)
+    {
+        ExpansionLocale_SetCurrent((ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID);
+
+        gExpansionLanguageMenuProbe.prefsState = EXPANSION_USER_PREFS_VALID;
+        gExpansionLanguageMenuProbe.promptReason = EXPANSION_LANGUAGE_PROMPT_NONE;
+        gExpansionLanguageMenuProbe.enabledLocaleCount = FE8_EXPANSION_ENABLED_LOCALE_COUNT;
+        gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;
+        gExpansionLanguageMenuProbe.autoSelected = FALSE;
+        gExpansionLanguageMenuProbe.promptShown = FALSE;
+        gExpansionLanguageMenuProbe.selectedLocale =
+            (ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID;
+        gExpansionLanguageMenuProbe.currentLocale = ExpansionLocale_GetCurrent();
+
+        if (procPtr != NULL)
+            Proc_Goto(procPtr, LBL_EXPANSION_LANGUAGE_SELECTOR_DONE);
+        return;
+    }
+#endif
+
+    /*
+     * The global compatibility gate owns non-current saves. Do not read,
+     * repair, or prompt on a nested preference record until the outer save
+     * format is CURRENT; otherwise Back could mutate an unsupported save.
+     */
+    if (!(gSramBootFlags & SRAM_BOOT_FLAG_WRITES_ALLOWED))
+    {
+        ExpansionLocale_SetCurrent((ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID);
+
+        gExpansionLanguageMenuProbe.prefsState = EXPANSION_USER_PREFS_UNSET;
+        gExpansionLanguageMenuProbe.promptReason = EXPANSION_LANGUAGE_PROMPT_NONE;
+        gExpansionLanguageMenuProbe.enabledLocaleCount = FE8_EXPANSION_ENABLED_LOCALE_COUNT;
+        gExpansionLanguageMenuProbe.needsPreferenceRepair = FALSE;
+        gExpansionLanguageMenuProbe.autoSelected = FALSE;
+        gExpansionLanguageMenuProbe.promptShown = FALSE;
+        gExpansionLanguageMenuProbe.selectedLocale =
+            (ExpansionLocaleId)FE8_EXPANSION_DEFAULT_LOCALE_ID;
+        gExpansionLanguageMenuProbe.currentLocale = ExpansionLocale_GetCurrent();
+
+        if (procPtr != NULL)
+            Proc_Goto(procPtr, LBL_EXPANSION_LANGUAGE_SELECTOR_DONE);
+        return;
+    }
 
     state = ExpansionUserPrefs_Load(&prefs);
     state = ExpansionUserPrefs_Normalize(&prefs, state, &effectiveLocale, &requiresPrompt);
@@ -598,7 +649,8 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
         gExpansionLanguageMenuProbe.selectedLocale = effectiveLocale;
         gExpansionLanguageMenuProbe.currentLocale = ExpansionLocale_GetCurrent();
 
-        Proc_Goto(procPtr, LBL_EXPANSION_LANGUAGE_SELECTOR_DONE);
+        if (procPtr != NULL)
+            Proc_Goto(procPtr, LBL_EXPANSION_LANGUAGE_SELECTOR_DONE);
         break;
 
     case EXPANSION_LANGUAGE_STARTUP_AUTO_SELECT:
@@ -617,7 +669,8 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
             gExpansionLanguageMenuProbe.currentLocale = ExpansionLocale_GetCurrent();
         }
 
-        Proc_Goto(procPtr, LBL_EXPANSION_LANGUAGE_SELECTOR_DONE);
+        if (procPtr != NULL)
+            Proc_Goto(procPtr, LBL_EXPANSION_LANGUAGE_SELECTOR_DONE);
         break;
 
     case EXPANSION_LANGUAGE_STARTUP_SHOW_MENU:
@@ -628,6 +681,16 @@ static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
          * -- no Proc_Goto here. */
         break;
     }
+}
+
+void ExpansionLanguageMenu_InitializeSingleLocaleBoot(void)
+{
+    ExpansionLanguageMenu_RuntimeInitCore(NULL);
+}
+
+static void ExpansionLanguageMenu_RuntimeInit(ProcPtr procPtr)
+{
+    ExpansionLanguageMenu_RuntimeInitCore(procPtr);
 }
 
 static void ExpansionLanguageMenu_ShowSelector(ProcPtr procPtr)

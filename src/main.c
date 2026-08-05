@@ -7,6 +7,9 @@
 #include "mu.h"
 #include "soundwrapper.h"
 #include "gamecontrol.h"
+#ifdef MODERN
+#include "expansion_language_menu.h"
+#endif
 #include "bm.h"
 #include "bmsave.h"
 #include "worldmap.h"
@@ -22,6 +25,10 @@ void StoreIRQToIRAM(void);
 void AgbMain(void)
 {
     int sw_rst;
+#if defined(MODERN) && !FE8_EXPANSION_DEBUG
+    int i;
+    int syncFrames;
+#endif
 
     // clear RAM
     DmaFill32(3, 0, (void *)IWRAM_START, 0x7F80); // reset the area for the IWRAM ARM section.
@@ -59,8 +66,13 @@ void AgbMain(void)
     SetLCGRNValue(0x42D690E9);
     InitRN(AdvanceGetLCGRNValue());
     DisableKeyComboResetEN();
+#ifndef MODERN
     EraseInvalidSaveData();
+#endif
     EraseSramDataIfInvalid();
+#if defined(MODERN) && !FE8_EXPANSION_DEBUG && FE8_EXPANSION_ENABLED_LOCALE_COUNT <= 1
+    ExpansionLanguageMenu_InitializeSingleLocaleBoot();
+#endif
 
     // initialize sound
     m4aSoundInit();
@@ -70,6 +82,18 @@ void AgbMain(void)
     GmDataInit();
     SetLang(LANG_ENGLISH);
     ResetText();
+#if defined(MODERN) && !FE8_EXPANSION_DEBUG
+    /*
+     * Modern GCC reaches StartGame seven VBlanks early with an existing
+     * save. Full-chip erased-SRAM verification already consumes that
+     * route's startup budget, so it gets no additional synthetic VBlank.
+     * Remove only synthetic compensation frames from the game clock.
+     */
+    syncFrames = (gSramBootFlags & SRAM_BOOT_FLAG_DATA_INITIALIZED) ? 0 : 7;
+    for (i = 0; i < syncFrames; ++i)
+        VBlankIntrWait();
+    SetGameTime(GetGameClock() - syncFrames);
+#endif
     StartGame();
 
     // perform the game loop.

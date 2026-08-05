@@ -199,6 +199,33 @@ class BackendIntegrationTests(unittest.TestCase):
                 gba_playtest.compare_fingerprints(corrupted, first, "behavior")
             )
 
+    def test_accepts_full_tas_scale_input_range_count(self):
+        with tempfile.TemporaryDirectory(prefix="gba-playtest-test-") as temporary:
+            rom = Path(temporary) / "fixture.gba"
+            build_homebrew_rom(rom)
+            range_count = 10_001
+            scenario = gba_playtest.parse_scenario_data(
+                {
+                    "schema_version": 1,
+                    "name": "full-tas-scale-inputs",
+                    "frames": [
+                        {"start": frame, "end": frame, "keys": ["A"]}
+                        for frame in range(1, range_count * 2, 2)
+                    ],
+                    "checkpoints": [
+                        {
+                            "name": "after-inputs",
+                            "frame": range_count * 2,
+                            "framebuffer": True,
+                            "probes": [],
+                        }
+                    ],
+                }
+            )
+
+            fingerprint = self._capture_or_skip(rom, scenario)
+            self.assertEqual(fingerprint["checkpoints"][0]["frame"], range_count * 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -220,13 +220,15 @@ enum ExpansionUserPrefsState ExpansionUserPrefs_Normalize(
  * ExpansionUserPrefs_Store (src/expansion_save_prefs.c): validates that
  * `localeId` is supported+enabled (by macro only -- never calls
  * ExpansionLocale_IsSupported/IsEnabled, so this stays legacy-linkable),
- * checks IsSramWorking(), builds a fully-checksummed current record, and
- * performs exactly one bounded WriteAndVerifySramFast() call covering
+ * checks IsSramWorking() and that the outer save is SAVE_COMPAT_CURRENT,
+ * builds a fully-checksummed current record, and performs exactly one
+ * bounded WriteAndVerifySramFast() call covering
  * only this record's own EXPANSION_USER_PREFS_META_OFFSET..+sizeof(...)
  * window inside gSram->expansionSaveMeta.reserved -- never WipeSram(),
  * never any other SRAM byte. Returns FALSE (writing nothing) if
- * `localeId` is not supported+enabled or SRAM is not confirmed working;
- * otherwise returns whether the write verified successfully. */
+ * `localeId` is not supported+enabled, SRAM is not confirmed working, or
+ * the outer save is not CURRENT; otherwise returns whether the write
+ * verified successfully. */
 bool8 ExpansionUserPrefs_StoreRaw(ExpansionLocaleId localeId, bool8 explicitSelection);
 
 /* Full store entry point (src/expansion_save_prefs.c, modern-ROM-linked

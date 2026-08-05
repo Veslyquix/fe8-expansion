@@ -77,7 +77,9 @@ PROC_LABEL(LGAMECTRL_GAME_INTRO_UI),
      * lives in src/expansion_language_menu.c, which -- like
      * src/expansion_locale.c/src/expansion_save_prefs.c -- is only
      * linked into the modern ROM. */
+#if FE8_EXPANSION_ENABLED_LOCALE_COUNT > 1 || FE8_EXPANSION_DEBUG
     PROC_START_CHILD_BLOCKING(ProcScr_ExpansionLanguageSelector),
+#endif
 
     // fallthrough
 

@@ -45,6 +45,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "modernize" / "tests"))
 import gba_playtest  # noqa: E402
 import host_mode  # noqa: E402
 import sram_fixture as sf  # noqa: E402
+import sram_hash_mirror  # noqa: E402
 
 # Every non-CURRENT SaveCompatState covered by the savecompat-dialog-back
 # scenario, mapped from its fixture/fingerprint name to the state constant.
@@ -80,6 +81,13 @@ def _load_committed_fingerprint(name: str) -> dict:
     return gba_playtest.validate_fingerprint(
         json.loads(path.read_text(encoding="utf-8")), str(path)
     )
+
+
+def _post_probe_fixture_hash(path: Path, exclude_ranges) -> str:
+    image = bytearray(path.read_bytes())
+    start = sf.sft.SRAM_PROBE_OFFSET
+    image[start:start + sf.sft.SRAM_PROBE_SIZE] = (0x12345678).to_bytes(4, "little")
+    return sram_hash_mirror.compute_sram_hash(bytes(image), exclude_ranges)
 
 
 def _make_test_class(suffix: str, rom: Path):
@@ -121,12 +129,16 @@ def _make_test_class(suffix: str, rom: Path):
             dialog_scenario = gba_playtest.load_scenario(
                 SCENARIOS_DIR / "savecompat-dialog-back.json"
             )
+            exclude_ranges = dialog_scenario.checkpoints[0].sram_hash_exclude_ranges
             dialog_shown_hashes: dict[str, str] = {}
 
             for name, state in _DIALOG_BACK_STATES.items():
                 with self.subTest(rom=suffix, state=name):
                     fixture_path = self.fixture_dir / f"{name}.sav"
                     sf.write_fixture(fixture_path, state)
+                    initial_hash = _post_probe_fixture_hash(
+                        fixture_path, exclude_ranges
+                    )
                     actual = _capture_or_skip(rom, dialog_scenario, fixture_path)
 
                     expected = _load_committed_fingerprint(
@@ -143,12 +155,20 @@ def _make_test_class(suffix: str, rom: Path):
 
                     checkpoints = {cp["name"]: cp for cp in actual["checkpoints"]}
                     sram_hashes = {cp["sram_hash"] for cp in checkpoints.values()}
-                    self.assertEqual(
-                        len(sram_hashes), 1,
-                        f"rom={suffix} state={name}: SRAM must be byte-identical "
-                        f"across dialog-shown/after-dismiss/back-returned "
-                        f"checkpoints (found {sram_hashes})",
-                    )
+                    if suffix == "legacy":
+                        self.assertEqual(
+                            len(sram_hashes), 1,
+                            f"rom={suffix} state={name}: SRAM must be byte-identical "
+                            f"across dialog-shown/after-dismiss/back-returned "
+                            f"checkpoints (found {sram_hashes})",
+                        )
+                    else:
+                        self.assertEqual(
+                            sram_hashes,
+                            {initial_hash},
+                            f"rom={suffix} state={name}: Back must preserve the "
+                            "original fixture apart from SramInit's hardware probe",
+                        )
                     dialog_shown_hashes[name] = checkpoints["dialog-shown"]["framebuffer_hash"]
 
             # "correct state/message is selected" (requirement 7): every
@@ -158,6 +178,51 @@ def _make_test_class(suffix: str, rom: Path):
                 f"rom={suffix}: expected a distinct dialog per state, "
                 f"got {dialog_shown_hashes}",
             )
+
+        def test_erased_records_cannot_hide_surviving_save_blocks(self):
+            """Uniformly zero header/metadata bytes are not EMPTY when any
+            other save byte survives; the image must be preserved behind
+            the header-corrupt dialog rather than automatically wiped."""
+            fixture_path = self.fixture_dir / "partial-zero.sav"
+            image = bytearray(sf.sft.SRAM_SIZE)
+            image[0x3FC4] = 0x7A
+            fixture_path.write_bytes(image)
+
+            scenario = gba_playtest.load_scenario(
+                SCENARIOS_DIR / "savecompat-dialog-back.json"
+            )
+            initial_hash = _post_probe_fixture_hash(
+                fixture_path,
+                scenario.checkpoints[0].sram_hash_exclude_ranges,
+            )
+            actual = _capture_or_skip(rom, scenario, fixture_path)
+            expected = _load_committed_fingerprint(
+                f"savecompat-dialog-back-header-corrupt-{suffix}"
+            )
+            actual_checkpoints = {cp["name"]: cp for cp in actual["checkpoints"]}
+            expected_checkpoints = {cp["name"]: cp for cp in expected["checkpoints"]}
+
+            for name in ("dialog-shown", "back-returned"):
+                self.assertEqual(
+                    actual_checkpoints[name]["framebuffer_hash"],
+                    expected_checkpoints[name]["framebuffer_hash"],
+                    f"rom={suffix}: partial SRAM must route through the "
+                    f"header-corrupt dialog ({name})",
+                )
+
+            actual_hashes = {cp["sram_hash"] for cp in actual["checkpoints"]}
+            if suffix == "legacy":
+                self.assertEqual(
+                    len(actual_hashes),
+                    1,
+                    f"rom={suffix}: partial SRAM must remain stable after boot",
+                )
+            else:
+                self.assertEqual(
+                    actual_hashes,
+                    {initial_hash},
+                    f"rom={suffix}: partial SRAM must remain byte-identical after Back",
+                )
 
         def test_confirmed_erase_produces_fresh_current_and_reaches_save_menu(self):
             """Confirmed full erase: image becomes a valid fresh CURRENT

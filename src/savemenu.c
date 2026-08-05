@@ -1676,6 +1676,16 @@ void StartSaveMenu(ProcPtr parent)
     struct SaveMenuProc * proc;
     enum SaveCompatState compat = ClassifySramSaveCompat();
 
+#ifdef MODERN
+    /* A movie/reset environment may expose blank SRAM as all-0x00. EMPTY
+     * is the one safe state to initialize; every unsafe state stays blocked. */
+    if (compat == SAVE_COMPAT_EMPTY)
+    {
+        InitGlobalSaveInfodata();
+        compat = ClassifySramSaveCompat();
+    }
+#endif
+
     /*
      * Issue #2 slice 2: save format/version metadata is global, so any
      * non-CURRENT classification makes every slot/block offset potentially

@@ -60,6 +60,10 @@ void BmSave_NopStub(void)
     return;
 }
 
+#ifdef MODERN
+EWRAM_DATA u8 gSramBootFlags;
+#endif
+
 void SramInit(void)
 {
     u32 buf[2];
@@ -146,8 +150,7 @@ static bool BytesEqual(void const *a, void const *b, int size)
 }
 
 /* True if every byte of the region is 0xFF, matching WipeSram()'s
- * 0xFFFFFFFF fill pattern -- the only state ClassifySramSaveCompat() may
- * ever report as SAVE_COMPAT_EMPTY. */
+ * 0xFFFFFFFF fill pattern. */
 static bool IsRegionBlank(void const *data, int size)
 {
     u8 const *bytes = data;
@@ -166,9 +169,9 @@ static bool IsRegionBlank(void const *data, int size)
  * written" pattern every pre-issue-#18-sprint-2 build left in struct
  * ExpansionSaveMeta's `reserved` tail (see BuildCurrentExpansionSaveMeta()
  * below, which memset()s the whole struct before setting any named
- * field). Used by ExpansionUserPrefs_ValidateRaw()'s callers alongside
- * IsRegionBlank() above so either legacy "unset" pattern (all-zero or
- * all-0xFF) is treated as EXPANSION_USER_PREFS_UNSET, never CORRUPT. */
+ * field). Also used by modern live-SRAM EMPTY detection and by
+ * ExpansionUserPrefs_ValidateRaw()'s callers, where either legacy "unset"
+ * pattern (all-zero or all-0xFF) is never treated as CORRUPT. */
 static bool IsRegionAllZero(void const *data, int size)
 {
     u8 const *bytes = data;
@@ -182,6 +185,28 @@ static bool IsRegionAllZero(void const *data, int size)
 
     return true;
 }
+
+#ifdef MODERN
+/*
+ * SramInit() overwrites gSram->reserved as its four-byte hardware probe
+ * before compatibility classification. Every other byte must retain one
+ * consistent erased fill value before EMPTY is safe to report.
+ */
+static bool IsSramErasedWithValue(u8 value)
+{
+    u32 probeOffset;
+    u32 probeEnd;
+
+    probeOffset = (u8 *)gSram->reserved - (u8 *)gSram;
+    probeEnd = probeOffset + sizeof(gSram->reserved);
+
+    return VerifySramValueFast(gSram, value, probeOffset) == 0
+        && VerifySramValueFast(
+            (u8 *)gSram + probeEnd,
+            value,
+            CART_SRAM_SIZE - probeEnd) == 0;
+}
+#endif
 
 void BuildCurrentExpansionSaveMeta(struct ExpansionSaveMeta *meta)
 {
@@ -306,6 +331,9 @@ enum SaveCompatState ClassifySramSaveCompat(void)
 {
     struct GlobalSaveInfo header;
     struct ExpansionSaveMeta meta;
+#ifdef MODERN
+    bool sramErased;
+#endif
 
     /* SRAM hardware not confirmed working: never treat as blank, since
      * that would risk an automatic wipe of a cart we cannot actually
@@ -316,9 +344,29 @@ enum SaveCompatState ClassifySramSaveCompat(void)
     ReadSramFast(&gSram->globalSaveInfo, &header, sizeof(header));
     ReadSramFast(&gSram->expansionSaveMeta, &meta, sizeof(meta));
 
+#ifdef MODERN
+    /*
+     * Hardware erase uses 0xFF, while deterministic emulator/movie resets
+     * commonly expose never-written SRAM as 0x00. Require one consistent
+     * fill across the entire chip (apart from SramInit's probe bytes);
+     * erased-looking header/metadata must never hide surviving save blocks.
+     */
+    sramErased =
+        (IsRegionBlank(&header, sizeof(header))
+            && IsRegionBlank(&meta, sizeof(meta))
+            && IsSramErasedWithValue(0xFF))
+        || (IsRegionAllZero(&header, sizeof(header))
+            && IsRegionAllZero(&meta, sizeof(meta))
+            && IsSramErasedWithValue(0x00));
+
+    return ClassifySaveCompatRaw(
+        &header, sramErased,
+        &meta, sramErased);
+#else
     return ClassifySaveCompatRaw(
         &header, IsRegionBlank(&header, sizeof(header)),
         &meta, IsRegionBlank(&meta, sizeof(meta)));
+#endif
 }
 
 /* --- ExpansionUserPrefs (issue #18 sprint 2) --------------------------- */
@@ -440,6 +488,11 @@ bool8 ExpansionUserPrefs_StoreRaw(ExpansionLocaleId localeId, bool8 explicitSele
     if (!IsSramWorking())
         return FALSE;
 
+#ifdef MODERN
+    if (!(gSramBootFlags & SRAM_BOOT_FLAG_WRITES_ALLOWED))
+        return FALSE;
+#endif
+
     /*
      * Issue #18 sprint 2 write-interruption contract: build the whole
      * record (magic/version/localeId/flags/checksum) in a local, non-SRAM
@@ -541,6 +594,9 @@ void InitGlobalSaveInfodata(void)
         BuildCurrentExpansionSaveMeta(&meta);
         WriteAndVerifySramFast(&meta, &gSram->expansionSaveMeta, sizeof(meta));
     }
+#ifdef MODERN
+    gSramBootFlags |= SRAM_BOOT_FLAG_WRITES_ALLOWED;
+#endif
 }
 
 bool EnsureGlobalSaveInfoLoaded(struct GlobalSaveInfo *buf)
@@ -1484,6 +1540,11 @@ bool LoadAndVerifySoundRoomData(struct SoundRoomSaveData * buf)
 
 void WriteSoundRoomSaveData(struct SoundRoomSaveData * buf)
 {
+#ifdef MODERN
+    if (!(gSramBootFlags & SRAM_BOOT_FLAG_WRITES_ALLOWED))
+        return;
+#endif
+
     buf->magic1 = Checksum16(buf, sizeof(struct SoundRoomSaveData) - 4);
     WriteAndVerifySramFast(buf, &gSram->soundRoomSave, sizeof(struct SoundRoomSaveData));
 }
@@ -1607,9 +1668,15 @@ void ModifySaveLinkArenaStruct2B(struct bmsave_unkstruct2 * buf, int val)
 
 void EraseSramDataIfInvalid(void)
 {
+#ifdef MODERN
+    enum SaveCompatState state;
+
+    gSramBootFlags = 0;
+
     /*
-     * Issue #2 slice 1: only the documented blank (0xFF-filled) SRAM state
-     * may trigger the full-SRAM wipe done by InitGlobalSaveInfodata().
+     * Issue #2 slice 1: only a uniformly erased SRAM state (hardware
+     * 0xFF or deterministic emulator/movie 0x00) may trigger the full-SRAM
+     * wipe done by InitGlobalSaveInfodata().
      * Previously this checked `!ReadGlobalSaveInfo(NULL)`, which is also
      * true for corrupt, newer, older, or save-config-incompatible data --
      * silently destroying all 32 KiB of valid-but-unrecognized SRAM before
@@ -1617,8 +1684,30 @@ void EraseSramDataIfInvalid(void)
      * vanilla saves, corrupt saves, and every other non-blank state must
      * be left byte-for-byte untouched here; see docs/save_format.md.
      */
+    state = ClassifySramSaveCompat();
+
+    if (state == SAVE_COMPAT_EMPTY)
+    {
+        InitGlobalSaveInfodata();
+        gSramBootFlags |= SRAM_BOOT_FLAG_DATA_INITIALIZED;
+    }
+    else if (state == SAVE_COMPAT_CURRENT)
+    {
+        gSramBootFlags |= SRAM_BOOT_FLAG_WRITES_ALLOWED;
+    }
+
+    /*
+     * Every remaining verifier can repair its own bounded auxiliary
+     * record. That is safe only after EMPTY became CURRENT, or when the
+     * input was already CURRENT. Non-current saves stay untouched for the
+     * compatibility dialog/host tooling.
+     */
+    if (state != SAVE_COMPAT_EMPTY && state != SAVE_COMPAT_CURRENT)
+        return;
+#else
     if (SAVE_COMPAT_EMPTY == ClassifySramSaveCompat())
         InitGlobalSaveInfodata();
+#endif
 
     if (!LoadBonusContentData(NULL))
         EraseBonusContentData();

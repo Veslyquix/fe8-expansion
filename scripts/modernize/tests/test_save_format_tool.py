@@ -11,11 +11,13 @@ All fixtures are synthetic byte arrays built in memory -- no committed
 binary blobs, ROM dumps, or savestates, per issue #2 slice 1's guardrails.
 """
 
+import io
 import os
 import struct
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -140,6 +142,16 @@ class ClassifySaveCompatRawTests(unittest.TestCase):
         meta = bytearray([0xFF] * sft.META_SIZE)
         self.assertEqual(self.classify(header, meta), sft.SAVE_COMPAT_EMPTY)
 
+    def test_zero_filled_emulator_header_and_meta_is_empty(self):
+        header = bytearray([0x00] * sft.HEADER_SIZE)
+        meta = bytearray([0x00] * sft.META_SIZE)
+        self.assertEqual(self.classify(header, meta), sft.SAVE_COMPAT_EMPTY)
+
+    def test_mixed_erased_fills_are_header_corrupt(self):
+        header = bytearray([0x00] * sft.HEADER_SIZE)
+        meta = bytearray([0xFF] * sft.META_SIZE)
+        self.assertEqual(self.classify(header, meta), sft.SAVE_COMPAT_HEADER_CORRUPT)
+
     def test_valid_header_blank_meta_is_valid_legacy_or_vanilla(self):
         header = make_header(valid=True)
         meta = make_meta(present=False)
@@ -223,6 +235,33 @@ class ClassifyImageTests(unittest.TestCase):
         image = make_image(header, meta)
         self.assertEqual(sft.classify_image(bytes(image), 1), sft.SAVE_COMPAT_CURRENT)
 
+    def test_full_zero_filled_image_is_empty(self):
+        image = bytes([0x00] * sft.SRAM_SIZE)
+        self.assertEqual(sft.classify_image(image, 1), sft.SAVE_COMPAT_EMPTY)
+
+    def test_sram_probe_bytes_do_not_make_erased_image_corrupt(self):
+        image = bytearray([0xFF] * sft.SRAM_SIZE)
+        image[sft.SRAM_PROBE_OFFSET:sft.SRAM_PROBE_OFFSET + sft.SRAM_PROBE_SIZE] = (
+            b"\x78\x56\x34\x12"
+        )
+        self.assertEqual(sft.classify_image(bytes(image), 1), sft.SAVE_COMPAT_EMPTY)
+
+    def test_erased_records_cannot_hide_surviving_save_blocks(self):
+        image = bytearray([0x00] * sft.SRAM_SIZE)
+        image[0x3FC4] = 0x7A
+        self.assertEqual(
+            sft.classify_image(bytes(image), 1),
+            sft.SAVE_COMPAT_HEADER_CORRUPT,
+        )
+
+    def test_ff_erased_records_cannot_hide_surviving_save_blocks(self):
+        image = bytearray([0xFF] * sft.SRAM_SIZE)
+        image[0x3FC4] = 0x7A
+        self.assertEqual(
+            sft.classify_image(bytes(image), 1),
+            sft.SAVE_COMPAT_HEADER_CORRUPT,
+        )
+
 
 # --- CLI tests ------------------------------------------------------------
 
@@ -285,6 +324,23 @@ class CliInspectTests(unittest.TestCase):
             path.write_bytes(bytes(make_image(header, meta)))
             self.assertEqual(
                 sft.main(["--repo-root", str(ROOT), "inspect", str(path)]), 0
+            )
+
+    def test_inspect_uses_full_image_empty_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "partial-zero.bin"
+            image = bytearray([0x00] * sft.SRAM_SIZE)
+            image[0x3FC4] = 0x7A
+            path.write_bytes(image)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                result = sft.main(["--repo-root", str(ROOT), "inspect", str(path)])
+
+            self.assertEqual(result, 0)
+            self.assertIn(
+                "classification: SAVE_COMPAT_HEADER_CORRUPT",
+                stdout.getvalue(),
             )
 
 

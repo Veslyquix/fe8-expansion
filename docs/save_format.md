@@ -121,10 +121,13 @@ record: it builds a fresh checksummed record in a local temporary, rejects
 an unsupported/disabled `localeId` before touching SRAM at all, and reuses
 the exact same bounded single `ReadSramFast`/`WriteAndVerifySramFast`-based
 existing-API write path `BuildCurrentExpansionSaveMeta`'s callers already
-use -- no new parallel SRAM-write mechanism, no source/destination buffer
-overlap, no `WipeSram()` call on any validation failure. On a successful
-store it calls `ExpansionLocale_SetCurrent()` (which internally invalidates
-the runtime resolver's cache), so a UI that just persisted a selection can
+use. `ExpansionUserPrefs_StoreRaw()` also requires the outer save to classify
+`SAVE_COMPAT_CURRENT`, so a nested preference repair can never modify a
+legacy/newer/corrupt/config-incompatible image before the global gate. There
+is no new parallel SRAM-write mechanism, source/destination buffer overlap,
+or `WipeSram()` call on any validation failure. On a successful store it
+calls `ExpansionLocale_SetCurrent()` (which internally invalidates the
+runtime resolver's cache), so a UI that just persisted a selection can
 immediately observe it without a reboot.
 
 Host-side (`scripts/modernize/save_format_tool.py`) mirrors this exact
@@ -204,15 +207,22 @@ See `scripts/modernize/tests/test_save_compat_epoch_modern_build.py` and
 
 ## Raw-byte compatibility classifier
 
-`enum SaveCompatState` (`include/save_format.h`) has 8 explicit states,
-decided in this precedence order by `ClassifySaveCompatRaw()`
-(`src/bmsave-lib.c`) from **only** the global save header
-(`struct GlobalSaveInfo`) and the metadata record above -- never any
-current save-block struct (game/suspend/arena/xmap):
+`enum SaveCompatState` (`include/save_format.h`) has 8 explicit states.
+All non-EMPTY states are decided in this precedence order by
+`ClassifySaveCompatRaw()` (`src/bmsave-lib.c`) from **only** the global save
+header (`struct GlobalSaveInfo`) and the metadata record above -- never by
+interpreting any current save-block struct (game/suspend/arena/xmap).
+`ClassifySramSaveCompat()` additionally scans the full chip as opaque bytes
+before allowing the destructive EMPTY result:
 
-1. **`SAVE_COMPAT_EMPTY`** -- both the header region and the metadata
-   region are entirely `0xFF`, matching `WipeSram()`'s fill pattern. This
-   is the **only** state that may trigger an automatic full-SRAM wipe.
+1. **`SAVE_COMPAT_EMPTY`** -- the full 32 KiB SRAM image has one consistent
+   erased fill: either entirely `0xFF` (hardware/`WipeSram()` fill) or
+   entirely `0x00` (deterministic emulator/movie reset fill), excluding
+   only the four-byte `gSram->reserved` hardware probe that `SramInit()`
+   deliberately overwrites before classification. Erased-looking
+   header/metadata bytes can therefore never hide surviving game/suspend/
+   arena/xmap data. This is the **only** state that may trigger an
+   automatic full-SRAM wipe.
 2. **`SAVE_COMPAT_HEADER_CORRUPT`** -- not blank, and the header itself
    fails the existing `ReadGlobalSaveInfo()`-style validation (name,
    `magic32`, `magic16`, checksum).
@@ -237,15 +247,19 @@ Two independent implementations share this exact precedence and must be
 kept in lockstep if it ever changes:
 
 * **C** (shipped): `ClassifySaveCompatRaw()`/`ClassifySramSaveCompat()` in
-  `src/bmsave-lib.c`, declared in `include/save_format.h`.
+  `src/bmsave-lib.c`, declared in `include/save_format.h`. The pure raw
+  helper trusts its already-derived blank flags; every destructive live
+  caller goes through `ClassifySramSaveCompat()` and its full-chip check.
 * **Python** (host tooling): `classify_save_compat_raw()`/
-  `classify_image()` in `scripts/modernize/save_format_tool.py`, a
-  byte-exact mirror documented as such in its own module docstring.
+  `classify_image()` in `scripts/modernize/save_format_tool.py`. The raw
+  helper classifies isolated same-fill header/metadata pairs; the CLI and
+  every full save-image operation use `classify_image()`, which mirrors the
+  complete SRAM check.
 
-`ClassifySramSaveCompat()` additionally treats `IsSramWorking() == false`
-(SRAM hardware not confirmed working) as `SAVE_COMPAT_HEADER_CORRUPT`
-rather than `SAVE_COMPAT_EMPTY`, so a hardware fault can never be mistaken
-for a genuinely blank cart and trigger an automatic wipe.
+`ClassifySramSaveCompat()` also treats `IsSramWorking() == false` (SRAM
+hardware not confirmed working) as `SAVE_COMPAT_HEADER_CORRUPT` rather than
+`SAVE_COMPAT_EMPTY`, so a hardware fault can never be mistaken for a
+genuinely blank cart and trigger an automatic wipe.
 
 ## Destructive boot-path fix
 
@@ -256,11 +270,15 @@ for a genuinely blank cart and trigger an automatic wipe.
 newer, older, and save-config-incompatible data alike, not just genuinely
 blank SRAM. It now gates the wipe on `ClassifySramSaveCompat() ==
 SAVE_COMPAT_EMPTY` instead, so every other state is left byte-for-byte
-untouched for later UI/tooling (slice 2 and the host-side CLI below). The
-bonus/rank/sound-room/link-arena per-block erase calls and
-`LoadAndVerfySuspendSave()` immediately below it are unchanged -- those
-are already bounded, per-block operations, not full-SRAM wipes, and are
-out of this slice's scope.
+untouched for later UI/tooling (slice 2 and the host-side CLI below).
+Modern builds return before the bonus/rank/sound-room/link-arena repair
+calls and `LoadAndVerfySuspendSave()` unless the image was already CURRENT
+or EMPTY was just initialized to CURRENT. They also skip the legacy
+`EraseInvalidSaveData()` converter before classification. A boot-scoped
+`gSramBootFlags` write-allowed bit remains clear for every non-current
+state and also blocks nested locale-preference stores and automatic
+sound-room unlock writes before the compatibility dialog. The archival
+build retains its original behavior byte-for-byte.
 
 `InitGlobalSaveInfodata()` (the genuinely-blank-SRAM initializer) now also
 builds and writes a current `ExpansionSaveMeta` record
@@ -398,9 +416,11 @@ proceeds into the existing save menu completely unchanged (same
 other state is diverted to `StartSaveCompatMenu()`
 (`src/save_compat_menu.c`) instead, and `StartSaveMenu()` returns
 immediately -- the real save menu proc is never started for a non-CURRENT
-state. `SAVE_COMPAT_EMPTY` cannot reach this gate as a non-CURRENT state in
-practice: `EraseSramDataIfInvalid()` (see above) already auto-converts it
-to `SAVE_COMPAT_CURRENT` at boot, before any menu is reachable.
+state. `SAVE_COMPAT_EMPTY` cannot normally reach this gate as a non-CURRENT
+state: `EraseSramDataIfInvalid()` (see above) already auto-converts either
+erased fill pattern to `SAVE_COMPAT_CURRENT` at boot. `StartSaveMenu()` also
+rechecks and initializes EMPTY as a defensive fallback before routing every
+other non-CURRENT state to the compatibility menu.
 
 `scripts/modernize/tests/test_save_format_call_site_safety.py` and
 `tools/gba-playtest/tests/test_save_compat_gate_safety.py` both statically
