@@ -51,9 +51,9 @@
     },
     "goal-window": {
       "authored_translation": 0,
-      "explicit_english_fallback": 0,
+      "explicit_english_fallback": 3,
       "indexed_source": 0,
-      "raw_source": 3,
+      "raw_source": 0,
       "total": 3
     },
     "items": {
@@ -107,8 +107,8 @@
     }
   },
   "explicit_fallback_coverage": {
-    "count": 1806,
-    "percent": 52.9
+    "count": 1809,
+    "percent": 52.99
   },
   "fallback_ids": [
     {
@@ -1850,6 +1850,21 @@
       "reason": "not-yet-verified",
       "subsystem": "unclassified",
       "target_id": "0x018D"
+    },
+    {
+      "reason": "not-yet-verified",
+      "subsystem": "goal-window",
+      "target_id": "0x01C1"
+    },
+    {
+      "reason": "not-yet-verified",
+      "subsystem": "goal-window",
+      "target_id": "0x01C2"
+    },
+    {
+      "reason": "not-yet-verified",
+      "subsystem": "goal-window",
+      "target_id": "0x01C3"
     },
     {
       "reason": "not-yet-verified",
@@ -9145,21 +9160,21 @@
   "fallback_reasons": {
     "dummy": 1,
     "expansion-only": 10,
-    "not-yet-verified": 1794,
+    "not-yet-verified": 1797,
     "region-only": 1
   },
   "mapping_authoritative": true,
   "schema_version": 1,
   "source_kind_counts": {
     "authored_translation": 0,
-    "explicit_english_fallback": 1806,
+    "explicit_english_fallback": 1809,
     "indexed_source": 1472,
-    "raw_source": 136
+    "raw_source": 133
   },
   "target_count": 3414,
   "translation_coverage": {
-    "count": 1608,
-    "percent": 47.1
+    "count": 1605,
+    "percent": 47.01
   },
   "unresolved_count": 0
 }

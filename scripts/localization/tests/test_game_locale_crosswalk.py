@@ -2,12 +2,14 @@ import json
 import subprocess
 import sys
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 from scripts.localization.game_locales.crosswalk import (
+    CrosswalkError,
     build_crosswalk_coverage_report,
     build_release_mapping,
     canonical_json_bytes,
@@ -138,12 +140,60 @@ class GameLocaleCrosswalkTests(unittest.TestCase):
         )
 
     def test_evidence_model_requires_structural_fields(self):
-        records = validate_evidence_document(self.evidence, target_count=3414)
+        records = validate_evidence_document(
+            self.evidence,
+            target_count=3414,
+            repo_root=ROOT,
+        )
         self.assertGreater(len(records), 1900)
         self.assertTrue(all(record.source_table for record in records))
         self.assertTrue(all(record.source_symbol for record in records))
         self.assertTrue(all(record.source_key for record in records))
         self.assertTrue(all(record.confidence in ("high", "manual") for record in records))
+
+    def test_crosswalk_rejects_literal_evidence_with_missing_source(self):
+        broken = deepcopy(self.evidence)
+        record = next(
+            row
+            for row in broken["records"]
+            if row.get("source", {})
+            .get("regional_sources", {})
+            .get("ja", {})
+            .get("kind")
+            == "literal"
+        )
+        record["source"]["regional_sources"]["ja"]["provenance"][
+            "source_path"
+        ] = "src/__missing_literal_source.c"
+        with self.assertRaisesRegex(CrosswalkError, "source_path does not exist"):
+            validate_evidence_document(
+                broken,
+                target_count=3414,
+                repo_root=ROOT,
+            )
+
+    def test_all_final_japanese_literal_providers_verify_committed_context(self):
+        mapping = validate_mapping_document(
+            self.mapping_data,
+            target_count=3414,
+            repo_root=ROOT,
+        )
+        literal_rows = [
+            row
+            for row in mapping.rows
+            if row.source.get("regional_sources", {}).get("ja", {}).get("kind")
+            == "literal"
+        ]
+        self.assertEqual(len(literal_rows), 20)
+        self.assertTrue(
+            all(
+                row.source["regional_sources"]["ja"]["provenance"].get(
+                    "context_sha256"
+                )
+                for row in literal_rows
+            )
+        )
+        self.assertFalse({0x01C1, 0x01C2, 0x01C3} & {row.target_id for row in literal_rows})
 
     def test_coverage_distinguishes_translation_and_fallback(self):
         report = build_crosswalk_coverage_report(

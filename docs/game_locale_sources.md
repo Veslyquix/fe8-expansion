@@ -25,6 +25,10 @@ remain import provenance only and never become runtime keys.
 - `mapping/fe8u_structural_evidence.json`: hash-pinned evidence harvested from
   matching named FE8U/FE8J structures. Each slot records its subsystem,
   evidence kind, table/symbol/key, confidence, source paths, and rationale.
+  A Japanese `literal` provider additionally names an existing tracked C
+  source file, table symbol, `message_id=0xNNNN` key, and bounded initializer
+  context SHA-256. Validation opens the source and requires the keyed entry's
+  exact literal and fingerprint to match.
 - `mapping/fe8u_target_map.json`: the authoritative 3,414-row FE8U target
   decision ledger generated from the committed evidence. Every row is indexed,
   raw, authored, or an explicit English fallback.
@@ -32,8 +36,8 @@ remain import provenance only and never become runtime keys.
   subsystem counts plus every fallback target ID and reason.
 - `mapping/raw_surface_decisions.json`: the 29 audited records that were not
   part of the original 114 raw-to-game-ID mappings. Each has a concrete game
-  message ID, semantic expansion key, or documented exclusion and call-site
-  anchors.
+  message ID, semantic expansion key, explicit English fallback, or documented
+  exclusion and call-site anchors.
 - `mapping/raw_surface_closure.json`: deterministic 143-record closure
   manifest. It is rebuilt from the raw source, verified FE8U map, deferred
   decisions, expansion registry/catalogs, and live source anchors.
@@ -127,14 +131,14 @@ The committed FE8U target report currently contains 3,414 decisions and zero
 unresolved:
 
 - 1,472 verified indexed mappings;
-- 136 verified raw target mappings, covering 137 raw import records because
+- 133 verified raw target mappings, covering 134 raw import records because
   the two Attack pointers intentionally share FE8U message ID `0x067B`;
 - 0 authored translations;
-- 1,806 explicit English fallbacks.
+- 1,809 explicit English fallbacks.
 
-Translation coverage is therefore 1,608 targets (47.10%). Explicit fallback
-coverage is 1,806 targets (52.90%); fallback content is not translated content.
-The largest reported gap is 1,794 `not-yet-verified` targets, chiefly dialogue
+Translation coverage is therefore 1,605 targets (47.01%). Explicit fallback
+coverage is 1,809 targets (52.99%); fallback content is not translated content.
+The largest reported gap is 1,797 `not-yet-verified` targets, chiefly dialogue
 outside the proven named structures. Other fallback reasons are `dummy` (1),
 `region-only` (1), and `expansion-only` (10).
 
@@ -142,7 +146,7 @@ outside the proven named structures. Other fallback reasons are `dummy` (1),
 
 The closure ledger accounts for all 143 unique raw imports:
 
-- 137 records resolve through stable FE8U game message IDs;
+- 134 records resolve through stable FE8U game message IDs;
 - 2 distinct commands that share FE8U ID `0x0693` use semantic expansion keys
   (`raw_surface.unit_action.summon` and
   `raw_surface.unit_action.call_monster`);
@@ -150,14 +154,18 @@ The closure ledger accounts for all 143 unique raw imports:
   `ClassChgMenuItem_OnTextDraw` callback always replaces them with localized
   class names;
 - 1 fixed build timestamp is excluded as non-language diagnostic identity;
-- 0 records use an English fallback and 0 remain unresolved.
+- 3 goal-window records use explicit English fallback because their former
+  Japanese provenance cited an absent source file and no committed source
+  table binds the exact literals to those IDs;
+- 0 records remain unresolved.
 
-The game-ID decisions include committed Japanese text copied from the
-authorized FE8J source semantics and Simplified Chinese from the exact imported
-raw payload. The expansion-key decisions keep the same provenance; their FE8J
-full-width indentation is normalized to the expansion catalog's allowed ASCII
-space, while the semantic labels remain exact. They are drawn with
-`Text_DrawString`, which is UTF-8 aware in modern localized-font profiles.
+The 20 remaining Japanese literal providers are verified directly against
+tracked FE8J-derived C table entries with matching message IDs, exact values,
+and bounded context hashes. Simplified Chinese still comes from the exact
+imported raw payload. The expansion-key decisions keep the same provenance;
+their FE8J full-width indentation is normalized to the expansion catalog's
+allowed ASCII space, while the semantic labels remain exact. They are drawn
+with `Text_DrawString`, which is UTF-8 aware in modern localized-font profiles.
 Legacy initializer strings and callbacks remain unchanged.
 
 Build or check the machine report:
@@ -168,9 +176,9 @@ python3 -m scripts.localization.game_locales check-raw-closure
 ```
 
 The check also verifies every recorded FE8U source path and anchor still
-exists, every semantic expansion key is active and translated in
-`en`/`ja`/`zh-Hans`, and each expansion-key Chinese value equals its imported
-raw payload.
+exists, every literal provider matches its committed symbol/key/value/context,
+every semantic expansion key is active and translated in `en`/`ja`/`zh-Hans`,
+and each expansion-key Chinese value equals its imported raw payload.
 
 ## Mapping validation and coverage
 

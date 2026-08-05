@@ -836,8 +836,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
-              "source_path": "src/data/data_081F6D00/data_081F6D00.s",
-              "source_symbol": "MenuItem_PromoSubConfirm[0].name"
+              "context_sha256": "c3abd9c697c949116e2d47fe7718605d8c7f01143171697f524a79ea2c83fbe0",
+              "source_key": "message_id=0x0023",
+              "source_path": "src/classchg-menuconfirm.c",
+              "source_symbol": "MenuItem_PromoSubConfirm"
             },
             "text": "　決定"
           },
@@ -859,10 +861,10 @@
         "evidence": "regional-promotion-message-id: MenuItem_PromoSubConfirm MenuItem_PromoSubConfirm[0].name",
         "evidence_kind": "regional-promotion-message-id",
         "method": "structural-crosswalk",
-        "rationale": "The FE8U promotion confirmation row already resolves this stable message ID; the FE8J promotion data and FE8CN raw record prove the regional label.",
+        "rationale": "The FE8U promotion confirmation row uses this stable message ID, and the committed FE8J-derived MenuItem_PromoSubConfirm table binds the exact Japanese literal to the same ID.",
         "source_key": "MenuItem_PromoSubConfirm[0].name",
         "source_paths": {
-          "fe8j": "src/data/data_081F6D00/data_081F6D00.s",
+          "fe8j": "src/classchg-menuconfirm.c",
           "fe8u": "src/classchg-menuconfirm.c"
         },
         "source_symbol": "MenuItem_PromoSubConfirm",
@@ -878,8 +880,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
-              "source_path": "src/data/data_081F6D00/data_081F6D00.s",
-              "source_symbol": "MenuItem_PromoSubConfirm[1].name"
+              "context_sha256": "b5d6d01a1c52801e0b811911b9834a994abc4eccfd91a6c91b805d7f4ff5611d",
+              "source_key": "message_id=0x0024",
+              "source_path": "src/classchg-menuconfirm.c",
+              "source_symbol": "MenuItem_PromoSubConfirm"
             },
             "text": "　やめる"
           },
@@ -901,10 +905,10 @@
         "evidence": "regional-promotion-message-id: MenuItem_PromoSubConfirm MenuItem_PromoSubConfirm[1].name",
         "evidence_kind": "regional-promotion-message-id",
         "method": "structural-crosswalk",
-        "rationale": "The FE8U promotion confirmation row already resolves this stable message ID; the FE8J promotion data and FE8CN raw record prove the regional label.",
+        "rationale": "The FE8U promotion confirmation row uses this stable message ID, and the committed FE8J-derived MenuItem_PromoSubConfirm table binds the exact Japanese literal to the same ID.",
         "source_key": "MenuItem_PromoSubConfirm[1].name",
         "source_paths": {
-          "fe8j": "src/data/data_081F6D00/data_081F6D00.s",
+          "fe8j": "src/classchg-menuconfirm.c",
           "fe8u": "src/classchg-menuconfirm.c"
         },
         "source_symbol": "MenuItem_PromoSubConfirm",
@@ -944,8 +948,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "a5affa6867e7f1cbb126a50b9357f87902d996f2c0a249506d44da5d60c7e406",
+              "source_key": "message_id=0x0026",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_0AC"
+              "source_symbol": "gDebugContinueMenuItems"
             },
             "text": "　リリースエントリ"
           },
@@ -986,8 +992,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "e85517e27fd6fa5503f1d3f058e61260b597dc128af1bc23db458ed8d142d4f7",
+              "source_key": "message_id=0x0027",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_09C"
+              "source_symbol": "gDebugContinueMenuItems"
             },
             "text": "　どこでも再開"
           },
@@ -1028,8 +1036,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "72e8377c23640f843e4d879284b390076444aaefe58f131087eb2b0da3ce899f",
+              "source_key": "message_id=0x0028",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_090"
+              "source_symbol": "gDebugContinueMenuItems"
             },
             "text": "　手再開"
           },
@@ -1070,8 +1080,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "faca0ce8dd3fedae2f4b560482043dbbe2c5c7baa9e3a4b5951fef61448e8e47",
+              "source_key": "message_id=0x0029",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_07C"
+              "source_symbol": "gDebugContinueMenuItems"
             },
             "text": "　ファイル初期化"
           },
@@ -12257,127 +12269,58 @@
     },
     {
       "source": {
-        "import_id": "fe8cn.raw.import-0139",
-        "kind": "raw",
-        "regional_sources": {
-          "ja": {
-            "kind": "literal",
-            "provenance": {
-              "source_path": "src/player_interface_0808F584.c",
-              "source_symbol": "GoalString_UnitsLeft"
-            },
-            "text": "残り"
-          },
-          "zh-Hans": {
-            "import_id": "fe8cn.raw.import-0139",
-            "kind": "import"
-          }
-        }
+        "kind": "english_fallback",
+        "reason": "not-yet-verified"
       },
       "state": "verified",
       "target_id": "0x01C1",
       "verification": {
-        "candidate_seed": {
-          "matched": false,
-          "seed_tag": "interp",
-          "source_line": 447
-        },
-        "confidence": "high",
-        "evidence": "regional-goal-message-id: GoalDisplay_Init GOAL_TYPE_DEFEAT_ALL.units_left",
-        "evidence_kind": "regional-goal-message-id",
-        "method": "structural-crosswalk",
-        "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
-        "source_key": "GOAL_TYPE_DEFEAT_ALL.units_left",
-        "source_paths": {
-          "fe8j": "src/player_interface_0808F584.c",
-          "fe8u": "src/player_interface.c"
-        },
-        "source_symbol": "GoalDisplay_Init",
-        "source_table": "GoalDisplay_Init",
+        "confidence": "explicit",
+        "evidence": "The prior Japanese literal '残り' cited an absent source file; no committed source table binds that exact literal to this FE8U target.",
+        "evidence_kind": "fallback-classification",
+        "method": "explicit-fallback",
+        "rationale": "The prior Japanese literal '残り' cited an absent source file; no committed source table binds that exact literal to this FE8U target.",
+        "source_key": "0x01C1",
+        "source_symbol": "gMsgTable",
+        "source_table": "FE8U target universe",
         "subsystem": "goal-window"
       }
     },
     {
       "source": {
-        "import_id": "fe8cn.raw.import-0141",
-        "kind": "raw",
-        "regional_sources": {
-          "ja": {
-            "kind": "literal",
-            "provenance": {
-              "source_path": "src/player_interface_0808F584.c",
-              "source_symbol": "GoalString_Turn"
-            },
-            "text": "ターン"
-          },
-          "zh-Hans": {
-            "import_id": "fe8cn.raw.import-0141",
-            "kind": "import"
-          }
-        }
+        "kind": "english_fallback",
+        "reason": "not-yet-verified"
       },
       "state": "verified",
       "target_id": "0x01C2",
       "verification": {
-        "candidate_seed": {
-          "matched": false,
-          "seed_tag": "auto:shifted",
-          "source_line": 448
-        },
-        "confidence": "high",
-        "evidence": "regional-goal-message-id: GoalDisplay_Init GOAL_TYPE_DEFENSE.turn_suffix",
-        "evidence_kind": "regional-goal-message-id",
-        "method": "structural-crosswalk",
-        "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
-        "source_key": "GOAL_TYPE_DEFENSE.turn_suffix",
-        "source_paths": {
-          "fe8j": "src/player_interface_0808F584.c",
-          "fe8u": "src/player_interface.c"
-        },
-        "source_symbol": "GoalDisplay_Init",
-        "source_table": "GoalDisplay_Init",
+        "confidence": "explicit",
+        "evidence": "The prior Japanese literal 'ターン' cited an absent source file; no committed source table binds that exact literal to this FE8U target.",
+        "evidence_kind": "fallback-classification",
+        "method": "explicit-fallback",
+        "rationale": "The prior Japanese literal 'ターン' cited an absent source file; no committed source table binds that exact literal to this FE8U target.",
+        "source_key": "0x01C2",
+        "source_symbol": "gMsgTable",
+        "source_table": "FE8U target universe",
         "subsystem": "goal-window"
       }
     },
     {
       "source": {
-        "import_id": "fe8cn.raw.import-0140",
-        "kind": "raw",
-        "regional_sources": {
-          "ja": {
-            "kind": "literal",
-            "provenance": {
-              "source_path": "src/player_interface_0808F584.c",
-              "source_symbol": "GoalString_LastTurn"
-            },
-            "text": "最終ターン"
-          },
-          "zh-Hans": {
-            "import_id": "fe8cn.raw.import-0140",
-            "kind": "import"
-          }
-        }
+        "kind": "english_fallback",
+        "reason": "not-yet-verified"
       },
       "state": "verified",
       "target_id": "0x01C3",
       "verification": {
-        "candidate_seed": {
-          "matched": false,
-          "seed_tag": "interp",
-          "source_line": 449
-        },
-        "confidence": "high",
-        "evidence": "regional-goal-message-id: GoalDisplay_Init GOAL_TYPE_DEFENSE.last_turn",
-        "evidence_kind": "regional-goal-message-id",
-        "method": "structural-crosswalk",
-        "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
-        "source_key": "GOAL_TYPE_DEFENSE.last_turn",
-        "source_paths": {
-          "fe8j": "src/player_interface_0808F584.c",
-          "fe8u": "src/player_interface.c"
-        },
-        "source_symbol": "GoalDisplay_Init",
-        "source_table": "GoalDisplay_Init",
+        "confidence": "explicit",
+        "evidence": "The prior Japanese literal '最終ターン' cited an absent source file; no committed source table binds that exact literal to this FE8U target.",
+        "evidence_kind": "fallback-classification",
+        "method": "explicit-fallback",
+        "rationale": "The prior Japanese literal '最終ターン' cited an absent source file; no committed source table binds that exact literal to this FE8U target.",
+        "source_key": "0x01C3",
+        "source_symbol": "gMsgTable",
+        "source_table": "FE8U target universe",
         "subsystem": "goal-window"
       }
     },
@@ -46787,8 +46730,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "676d5a31e9afca62dfccdf6b0047051c6bd38692f0f5ea2c2b450ae008661cf6",
+              "source_key": "message_id=0x067B",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_254"
+              "source_symbol": "gUnitActionMenuItems"
             },
             "text": "　攻撃"
           },
@@ -48288,8 +48233,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "d9313e085970750d09c7d556d55b343888ad3f5badef293c22a261af6bd3ad53",
+              "source_key": "message_id=0x06A4",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_0C0"
+              "source_symbol": "gDebugChuudanMenuItems"
             },
             "text": "　手中断"
           },
@@ -48450,8 +48397,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "0a1ea40c63e3ff188e3fad11d48b375b44e685414db3a67866411b5f1862cfbb",
+              "source_key": "message_id=0x06AA",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_118"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　マップ"
           },
@@ -48492,8 +48441,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "0de5bea61c445c58665755a34d8aa21626c7baef22915736b1d7438f7175a655",
+              "source_key": "message_id=0x06AB",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_10C"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　デブ情報"
           },
@@ -48534,8 +48485,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "2aba3723828092f5ee3cde8b534bdd91ac12f188daf5011743e28c4ebc93a558",
+              "source_key": "message_id=0x06AC",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_104"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　天気"
           },
@@ -48576,8 +48529,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "07bb77bc1cbae243a2c1aef82613b0f6454700bf17cb34cc28f06040b90af828",
+              "source_key": "message_id=0x06AD",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_0FC"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　索敵"
           },
@@ -48618,8 +48573,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "3adaaf05612029d72f6cda561c5667d48857564b5fcf4f6d8569de6536fd2df3",
+              "source_key": "message_id=0x06AE",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_0F0"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　周回数"
           },
@@ -48660,8 +48617,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "e2b3546d0a9dd815ef28a36e503cf2dfbba2853c1d25054b79481b3754ded73a",
+              "source_key": "message_id=0x06AF",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_0E0"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　クリアずみ"
           },
@@ -48702,8 +48661,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "281a5818743b41e2a13bd906eda33f73555892c759aca1b035efaeea9ebf707c",
+              "source_key": "message_id=0x06B0",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_0CC"
+              "source_symbol": "gDebugMenuItems"
             },
             "text": "　おやすみなさい"
           },
@@ -48936,8 +48897,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "d6fc4f6b1e2eced517d9c4b237b82e3dec36fc62d0504ffeb99a6005d045f039",
+              "source_key": "message_id=0x06B9",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_060"
+              "source_symbol": "gDebugClearMenuItems"
             },
             "text": "ファイルをクリアずみに"
           },
@@ -48978,8 +48941,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "be93dafe1ac9a5b7a64624db449a60bd083dc796cbc3d91f4500a0264050366c",
+              "source_key": "message_id=0x06BA",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_054"
+              "source_symbol": "gDebugClearMenuItems"
             },
             "text": "しますか？"
           },
@@ -49020,8 +48985,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "0f21151397c31fec0e48d9f2b5a100eeb36371fc55a44e2064b718e890666c2f",
+              "source_key": "message_id=0x06BB",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_03C"
+              "source_symbol": "gDebugClearMenuItems"
             },
             "text": "クリアずみファイルでは"
           },
@@ -49062,8 +49029,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "c6fec9f72fabc0894789f6407a5536fa13297d7e164b2d7b9c6676692efc2709",
+              "source_key": "message_id=0x06BC",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_024"
+              "source_symbol": "gDebugClearMenuItems"
             },
             "text": "以後プレイできません"
           },
@@ -49104,8 +49073,10 @@
           "ja": {
             "kind": "literal",
             "provenance": {
+              "context_sha256": "78ce29be5b85aadc50c3f04323784c32965622fdfd93eacf65ff583caf96faff",
+              "source_key": "message_id=0x06BD",
               "source_path": "src/menu_def.c",
-              "source_symbol": "gMenuStr_00C"
+              "source_symbol": "gDebugClearMenuItems"
             },
             "text": "　　　　　　　　　了解"
           },

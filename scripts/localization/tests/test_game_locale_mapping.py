@@ -13,6 +13,7 @@ from scripts.localization.game_locales.coverage import (
 )
 from scripts.localization.game_locales.mapping import (
     MappingError,
+    literal_context_hashes,
     validate_mapping_document,
 )
 
@@ -68,6 +69,42 @@ class GameLocaleMappingTests(unittest.TestCase):
     def _candidate_data(self):
         return json.loads(self.CANDIDATE_PATH.read_text(encoding="utf-8"))
 
+    def _literal_mapping_data(self):
+        provenance = {
+            "source_key": "message_id=0x0023",
+            "source_path": "src/classchg-menuconfirm.c",
+            "source_symbol": "MenuItem_PromoSubConfirm",
+        }
+        _, hashes = literal_context_hashes(
+            text="　決定",
+            provenance=provenance,
+            field="fixture.provenance",
+            repo_root=ROOT,
+        )
+        provenance["context_sha256"] = hashes[0]
+        row = deepcopy(_verified_source_rows()[1])
+        row["target_id"] = "0x0023"
+        row["source"]["regional_sources"] = {
+            "ja": {
+                "kind": "literal",
+                "provenance": provenance,
+                "text": "　決定",
+            },
+            "zh-Hans": {
+                "import_id": "fe8cn.raw.import-0000",
+                "kind": "import",
+            },
+        }
+        return {
+            "schema_version": 2,
+            "kind": "fe8u-locale-mapping",
+            "locale_ids": ["ja", "zh-Hans"],
+            "authority": "verified",
+            "authoritative": True,
+            "note": "raw literal fixture",
+            "rows": [row],
+        }
+
     def test_fe8u_target_header_has_3414_targets(self):
         target_ids = load_fe8u_target_ids(ROOT / "include/constants/msg.h")
         self.assertEqual(len(target_ids), 3414)
@@ -121,38 +158,46 @@ class GameLocaleMappingTests(unittest.TestCase):
             validate_mapping_document(data, target_count=2)
 
     def test_raw_mapping_accepts_authorized_japanese_literal_provenance(self):
-        data = {
-            "schema_version": 2,
-            "kind": "fe8u-locale-mapping",
-            "locale_ids": ["ja", "zh-Hans"],
-            "authority": "verified",
-            "authoritative": True,
-            "note": "raw literal fixture",
-            "rows": [_verified_source_rows()[1]],
-        }
-        data["rows"][0]["source"]["regional_sources"] = {
-            "ja": {
-                "kind": "literal",
-                "text": "決定",
-                "provenance": {
-                    "source_path": "src/classchg-menuconfirm.c",
-                    "source_symbol": "MenuItem_PromoSubConfirm[0].name",
-                },
-            },
-            "zh-Hans": {
-                "kind": "import",
-                "import_id": "fe8cn.raw.import-0000",
-            },
-        }
-        mapping = validate_mapping_document(data, target_count=2)
+        data = self._literal_mapping_data()
+        mapping = validate_mapping_document(data, target_count=0x24, repo_root=ROOT)
         self.assertEqual(
             mapping.rows[0].source["regional_sources"]["ja"]["text"],
-            "決定",
+            "　決定",
         )
 
         del data["rows"][0]["source"]["regional_sources"]["ja"]["provenance"]
         with self.assertRaisesRegex(MappingError, "ja.provenance"):
-            validate_mapping_document(data, target_count=2)
+            validate_mapping_document(data, target_count=0x24, repo_root=ROOT)
+
+    def test_japanese_literal_rejects_missing_committed_source_file(self):
+        data = self._literal_mapping_data()
+        data["rows"][0]["source"]["regional_sources"]["ja"]["provenance"][
+            "source_path"
+        ] = "src/__missing_literal_source.c"
+        with self.assertRaisesRegex(MappingError, "source_path does not exist"):
+            validate_mapping_document(data, target_count=0x24, repo_root=ROOT)
+
+    def test_japanese_literal_rejects_missing_source_symbol(self):
+        data = self._literal_mapping_data()
+        data["rows"][0]["source"]["regional_sources"]["ja"]["provenance"][
+            "source_symbol"
+        ] = "gMissingLiteralSource"
+        with self.assertRaisesRegex(MappingError, "source_symbol is absent"):
+            validate_mapping_document(data, target_count=0x24, repo_root=ROOT)
+
+    def test_japanese_literal_rejects_mismatched_literal(self):
+        data = self._literal_mapping_data()
+        data["rows"][0]["source"]["regional_sources"]["ja"]["text"] = "　別"
+        with self.assertRaisesRegex(MappingError, "literal does not match"):
+            validate_mapping_document(data, target_count=0x24, repo_root=ROOT)
+
+    def test_japanese_literal_rejects_changed_source_context(self):
+        data = self._literal_mapping_data()
+        data["rows"][0]["source"]["regional_sources"]["ja"]["provenance"][
+            "context_sha256"
+        ] = "0" * 64
+        with self.assertRaisesRegex(MappingError, "does not match committed source context"):
+            validate_mapping_document(data, target_count=0x24, repo_root=ROOT)
 
     def test_candidate_coverage_is_honestly_unresolved(self):
         mapping = validate_mapping_document(self._candidate_data(), target_count=3414)

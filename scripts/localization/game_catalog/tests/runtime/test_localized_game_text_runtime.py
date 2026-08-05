@@ -319,7 +319,7 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
             for row in mapping["rows"]
             if row["source"]["kind"] == "english_fallback"
         ]
-        self.assertEqual(len(fallback_ids), 1806)
+        self.assertEqual(len(fallback_ids), 1809)
         (build_dir / "fallback_corpus_ids.h").write_text(
             "static const int sFallbackIds[] = {\n"
             + "".join(
@@ -358,7 +358,7 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
         run_result = self._run([str(binary)])
         self.assertEqual(
             run_result.stdout.strip(),
-            "fallback_corpus_driver: 1806 exact shared-English streams",
+            "fallback_corpus_driver: 1809 exact shared-English streams",
         )
 
     def test_profile_compiles_and_layout_probes(self):

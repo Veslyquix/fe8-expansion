@@ -384,10 +384,10 @@
           "path": "src/player_interface.c"
         }
       ],
-      "classification": "game_message",
+      "classification": "english_fallback",
+      "fallback_reason": "japanese-literal-source-unverified",
       "import_id": "fe8cn.raw.import-0139",
-      "rationale": "The goal window already resolves the stable FE8U Left label message ID.",
-      "target_id": "0x01C1",
+      "rationale": "Japanese goal-window label for FE8U 0x01C1 has no exact committed-source literal anchor.",
       "user_facing": true
     },
     {
@@ -399,10 +399,10 @@
           "path": "src/player_interface.c"
         }
       ],
-      "classification": "game_message",
+      "classification": "english_fallback",
+      "fallback_reason": "japanese-literal-source-unverified",
       "import_id": "fe8cn.raw.import-0140",
-      "rationale": "The goal window already resolves the stable FE8U Last Turn label message ID.",
-      "target_id": "0x01C3",
+      "rationale": "Japanese goal-window label for FE8U 0x01C3 has no exact committed-source literal anchor.",
       "user_facing": true
     },
     {
@@ -414,10 +414,10 @@
           "path": "src/player_interface.c"
         }
       ],
-      "classification": "game_message",
+      "classification": "english_fallback",
+      "fallback_reason": "japanese-literal-source-unverified",
       "import_id": "fe8cn.raw.import-0141",
-      "rationale": "The goal window already resolves the stable FE8U Turn suffix message ID.",
-      "target_id": "0x01C2",
+      "rationale": "Japanese goal-window label for FE8U 0x01C2 has no exact committed-source literal anchor.",
       "user_facing": true
     },
     {

@@ -195,37 +195,18 @@ class FixtureBuildTests(unittest.TestCase):
         self.assertEqual(report["locales"]["zh-Hans"]["provider_counts"]["raw"], 1)
         self.assertEqual(report["locales"]["zh-Hans"]["explicit_fallback_count"], 1)
 
-    def test_fixture_build_emits_authorized_japanese_raw_literal(self):
-        mapping = json.loads(
-            (self.fixture_dir / "mapping.json").read_text(encoding="utf-8")
-        )
-        mapping["rows"][1]["source"]["regional_sources"]["ja"] = {
-            "kind": "literal",
-            "text": "決定",
-            "provenance": {
-                "source_path": "src/classchg-menuconfirm.c",
-                "source_symbol": "MenuItem_PromoSubConfirm[0].name",
-            },
-        }
-        (self.fixture_dir / "mapping.json").write_text(
-            json.dumps(mapping, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-
-        build = build_game_catalog(
-            english_texts_path=self.fixture_dir / "texts.txt",
-            english_definitions_path=self.fixture_dir / "textdefs.txt",
-            ja_indexed_path=self.fixture_dir / "ja_indexed.txt",
-            zh_indexed_path=self.fixture_dir / "zh_indexed.txt",
-            zh_raw_path=self.fixture_dir / "zh_raw.json",
-            mapping_path=self.fixture_dir / "mapping.json",
-            target_header_path=self.fixture_dir / "msg.h",
-        )
+    def test_committed_build_emits_verified_japanese_raw_literal(self):
+        build = build_game_catalog()
         ja = build.locale_bundle("ja")
 
-        self.assertEqual(ja.catalog.decode_entry(1), "決定".encode("utf-8") + b"\x00")
-        self.assertEqual(build.report["locales"]["ja"]["provider_counts"]["raw"], 1)
-        self.assertEqual(build.report["locales"]["ja"]["provider_unavailable_count"], 0)
+        self.assertEqual(
+            ja.catalog.decode_entry(0x0023),
+            "　決定".encode("utf-8") + b"\x00",
+        )
+        self.assertEqual(
+            build.report["locales"]["ja"]["provider_counts"]["raw"],
+            20,
+        )
 
 
 if __name__ == "__main__":

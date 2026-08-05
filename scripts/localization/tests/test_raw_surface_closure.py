@@ -55,13 +55,13 @@ class RawSurfaceClosureTests(unittest.TestCase):
         self.assertEqual(summary["total_count"], 143)
         self.assertEqual(summary["baseline_game_message_count"], 114)
         self.assertEqual(summary["deferred_decision_count"], 29)
-        self.assertEqual(summary["game_message_count"], 137)
+        self.assertEqual(summary["game_message_count"], 134)
         self.assertEqual(summary["expansion_message_count"], 2)
         self.assertEqual(summary["non_user_facing_exclusion_count"], 3)
         self.assertEqual(summary["diagnostic_exclusion_count"], 1)
-        self.assertEqual(summary["english_fallback_count"], 0)
+        self.assertEqual(summary["english_fallback_count"], 3)
         self.assertEqual(summary["unresolved_count"], 0)
-        self.assertEqual(summary["user_facing_deferred_localized_count"], 25)
+        self.assertEqual(summary["user_facing_deferred_localized_count"], 22)
         self.assertEqual(
             len({row["import_id"] for row in self.closure["rows"]}), 143
         )
@@ -145,7 +145,49 @@ class RawSurfaceClosureTests(unittest.TestCase):
                 repo_root=ROOT,
             )
 
+    def test_tampered_literal_context_fails_the_closure(self):
+        broken = deepcopy(self.mapping)
+        row = next(
+            row
+            for row in broken["rows"]
+            if row.get("source", {})
+            .get("regional_sources", {})
+            .get("ja", {})
+            .get("kind")
+            == "literal"
+        )
+        row["source"]["regional_sources"]["ja"]["provenance"][
+            "context_sha256"
+        ] = "0" * 64
+        with self.assertRaisesRegex(
+            RawClosureError,
+            "literal evidence failed.*context_sha256",
+        ):
+            build_raw_surface_closure(
+                raw_data=self.raw,
+                mapping_data=broken,
+                decisions_data=self.decisions,
+                registry_data=self.registry,
+                catalog_data=self.catalogs,
+                repo_root=ROOT,
+            )
+
+    def test_unproven_goal_literals_are_explicit_fallbacks(self):
+        decisions = {
+            row["import_id"]: row for row in self.decisions["decisions"]
+        }
+        for import_id in (
+            "fe8cn.raw.import-0139",
+            "fe8cn.raw.import-0140",
+            "fe8cn.raw.import-0141",
+        ):
+            decision = decisions[import_id]
+            self.assertEqual(decision["classification"], "english_fallback")
+            self.assertEqual(
+                decision["fallback_reason"],
+                "japanese-literal-source-unverified",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
-

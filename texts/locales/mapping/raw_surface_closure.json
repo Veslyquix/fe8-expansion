@@ -3051,15 +3051,15 @@
           "path": "src/player_interface.c"
         }
       ],
-      "classification": "game_message",
+      "classification": "english_fallback",
       "decision_origin": "deferred-surface-audit",
+      "fallback_reason": "japanese-literal-source-unverified",
       "import_id": "fe8cn.raw.import-0139",
       "provenance": {
         "address": "0x0808F684"
       },
-      "rationale": "The goal window already resolves the stable FE8U Left label message ID.",
+      "rationale": "Japanese goal-window label for FE8U 0x01C1 has no exact committed-source literal anchor.",
       "source_text_sha256": "0ec085ed84584b2393a6c115b51363188368b1f511f492737f7bb47b09005b48",
-      "target_id": "0x01C1",
       "user_facing": true
     },
     {
@@ -3071,15 +3071,15 @@
           "path": "src/player_interface.c"
         }
       ],
-      "classification": "game_message",
+      "classification": "english_fallback",
       "decision_origin": "deferred-surface-audit",
+      "fallback_reason": "japanese-literal-source-unverified",
       "import_id": "fe8cn.raw.import-0140",
       "provenance": {
         "address": "0x0808F6EC"
       },
-      "rationale": "The goal window already resolves the stable FE8U Last Turn label message ID.",
+      "rationale": "Japanese goal-window label for FE8U 0x01C3 has no exact committed-source literal anchor.",
       "source_text_sha256": "a63adc3884676c4cda74a7fdd29a946e7ad72ef63b52ed039a84c614f7f9cddd",
-      "target_id": "0x01C3",
       "user_facing": true
     },
     {
@@ -3091,15 +3091,15 @@
           "path": "src/player_interface.c"
         }
       ],
-      "classification": "game_message",
+      "classification": "english_fallback",
       "decision_origin": "deferred-surface-audit",
+      "fallback_reason": "japanese-literal-source-unverified",
       "import_id": "fe8cn.raw.import-0141",
       "provenance": {
         "address": "0x0808F760"
       },
-      "rationale": "The goal window already resolves the stable FE8U Turn suffix message ID.",
+      "rationale": "Japanese goal-window label for FE8U 0x01C2 has no exact committed-source literal anchor.",
       "source_text_sha256": "9fb1d89660c28e488f979606377cfd65e01380649e060f692729c104d085085f",
-      "target_id": "0x01C2",
       "user_facing": true
     },
     {
@@ -3133,12 +3133,12 @@
     "baseline_game_message_count": 114,
     "deferred_decision_count": 29,
     "diagnostic_exclusion_count": 1,
-    "english_fallback_count": 0,
+    "english_fallback_count": 3,
     "expansion_message_count": 2,
-    "game_message_count": 137,
+    "game_message_count": 134,
     "non_user_facing_exclusion_count": 3,
     "total_count": 143,
     "unresolved_count": 0,
-    "user_facing_deferred_localized_count": 25
+    "user_facing_deferred_localized_count": 22
   }
 }

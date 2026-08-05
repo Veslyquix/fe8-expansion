@@ -27,12 +27,16 @@ from .raw_closure import (
 )
 
 
-def _load_mapping(path: Path, target_count: int):
+def _load_mapping(path: Path, target_count: int, *, repo_root: Path):
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
         raise MappingError(f"{path}: invalid JSON: {error}") from error
-    return validate_mapping_document(data, target_count=target_count)
+    return validate_mapping_document(
+        data,
+        target_count=target_count,
+        repo_root=repo_root,
+    )
 
 
 def _load_json(path: Path):
@@ -96,7 +100,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
 def _cmd_validate_mapping(args: argparse.Namespace) -> int:
     target_ids = load_fe8u_target_ids(args.target_header)
-    mapping = _load_mapping(args.mapping, len(target_ids))
+    mapping = _load_mapping(
+        args.mapping,
+        len(target_ids),
+        repo_root=args.repo_root,
+    )
     print(
         f"valid {mapping.authority} mapping: {len(mapping.rows)} rows, "
         f"locale_ids={','.join(mapping.locale_ids)}"
@@ -106,7 +114,11 @@ def _cmd_validate_mapping(args: argparse.Namespace) -> int:
 
 def _cmd_coverage(args: argparse.Namespace) -> int:
     target_ids = load_fe8u_target_ids(args.target_header)
-    mapping = _load_mapping(args.mapping, len(target_ids))
+    mapping = _load_mapping(
+        args.mapping,
+        len(target_ids),
+        repo_root=args.repo_root,
+    )
     report = build_coverage_report(mapping, target_ids, locale=args.locale)
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
@@ -120,8 +132,13 @@ def _build_crosswalk_artifacts(args: argparse.Namespace):
         evidence,
         target_count=target_count,
         candidate_data=candidates,
+        repo_root=args.repo_root,
     )
-    report = build_crosswalk_coverage_report(mapping, target_count=target_count)
+    report = build_crosswalk_coverage_report(
+        mapping,
+        target_count=target_count,
+        repo_root=args.repo_root,
+    )
     return {
         args.mapping: canonical_json_bytes(mapping),
         args.report: canonical_json_bytes(report),
@@ -285,6 +302,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("include/constants/msg.h"),
     )
+    validate_parser.add_argument("--repo-root", type=Path, default=Path("."))
     validate_parser.set_defaults(handler=_cmd_validate_mapping)
 
     coverage_parser = subparsers.add_parser(
@@ -298,6 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("include/constants/msg.h"),
     )
+    coverage_parser.add_argument("--repo-root", type=Path, default=Path("."))
     coverage_parser.set_defaults(handler=_cmd_coverage)
 
     harvest_parser = subparsers.add_parser(
@@ -361,6 +380,7 @@ def build_parser() -> argparse.ArgumentParser:
             type=Path,
             default=Path("include/constants/msg.h"),
         )
+        crosswalk_parser.add_argument("--repo-root", type=Path, default=Path("."))
         crosswalk_parser.set_defaults(handler=handler)
 
     for command, help_text, handler in (

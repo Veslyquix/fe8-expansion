@@ -102,7 +102,7 @@ int main(void)
     u32 index;
     int msgId;
 
-    if (ARRAY_COUNT(sFallbackIds) != 1806)
+    if (ARRAY_COUNT(sFallbackIds) != 1809)
         return 1;
 
     for (index = 0; index < ARRAY_COUNT(sFallbackIds); index++)
@@ -151,6 +151,6 @@ int main(void)
         }
     }
 
-    puts("fallback_corpus_driver: 1806 exact shared-English streams");
+    puts("fallback_corpus_driver: 1809 exact shared-English streams");
     return 0;
 }

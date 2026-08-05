@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import ast
+import hashlib
 import re
+import subprocess
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from pathlib import Path, PurePosixPath
+from typing import Any, Dict, List, Optional, Tuple
 
 from .parsers import FE8J_MAX_INDEXED_ID
 
@@ -21,6 +25,13 @@ VERIFICATION_CONFIDENCE = ("high", "manual", "explicit")
 _ID_RE = re.compile(r"0x([0-9A-F]{4})")
 _RAW_IMPORT_ID_RE = re.compile(r"fe8cn\.raw\.import-[0-9]{4}")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_LITERAL_SOURCE_KEY_RE = re.compile(r"message_id=0x([0-9A-F]{4})")
+_C_STRING_ENTRY_RE = re.compile(
+    r'^\s*"((?:\\.|[^"\\])*)"\s*,\s*(0[xX][0-9A-Fa-f]+|[0-9]+)\b',
+    re.DOTALL,
+)
+_COMMITTED_SOURCE_SUFFIXES = (".c", ".h")
 
 
 class MappingError(ValueError):
@@ -72,7 +83,187 @@ def _parse_id(value: Any, field: str) -> int:
     return int(match.group(1), 16)
 
 
-def _validate_source(source: Dict[str, Any], field: str) -> str:
+def _default_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _scan_balanced_source(text: str, opening: int, field: str) -> Tuple[str, int]:
+    depth = 0
+    quote: Optional[str] = None
+    escaped = False
+    in_line_comment = False
+    in_block_comment = False
+    index = opening
+    while index < len(text):
+        char = text[index]
+        next_char = text[index + 1] if index + 1 < len(text) else ""
+        if in_line_comment:
+            if char == "\n":
+                in_line_comment = False
+            index += 1
+            continue
+        if in_block_comment:
+            if char == "*" and next_char == "/":
+                in_block_comment = False
+                index += 2
+            else:
+                index += 1
+            continue
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "/" and next_char == "/":
+            in_line_comment = True
+            index += 2
+            continue
+        if char == "/" and next_char == "*":
+            in_block_comment = True
+            index += 2
+            continue
+        if char in ('"', "'"):
+            quote = char
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[opening + 1 : index], index + 1
+        index += 1
+    raise MappingError(f"{field} references an unterminated source initializer")
+
+
+def _top_level_source_entries(body: str, field: str) -> List[str]:
+    entries = []
+    index = 0
+    while index < len(body):
+        if body[index] == "{":
+            entry, index = _scan_balanced_source(body, index, field)
+            entries.append(entry)
+        else:
+            index += 1
+    return entries
+
+
+def _decode_c_string(value: str, field: str) -> str:
+    if "\\" not in value:
+        return value
+    try:
+        decoded = ast.literal_eval(f'"{value}"')
+    except (SyntaxError, ValueError) as error:
+        raise MappingError(f"{field} contains an unsupported C string escape") from error
+    if not isinstance(decoded, str):
+        raise MappingError(f"{field} did not decode to a string")
+    return decoded
+
+
+def _resolve_committed_source(
+    source_path: str,
+    *,
+    field: str,
+    repo_root: Optional[Path],
+) -> Path:
+    relative = PurePosixPath(source_path)
+    if relative.is_absolute() or ".." in relative.parts or str(relative) != source_path:
+        raise MappingError(f"{field}.source_path must be a canonical repository-relative path")
+    if relative.suffix not in _COMMITTED_SOURCE_SUFFIXES:
+        raise MappingError(
+            f"{field}.source_path must reference committed C source/header content"
+        )
+    root = Path(repo_root) if repo_root is not None else _default_repo_root()
+    root = root.resolve()
+    path = (root / source_path).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as error:
+        raise MappingError(f"{field}.source_path escapes the repository") from error
+    if not path.is_file():
+        raise MappingError(f"{field}.source_path does not exist: {source_path}")
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", source_path],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if tracked.returncode != 0:
+        raise MappingError(f"{field}.source_path is not committed: {source_path}")
+    return path
+
+
+def literal_context_hashes(
+    *,
+    text: str,
+    provenance: Dict[str, Any],
+    field: str,
+    repo_root: Optional[Path] = None,
+) -> Tuple[int, Tuple[str, ...]]:
+    source_path = _require_nonempty_string(
+        provenance.get("source_path"), f"{field}.source_path"
+    )
+    source_symbol = _require_nonempty_string(
+        provenance.get("source_symbol"), f"{field}.source_symbol"
+    )
+    if not _IDENTIFIER_RE.fullmatch(source_symbol):
+        raise MappingError(f"{field}.source_symbol must be a C identifier")
+    source_key = _require_nonempty_string(
+        provenance.get("source_key"), f"{field}.source_key"
+    )
+    key_match = _LITERAL_SOURCE_KEY_RE.fullmatch(source_key)
+    if not key_match:
+        raise MappingError(f"{field}.source_key must use message_id=0xNNNN form")
+    source_key_id = int(key_match.group(1), 16)
+
+    path = _resolve_committed_source(
+        source_path,
+        field=field,
+        repo_root=repo_root,
+    )
+    source = path.read_text(encoding="utf-8")
+    definition = re.search(
+        rf"\b{re.escape(source_symbol)}\s*\[[^\]]*\][^=;]*=\s*\{{",
+        source,
+    )
+    if not definition:
+        raise MappingError(
+            f"{field}.source_symbol is absent from {source_path}: {source_symbol}"
+        )
+    opening = source.find("{", definition.start())
+    body, _ = _scan_balanced_source(source, opening, field)
+    keyed_entries = []
+    literal_entries = []
+    for entry in _top_level_source_entries(body, field):
+        match = _C_STRING_ENTRY_RE.match(entry)
+        if not match or int(match.group(2), 0) != source_key_id:
+            continue
+        keyed_entries.append(entry)
+        if _decode_c_string(match.group(1), field) == text:
+            literal_entries.append(entry)
+    if not keyed_entries:
+        raise MappingError(
+            f"{field}.source_key is absent from {source_symbol}: {source_key}"
+        )
+    if not literal_entries:
+        raise MappingError(
+            f"{field} literal does not match {source_symbol} {source_key}"
+        )
+    return source_key_id, tuple(
+        hashlib.sha256(entry.strip().encode("utf-8")).hexdigest()
+        for entry in literal_entries
+    )
+
+
+def validate_source_provider(
+    source: Dict[str, Any],
+    field: str,
+    *,
+    target_id: Optional[int] = None,
+    repo_root: Optional[Path] = None,
+) -> str:
     kind = source.get("kind")
     if kind not in SOURCE_KINDS:
         raise MappingError(f"{field}.kind must be one of {SOURCE_KINDS}")
@@ -122,21 +313,36 @@ def _validate_source(source: Dict[str, Any], field: str) -> str:
                     ja_source.get("symbol"), f"{field}.regional_sources.ja.symbol"
                 )
             else:
-                _require_nonempty_string(
+                literal_text = _require_nonempty_string(
                     ja_source.get("text"), f"{field}.regional_sources.ja.text"
                 )
                 provenance = _require_dict(
                     ja_source.get("provenance"),
                     f"{field}.regional_sources.ja.provenance",
                 )
-                _require_nonempty_string(
-                    provenance.get("source_path"),
-                    f"{field}.regional_sources.ja.provenance.source_path",
+                provenance_field = f"{field}.regional_sources.ja.provenance"
+                source_key_id, context_hashes = literal_context_hashes(
+                    text=literal_text,
+                    provenance=provenance,
+                    field=provenance_field,
+                    repo_root=repo_root,
                 )
-                _require_nonempty_string(
-                    provenance.get("source_symbol"),
-                    f"{field}.regional_sources.ja.provenance.source_symbol",
-                )
+                if target_id is not None and source_key_id != target_id:
+                    raise MappingError(
+                        f"{provenance_field}.source_key must match target "
+                        f"{format_message_id(target_id)}"
+                    )
+                context_sha256 = provenance.get("context_sha256")
+                if not isinstance(context_sha256, str) or not _SHA256_RE.fullmatch(
+                    context_sha256
+                ):
+                    raise MappingError(
+                        f"{provenance_field}.context_sha256 must be 64 lowercase hex digits"
+                    )
+                if context_sha256 not in context_hashes:
+                    raise MappingError(
+                        f"{provenance_field}.context_sha256 does not match committed source context"
+                    )
             cn_source = _require_dict(
                 regional_sources.get("zh-Hans"),
                 f"{field}.regional_sources.zh-Hans",
@@ -160,6 +366,7 @@ def validate_mapping_document(
     data: Any,
     *,
     target_count: Optional[int] = None,
+    repo_root: Optional[Path] = None,
 ) -> MappingDocument:
     document = _require_dict(data, "mapping")
     if document.get("schema_version") != MAPPING_SCHEMA_VERSION:
@@ -240,7 +447,12 @@ def validate_mapping_document(
                 f"{field}.state must be {expected_state!r} for a {authority} document"
             )
         source = _require_dict(row.get("source"), f"{field}.source")
-        source_kind = _validate_source(source, f"{field}.source")
+        source_kind = validate_source_provider(
+            source,
+            f"{field}.source",
+            target_id=target_id,
+            repo_root=repo_root,
+        )
 
         candidate_provenance = row.get("candidate_provenance")
         verification = row.get("verification")

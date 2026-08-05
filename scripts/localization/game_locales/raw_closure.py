@@ -163,8 +163,15 @@ def _validate_decisions(
     return result
 
 
-def _mapped_imports(mapping_data: Any) -> Dict[str, Dict[str, Any]]:
-    mapping = validate_mapping_document(mapping_data)
+def _mapped_imports(
+    mapping_data: Any,
+    *,
+    repo_root: Path,
+) -> Dict[str, Dict[str, Any]]:
+    try:
+        mapping = validate_mapping_document(mapping_data, repo_root=repo_root)
+    except MappingError as error:
+        raise RawClosureError(f"mapping literal evidence failed: {error}") from error
     result: Dict[str, Dict[str, Any]] = {}
     for row in mapping.rows:
         if row.source_kind != "raw":
@@ -239,7 +246,7 @@ def build_raw_surface_closure(
         raw_records=raw_records,
         repo_root=repo_root,
     )
-    mapped = _mapped_imports(mapping_data)
+    mapped = _mapped_imports(mapping_data, repo_root=repo_root)
     active_keys = _active_registry_keys(registry_data)
     catalogs = {
         locale: _catalog_strings(catalog_data[locale], locale)

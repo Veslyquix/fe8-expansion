@@ -11,7 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
-from .mapping import MappingError, format_message_id, validate_mapping_document
+from .mapping import (
+    MappingError,
+    format_message_id,
+    validate_mapping_document,
+    validate_source_provider,
+)
 from .parsers import FE8J_MAX_INDEXED_ID
 
 EVIDENCE_SCHEMA_VERSION = 1
@@ -1183,7 +1188,44 @@ def harvest_structural_evidence(
     }
 
 
-def validate_evidence_document(data: Any, *, target_count: int) -> List[EvidenceRecord]:
+def _validated_fallback_overrides(
+    data: Any,
+    *,
+    target_count: int,
+) -> Dict[int, Dict[str, Any]]:
+    raw_overrides = data.get("fallback_overrides")
+    if not isinstance(raw_overrides, list):
+        raise CrosswalkError("evidence.fallback_overrides must be an array")
+    result = {}
+    for index, raw in enumerate(raw_overrides):
+        field = f"evidence.fallback_overrides[{index}]"
+        if not isinstance(raw, dict):
+            raise CrosswalkError(f"{field} must be an object")
+        target = raw.get("target_id")
+        if not isinstance(target, str) or not re.fullmatch(r"0x[0-9A-F]{4}", target):
+            raise CrosswalkError(f"{field}.target_id must use canonical 0xNNNN form")
+        target_id = int(target, 16)
+        if target_id < 0 or target_id >= target_count:
+            raise CrosswalkError(f"{field}.target_id is outside target universe")
+        if target_id in result:
+            raise CrosswalkError(f"{field}.target_id is duplicated")
+        if raw.get("reason") not in FALLBACK_REASONS:
+            raise CrosswalkError(
+                f"{field}.reason must be one of {FALLBACK_REASONS}"
+            )
+        for name in ("subsystem", "rationale"):
+            if not isinstance(raw.get(name), str) or not raw[name]:
+                raise CrosswalkError(f"{field}.{name} must be a non-empty string")
+        result[target_id] = raw
+    return result
+
+
+def validate_evidence_document(
+    data: Any,
+    *,
+    target_count: int,
+    repo_root: Optional[Path] = None,
+) -> List[EvidenceRecord]:
     if not isinstance(data, dict):
         raise CrosswalkError("evidence must be an object")
     if data.get("schema_version") != EVIDENCE_SCHEMA_VERSION:
@@ -1194,6 +1236,7 @@ def validate_evidence_document(data: Any, *, target_count: int) -> List[Evidence
         raise CrosswalkError(f"evidence.kind must be {EVIDENCE_KIND!r}")
     if data.get("target_count") != target_count:
         raise CrosswalkError(f"evidence.target_count must be {target_count}")
+    _validated_fallback_overrides(data, target_count=target_count)
     raw_records = data.get("records")
     if not isinstance(raw_records, list):
         raise CrosswalkError("evidence.records must be an array")
@@ -1215,6 +1258,15 @@ def validate_evidence_document(data: Any, *, target_count: int) -> List[Evidence
             rationale = raw["rationale"]
         except (KeyError, TypeError, ValueError) as error:
             raise CrosswalkError(f"{field} is incomplete: {error}") from error
+        try:
+            validate_source_provider(
+                source,
+                f"{field}.source",
+                target_id=target_id,
+                repo_root=repo_root,
+            )
+        except MappingError as error:
+            raise CrosswalkError(str(error)) from error
         for name, value in (
             ("subsystem", subsystem),
             ("evidence_kind", evidence_kind),
@@ -1225,6 +1277,16 @@ def validate_evidence_document(data: Any, *, target_count: int) -> List[Evidence
         ):
             if not isinstance(value, str) or not value:
                 raise CrosswalkError(f"{field}.{name} must be a non-empty string")
+        if not source_paths or any(
+            not isinstance(name, str)
+            or not name
+            or not isinstance(path, str)
+            or not path
+            for name, path in source_paths.items()
+        ):
+            raise CrosswalkError(
+                f"{field}.source_paths must contain non-empty string paths"
+            )
         if confidence not in CONFIDENCE_LEVELS:
             raise CrosswalkError(
                 f"{field}.confidence must be one of {CONFIDENCE_LEVELS}"
@@ -1252,10 +1314,19 @@ def _provider_key(source: Mapping[str, Any]) -> str:
     return json.dumps(source, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _candidate_rows(candidate_data: Optional[Any], target_count: int) -> Dict[int, Any]:
+def _candidate_rows(
+    candidate_data: Optional[Any],
+    target_count: int,
+    *,
+    repo_root: Optional[Path],
+) -> Dict[int, Any]:
     if candidate_data is None:
         return {}
-    candidate = validate_mapping_document(candidate_data, target_count=target_count)
+    candidate = validate_mapping_document(
+        candidate_data,
+        target_count=target_count,
+        repo_root=repo_root,
+    )
     if candidate.coverage_eligible:
         raise CrosswalkError("candidate input must not be authoritative")
     return {row.target_id: row for row in candidate.rows}
@@ -1266,16 +1337,26 @@ def build_release_mapping(
     *,
     target_count: int,
     candidate_data: Optional[Any] = None,
+    repo_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    records = validate_evidence_document(evidence_data, target_count=target_count)
-    candidates = _candidate_rows(candidate_data, target_count)
+    records = validate_evidence_document(
+        evidence_data,
+        target_count=target_count,
+        repo_root=repo_root,
+    )
+    candidates = _candidate_rows(
+        candidate_data,
+        target_count,
+        repo_root=repo_root,
+    )
     grouped: Dict[int, List[EvidenceRecord]] = {}
     for record in records:
         grouped.setdefault(record.target_id, []).append(record)
 
-    fallback_overrides = {
-        int(row["target_id"], 16): row for row in evidence_data.get("fallback_overrides", [])
-    }
+    fallback_overrides = _validated_fallback_overrides(
+        evidence_data,
+        target_count=target_count,
+    )
     rows: List[Dict[str, Any]] = []
     for target_id in range(target_count):
         evidence = grouped.get(target_id, [])
@@ -1394,12 +1475,25 @@ def build_release_mapping(
         "rows": rows,
         "schema_version": 2,
     }
-    validate_mapping_document(mapping, target_count=target_count)
+    validate_mapping_document(
+        mapping,
+        target_count=target_count,
+        repo_root=repo_root,
+    )
     return mapping
 
 
-def build_crosswalk_coverage_report(mapping_data: Any, *, target_count: int) -> Dict[str, Any]:
-    mapping = validate_mapping_document(mapping_data, target_count=target_count)
+def build_crosswalk_coverage_report(
+    mapping_data: Any,
+    *,
+    target_count: int,
+    repo_root: Optional[Path] = None,
+) -> Dict[str, Any]:
+    mapping = validate_mapping_document(
+        mapping_data,
+        target_count=target_count,
+        repo_root=repo_root,
+    )
     if not mapping.coverage_eligible:
         raise CrosswalkError("coverage requires an authoritative mapping")
     if len(mapping.rows) != target_count:
