@@ -156,6 +156,19 @@ menus and did not reach credits. Do not accept an adaptive run unless semantic
 chapter/phase state and the continuation agree; do not run it with a movie
 loaded because GBAHawk merges movie and Lua inputs.
 
+Issue #22 used this diagnostic to reproduce a graphics-corruption failure near
+reference source frame 18,505. The desynchronized route started trainee
+promotion with no eligible trainee: the original handler read beyond its
+three-entry trainee table, produced character/portrait ID zero, and passed the
+preceding Proc script bytes to the BIOS Huffman decompressor as face graphics.
+The decompressor then wrote through VRAM mirrors for thousands of frames.
+
+For this regression, replay the same poll-input stream through at least source
+frame 19,000 and require coherent rendering without a multi-thousand-frame
+input-poll stall. A valid run may take a different semantic route after the
+fixed handler rejects the nonexistent trainee; matching the old corrupt frame
+is neither expected nor desired.
+
 ## Confirmed setup (this run)
 
 - TAS: `vykan12-v2-fesacredstones.gbmv` (254,468 frames, ~71 min). Its `Header.txt`
