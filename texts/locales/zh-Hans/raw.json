@@ -1,0 +1,1770 @@
+{
+  "locale_id": "zh-Hans",
+  "record_count": 152,
+  "records": [
+    {
+      "address": "0x08000B04",
+      "key": "fe8cn.raw.08000B04",
+      "provenance": [
+        {
+          "marker_line": 17793,
+          "payload_start_line": 17794,
+          "record_index": 151
+        }
+      ],
+      "text": "2004/09/09(THU) 13:12:56"
+    },
+    {
+      "address": "0x0808F684",
+      "key": "fe8cn.raw.0808F684",
+      "provenance": [
+        {
+          "marker_line": 17769,
+          "payload_start_line": 17770,
+          "record_index": 139
+        }
+      ],
+      "text": "余："
+    },
+    {
+      "address": "0x0808F6EC",
+      "key": "fe8cn.raw.0808F6EC",
+      "provenance": [
+        {
+          "marker_line": 17771,
+          "payload_start_line": 17772,
+          "record_index": 140
+        }
+      ],
+      "text": "最终回合"
+    },
+    {
+      "address": "0x0808F760",
+      "key": "fe8cn.raw.0808F760",
+      "provenance": [
+        {
+          "marker_line": 17773,
+          "payload_start_line": 17774,
+          "record_index": 141
+        }
+      ],
+      "text": "回合"
+    },
+    {
+      "address": "0x085C4320",
+      "key": "fe8cn.raw.085C4320",
+      "provenance": [
+        {
+          "marker_line": 17491,
+          "payload_start_line": 17492,
+          "record_index": 0
+        }
+      ],
+      "text": "你确定要将存档"
+    },
+    {
+      "address": "0x085C4344",
+      "key": "fe8cn.raw.085C4344",
+      "provenance": [
+        {
+          "marker_line": 17493,
+          "payload_start_line": 17494,
+          "record_index": 1
+        }
+      ],
+      "text": "删除吗？"
+    },
+    {
+      "address": "0x085C4368",
+      "key": "fe8cn.raw.085C4368",
+      "provenance": [
+        {
+          "marker_line": 17495,
+          "payload_start_line": 17496,
+          "record_index": 2
+        }
+      ],
+      "text": "被删除的存档"
+    },
+    {
+      "address": "0x085C438C",
+      "key": "fe8cn.raw.085C438C",
+      "provenance": [
+        {
+          "marker_line": 17497,
+          "payload_start_line": 17498,
+          "record_index": 3
+        }
+      ],
+      "text": "就不能再玩了"
+    },
+    {
+      "address": "0x085C43B0",
+      "key": "fe8cn.raw.085C43B0",
+      "provenance": [
+        {
+          "marker_line": 17499,
+          "payload_start_line": 17500,
+          "record_index": 4
+        }
+      ],
+      "text": "         是的"
+    },
+    {
+      "address": "0x085C4464",
+      "key": "fe8cn.raw.085C4464",
+      "provenance": [
+        {
+          "marker_line": 17501,
+          "payload_start_line": 17502,
+          "record_index": 5
+        }
+      ],
+      "text": " 释放项目"
+    },
+    {
+      "address": "0x085C4488",
+      "key": "fe8cn.raw.085C4488",
+      "provenance": [
+        {
+          "marker_line": 17503,
+          "payload_start_line": 17504,
+          "record_index": 6
+        }
+      ],
+      "text": " 继续游戏"
+    },
+    {
+      "address": "0x085C44AC",
+      "key": "fe8cn.raw.085C44AC",
+      "provenance": [
+        {
+          "marker_line": 17505,
+          "payload_start_line": 17506,
+          "record_index": 7
+        }
+      ],
+      "text": " 继续"
+    },
+    {
+      "address": "0x085C44D0",
+      "key": "fe8cn.raw.085C44D0",
+      "provenance": [
+        {
+          "marker_line": 17507,
+          "payload_start_line": 17508,
+          "record_index": 8
+        }
+      ],
+      "text": " 存档初始化"
+    },
+    {
+      "address": "0x085C4518",
+      "key": "fe8cn.raw.085C4518",
+      "provenance": [
+        {
+          "marker_line": 17509,
+          "payload_start_line": 17510,
+          "record_index": 9
+        }
+      ],
+      "text": " 中断"
+    },
+    {
+      "address": "0x085C4560",
+      "key": "fe8cn.raw.085C4560",
+      "provenance": [
+        {
+          "marker_line": 17511,
+          "payload_start_line": 17512,
+          "record_index": 10
+        }
+      ],
+      "text": " 地图"
+    },
+    {
+      "address": "0x085C4584",
+      "key": "fe8cn.raw.085C4584",
+      "provenance": [
+        {
+          "marker_line": 17513,
+          "payload_start_line": 17514,
+          "record_index": 11
+        }
+      ],
+      "text": " 调试信息"
+    },
+    {
+      "address": "0x085C45A8",
+      "key": "fe8cn.raw.085C45A8",
+      "provenance": [
+        {
+          "marker_line": 17515,
+          "payload_start_line": 17516,
+          "record_index": 12
+        }
+      ],
+      "text": " 天气"
+    },
+    {
+      "address": "0x085C45CC",
+      "key": "fe8cn.raw.085C45CC",
+      "provenance": [
+        {
+          "marker_line": 17517,
+          "payload_start_line": 17518,
+          "record_index": 13
+        }
+      ],
+      "text": " 索敌"
+    },
+    {
+      "address": "0x085C45F0",
+      "key": "fe8cn.raw.085C45F0",
+      "provenance": [
+        {
+          "marker_line": 17519,
+          "payload_start_line": 17520,
+          "record_index": 14
+        }
+      ],
+      "text": " 周回数"
+    },
+    {
+      "address": "0x085C4614",
+      "key": "fe8cn.raw.085C4614",
+      "provenance": [
+        {
+          "marker_line": 17521,
+          "payload_start_line": 17522,
+          "record_index": 15
+        }
+      ],
+      "text": " 删除完成"
+    },
+    {
+      "address": "0x085C4638",
+      "key": "fe8cn.raw.085C4638",
+      "provenance": [
+        {
+          "marker_line": 17523,
+          "payload_start_line": 17524,
+          "record_index": 16
+        }
+      ],
+      "text": " 晚安"
+    },
+    {
+      "address": "0x085C4A28",
+      "key": "fe8cn.raw.085C4A28",
+      "provenance": [
+        {
+          "marker_line": 17525,
+          "payload_start_line": 17526,
+          "record_index": 17
+        }
+      ],
+      "text": "是的"
+    },
+    {
+      "address": "0x085C4A4C",
+      "key": "fe8cn.raw.085C4A4C",
+      "provenance": [
+        {
+          "marker_line": 17527,
+          "payload_start_line": 17528,
+          "record_index": 18
+        }
+      ],
+      "text": "不要"
+    },
+    {
+      "address": "0x085C4A94",
+      "key": "fe8cn.raw.085C4A94",
+      "provenance": [
+        {
+          "marker_line": 17529,
+          "payload_start_line": 17530,
+          "record_index": 19
+        }
+      ],
+      "text": "使用"
+    },
+    {
+      "address": "0x085C4AB8",
+      "key": "fe8cn.raw.085C4AB8",
+      "provenance": [
+        {
+          "marker_line": 17531,
+          "payload_start_line": 17532,
+          "record_index": 20
+        }
+      ],
+      "text": "装备"
+    },
+    {
+      "address": "0x085C4ADC",
+      "key": "fe8cn.raw.085C4ADC",
+      "provenance": [
+        {
+          "marker_line": 17533,
+          "payload_start_line": 17534,
+          "record_index": 21
+        }
+      ],
+      "text": "交换"
+    },
+    {
+      "address": "0x085C4B00",
+      "key": "fe8cn.raw.085C4B00",
+      "provenance": [
+        {
+          "marker_line": 17535,
+          "payload_start_line": 17536,
+          "record_index": 22
+        }
+      ],
+      "text": "丢弃"
+    },
+    {
+      "address": "0x085C4F14",
+      "key": "fe8cn.raw.085C4F14",
+      "provenance": [
+        {
+          "marker_line": 17537,
+          "payload_start_line": 17538,
+          "record_index": 23
+        }
+      ],
+      "text": " 占领"
+    },
+    {
+      "address": "0x085C4F38",
+      "key": "fe8cn.raw.085C4F38",
+      "provenance": [
+        {
+          "marker_line": 17539,
+          "payload_start_line": 17540,
+          "record_index": 24
+        }
+      ],
+      "text": " 攻击"
+    },
+    {
+      "address": "0x085C4F5C",
+      "key": "fe8cn.raw.085C4F5C",
+      "provenance": [
+        {
+          "marker_line": 17541,
+          "payload_start_line": 17542,
+          "record_index": 25
+        }
+      ],
+      "text": " 攻击"
+    },
+    {
+      "address": "0x085C4F80",
+      "key": "fe8cn.raw.085C4F80",
+      "provenance": [
+        {
+          "marker_line": 17543,
+          "payload_start_line": 17544,
+          "record_index": 26
+        }
+      ],
+      "text": " 杖"
+    },
+    {
+      "address": "0x085C4FA4",
+      "key": "fe8cn.raw.085C4FA4",
+      "provenance": [
+        {
+          "marker_line": 17545,
+          "payload_start_line": 17546,
+          "record_index": 27
+        }
+      ],
+      "text": " 乘坐"
+    },
+    {
+      "address": "0x085C4FC8",
+      "key": "fe8cn.raw.085C4FC8",
+      "provenance": [
+        {
+          "marker_line": 17547,
+          "payload_start_line": 17548,
+          "record_index": 28
+        }
+      ],
+      "text": " 步行"
+    },
+    {
+      "address": "0x085C4FEC",
+      "key": "fe8cn.raw.085C4FEC",
+      "provenance": [
+        {
+          "marker_line": 17549,
+          "payload_start_line": 17550,
+          "record_index": 29
+        }
+      ],
+      "text": " 演奏"
+    },
+    {
+      "address": "0x085C5010",
+      "key": "fe8cn.raw.085C5010",
+      "provenance": [
+        {
+          "marker_line": 17551,
+          "payload_start_line": 17552,
+          "record_index": 30
+        }
+      ],
+      "text": " 舞蹈"
+    },
+    {
+      "address": "0x085C5034",
+      "key": "fe8cn.raw.085C5034",
+      "provenance": [
+        {
+          "marker_line": 17553,
+          "payload_start_line": 17554,
+          "record_index": 31
+        }
+      ],
+      "text": " 盗取"
+    },
+    {
+      "address": "0x085C5058",
+      "key": "fe8cn.raw.085C5058",
+      "provenance": [
+        {
+          "marker_line": 17555,
+          "payload_start_line": 17556,
+          "record_index": 32
+        }
+      ],
+      "text": " 召唤"
+    },
+    {
+      "address": "0x085C507C",
+      "key": "fe8cn.raw.085C507C",
+      "provenance": [
+        {
+          "marker_line": 17557,
+          "payload_start_line": 17558,
+          "record_index": 33
+        }
+      ],
+      "text": " 呼魔"
+    },
+    {
+      "address": "0x085C50A0",
+      "key": "fe8cn.raw.085C50A0",
+      "provenance": [
+        {
+          "marker_line": 17559,
+          "payload_start_line": 17560,
+          "record_index": 34
+        }
+      ],
+      "text": " 打开"
+    },
+    {
+      "address": "0x085C50C4",
+      "key": "fe8cn.raw.085C50C4",
+      "provenance": [
+        {
+          "marker_line": 17561,
+          "payload_start_line": 17562,
+          "record_index": 35
+        }
+      ],
+      "text": " 对话"
+    },
+    {
+      "address": "0x085C50E8",
+      "key": "fe8cn.raw.085C50E8",
+      "provenance": [
+        {
+          "marker_line": 17563,
+          "payload_start_line": 17564,
+          "record_index": 36
+        }
+      ],
+      "text": " 支援"
+    },
+    {
+      "address": "0x085C510C",
+      "key": "fe8cn.raw.085C510C",
+      "provenance": [
+        {
+          "marker_line": 17565,
+          "payload_start_line": 17566,
+          "record_index": 37
+        }
+      ],
+      "text": " 访问"
+    },
+    {
+      "address": "0x085C5130",
+      "key": "fe8cn.raw.085C5130",
+      "provenance": [
+        {
+          "marker_line": 17567,
+          "payload_start_line": 17568,
+          "record_index": 38
+        }
+      ],
+      "text": " 宝箱"
+    },
+    {
+      "address": "0x085C5154",
+      "key": "fe8cn.raw.085C5154",
+      "provenance": [
+        {
+          "marker_line": 17569,
+          "payload_start_line": 17570,
+          "record_index": 39
+        }
+      ],
+      "text": " 开门"
+    },
+    {
+      "address": "0x085C5178",
+      "key": "fe8cn.raw.085C5178",
+      "provenance": [
+        {
+          "marker_line": 17571,
+          "payload_start_line": 17572,
+          "record_index": 40
+        }
+      ],
+      "text": " 武器店"
+    },
+    {
+      "address": "0x085C519C",
+      "key": "fe8cn.raw.085C519C",
+      "provenance": [
+        {
+          "marker_line": 17573,
+          "payload_start_line": 17574,
+          "record_index": 41
+        }
+      ],
+      "text": " 道具店"
+    },
+    {
+      "address": "0x085C51C0",
+      "key": "fe8cn.raw.085C51C0",
+      "provenance": [
+        {
+          "marker_line": 17575,
+          "payload_start_line": 17576,
+          "record_index": 42
+        }
+      ],
+      "text": " 秘密店"
+    },
+    {
+      "address": "0x085C51E4",
+      "key": "fe8cn.raw.085C51E4",
+      "provenance": [
+        {
+          "marker_line": 17577,
+          "payload_start_line": 17578,
+          "record_index": 43
+        }
+      ],
+      "text": " 斗技场"
+    },
+    {
+      "address": "0x085C5208",
+      "key": "fe8cn.raw.085C5208",
+      "provenance": [
+        {
+          "marker_line": 17579,
+          "payload_start_line": 17580,
+          "record_index": 44
+        }
+      ],
+      "text": " 救出"
+    },
+    {
+      "address": "0x085C522C",
+      "key": "fe8cn.raw.085C522C",
+      "provenance": [
+        {
+          "marker_line": 17581,
+          "payload_start_line": 17582,
+          "record_index": 45
+        }
+      ],
+      "text": " 放下"
+    },
+    {
+      "address": "0x085C5250",
+      "key": "fe8cn.raw.085C5250",
+      "provenance": [
+        {
+          "marker_line": 17583,
+          "payload_start_line": 17584,
+          "record_index": 46
+        }
+      ],
+      "text": " 接受"
+    },
+    {
+      "address": "0x085C5274",
+      "key": "fe8cn.raw.085C5274",
+      "provenance": [
+        {
+          "marker_line": 17585,
+          "payload_start_line": 17586,
+          "record_index": 47
+        }
+      ],
+      "text": " 转移"
+    },
+    {
+      "address": "0x085C5298",
+      "key": "fe8cn.raw.085C5298",
+      "provenance": [
+        {
+          "marker_line": 17587,
+          "payload_start_line": 17588,
+          "record_index": 48
+        }
+      ],
+      "text": " 物品"
+    },
+    {
+      "address": "0x085C52BC",
+      "key": "fe8cn.raw.085C52BC",
+      "provenance": [
+        {
+          "marker_line": 17589,
+          "payload_start_line": 17590,
+          "record_index": 49
+        }
+      ],
+      "text": " 交换"
+    },
+    {
+      "address": "0x085C52E0",
+      "key": "fe8cn.raw.085C52E0",
+      "provenance": [
+        {
+          "marker_line": 17591,
+          "payload_start_line": 17592,
+          "record_index": 50
+        }
+      ],
+      "text": " 运输队"
+    },
+    {
+      "address": "0x085C5304",
+      "key": "fe8cn.raw.085C5304",
+      "provenance": [
+        {
+          "marker_line": 17593,
+          "payload_start_line": 17594,
+          "record_index": 51
+        }
+      ],
+      "text": " 待机"
+    },
+    {
+      "address": "0x085C534C",
+      "key": "fe8cn.raw.085C534C",
+      "provenance": [
+        {
+          "marker_line": 17595,
+          "payload_start_line": 17596,
+          "record_index": 52
+        }
+      ],
+      "text": " 部队"
+    },
+    {
+      "address": "0x085C5370",
+      "key": "fe8cn.raw.085C5370",
+      "provenance": [
+        {
+          "marker_line": 17597,
+          "payload_start_line": 17598,
+          "record_index": 53
+        }
+      ],
+      "text": " 状态"
+    },
+    {
+      "address": "0x085C5394",
+      "key": "fe8cn.raw.085C5394",
+      "provenance": [
+        {
+          "marker_line": 17599,
+          "payload_start_line": 17600,
+          "record_index": 54
+        }
+      ],
+      "text": " 辞典"
+    },
+    {
+      "address": "0x085C53B8",
+      "key": "fe8cn.raw.085C53B8",
+      "provenance": [
+        {
+          "marker_line": 17601,
+          "payload_start_line": 17602,
+          "record_index": 55
+        }
+      ],
+      "text": " 战绩"
+    },
+    {
+      "address": "0x085C53DC",
+      "key": "fe8cn.raw.085C53DC",
+      "provenance": [
+        {
+          "marker_line": 17603,
+          "payload_start_line": 17604,
+          "record_index": 56
+        }
+      ],
+      "text": " 设定"
+    },
+    {
+      "address": "0x085C5400",
+      "key": "fe8cn.raw.085C5400",
+      "provenance": [
+        {
+          "marker_line": 17605,
+          "payload_start_line": 17606,
+          "record_index": 57
+        }
+      ],
+      "text": " 撤退"
+    },
+    {
+      "address": "0x085C5424",
+      "key": "fe8cn.raw.085C5424",
+      "provenance": [
+        {
+          "marker_line": 17607,
+          "payload_start_line": 17608,
+          "record_index": 58
+        }
+      ],
+      "text": " 中断"
+    },
+    {
+      "address": "0x085C5448",
+      "key": "fe8cn.raw.085C5448",
+      "provenance": [
+        {
+          "marker_line": 17609,
+          "payload_start_line": 17610,
+          "record_index": 59
+        }
+      ],
+      "text": " 结束"
+    },
+    {
+      "address": "0x088617C8",
+      "key": "fe8cn.raw.088617C8",
+      "provenance": [
+        {
+          "marker_line": 17639,
+          "payload_start_line": 17640,
+          "record_index": 74
+        }
+      ],
+      "text": "——"
+    },
+    {
+      "address": "0x088617CC",
+      "key": "fe8cn.raw.088617CC",
+      "provenance": [
+        {
+          "marker_line": 17641,
+          "payload_start_line": 17642,
+          "record_index": 75
+        }
+      ],
+      "text": "平地"
+    },
+    {
+      "address": "0x088617D0",
+      "key": "fe8cn.raw.088617D0",
+      "provenance": [
+        {
+          "marker_line": 17643,
+          "payload_start_line": 17644,
+          "record_index": 76
+        }
+      ],
+      "text": "道路"
+    },
+    {
+      "address": "0x088617D4",
+      "key": "fe8cn.raw.088617D4",
+      "provenance": [
+        {
+          "marker_line": 17645,
+          "payload_start_line": 17646,
+          "record_index": 77
+        }
+      ],
+      "text": "村庄"
+    },
+    {
+      "address": "0x088617D8",
+      "key": "fe8cn.raw.088617D8",
+      "provenance": [
+        {
+          "marker_line": 17647,
+          "payload_start_line": 17648,
+          "record_index": 78
+        }
+      ],
+      "text": "已关闭"
+    },
+    {
+      "address": "0x088617DC",
+      "key": "fe8cn.raw.088617DC",
+      "provenance": [
+        {
+          "marker_line": 17649,
+          "payload_start_line": 17650,
+          "record_index": 79
+        }
+      ],
+      "text": "民家"
+    },
+    {
+      "address": "0x088617E0",
+      "key": "fe8cn.raw.088617E0",
+      "provenance": [
+        {
+          "marker_line": 17651,
+          "payload_start_line": 17652,
+          "record_index": 80
+        }
+      ],
+      "text": "武器店"
+    },
+    {
+      "address": "0x088617E4",
+      "key": "fe8cn.raw.088617E4",
+      "provenance": [
+        {
+          "marker_line": 17653,
+          "payload_start_line": 17654,
+          "record_index": 81
+        }
+      ],
+      "text": "道具店"
+    },
+    {
+      "address": "0x088617E8",
+      "key": "fe8cn.raw.088617E8",
+      "provenance": [
+        {
+          "marker_line": 17655,
+          "payload_start_line": 17656,
+          "record_index": 82
+        }
+      ],
+      "text": "斗技场"
+    },
+    {
+      "address": "0x088617EC",
+      "key": "fe8cn.raw.088617EC",
+      "provenance": [
+        {
+          "marker_line": 17657,
+          "payload_start_line": 17658,
+          "record_index": 83
+        }
+      ],
+      "text": "寄存处"
+    },
+    {
+      "address": "0x088617F0",
+      "key": "fe8cn.raw.088617F0",
+      "provenance": [
+        {
+          "marker_line": 17659,
+          "payload_start_line": 17660,
+          "record_index": 84
+        }
+      ],
+      "text": "要塞"
+    },
+    {
+      "address": "0x088617F4",
+      "key": "fe8cn.raw.088617F4",
+      "provenance": [
+        {
+          "marker_line": 17661,
+          "payload_start_line": 17662,
+          "record_index": 85
+        }
+      ],
+      "text": "城门"
+    },
+    {
+      "address": "0x088617F8",
+      "key": "fe8cn.raw.088617F8",
+      "provenance": [
+        {
+          "marker_line": 17663,
+          "payload_start_line": 17664,
+          "record_index": 86
+        }
+      ],
+      "text": "森林"
+    },
+    {
+      "address": "0x088617FC",
+      "key": "fe8cn.raw.088617FC",
+      "provenance": [
+        {
+          "marker_line": 17665,
+          "payload_start_line": 17666,
+          "record_index": 87
+        }
+      ],
+      "text": "密林"
+    },
+    {
+      "address": "0x08861800",
+      "key": "fe8cn.raw.08861800",
+      "provenance": [
+        {
+          "marker_line": 17667,
+          "payload_start_line": 17668,
+          "record_index": 88
+        }
+      ],
+      "text": "沙地"
+    },
+    {
+      "address": "0x08861804",
+      "key": "fe8cn.raw.08861804",
+      "provenance": [
+        {
+          "marker_line": 17669,
+          "payload_start_line": 17670,
+          "record_index": 89
+        }
+      ],
+      "text": "沙漠"
+    },
+    {
+      "address": "0x08861808",
+      "key": "fe8cn.raw.08861808",
+      "provenance": [
+        {
+          "marker_line": 17671,
+          "payload_start_line": 17672,
+          "record_index": 90
+        }
+      ],
+      "text": "河"
+    },
+    {
+      "address": "0x0886180C",
+      "key": "fe8cn.raw.0886180C",
+      "provenance": [
+        {
+          "marker_line": 17673,
+          "payload_start_line": 17674,
+          "record_index": 91
+        }
+      ],
+      "text": "山"
+    },
+    {
+      "address": "0x08861810",
+      "key": "fe8cn.raw.08861810",
+      "provenance": [
+        {
+          "marker_line": 17675,
+          "payload_start_line": 17676,
+          "record_index": 92
+        }
+      ],
+      "text": "高山"
+    },
+    {
+      "address": "0x08861814",
+      "key": "fe8cn.raw.08861814",
+      "provenance": [
+        {
+          "marker_line": 17677,
+          "payload_start_line": 17678,
+          "record_index": 93
+        }
+      ],
+      "text": "桥"
+    },
+    {
+      "address": "0x08861818",
+      "key": "fe8cn.raw.08861818",
+      "provenance": [
+        {
+          "marker_line": 17679,
+          "payload_start_line": 17680,
+          "record_index": 94
+        }
+      ],
+      "text": "吊桥"
+    },
+    {
+      "address": "0x0886181C",
+      "key": "fe8cn.raw.0886181C",
+      "provenance": [
+        {
+          "marker_line": 17681,
+          "payload_start_line": 17682,
+          "record_index": 95
+        }
+      ],
+      "text": "海"
+    },
+    {
+      "address": "0x08861820",
+      "key": "fe8cn.raw.08861820",
+      "provenance": [
+        {
+          "marker_line": 17683,
+          "payload_start_line": 17684,
+          "record_index": 96
+        }
+      ],
+      "text": "湖"
+    },
+    {
+      "address": "0x08861824",
+      "key": "fe8cn.raw.08861824",
+      "provenance": [
+        {
+          "marker_line": 17685,
+          "payload_start_line": 17686,
+          "record_index": 97
+        }
+      ],
+      "text": "地板"
+    },
+    {
+      "address": "0x08861828",
+      "key": "fe8cn.raw.08861828",
+      "provenance": [
+        {
+          "marker_line": 17687,
+          "payload_start_line": 17688,
+          "record_index": 98
+        }
+      ],
+      "text": "地板"
+    },
+    {
+      "address": "0x0886182C",
+      "key": "fe8cn.raw.0886182C",
+      "provenance": [
+        {
+          "marker_line": 17689,
+          "payload_start_line": 17690,
+          "record_index": 99
+        }
+      ],
+      "text": "围墙"
+    },
+    {
+      "address": "0x08861830",
+      "key": "fe8cn.raw.08861830",
+      "provenance": [
+        {
+          "marker_line": 17691,
+          "payload_start_line": 17692,
+          "record_index": 100
+        }
+      ],
+      "text": "墙壁"
+    },
+    {
+      "address": "0x08861834",
+      "key": "fe8cn.raw.08861834",
+      "provenance": [
+        {
+          "marker_line": 17693,
+          "payload_start_line": 17694,
+          "record_index": 101
+        }
+      ],
+      "text": "墙壁"
+    },
+    {
+      "address": "0x08861838",
+      "key": "fe8cn.raw.08861838",
+      "provenance": [
+        {
+          "marker_line": 17695,
+          "payload_start_line": 17696,
+          "record_index": 102
+        }
+      ],
+      "text": "破壁"
+    },
+    {
+      "address": "0x0886183C",
+      "key": "fe8cn.raw.0886183C",
+      "provenance": [
+        {
+          "marker_line": 17697,
+          "payload_start_line": 17698,
+          "record_index": 103
+        }
+      ],
+      "text": "柱子"
+    },
+    {
+      "address": "0x08861840",
+      "key": "fe8cn.raw.08861840",
+      "provenance": [
+        {
+          "marker_line": 17699,
+          "payload_start_line": 17700,
+          "record_index": 104
+        }
+      ],
+      "text": "门"
+    },
+    {
+      "address": "0x08861844",
+      "key": "fe8cn.raw.08861844",
+      "provenance": [
+        {
+          "marker_line": 17701,
+          "payload_start_line": 17702,
+          "record_index": 105
+        }
+      ],
+      "text": "宝座"
+    },
+    {
+      "address": "0x08861848",
+      "key": "fe8cn.raw.08861848",
+      "provenance": [
+        {
+          "marker_line": 17703,
+          "payload_start_line": 17704,
+          "record_index": 106
+        }
+      ],
+      "text": "空宝箱"
+    },
+    {
+      "address": "0x0886184C",
+      "key": "fe8cn.raw.0886184C",
+      "provenance": [
+        {
+          "marker_line": 17705,
+          "payload_start_line": 17706,
+          "record_index": 107
+        }
+      ],
+      "text": "宝箱"
+    },
+    {
+      "address": "0x08861850",
+      "key": "fe8cn.raw.08861850",
+      "provenance": [
+        {
+          "marker_line": 17707,
+          "payload_start_line": 17708,
+          "record_index": 108
+        }
+      ],
+      "text": "屋顶"
+    },
+    {
+      "address": "0x08861854",
+      "key": "fe8cn.raw.08861854",
+      "provenance": [
+        {
+          "marker_line": 17709,
+          "payload_start_line": 17710,
+          "record_index": 109
+        }
+      ],
+      "text": "大门"
+    },
+    {
+      "address": "0x08861858",
+      "key": "fe8cn.raw.08861858",
+      "provenance": [
+        {
+          "marker_line": 17711,
+          "payload_start_line": 17712,
+          "record_index": 110
+        }
+      ],
+      "text": "教会"
+    },
+    {
+      "address": "0x0886185C",
+      "key": "fe8cn.raw.0886185C",
+      "provenance": [
+        {
+          "marker_line": 17713,
+          "payload_start_line": 17714,
+          "record_index": 111
+        }
+      ],
+      "text": "废墟"
+    },
+    {
+      "address": "0x08861860",
+      "key": "fe8cn.raw.08861860",
+      "provenance": [
+        {
+          "marker_line": 17715,
+          "payload_start_line": 17716,
+          "record_index": 112
+        }
+      ],
+      "text": "悬崖"
+    },
+    {
+      "address": "0x08861864",
+      "key": "fe8cn.raw.08861864",
+      "provenance": [
+        {
+          "marker_line": 17717,
+          "payload_start_line": 17718,
+          "record_index": 113
+        }
+      ],
+      "text": "弩"
+    },
+    {
+      "address": "0x08861868",
+      "key": "fe8cn.raw.08861868",
+      "provenance": [
+        {
+          "marker_line": 17719,
+          "payload_start_line": 17720,
+          "record_index": 114
+        }
+      ],
+      "text": "远程"
+    },
+    {
+      "address": "0x0886186C",
+      "key": "fe8cn.raw.0886186C",
+      "provenance": [
+        {
+          "marker_line": 17721,
+          "payload_start_line": 17722,
+          "record_index": 115
+        }
+      ],
+      "text": "必杀"
+    },
+    {
+      "address": "0x08861870",
+      "key": "fe8cn.raw.08861870",
+      "provenance": [
+        {
+          "marker_line": 17723,
+          "payload_start_line": 17724,
+          "record_index": 116
+        }
+      ],
+      "text": "荒地"
+    },
+    {
+      "address": "0x08861874",
+      "key": "fe8cn.raw.08861874",
+      "provenance": [
+        {
+          "marker_line": 17725,
+          "payload_start_line": 17726,
+          "record_index": 117
+        }
+      ],
+      "text": "破屋"
+    },
+    {
+      "address": "0x08861878",
+      "key": "fe8cn.raw.08861878",
+      "provenance": [
+        {
+          "marker_line": 17727,
+          "payload_start_line": 17728,
+          "record_index": 118
+        }
+      ],
+      "text": "——"
+    },
+    {
+      "address": "0x0886187C",
+      "key": "fe8cn.raw.0886187C",
+      "provenance": [
+        {
+          "marker_line": 17729,
+          "payload_start_line": 17730,
+          "record_index": 119
+        }
+      ],
+      "text": "楼梯"
+    },
+    {
+      "address": "0x08861880",
+      "key": "fe8cn.raw.08861880",
+      "provenance": [
+        {
+          "marker_line": 17731,
+          "payload_start_line": 17732,
+          "record_index": 120
+        }
+      ],
+      "text": "——"
+    },
+    {
+      "address": "0x08861884",
+      "key": "fe8cn.raw.08861884",
+      "provenance": [
+        {
+          "marker_line": 17733,
+          "payload_start_line": 17734,
+          "record_index": 121
+        }
+      ],
+      "text": "冰川"
+    },
+    {
+      "address": "0x08861888",
+      "key": "fe8cn.raw.08861888",
+      "provenance": [
+        {
+          "marker_line": 17735,
+          "payload_start_line": 17736,
+          "record_index": 122
+        }
+      ],
+      "text": "通信斗技"
+    },
+    {
+      "address": "0x0886188C",
+      "key": "fe8cn.raw.0886188C",
+      "provenance": [
+        {
+          "marker_line": 17737,
+          "payload_start_line": 17738,
+          "record_index": 123
+        }
+      ],
+      "text": "山谷"
+    },
+    {
+      "address": "0x08861890",
+      "key": "fe8cn.raw.08861890",
+      "provenance": [
+        {
+          "marker_line": 17739,
+          "payload_start_line": 17740,
+          "record_index": 124
+        }
+      ],
+      "text": "围墙"
+    },
+    {
+      "address": "0x08861894",
+      "key": "fe8cn.raw.08861894",
+      "provenance": [
+        {
+          "marker_line": 17741,
+          "payload_start_line": 17742,
+          "record_index": 125
+        }
+      ],
+      "text": "古树"
+    },
+    {
+      "address": "0x08861898",
+      "key": "fe8cn.raw.08861898",
+      "provenance": [
+        {
+          "marker_line": 17743,
+          "payload_start_line": 17744,
+          "record_index": 126
+        }
+      ],
+      "text": "圆木桥"
+    },
+    {
+      "address": "0x0886189C",
+      "key": "fe8cn.raw.0886189C",
+      "provenance": [
+        {
+          "marker_line": 17745,
+          "payload_start_line": 17746,
+          "record_index": 127
+        }
+      ],
+      "text": "天空"
+    },
+    {
+      "address": "0x088618A0",
+      "key": "fe8cn.raw.088618A0",
+      "provenance": [
+        {
+          "marker_line": 17747,
+          "payload_start_line": 17748,
+          "record_index": 128
+        }
+      ],
+      "text": "深海"
+    },
+    {
+      "address": "0x088618A4",
+      "key": "fe8cn.raw.088618A4",
+      "provenance": [
+        {
+          "marker_line": 17749,
+          "payload_start_line": 17750,
+          "record_index": 129
+        }
+      ],
+      "text": "遗迹"
+    },
+    {
+      "address": "0x088618A8",
+      "key": "fe8cn.raw.088618A8",
+      "provenance": [
+        {
+          "marker_line": 17751,
+          "payload_start_line": 17752,
+          "record_index": 130
+        }
+      ],
+      "text": "酒馆"
+    },
+    {
+      "address": "0x088618AC",
+      "key": "fe8cn.raw.088618AC",
+      "provenance": [
+        {
+          "marker_line": 17753,
+          "payload_start_line": 17754,
+          "record_index": 131
+        }
+      ],
+      "text": "桶"
+    },
+    {
+      "address": "0x088618B0",
+      "key": "fe8cn.raw.088618B0",
+      "provenance": [
+        {
+          "marker_line": 17755,
+          "payload_start_line": 17756,
+          "record_index": 132
+        }
+      ],
+      "text": "骨"
+    },
+    {
+      "address": "0x088618B4",
+      "key": "fe8cn.raw.088618B4",
+      "provenance": [
+        {
+          "marker_line": 17757,
+          "payload_start_line": 17758,
+          "record_index": 133
+        }
+      ],
+      "text": "暗"
+    },
+    {
+      "address": "0x088618B8",
+      "key": "fe8cn.raw.088618B8",
+      "provenance": [
+        {
+          "marker_line": 17759,
+          "payload_start_line": 17760,
+          "record_index": 134
+        }
+      ],
+      "text": "水"
+    },
+    {
+      "address": "0x088618BC",
+      "key": "fe8cn.raw.088618BC",
+      "provenance": [
+        {
+          "marker_line": 17761,
+          "payload_start_line": 17762,
+          "record_index": 135
+        }
+      ],
+      "text": "船舷"
+    },
+    {
+      "address": "0x088618C0",
+      "key": "fe8cn.raw.088618C0",
+      "provenance": [
+        {
+          "marker_line": 17763,
+          "payload_start_line": 17764,
+          "record_index": 136
+        }
+      ],
+      "text": "甲板"
+    },
+    {
+      "address": "0x088618C4",
+      "key": "fe8cn.raw.088618C4",
+      "provenance": [
+        {
+          "marker_line": 17765,
+          "payload_start_line": 17766,
+          "record_index": 137
+        }
+      ],
+      "text": "支柱"
+    },
+    {
+      "address": "0x088618C8",
+      "key": "fe8cn.raw.088618C8",
+      "provenance": [
+        {
+          "marker_line": 17767,
+          "payload_start_line": 17768,
+          "record_index": 138
+        }
+      ],
+      "text": "桅杆"
+    },
+    {
+      "address": "0x08AC1A0C",
+      "key": "fe8cn.raw.08AC1A0C",
+      "provenance": [
+        {
+          "marker_line": 17621,
+          "payload_start_line": 17622,
+          "record_index": 65
+        },
+        {
+          "marker_line": 17783,
+          "payload_start_line": 17784,
+          "record_index": 146
+        }
+      ],
+      "text": " 部队"
+    },
+    {
+      "address": "0x08AC1A30",
+      "key": "fe8cn.raw.08AC1A30",
+      "provenance": [
+        {
+          "marker_line": 17623,
+          "payload_start_line": 17624,
+          "record_index": 66
+        },
+        {
+          "marker_line": 17781,
+          "payload_start_line": 17782,
+          "record_index": 145
+        }
+      ],
+      "text": " 状态"
+    },
+    {
+      "address": "0x08AC1A54",
+      "key": "fe8cn.raw.08AC1A54",
+      "provenance": [
+        {
+          "marker_line": 17625,
+          "payload_start_line": 17626,
+          "record_index": 67
+        },
+        {
+          "marker_line": 17779,
+          "payload_start_line": 17780,
+          "record_index": 144
+        }
+      ],
+      "text": " 辞典"
+    },
+    {
+      "address": "0x08AC1A78",
+      "key": "fe8cn.raw.08AC1A78",
+      "provenance": [
+        {
+          "marker_line": 17627,
+          "payload_start_line": 17628,
+          "record_index": 68
+        },
+        {
+          "marker_line": 17777,
+          "payload_start_line": 17778,
+          "record_index": 143
+        }
+      ],
+      "text": " 设定"
+    },
+    {
+      "address": "0x08AC1A9C",
+      "key": "fe8cn.raw.08AC1A9C",
+      "provenance": [
+        {
+          "marker_line": 17629,
+          "payload_start_line": 17630,
+          "record_index": 69
+        },
+        {
+          "marker_line": 17775,
+          "payload_start_line": 17776,
+          "record_index": 142
+        }
+      ],
+      "text": " 记录"
+    },
+    {
+      "address": "0x08AC1B0C",
+      "key": "fe8cn.raw.08AC1B0C",
+      "provenance": [
+        {
+          "marker_line": 17631,
+          "payload_start_line": 17632,
+          "record_index": 70
+        },
+        {
+          "marker_line": 17791,
+          "payload_start_line": 17792,
+          "record_index": 150
+        }
+      ],
+      "text": " 进入武器店"
+    },
+    {
+      "address": "0x08AC1B30",
+      "key": "fe8cn.raw.08AC1B30",
+      "provenance": [
+        {
+          "marker_line": 17633,
+          "payload_start_line": 17634,
+          "record_index": 71
+        },
+        {
+          "marker_line": 17789,
+          "payload_start_line": 17790,
+          "record_index": 149
+        }
+      ],
+      "text": " 进入道具店"
+    },
+    {
+      "address": "0x08AC1B54",
+      "key": "fe8cn.raw.08AC1B54",
+      "provenance": [
+        {
+          "marker_line": 17635,
+          "payload_start_line": 17636,
+          "record_index": 72
+        },
+        {
+          "marker_line": 17787,
+          "payload_start_line": 17788,
+          "record_index": 148
+        }
+      ],
+      "text": " 进入秘密商店"
+    },
+    {
+      "address": "0x08AC1B78",
+      "key": "fe8cn.raw.08AC1B78",
+      "provenance": [
+        {
+          "marker_line": 17637,
+          "payload_start_line": 17638,
+          "record_index": 73
+        },
+        {
+          "marker_line": 17785,
+          "payload_start_line": 17786,
+          "record_index": 147
+        }
+      ],
+      "text": " 物品整理"
+    },
+    {
+      "address": "0x08BAB914",
+      "key": "fe8cn.raw.08BAB914",
+      "provenance": [
+        {
+          "marker_line": 17611,
+          "payload_start_line": 17612,
+          "record_index": 60
+        }
+      ],
+      "text": " 确定"
+    },
+    {
+      "address": "0x08BAB938",
+      "key": "fe8cn.raw.08BAB938",
+      "provenance": [
+        {
+          "marker_line": 17613,
+          "payload_start_line": 17614,
+          "record_index": 61
+        }
+      ],
+      "text": " 取消"
+    },
+    {
+      "address": "0x08BAB9A4",
+      "key": "fe8cn.raw.08BAB9A4",
+      "provenance": [
+        {
+          "marker_line": 17615,
+          "payload_start_line": 17616,
+          "record_index": 62
+        }
+      ],
+      "text": " 第1兵种"
+    },
+    {
+      "address": "0x08BAB9C8",
+      "key": "fe8cn.raw.08BAB9C8",
+      "provenance": [
+        {
+          "marker_line": 17617,
+          "payload_start_line": 17618,
+          "record_index": 63
+        }
+      ],
+      "text": " 第2兵种"
+    },
+    {
+      "address": "0x08BAB9EC",
+      "key": "fe8cn.raw.08BAB9EC",
+      "provenance": [
+        {
+          "marker_line": 17619,
+          "payload_start_line": 17620,
+          "record_index": 64
+        }
+      ],
+      "text": " 第3兵种"
+    }
+  ],
+  "schema_version": 1,
+  "source_layout": "FE8CN-raw-address",
+  "unique_address_count": 143
+}

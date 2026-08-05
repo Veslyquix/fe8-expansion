@@ -1,0 +1,37 @@
+# Normalized FE8J message control definitions.
+# Input SHA-256: 93186c5645192ef46484b34f0d6dc4237cf21b61ffac317077ac5892067cc0b5
+
+[X] = 0x0000
+[LF] = 0x0001
+[CR] = 0x0002
+[A] = 0x0003
+[....] = 0x0004
+[.....] = 0x0005
+[......] = 0x0006
+[.......] = 0x0007
+[OpenFarLeft] = 0x0008
+[OpenMidLeft] = 0x0009
+[OpenLeft] = 0x000A
+[OpenRight] = 0x000B
+[OpenMidRight] = 0x000C
+[OpenFarRight] = 0x000D
+[OpenFarFarLeft] = 0x000E
+[OpenFarFarRight] = 0x000F
+[LoadFace] = 0x0010
+[ClearFace] = 0x0011
+[NormalPrint] = 0x0012
+[FastPrint] = 0x0013
+[CloseSpeechFast] = 0x0014
+[CloseSpeechSlow] = 0x0015
+[ToggleMouthMove] = 0x0016
+[ToggleSmile] = 0x0017
+[Yes] = 0x0018
+[No] = 0x0019
+[BuySell] = 0x001A
+[ShopContinue] = 0x001B
+[SendToBack] = 0x001C
+[FastPrint2] = 0x001D
+[.] = 0x001F
+[HASH] = 0x0023
+[DashedLine] = 0x007F
+[AccentedE] = 0x00E9
