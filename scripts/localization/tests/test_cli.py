@@ -53,10 +53,29 @@ class CliTests(unittest.TestCase):
             )
             cat_path.write_text(json.dumps({"locale": "en", "strings": {}}), encoding="utf-8")
             result = run_cli(
-                ["validate", "--registry", str(reg_path), "--catalog-en", str(cat_path)]
+                [
+                    "validate",
+                    "--registry",
+                    str(reg_path),
+                    "--catalog",
+                    f"en={cat_path}",
+                ]
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("error:", result.stdout)
+
+    def test_validate_rejects_duplicate_catalog_mapping(self):
+        result = run_cli(
+            [
+                "validate",
+                "--catalog",
+                "en=texts/expansion/catalog.en.json",
+                "--catalog",
+                "en=texts/expansion/catalog.en.json",
+            ]
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("duplicate --catalog", result.stdout)
 
 
 if __name__ == "__main__":

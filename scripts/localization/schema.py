@@ -40,11 +40,15 @@ LOCALE_INVALID = 0xFF
 # translation, so it can never be mistaken for actual localized content.
 PSEUDO_LOCALE = "qps-ploc"
 
-# The current production catalog/runtime implementation ships English content
-# plus the derived pseudo locale. Japanese and Simplified Chinese keep their
-# stable IDs and future 32 MiB bank assignment, but remain reserved until their
-# catalogs, menu strings, fonts/codecs, renderer, and runtime integration are
-# populated.
+# Authored expansion-framework catalogs. qps-ploc is derived from English and
+# therefore deliberately excluded from this tuple.
+AUTHORED_CATALOG_LOCALES: Tuple[str, ...] = ("en", "ja", "zh-Hans")
+POPULATED_CATALOG_LOCALES: Tuple[str, ...] = AUTHORED_CATALOG_LOCALES + (PSEUDO_LOCALE,)
+
+# Product configuration remains intentionally narrower than catalog
+# population. Japanese and Simplified Chinese have expansion-framework
+# catalogs, but stay gated until the common CJK font/renderer and full game
+# locale runtime are ready.
 INITIALLY_SUPPORTED_LOCALES: Tuple[str, ...] = ("en", PSEUDO_LOCALE)
 REAL_CJK_LOCALES: Tuple[str, ...] = ("ja", "zh-Hans")
 CONFIGURABLE_LOCALES: Tuple[str, ...] = INITIALLY_SUPPORTED_LOCALES
@@ -84,13 +88,9 @@ SURFACES = (
     "diagnostic",
 )
 
-# ASCII-only glyph allowlist for sprint 1 (see docs/config_identity.md-style
-# reasoning: expansion framework strings ship as plain printable ASCII, plus
-# the single control token \n). Matches vanilla's own initial glyph set
-# intentionally kept narrow: broadening this later requires an explicit,
-# reviewed glyph-budget change, not a silent expansion.
-ASCII_MIN = 0x20
-ASCII_MAX = 0x7E
+# Catalog JSON contains strict UTF-8 text. Newline is the only control scalar
+# accepted by the expansion catalog; engine byte controls are not source-level
+# catalog tokens.
 ALLOWED_CONTROL_TOKENS = ("\n",)
 
 MAX_WIDTH_MIN = 1
@@ -100,6 +100,12 @@ MAX_DECODED_BYTES_MIN = 1
 # kept in sync explicitly (not imported from C) and cross-checked by
 # scripts/localization/tests/test_generate.py.
 MAX_DECODED_BYTES_MAX = 96
+
+# GBA/AAPCS generated-data accounting. The descriptor contains two pointers
+# and a u16 count, rounded to 4-byte alignment.
+C_POINTER_SIZE_BYTES = 4
+C_MSG_ID_SIZE_BYTES = 2
+C_CATALOG_DESCRIPTOR_SIZE_BYTES = 12
 
 
 class SchemaError(ValueError):

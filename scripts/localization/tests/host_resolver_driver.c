@@ -31,7 +31,9 @@ int main(void)
 
     CHECK(ExpansionLocale_IsEnabled(EXPANSION_LOCALE_EN) == TRUE);
     CHECK(ExpansionLocale_IsEnabled(EXPANSION_LOCALE_QPS_PLOC) == TRUE);
-    CHECK(ExpansionLocale_IsEnabled(EXPANSION_LOCALE_JA) == FALSE);
+    CHECK(ExpansionLocale_IsEnabled(EXPANSION_LOCALE_JA) == TRUE);
+    CHECK(ExpansionLocale_IsEnabled(EXPANSION_LOCALE_ZH_HANS) == TRUE);
+    CHECK(ExpansionLocale_IsEnabled(EXPANSION_LOCALE_FR) == FALSE);
 
     CHECK(ExpansionLocale_GetDefault() == EXPANSION_LOCALE_EN);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_EN);
@@ -42,26 +44,43 @@ int main(void)
      * call (it may alias the single bounded scratch slot). */
     {
         char en0[EXPANSION_LOCALE_SCRATCH_SLOT_BYTES];
-        const char *pseudo;
+        const char *localized;
         s = ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, 0);
         CHECK(s != NULL);
-        CHECK(strcmp(s, "<!MISSING!>") != 0);
+        CHECK(strcmp(s, "Expansion Framework") == 0);
         printf("EN[0] = %s\n", s);
         strcpy(en0, s);
 
-        /* Resolve id 0 in qps-ploc -- must differ from English (pseudo), and
-         * still be plain ASCII, and not the missing marker. */
-        pseudo = ExpansionLocale_Resolve(EXPANSION_LOCALE_QPS_PLOC, 0);
-        CHECK(pseudo != NULL);
-        CHECK(strcmp(pseudo, "<!MISSING!>") != 0);
-        CHECK(strcmp(pseudo, en0) != 0);
-        printf("QPS[0] = %s\n", pseudo);
+        localized = ExpansionLocale_Resolve(EXPANSION_LOCALE_JA, 0);
+#ifdef TEST_JA_TITLE_FALLS_BACK
+        CHECK(strcmp(localized, en0) == 0);
+#else
+        CHECK(strcmp(localized, "拡張フレームワーク") == 0);
+#endif
+        printf("JA[0] = %s\n", localized);
+
+        localized = ExpansionLocale_Resolve(EXPANSION_LOCALE_ZH_HANS, 0);
+        CHECK(strcmp(localized, "扩展框架") == 0);
+        printf("ZH[0] = %s\n", localized);
+
+        localized = ExpansionLocale_Resolve(EXPANSION_LOCALE_QPS_PLOC, 0);
+        CHECK(localized != NULL);
+        CHECK(strcmp(localized, "<!MISSING!>") != 0);
+        CHECK(strcmp(localized, en0) != 0);
+        printf("QPS[0] = %s\n", localized);
     }
 
-    /* Unsupported locale falls back one step to English. */
-    s = ExpansionLocale_Resolve(EXPANSION_LOCALE_JA, 0);
-    CHECK(s != NULL);
-    CHECK(strcmp(s, "<!MISSING!>") != 0);
+    /* Exact real-locale resolution remains independent of the optional
+     * sparse-title fallback fixture above. */
+    CHECK(strcmp(ExpansionLocale_Resolve(EXPANSION_LOCALE_JA, 1), "バージョン:") == 0);
+    CHECK(strcmp(ExpansionLocale_Resolve(EXPANSION_LOCALE_ZH_HANS, 1), "版本:") == 0);
+
+    /* Stable but unpopulated and invalid locale slots both fall back exactly
+     * one step to English. */
+    CHECK(strcmp(ExpansionLocale_Resolve(EXPANSION_LOCALE_FR, 0), "Expansion Framework") == 0);
+    CHECK(strcmp(
+        ExpansionLocale_Resolve(EXPANSION_LOCALE_INVALID, 0),
+        "Expansion Framework") == 0);
 
     /* Unknown/invalid message id -> visible missing marker, never crash. */
     s = ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, (ExpansionMsgId)60000);
@@ -77,13 +96,23 @@ int main(void)
 
     /* Locale switch + cache invalidation smoke: switching locale and
      * re-resolving the same id must return the new locale's string. */
+    CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_JA) == TRUE);
+    CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_JA);
+    s = ExpansionLocale_ResolveCurrent(1);
+    CHECK(strcmp(s, "バージョン:") == 0);
+
+    /* Same message id after a locale change must not reuse the Japanese
+     * cache entry. SetCurrent invalidates the cache before this lookup. */
+    CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_ZH_HANS) == TRUE);
+    CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_ZH_HANS);
+    s = ExpansionLocale_ResolveCurrent(1);
+    CHECK(strcmp(s, "版本:") == 0);
+
+    CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_FR) == FALSE);
+    CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_ZH_HANS);
+
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_QPS_PLOC) == TRUE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_QPS_PLOC);
-    s = ExpansionLocale_ResolveCurrent(0);
-    CHECK(strcmp(s, "<!MISSING!>") != 0);
-
-    CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_JA) == FALSE); /* not enabled */
-    CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_QPS_PLOC); /* unchanged */
 
     CHECK(ExpansionLocale_SetCurrent(EXPANSION_LOCALE_EN) == TRUE);
     CHECK(ExpansionLocale_GetCurrent() == EXPANSION_LOCALE_EN);
@@ -99,16 +128,14 @@ int main(void)
     ExpansionLocale_InvalidateCache();
 
     ExpansionLocale_GetCatalogStats(&stats);
-    /* The registry currently carries 28 active messages (ids 0-28,
-     * minus the one tombstone), including compact locale labels and the
-     * Config row's More action. This is the catalog's real active count,
-     * not a fingerprint, so legitimate authored entries update it. */
-    CHECK(stats.activeMessageCount == 28);
+    CHECK(stats.activeMessageCount == 32);
     CHECK(stats.tombstoneCount == 1);
+    CHECK(stats.populatedLocaleCount == 4);
+    CHECK(stats.populatedLocaleCount == gExpansionLocalePopulatedCount);
     CHECK(stats.scratchBudgetBytes == EXPANSION_LOCALE_SCRATCH_SLOT_BYTES);
     CHECK(stats.scratchBytes == EXPANSION_LOCALE_SCRATCH_SLOT_BYTES);
-    printf("stats: active=%u tombstone=%u stringBytes=%u indexBytes=%u\n",
-           stats.activeMessageCount, stats.tombstoneCount,
+    printf("stats: active=%u tombstone=%u populated=%u stringBytes=%u indexBytes=%u\n",
+           stats.activeMessageCount, stats.tombstoneCount, stats.populatedLocaleCount,
            (unsigned)stats.catalogStringBytes, (unsigned)stats.catalogIndexBytes);
 
     if (failures == 0)

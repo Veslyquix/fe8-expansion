@@ -13,6 +13,7 @@ vanilla message table (gMsgTable), or any XMAP identifier: the isolation
 guarantee issue #18 sprint 1 requires.
 """
 
+import json
 import re
 import subprocess
 import sys
@@ -23,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
+from scripts.localization.catalog import DEFAULT_CATALOG_PATHS
 from scripts.localization.generate import generate
 
 DRIVER_C = Path(__file__).resolve().with_name("host_resolver_driver.c")
@@ -47,22 +49,42 @@ class ResolverNativeTests(unittest.TestCase):
             raise unittest.SkipTest("no host 'cc' compiler available")
         cls.cc = cc
 
-    def _build_and_run(self, tmp_path):
+    def _build_and_run(self, tmp_path, sparse_ja_title=False):
         generated_dir = tmp_path / "generated"
-        generate(output_dir=generated_dir)
+        catalog_paths = None
+        if sparse_ja_title:
+            ja_data = json.loads(
+                DEFAULT_CATALOG_PATHS["ja"].read_text(encoding="utf-8")
+            )
+            del ja_data["strings"]["framework.title"]
+            sparse_ja_path = tmp_path / "catalog.ja.json"
+            sparse_ja_path.write_text(
+                json.dumps(ja_data, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            catalog_paths = dict(DEFAULT_CATALOG_PATHS)
+            catalog_paths["ja"] = sparse_ja_path
+        generate(output_dir=generated_dir, catalog_paths=catalog_paths)
         binary = tmp_path / "host_resolver_driver"
         cmd = [
-            self.cc, "-std=c99", "-Wall", "-Wextra",
+            self.cc, "-std=gnu89", "-Wall", "-Wextra",
+            "-Werror=declaration-after-statement",
             "-I", str(ROOT / "include"),
             "-I", str(generated_dir),
-            "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x81u",
+            "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x87u",
             "-DFE8_EXPANSION_DEFAULT_LOCALE_ID=0u",
             "-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=1",
-            str(DRIVER_C),
-            str(ROOT / "src" / "expansion_locale.c"),
-            str(generated_dir / "expansion_locale_catalog.c"),
-            "-o", str(binary),
         ]
+        if sparse_ja_title:
+            cmd.append("-DTEST_JA_TITLE_FALLS_BACK=1")
+        cmd.extend(
+            [
+                str(DRIVER_C),
+                str(ROOT / "src" / "expansion_locale.c"),
+                str(generated_dir / "expansion_locale_catalog.c"),
+                "-o", str(binary),
+            ]
+        )
         compile_result = subprocess.run(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
@@ -84,6 +106,12 @@ class ResolverNativeTests(unittest.TestCase):
             result_a = self._build_and_run(Path(tmp_a))
             result_b = self._build_and_run(Path(tmp_b))
             self.assertEqual(result_a.stdout, result_b.stdout)
+
+    def test_missing_japanese_entry_falls_back_to_english(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_result = self._build_and_run(Path(tmp), sparse_ja_title=True)
+            self.assertEqual(run_result.returncode, 0, run_result.stdout)
+            self.assertIn("JA[0] = Expansion Framework", run_result.stdout)
 
 
 class VanillaIsolationSourceAuditTests(unittest.TestCase):

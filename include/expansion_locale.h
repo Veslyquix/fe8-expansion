@@ -3,7 +3,7 @@
 
 /*
  * Stable expansion framework locale/message identifiers and runtime
- * resolver API (issue #18 sprint 1).
+ * resolver API (issue #18).
  *
  * ExpansionLocaleId/ExpansionMsgId are brand-new, independently numbered
  * identifier spaces -- never alias or reuse GetLang()/SetLang()/
@@ -13,19 +13,18 @@
  * src/msg_data.c pipeline, its Huffman decode cache, or gMsgTable.
  *
  * Every message/locale string this framework ships is new, original
- * expansion-framework English (plus a deterministic ASCII pseudo-locale
- * transform of that same English -- see scripts/localization/pseudo.py);
- * this file and src/expansion_locale.c never contain vanilla dialogue or
- * any FE8J/EU/CN original-game text.
+ * expansion-framework text from authored UTF-8 catalogs (plus a
+ * deterministic ASCII pseudo-locale transform of English -- see
+ * scripts/localization/pseudo.py); this file and src/expansion_locale.c
+ * never contain vanilla dialogue or any FE8J/EU/CN original-game text.
  *
  * The canonical message registry/catalog source lives under
- * texts/expansion/ (registry.json + catalog.en.json); the generated,
+ * texts/expansion/ (registry.json + catalog.<locale>.json); the generated,
  * per-build C catalog (never committed -- see scripts/localization/
  * generate.py and modern.mk's "Localization catalog" section) is written
  * under build/expansion-localization/generated/ and defines the `extern`
- * data declared below. This header intentionally declares no save/UI
- * API yet -- that is later sprint work; the functions below are the only
- * supported entry point into the expansion catalog in sprint 1.
+ * data declared below. The resolver API remains independent of the
+ * separate save/preferences and language-menu APIs.
  *
  * This file is compiled by both the legacy (agbcc) and modern (GCC)
  * source globs -- like include/expansion_metadata.h/src/expansion_metadata.c
@@ -42,9 +41,10 @@
  * Stable, append-only, test-locked locale ordering -- mirrors
  * scripts/localization/schema.py's LOCALE_IDS tuple exactly (index for
  * index); do not renumber an existing entry, and a retired locale's slot
- * must never be reused. Sprint 1 ships real catalog content only for
- * EXPANSION_LOCALE_EN and EXPANSION_LOCALE_QPS_PLOC -- every other id
- * below is a reserved slot for a future sprint.
+ * must never be reused. Generated expansion-framework descriptors
+ * currently populate EN, JA, ZH_HANS, and QPS_PLOC. Product configuration
+ * still gates JA/ZH_HANS until the common CJK font/renderer and full game
+ * locale runtime are ready.
  */
 typedef u8 ExpansionLocaleId;
 
@@ -92,9 +92,9 @@ typedef u16 ExpansionMsgId;
 
 /*
  * Per-slot byte budget for the runtime resolver's single bounded scratch
- * cache slot below -- every active registry message's max_decoded_bytes
- * (texts/expansion/registry.json) must be <= this value in both English
- * and the derived pseudo-locale form; scripts/localization/schema.py's
+ * cache slot below -- every generated catalog string's UTF-8 byte length
+ * (including NUL) must fit its registry max_decoded_bytes and this hard
+ * cap; scripts/localization/schema.py's
  * MAX_DECODED_BYTES_MAX mirrors this constant and is cross-checked by
  * scripts/localization/tests/test_generate.py.
  */
@@ -105,18 +105,30 @@ typedef u16 ExpansionMsgId;
 
 /*
  * Ascending-sorted array of every active ExpansionMsgId, shared by every
- * populated locale table below (a message either exists, at the same
- * array index, in every populated locale, or it does not exist at all --
- * sprint 1 has no locale with partial coverage). gExpansionLocaleMsgCount
- * is this array's element count.
+ * populated locale descriptor. A descriptor's string pointer at the same
+ * index may be NULL, in which case the resolver performs exactly one
+ * fallback lookup in English. gExpansionLocaleMsgCount is this array's
+ * element count.
  */
 extern const ExpansionMsgId gExpansionLocaleMsgIds[];
 extern const u16 gExpansionLocaleMsgCount;
 
-/* Parallel-indexed (to gExpansionLocaleMsgIds) plain-ASCII C string
- * tables for the two locales sprint 1 actually populates. */
-extern const char *const gExpansionCatalog_en[];
-extern const char *const gExpansionCatalog_qps_ploc[];
+struct ExpansionLocaleCatalogDescriptor
+{
+    const ExpansionMsgId *ids;
+    const char *const *strings;
+    u16 count;
+};
+
+/*
+ * Stable-id-indexed descriptor table. Populated locale slots contain a
+ * shared id table plus a UTF-8 string-pointer table; unpopulated stable
+ * slots contain { NULL, NULL, 0 }. The generated populated count is
+ * diagnostic data, not the product configuration allowlist.
+ */
+extern const struct ExpansionLocaleCatalogDescriptor
+    gExpansionLocaleCatalogs[EXPANSION_LOCALE_COUNT];
+extern const u8 gExpansionLocalePopulatedCount;
 
 /* Build-time tombstone count (texts/expansion/registry.json entries with
  * status "tombstone") -- exposed at runtime purely as budget/diagnostic
@@ -129,6 +141,7 @@ struct ExpansionLocaleCatalogStats
 {
     u16 activeMessageCount;
     u16 tombstoneCount;
+    u16 populatedLocaleCount;
     u32 catalogStringBytes;
     u32 catalogIndexBytes;
     u32 scratchBytes;
@@ -143,8 +156,9 @@ bool8 ExpansionLocale_IsSupported(ExpansionLocaleId locale);
 
 /* A locale id is "enabled" if the configured EXPANSION_ENABLED_LOCALES
  * build setting (config.mk / scripts/modernize/expansion_config.py) marks
- * it enabled for this build. Sprint 1 only ever allows EN and/or
- * EXPANSION_LOCALE_QPS_PLOC to be enabled. */
+ * it enabled for this build. Product configuration currently allows EN
+ * and optional QPS_PLOC only, independently of generated catalog
+ * population. */
 bool8 ExpansionLocale_IsEnabled(ExpansionLocaleId locale);
 
 ExpansionLocaleId ExpansionLocale_GetDefault(void);

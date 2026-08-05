@@ -43,6 +43,13 @@ def _write(directory: Path, registry: dict, strings: dict):
     return reg_path, cat_path
 
 
+def _load(registry_path: Path, catalog_path: Path):
+    return load_catalog(
+        registry_path=registry_path,
+        catalog_paths={"en": catalog_path},
+    )
+
+
 class ParseRegistryTests(unittest.TestCase):
     def test_valid_registry_parses(self):
         entries = parse_registry(_base_registry())
@@ -187,7 +194,7 @@ class LoadCatalogTests(unittest.TestCase):
             reg_path, cat_path = _write(
                 tmp_path, _base_registry(), {"a.one": "Hello", "a.two": "World"}
             )
-            loaded = load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+            loaded = _load(reg_path, cat_path)
             self.assertEqual(loaded.en_strings["a.one"], "Hello")
             self.assertIn("a.one", loaded.pseudo_strings)
             self.assertNotEqual(loaded.pseudo_strings["a.one"], loaded.en_strings["a.one"])
@@ -197,7 +204,7 @@ class LoadCatalogTests(unittest.TestCase):
             tmp_path = Path(tmp)
             reg_path, cat_path = _write(tmp_path, _base_registry(), {"a.one": "Hello"})
             with self.assertRaises(SchemaError):
-                load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+                _load(reg_path, cat_path)
 
     def test_extra_catalog_key_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -207,16 +214,64 @@ class LoadCatalogTests(unittest.TestCase):
                 {"a.one": "Hello", "a.two": "World", "a.extra": "Nope"},
             )
             with self.assertRaises(SchemaError):
-                load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+                _load(reg_path, cat_path)
 
-    def test_non_ascii_text_rejected(self):
+    def test_non_ascii_utf8_text_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             reg_path, cat_path = _write(
                 tmp_path, _base_registry(), {"a.one": "Hell\u00f6", "a.two": "World"}
             )
+            loaded = _load(reg_path, cat_path)
+            self.assertEqual(loaded.en_strings["a.one"], "Hellö")
+
+    def test_control_scalar_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, _base_registry(), {"a.one": "Bad\tTab", "a.two": "World"}
+            )
             with self.assertRaises(SchemaError):
-                load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+                _load(reg_path, cat_path)
+
+    def test_c1_control_scalar_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, _base_registry(), {"a.one": "Bad\u0080", "a.two": "World"}
+            )
+            with self.assertRaises(SchemaError):
+                _load(reg_path, cat_path)
+
+    def test_surrogate_rejected_even_when_json_escaped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, _base_registry(), {"a.one": "\ud800", "a.two": "World"}
+            )
+            with self.assertRaises(SchemaError):
+                _load(reg_path, cat_path)
+
+    def test_invalid_utf8_source_bytes_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, _base_registry(), {"a.one": "Hello", "a.two": "World"}
+            )
+            cat_path.write_bytes(
+                b'{"locale":"en","strings":{"a.one":"' + bytes([0xFF]) + b'"}}'
+            )
+            with self.assertRaises(SchemaError):
+                _load(reg_path, cat_path)
+
+    def test_explicit_null_translation_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, _base_registry(), {"a.one": None, "a.two": "World"}
+            )
+            with self.assertRaises(SchemaError):
+                _load(reg_path, cat_path)
 
     def test_width_overflow_rejected(self):
         reg = _base_registry()
@@ -225,7 +280,7 @@ class LoadCatalogTests(unittest.TestCase):
             tmp_path = Path(tmp)
             reg_path, cat_path = _write(tmp_path, reg, {"a.one": "Hello", "a.two": "World"})
             with self.assertRaises(SchemaError):
-                load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+                _load(reg_path, cat_path)
 
     def test_decoded_bytes_overflow_rejected(self):
         reg = _base_registry()
@@ -234,7 +289,7 @@ class LoadCatalogTests(unittest.TestCase):
             tmp_path = Path(tmp)
             reg_path, cat_path = _write(tmp_path, reg, {"a.one": "Hello", "a.two": "World"})
             with self.assertRaises(SchemaError):
-                load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+                _load(reg_path, cat_path)
 
     def test_pseudo_overflow_rejected_even_if_english_fits(self):
         # English text fits its byte budget, but the pseudo transform's
@@ -248,7 +303,7 @@ class LoadCatalogTests(unittest.TestCase):
                 tmp_path, reg, {"a.one": "aeiouaeiou", "a.two": "World"}
             )
             with self.assertRaises(SchemaError):
-                load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+                _load(reg_path, cat_path)
 
     def test_placeholder_parity_holds_for_real_pseudo_transform(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -256,8 +311,90 @@ class LoadCatalogTests(unittest.TestCase):
             reg_path, cat_path = _write(
                 tmp_path, _base_registry(), {"a.one": "Sample {0}", "a.two": "World"}
             )
-            loaded = load_catalog(registry_path=reg_path, catalog_en_path=cat_path)
+            loaded = _load(reg_path, cat_path)
             self.assertIn("{0}", loaded.pseudo_strings["a.one"])
+
+    def test_real_locale_placeholder_mismatch_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, en_path = _write(
+                tmp_path, _base_registry(), {"a.one": "Value {0}", "a.two": "World"}
+            )
+            ja_path = tmp_path / "catalog.ja.json"
+            ja_path.write_text(
+                json.dumps(
+                    {"locale": "ja", "strings": {"a.one": "値 {1}", "a.two": "世界"}},
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(SchemaError):
+                load_catalog(
+                    registry_path=reg_path,
+                    catalog_paths={"en": en_path, "ja": ja_path},
+                )
+
+    def test_real_locale_newline_mismatch_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, en_path = _write(
+                tmp_path, _base_registry(), {"a.one": "Line one\nLine two", "a.two": "World"}
+            )
+            ja_path = tmp_path / "catalog.ja.json"
+            ja_path.write_text(
+                json.dumps(
+                    {"locale": "ja", "strings": {"a.one": "一行だけ", "a.two": "世界"}},
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(SchemaError):
+                load_catalog(
+                    registry_path=reg_path,
+                    catalog_paths={"en": en_path, "ja": ja_path},
+                )
+
+    def test_sparse_non_english_catalog_is_valid_for_english_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, en_path = _write(
+                tmp_path, _base_registry(), {"a.one": "Hello", "a.two": "World"}
+            )
+            ja_path = tmp_path / "catalog.ja.json"
+            ja_path.write_text(
+                json.dumps(
+                    {"locale": "ja", "strings": {"a.one": "こんにちは"}},
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            loaded = load_catalog(
+                registry_path=reg_path,
+                catalog_paths={"en": en_path, "ja": ja_path},
+            )
+            self.assertEqual(loaded.missing_keys("ja"), ("a.two",))
+
+    def test_cjk_surface_width_counts_wide_scalars(self):
+        reg = _base_registry()
+        reg["messages"][0]["max_width"] = 3
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, reg, {"a.one": "日本", "a.two": "World"}
+            )
+            with self.assertRaises(SchemaError):
+                _load(reg_path, cat_path)
+
+    def test_utf8_byte_budget_counts_encoded_bytes(self):
+        reg = _base_registry()
+        reg["messages"][0]["max_decoded_bytes"] = 6
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            reg_path, cat_path = _write(
+                tmp_path, reg, {"a.one": "日本", "a.two": "World"}
+            )
+            with self.assertRaises(SchemaError):
+                _load(reg_path, cat_path)
 
     def test_real_repository_registry_and_catalog_load_cleanly(self):
         # The committed texts/expansion/registry.json + catalog.en.json
@@ -265,6 +402,19 @@ class LoadCatalogTests(unittest.TestCase):
         loaded = load_catalog()
         self.assertGreater(len(loaded.active_entries), 0)
         self.assertGreaterEqual(len(loaded.tombstone_entries), 1)
+        self.assertEqual(loaded.authored_locales, ("en", "ja", "zh-Hans"))
+        self.assertEqual(
+            loaded.generated_locales, ("en", "ja", "zh-Hans", "qps-ploc")
+        )
+        self.assertEqual(loaded.missing_keys("ja"), ())
+        self.assertEqual(loaded.missing_keys("zh-Hans"), ())
+        self.assertEqual(loaded.en_strings["framework.locale_name.ja"], "Japanese")
+        self.assertEqual(
+            loaded.en_strings["framework.locale_name.zh_hans"],
+            "Simplified Chinese",
+        )
+        self.assertEqual(loaded.en_strings["framework.locale_short_name.ja"], "JA")
+        self.assertEqual(loaded.en_strings["framework.locale_short_name.zh_hans"], "ZH")
 
 
 if __name__ == "__main__":

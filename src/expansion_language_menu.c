@@ -258,16 +258,15 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
 /* Parallel-indexed to ExpansionLocaleId (include/expansion_locale.h):
  * which catalog message (if any) names that locale, always resolved
  * against EXPANSION_LOCALE_EN specifically -- these are self-referential
- * proper nouns ("English", "Pseudo (Test)"), never translated content.
- * Every reserved (not-yet-populated) locale slot maps to
- * EXPANSION_MSG_ID_INVALID; sprint 1 only ships real catalog content
- * for EN/QPS_PLOC (see include/expansion_locale.h), matching what
- * FE8_EXPANSION_ENABLED_LOCALE_MASK can ever actually enable today. */
+ * proper nouns/identifiers, never translated display content. Japanese
+ * and Simplified Chinese deliberately use bootstrap-safe English names
+ * and ASCII codes here until a common selector CJK font exists. Other
+ * unpopulated locale slots remain EXPANSION_MSG_ID_INVALID. */
 static const ExpansionMsgId sLocaleNameMsgIds[EXPANSION_LOCALE_COUNT] =
 {
     EXP_MSG_FRAMEWORK_LOCALE_NAME_EN,       /* EXPANSION_LOCALE_EN */
-    EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_JA (reserved) */
-    EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_ZH_HANS (reserved) */
+    EXP_MSG_FRAMEWORK_LOCALE_NAME_JA,       /* EXPANSION_LOCALE_JA */
+    EXP_MSG_FRAMEWORK_LOCALE_NAME_ZH_HANS,  /* EXPANSION_LOCALE_ZH_HANS */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_FR (reserved) */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_DE (reserved) */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_ES (reserved) */
@@ -278,8 +277,8 @@ static const ExpansionMsgId sLocaleNameMsgIds[EXPANSION_LOCALE_COUNT] =
 static const ExpansionMsgId sLocaleShortNameMsgIds[EXPANSION_LOCALE_COUNT] =
 {
     EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_EN,       /* EXPANSION_LOCALE_EN */
-    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_JA (reserved) */
-    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_ZH_HANS (reserved) */
+    EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_JA,       /* EXPANSION_LOCALE_JA */
+    EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_ZH_HANS,  /* EXPANSION_LOCALE_ZH_HANS */
     EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_FR (reserved) */
     EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_DE (reserved) */
     EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_ES (reserved) */

@@ -34,6 +34,15 @@ class LocaleIdStabilityTests(unittest.TestCase):
     def test_configurable_locales_match_the_production_allowlist(self):
         self.assertEqual(schema.CONFIGURABLE_LOCALES, schema.INITIALLY_SUPPORTED_LOCALES)
 
+    def test_authored_catalog_locales_include_real_cjk(self):
+        self.assertEqual(schema.AUTHORED_CATALOG_LOCALES, ("en", "ja", "zh-Hans"))
+
+    def test_populated_catalog_locales_include_derived_pseudo(self):
+        self.assertEqual(
+            schema.POPULATED_CATALOG_LOCALES,
+            ("en", "ja", "zh-Hans", "qps-ploc"),
+        )
+
     def test_every_initially_supported_locale_is_a_stable_id(self):
         for locale in schema.INITIALLY_SUPPORTED_LOCALES:
             self.assertIn(locale, schema.LOCALE_IDS)
@@ -83,6 +92,27 @@ class CSyncTests(unittest.TestCase):
         match = re.search(r"#define EXPANSION_MSG_ID_INVALID\s+0x([0-9A-Fa-f]+)u", text)
         self.assertIsNotNone(match)
         self.assertEqual(int(match.group(1), 16), schema.MSG_ID_INVALID)
+
+
+class LanguageMenuLocaleNameTests(unittest.TestCase):
+    MENU_PATH = ROOT / "src" / "expansion_language_menu.c"
+
+    def test_prepared_cjk_names_and_codes_have_stable_message_ids(self):
+        text = self.MENU_PATH.read_text(encoding="utf-8")
+        for macro in (
+            "EXP_MSG_FRAMEWORK_LOCALE_NAME_JA",
+            "EXP_MSG_FRAMEWORK_LOCALE_NAME_ZH_HANS",
+            "EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_JA",
+            "EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_ZH_HANS",
+        ):
+            self.assertIn(macro, text)
+
+    def test_locale_proper_names_still_resolve_against_english(self):
+        text = self.MENU_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "return ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, msgId);",
+            text,
+        )
 
 
 class MsgIdContractTests(unittest.TestCase):
