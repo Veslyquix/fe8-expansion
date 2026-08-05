@@ -23,6 +23,8 @@ valid oracle — it holds relocated pointers (= shifted addresses); only the
 | `fingerprint.lua` | GBAHawk Lua: replay the loaded movie headless (`invisibleemulation`), screenshot the framebuffer at ~40 evenly-spaced checkpoints + the final frame, write a manifest, `client.exit()`. |
 | `run_tas.sh` | Drive `GBAHawk.exe` from WSL2 for one (rom, movie, tag). |
 | `compare.py` | Hash the matching vs shifted checkpoint PNGs; report identical / first divergent checkpoint and whether both reached the movie end. |
+| `capture_poll_inputs.lua` | Reduce a loaded reference movie to the input stream actually consumed on non-lag frames. |
+| `adaptive_replay.lua` | Diagnostic-only replay of that logical stream, advancing only when the target ROM polls input. |
 | `get_vba_rr_sdl.sh` | Build exact source revision `fe4a46bd` (svn421) with a native SDL/C-core frontend and pinned non-root runtime dependencies. |
 | `vba_fingerprint.lua` | Advance the public VBM and save raw GD framebuffer snapshots at evenly spaced checkpoints plus the endpoint. |
 | `prepare_vba_movie.py` | Append one duplicated guard input frame so svn421 exits cleanly after capturing the original movie endpoint. |
@@ -119,6 +121,40 @@ inserts/deletes. Supported operations are `set`, `add`, `remove`, `move`,
 divergence, update the manifest, regenerate the GBMV, and replay from the last
 stable checkpoint. Completion still requires the full credits endpoint; movie
 frame exhaustion alone is not success.
+
+### Poll-adaptive diagnostic replay
+
+For diagnosing compiler-cycle desync separately from fixed movie frames, first
+run the vanilla movie with `capture_poll_inputs.lua`. Configure its output tag
+in `C:\gbahawk_test\out\poll-input-config.txt`:
+
+```text
+vanilla
+0
+```
+
+The second line selects the full movie; use a positive frame count for a short
+diagnostic capture. This writes `vanilla-poll-inputs.tsv`. Then start the modern
+ROM **without a movie loaded** and run `adaptive_replay.lua` with
+`C:\gbahawk_test\out\adaptive-config.txt`:
+
+```text
+C:\gbahawk_test\out\vanilla-poll-inputs.tsv
+modern
+0
+40
+```
+
+The remaining lines select the full source stream (`0`) and 40 screenshot
+checkpoints. The script repeats the current logical input across modern lag
+frames and writes the exact physical input rows it applied.
+
+This is a diagnostic and candidate-generation tool, not a synchronization
+oracle. The FE8U route has timing-sensitive menus and map state: the current
+modern experiment passed the Prologue save screen but later entered different
+menus and did not reach credits. Do not accept an adaptive run unless semantic
+chapter/phase state and the continuation agree; do not run it with a movie
+loaded because GBAHawk merges movie and Lua inputs.
 
 ## Confirmed setup (this run)
 
