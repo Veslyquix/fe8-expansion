@@ -15,4 +15,6 @@ typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 
+#include "expansion_config.h"
+
 #endif /* GUARD_GLOBAL_H */

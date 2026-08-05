@@ -3,11 +3,11 @@
 #include "localized_text_codec.h"
 
 /*
- * This source is discovered by both source globs, but MODERN is defined only
- * by modern.mk. The archival compiler therefore sees an empty translation
- * unit, and ldscript.txt does not link this new object into fireemblem8.gba.
+ * This source is discovered by both source globs. The public header enables
+ * it only for modern builds whose generated locale mask includes ja or
+ * zh-Hans, leaving legacy and default English-only objects empty.
  */
-#ifdef MODERN
+#ifdef FE8_LOCALIZED_TEXT_CODEC_ENABLED
 
 #define LOCALIZED_TEXT_CODEC_LEAF_MASK 0xFFFF0000u
 #define LOCALIZED_TEXT_CODEC_MAX_NODES 0x00010000u
@@ -23,10 +23,12 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
     u32 rootIndex,
     const u8 *input,
     u32 inputByteLength,
+    u32 inputBitLength,
     u8 *output,
     u32 outputCapacity,
     u32 *outDecodedLength)
 {
+    u32 bitsConsumed;
     u32 byteIndex;
     u32 bitIndex;
     u32 currentIndex;
@@ -50,9 +52,14 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
     if (nodeCount == 0 || nodeCount > LOCALIZED_TEXT_CODEC_MAX_NODES)
         return LOCALIZED_TEXT_CODEC_INVALID_ARGUMENT;
 
+    if (inputBitLength / 8u > inputByteLength
+        || (inputBitLength / 8u == inputByteLength && inputBitLength % 8u != 0))
+        return LOCALIZED_TEXT_CODEC_INVALID_ARGUMENT;
+
     if (rootIndex >= nodeCount || LocalizedTextCodec_IsLeaf(nodes[rootIndex]))
         return LOCALIZED_TEXT_CODEC_INVALID_ROOT;
 
+    bitsConsumed = 0;
     byteIndex = 0;
     bitIndex = 0;
     currentIndex = rootIndex;
@@ -60,7 +67,7 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
 
     for (;;)
     {
-        if (byteIndex >= inputByteLength)
+        if (bitsConsumed >= inputBitLength)
         {
             *outDecodedLength = outputLength;
             if (currentIndex == rootIndex)
@@ -76,6 +83,7 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
         }
 
         bit = (input[byteIndex] >> bitIndex) & 1;
+        bitsConsumed++;
         bitIndex++;
         if (bitIndex == 8)
         {
@@ -131,4 +139,4 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
     }
 }
 
-#endif /* MODERN */
+#endif /* FE8_LOCALIZED_TEXT_CODEC_ENABLED */

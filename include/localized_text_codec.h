@@ -2,9 +2,9 @@
 #define GUARD_LOCALIZED_TEXT_CODEC_H
 
 /*
- * Modern-only explicit-table Huffman decoder.
+ * Modern CJK-profile explicit-table Huffman decoder.
  * Include global.h before this header, following the repository's C include
- * convention, so u8/u32 are available.
+ * convention, so u8/u32 and FE8_EXPANSION_ENABLED_LOCALE_MASK are available.
  *
  * Nodes use the existing engine convention:
  *   leaf:     0xFFFF0000 | u16 symbol
@@ -14,12 +14,20 @@
  * byte is nonzero emits low then high; generated catalogs never pair a zero
  * byte. A single-byte zero symbol is the only successful terminator.
  *
- * outDecodedLength includes the terminating NUL on success. On failure it is
- * the number of bytes safely written before the failure. outputCapacity also
- * includes space for the NUL.
+ * inputBitLength is the exact meaningful bit count and must fit within
+ * inputByteLength. Padding bits are never consumed. outDecodedLength includes
+ * the terminating NUL on success. On failure it is the number of bytes safely
+ * written before the failure. outputCapacity also includes space for the NUL.
  */
 
-#ifdef MODERN
+/*
+ * Stable locale-mask bits 1 and 2 are ja and zh-Hans respectively. English
+ * and ASCII pseudo-locale profiles use the uncompressed catalog path and must
+ * not pay for this decoder.
+ */
+#if defined(MODERN) && ((FE8_EXPANSION_ENABLED_LOCALE_MASK & 0x06u) != 0)
+
+#define FE8_LOCALIZED_TEXT_CODEC_ENABLED 1
 
 enum LocalizedTextCodecStatus
 {
@@ -39,10 +47,11 @@ enum LocalizedTextCodecStatus LocalizedTextCodec_Decode(
     u32 rootIndex,
     const u8 *input,
     u32 inputByteLength,
+    u32 inputBitLength,
     u8 *output,
     u32 outputCapacity,
     u32 *outDecodedLength);
 
-#endif /* MODERN */
+#endif /* modern build with a CJK locale */
 
 #endif /* GUARD_LOCALIZED_TEXT_CODEC_H */

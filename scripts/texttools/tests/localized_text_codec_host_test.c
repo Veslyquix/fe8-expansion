@@ -31,6 +31,7 @@ static int TestCorpus(void)
         HOST_FIXTURE_ROOT_INDEX,
         gHostFixtureCompressed,
         ARRAY_COUNT(gHostFixtureCompressed),
+        HOST_FIXTURE_BIT_LENGTH,
         storage + 1,
         HOST_FIXTURE_EXPECTED_SIZE,
         &decodedLength);
@@ -54,7 +55,7 @@ static int TestMalformedChild(void)
 
     memset(storage, GUARD_VALUE, sizeof(storage));
     status = LocalizedTextCodec_Decode(
-        nodes, ARRAY_COUNT(nodes), 0, input, ARRAY_COUNT(input),
+        nodes, ARRAY_COUNT(nodes), 0, input, ARRAY_COUNT(input), 1,
         storage + 1, 2, &decodedLength);
 
     return status == LOCALIZED_TEXT_CODEC_INVALID_NODE
@@ -75,7 +76,7 @@ static int TestTruncatedInput(void)
 
     memset(storage, GUARD_VALUE, sizeof(storage));
     status = LocalizedTextCodec_Decode(
-        nodes, ARRAY_COUNT(nodes), 0, input, ARRAY_COUNT(input),
+        nodes, ARRAY_COUNT(nodes), 0, input, ARRAY_COUNT(input), 8,
         storage + 1, 2, &decodedLength);
 
     return status == LOCALIZED_TEXT_CODEC_TRUNCATED_INPUT
@@ -93,12 +94,49 @@ static int TestMissingTerminator(void)
 
     memset(storage, GUARD_VALUE, sizeof(storage));
     status = LocalizedTextCodec_Decode(
-        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input),
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 8,
         storage + 1, 8, &decodedLength);
 
     return status == LOCALIZED_TEXT_CODEC_MISSING_TERMINATOR
         && decodedLength == 8
         && CheckGuards(storage, 8);
+}
+
+static int TestPaddingIsNotTerminator(void)
+{
+    static const u32 nodes[] = {0xFFFF0000, 0xFFFF0041, 0x00010000};
+    static const u8 input[] = {1};
+    u8 storage[4];
+    u32 decodedLength;
+    enum LocalizedTextCodecStatus status;
+
+    memset(storage, GUARD_VALUE, sizeof(storage));
+    status = LocalizedTextCodec_Decode(
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 1,
+        storage + 1, 2, &decodedLength);
+
+    return status == LOCALIZED_TEXT_CODEC_MISSING_TERMINATOR
+        && decodedLength == 1
+        && storage[1] == 'A'
+        && CheckGuards(storage, 2);
+}
+
+static int TestBitLengthOutsideByteBound(void)
+{
+    static const u32 nodes[] = {0xFFFF0000, 0xFFFF0041, 0x00010000};
+    static const u8 input[] = {1};
+    u8 storage[4];
+    u32 decodedLength;
+    enum LocalizedTextCodecStatus status;
+
+    memset(storage, GUARD_VALUE, sizeof(storage));
+    status = LocalizedTextCodec_Decode(
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 9,
+        storage + 1, 2, &decodedLength);
+
+    return status == LOCALIZED_TEXT_CODEC_INVALID_ARGUMENT
+        && decodedLength == 0
+        && CheckGuards(storage, 2);
 }
 
 static int TestOutputOverflow(void)
@@ -111,7 +149,7 @@ static int TestOutputOverflow(void)
 
     memset(storage, GUARD_VALUE, sizeof(storage));
     status = LocalizedTextCodec_Decode(
-        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input),
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 2,
         storage + 1, 1, &decodedLength);
 
     return status == LOCALIZED_TEXT_CODEC_OUTPUT_OVERFLOW
@@ -130,7 +168,7 @@ static int TestInvalidPairedZero(void)
 
     memset(storage, GUARD_VALUE, sizeof(storage));
     status = LocalizedTextCodec_Decode(
-        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input),
+        nodes, ARRAY_COUNT(nodes), 2, input, ARRAY_COUNT(input), 1,
         storage + 1, 2, &decodedLength);
 
     return status == LOCALIZED_TEXT_CODEC_INVALID_SYMBOL
@@ -158,12 +196,16 @@ int main(void)
         return 3;
     if (!TestMissingTerminator())
         return 4;
-    if (!TestOutputOverflow())
+    if (!TestPaddingIsNotTerminator())
         return 5;
-    if (!TestInvalidPairedZero())
+    if (!TestBitLengthOutsideByteBound())
         return 6;
-    if (!TestNodeConvention())
+    if (!TestOutputOverflow())
         return 7;
+    if (!TestInvalidPairedZero())
+        return 8;
+    if (!TestNodeConvention())
+        return 9;
 
     puts("localized_text_codec_host_test: ok");
     return 0;

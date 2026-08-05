@@ -3,7 +3,9 @@
 This layer treats message content as opaque bytes. It deliberately performs no
 UTF-8 or FE control-code validation; importers and renderers own those semantic
 checks. Present catalog entries must contain exactly one trailing NUL because
-the runtime decoder uses that byte as its only termination condition.
+the runtime decoder uses that byte as its only termination condition. Each
+entry carries its exact meaningful compressed bit length so byte padding is
+never decoded as message data.
 """
 
 from __future__ import annotations
@@ -176,6 +178,7 @@ class Catalog:
             self.model.root_index,
             encoded,
             len(encoded),
+            entry.bit_length,
             entry.decoded_size,
         )
         if result.status != DecodeStatus.OK:
@@ -424,9 +427,10 @@ def decompress_bounded(
     root_index: int,
     compressed: bytes,
     input_length: int,
+    input_bit_length: int,
     output_capacity: int,
 ) -> DecodeResult:
-    """Decode with explicit bounds and the engine's u32 node convention."""
+    """Decode meaningful bits with explicit byte/output bounds."""
 
     output = bytearray()
     byte_index = 0
@@ -438,6 +442,8 @@ def decompress_bounded(
         or node_count > len(nodes)
         or input_length < 0
         or input_length > len(compressed)
+        or input_bit_length < 0
+        or input_bit_length > input_length * 8
         or output_capacity < 0
     ):
         return _decode_result(
@@ -450,7 +456,7 @@ def decompress_bounded(
 
     current_index = root_index
     while True:
-        if byte_index >= input_length:
+        if byte_index * 8 + bit_index >= input_bit_length:
             status = (
                 DecodeStatus.MISSING_TERMINATOR
                 if current_index == root_index
@@ -661,6 +667,7 @@ def build_catalog(
             model.root_index,
             encoded,
             len(encoded),
+            entry.bit_length,
             len(message),
         )
         if result.status != DecodeStatus.OK or result.data != message:

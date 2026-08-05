@@ -6,6 +6,7 @@ import hashlib
 import json
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -150,6 +151,21 @@ class CatalogTests(unittest.TestCase):
             hashlib.sha256(catalog.compressed_blob).hexdigest(),
         )
 
+    def test_catalog_decode_uses_entry_meaningful_bit_length(self):
+        catalog = build_catalog((b"A\x00",))
+        entry = catalog.entries[0]
+        self.assertEqual(entry.bit_length, 2)
+        self.assertEqual(entry.compressed_size, 1)
+
+        truncated = replace(
+            catalog,
+            entries=(replace(entry, bit_length=1),),
+        )
+        with self.assertRaisesRegex(
+            ValueError, "MISSING_TERMINATOR|TRUNCATED_INPUT"
+        ):
+            truncated.decode_entry(0)
+
     def test_catalog_rejects_unreachable_bytes_after_nul(self):
         with self.assertRaisesRegex(ValueError, "end with NUL"):
             build_catalog((b"missing",))
@@ -160,7 +176,7 @@ class CatalogTests(unittest.TestCase):
 class BoundedHostDecoderTests(unittest.TestCase):
     def test_malformed_child_index_is_explicit(self):
         result = decompress_bounded(
-            (0x00020002, 0xFFFF0000), 2, 0, b"\x00", 1, 8
+            (0x00020002, 0xFFFF0000), 2, 0, b"\x00", 1, 1, 8
         )
         self.assertEqual(result.status, DecodeStatus.INVALID_NODE)
         self.assertEqual(result.data, b"")
@@ -178,26 +194,43 @@ class BoundedHostDecoderTests(unittest.TestCase):
             0x00090009,
             0xFFFF0000,
         )
-        result = decompress_bounded(nodes, len(nodes), 0, b"\x00", 1, 8)
+        result = decompress_bounded(nodes, len(nodes), 0, b"\x00", 1, 8, 8)
         self.assertEqual(result.status, DecodeStatus.TRUNCATED_INPUT)
         self.assertEqual(result.data, b"")
 
     def test_complete_symbols_without_terminator_are_explicit(self):
         nodes = (0xFFFF0041, 0xFFFF0000, 0x00010000)
-        result = decompress_bounded(nodes, len(nodes), 2, b"\x00", 1, 8)
+        result = decompress_bounded(nodes, len(nodes), 2, b"\x00", 1, 8, 8)
         self.assertEqual(result.status, DecodeStatus.MISSING_TERMINATOR)
         self.assertEqual(result.data, b"A" * 8)
 
+    def test_one_meaningful_bit_never_consumes_zero_padding_as_terminator(self):
+        nodes = (0xFFFF0000, 0xFFFF0041, 0x00010000)
+        result = decompress_bounded(nodes, len(nodes), 2, b"\x01", 1, 1, 2)
+        self.assertEqual(result.status, DecodeStatus.MISSING_TERMINATOR)
+        self.assertEqual(result.data, b"A")
+        self.assertEqual(result.decoded_length, 1)
+
+    def test_bit_length_must_fit_inside_byte_bound(self):
+        nodes = (0xFFFF0000, 0xFFFF0041, 0x00010000)
+        for bit_length in (-1, 9):
+            with self.subTest(bit_length=bit_length):
+                result = decompress_bounded(
+                    nodes, len(nodes), 2, b"\x01", 1, bit_length, 2
+                )
+                self.assertEqual(result.status, DecodeStatus.INVALID_ARGUMENT)
+                self.assertEqual(result.data, b"")
+
     def test_output_overflow_stops_at_capacity(self):
         nodes = (0xFFFF0041, 0xFFFF0000, 0x00010000)
-        result = decompress_bounded(nodes, len(nodes), 2, b"\x02", 1, 1)
+        result = decompress_bounded(nodes, len(nodes), 2, b"\x02", 1, 2, 1)
         self.assertEqual(result.status, DecodeStatus.OUTPUT_OVERFLOW)
         self.assertEqual(result.data, b"A")
         self.assertEqual(result.decoded_length, 1)
 
     def test_paired_zero_symbol_is_rejected(self):
         nodes = (0xFFFF0100, 0xFFFF0000, 0x00010000)
-        result = decompress_bounded(nodes, len(nodes), 2, b"\x00", 1, 8)
+        result = decompress_bounded(nodes, len(nodes), 2, b"\x00", 1, 1, 8)
         self.assertEqual(result.status, DecodeStatus.INVALID_SYMBOL)
         self.assertEqual(result.data, b"")
 

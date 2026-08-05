@@ -9,8 +9,9 @@ The serialized model uses:
 
 - `0xFFFF0000 | symbol` leaves;
 - `(right_index << 16) | left_index` internal nodes;
-- LSB-first, independently byte-aligned message streams;
-- blob-relative pointer offsets and byte sizes;
+- LSB-first, independently byte-aligned message streams whose exact meaningful
+  bit lengths exclude zero padding;
+- blob-relative pointer offsets, byte storage sizes, and meaningful bit lengths;
 - `present: false` plus `pointer_offset: null` for an absent entry, allowing a
   future runtime catalog resolver to choose English fallback before decoding;
 - deterministic budget and SHA-256 round-trip metadata.
@@ -19,9 +20,13 @@ The serialized model uses:
 shorter compressed byte suffix of the immediate predecessor. No global
 deduplication is performed.
 
-The C decoder in `include/localized_text_codec.h` is table-independent and
-modern-only. Its decoded length includes the terminating NUL; on failure it is
-the number of bytes safely written before the failure.
+The C decoder in `include/localized_text_codec.h` is table-independent and is
+compiled only for modern profiles whose generated locale mask enables Japanese
+or Simplified Chinese. Legacy and default English-only profiles emit no codec
+declarations or implementation. The decoder requires a terminating NUL within
+the exact meaningful bit length; byte padding is never consumed. Its decoded
+length includes the terminating NUL; on failure it is the number of bytes
+safely written before the failure.
 
 Run the focused Python and host-native C tests from the repository root:
 
