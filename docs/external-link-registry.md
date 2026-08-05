@@ -73,5 +73,6 @@ repo) instead of one registry line per pinned link.
 - host:img.shields.io | laqieer | third-party-reference | Badge image service used by README.md.
 - host:marketplace.visualstudio.com | laqieer | third-party-reference | VS Code Makefile Tools extension listing.
 - host:retdec.com | laqieer | third-party-reference | RetDec decompiler homepage.
+- host:tasvideos.org | laqieer | third-party-reference | Published TAS movie metadata and downloadable input-log reference used by the diagnostic replay lane.
 - host:www.hex-rays.com | laqieer | third-party-reference | IDA Pro product page.
 <!-- EXTERNAL-LINK-REGISTRY:END -->
