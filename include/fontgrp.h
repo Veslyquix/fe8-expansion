@@ -3,6 +3,11 @@
 
 #include "global.h"
 
+#if defined(MODERN) && ((FE8_EXPANSION_ENABLED_LOCALE_MASK & 0x06u) != 0)
+#include "localized_font.h"
+#include "text_utf8.h"
+#endif
+
 struct Text {
     u16 chr_position;
     u8 x;
