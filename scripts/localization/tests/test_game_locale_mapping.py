@@ -120,6 +120,40 @@ class GameLocaleMappingTests(unittest.TestCase):
         with self.assertRaisesRegex(MappingError, "must not use address-derived"):
             validate_mapping_document(data, target_count=2)
 
+    def test_raw_mapping_accepts_authorized_japanese_literal_provenance(self):
+        data = {
+            "schema_version": 2,
+            "kind": "fe8u-locale-mapping",
+            "locale_ids": ["ja", "zh-Hans"],
+            "authority": "verified",
+            "authoritative": True,
+            "note": "raw literal fixture",
+            "rows": [_verified_source_rows()[1]],
+        }
+        data["rows"][0]["source"]["regional_sources"] = {
+            "ja": {
+                "kind": "literal",
+                "text": "決定",
+                "provenance": {
+                    "source_path": "src/classchg-menuconfirm.c",
+                    "source_symbol": "MenuItem_PromoSubConfirm[0].name",
+                },
+            },
+            "zh-Hans": {
+                "kind": "import",
+                "import_id": "fe8cn.raw.import-0000",
+            },
+        }
+        mapping = validate_mapping_document(data, target_count=2)
+        self.assertEqual(
+            mapping.rows[0].source["regional_sources"]["ja"]["text"],
+            "決定",
+        )
+
+        del data["rows"][0]["source"]["regional_sources"]["ja"]["provenance"]
+        with self.assertRaisesRegex(MappingError, "ja.provenance"):
+            validate_mapping_document(data, target_count=2)
+
     def test_candidate_coverage_is_honestly_unresolved(self):
         mapping = validate_mapping_document(self._candidate_data(), target_count=3414)
         report = build_coverage_report(mapping, range(3414), locale="ja")

@@ -34,8 +34,10 @@ U+3000, `LQuote`/`RQuote` to `"`, and `AccentedE` to `e`. An unknown high-byte
 printable token is rejected rather than emitted as invalid UTF-8.
 
 The CJK mapping never infers a positional match. Explicit English fallback
-decisions produce absent CJK entries; a verified provider without a committed
-payload is also absent and reported separately as `provider_unavailable`.
+decisions produce absent CJK entries. Evidence-backed regional raw mappings
+may commit an authorized FE8J literal as the Japanese provider while retaining
+the FE8CN import as the Chinese provider; older symbol-only Japanese evidence
+remains absent and is reported separately as `provider_unavailable`.
 
 Outputs are generated under `build/game-localization/generated/`:
 
@@ -92,8 +94,17 @@ an earlier `GetStringFromIndex` call.
 The exhaustive audit independently decodes all 3,414 English entries, checks
 source equality, renderer-valid UTF-8/control structure, and exact NUL bit
 boundaries. It separately guards `0xD4D`, `0xD4E`, `0xD4F`, `0xD50`, and
-`0xD54`, and compares all 1,828 explicit CJK fallbacks byte-for-byte with the
+`0xD54`, and compares all 1,806 explicit CJK fallbacks byte-for-byte with the
 corresponding shared English descriptor.
+
+The 143-record raw closure is a separate call-site audit:
+
+```bash
+python3 -m scripts.localization.game_locales check-raw-closure
+```
+
+See `docs/game_locale_sources.md` for its 137 game-ID, 2 semantic-key, and 4
+exclusion decisions.
 
 `StringInsertSpecialPrefixByCtrl`, `StrInsertTact`, and other renderer-side
 walkers remain byte-oriented. They must not process long UTF-8 overlay content

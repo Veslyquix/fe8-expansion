@@ -1,0 +1,3144 @@
+{
+  "kind": "fe8cn-raw-surface-closure",
+  "rows": [
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6b9, 0, 0, 3,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0000",
+      "provenance": {
+        "address": "0x085C4320"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "76e3439feac018deb1c3bbc28663358be6b85e11c2c9b9ea7f7c01aaafd78983",
+      "target_id": "0x06B9",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ba, 0, 0, 4,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0001",
+      "provenance": {
+        "address": "0x085C4344"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "515250b5c4943ce064ec3eed0845b4242b6eb0fcd10124a2a66c28cd1e02d7a5",
+      "target_id": "0x06BA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6bb, 0, 0, 5,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0002",
+      "provenance": {
+        "address": "0x085C4368"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "38f443e379a83f1ac6f7161985f191a698f89b246b3622531c11658e58add263",
+      "target_id": "0x06BB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6bc, 0, 0, 6,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0003",
+      "provenance": {
+        "address": "0x085C438C"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "3d8be17eb77376c84602de7febdd69e42e9ba56100f7e7b3d3c8e2754138574d",
+      "target_id": "0x06BC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6bd, 0, 4, 7,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0004",
+      "provenance": {
+        "address": "0x085C43B0"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "76358345517a01aa3855a405e2cef735004ab21e2765ab7def2604023910936c",
+      "target_id": "0x06BD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x26, 0, 0, 0xa,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0005",
+      "provenance": {
+        "address": "0x085C4464"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "0b8a87439a80c170de31b4a93827bd23441980f75534b20deac09d1fb64f31b4",
+      "target_id": "0x0026",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x27, 0, 0, 0xb,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0006",
+      "provenance": {
+        "address": "0x085C4488"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "43fb8319313d5057c37afabe9c79a4f8cc48e92e3d92e2bc046c68d810f1546f",
+      "target_id": "0x0027",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x28, 0, 0, 0xc,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0007",
+      "provenance": {
+        "address": "0x085C44AC"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "13fcef89e684fa5ec609e4db4dfd105a08a9d2e85ded5992cb40395e907499c2",
+      "target_id": "0x0028",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x29, 0, 0, 0xd,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0008",
+      "provenance": {
+        "address": "0x085C44D0"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "ad95f98a8c02952e4decebec34ab1934aebfe174e1eb392cd6c1d3ed825aa0f7",
+      "target_id": "0x0029",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6a4, 0, 0, 0x10,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0009",
+      "provenance": {
+        "address": "0x085C4518"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "d5b1fc040fc11922b2c6e847515029afbf07a2a061676038807eb1c4bb148086",
+      "target_id": "0x06A4",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6aa, 0, 0, 0x11,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0010",
+      "provenance": {
+        "address": "0x085C4560"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "8d414c4166459c832e6780fb3d2e1666c3b5129c1fd4d9281c87ad4c3765b11a",
+      "target_id": "0x06AA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ab, 0, 0, 0x12,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0011",
+      "provenance": {
+        "address": "0x085C4584"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "4213a2786be557ed5b3fa31cc3ac832161b9ad2080f37d54e9d4782137064269",
+      "target_id": "0x06AB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ac, 0, 0, 0x13,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0012",
+      "provenance": {
+        "address": "0x085C45A8"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "7cf4992eb921180fb27dd9a70ab772f3369caad1fa6d64d0c6a7751a85ef2c4f",
+      "target_id": "0x06AC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ad, 0, 0, 0x14,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0013",
+      "provenance": {
+        "address": "0x085C45CC"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "90c34d7448680dfecd2ac7db33a48168474ad855cbafaaea5830bfb8e07975c1",
+      "target_id": "0x06AD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ae, 0, 0, 0x15,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0014",
+      "provenance": {
+        "address": "0x085C45F0"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "73a55f189fbea8bf26dab9c5e6600901f1cc9ba1f1e77a801762d61a6daebceb",
+      "target_id": "0x06AE",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6af, 0, 0, 0x16,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0015",
+      "provenance": {
+        "address": "0x085C4614"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "13181dee87cb616fd21bcf5b3b2674b2ba3bb04fc8ad9744ed0e43531180ea84",
+      "target_id": "0x06AF",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6b0, 0, 0, 0x18,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0016",
+      "provenance": {
+        "address": "0x085C4638"
+      },
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "source_text_sha256": "ba2ea64600bbb7e4ed5d6f8aed54cccab132550c1d49c24ef5271a94393c911f",
+      "target_id": "0x06B0",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gYesNoSelectionMenuItems",
+            "gYesNoSelectionMenuItems.override[0x32].name",
+            "override",
+            "x32",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0017",
+      "provenance": {
+        "address": "0x085C4A28"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "aa2a331d2dcf56680e516898a4ae11aa832d2097fa7fd231b7be2c736ff15a99",
+      "target_id": "0x0843",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gYesNoSelectionMenuItems",
+            "gYesNoSelectionMenuItems.override[0x33].name",
+            "override",
+            "x33",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0018",
+      "provenance": {
+        "address": "0x085C4A4C"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "77af2f337c1d4d74e01293481a94622cd25c2fc780fba19916c0115877e82b5c",
+      "target_id": "0x0844",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gItemSubMenuItems",
+            "gItemSubMenuItems.override[0x34].name",
+            "override",
+            "x34",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0019",
+      "provenance": {
+        "address": "0x085C4A94"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "cdfd0b34e4918648910bd74bb862cf6076871cdf7fb6c6571a8a5bda78e9b942",
+      "target_id": "0x0696",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gItemSubMenuItems",
+            "gItemSubMenuItems.override[0x35].name",
+            "override",
+            "x35",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0020",
+      "provenance": {
+        "address": "0x085C4AB8"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "144a327039fee815aaee248148a83b5553e8277e73a96440e91c2a6100efd6d4",
+      "target_id": "0x0697",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gItemSubMenuItems",
+            "gItemSubMenuItems.override[0x36].name",
+            "override",
+            "x36",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0021",
+      "provenance": {
+        "address": "0x085C4ADC"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "c9c3d2d1754925a47da20aeb98b43d7337377a4488b154953e6de03b82d7a63d",
+      "target_id": "0x0698",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gItemSubMenuItems",
+            "gItemSubMenuItems.override[0x37].name",
+            "override",
+            "x37",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0022",
+      "provenance": {
+        "address": "0x085C4B00"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "b16f71b55691cdc3055ae0a3fb270f0222252c3c032223ae78ccc562be4f212b",
+      "target_id": "0x0699",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x4e].name",
+            "override",
+            "x4e",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0023",
+      "provenance": {
+        "address": "0x085C4F14"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "20c017ad03264bac7bb22d8742d7304cbf5a824ad93f17a215017588a723dcf3",
+      "target_id": "0x067A",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x4f].name",
+            "override",
+            "x4f",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0024",
+      "provenance": {
+        "address": "0x085C4F38"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "63fd3568dd19054a5be2b61cc37c02655d16eea9bf089cf9cc54c0ee7a190d69",
+      "target_id": "0x067B",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x67B, 0x6C0, 0, 0x50,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0025",
+      "provenance": {
+        "address": "0x085C4F5C"
+      },
+      "rationale": "This is the ballista Attack pointer, an intentional duplicate of the adjacent Attack row and the same stable FE8U message ID.",
+      "source_text_sha256": "63fd3568dd19054a5be2b61cc37c02655d16eea9bf089cf9cc54c0ee7a190d69",
+      "target_id": "0x067B",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x51].name",
+            "override",
+            "x51",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0026",
+      "provenance": {
+        "address": "0x085C4F80"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "b3f345a8cfd47e15f8711292234f274d4d0421c00473f96274408cef0e6594ed",
+      "target_id": "0x067C",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x52].name",
+            "override",
+            "x52",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0027",
+      "provenance": {
+        "address": "0x085C4FA4"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "00c97b51d06fe4cfb7a8ab70042186abf873bc5814a4b421b0e2755786684bbc",
+      "target_id": "0x0691",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x53].name",
+            "override",
+            "x53",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0028",
+      "provenance": {
+        "address": "0x085C4FC8"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "56a9af0466d1695f53e5d8698f01ecb872360a7c22dd5df3ea5bfbf0eed605ee",
+      "target_id": "0x0692",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x54].name",
+            "override",
+            "x54",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0029",
+      "provenance": {
+        "address": "0x085C4FEC"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "35f4bbd0dd0ead8c7b9aa504735911b05e924af73d29b093b1cfd902f2b70da6",
+      "target_id": "0x067D",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x55].name",
+            "override",
+            "x55",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0030",
+      "provenance": {
+        "address": "0x085C5010"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "2a5d1a1466c896d3bb87c4aad432a4e12a1e8f099cc411e1475d4c6fa0edfa63",
+      "target_id": "0x067E",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x56].name",
+            "override",
+            "x56",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0031",
+      "provenance": {
+        "address": "0x085C5034"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "bfcf25367435ce0f51e054fd7e0b8592a6d0191ccf6a80e4899b546abd0c0fe3",
+      "target_id": "0x067F",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x693, 0x6DD, 0, 0x57, SummonCommandUsability, LOCALIZED_RAW_UNIT_ACTION_DRAW"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "expansion_message",
+      "decision_origin": "deferred-surface-audit",
+      "expansion_key": "raw_surface.unit_action.summon",
+      "import_id": "fe8cn.raw.import-0032",
+      "provenance": {
+        "address": "0x085C5058"
+      },
+      "rationale": "Summon shares FE8U message ID 0x0693 with a distinct command, so the modern row uses a semantic expansion key.",
+      "source_text_sha256": "33cd5fd790473a195669c214372a29bfa2f49a2185a81610c47be4f6032fe833",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x693, 0x6DD, 0, 0x58, YobimaCommandUsability, LOCALIZED_RAW_UNIT_ACTION_DRAW"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "expansion_message",
+      "decision_origin": "deferred-surface-audit",
+      "expansion_key": "raw_surface.unit_action.call_monster",
+      "import_id": "fe8cn.raw.import-0033",
+      "provenance": {
+        "address": "0x085C507C"
+      },
+      "rationale": "Call Monster shares FE8U message ID 0x0693 with Summon, so the modern row uses its own semantic expansion key.",
+      "source_text_sha256": "133f03f93432669322a116f2ce2cf7021d276177cc432d9995751915a7d52bd8",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x59].name",
+            "override",
+            "x59",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0034",
+      "provenance": {
+        "address": "0x085C50A0"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "f04db8b4d81328a749aa7c0de556d7c0c95c11a50a12d3e755bd02bff6d5888a",
+      "target_id": "0x0694",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x5a].name",
+            "override",
+            "x5a",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0035",
+      "provenance": {
+        "address": "0x085C50C4"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "ed82bed5bbcc1ed2ec98d9a02ab65a922fee87896c8a8f8c9267247d6eb98d13",
+      "target_id": "0x0680",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x5b].name",
+            "override",
+            "x5b",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0036",
+      "provenance": {
+        "address": "0x085C50E8"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "968f3fce70fda7a30f323e61c0c82e382070d43c18c24fbc84ab1f9704fd64f8",
+      "target_id": "0x0681",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x5c].name",
+            "override",
+            "x5c",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0037",
+      "provenance": {
+        "address": "0x085C510C"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "af5999256de9a8a0afd70f2349f352be698fe3235826eb7f6408f379216c2865",
+      "target_id": "0x0682",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x5d].name",
+            "override",
+            "x5d",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0038",
+      "provenance": {
+        "address": "0x085C5130"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "e7e9eb468e945b3a02c1848a1d3813c1f7654904e2743e40e3478c4af2bc4ad0",
+      "target_id": "0x0683",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x5e].name",
+            "override",
+            "x5e",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0039",
+      "provenance": {
+        "address": "0x085C5154"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "e3df955899729c84d178efca02b6a6ba7389237bee045196e93349d181e17875",
+      "target_id": "0x0684",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x5f].name",
+            "override",
+            "x5f",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0040",
+      "provenance": {
+        "address": "0x085C5178"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "7767498f0fdf9c3c8a3a0ae9788ed4ccc4e093ccd7eced6a2f0d4c326a8af515",
+      "target_id": "0x0685",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x60].name",
+            "override",
+            "x60",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0041",
+      "provenance": {
+        "address": "0x085C519C"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "bdb82f9ca2995c708780769b332cc4d5424a91ec6b833c48c2f40fdf590ac424",
+      "target_id": "0x0686",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x61].name",
+            "override",
+            "x61",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0042",
+      "provenance": {
+        "address": "0x085C51C0"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "e916121704261adad2a3210cc01cbb80d096f29c7d116fa38130e18129cd047a",
+      "target_id": "0x0687",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x62].name",
+            "override",
+            "x62",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0043",
+      "provenance": {
+        "address": "0x085C51E4"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "72f1e70738b0f70db89baeb674c020699a2ba39a6bc68949e1ece5f58659389a",
+      "target_id": "0x0688",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x63].name",
+            "override",
+            "x63",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0044",
+      "provenance": {
+        "address": "0x085C5208"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "9729eedbc25a17cdf8c96fb066d19a3faba79f024810e349127466c087602d75",
+      "target_id": "0x0689",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x64].name",
+            "override",
+            "x64",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0045",
+      "provenance": {
+        "address": "0x085C522C"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "2b2e01539af2f070e764c807b1a0d263d47ef379b8c1f0b4fcb1e6c27a7c5335",
+      "target_id": "0x068A",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x65].name",
+            "override",
+            "x65",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0046",
+      "provenance": {
+        "address": "0x085C5250"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "be4200e7dae7b2c53e0ca54137f65e424f7baa8d385d0089d4242dea41fe0c2f",
+      "target_id": "0x068B",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x66].name",
+            "override",
+            "x66",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0047",
+      "provenance": {
+        "address": "0x085C5274"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "f8de5a4071c49847286b1a2e6bcb1fe9796204a46947137bb711ac1aa27ee2d2",
+      "target_id": "0x068C",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x67].name",
+            "override",
+            "x67",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0048",
+      "provenance": {
+        "address": "0x085C5298"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "247ba8cf03fdabd7889d45cfe324013bca2ccd2d00df391cab7b5ed4829507e6",
+      "target_id": "0x068D",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x68].name",
+            "override",
+            "x68",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0049",
+      "provenance": {
+        "address": "0x085C52BC"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "28e68c7f7838a2ae9da9956424cef9b792003333806c346c2cd01b0a864599ba",
+      "target_id": "0x068E",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x69].name",
+            "override",
+            "x69",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0050",
+      "provenance": {
+        "address": "0x085C52E0"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "b548ee94a00137fdad5ec08f7165cbb543e992e137d32dcefb77a6ad2373c9e3",
+      "target_id": "0x068F",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gUnitActionMenuItems",
+            "gUnitActionMenuItems.override[0x6b].name",
+            "override",
+            "x6b",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0051",
+      "provenance": {
+        "address": "0x085C5304"
+      },
+      "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
+      "source_text_sha256": "39301f66e323fbc573317a7ac670b9a43951d42be00503653c09508c520f6b4c",
+      "target_id": "0x0695",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x6e].name",
+            "override",
+            "x6e",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0052",
+      "provenance": {
+        "address": "0x085C534C"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "7ef81e4b3eb7d91e4018b3f9328c0eefb939f1820aaa27b26e4bcb87767d7a2a",
+      "target_id": "0x069A",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x6f].name",
+            "override",
+            "x6f",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0053",
+      "provenance": {
+        "address": "0x085C5370"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "31fae0f7ff1752ce2a96158faaf750b9b7e38c7fc12b7edb9db6203bcae375ee",
+      "target_id": "0x0690",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x74].name",
+            "override",
+            "x74",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0054",
+      "provenance": {
+        "address": "0x085C5394"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "10ad1e2f812c0128ebbddddcde95f42ea83a43fefccebe00e2052c5a3a769c9f",
+      "target_id": "0x069C",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x70].name",
+            "override",
+            "x70",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0055",
+      "provenance": {
+        "address": "0x085C53B8"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "28433bf4fd5986857072a5bceb67535d2d45e7bf10b00752d9ef7da7240f1f37",
+      "target_id": "0x069E",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x71].name",
+            "override",
+            "x71",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0056",
+      "provenance": {
+        "address": "0x085C53DC"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "ed647fcb24adf8cef7db3110212a4bfd2022775ffed13b2126c1e49ae745f2c6",
+      "target_id": "0x069B",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x72].name",
+            "override",
+            "x72",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0057",
+      "provenance": {
+        "address": "0x085C5400"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "c1601a88161edb13bf85df5c04b4f9a140bcd977f915ef1fc14e8b4ba5c8e280",
+      "target_id": "0x069D",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x73].name",
+            "override",
+            "x73",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0058",
+      "provenance": {
+        "address": "0x085C5424"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "d5b1fc040fc11922b2c6e847515029afbf07a2a061676038807eb1c4bb148086",
+      "target_id": "0x069F",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gMapMenuItems",
+            "gMapMenuItems.override[0x78].name",
+            "override",
+            "x78",
+            "name"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0059",
+      "provenance": {
+        "address": "0x085C5448"
+      },
+      "rationale": "The stable FE8CN raw import order mirrors the named map menu rows.",
+      "source_text_sha256": "10ed603d1ad2deb9def81a60f9430943e6393e1c791f304a78962ba8069201ca",
+      "target_id": "0x06A0",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x23,   /* Change */"
+          ],
+          "path": "src/classchg-menuconfirm.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0060",
+      "provenance": {
+        "address": "0x08BAB914"
+      },
+      "rationale": "The promotion confirmation row already supports the stable FE8U Change message ID.",
+      "source_text_sha256": "3490bfc74264cd9803ef64604baf6584eaa9a89f495c990c83ab4b500e141de1",
+      "target_id": "0x0023",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x24,   /* Cancel */"
+          ],
+          "path": "src/classchg-menuconfirm.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0061",
+      "provenance": {
+        "address": "0x08BAB938"
+      },
+      "rationale": "The promotion confirmation row already supports the stable FE8U Cancel message ID.",
+      "source_text_sha256": "cdad92f16686b8abf50cebd85f61ea261fe29eb97921008eadb3112ab118da67",
+      "target_id": "0x0024",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "\"　第１兵種\"",
+            "ClassChgMenuItem_OnTextDraw"
+          ],
+          "path": "src/classchg-menuselect.c"
+        }
+      ],
+      "classification": "non_user_facing_exclusion",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0062",
+      "provenance": {
+        "address": "0x08BAB9A4"
+      },
+      "rationale": "The initializer name is never drawn: the row-specific onDraw callback replaces it with the locale-aware promoted class name from GetStringFromIndex.",
+      "source_text_sha256": "c7b1ec47c7be8b638328c0aa9228b256a5ada458f0f3dd8f2bf99c966be2a501",
+      "user_facing": false
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "\"　第２兵種\"",
+            "ClassChgMenuItem_OnTextDraw"
+          ],
+          "path": "src/classchg-menuselect.c"
+        }
+      ],
+      "classification": "non_user_facing_exclusion",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0063",
+      "provenance": {
+        "address": "0x08BAB9C8"
+      },
+      "rationale": "The initializer name is never drawn: the row-specific onDraw callback replaces it with the locale-aware promoted class name from GetStringFromIndex.",
+      "source_text_sha256": "cf0a1ca79e59ab7a251d812e08760b7f1a5d752e3fa4a802082f8070f9247517",
+      "user_facing": false
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "\"　第３兵種\"",
+            "ClassChgMenuItem_OnTextDraw"
+          ],
+          "path": "src/classchg-menuselect.c"
+        }
+      ],
+      "classification": "non_user_facing_exclusion",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0064",
+      "provenance": {
+        "address": "0x08BAB9EC"
+      },
+      "rationale": "The initializer name is never drawn: the row-specific onDraw callback replaces it with the locale-aware promoted class name from GetStringFromIndex.",
+      "source_text_sha256": "62ec85ce075be747be754743625b7c7ced052b7beaeda1897b15232e30331252",
+      "user_facing": false
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMGeneralMenu",
+            "MenuItemDef_WMGeneralMenu.override[0x0].name",
+            "override",
+            "x0",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0065",
+      "provenance": {
+        "address": "0x08AC1A0C"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "7ef81e4b3eb7d91e4018b3f9328c0eefb939f1820aaa27b26e4bcb87767d7a2a",
+      "target_id": "0x0645",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMGeneralMenu",
+            "MenuItemDef_WMGeneralMenu.override[0x1].name",
+            "override",
+            "x1",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0066",
+      "provenance": {
+        "address": "0x08AC1A30"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "31fae0f7ff1752ce2a96158faaf750b9b7e38c7fc12b7edb9db6203bcae375ee",
+      "target_id": "0x0646",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMGeneralMenu",
+            "MenuItemDef_WMGeneralMenu.override[0x2].name",
+            "override",
+            "x2",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0067",
+      "provenance": {
+        "address": "0x08AC1A54"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "10ad1e2f812c0128ebbddddcde95f42ea83a43fefccebe00e2052c5a3a769c9f",
+      "target_id": "0x0647",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMGeneralMenu",
+            "MenuItemDef_WMGeneralMenu.override[0x3].name",
+            "override",
+            "x3",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0068",
+      "provenance": {
+        "address": "0x08AC1A78"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "ed647fcb24adf8cef7db3110212a4bfd2022775ffed13b2126c1e49ae745f2c6",
+      "target_id": "0x0648",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMGeneralMenu",
+            "MenuItemDef_WMGeneralMenu.override[0x4].name",
+            "override",
+            "x4",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0069",
+      "provenance": {
+        "address": "0x08AC1A9C"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "62420208894877bbb872eb1f7806ecbb6eadd0d53263f0933ed217536490b1b4",
+      "target_id": "0x0649",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMNodeMenu",
+            "MenuItemDef_WMNodeMenu.override[0x0].name",
+            "override",
+            "x0",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0070",
+      "provenance": {
+        "address": "0x08AC1B0C"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "8173af84b4d283337b5994e54a65c3580765f4c311649f4cde2482d0d2d8729c",
+      "target_id": "0x066E",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMNodeMenu",
+            "MenuItemDef_WMNodeMenu.override[0x1].name",
+            "override",
+            "x1",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0071",
+      "provenance": {
+        "address": "0x08AC1B30"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "41a8761eb347be881e9ab12dc9271beb566871df3e51c2d0eecde684e94ea60d",
+      "target_id": "0x066F",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMNodeMenu",
+            "MenuItemDef_WMNodeMenu.override[0x2].name",
+            "override",
+            "x2",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0072",
+      "provenance": {
+        "address": "0x08AC1B54"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "c33429cd4dbea028a61c9d974f8b238ed253eefe1f635b4e369fd8ce93f9fa0e",
+      "target_id": "0x0670",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "MenuItemDef_WMNodeMenu",
+            "MenuItemDef_WMNodeMenu.override[0x3].name",
+            "override",
+            "x3",
+            "name"
+          ],
+          "path": "src/worldmap_path.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0073",
+      "provenance": {
+        "address": "0x08AC1B78"
+      },
+      "rationale": "The shared world-map menu row selects the direct regional string.",
+      "source_text_sha256": "e1108744ffd178d0ef407571a0081032ecb805f0adaa62421eb984a30b4db64a",
+      "target_id": "0x0671",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_NONE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0074",
+      "provenance": {
+        "address": "0x088617C8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "f3f3079e2ba8b15c942c7f54d01977d94ab8320118a62ace3a88d8c4eaf76bf8",
+      "target_id": "0x01C4",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_PLAINS"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0075",
+      "provenance": {
+        "address": "0x088617CC"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "543401b7ea820641ec80b4196c0ba1d70151ecac5f2ba0af0865187f537a114d",
+      "target_id": "0x01C5",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_ROAD"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0076",
+      "provenance": {
+        "address": "0x088617D0"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "a44c7ba211320a43e426a37960fda386d1034270704cf38a6b1bced7feb7388a",
+      "target_id": "0x01C6",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_VILLAGE_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0077",
+      "provenance": {
+        "address": "0x088617D4"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "71580f54ce84a286d05e0958ce821d8cf70f9a9b057711ffca9b0c68d48c0b8f",
+      "target_id": "0x01C7",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_VILLAGE_CLOSED"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0078",
+      "provenance": {
+        "address": "0x088617D8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "6744b4c6a9aa00381ffea2b3d229778b0724b073bd46e13f4e73868667eeb44f",
+      "target_id": "0x01C8",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_HOUSE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0079",
+      "provenance": {
+        "address": "0x088617DC"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "e17916291ffcc3d4b25d47f2405183547c92b549e0960cbb02e4556749801df8",
+      "target_id": "0x01C9",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_ARMORY"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0080",
+      "provenance": {
+        "address": "0x088617E0"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "f9f6d5bc55ece896e2ce0e641a030a8dfb2c877096ba3b64f5fbceffccc25938",
+      "target_id": "0x01CA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_VENDOR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0081",
+      "provenance": {
+        "address": "0x088617E4"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "b1cecb67c5d1478ace0ab49cc479ef7e054ba859b2b46a1474c037806a21591f",
+      "target_id": "0x01CB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_ARENA_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0082",
+      "provenance": {
+        "address": "0x088617E8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "624efbde770ca19434310ff51ee511e71f9f632de0ca8a05578604bed7a1e558",
+      "target_id": "0x01CC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_C_ROOM_09"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0083",
+      "provenance": {
+        "address": "0x088617EC"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "302b64950910122710191dc494be1a22e202a518c097ea8ca57234cf34919f3e",
+      "target_id": "0x01CD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_FORT"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0084",
+      "provenance": {
+        "address": "0x088617F0"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "5ec7f9ec424e2146c142ace6b5a85cb18b21bf10ff089fe713d38ba37d125c9e",
+      "target_id": "0x01CE",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_GATE_CASTLE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0085",
+      "provenance": {
+        "address": "0x088617F4"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "c85e73a392baea72b7f0bb480617cb21b82212ec4f085b17c6b0fb20235b657e",
+      "target_id": "0x01CF",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_FOREST"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0086",
+      "provenance": {
+        "address": "0x088617F8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "3bfbf21e2f002bc2dcafb5e9df5fcbb1f16ea95587716d7794fa0e5c8547bbc8",
+      "target_id": "0x01D0",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_THICKET"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0087",
+      "provenance": {
+        "address": "0x088617FC"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "408586032d138b7941b0c8463d483be28f6de6e3bd977f04cfbf4a07f1bc913d",
+      "target_id": "0x01D1",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_SAND"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0088",
+      "provenance": {
+        "address": "0x08861800"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "7be8900dbfbfa0864f894aef5865b76c66915f6161ca7eebf436390bc5d746b0",
+      "target_id": "0x01D2",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_DESERT"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0089",
+      "provenance": {
+        "address": "0x08861804"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "4fbf406572d59250ac061331d61381e06be07bd5577aa8da4cc8616813d7911e",
+      "target_id": "0x01D3",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_RIVER"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0090",
+      "provenance": {
+        "address": "0x08861808"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "0d7d2cdf672f34674055a7e136f4b8216891ccf500d84cfbe80c73158ed5d6de",
+      "target_id": "0x01D4",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_MOUNTAIN"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0091",
+      "provenance": {
+        "address": "0x0886180C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "4862540a299762b3f090257ebb6976ec1d05ca460de0a1a195ee8569061ad6c0",
+      "target_id": "0x01D5",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_PEAK"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0092",
+      "provenance": {
+        "address": "0x08861810"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "323087e57195f7cf5f6916ebcbfcaf64a2c019c7d01cbf940dca2e3934026b5c",
+      "target_id": "0x01D6",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BRIDGE_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0093",
+      "provenance": {
+        "address": "0x08861814"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "a1e218ec8e11995a65f11a42558a9c7001f25e1a93d0cf9ba2f9ed58eaf272b2",
+      "target_id": "0x01D7",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BRIDGE_14"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0094",
+      "provenance": {
+        "address": "0x08861818"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "4139117d7d18c45dda8174a8c18137f263ac6a06695aa5a8c5c52e4639835a0c",
+      "target_id": "0x01D8",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_SEA"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0095",
+      "provenance": {
+        "address": "0x0886181C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "0ac6d5192ec21d34f7d6e0b0246b06d5cbaa2600cfcbd48f2363d1e3d22e76a2",
+      "target_id": "0x01D9",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_LAKE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0096",
+      "provenance": {
+        "address": "0x08861820"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "3e98b56da0099e71fa0d09a3f7dc4c3269f97019409545bcd43fd7b5cfcbdcd5",
+      "target_id": "0x01DA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_FLOOR_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0097",
+      "provenance": {
+        "address": "0x08861824"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "59a6a585ba18f342a13e9c6af01760feb60d31fd53510850d8a8dd59389490ab",
+      "target_id": "0x01DB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_FLOOR_MAGIC"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0098",
+      "provenance": {
+        "address": "0x08861828"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "59a6a585ba18f342a13e9c6af01760feb60d31fd53510850d8a8dd59389490ab",
+      "target_id": "0x01DC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_FENCE_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0099",
+      "provenance": {
+        "address": "0x0886182C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "dcfce2730d69df0be22cd2f9020ebd7b8c3e75c513c1d6d3e1c7d72d035bea4f",
+      "target_id": "0x01DD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_WALL_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0100",
+      "provenance": {
+        "address": "0x08861830"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "9dd5c564f81cb380ae18874625552af7a214e0c974eb9dad1bb568f2ed28c0c0",
+      "target_id": "0x01DE",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_WALL_DAMAGED"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0101",
+      "provenance": {
+        "address": "0x08861834"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "9dd5c564f81cb380ae18874625552af7a214e0c974eb9dad1bb568f2ed28c0c0",
+      "target_id": "0x01DF",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_RUBBLE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0102",
+      "provenance": {
+        "address": "0x08861838"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "2a805a977a7660d646960d62af465802b2c9785e423e4c2da2d31a15eed905fe",
+      "target_id": "0x01E0",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_PILLAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0103",
+      "provenance": {
+        "address": "0x0886183C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "59e7813d7e6f4e99b7787693bd121380b61f19c2b856d00c2e4da334c234c4b1",
+      "target_id": "0x01E1",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_DOOR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0104",
+      "provenance": {
+        "address": "0x08861840"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "a407325e0081cb7db7869427e4faf30e0fc8dcf53c03c7c9f9b92e118ec05a6d",
+      "target_id": "0x01E2",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_THRONE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0105",
+      "provenance": {
+        "address": "0x08861844"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "ce76ebd34b7297b4670e8600b0b3ba3f51bc99d7281b35ac664ad2020055fccb",
+      "target_id": "0x01E3",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_CHEST_EMPTY"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0106",
+      "provenance": {
+        "address": "0x08861848"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "d291455f2638f932c6909b5a953b8c636c141b1fdebdd800dce239b723bc77e4",
+      "target_id": "0x01E4",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_CHEST_FULL"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0107",
+      "provenance": {
+        "address": "0x0886184C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "63a9d95616f935907ea0b1f67e2dd85abf7fc4aefdbe53d9d15c3bb045497cf6",
+      "target_id": "0x01E5",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_ROOF"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0108",
+      "provenance": {
+        "address": "0x08861850"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "3c9731b77a4af5aa190ed28e620d1a4fc5e18a3ce210c478f0644be01abb7f2b",
+      "target_id": "0x01E6",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_GATE_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0109",
+      "provenance": {
+        "address": "0x08861854"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "577c189ba2c3960e854c3ceaf0be885d85988ca6cc8f7eedf29e6ee31b5bf5de",
+      "target_id": "0x01E7",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_CHURCH"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0110",
+      "provenance": {
+        "address": "0x08861858"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "9f008ad32e93355c0a01342f598c08d91d8d3c45888887a8b33d17a7f175a288",
+      "target_id": "0x01E8",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_RUINS_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0111",
+      "provenance": {
+        "address": "0x0886185C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "dccb6844df3963597badedc2431d4a5feb8570234a2a1925011a130c3cba827f",
+      "target_id": "0x01E9",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_CLIFF"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0112",
+      "provenance": {
+        "address": "0x08861860"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "32f6911fabc9e5759d97e8f38c52dc1ae7b76a46fecb91489a793332b88218f9",
+      "target_id": "0x01EA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BALLISTA_REGULAR"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0113",
+      "provenance": {
+        "address": "0x08861864"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "e86ef966639cc8854800a9b26f1a1e74e5465a5ac4860ff31940630cf60a9d80",
+      "target_id": "0x01EB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BALLISTA_LONG"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0114",
+      "provenance": {
+        "address": "0x08861868"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "7ba00927dde9122f96860ec7221e00a828ad0c5bdcbf991373d7e0a9aa4a9279",
+      "target_id": "0x01EC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BALLISTA_KILLER"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0115",
+      "provenance": {
+        "address": "0x0886186C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "678fcbceb6ba37cfae7ff162d6a7f7ebe81bc32247be12b1446d6e6d2e85b091",
+      "target_id": "0x01ED",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_SHIP_FLAT"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0116",
+      "provenance": {
+        "address": "0x08861870"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "c0f0dcdb799a687e8ff4c870005370d5835d01f196888b8aa0d2435d8c52d471",
+      "target_id": "0x01EE",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_SHIP_WRECK"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0117",
+      "provenance": {
+        "address": "0x08861874"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "e568d35730b440f52e06a8e507e8a9a83b866632d35fb28be74ed00768e9de96",
+      "target_id": "0x01EF",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_TILE_2C"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0118",
+      "provenance": {
+        "address": "0x08861878"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "f3f3079e2ba8b15c942c7f54d01977d94ab8320118a62ace3a88d8c4eaf76bf8",
+      "target_id": "0x01F0",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_STAIRS"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0119",
+      "provenance": {
+        "address": "0x0886187C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "66a03a3ae3a13db927b9c50e3774bfab4de9af8d61096bc5663c48bb2e014b5b",
+      "target_id": "0x01F1",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_TILE_2E"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0120",
+      "provenance": {
+        "address": "0x08861880"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "f3f3079e2ba8b15c942c7f54d01977d94ab8320118a62ace3a88d8c4eaf76bf8",
+      "target_id": "0x01F2",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_GLACIER"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0121",
+      "provenance": {
+        "address": "0x08861884"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "b7c9a4940d9bfa8c20c6400f3fc2f1c36b8370e78818486fe35b9afec8c1b6e1",
+      "target_id": "0x01F3",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_ARENA_30"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0122",
+      "provenance": {
+        "address": "0x08861888"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "09f9691733bad7b6f2e49ca375d4783fb153ef8d0c29248cbdb9eadb9621a81d",
+      "target_id": "0x01F4",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_VALLEY"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0123",
+      "provenance": {
+        "address": "0x0886188C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "229736ce613d7917d11844a0be05bc7f88fa3c7490d4272e13799fe34943199e",
+      "target_id": "0x01F5",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_FENCE_32"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0124",
+      "provenance": {
+        "address": "0x08861890"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "dcfce2730d69df0be22cd2f9020ebd7b8c3e75c513c1d6d3e1c7d72d035bea4f",
+      "target_id": "0x01F6",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_SNAG"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0125",
+      "provenance": {
+        "address": "0x08861894"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "e1586744eebaa42c486f3bcf48c6da82c827a9489a11a1aa1725dac976111df9",
+      "target_id": "0x01F7",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BRIDGE_SNAG"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0126",
+      "provenance": {
+        "address": "0x08861898"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "34428458ccbb0c8e7f4222f72c1928f0741f42299489e44f169c8bfe2d3fa44a",
+      "target_id": "0x01F8",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_SKY"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0127",
+      "provenance": {
+        "address": "0x0886189C"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "6c8c7a77cdfd4fd3e8d872de821ed94b78d8a967978cb3b460f06602c6e5ee67",
+      "target_id": "0x01F9",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_DEEPS"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0128",
+      "provenance": {
+        "address": "0x088618A0"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "d16725cb63477eabbe872be7928d0cc1a18f3834931bb43996baab57ab4ec746",
+      "target_id": "0x01FA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_RUINS_VILLAGE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0129",
+      "provenance": {
+        "address": "0x088618A4"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "2b12c4022b2dc316bdfa025d30d8719488355f2dc567215bf0d10870450665c3",
+      "target_id": "0x01FB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_INN"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0130",
+      "provenance": {
+        "address": "0x088618A8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "5c21eb3c470adac01a2ae8199fcb6e45a07d0217030551341a4fdf531f21e5fc",
+      "target_id": "0x01FC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BARREL"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0131",
+      "provenance": {
+        "address": "0x088618AC"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "24d1240f704af6f562eb3dc490582c61c45cf3b3fb08dc296afc63c805473e63",
+      "target_id": "0x01FD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BONE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0132",
+      "provenance": {
+        "address": "0x088618B0"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "86aaff9bad01affb1f9439ccfbfe69786ef6c4cdbeaa0b7af7b2e9640543a10c",
+      "target_id": "0x01FE",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_DARK"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0133",
+      "provenance": {
+        "address": "0x088618B4"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "140ede26426df0505039b3d0dddb8c4a8ef9ac70a3fb1abef4a7c929ed8f08be",
+      "target_id": "0x01FF",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_WATER"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0134",
+      "provenance": {
+        "address": "0x088618B8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "327b54d04f71f2126114d9d61d4c3640ca0fc5b30878ad28416ff634a51a712d",
+      "target_id": "0x0200",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_GUNNELS"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0135",
+      "provenance": {
+        "address": "0x088618BC"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "de448403dafdcf54c2f9abb1de0c2343f4db4ffe9b2a664c48aa32c90e6734cf",
+      "target_id": "0x0201",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_DECK"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0136",
+      "provenance": {
+        "address": "0x088618C0"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "9c72e22e7c03889a1adab9fe98a92fc48788e443ea19a67ecf6bdd0885f8791c",
+      "target_id": "0x0202",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_BRACE"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0137",
+      "provenance": {
+        "address": "0x088618C4"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "339f0c3ba83e47847b1efb138d469565a8f69cc87769c65fdd2a24834cb6372c",
+      "target_id": "0x0203",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "gTerrainNames",
+            "TERRAIN_MAST"
+          ],
+          "path": "src/data_terrains.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "verified-game-map",
+      "import_id": "fe8cn.raw.import-0138",
+      "provenance": {
+        "address": "0x088618C8"
+      },
+      "rationale": "The shared terrain enum index selects a direct regional string.",
+      "source_text_sha256": "9da8bae955e3eb937e24e3c38b1a4c4c1f1df03df8e1dd63f106a31cb5f4075f",
+      "target_id": "0x0204",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "GetStringFromIndex(MSG_1C1)"
+          ],
+          "path": "src/player_interface.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0139",
+      "provenance": {
+        "address": "0x0808F684"
+      },
+      "rationale": "The goal window already resolves the stable FE8U Left label message ID.",
+      "source_text_sha256": "0ec085ed84584b2393a6c115b51363188368b1f511f492737f7bb47b09005b48",
+      "target_id": "0x01C1",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "GetStringFromIndex(MSG_1C3)"
+          ],
+          "path": "src/player_interface.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0140",
+      "provenance": {
+        "address": "0x0808F6EC"
+      },
+      "rationale": "The goal window already resolves the stable FE8U Last Turn label message ID.",
+      "source_text_sha256": "a63adc3884676c4cda74a7fdd29a946e7ad72ef63b52ed039a84c614f7f9cddd",
+      "target_id": "0x01C3",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "GetStringFromIndex(MSG_1C2)"
+          ],
+          "path": "src/player_interface.c"
+        }
+      ],
+      "classification": "game_message",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0141",
+      "provenance": {
+        "address": "0x0808F760"
+      },
+      "rationale": "The goal window already resolves the stable FE8U Turn suffix message ID.",
+      "source_text_sha256": "9fb1d89660c28e488f979606377cfd65e01380649e060f692729c104d085085f",
+      "target_id": "0x01C2",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "const char gBuildDateTime[]"
+          ],
+          "path": "src/main.c"
+        },
+        {
+          "anchors": [
+            "PrintDebugStringToBG(bg, gBuildDateTime)"
+          ],
+          "path": "src/fe3_dummy.c"
+        }
+      ],
+      "classification": "diagnostic_exclusion",
+      "decision_origin": "deferred-surface-audit",
+      "import_id": "fe8cn.raw.import-0142",
+      "provenance": {
+        "address": "0x08000B04"
+      },
+      "rationale": "This fixed build timestamp is diagnostic identity printed by PrintDebugBuildDateAndTime, not natural-language UI; translating it would corrupt the diagnostic value.",
+      "source_text_sha256": "d0ccef842b6c695e40b276ba41f9cdb6726b05baedfe3b682fd133ddb621a193",
+      "user_facing": false
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "baseline_game_message_count": 114,
+    "deferred_decision_count": 29,
+    "diagnostic_exclusion_count": 1,
+    "english_fallback_count": 0,
+    "expansion_message_count": 2,
+    "game_message_count": 137,
+    "non_user_facing_exclusion_count": 3,
+    "total_count": 143,
+    "unresolved_count": 0,
+    "user_facing_deferred_localized_count": 25
+  }
+}

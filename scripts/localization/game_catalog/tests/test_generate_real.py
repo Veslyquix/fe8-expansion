@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[4]
 TEST_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from scripts.localization.game_catalog.build import generate
+from scripts.localization.game_catalog.build import build_game_catalog, generate
 
 
 class RealGenerateTests(unittest.TestCase):
@@ -31,19 +31,20 @@ class RealGenerateTests(unittest.TestCase):
             report = json.loads(written_a["report_json"].read_text(encoding="utf-8"))
             budget = json.loads(written_a["budget_json"].read_text(encoding="utf-8"))
             self.assertEqual(report["mapping_source_counts"]["indexed"], 1472)
-            self.assertEqual(report["mapping_source_counts"]["raw"], 114)
+            self.assertEqual(report["mapping_source_counts"]["raw"], 136)
             self.assertEqual(report["mapping_source_counts"]["authored"], 0)
-            self.assertEqual(report["mapping_source_counts"]["english_fallback"], 1828)
+            self.assertEqual(report["mapping_source_counts"]["english_fallback"], 1806)
             self.assertEqual(report["mapping_source_counts"]["unresolved"], 0)
             self.assertEqual(report["shared_english"]["present_count"], 3414)
             self.assertEqual(report["shared_english"]["absent_count"], 0)
             self.assertEqual(
                 report["shared_english"]["storage"]["required_bytes"], 4000
             )
-            self.assertEqual(report["locales"]["ja"]["present_count"], 1472)
-            self.assertEqual(report["locales"]["ja"]["provider_unavailable_count"], 114)
-            self.assertEqual(report["locales"]["zh-Hans"]["present_count"], 1586)
-            self.assertEqual(report["locales"]["zh-Hans"]["explicit_fallback_count"], 1828)
+            self.assertEqual(report["locales"]["ja"]["present_count"], 1495)
+            self.assertEqual(report["locales"]["ja"]["provider_counts"]["raw"], 23)
+            self.assertEqual(report["locales"]["ja"]["provider_unavailable_count"], 113)
+            self.assertEqual(report["locales"]["zh-Hans"]["present_count"], 1608)
+            self.assertEqual(report["locales"]["zh-Hans"]["explicit_fallback_count"], 1806)
             self.assertTrue(report["locales"]["ja"]["storage"]["target_fits"])
             self.assertTrue(report["locales"]["zh-Hans"]["storage"]["target_fits"])
             self.assertEqual(report["locales"]["ja"]["storage"]["required_bytes"], 5328)
@@ -82,6 +83,46 @@ class RealGenerateTests(unittest.TestCase):
             self.assertIn("gGameLocalizationZhHansEntries[]", source)
             self.assertIn("gGameLocalizationCatalogs[GAME_LOCALIZATION_LOCALE_COUNT]", source)
             self.assertIn("gGameLocalizationJaCompressedBlob +", source)
+
+    def test_deferred_game_id_surfaces_emit_exact_japanese_and_chinese(self):
+        build = build_game_catalog()
+        ja = build.locale_bundle("ja")
+        zh = build.locale_bundle("zh-Hans")
+        decisions = json.loads(
+            (
+                ROOT / "texts/locales/mapping/raw_surface_decisions.json"
+            ).read_text(encoding="utf-8")
+        )
+        raw = {
+            row["import_id"]: row["text"]
+            for row in json.loads(
+                (ROOT / "texts/locales/zh-Hans/raw.json").read_text(
+                    encoding="utf-8"
+                )
+            )["records"]
+        }
+        mapping = {
+            row["target_id"]: row["source"]
+            for row in json.loads(
+                (
+                    ROOT / "texts/locales/mapping/fe8u_target_map.json"
+                ).read_text(encoding="utf-8")
+            )["rows"]
+        }
+
+        for decision in decisions["decisions"]:
+            if decision["classification"] != "game_message":
+                continue
+            target_id = int(decision["target_id"], 16)
+            with self.subTest(import_id=decision["import_id"]):
+                self.assertEqual(
+                    ja.entries[target_id].source_text,
+                    mapping[decision["target_id"]]["regional_sources"]["ja"]["text"],
+                )
+                self.assertEqual(
+                    zh.entries[target_id].source_text,
+                    raw[decision["import_id"]],
+                )
 
     def test_profile_specific_outputs_exclude_disabled_payloads_and_size_capacity(self):
         with (

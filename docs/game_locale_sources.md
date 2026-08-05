@@ -1,9 +1,9 @@
 # Full-game locale source imports
 
-`texts/locales/` contains deterministic, UTF-8 source imports for future
-full-game Japanese (`ja`) and Simplified Chinese (`zh-Hans`) localization.
-These files are data inputs only; they are not integrated with the runtime
-locale catalog.
+`texts/locales/` contains deterministic, UTF-8 source imports for full-game
+Japanese (`ja`) and Simplified Chinese (`zh-Hans`) localization. Verified
+FE8U-target decisions feed the opt-in modern game catalog; raw-address values
+remain import provenance only and never become runtime keys.
 
 ## Layout and provenance
 
@@ -30,6 +30,13 @@ locale catalog.
   raw, authored, or an explicit English fallback.
 - `mapping/fe8u_target_map.coverage.json`: deterministic source-kind and
   subsystem counts plus every fallback target ID and reason.
+- `mapping/raw_surface_decisions.json`: the 29 audited records that were not
+  part of the original 114 raw-to-game-ID mappings. Each has a concrete game
+  message ID, semantic expansion key, or documented exclusion and call-site
+  anchors.
+- `mapping/raw_surface_closure.json`: deterministic 143-record closure
+  manifest. It is rebuilt from the raw source, verified FE8U map, deferred
+  decisions, expansion registry/catalogs, and live source anchors.
 - `manifest.json`: pinned input SHA-256 hashes, artifact hashes, exact counts,
   locale IDs, codepoint counts, and maximum UTF-8 payload lengths.
 
@@ -116,18 +123,54 @@ python3 -m scripts.localization.game_locales build-crosswalk
 python3 -m scripts.localization.game_locales check-crosswalk
 ```
 
-The committed report currently contains 3,414 decisions and zero unresolved:
+The committed FE8U target report currently contains 3,414 decisions and zero
+unresolved:
 
 - 1,472 verified indexed mappings;
-- 114 verified raw mappings;
+- 136 verified raw target mappings, covering 137 raw import records because
+  the two Attack pointers intentionally share FE8U message ID `0x067B`;
 - 0 authored translations;
-- 1,828 explicit English fallbacks.
+- 1,806 explicit English fallbacks.
 
-Translation coverage is therefore 1,586 targets (46.46%). Explicit fallback
-coverage is 1,828 targets (53.54%); fallback content is not translated content.
-The largest reported gap is 1,816 `not-yet-verified` targets, chiefly dialogue
+Translation coverage is therefore 1,608 targets (47.10%). Explicit fallback
+coverage is 1,806 targets (52.90%); fallback content is not translated content.
+The largest reported gap is 1,794 `not-yet-verified` targets, chiefly dialogue
 outside the proven named structures. Other fallback reasons are `dummy` (1),
 `region-only` (1), and `expansion-only` (10).
+
+## Raw-surface closure
+
+The closure ledger accounts for all 143 unique raw imports:
+
+- 137 records resolve through stable FE8U game message IDs;
+- 2 distinct commands that share FE8U ID `0x0693` use semantic expansion keys
+  (`raw_surface.unit_action.summon` and
+  `raw_surface.unit_action.call_monster`);
+- 3 promotion-selector initializer strings are excluded because their
+  `ClassChgMenuItem_OnTextDraw` callback always replaces them with localized
+  class names;
+- 1 fixed build timestamp is excluded as non-language diagnostic identity;
+- 0 records use an English fallback and 0 remain unresolved.
+
+The game-ID decisions include committed Japanese text copied from the
+authorized FE8J source semantics and Simplified Chinese from the exact imported
+raw payload. The expansion-key decisions keep the same provenance; their FE8J
+full-width indentation is normalized to the expansion catalog's allowed ASCII
+space, while the semantic labels remain exact. They are drawn with
+`Text_DrawString`, which is UTF-8 aware in modern localized-font profiles.
+Legacy initializer strings and callbacks remain unchanged.
+
+Build or check the machine report:
+
+```bash
+python3 -m scripts.localization.game_locales build-raw-closure
+python3 -m scripts.localization.game_locales check-raw-closure
+```
+
+The check also verifies every recorded FE8U source path and anchor still
+exists, every semantic expansion key is active and translated in
+`en`/`ja`/`zh-Hans`, and each expansion-key Chinese value equals its imported
+raw payload.
 
 ## Mapping validation and coverage
 

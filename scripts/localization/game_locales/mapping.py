@@ -112,13 +112,31 @@ def _validate_source(source: Dict[str, Any], field: str) -> str:
             ja_source = _require_dict(
                 regional_sources.get("ja"), f"{field}.regional_sources.ja"
             )
-            if ja_source.get("kind") != "symbol":
+            ja_kind = ja_source.get("kind")
+            if ja_kind not in ("symbol", "literal"):
                 raise MappingError(
-                    f"{field}.regional_sources.ja.kind must be 'symbol'"
+                    f"{field}.regional_sources.ja.kind must be 'symbol' or 'literal'"
                 )
-            _require_nonempty_string(
-                ja_source.get("symbol"), f"{field}.regional_sources.ja.symbol"
-            )
+            if ja_kind == "symbol":
+                _require_nonempty_string(
+                    ja_source.get("symbol"), f"{field}.regional_sources.ja.symbol"
+                )
+            else:
+                _require_nonempty_string(
+                    ja_source.get("text"), f"{field}.regional_sources.ja.text"
+                )
+                provenance = _require_dict(
+                    ja_source.get("provenance"),
+                    f"{field}.regional_sources.ja.provenance",
+                )
+                _require_nonempty_string(
+                    provenance.get("source_path"),
+                    f"{field}.regional_sources.ja.provenance.source_path",
+                )
+                _require_nonempty_string(
+                    provenance.get("source_symbol"),
+                    f"{field}.regional_sources.ja.provenance.source_symbol",
+                )
             cn_source = _require_dict(
                 regional_sources.get("zh-Hans"),
                 f"{field}.regional_sources.zh-Hans",

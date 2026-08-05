@@ -49,6 +49,13 @@
       "raw_source": 0,
       "total": 10
     },
+    "goal-window": {
+      "authored_translation": 0,
+      "explicit_english_fallback": 0,
+      "indexed_source": 0,
+      "raw_source": 3,
+      "total": 3
+    },
     "items": {
       "authored_translation": 0,
       "explicit_english_fallback": 0,
@@ -60,8 +67,8 @@
       "authored_translation": 0,
       "explicit_english_fallback": 1,
       "indexed_source": 36,
-      "raw_source": 49,
-      "total": 86
+      "raw_source": 68,
+      "total": 105
     },
     "supports": {
       "authored_translation": 0,
@@ -86,10 +93,10 @@
     },
     "unclassified": {
       "authored_translation": 0,
-      "explicit_english_fallback": 1816,
+      "explicit_english_fallback": 1794,
       "indexed_source": 0,
       "raw_source": 0,
-      "total": 1816
+      "total": 1794
     },
     "world-map": {
       "authored_translation": 0,
@@ -100,8 +107,8 @@
     }
   },
   "explicit_fallback_coverage": {
-    "count": 1828,
-    "percent": 53.54
+    "count": 1806,
+    "percent": 52.9
   },
   "fallback_ids": [
     {
@@ -282,37 +289,7 @@
     {
       "reason": "not-yet-verified",
       "subsystem": "unclassified",
-      "target_id": "0x0023"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x0024"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
       "target_id": "0x0025"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x0026"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x0027"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x0028"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x0029"
     },
     {
       "reason": "not-yet-verified",
@@ -1873,21 +1850,6 @@
       "reason": "not-yet-verified",
       "subsystem": "unclassified",
       "target_id": "0x018D"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x01C1"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x01C2"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x01C3"
     },
     {
       "reason": "not-yet-verified",
@@ -4142,11 +4104,6 @@
     {
       "reason": "not-yet-verified",
       "subsystem": "unclassified",
-      "target_id": "0x06A4"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
       "target_id": "0x06A5"
     },
     {
@@ -4168,41 +4125,6 @@
       "reason": "not-yet-verified",
       "subsystem": "unclassified",
       "target_id": "0x06A9"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06AA"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06AB"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06AC"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06AD"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06AE"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06AF"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06B0"
     },
     {
       "reason": "not-yet-verified",
@@ -4243,31 +4165,6 @@
       "reason": "not-yet-verified",
       "subsystem": "unclassified",
       "target_id": "0x06B8"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06B9"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06BA"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06BB"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06BC"
-    },
-    {
-      "reason": "not-yet-verified",
-      "subsystem": "unclassified",
-      "target_id": "0x06BD"
     },
     {
       "reason": "not-yet-verified",
@@ -9248,21 +9145,21 @@
   "fallback_reasons": {
     "dummy": 1,
     "expansion-only": 10,
-    "not-yet-verified": 1816,
+    "not-yet-verified": 1794,
     "region-only": 1
   },
   "mapping_authoritative": true,
   "schema_version": 1,
   "source_kind_counts": {
     "authored_translation": 0,
-    "explicit_english_fallback": 1828,
+    "explicit_english_fallback": 1806,
     "indexed_source": 1472,
-    "raw_source": 114
+    "raw_source": 136
   },
   "target_count": 3414,
   "translation_coverage": {
-    "count": 1586,
-    "percent": 46.46
+    "count": 1608,
+    "percent": 47.1
   },
   "unresolved_count": 0
 }

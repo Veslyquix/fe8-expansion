@@ -262,6 +262,24 @@
       "surface": "locale_name",
       "max_width": 8,
       "max_decoded_bytes": 8
+    },
+    {
+      "id": 33,
+      "key": "raw_surface.unit_action.summon",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 16,
+      "max_decoded_bytes": 24,
+      "notes": "Modern semantic adapter for the summon command; Japanese and Chinese use authorized regional raw-source semantics, with FE8J's full-width indent normalized to catalog-safe ASCII space."
+    },
+    {
+      "id": 34,
+      "key": "raw_surface.unit_action.call_monster",
+      "status": "active",
+      "surface": "framework_generic",
+      "max_width": 16,
+      "max_decoded_bytes": 24,
+      "notes": "Modern semantic adapter for the demon call command that shares FE8U message ID 0x0693 with summon; FE8J's full-width indent is normalized to catalog-safe ASCII space."
     }
   ]
 }

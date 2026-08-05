@@ -125,7 +125,7 @@ class ModernEnglishBundleTests(unittest.TestCase):
             for row in rows
             if row["source"]["kind"] == "english_fallback"
         ]
-        self.assertEqual(len(fallback_ids), 1828)
+        self.assertEqual(len(fallback_ids), 1806)
 
         for msg_id in fallback_ids:
             with self.subTest(msg_id=f"0x{msg_id:04X}"):

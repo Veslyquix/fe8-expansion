@@ -830,50 +830,86 @@
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0060",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/data/data_081F6D00/data_081F6D00.s",
+              "source_symbol": "MenuItem_PromoSubConfirm[0].name"
+            },
+            "text": "　決定"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0060",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x0023",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "auto:shifted",
           "source_line": 33
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x0023",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-promotion-message-id: MenuItem_PromoSubConfirm MenuItem_PromoSubConfirm[0].name",
+        "evidence_kind": "regional-promotion-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U promotion confirmation row already resolves this stable message ID; the FE8J promotion data and FE8CN raw record prove the regional label.",
+        "source_key": "MenuItem_PromoSubConfirm[0].name",
+        "source_paths": {
+          "fe8j": "src/data/data_081F6D00/data_081F6D00.s",
+          "fe8u": "src/classchg-menuconfirm.c"
+        },
+        "source_symbol": "MenuItem_PromoSubConfirm",
+        "source_table": "MenuItem_PromoSubConfirm",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0061",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/data/data_081F6D00/data_081F6D00.s",
+              "source_symbol": "MenuItem_PromoSubConfirm[1].name"
+            },
+            "text": "　やめる"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0061",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x0024",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "auto:shifted",
           "source_line": 34
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x0024",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-promotion-message-id: MenuItem_PromoSubConfirm MenuItem_PromoSubConfirm[1].name",
+        "evidence_kind": "regional-promotion-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U promotion confirmation row already resolves this stable message ID; the FE8J promotion data and FE8CN raw record prove the regional label.",
+        "source_key": "MenuItem_PromoSubConfirm[1].name",
+        "source_paths": {
+          "fe8j": "src/data/data_081F6D00/data_081F6D00.s",
+          "fe8u": "src/classchg-menuconfirm.c"
+        },
+        "source_symbol": "MenuItem_PromoSubConfirm",
+        "source_table": "MenuItem_PromoSubConfirm",
+        "subsystem": "menus"
       }
     },
     {
@@ -902,98 +938,170 @@
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0005",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0AC"
+            },
+            "text": "　リリースエントリ"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0005",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x0026",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "auto:shifted",
           "source_line": 36
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x0026",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugContinueMenuItems gDebugContinueMenuItems.override[0xa].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugContinueMenuItems.override[0xa].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugContinueMenuItems",
+        "source_table": "gDebugContinueMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0006",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_09C"
+            },
+            "text": "　どこでも再開"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0006",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x0027",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "auto:shifted",
           "source_line": 37
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x0027",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugContinueMenuItems gDebugContinueMenuItems.override[0xb].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugContinueMenuItems.override[0xb].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugContinueMenuItems",
+        "source_table": "gDebugContinueMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0007",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_090"
+            },
+            "text": "　手再開"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0007",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x0028",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 38
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x0028",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugContinueMenuItems gDebugContinueMenuItems.override[0xc].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugContinueMenuItems.override[0xc].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugContinueMenuItems",
+        "source_table": "gDebugContinueMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0008",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_07C"
+            },
+            "text": "　ファイル初期化"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0008",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x0029",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "auto:shifted",
           "source_line": 39
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x0029",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugContinueMenuItems gDebugContinueMenuItems.override[0xd].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugContinueMenuItems.override[0xd].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugContinueMenuItems",
+        "source_table": "gDebugContinueMenuItems",
+        "subsystem": "menus"
       }
     },
     {
@@ -12149,74 +12257,128 @@
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0139",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/player_interface_0808F584.c",
+              "source_symbol": "GoalString_UnitsLeft"
+            },
+            "text": "残り"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0139",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x01C1",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 447
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x01C1",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-goal-message-id: GoalDisplay_Init GOAL_TYPE_DEFEAT_ALL.units_left",
+        "evidence_kind": "regional-goal-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
+        "source_key": "GOAL_TYPE_DEFEAT_ALL.units_left",
+        "source_paths": {
+          "fe8j": "src/player_interface_0808F584.c",
+          "fe8u": "src/player_interface.c"
+        },
+        "source_symbol": "GoalDisplay_Init",
+        "source_table": "GoalDisplay_Init",
+        "subsystem": "goal-window"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0141",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/player_interface_0808F584.c",
+              "source_symbol": "GoalString_Turn"
+            },
+            "text": "ターン"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0141",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x01C2",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "auto:shifted",
           "source_line": 448
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x01C2",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-goal-message-id: GoalDisplay_Init GOAL_TYPE_DEFENSE.turn_suffix",
+        "evidence_kind": "regional-goal-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
+        "source_key": "GOAL_TYPE_DEFENSE.turn_suffix",
+        "source_paths": {
+          "fe8j": "src/player_interface_0808F584.c",
+          "fe8u": "src/player_interface.c"
+        },
+        "source_symbol": "GoalDisplay_Init",
+        "source_table": "GoalDisplay_Init",
+        "subsystem": "goal-window"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0140",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/player_interface_0808F584.c",
+              "source_symbol": "GoalString_LastTurn"
+            },
+            "text": "最終ターン"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0140",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x01C3",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 449
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x01C3",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-goal-message-id: GoalDisplay_Init GOAL_TYPE_DEFENSE.last_turn",
+        "evidence_kind": "regional-goal-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
+        "source_key": "GOAL_TYPE_DEFENSE.last_turn",
+        "source_paths": {
+          "fe8j": "src/player_interface_0808F584.c",
+          "fe8u": "src/player_interface.c"
+        },
+        "source_symbol": "GoalDisplay_Init",
+        "source_table": "GoalDisplay_Init",
+        "subsystem": "goal-window"
       }
     },
     {
@@ -46616,12 +46778,19 @@
     },
     {
       "source": {
+        "alternate_import_ids": [
+          "fe8cn.raw.import-0025"
+        ],
         "import_id": "fe8cn.raw.import-0024",
         "kind": "raw",
         "regional_sources": {
           "ja": {
-            "kind": "symbol",
-            "symbol": "gMenuStr_25C..gMenuStr_154"
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_254"
+            },
+            "text": "　攻撃"
           },
           "zh-Hans": {
             "import_id": "fe8cn.raw.import-0024",
@@ -48113,26 +48282,44 @@
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0009",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0C0"
+            },
+            "text": "　手中断"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0009",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06A4",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1545
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06A4",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugChuudanMenuItems gDebugChuudanMenuItems.override[0x10].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugChuudanMenuItems.override[0x10].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugChuudanMenuItems",
+        "source_table": "gDebugChuudanMenuItems",
+        "subsystem": "menus"
       }
     },
     {
@@ -48257,170 +48444,296 @@
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0010",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_118"
+            },
+            "text": "　マップ"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0010",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06AA",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1551
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06AA",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x11].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x11].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0011",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_10C"
+            },
+            "text": "　デブ情報"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0011",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06AB",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1552
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06AB",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x12].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x12].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0012",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_104"
+            },
+            "text": "　天気"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0012",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06AC",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1553
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06AC",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x13].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x13].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0013",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0FC"
+            },
+            "text": "　索敵"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0013",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06AD",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1554
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06AD",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x14].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x14].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0014",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0F0"
+            },
+            "text": "　周回数"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0014",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06AE",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1555
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06AE",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x15].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x15].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0015",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0E0"
+            },
+            "text": "　クリアずみ"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0015",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06AF",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1556
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06AF",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x16].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x16].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0016",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0CC"
+            },
+            "text": "　おやすみなさい"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0016",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06B0",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1557
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06B0",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugMenuItems gDebugMenuItems.override[0x18].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugMenuItems.override[0x18].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugMenuItems",
+        "source_table": "gDebugMenuItems",
+        "subsystem": "menus"
       }
     },
     {
@@ -48617,122 +48930,212 @@
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0000",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_060"
+            },
+            "text": "ファイルをクリアずみに"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0000",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06B9",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1566
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06B9",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugClearMenuItems gDebugClearMenuItems.override[0x3].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugClearMenuItems.override[0x3].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugClearMenuItems",
+        "source_table": "gDebugClearMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0001",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_054"
+            },
+            "text": "しますか？"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0001",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06BA",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1567
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06BA",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugClearMenuItems gDebugClearMenuItems.override[0x4].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugClearMenuItems.override[0x4].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugClearMenuItems",
+        "source_table": "gDebugClearMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0002",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_03C"
+            },
+            "text": "クリアずみファイルでは"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0002",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06BB",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1568
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06BB",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugClearMenuItems gDebugClearMenuItems.override[0x5].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugClearMenuItems.override[0x5].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugClearMenuItems",
+        "source_table": "gDebugClearMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0003",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_024"
+            },
+            "text": "以後プレイできません"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0003",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06BC",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1569
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06BC",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugClearMenuItems gDebugClearMenuItems.override[0x6].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugClearMenuItems.override[0x6].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugClearMenuItems",
+        "source_table": "gDebugClearMenuItems",
+        "subsystem": "menus"
       }
     },
     {
       "source": {
-        "kind": "english_fallback",
-        "reason": "not-yet-verified"
+        "import_id": "fe8cn.raw.import-0004",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_00C"
+            },
+            "text": "　　　　　　　　　了解"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0004",
+            "kind": "import"
+          }
+        }
       },
       "state": "verified",
       "target_id": "0x06BD",
       "verification": {
         "candidate_seed": {
-          "ignored": true,
+          "matched": false,
           "seed_tag": "interp",
           "source_line": 1570
         },
-        "confidence": "explicit",
-        "evidence": "No accepted structural evidence identifies this semantic slot. A candidate seed exists but was not allowed to self-promote.",
-        "evidence_kind": "fallback-classification",
-        "method": "explicit-fallback",
-        "rationale": "not-yet-verified",
-        "source_key": "0x06BD",
-        "source_symbol": "gMsgTable",
-        "source_table": "FE8U target universe",
-        "subsystem": "unclassified"
+        "confidence": "high",
+        "evidence": "regional-direct-message-id: gDebugClearMenuItems gDebugClearMenuItems.override[0x7].name",
+        "evidence_kind": "regional-direct-message-id",
+        "method": "structural-crosswalk",
+        "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+        "source_key": "gDebugClearMenuItems.override[0x7].name",
+        "source_paths": {
+          "fe8j": "src/menu_def.c",
+          "fe8u": "src/menu_def.c"
+        },
+        "source_symbol": "gDebugClearMenuItems",
+        "source_table": "gDebugClearMenuItems",
+        "subsystem": "menus"
       }
     },
     {

@@ -33,6 +33,8 @@
     "framework.locale_name.ja": "日本語",
     "framework.locale_name.zh_hans": "簡体字中国語",
     "framework.locale_short_name.ja": "JA",
-    "framework.locale_short_name.zh_hans": "ZH"
+    "framework.locale_short_name.zh_hans": "ZH",
+    "raw_surface.unit_action.summon": " 召喚",
+    "raw_surface.unit_action.call_monster": " 呼魔"
   }
 }

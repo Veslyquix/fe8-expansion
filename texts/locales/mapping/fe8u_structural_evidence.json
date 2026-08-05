@@ -50,6 +50,198 @@
   "records": [
     {
       "confidence": "high",
+      "evidence_kind": "regional-promotion-message-id",
+      "rationale": "The FE8U promotion confirmation row already resolves this stable message ID; the FE8J promotion data and FE8CN raw record prove the regional label.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0060",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/data/data_081F6D00/data_081F6D00.s",
+              "source_symbol": "MenuItem_PromoSubConfirm[0].name"
+            },
+            "text": "　決定"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0060",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "MenuItem_PromoSubConfirm[0].name",
+      "source_paths": {
+        "fe8j": "src/data/data_081F6D00/data_081F6D00.s",
+        "fe8u": "src/classchg-menuconfirm.c"
+      },
+      "source_symbol": "MenuItem_PromoSubConfirm",
+      "source_table": "MenuItem_PromoSubConfirm",
+      "subsystem": "menus",
+      "target_id": "0x0023"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-promotion-message-id",
+      "rationale": "The FE8U promotion confirmation row already resolves this stable message ID; the FE8J promotion data and FE8CN raw record prove the regional label.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0061",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/data/data_081F6D00/data_081F6D00.s",
+              "source_symbol": "MenuItem_PromoSubConfirm[1].name"
+            },
+            "text": "　やめる"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0061",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "MenuItem_PromoSubConfirm[1].name",
+      "source_paths": {
+        "fe8j": "src/data/data_081F6D00/data_081F6D00.s",
+        "fe8u": "src/classchg-menuconfirm.c"
+      },
+      "source_symbol": "MenuItem_PromoSubConfirm",
+      "source_table": "MenuItem_PromoSubConfirm",
+      "subsystem": "menus",
+      "target_id": "0x0024"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0005",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0AC"
+            },
+            "text": "　リリースエントリ"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0005",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugContinueMenuItems.override[0xa].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugContinueMenuItems",
+      "source_table": "gDebugContinueMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x0026"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0006",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_09C"
+            },
+            "text": "　どこでも再開"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0006",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugContinueMenuItems.override[0xb].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugContinueMenuItems",
+      "source_table": "gDebugContinueMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x0027"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0007",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_090"
+            },
+            "text": "　手再開"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0007",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugContinueMenuItems.override[0xc].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugContinueMenuItems",
+      "source_table": "gDebugContinueMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x0028"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0008",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_07C"
+            },
+            "text": "　ファイル初期化"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0008",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugContinueMenuItems.override[0xd].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugContinueMenuItems",
+      "source_table": "gDebugContinueMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x0029"
+    },
+    {
+      "confidence": "high",
       "evidence_kind": "shared-script-slot",
       "rationale": "The same named event script and text ordinal identify the slot.",
       "source": {
@@ -4056,6 +4248,102 @@
       "source_table": "gChapterDataTable",
       "subsystem": "chapters",
       "target_id": "0x01C0"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-goal-message-id",
+      "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0139",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/player_interface_0808F584.c",
+              "source_symbol": "GoalString_UnitsLeft"
+            },
+            "text": "残り"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0139",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "GOAL_TYPE_DEFEAT_ALL.units_left",
+      "source_paths": {
+        "fe8j": "src/player_interface_0808F584.c",
+        "fe8u": "src/player_interface.c"
+      },
+      "source_symbol": "GoalDisplay_Init",
+      "source_table": "GoalDisplay_Init",
+      "subsystem": "goal-window",
+      "target_id": "0x01C1"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-goal-message-id",
+      "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0141",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/player_interface_0808F584.c",
+              "source_symbol": "GoalString_Turn"
+            },
+            "text": "ターン"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0141",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "GOAL_TYPE_DEFENSE.turn_suffix",
+      "source_paths": {
+        "fe8j": "src/player_interface_0808F584.c",
+        "fe8u": "src/player_interface.c"
+      },
+      "source_symbol": "GoalDisplay_Init",
+      "source_table": "GoalDisplay_Init",
+      "subsystem": "goal-window",
+      "target_id": "0x01C2"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-goal-message-id",
+      "rationale": "The FE8U goal window already resolves this stable message ID; the authorized FE8J GoalDisplay_Init raw label and FE8CN record identify the same UI slot.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0140",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/player_interface_0808F584.c",
+              "source_symbol": "GoalString_LastTurn"
+            },
+            "text": "最終ターン"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0140",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "GOAL_TYPE_DEFENSE.last_turn",
+      "source_paths": {
+        "fe8j": "src/player_interface_0808F584.c",
+        "fe8u": "src/player_interface.c"
+      },
+      "source_symbol": "GoalDisplay_Init",
+      "source_table": "GoalDisplay_Init",
+      "subsystem": "goal-window",
+      "target_id": "0x01C3"
     },
     {
       "confidence": "high",
@@ -23262,12 +23550,19 @@
       "evidence_kind": "regional-raw-table",
       "rationale": "The shared menu row selects a direct regional string; the stable import ID is runtime identity.",
       "source": {
+        "alternate_import_ids": [
+          "fe8cn.raw.import-0025"
+        ],
         "import_id": "fe8cn.raw.import-0024",
         "kind": "raw",
         "regional_sources": {
           "ja": {
-            "kind": "symbol",
-            "symbol": "gMenuStr_25C..gMenuStr_154"
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_254"
+            },
+            "text": "　攻撃"
           },
           "zh-Hans": {
             "import_id": "fe8cn.raw.import-0024",
@@ -24320,6 +24615,422 @@
       "source_table": "gMapMenuItems",
       "subsystem": "menus",
       "target_id": "0x06A0"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0009",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0C0"
+            },
+            "text": "　手中断"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0009",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugChuudanMenuItems.override[0x10].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugChuudanMenuItems",
+      "source_table": "gDebugChuudanMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06A4"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0010",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_118"
+            },
+            "text": "　マップ"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0010",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x11].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06AA"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0011",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_10C"
+            },
+            "text": "　デブ情報"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0011",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x12].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06AB"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0012",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_104"
+            },
+            "text": "　天気"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0012",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x13].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06AC"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0013",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0FC"
+            },
+            "text": "　索敵"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0013",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x14].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06AD"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0014",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0F0"
+            },
+            "text": "　周回数"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0014",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x15].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06AE"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0015",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0E0"
+            },
+            "text": "　クリアずみ"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0015",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x16].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06AF"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0016",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_0CC"
+            },
+            "text": "　おやすみなさい"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0016",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugMenuItems.override[0x18].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugMenuItems",
+      "source_table": "gDebugMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06B0"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0000",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_060"
+            },
+            "text": "ファイルをクリアずみに"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0000",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugClearMenuItems.override[0x3].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugClearMenuItems",
+      "source_table": "gDebugClearMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06B9"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0001",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_054"
+            },
+            "text": "しますか？"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0001",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugClearMenuItems.override[0x4].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugClearMenuItems",
+      "source_table": "gDebugClearMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06BA"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0002",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_03C"
+            },
+            "text": "クリアずみファイルでは"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0002",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugClearMenuItems.override[0x5].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugClearMenuItems",
+      "source_table": "gDebugClearMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06BB"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0003",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_024"
+            },
+            "text": "以後プレイできません"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0003",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugClearMenuItems.override[0x6].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugClearMenuItems",
+      "source_table": "gDebugClearMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06BC"
+    },
+    {
+      "confidence": "high",
+      "evidence_kind": "regional-direct-message-id",
+      "rationale": "The FE8U menu row already resolves this stable message ID, while the matching authorized FE8J row and FE8CN raw record provide regional text.",
+      "source": {
+        "import_id": "fe8cn.raw.import-0004",
+        "kind": "raw",
+        "regional_sources": {
+          "ja": {
+            "kind": "literal",
+            "provenance": {
+              "source_path": "src/menu_def.c",
+              "source_symbol": "gMenuStr_00C"
+            },
+            "text": "　　　　　　　　　了解"
+          },
+          "zh-Hans": {
+            "import_id": "fe8cn.raw.import-0004",
+            "kind": "import"
+          }
+        }
+      },
+      "source_key": "gDebugClearMenuItems.override[0x7].name",
+      "source_paths": {
+        "fe8j": "src/menu_def.c",
+        "fe8u": "src/menu_def.c"
+      },
+      "source_symbol": "gDebugClearMenuItems",
+      "source_table": "gDebugClearMenuItems",
+      "subsystem": "menus",
+      "target_id": "0x06BD"
     },
     {
       "confidence": "high",
@@ -38649,10 +39360,6 @@
   ],
   "reference_files": [
     {
-      "logical_path": "repository:texts/locales/zh-Hans/raw.json",
-      "sha256": "2c2f3ac5fef9117a01d92cdc0098c1b83903719507048c8b5541f4cccc50b6ff"
-    },
-    {
       "logical_path": "fe8j:baserom.gba",
       "sha256": "44fd343625ab9e6b90f63a80758c15066d526e6873fae91474006314a5ead464"
     },
@@ -39337,6 +40044,10 @@
       "sha256": "a089f979bf2eef6e0891ffdef53da2bba5b3885dc53a0b6b6ddf37bd3059e07e"
     },
     {
+      "logical_path": "fe8j:src/data/data_081F6D00/data_081F6D00.s",
+      "sha256": "4fa7ea7c3b0a808b3aee88b55a5ce2d8d6ec99fd8bbc7286d0484d3a54902697"
+    },
+    {
       "logical_path": "fe8j:src/data/data_088617C8/data_088617C8.s",
       "sha256": "ce37f8fd49e7e98e81ef3d4305de262762210ff0370350fefc4bc69949da64a0"
     },
@@ -39369,12 +40080,20 @@
       "sha256": "30cc532531cc641d3b3eccb0a3c338447ac61b9a7aa3d775ab70834a9974ebc1"
     },
     {
+      "logical_path": "fe8j:src/player_interface_0808F584.c",
+      "sha256": "87a9bfce30c2009afc4173229252e5968622c9a16c85c9bbe106c9b649f1517a"
+    },
+    {
       "logical_path": "fe8u:fireemblem8.elf",
       "sha256": "b6a3dc8d89ed94f3681cda5ca7efab8b05b21b94748761f7785203638d943821"
     },
     {
       "logical_path": "fe8u:fireemblem8.gba",
       "sha256": "638cda9d9b72657220fbf7e7a500cd3b64d9686c36e8a56fca69d26d13886f2f"
+    },
+    {
+      "logical_path": "fe8u:src/classchg-menuconfirm.c",
+      "sha256": "ca94ad98629bafee69e2eab12f3d73c1136bd85a3d7eca79d457d4a4e658a84a"
     },
     {
       "logical_path": "fe8u:src/data/chapter_settings.json",
@@ -39878,11 +40597,19 @@
     },
     {
       "logical_path": "fe8u:src/menu_def.c",
-      "sha256": "cfdddbb06fee477898f10a95bcaa7fa28f2edf2412f4be76147b8db265857bcb"
+      "sha256": "036310a643bc97e540d6d1d0dd8c8b8431124331dd092f28885dededcea5b2e3"
+    },
+    {
+      "logical_path": "fe8u:src/player_interface.c",
+      "sha256": "0faed5a192d559878fa167ea1484271074fab3f03af6a24e97176ac89d1aa0b0"
     },
     {
       "logical_path": "fe8u:src/worldmap_path.c",
       "sha256": "3bd22faa296f0ffa85f7c63adb3108da3299239ed7dc3397c0aec63799e37589"
+    },
+    {
+      "logical_path": "repository:texts/locales/zh-Hans/raw.json",
+      "sha256": "2c2f3ac5fef9117a01d92cdc0098c1b83903719507048c8b5541f4cccc50b6ff"
     }
   ],
   "schema_version": 1,

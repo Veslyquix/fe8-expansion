@@ -21,6 +21,10 @@ from .importer import (
 )
 from .mapping import MappingError, validate_mapping_document
 from .parsers import LocaleSourceError
+from .raw_closure import (
+    build_raw_surface_closure,
+    canonical_json_bytes as closure_json_bytes,
+)
 
 
 def _load_mapping(path: Path, target_count: int):
@@ -180,6 +184,57 @@ def _cmd_check_crosswalk(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_raw_closure(args: argparse.Namespace):
+    return build_raw_surface_closure(
+        raw_data=_load_json(args.raw_source),
+        mapping_data=_load_json(args.mapping),
+        decisions_data=_load_json(args.decisions),
+        registry_data=_load_json(args.registry),
+        catalog_data={
+            "en": _load_json(args.catalog_en),
+            "ja": _load_json(args.catalog_ja),
+            "zh-Hans": _load_json(args.catalog_zh_hans),
+        },
+        repo_root=args.repo_root,
+    )
+
+
+def _cmd_build_raw_closure(args: argparse.Namespace) -> int:
+    closure = _build_raw_closure(args)
+    args.closure.parent.mkdir(parents=True, exist_ok=True)
+    args.closure.write_bytes(closure_json_bytes(closure))
+    summary = closure["summary"]
+    print(
+        f"built raw closure: {summary['total_count']}/"
+        f"{summary['total_count']} decisions, "
+        f"game={summary['game_message_count']} "
+        f"expansion={summary['expansion_message_count']} "
+        f"excluded={summary['non_user_facing_exclusion_count'] + summary['diagnostic_exclusion_count']} "
+        f"fallback={summary['english_fallback_count']} "
+        f"unresolved={summary['unresolved_count']}"
+    )
+    return 0
+
+
+def _cmd_check_raw_closure(args: argparse.Namespace) -> int:
+    closure = _build_raw_closure(args)
+    expected = closure_json_bytes(closure)
+    if not args.closure.is_file() or args.closure.read_bytes() != expected:
+        raise MappingError(
+            f"{args.closure}: raw closure differs from deterministic rebuild"
+        )
+    summary = closure["summary"]
+    print(
+        f"raw closure matches committed bytes: decisions={summary['total_count']} "
+        f"game={summary['game_message_count']} "
+        f"expansion={summary['expansion_message_count']} "
+        f"excluded={summary['non_user_facing_exclusion_count'] + summary['diagnostic_exclusion_count']} "
+        f"fallback={summary['english_fallback_count']} "
+        f"unresolved={summary['unresolved_count']}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -307,6 +362,66 @@ def build_parser() -> argparse.ArgumentParser:
             default=Path("include/constants/msg.h"),
         )
         crosswalk_parser.set_defaults(handler=handler)
+
+    for command, help_text, handler in (
+        (
+            "build-raw-closure",
+            "build the 143-record raw-surface closure manifest",
+            _cmd_build_raw_closure,
+        ),
+        (
+            "check-raw-closure",
+            "compare the raw-surface closure manifest with a deterministic rebuild",
+            _cmd_check_raw_closure,
+        ),
+    ):
+        closure_parser = subparsers.add_parser(command, help=help_text)
+        closure_parser.add_argument(
+            "--raw-source",
+            type=Path,
+            default=Path("texts/locales/zh-Hans/raw.json"),
+        )
+        closure_parser.add_argument(
+            "--mapping",
+            type=Path,
+            default=Path("texts/locales/mapping/fe8u_target_map.json"),
+        )
+        closure_parser.add_argument(
+            "--decisions",
+            type=Path,
+            default=Path("texts/locales/mapping/raw_surface_decisions.json"),
+        )
+        closure_parser.add_argument(
+            "--closure",
+            type=Path,
+            default=Path("texts/locales/mapping/raw_surface_closure.json"),
+        )
+        closure_parser.add_argument(
+            "--registry",
+            type=Path,
+            default=Path("texts/expansion/registry.json"),
+        )
+        closure_parser.add_argument(
+            "--catalog-en",
+            type=Path,
+            default=Path("texts/expansion/catalog.en.json"),
+        )
+        closure_parser.add_argument(
+            "--catalog-ja",
+            type=Path,
+            default=Path("texts/expansion/catalog.ja.json"),
+        )
+        closure_parser.add_argument(
+            "--catalog-zh-hans",
+            type=Path,
+            default=Path("texts/expansion/catalog.zh-Hans.json"),
+        )
+        closure_parser.add_argument(
+            "--repo-root",
+            type=Path,
+            default=Path("."),
+        )
+        closure_parser.set_defaults(handler=handler)
 
     return parser
 

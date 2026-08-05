@@ -174,8 +174,14 @@ the compact Config-row label is the cataloged code `QPS`. Locale names/codes
 are resolved against `EXPANSION_LOCALE_EN` (proper nouns/identifiers), never
 through themselves. The bootstrap names/codes for the prepared real locales
 are deliberately ASCII (`Japanese`, `Simplified Chinese`, `JA`, `ZH`) until
-the selector has a common CJK font. The Japanese/Chinese text added here is
-original expansion-framework UI/debug text only, not imported game dialogue.
+the selector has a common CJK font. Most Japanese/Chinese text here is
+original expansion-framework UI/debug text.
+The two `raw_surface.unit_action.*` keys are the deliberate exception: they are
+semantic modern adapters for two regional game commands that share one FE8U
+message ID. Their Japanese/Chinese strings retain authorized raw-source
+provenance documented in `docs/game_locale_sources.md`; the raw address/import
+ID never becomes the runtime key.
+
 `ja`/`zh-Hans` remain rejected by production configuration despite their
 populated expansion catalogs; `fr`/`de`/`es`/`it` remain unpopulated null
 descriptor slots.
@@ -188,6 +194,9 @@ descriptor slots.
    The committed `ja`/`zh-Hans` catalogs intentionally cover every active
    key, although the generic resolver also handles a missing non-English
    entry with one deterministic English fallback.
+   Raw-only game surfaces must use a semantic `raw_surface.*` key, not a ROM
+   address or `fe8cn.raw.import-*` identifier, and must be recorded in the raw
+   closure ledger.
 2. `make localization-generate` (or let any modern build target
    depend on it) regenerates `expansion_locale_catalog.c`/
    `expansion_msg_ids.h`/the localization budget JSON, write-if-unchanged.

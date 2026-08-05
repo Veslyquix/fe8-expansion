@@ -333,7 +333,21 @@ def _entry_for_locale(
             )
         regional_sources = source.get("regional_sources", {})
         ja_source = regional_sources.get("ja", {}) if isinstance(regional_sources, dict) else {}
-        symbol = ja_source.get("symbol") if isinstance(ja_source, dict) else None
+        ja_kind = ja_source.get("kind") if isinstance(ja_source, dict) else None
+        if ja_kind == "literal":
+            source_text = ja_source["text"]
+            return EntryPayloadMeta(
+                target_id=row.target_id,
+                mapping_source_kind=row.source_kind,
+                mapping_source=source,
+                locale_provider_kind="raw",
+                source_text=source_text,
+                encoded_bytes=encode_canonical_text(source_text),
+                fallback_kind=FALLBACK_KIND_NONE,
+                fallback_reason=None,
+                note=None,
+            )
+        symbol = ja_source.get("symbol") if ja_kind == "symbol" else None
         note = "verified raw mapping has no committed canonical ja payload source"
         if symbol:
             note += f"; evidence symbol={symbol}"

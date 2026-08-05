@@ -128,7 +128,7 @@ int main(void)
     ExpansionLocale_InvalidateCache();
 
     ExpansionLocale_GetCatalogStats(&stats);
-    CHECK(stats.activeMessageCount == 32);
+    CHECK(stats.activeMessageCount == 34);
     CHECK(stats.tombstoneCount == 1);
     CHECK(stats.populatedLocaleCount == 4);
     CHECK(stats.populatedLocaleCount == gExpansionLocalePopulatedCount);
