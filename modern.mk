@@ -27,6 +27,7 @@ MODERN_GOALS := \
 	expansion-modern-linker-check \
 	expansion-modern-localization-budget \
 	expansion-modern-localization-budget-check \
+	expansion-modern-localization-profile-headroom-check \
 	expansion-modern-localization-runtime-debug-check \
 	expansion-modern-localization-runtime-release-check \
 	expansion-modern-localization-runtime-multi-check \
@@ -1568,6 +1569,14 @@ MODERN_LOCALE_PROFILE_EN_ZH_HANS_ROOT := $(MODERN_BUILD_ROOT)-locale-en-zh-hans
 MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT := $(MODERN_BUILD_ROOT)-locale-en-ja-zh-hans
 MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_ROOT := \
 	$(MODERN_BUILD_ROOT)-locale-en-ja-zh-hans-qps
+MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
 
 expansion-modern-localization-profile-en-ja:
 	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
@@ -1591,11 +1600,54 @@ expansion-modern-localization-profile-en-ja-zh-hans-qps:
 		EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans,qps-ploc \
 		EXPANSION_PSEUDO_LOCALE=1
 
+# Build the product profiles serially: every private modern build root still
+# shares the generated battle-animation sidecar, so parallel recursive profile
+# builds would race that one legacy asset. Each real linked map/ELF pair must
+# agree on all non-empty allocatable output sections and retain positive
+# EWRAM headroom; this is intentionally stronger than the generic overflow
+# assertion and cannot be satisfied by a source-only aggregate budget.
+expansion-modern-localization-profile-headroom-check:
+	+$(MAKE) expansion-modern-localization-profile-en-ja \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	+$(MAKE) expansion-modern-localization-profile-en-zh-hans \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	+$(MAKE) expansion-modern-localization-profile-en-ja-zh-hans \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	+$(MAKE) expansion-modern-localization-profile-en-ja-zh-hans-qps \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	@printf 'Modern localization profile headroom checks passed (config=%s abi=%s)\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
 .PHONY: \
 	expansion-modern-localization-profile-en-ja \
 	expansion-modern-localization-profile-en-zh-hans \
 	expansion-modern-localization-profile-en-ja-zh-hans \
-	expansion-modern-localization-profile-en-ja-zh-hans-qps
+	expansion-modern-localization-profile-en-ja-zh-hans-qps \
+	expansion-modern-localization-profile-headroom-check
 
 # Compile-settings stamp: a content-addressed prerequisite of every modern
 # C/data object that can observe include/expansion_config.h (global.h
@@ -3157,18 +3209,18 @@ ifeq ($(MODERN_CONFIG),debug)
 endif
 	@printf 'Modern ROM localization-runtime multi-check passed (config=%s): %s\n' '$(MODERN_CONFIG)' "$(MODERN_LOCALE_MULTI_ROM)"
 
-# 4. Production CJK debug profile: captured first-start Japanese/Chinese
-#    choices, inline Config switching across all three real locales, and
-#    Simplified Chinese persistence across a real soft reset.
+# 4. Production CJK matrix: all four named profiles first pass the exact
+#    product map/ELF headroom gate above. The trilingual profile then runs
+#    captured first-start Japanese/Chinese choices, inline Config switching
+#    across all three real locales, and Simplified Chinese persistence across
+#    a real soft reset.
 MODERN_LOCALE_CJK_ROM := \
 	$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
 
 expansion-modern-localization-runtime-cjk-check: expansion-modern-boot-preflight \
+		expansion-modern-localization-profile-headroom-check \
 		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav \
 		$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav
-	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
-		MODERN_ROM_SIZE=32M MODERN_BUILD_ROOT=$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT) \
-		EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans
 ifeq ($(MODERN_CONFIG),debug)
 	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_CJK_ROM)" \
 		--scenario "$(MODERN_LOCALE_SCEN)/locale-cjk-first-start-ja-modern-debug.json" \

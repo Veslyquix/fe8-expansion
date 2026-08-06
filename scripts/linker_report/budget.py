@@ -431,8 +431,12 @@ def generate_report(
     # ELF cross-validation
     elf_report: dict[str, Any]
     if elf_sections is not None:
-        elf_names = {es.name for es in elf_sections}
-        map_names = {s.name for s in budget_sections}
+        elf_names = {es.name for es in elf_sections if es.size > 0}
+        # readelf's allocatable-section view deliberately omits zero-sized
+        # output placeholders such as an empty 16 MiB .locale_data bank.
+        # Compare only map sections that occupy bytes; a populated locale
+        # bank remains non-zero/allocatable and is still cross-validated.
+        map_names = {s.name for s in budget_sections if s.size > 0}
         elf_report = {
             "available": True,
             "section_count": len(elf_sections),
@@ -499,11 +503,13 @@ def render_check_diff(
     ))
 
 
-def elf_cross_validation_errors(report: dict[str, Any]) -> list[str]:
+def elf_cross_validation_errors(
+    report: dict[str, Any], require_available: bool = False,
+) -> list[str]:
     """Return section-name mismatches from the current ELF diagnostics."""
     elf_report = report.get("elf", {})
     if not elf_report.get("available"):
-        return []
+        return ["ELF cross-validation unavailable"] if require_available else []
 
     cross_validation = elf_report.get("cross_validation", {})
     errors = []
@@ -511,6 +517,26 @@ def elf_cross_validation_errors(report: dict[str, Any]) -> list[str]:
         values = cross_validation.get(key, [])
         if values:
             errors.append(f"{key}: {', '.join(values)}")
+    return errors
+
+
+def positive_headroom_errors(
+    report: dict[str, Any], region_names: list[str],
+) -> list[str]:
+    """Return errors for requested regions without at least one free byte."""
+    regions = {region["name"]: region for region in report.get("regions", ())}
+    errors = []
+    for name in dict.fromkeys(region_names):
+        region = regions.get(name)
+        if region is None:
+            errors.append(f"required region is missing: {name}")
+            continue
+        if region.get("overflow") or region.get("free_bytes", 0) <= 0:
+            errors.append(
+                f"{name} requires positive headroom: "
+                f"free_bytes={region.get('free_bytes', 0)} "
+                f"overflow={region.get('overflow')}"
+            )
     return errors
 
 
@@ -529,7 +555,23 @@ def main(argv: list[str] | None = None) -> int:
         "--check", action="store_true",
         help="Compare generated report against existing --output; exit 1 on drift"
     )
+    parser.add_argument(
+        "--validate-elf", action="store_true",
+        help="Fail if non-empty mapped output sections and allocatable ELF "
+             "sections diverge. Requires --elf.",
+    )
+    parser.add_argument(
+        "--require-positive-headroom",
+        action="append",
+        default=[],
+        choices=tuple(REGION_RANGES),
+        metavar="REGION",
+        help="Fail unless REGION has at least one free byte. Repeatable.",
+    )
     args = parser.parse_args(argv)
+
+    if args.validate_elf and not args.elf:
+        parser.error("--validate-elf requires --elf")
 
     map_path = Path(args.map)
     if not map_path.is_file():
@@ -562,6 +604,16 @@ def main(argv: list[str] | None = None) -> int:
     report_json = json.dumps(report, indent=2) + "\n"
 
     output_path = Path(args.output)
+    elf_errors = (
+        elf_cross_validation_errors(
+            report, require_available=args.validate_elf,
+        )
+        if args.check or args.validate_elf
+        else []
+    )
+    headroom_errors = positive_headroom_errors(
+        report, args.require_positive_headroom,
+    )
 
     if args.check:
         if not output_path.is_file():
@@ -573,10 +625,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: cannot read expected report: {exc}", file=sys.stderr)
             return 2
 
-        cross_validation_errors = elf_cross_validation_errors(report)
-        if cross_validation_errors:
+        if elf_errors:
             print("check failed: ELF/map section mismatch", file=sys.stderr)
-            for error in cross_validation_errors:
+            for error in elf_errors:
+                print(f"  - {error}", file=sys.stderr)
+            return 1
+
+        if headroom_errors:
+            print("check failed: memory headroom requirement", file=sys.stderr)
+            for error in headroom_errors:
                 print(f"  - {error}", file=sys.stderr)
             return 1
 
@@ -596,6 +653,18 @@ def main(argv: list[str] | None = None) -> int:
         f"wrote {n_sections} sections, {n_overlays} overlays to {args.output}",
         file=sys.stderr,
     )
+
+    if elf_errors:
+        print("validation failed: ELF/map section mismatch", file=sys.stderr)
+        for error in elf_errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+
+    if headroom_errors:
+        print("validation failed: memory headroom requirement", file=sys.stderr)
+        for error in headroom_errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
 
     return 1 if report["overflow"] else 0
 

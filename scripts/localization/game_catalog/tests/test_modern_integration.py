@@ -210,6 +210,43 @@ class ModernGameLocalizationIntegrationTests(unittest.TestCase):
                 else:
                     self.assertNotIn(qps_arg, body)
 
+    def test_cjk_runtime_gate_checks_all_product_profile_maps(self):
+        modern_mk = (ROOT / "modern.mk").read_text(encoding="utf-8")
+        match = re.search(
+            r"(?m)^expansion-modern-localization-profile-headroom-check:\n"
+            r"(?P<body>(?:\t[^\n]*\n)+)",
+            modern_mk,
+        )
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        for profile in (
+            "en-ja",
+            "en-zh-hans",
+            "en-ja-zh-hans",
+            "en-ja-zh-hans-qps",
+        ):
+            with self.subTest(profile=profile):
+                self.assertIn(
+                    f"expansion-modern-localization-profile-{profile}",
+                    body,
+                )
+        self.assertEqual(body.count("--validate-elf"), 4)
+        self.assertEqual(
+            body.count("--require-positive-headroom ewram"),
+            4,
+        )
+
+        cjk_start = modern_mk.index(
+            "expansion-modern-localization-runtime-cjk-check:"
+        )
+        cjk_recipe = modern_mk.index(
+            "ifeq ($(MODERN_CONFIG),debug)", cjk_start
+        )
+        self.assertIn(
+            "expansion-modern-localization-profile-headroom-check",
+            modern_mk[cjk_start:cjk_recipe],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

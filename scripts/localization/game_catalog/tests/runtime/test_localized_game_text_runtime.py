@@ -82,7 +82,7 @@ def _c_bytes(data: bytes) -> str:
 class LocalizedGameTextRuntimeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        for tool in ("cc", "size", "nm"):
+        for tool in ("cc", "size", "nm", "objdump"):
             try:
                 subprocess.run(
                     [tool, "--version"],
@@ -618,6 +618,13 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
         self.assertEqual(
             int(scratch_line.split()[1], 16),
             0x500,
+        )
+        cjk_msg_sections = self._run(
+            ["objdump", "-h", str(floor_dir / "msg.o")]
+        ).stdout
+        self.assertIn(
+            "iwram_data.localized_msg_transform",
+            cjk_msg_sections,
         )
 
         growth_dir = BUILD_ROOT / "cjk-growth"

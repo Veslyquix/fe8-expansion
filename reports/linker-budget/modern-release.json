@@ -5,9 +5,9 @@
       "name": "ewram",
       "origin": 33554432,
       "capacity_bytes": 262144,
-      "occupied_bytes": 259032,
-      "free_bytes": 3112,
-      "utilization_percent": 98.81,
+      "occupied_bytes": 259008,
+      "free_bytes": 3136,
+      "utilization_percent": 98.8,
       "overflow": false
     },
     {
@@ -96,7 +96,7 @@
     {
       "name": ".bss",
       "address": 33812268,
-      "size_bytes": 1196,
+      "size_bytes": 1172,
       "is_overlay": false,
       "region": "ewram"
     },
@@ -111,6 +111,13 @@
       "name": "ROM",
       "address": 134217728,
       "size_bytes": 16776960,
+      "is_overlay": false,
+      "region": "rom"
+    },
+    {
+      "name": ".locale_data",
+      "address": 150994944,
+      "size_bytes": 0,
       "is_overlay": false,
       "region": "rom"
     }
@@ -236,7 +243,7 @@
     },
     {
       "name": "__ewram_used_end",
-      "address": 33813464,
+      "address": 33813440,
       "expression": ".",
       "region": "ewram"
     },
@@ -955,6 +962,18 @@
       "region": "iwram"
     },
     {
+      "name": "__localized_msg_transform_scratch_end",
+      "address": 50358184,
+      "expression": ".",
+      "region": "iwram"
+    },
+    {
+      "name": "__localized_msg_transform_scratch_start",
+      "address": 50358184,
+      "expression": ".",
+      "region": "iwram"
+    },
+    {
       "name": "__sp_usr",
       "address": 50363904,
       "expression": "(__sp_irq - 0x1a0)",
@@ -1005,7 +1024,7 @@
     },
     {
       "name": "__floating_end",
-      "address": 145938236,
+      "address": 145939948,
       "expression": ".",
       "region": "rom"
     },
@@ -1019,6 +1038,18 @@
       "name": "_banim_pal_end",
       "address": 149926624,
       "expression": ".",
+      "region": "rom"
+    },
+    {
+      "name": "__locale_bank_end",
+      "address": 150994944,
+      "expression": "(__locale_bank_start + SIZEOF (.locale_data))",
+      "region": "rom"
+    },
+    {
+      "name": "__locale_bank_start",
+      "address": 150994944,
+      "expression": "0x9000000",
       "region": "rom"
     }
   ],
@@ -1093,7 +1124,7 @@
         "name": ".bss",
         "type": "NOBITS",
         "address": 33812268,
-        "size_bytes": 1196,
+        "size_bytes": 1172,
         "flags": "WA"
       },
       {

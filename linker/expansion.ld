@@ -306,6 +306,8 @@ SECTIONS
 
     ASSERT(SIZEOF(ROM) <= __rom_size, "ROM content exceeds configured ROM size")
     ASSERT(SIZEOF(IWRAM) <= 32K, "IWRAM overflow")
+    ASSERT(__iwram_start + SIZEOF(IWRAM) <= __sp_usr,
+        "IWRAM data overlaps the reserved user/IRQ stacks")
     ASSERT(__ewram_used_end <= ORIGIN(ewram) + LENGTH(ewram), "EWRAM overflow")
     ASSERT(gOpAnimSt - gGenericBuffer == 0x2000,
         "gGenericBuffer must immediately precede gOpAnimSt")

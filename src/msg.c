@@ -43,8 +43,12 @@ struct MsgTransformScratch
 
 /* msg.c owns this CJK-only workspace. The active decode cache remains in
  * sMsgString, while derived help-box/Tact/Item text uses these disjoint
- * regions and cannot alias prep/support overlay state. */
-static EWRAM_DATA struct MsgTransformScratch sMsgTransformScratch = {0};
+ * regions and cannot alias prep/support overlay state. This transient
+ * workspace is placed after the fixed IWRAM layout by linker/iwram.ld;
+ * every writer initializes its destination before reading it, so it has no
+ * persistent state or zero-on-boot contract. */
+static struct MsgTransformScratch sMsgTransformScratch
+    __attribute__((section("iwram_data.localized_msg_transform"))) = {0};
 #define MSG_TRANSFORM_OUTPUT (sMsgTransformScratch.output)
 #define MSG_TRANSFORM_INSERTION (sMsgTransformScratch.insertion)
 

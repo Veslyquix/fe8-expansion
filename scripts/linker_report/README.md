@@ -16,6 +16,14 @@ python3 scripts/linker_report/budget.py \
     --elf fireemblem8.elf \
     --output reports/linker-budget.json
 
+# Product gate: require real ELF/map agreement and positive RAM headroom:
+python3 scripts/linker_report/budget.py \
+    --map fireemblem8.map \
+    --elf fireemblem8.elf \
+    --output build/linker-budget.json \
+    --validate-elf \
+    --require-positive-headroom ewram
+
 # Check mode (exits 1 on map-derived memory-budget drift):
 python3 scripts/linker_report/budget.py \
     --map fireemblem8.map \
@@ -41,13 +49,19 @@ assignments, and overflow state. Derived shift/end markers such as
 `__floating_end` are reported but not baselined because linker veneer insertion
 may move them without changing any memory boundary. Optional ELF diagnostics
 also remain inspectable without becoming host-sensitive baseline fields.
+ELF comparison uses non-empty mapped output sections versus allocatable ELF
+sections. This models GNU ld's zero-sized, non-allocatable output placeholders
+(for example an empty 16 MiB `.locale_data`) without exempting a populated
+locale bank: any non-zero map section missing from the allocatable ELF still
+fails `--validate-elf` and `--check`. Unlike diagnostic-only `--elf`,
+`--validate-elf` also fails closed when readelf is unavailable.
 
 ## Exit codes
 
 | Code | Meaning |
 |------|---------|
 | 0    | Success, no region overflow |
-| 1    | Region overflow detected, or `--check` found drift |
+| 1    | Overflow, validation/headroom failure, or `--check` drift |
 | 2    | Malformed input or missing file |
 
 ## Tests

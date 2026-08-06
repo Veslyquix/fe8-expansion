@@ -181,6 +181,108 @@ class TestMapParsing(unittest.TestCase):
             ["in_elf_not_map: unexpected"],
         )
 
+    def test_required_elf_validation_fails_closed_when_unavailable(self):
+        report = {"elf": {"available": False}}
+
+        self.assertEqual(budget.elf_cross_validation_errors(report), [])
+        self.assertEqual(
+            budget.elf_cross_validation_errors(
+                report, require_available=True,
+            ),
+            ["ELF cross-validation unavailable"],
+        )
+
+    def test_empty_locale_output_is_not_an_alloc_section_mismatch(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("rom", 0x08000000, 0x01000000)],
+            [
+                budget.OutputSection("ROM", 0x08000000, 0x100),
+                budget.OutputSection(".locale_data", 0x09000000, 0),
+            ],
+            [],
+            [
+                budget.ElfSection(
+                    "ROM", "PROGBITS", 0x08000000, 0x100, "AX"
+                ),
+                budget.ElfSection(
+                    ".locale_data", "PROGBITS", 0x09000000, 0, "A"
+                ),
+            ],
+        )
+
+        self.assertEqual(
+            report["elf"]["cross_validation"],
+            {"in_elf_not_map": [], "in_map_not_elf": []},
+        )
+        self.assertIn(
+            ".locale_data",
+            {section["name"] for section in report["sections"]},
+        )
+
+    def test_populated_locale_output_must_exist_in_allocatable_elf(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("rom", 0x08000000, 0x02000000)],
+            [
+                budget.OutputSection("ROM", 0x08000000, 0x100),
+                budget.OutputSection(".locale_data", 0x09000000, 0x200),
+            ],
+            [],
+            [
+                budget.ElfSection(
+                    "ROM", "PROGBITS", 0x08000000, 0x100, "AX"
+                ),
+            ],
+        )
+
+        self.assertEqual(
+            budget.elf_cross_validation_errors(report),
+            ["in_map_not_elf: .locale_data"],
+        )
+
+    def test_populated_locale_output_matches_allocatable_elf(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("rom", 0x08000000, 0x02000000)],
+            [
+                budget.OutputSection("ROM", 0x08000000, 0x100),
+                budget.OutputSection(".locale_data", 0x09000000, 0x200),
+            ],
+            [],
+            [
+                budget.ElfSection(
+                    "ROM", "PROGBITS", 0x08000000, 0x100, "AX"
+                ),
+                budget.ElfSection(
+                    ".locale_data", "PROGBITS", 0x09000000, 0x200, "A"
+                ),
+            ],
+        )
+
+        self.assertEqual(budget.elf_cross_validation_errors(report), [])
+
+    def test_positive_headroom_requirement_rejects_full_region(self):
+        report = {
+            "regions": [
+                {
+                    "name": "ewram",
+                    "free_bytes": 0,
+                    "overflow": False,
+                },
+                {
+                    "name": "iwram",
+                    "free_bytes": 1,
+                    "overflow": False,
+                },
+            ]
+        }
+
+        self.assertEqual(
+            budget.positive_headroom_errors(report, ["ewram", "iwram"]),
+            [
+                "ewram requires positive headroom: "
+                "free_bytes=0 overflow=False"
+            ],
+        )
+
     def test_pinned_assignments_captured(self):
         """Symbol assignments at GBA addresses are recorded."""
         out = self.make_output_path("pinned")

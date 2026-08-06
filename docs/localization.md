@@ -174,6 +174,15 @@ profile with `MODERN_ROM_SIZE=16M` fails before compilation. The named targets
 use private build roots so their generated catalogs, fonts, metadata, and
 objects cannot cross-contaminate one another.
 
+`make expansion-modern-localization-profile-headroom-check
+MODERN_CONFIG={debug,release}` builds those four roots serially, validates each
+real map against its ELF (including populated `.locale_data`), and requires
+positive EWRAM/IWRAM headroom. The CJK runtime gate runs this matrix before its
+trilingual libmGBA scenarios. The 0x1600 decoded-message cache remains in
+EWRAM; the separate 0x500 private transformation workspace is transient and
+linked after the fixed IWRAM layout, below an explicit reserved-stack
+assertion. No generated maximum or transform capacity is reduced.
+
 These are baked into the ROM's embedded `ExpansionMetadata` (build-commit,
 enabled-locale mask, default-locale id, pseudo-locale flag) so a given ROM's
 config is always recoverable from the binary itself, never only from the
@@ -544,3 +553,9 @@ sub-`$(MAKE)` invocations; always verify the full gate sequentially).
   `__locale_bank_start`/`__locale_bank_end`): actual upper-bank start/end,
   occupancy, and headroom to `0x0A000000`. Older reports/maps without those
   symbols remain readable and simply omit this optional field.
+
+The generic map/ELF comparison treats only non-empty mapped sections as
+allocatable expectations. GNU ld emits an empty 16 MiB `.locale_data` output
+placeholder without `SHF_ALLOC`, while every populated CJK bank is non-empty
+and allocatable; therefore empty default builds compare cleanly and a genuine
+populated-bank omission still fails.
