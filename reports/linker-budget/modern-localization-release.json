@@ -61,34 +61,34 @@
     "missing": [],
     "symbols": {
       "gExpansionLocaleMsgCount": 2,
-      "gExpansionLocaleMsgIds": 64,
+      "gExpansionLocaleMsgIds": 68,
       "gExpansionLocaleTombstoneCount": 2
     },
-    "total_bytes": 68
+    "total_bytes": 72
   },
   "rom_catalog_strings": {
     "missing": [],
     "symbols": {
-      "gExpansionCatalog_en": 128,
-      "gExpansionCatalog_ja": 128,
-      "gExpansionCatalog_qps_ploc": 128,
-      "gExpansionCatalog_zh_Hans": 128
+      "gExpansionCatalog_en": 136,
+      "gExpansionCatalog_ja": 136,
+      "gExpansionCatalog_qps_ploc": 136,
+      "gExpansionCatalog_zh_Hans": 136
     },
-    "total_bytes": 512,
+    "total_bytes": 544,
     "unexpected": []
   },
   "schema_version": 1,
   "source_catalog_budget": {
-    "active_message_count": 32,
-    "catalog_index_bytes": 672,
+    "active_message_count": 34,
+    "catalog_index_bytes": 708,
     "catalog_string_bytes": {
-      "en": 376,
-      "ja": 435,
-      "qps-ploc": 618,
-      "total": 1797,
-      "zh-Hans": 368
+      "en": 392,
+      "ja": 451,
+      "qps-ploc": 646,
+      "total": 1873,
+      "zh-Hans": 384
     },
-    "glyphs_used_count": 198,
+    "glyphs_used_count": 203,
     "locales_generated": [
       "en",
       "ja",
