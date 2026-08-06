@@ -220,6 +220,53 @@ class TextConsumerNativeTests(unittest.TestCase):
             result.stdout.strip(), "text_reviewed_consumers_host_test: ok"
         )
 
+    def test_item_popup_articles_follow_displayed_language(self):
+        common = [
+            "cc",
+            "-std=gnu89",
+            "-Wall",
+            "-Wextra",
+            "-Werror=implicit-function-declaration",
+            "-Werror=declaration-after-statement",
+            "-Wno-unused-parameter",
+            "-no-pie",
+            "-fsigned-char",
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-DMODERN=1",
+            "-DNONMATCHING=1",
+            "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x07u",
+            "-I",
+            ROOT / "include",
+        ]
+        bmitem_object = BUILD_DIR / "bmitem.popup.o"
+        self._run(
+            common
+            + [
+                "-c",
+                ROOT / "src" / "bmitem.c",
+                "-o",
+                bmitem_object,
+            ]
+        )
+
+        binary = BUILD_DIR / "item_popup_article_host_test"
+        self._run(
+            common
+            + [
+                TEST_DIR / "item_popup_article_host_test.c",
+                bmitem_object,
+                "-Wl,--gc-sections",
+                "-Wl,--unresolved-symbols=ignore-all",
+                "-o",
+                binary,
+            ]
+        )
+        result = self._run([binary])
+        self.assertEqual(
+            result.stdout.strip(), "item_popup_article_host_test: ok"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

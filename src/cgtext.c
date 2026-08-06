@@ -21,8 +21,6 @@ EWRAM_DATA struct CgTextSt gCgTextSt = { 0 };
 
 #ifdef FE8_TEXT_UTF8_ENABLED
 #define CG_TEXT_NAME_BUFFER_CAPACITY 0x100u
-#define CG_TEXT_NAME_BUFFER \
-    (gBufPrep + (u32)sizeof(gBufPrep) - CG_TEXT_NAME_BUFFER_CAPACITY)
 
 static int CgText_CopyName(char *buffer, u32 capacity, const char **source)
 {
@@ -213,14 +211,13 @@ void CgText_DrawNameBox(struct CgTextMainProc * proc)
 #ifdef FE8_TEXT_UTF8_ENABLED
     struct TextUtf8Token token;
     const char *next;
-    char *buf;
+    char buf[CG_TEXT_NAME_BUFFER_CAPACITY];
 
     next = TextUtf8_Next(proc->str, &token);
     if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL
         && token.payload == 0x23)
     {
         proc->str = next;
-        buf = CG_TEXT_NAME_BUFFER;
         CgText_CopyName(buf, CG_TEXT_NAME_BUFFER_CAPACITY, &proc->str);
 #else
     char buf[32];

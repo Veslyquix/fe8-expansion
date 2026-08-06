@@ -19,11 +19,10 @@
 #define MSG_BUFFER4 (sMsgString.storage.legacy.buffer4)
 #define MSG_BUFFER5 (sMsgString.storage.legacy.buffer5)
 #define MSG_LOCALIZED_STORAGE (sMsgString.storage.localized)
-#define MSG_TRANSFORM_INSERTION_CAPACITY 0x100u
-#define MSG_TRANSFORM_OUTPUT_CAPACITY ((u32)sizeof(MSG_LOCALIZED_STORAGE))
-#define MSG_TRANSFORM_OUTPUT (gBufPrep)
-#define MSG_TRANSFORM_INSERTION \
-    (gBufPrep + (u32)sizeof(gBufPrep) - MSG_TRANSFORM_INSERTION_CAPACITY)
+#define MSG_TRANSFORM_OUTPUT_CAPACITY \
+    FE8_LOCALIZED_GAME_TEXT_TRANSFORM_OUTPUT_BYTES
+#define MSG_TRANSFORM_INSERTION_CAPACITY \
+    FE8_LOCALIZED_GAME_TEXT_TRANSFORM_INSERTION_BYTES
 #else
 #define MSG_BUFFER1 (sMsgString.buffer1)
 #define MSG_BUFFER2 (sMsgString.buffer2)
@@ -36,14 +35,31 @@ EWRAM_DATA struct MsgBuffer sMsgString = {0};
 EWRAM_DATA int sActiveMsg = 0;
 
 #if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+struct MsgTransformScratch
+{
+    char output[MSG_TRANSFORM_OUTPUT_CAPACITY];
+    char insertion[MSG_TRANSFORM_INSERTION_CAPACITY];
+};
+
+/* msg.c owns this CJK-only workspace. The active decode cache remains in
+ * sMsgString, while derived help-box/Tact/Item text uses these disjoint
+ * regions and cannot alias prep/support overlay state. */
+static EWRAM_DATA struct MsgTransformScratch sMsgTransformScratch = {0};
+#define MSG_TRANSFORM_OUTPUT (sMsgTransformScratch.output)
+#define MSG_TRANSFORM_INSERTION (sMsgTransformScratch.insertion)
+
 static EWRAM_DATA bool8 sActiveMsgValid = FALSE;
 static EWRAM_DATA ExpansionLocaleId sActiveMsgLocale;
 static EWRAM_DATA enum LocalizedGameTextStatus sActiveMsgStatus;
 static EWRAM_DATA enum LocalizedGameTextStatus sLastMsgStatus;
 LOCALIZED_GAME_TEXT_STATIC_ASSERT(
-    MSG_TRANSFORM_OUTPUT_CAPACITY + MSG_TRANSFORM_INSERTION_CAPACITY
-        <= sizeof(gBufPrep),
-    prep_transform_regions_do_not_overlap);
+    sizeof(sMsgTransformScratch.output)
+        == MSG_TRANSFORM_OUTPUT_CAPACITY,
+    transform_output_capacity_is_exact);
+LOCALIZED_GAME_TEXT_STATIC_ASSERT(
+    sizeof(sMsgTransformScratch.insertion)
+        == MSG_TRANSFORM_INSERTION_CAPACITY,
+    transform_insertion_capacity_is_exact);
 #endif
 
 const char *gStrPrefix[][2] =
@@ -530,16 +546,13 @@ static char *ResolveStringIntoBuffer(int index, char *buffer, u32 bufferCapacity
     return buffer;
 }
 
-static char *ResolveStringIntoUnboundedBuffer(int index, char *buffer)
+static char *ResolveStringIntoUnboundedBuffer(char *buffer)
 {
     if (buffer == NULL)
     {
         sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID;
         return buffer;
     }
-
-    if (buffer == gBufPrep)
-        return ResolveStringIntoBuffer(index, buffer, (u32)sizeof(gBufPrep));
 
     sLastMsgStatus = LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED;
     return (char *)LOCALIZED_GAME_TEXT_MARKER_UNBOUNDED;
@@ -940,7 +953,8 @@ char * GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCa
 
 char * GetStringFromIndexInBuffer(int index, char *buffer)
 {
-    return ResolveStringIntoUnboundedBuffer(index, buffer);
+    (void)index;
+    return ResolveStringIntoUnboundedBuffer(buffer);
 }
 #else
 char * GetStringFromIndex(int index)

@@ -48,7 +48,7 @@ JA_MESSAGES = (
     ("診".encode("utf-8") + b"\x80\x20\x00"),
     "艾莉\x00".encode("utf-8"),
     ((b"\x80\x20" * 2800) + b"\x00"),
-    ((b"\x80\x20" * 938) + "猫\x00".encode("utf-8")),
+    ((b"\x80\x20" * 170) + "猫\x00".encode("utf-8")),
     "剣\x00".encode("utf-8"),
 )
 
@@ -403,6 +403,10 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
                 str(english_dir / "msg.o"),
             ]
         )
+        english_msg_symbols = self._run(
+            ["nm", str(english_dir / "msg.o")]
+        ).stdout
+        self.assertNotIn("sMsgTransformScratch", english_msg_symbols)
         self._run(
             [
                 "cc",
@@ -495,6 +499,10 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
                 str(legacy_dir / "msg.o"),
             ]
         )
+        legacy_msg_symbols = self._run(
+            ["nm", str(legacy_dir / "msg.o")]
+        ).stdout
+        self.assertNotIn("sMsgTransformScratch", legacy_msg_symbols)
         self._run(
             [
                 "cc",
@@ -598,6 +606,19 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
         self.assertNotIn("gMsgTable", undefined)
         self.assertNotIn("gMsgHuffmanTable", undefined)
         self.assertNotIn("CallARM_DecompText", undefined)
+        cjk_msg_symbols = self._run(
+            ["nm", "-S", str(floor_dir / "msg.o")]
+        ).stdout
+        self.assertIn("sMsgTransformScratch", cjk_msg_symbols)
+        scratch_line = next(
+            line
+            for line in cjk_msg_symbols.splitlines()
+            if line.endswith(" sMsgTransformScratch")
+        )
+        self.assertEqual(
+            int(scratch_line.split()[1], 16),
+            0x500,
+        )
 
         growth_dir = BUILD_ROOT / "cjk-growth"
         growth_dir.mkdir()

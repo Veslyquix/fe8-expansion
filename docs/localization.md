@@ -96,12 +96,14 @@ The framework is layered, each layer independently testable:
    extended `0x80` controls, color arguments, U+3000/legacy spacing, valid
    scalars, and invalid/truncated input have explicit token boundaries.
    Dialogue, CG/name-box, and help-box interpreters never inspect UTF-8
-   continuation bytes as controls. Message substitutions use the existing
-   `gBufPrep[0x2000]` as a transient derived bounded layout: one
-   generated-message-capacity output region plus a disjoint `0x100`-byte
-   insertion/name region. Successful transforms are committed back to the
-   persistent localized message buffer; a compile-time assertion prevents
-   the two `gBufPrep` regions from overlapping. The
+   continuation bytes as controls. Message substitutions use a private,
+   CJK-only `msg.c` workspace with a `0x400`-byte derived-output region and
+   a disjoint `0x100`-byte insertion region; the production catalog test
+   conservatively bounds every current substitution stream at 273 bytes.
+   The active localized-message cache remains separate, and CG name-box
+   copies use a caller-owned `0x100`-byte stack buffer. Neither path borrows
+   `gBufPrep`, which is live support-screen/preparation overlay state.
+   English-only and archival builds emit none of this CJK workspace. The
    historical two-argument `GetStringFromIndexInBuffer()` ABI remains for
    legacy builds; an unknown-size call in a modern CJK build returns
    `<!LOC_CAP!>` with `LEGACY_BUFFER_UNBOUNDED` instead of writing

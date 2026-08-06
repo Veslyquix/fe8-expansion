@@ -124,6 +124,40 @@ class RealGenerateTests(unittest.TestCase):
                     raw[decision["import_id"]],
                 )
 
+    def test_transformed_messages_fit_dedicated_runtime_scratch(self):
+        build = build_game_catalog()
+        substitution_controls = tuple(
+            b"\x80" + bytes((payload,))
+            for payload in (0x12, 0x13, 0x14, 0x15, 0x20, 0x22)
+        )
+        streams = [
+            entry.encoded_bytes for entry in build.english.entries
+        ]
+        for locale in ("ja", "zh-Hans"):
+            streams.extend(
+                entry.encoded_bytes
+                for entry in build.locale_bundle(locale).entries
+                if entry.encoded_bytes is not None
+            )
+
+        bounds = []
+        for stream in streams:
+            substitution_count = sum(
+                stream.count(control)
+                for control in substitution_controls
+            )
+            if substitution_count == 0:
+                continue
+            bounds.append(
+                len(stream)
+                + substitution_count * (
+                    0x100 - len(substitution_controls[0])
+                )
+            )
+
+        self.assertTrue(bounds)
+        self.assertLessEqual(max(bounds), 0x400)
+
     def test_profile_specific_outputs_exclude_disabled_payloads_and_size_capacity(self):
         with (
             self._tmpdir() as ja_tmp,

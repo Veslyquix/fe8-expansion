@@ -29,6 +29,45 @@ struct PlaySt gPlaySt = { {0}, {0, 0, 0, 0} };
     failures++; \
 } } while (0)
 
+struct RuntimeSupportScreenUnit
+{
+    u8 charId;
+    u8 classId;
+    u8 supportLevel[7];
+    u8 partnerClassId[7];
+    s8 partnerIsAlive[7];
+};
+
+static u8 sPrepGuardSnapshot[sizeof(gBufPrep)];
+
+static void SeedSupportScreenRecords(void)
+{
+    struct RuntimeSupportScreenUnit *units;
+    u32 i;
+    u32 j;
+
+    memset(gBufPrep, 0xA5, sizeof(gBufPrep));
+    units = (struct RuntimeSupportScreenUnit *)gBufPrep;
+    for (i = 0; i < 16; i++)
+    {
+        units[i].charId = (u8)(0x20 + i);
+        units[i].classId = (u8)(0x40 + i);
+        for (j = 0; j < 7; j++)
+        {
+            units[i].supportLevel[j] = (u8)(i + j);
+            units[i].partnerClassId[j] = (u8)(0x60 + i + j);
+            units[i].partnerIsAlive[j] = (s8)(j - 3);
+        }
+    }
+    memcpy(sPrepGuardSnapshot, gBufPrep, sizeof(gBufPrep));
+}
+
+static void CheckSupportScreenRecordsUnchanged(void)
+{
+    CHECK(memcmp(
+        gBufPrep, sPrepGuardSnapshot, sizeof(gBufPrep)) == 0);
+}
+
 ExpansionLocaleId ExpansionLocale_GetCurrent(void)
 {
     return sCurrentLocale;
@@ -154,12 +193,13 @@ static void TestPresentDecode(void)
     CHECK(sArmDecompCalls == 0);
 }
 
-static void TestPresentDecodeViaKnownLegacyPrepBuffer(void)
+static void TestPresentDecodeViaBoundedPrepBuffer(void)
 {
     const char *result;
 
     ResetHarness(EXPANSION_LOCALE_JA);
-    result = GetStringFromIndexInBuffer(0, gBufPrep);
+    result = GetStringFromIndexInBufferWithLimit(
+        0, gBufPrep, (u32)sizeof(gBufPrep));
     CHECK(strcmp(result, "猫") == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
     CHECK(sArmDecompCalls == 0);
@@ -441,7 +481,7 @@ static void TestDerivedTextDoesNotMutateActiveCache(void)
     sTacticianNameOverride = tactOne;
     derived = StrInsertTact();
     CHECK(strcmp(derived, "\xE8\xA8\xBA\xE7\x94\xB2") == 0);
-    CHECK(derived == gBufPrep);
+    CHECK(derived != gBufPrep);
     CHECK(active == GetStringFromIndex(14));
     CHECK(memcmp(active, "\xE8\xA8\xBA\x80\x20\x00", 6) == 0);
 
@@ -454,7 +494,7 @@ static void TestDerivedTextDoesNotMutateActiveCache(void)
     active = GetStringFromIndex(18);
     prefixed = InsertPrefix((char *)active, "Pre-", FALSE);
     CHECK(strcmp(prefixed, "Pre-\xE5\x89\xA3") == 0);
-    CHECK(prefixed == gBufPrep);
+    CHECK(prefixed != gBufPrep);
     CHECK(strcmp(active, "\xE5\x89\xA3") == 0);
     CHECK(active == GetStringFromIndex(18));
     CHECK(strcmp(active, "\xE5\x89\xA3") == 0);
@@ -462,6 +502,29 @@ static void TestDerivedTextDoesNotMutateActiveCache(void)
     prefixed = InsertPrefix((char *)active, "Pre-", FALSE);
     CHECK(strcmp(prefixed, "Pre-\xE5\x89\xA3") == 0);
     CHECK(strcmp(active, "\xE5\x89\xA3") == 0);
+}
+
+static void TestHelpBoxTransformsPreserveSupportScreenRecords(void)
+{
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    SeedSupportScreenRecords();
+
+    GetStringFromIndex(13);
+    result = StringInsertSpecialPrefixByCtrl();
+    CHECK(strstr(result, "\xE8\xBB\x8D\xE5\xB8\xAB") != NULL);
+    CheckSupportScreenRecordsUnchanged();
+
+    GetStringFromIndex(14);
+    result = StrInsertTact();
+    CHECK(strcmp(result, "\xE8\xA8\xBA\xE8\xBB\x8D\xE5\xB8\xAB") == 0);
+    CheckSupportScreenRecordsUnchanged();
+
+    result = GetStringFromIndex(18);
+    result = InsertPrefix((char *)result, "Pre-", FALSE);
+    CHECK(strcmp(result, "Pre-\xE5\x89\xA3") == 0);
+    CheckSupportScreenRecordsUnchanged();
 }
 
 static void TestRepeatedDynamicSpecialSubstitutions(void)
@@ -503,8 +566,8 @@ static void TestSubstitutionCapacityBoundary(void)
     ResetHarness(EXPANSION_LOCALE_JA);
     GetStringFromIndex(17);
     result = StrInsertTact();
-    CHECK(strlen(result) == 5631u);
-    CHECK(memcmp(result + 5628, "\xE7\x8C\xAB", 3) == 0);
+    CHECK(strlen(result) == 1023u);
+    CHECK(memcmp(result + 1020, "\xE7\x8C\xAB", 3) == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
 }
 
@@ -590,7 +653,7 @@ static void TestUtf8ContinuationTailIsBounded(void)
 int main(void)
 {
     TestPresentDecode();
-    TestPresentDecodeViaKnownLegacyPrepBuffer();
+    TestPresentDecodeViaBoundedPrepBuffer();
     TestAbsentFallback();
     TestLegacyGlyphFallbackNormalization();
     TestFallbackControlsAndFaceIdsRemainExact();
@@ -607,6 +670,7 @@ int main(void)
     TestUtf8ControlSubstitutions();
     TestTactSubstitutionKeepsUtf8Boundaries();
     TestDerivedTextDoesNotMutateActiveCache();
+    TestHelpBoxTransformsPreserveSupportScreenRecords();
     TestRepeatedDynamicSpecialSubstitutions();
     TestSubstitutionCapacityBoundary();
     TestCacheLocaleSwitchAndExplicitInvalidation();

@@ -18,6 +18,7 @@
  * translation unit sees no declaration, no call and no data -- its object is
  * the vanilla one. See include/expansion_starter_content.h. */
 #include "expansion_starter_content.h"
+#include "localized_game_text.h"
 
 /* Issue #10: bind the runtime item-data lookup to the single-sourced,
  * build-time item ID cap (include/id_space.h, generated from
@@ -45,6 +46,32 @@ static inline void SetChapterUnk1C(int arg, u8 val) {
 static inline int GetChapterUnk1C(int arg) {
     return gPlaySt.unk1C[arg];
 }
+
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+static int ItemNameUsesEnglishGrammar(int item)
+{
+    ExpansionLocaleId locale;
+    enum LocalizedGameTextStatus status;
+
+    locale = ExpansionLocale_GetCurrent();
+    if (locale == EXPANSION_LOCALE_EN
+        || locale == EXPANSION_LOCALE_QPS_PLOC)
+        return TRUE;
+
+#if FE8_EXPANSION_STARTER_CONTENT
+    /* Starter-content names are authored ASCII originals rather than game
+     * catalog translations, so they are explicit English fallback content. */
+    if (ExpansionStarterContentItemName(
+            (ItemId)ITEM_INDEX(item)) != NULL)
+        return TRUE;
+#endif
+
+    status = LocalizedGameText_GetLastStatus();
+    return status == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT
+        || status
+            == LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED;
+}
+#endif
 
 char* GetItemNameWithArticle(int item, s8 capitalize) {
     switch (GetItemIndex(item)) {
@@ -94,6 +121,8 @@ char* GetItemNameWithArticle(int item, s8 capitalize) {
 
         result = GetItemName(item);
 #if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+        if (!ItemNameUsesEnglishGrammar(item))
+            return result;
         result = InsertPrefix(result, article, capitalize);
 #else
         InsertPrefix(result, article, capitalize);

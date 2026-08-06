@@ -118,6 +118,10 @@ class TextConsumerAuditTests(unittest.TestCase):
         self.assertIn("MSG_TRANSFORM_OUTPUT", special)
         self.assertIn("MSG_TRANSFORM_OUTPUT", tact)
         self.assertIn("MSG_TRANSFORM_OUTPUT_CAPACITY", msg)
+        self.assertIn("struct MsgTransformScratch", msg)
+        self.assertIn("sMsgTransformScratch.output", msg)
+        self.assertIn("sMsgTransformScratch.insertion", msg)
+        self.assertNotIn("gBufPrep", msg)
         self.assertNotIn("MsgStreamWriter_CommitToActive", msg)
         self.assertIn("return writer.buffer;", special)
         self.assertIn("return writer.buffer;", tact)
@@ -129,6 +133,46 @@ class TextConsumerAuditTests(unittest.TestCase):
         self.assertNotIn("iter[1]", copy_name)
         self.assertNotIn("+= 2", copy_name)
         self.assertIn("CG_TEXT_NAME_BUFFER_CAPACITY", cg)
+        self.assertIn(
+            "char buf[CG_TEXT_NAME_BUFFER_CAPACITY]", cg
+        )
+        self.assertNotIn("gBufPrep", cg)
+
+    def test_popup_article_callers_share_locale_aware_item_path(self):
+        bmitem = self._read("src/bmitem.c")
+        grammar = _function_body(bmitem, "ItemNameUsesEnglishGrammar")
+        article = _function_body(bmitem, "GetItemNameWithArticle")
+        self.assertIn("EXPANSION_LOCALE_EN", grammar)
+        self.assertIn("EXPANSION_LOCALE_QPS_PLOC", grammar)
+        self.assertIn(
+            "LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_ABSENT",
+            grammar,
+        )
+        self.assertIn(
+            "LOCALIZED_GAME_TEXT_STATUS_ENGLISH_FALLBACK_UNPOPULATED",
+            grammar,
+        )
+        self.assertLess(
+            article.index("ItemNameUsesEnglishGrammar"),
+            article.index("InsertPrefix"),
+        )
+
+        popup = self._read("src/popup.c")
+        self.assertIn(
+            "GetItemNameWithArticle",
+            _function_body(popup, "ParsePopupInstAndGetLen"),
+        )
+        self.assertIn(
+            "GetItemNameWithArticle",
+            _function_body(popup, "GeneratePopupText"),
+        )
+
+        battle_popup = _function_body(
+            self._read("src/banim-ekrpopup.c"), "DrawBattlePopup"
+        )
+        self.assertGreaterEqual(
+            battle_popup.count("GetItemNameWithArticle"), 2
+        )
 
     def test_reviewed_class_and_name_consumers_have_cjk_paths(self):
         opinfo = self._read("src/opinfo.c")
