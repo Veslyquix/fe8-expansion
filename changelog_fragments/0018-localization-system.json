@@ -1,6 +1,6 @@
 {
   "issue": 18,
   "category": "added",
-  "summary": "Add the expansion locale catalog/config/runtime resolver, production 32 MiB Japanese and Simplified Chinese profiles, UTF-8 language UI, persisted first-start/Config switching, localization host/build/runtime gates, and captured CJK playtest scenarios (see docs/localization.md).",
+  "summary": "Add production 32 MiB Japanese and Simplified Chinese support: verified full-game locale imports with FE8U mapping and explicit fallback catalogs, licensed deterministic CJK font assets and a multilingual Huffman codec, UTF-8 language UI with persisted first-start/Config switching, localization host/build/runtime gates, and captured CJK playtest scenarios (see docs/localization.md, docs/game_locale_sources.md, and docs/cjk_fonts.md).",
   "semver_impact": "minor"
 }

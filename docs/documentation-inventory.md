@@ -70,6 +70,8 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/starter_features.md | laqieer | current | Four default-off starter flags, typed mechanics/content API, QoL, and runtime matrices (issue #6)
 - docs/localization.md | laqieer | current | Stable locale/message IDs, catalog authoring, prefs/UI, budgets, and runtime matrices (issue #18)
 - docs/game_localization_catalog.md | laqieer | current | Full-game FE8U-indexed CJK catalog generation, bounded runtime, and synthetic link gate
+- docs/game_locale_sources.md | laqieer | current | Maintainer reference for pinned FE8J/FE8CN imports, verified FE8U mappings, fallbacks, and regeneration gates
+- docs/cjk_fonts.md | laqieer | current | Maintainer reference for licensed Noto inputs, deterministic CJK font assets, budgets, and verification
 - docs/upstream-porting.md | laqieer | current | Canonical upstream-port tracking tooling reference (issue #12)
 - docs/issue-resolution-policy.md | laqieer | current | Wave 0 issue closure / review / legal-boundary governance baseline
 - docs/release_process.md | laqieer | current | Authoritative release-rehearsal/publication-eligibility process contract (issue #9)
@@ -122,6 +124,8 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - scripts/modernize/README.md | laqieer | subsystem-reference | Modern-compiler blocker audit tooling reference
 - scripts/shiftcheck/README.md | laqieer | subsystem-reference | ROM shiftability-harness reference
 - scripts/shiftcheck/tas/README.md | laqieer | subsystem-reference | Full-game TAS shiftability validation reference
+- scripts/texttools/multilang_codec/README.md | laqieer | subsystem-reference | Deterministic multilingual Huffman codec format, decoder contract, and focused tests
+- fonts/cjk/THIRD_PARTY_NOTICES.md | laqieer | subsystem-reference | Vendored Noto CJK font copyright, license, source, and immutable pin notices
 - tools/gba-playtest/README.md | laqieer | subsystem-reference | Headless libmGBA playtest fingerprint tooling reference
 <!-- DOCS-INVENTORY:END -->
 

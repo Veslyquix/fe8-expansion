@@ -476,15 +476,9 @@ def check_blob_identity(entries: List[Dict], repo_root: Path, target_sha: str = 
 # --- Exact per-file generator (issue #9 exact-provenance remediation) ------
 #
 # `PROVENANCE_ROOT_SEED` is the single, small, human-curated input: one
-# entry per reviewable root (49 roots as of the issue #9 disclosure-
-# correction round that split the single `"texts"` prefix root into
-# `"texts/textdefs.txt"`, `"texts/texts.txt"`, and `"texts/expansion"`
-# -- 47 immediately before that, 46 before the release-branch/origin-
-# master merge that added `localization.mk` (issue #18 sprint 1) as its
-# own root; this count is never itself validated by any check, only kept
-# truthful here for a human reader). Not every entry is still a literal
-# top-level path -- `"texts/expansion"` is one exact nested root, kept
-# disjoint from its now-narrowed `"texts/*.txt"` siblings so `_assign_root`
+# entry per reviewable root. Not every entry is a literal top-level path
+# -- `"texts/expansion"` and `"texts/locales"` are exact nested roots, kept
+# disjoint from the now-narrowed `"texts/*.txt"` siblings so `_assign_root`
 # never sees an overlapping/ambiguous match -- each
 # naming the `category`/`notes`/`pinned_commit` every exact allowlisted
 # path nested under (or equal to) that root should start out with.
@@ -548,6 +542,20 @@ _NOTE_TEXTS_EXPANSION_LOCALIZATION = (
     "provenance *kind* honestly, it does not invent or assert an author, "
     "rightsholder, license, or approval."
 )
+_NOTE_CJK_FONT_ASSETS = (
+    "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified "
+    "Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/"
+    "maps/manifests/reports, and third-party notices. Exact upstream commit, "
+    "source URLs, licenses, and hashes are recorded in this tree; no human "
+    "release/legal approval is inferred from those factual records."
+)
+_NOTE_GAME_LOCALE_SOURCES = (
+    "Issue #18 full-game locale source/provenance surface under texts/locales: "
+    "hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic "
+    "normalized catalogs, mapping evidence, fallback decisions, and manifests. "
+    "Exact source and regeneration facts are documented in "
+    "docs/game_locale_sources.md; no human release/legal approval is inferred."
+)
 _NOTE_SUBMODULE_MGFEMBP = (
     "Git submodule pointing at StanHash/mgfembp (FE6 multiboot payload "
     "builder). An explicit export exclusion (see "
@@ -572,6 +580,7 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("asmdiff.sh", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("buddy.yml", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("build_tools.sh", "code", _NOTE_CODE_BUILD_TOOLING),
+    RootSeed("cjk_fonts.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("changelog_fragments", "code", _NOTE_CODE_RELEASE_TOOLING_IO),
     RootSeed("clean_tools.sh", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("compile_flags.txt", "code", _NOTE_CODE_BUILD_TOOLING),
@@ -600,6 +609,7 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("_site", "asset", _NOTE_ASSET),
     RootSeed("asm", "asset", _NOTE_ASSET),
     RootSeed("banim", "asset", _NOTE_ASSET),
+    RootSeed("fonts", "asset", _NOTE_CJK_FONT_ASSETS),
     RootSeed("graphics", "asset", _NOTE_ASSET),
     RootSeed("preview", "asset", _NOTE_ASSET),
     RootSeed("reports", "asset", _NOTE_ASSET),
@@ -617,6 +627,7 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("texts/textdefs.txt", "asset", _NOTE_ASSET),
     RootSeed("texts/texts.txt", "asset", _NOTE_ASSET),
     RootSeed("texts/expansion", "asset", _NOTE_TEXTS_EXPANSION_LOCALIZATION),
+    RootSeed("texts/locales", "asset", _NOTE_GAME_LOCALE_SOURCES),
     RootSeed("mgfembp", "submodule", _NOTE_SUBMODULE_MGFEMBP),
 )
 
