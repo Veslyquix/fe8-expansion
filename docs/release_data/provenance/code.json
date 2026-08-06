@@ -1112,8 +1112,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "2f879339678163a201017e436a8d186ab002b9e2",
-    "sha256": "72ddaf46f7202c405a537e7b03a424e797869a2e818bf3d0e48f01a676a86636"
+    "oid": "f2460ecd28d48860155f2592558c9ed82c0fa0c4",
+    "sha256": "0aeb663648d726c88e82802bcf292898541c97fa14a6f6188d80caee70d34895"
   },
   {
     "path": "docs/release_data/map_hex_exceptions.json",
@@ -1136,8 +1136,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "50418e42265e2da3ca3c4bad5520bb77acbef21d",
-    "sha256": "314a6f2f4cceb8e62e243287a0b5d05f5eba92f62b7e5b29d85417bb3233494c"
+    "oid": "c9debda233ec25ef06cbf197dc04fc72eb3c2f45",
+    "sha256": "8af4cbd52d88a69ada3cfb6598103caf9245c582dceae784fc4c1b0341154fa3"
   },
   {
     "path": "docs/release_data/provenance/submodules.json",
@@ -1160,8 +1160,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored documentation. No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "6510dc4d966a682a0f3ec9dfc52bbe456fa86510",
-    "sha256": "7ecf567f6b30abdd8aa9e5c9fc534f845040a29582d3ef83afe53415264910b9"
+    "oid": "81e05f03e0acc3dbb690999a79bd536348c467cd",
+    "sha256": "2daeaa02d35ba33ebeb2d8c38ffcc23ac057312bccca7d619f6f0a8becb84f39"
   },
   {
     "path": "docs/release_data/version_ledger.json",
@@ -11864,8 +11864,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: repository-authored build tooling/config/source surface (or, for asm/, decompiled disassembly derived from the original ROM). No human legal/provenance review has been recorded yet; this manifest records that honestly rather than asserting a license or clearance.",
-    "oid": "01c049154b2f20fd38f67aec6062f67b8eeb4c7c",
-    "sha256": "3e26fc8c6e2158bdabf3534dec2b77702f7efda1e1cfd9a8b38ddcb07d789210"
+    "oid": "6a9de0bce26a7cedc8696df28538864b1cf25a94",
+    "sha256": "741fc6a0fda910ebd470c91d38749766af2157584dd9e25fe7f903d43c5c41d8"
   },
   {
     "path": "scripts/release_rehearsal/source_guard.py",
