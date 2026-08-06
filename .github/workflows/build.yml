@@ -172,6 +172,25 @@ jobs:
         make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs -j2
         make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs -j2
 
+    # Preserve the supported modern release AAPCS outputs before the
+    # expanded-cap runtime probe below deliberately rebuilds the same
+    # MODERN_OUTPUT_DIR with FE8_ITEM_ID_CAP=0xCE.
+    - run: |
+        artifact_dir="$RUNNER_TEMP/modern-release-aapcs-artifact"
+        rom="build/expansion-modern/release/aapcs/fireemblem8.gba"
+        map="build/expansion-modern/release/aapcs/fireemblem8.map"
+        if [ ! -f "$rom" ]; then
+          echo "expected modern release ROM missing: $rom"
+          exit 1
+        fi
+        if [ ! -f "$map" ]; then
+          echo "expected modern release linker map missing: $map"
+          exit 1
+        fi
+        mkdir -p "$artifact_dir"
+        cp "$rom" "$artifact_dir/"
+        cp "$map" "$artifact_dir/"
+
     # Issue #10 acceptance ("Boundary, serialization, and migration tests
     # gate CI"): runs the real, booted expansion ROM's item-ID-expansion
     # runtime probe (expansion-modern-itemexpansion-check, modern.mk) at an
@@ -201,9 +220,19 @@ jobs:
     # FE8_EXPANSION_ITEMTEST=1 pair itself, matching the actionable error
     # expansion-modern-itemexpansion-check prints when they are missing.
     #
-    # This is the workflow final step: per repository policy, CI ends after
-    # these target-ROM checks.
+    # This is the workflow's final correctness gate: per repository policy,
+    # CI ends after these target-ROM checks. The artifact upload below is
+    # publication of the already-built supported modern release ROM + linker
+    # map only; it adds no further build or verification work.
     - name: Boundary/serialization item-ID-expansion + content runtime gate (cap 0xCE)
       run: |
         FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug   MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2
         FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1 -j2
+
+    - if: success()
+      uses: actions/upload-artifact@v7
+      with:
+        name: modern-release-aapcs-rom-map
+        path: ${{ runner.temp }}/modern-release-aapcs-artifact
+        if-no-files-found: error
+        retention-days: 30

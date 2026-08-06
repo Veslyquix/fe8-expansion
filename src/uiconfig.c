@@ -658,7 +658,7 @@ struct GameOption CONST_DATA gGameOptions[] =
             { MSG_000, MSG_000, 192, 0 },
             { MSG_000, MSG_000, 192, 0 },
         },
-        .icon = 0x16, // reused from GAME_OPTION_SUBTITLE_HELP; no new asset
+        .icon = 0x22, // dedicated language/globe icon slot in Img_ConfigUiIcons
         .func = LanguageOptionEntryHandler,
     }
 #endif
