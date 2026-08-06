@@ -11,7 +11,7 @@
       "codepoints": {
         "byte_count": 7392,
         "format": "sorted unique little-endian uint32 Unicode scalars",
-        "path": "graphics/fonts/cjk/ja.system.codepoints.bin",
+        "path": "graphics/fonts/cjk/ja.system.codepoints.u32le",
         "sha256": "231dc726d09322323b7898a396acba93d894dccc63baba969d3f5001f8433169"
       },
       "febuilder_job": "ja-system",
@@ -22,7 +22,7 @@
       "widths": {
         "byte_count": 1848,
         "format": "one unsigned byte per glyph; valid range 1..16",
-        "path": "graphics/fonts/cjk/ja.system.widths.bin",
+        "path": "graphics/fonts/cjk/ja.system.widths.u8",
         "sha256": "afc94433ef480762c4090a3bc7d91c845e4f6a176df9ed6fda0e7b6ed2a813ff"
       }
     },
@@ -37,7 +37,7 @@
       "codepoints": {
         "byte_count": 7392,
         "format": "sorted unique little-endian uint32 Unicode scalars",
-        "path": "graphics/fonts/cjk/ja.talk.codepoints.bin",
+        "path": "graphics/fonts/cjk/ja.talk.codepoints.u32le",
         "sha256": "231dc726d09322323b7898a396acba93d894dccc63baba969d3f5001f8433169"
       },
       "febuilder_job": "ja-talk",
@@ -48,7 +48,7 @@
       "widths": {
         "byte_count": 1848,
         "format": "one unsigned byte per glyph; valid range 1..16",
-        "path": "graphics/fonts/cjk/ja.talk.widths.bin",
+        "path": "graphics/fonts/cjk/ja.talk.widths.u8",
         "sha256": "3549fdf3599c8cc34e3a6bba094a1df7b7d227252c9b50d6c4bb5c1f9ba4de4b"
       }
     },
@@ -63,7 +63,7 @@
       "codepoints": {
         "byte_count": 9840,
         "format": "sorted unique little-endian uint32 Unicode scalars",
-        "path": "graphics/fonts/cjk/zh-Hans.system.codepoints.bin",
+        "path": "graphics/fonts/cjk/zh-Hans.system.codepoints.u32le",
         "sha256": "add7c909c8ddf248ba95e2a6490dd417cbf527e0e95ce3c2378524b906f88f8f"
       },
       "febuilder_job": "zh-hans-system",
@@ -74,7 +74,7 @@
       "widths": {
         "byte_count": 2460,
         "format": "one unsigned byte per glyph; valid range 1..16",
-        "path": "graphics/fonts/cjk/zh-Hans.system.widths.bin",
+        "path": "graphics/fonts/cjk/zh-Hans.system.widths.u8",
         "sha256": "ad34d24b5d40247e4c09460cd3761e5f083067f14dcf5178734ef6185556bac3"
       }
     },
@@ -89,7 +89,7 @@
       "codepoints": {
         "byte_count": 9840,
         "format": "sorted unique little-endian uint32 Unicode scalars",
-        "path": "graphics/fonts/cjk/zh-Hans.talk.codepoints.bin",
+        "path": "graphics/fonts/cjk/zh-Hans.talk.codepoints.u32le",
         "sha256": "add7c909c8ddf248ba95e2a6490dd417cbf527e0e95ce3c2378524b906f88f8f"
       },
       "febuilder_job": "zh-hans-talk",
@@ -100,7 +100,7 @@
       "widths": {
         "byte_count": 2460,
         "format": "one unsigned byte per glyph; valid range 1..16",
-        "path": "graphics/fonts/cjk/zh-Hans.talk.widths.bin",
+        "path": "graphics/fonts/cjk/zh-Hans.talk.widths.u8",
         "sha256": "2256a73af0554a4af9444f2e28bade455b4209385088ddfedea12dd429e8cf5a"
       }
     }

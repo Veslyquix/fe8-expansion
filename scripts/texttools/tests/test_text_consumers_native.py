@@ -139,11 +139,11 @@ class TextConsumerNativeTests(unittest.TestCase):
         font_symbols = (
             (
                 "gLocalizedFontJaSystemCodepoints",
-                ROOT / "graphics/fonts/cjk/ja.system.codepoints.bin",
+                ROOT / "graphics/fonts/cjk/ja.system.codepoints.u32le",
             ),
             (
                 "gLocalizedFontJaSystemWidths",
-                ROOT / "graphics/fonts/cjk/ja.system.widths.bin",
+                ROOT / "graphics/fonts/cjk/ja.system.widths.u8",
             ),
             (
                 "gLocalizedFontJaSystemBitmaps",
@@ -151,11 +151,11 @@ class TextConsumerNativeTests(unittest.TestCase):
             ),
             (
                 "gLocalizedFontJaTalkCodepoints",
-                ROOT / "graphics/fonts/cjk/ja.talk.codepoints.bin",
+                ROOT / "graphics/fonts/cjk/ja.talk.codepoints.u32le",
             ),
             (
                 "gLocalizedFontJaTalkWidths",
-                ROOT / "graphics/fonts/cjk/ja.talk.widths.bin",
+                ROOT / "graphics/fonts/cjk/ja.talk.widths.u8",
             ),
             (
                 "gLocalizedFontJaTalkBitmaps",
@@ -163,11 +163,11 @@ class TextConsumerNativeTests(unittest.TestCase):
             ),
             (
                 "gLocalizedFontZhHansSystemCodepoints",
-                ROOT / "graphics/fonts/cjk/zh-Hans.system.codepoints.bin",
+                ROOT / "graphics/fonts/cjk/zh-Hans.system.codepoints.u32le",
             ),
             (
                 "gLocalizedFontZhHansSystemWidths",
-                ROOT / "graphics/fonts/cjk/zh-Hans.system.widths.bin",
+                ROOT / "graphics/fonts/cjk/zh-Hans.system.widths.u8",
             ),
             (
                 "gLocalizedFontZhHansSystemBitmaps",
@@ -175,11 +175,11 @@ class TextConsumerNativeTests(unittest.TestCase):
             ),
             (
                 "gLocalizedFontZhHansTalkCodepoints",
-                ROOT / "graphics/fonts/cjk/zh-Hans.talk.codepoints.bin",
+                ROOT / "graphics/fonts/cjk/zh-Hans.talk.codepoints.u32le",
             ),
             (
                 "gLocalizedFontZhHansTalkWidths",
-                ROOT / "graphics/fonts/cjk/zh-Hans.talk.widths.bin",
+                ROOT / "graphics/fonts/cjk/zh-Hans.talk.widths.u8",
             ),
             (
                 "gLocalizedFontZhHansTalkBitmaps",

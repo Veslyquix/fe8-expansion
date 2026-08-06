@@ -16,8 +16,10 @@ from scripts.fonttools.cjk.inventory import (
     read_sfnt_identity,
 )
 from scripts.fonttools.cjk.package import (
+    ASSET_ROOT,
     archive_package,
     check_compact_assets,
+    compact_asset_filenames,
 )
 
 
@@ -137,6 +139,24 @@ class CjkFontTests(unittest.TestCase):
         first = check_compact_assets(ROOT)
         second = check_compact_assets(ROOT)
         self.assertEqual(first, second)
+
+    def test_compact_assets_use_typed_extensions_and_existing_manifest_paths(self):
+        manifest = json.loads(
+            (ROOT / ASSET_ROOT / "manifest.json").read_text()
+        )
+        for path in (ROOT / ASSET_ROOT).iterdir():
+            self.assertNotEqual(path.suffix, ".bin", path)
+        for prefix, asset in manifest["assets"].items():
+            expected_suffixes = {
+                "codepoints": ".codepoints.u32le",
+                "widths": ".widths.u8",
+                "bitmap": ".glyphs.2bpp",
+            }
+            for kind, filename in compact_asset_filenames(prefix).items():
+                self.assertTrue(filename.endswith(expected_suffixes[kind]), filename)
+                relative_path = f"{ASSET_ROOT}/{filename}"
+                self.assertEqual(asset[kind]["path"], relative_path)
+                self.assertTrue((ROOT / relative_path).is_file(), relative_path)
 
     def test_febuilder_gate_counts_follow_current_manifest(self):
         manifest = json.loads(

@@ -26,10 +26,37 @@ PACKAGE_ARCHIVE = "build/tmp/cjk-fonts/febuilder-schema-v1.zip"
 GENERATION_REPORT = "fonts/cjk/reports/febuilder-generation-report.json"
 GATE_REPORT = "fonts/cjk/reports/febuilder-gates.json"
 ASSET_ROOT = "graphics/fonts/cjk"
+COMPACT_ASSET_SUFFIXES = {
+    "codepoints": ".codepoints.u32le",
+    "widths": ".widths.u8",
+    "bitmap": ".glyphs.2bpp",
+}
+FORBIDDEN_COMPACT_ASSET_EXTENSION = ".bin"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 SLOTS_HEADER = (
     "moji\tunicode\tstyle\twidth\tfilename\tpackedSha256\tpngSha256"
 )
+
+
+def compact_asset_filenames(prefix: str) -> Dict[str, str]:
+    return {
+        kind: f"{prefix}{suffix}"
+        for kind, suffix in COMPACT_ASSET_SUFFIXES.items()
+    }
+
+
+def _reject_generic_compact_assets(root: Path) -> None:
+    asset_root = root / ASSET_ROOT
+    generic_paths = sorted(
+        path.relative_to(root).as_posix()
+        for path in asset_root.iterdir()
+        if path.is_file() and path.suffix == FORBIDDEN_COMPACT_ASSET_EXTENSION
+    )
+    if generic_paths:
+        raise CjkFontError(
+            "generic compact asset path(s) are forbidden: "
+            + ", ".join(generic_paths)
+        )
 
 
 def _safe_member(name: str) -> str:
@@ -558,10 +585,11 @@ def build_compact_assets(
                 codepoints.extend(struct.pack("<I", row["scalar"]))
 
             prefix = f"{locale}.{runtime_style}"
+            filenames = compact_asset_filenames(prefix)
             files = {
-                "codepoints": (f"{prefix}.codepoints.bin", bytes(codepoints)),
-                "widths": (f"{prefix}.widths.bin", bytes(widths)),
-                "glyphs": (f"{prefix}.glyphs.2bpp", bytes(glyphs)),
+                "codepoints": (filenames["codepoints"], bytes(codepoints)),
+                "widths": (filenames["widths"], bytes(widths)),
+                "glyphs": (filenames["bitmap"], bytes(glyphs)),
             }
             for _, (filename, data) in files.items():
                 outputs[f"{ASSET_ROOT}/{filename}"] = data
@@ -667,6 +695,7 @@ def write_compact_assets(
     repeated = build_compact_assets(root, package_path, report_path)
     if repeated != outputs:
         raise CjkFontError("FEBuilder package import is not deterministic")
+    _reject_generic_compact_assets(root)
     for relative_path, data in outputs.items():
         path = root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -675,6 +704,7 @@ def write_compact_assets(
 
 
 def check_compact_assets(root: Path) -> Dict[str, bytes]:
+    _reject_generic_compact_assets(root)
     report_path = root / GENERATION_REPORT
     report_data = report_path.read_bytes()
     report, jobs, corpora = _load_report(root, report_data, "generate")
@@ -791,9 +821,8 @@ def check_compact_assets(root: Path) -> Dict[str, bytes]:
             raise CjkFontError(f"{prefix}: compact asset contract drifted")
 
         expected_paths = {
-            "codepoints": f"{ASSET_ROOT}/{prefix}.codepoints.bin",
-            "widths": f"{ASSET_ROOT}/{prefix}.widths.bin",
-            "bitmap": f"{ASSET_ROOT}/{prefix}.glyphs.2bpp",
+            kind: f"{ASSET_ROOT}/{filename}"
+            for kind, filename in compact_asset_filenames(prefix).items()
         }
         data_by_kind = {}
         for kind, relative_path in expected_paths.items():

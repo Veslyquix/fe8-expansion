@@ -112,8 +112,8 @@ above to reproduce the gate.
 
 For each `locale.style`, `graphics/fonts/cjk/` contains:
 
-- `*.codepoints.bin`: sorted unique little-endian `uint32` Unicode scalars;
-- `*.widths.bin`: one width byte per scalar, range 1 through 16;
+- `*.codepoints.u32le`: sorted unique little-endian `uint32` Unicode scalars;
+- `*.widths.u8`: one unsigned width byte per scalar, range 1 through 16;
 - `*.glyphs.2bpp`: one 64-byte 16x16 bitmap per scalar, row-major, four
   low-bit-first 2bpp pixels per byte.
 
