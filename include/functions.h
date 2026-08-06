@@ -50,7 +50,11 @@ void CallARM_FillMovementMap(void);
 // ??? LoadIconObjectGraphics(???);
 
 const char * GetStrPrefix(s8 * str, bool capital);
-void InsertPrefix(char * str, const char * prefix, bool capital);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+char *InsertPrefix(char *str, const char *prefix, bool capital);
+#else
+void InsertPrefix(char *str, const char *prefix, bool capital);
+#endif
 #if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
 void InsertPrefixWithLimit(
     char *str,

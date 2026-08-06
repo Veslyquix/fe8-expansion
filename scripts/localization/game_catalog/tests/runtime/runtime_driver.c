@@ -10,6 +10,7 @@ char *GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCap
 char *GetStringFromIndexInBuffer(int index, char *buffer);
 char *StringInsertSpecialPrefixByCtrl(void);
 char *StrInsertTact(void);
+char *InsertPrefix(char *str, const char *prefix, bool capital);
 extern struct MsgBuffer sMsgString;
 
 static int failures = 0;
@@ -17,6 +18,7 @@ static int sArmDecompCalls = 0;
 static ExpansionLocaleId sCurrentLocale = EXPANSION_LOCALE_EN;
 static struct CharacterData sCharacterData = { 15 };
 static struct ItemData sItemData = { 18 };
+static const char *sTacticianNameOverride;
 
 char gBufPrep[0x2000];
 struct ActionData gActionData = { 0 };
@@ -93,6 +95,8 @@ void CopyString(void *dst, const void *src)
 
 char *GetTacticianName(void)
 {
+    if (sTacticianNameOverride != NULL)
+        return (char *)sTacticianNameOverride;
     if (sCurrentLocale == EXPANSION_LOCALE_JA)
         return "\xE8\xBB\x8D\xE5\xB8\xAB";
     if (sCurrentLocale == EXPANSION_LOCALE_ZH_HANS)
@@ -133,6 +137,9 @@ static void ResetHarness(ExpansionLocaleId locale)
     memset(gBufPrep, 0, sizeof(gBufPrep));
     sCurrentLocale = locale;
     sArmDecompCalls = 0;
+    sTacticianNameOverride = NULL;
+    sCharacterData.nameTextId = 15;
+    sItemData.nameTextId = 18;
     LocalizedGameText_InvalidateCache();
 }
 
@@ -419,6 +426,68 @@ static void TestTactSubstitutionKeepsUtf8Boundaries(void)
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
 }
 
+static void TestDerivedTextDoesNotMutateActiveCache(void)
+{
+    static const char tactOne[] = "\xE7\x94\xB2";
+    static const char tactTwo[] = "\xE4\xB9\x99";
+    const char *active;
+    const char *derived;
+    const char *prefixed;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    active = GetStringFromIndex(14);
+    CHECK(active == (const char *)sMsgString.storage.localized);
+
+    sTacticianNameOverride = tactOne;
+    derived = StrInsertTact();
+    CHECK(strcmp(derived, "\xE8\xA8\xBA\xE7\x94\xB2") == 0);
+    CHECK(derived == gBufPrep);
+    CHECK(active == GetStringFromIndex(14));
+    CHECK(memcmp(active, "\xE8\xA8\xBA\x80\x20\x00", 6) == 0);
+
+    sTacticianNameOverride = tactTwo;
+    derived = StrInsertTact();
+    CHECK(strcmp(derived, "\xE8\xA8\xBA\xE4\xB9\x99") == 0);
+    CHECK(active == GetStringFromIndex(14));
+    CHECK(memcmp(active, "\xE8\xA8\xBA\x80\x20\x00", 6) == 0);
+
+    active = GetStringFromIndex(18);
+    prefixed = InsertPrefix((char *)active, "Pre-", FALSE);
+    CHECK(strcmp(prefixed, "Pre-\xE5\x89\xA3") == 0);
+    CHECK(prefixed == gBufPrep);
+    CHECK(strcmp(active, "\xE5\x89\xA3") == 0);
+    CHECK(active == GetStringFromIndex(18));
+    CHECK(strcmp(active, "\xE5\x89\xA3") == 0);
+
+    prefixed = InsertPrefix((char *)active, "Pre-", FALSE);
+    CHECK(strcmp(prefixed, "Pre-\xE5\x89\xA3") == 0);
+    CHECK(strcmp(active, "\xE5\x89\xA3") == 0);
+}
+
+static void TestRepeatedDynamicSpecialSubstitutions(void)
+{
+    static const char tactOne[] = "\xE7\x94\xB2";
+    static const char tactTwo[] = "\xE4\xB9\x99";
+    const char *active;
+    const char *derived;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    active = GetStringFromIndex(13);
+    sTacticianNameOverride = tactOne;
+    derived = StringInsertSpecialPrefixByCtrl();
+    CHECK(strstr(derived, tactOne) != NULL);
+    CHECK(strstr(derived, "\xE5\x89\xA3") != NULL);
+    CHECK(active == GetStringFromIndex(13));
+
+    sTacticianNameOverride = tactTwo;
+    sItemData.nameTextId = 0;
+    derived = StringInsertSpecialPrefixByCtrl();
+    CHECK(strstr(derived, tactTwo) != NULL);
+    CHECK(strstr(derived, "\xE5\x89\xA3") == NULL);
+    CHECK(active == GetStringFromIndex(13));
+    CHECK(memcmp(active, "\xE5\x80\x99\x80\x20", 5) == 0);
+}
+
 static void TestSubstitutionCapacityBoundary(void)
 {
     const char *result;
@@ -537,6 +606,8 @@ int main(void)
     TestLegacyUnknownBufferStatus();
     TestUtf8ControlSubstitutions();
     TestTactSubstitutionKeepsUtf8Boundaries();
+    TestDerivedTextDoesNotMutateActiveCache();
+    TestRepeatedDynamicSpecialSubstitutions();
     TestSubstitutionCapacityBoundary();
     TestCacheLocaleSwitchAndExplicitInvalidation();
     TestDefaultEnglishBehavior();

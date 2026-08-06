@@ -106,6 +106,9 @@ class TextConsumerAuditTests(unittest.TestCase):
         self.assertIn("MSG_TRANSFORM_OUTPUT", special)
         self.assertIn("MSG_TRANSFORM_OUTPUT", tact)
         self.assertIn("MSG_TRANSFORM_OUTPUT_CAPACITY", msg)
+        self.assertNotIn("MsgStreamWriter_CommitToActive", msg)
+        self.assertIn("return writer.buffer;", special)
+        self.assertIn("return writer.buffer;", tact)
         self.assertNotIn("CopyString", special)
         self.assertNotIn("CopyString", tact)
 
@@ -114,6 +117,106 @@ class TextConsumerAuditTests(unittest.TestCase):
         self.assertNotIn("iter[1]", copy_name)
         self.assertNotIn("+= 2", copy_name)
         self.assertIn("CG_TEXT_NAME_BUFFER_CAPACITY", cg)
+
+    def test_reviewed_class_and_name_consumers_have_cjk_paths(self):
+        opinfo = self._read("src/opinfo.c")
+        for function in (
+            "ClassIntro_Init",
+            "ClassStatsDisplay_Init",
+            "ClassStatsDisplay_Loop",
+        ):
+            body = _function_body(opinfo, function)
+            self.assertIn(
+                "FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED", body
+            )
+        self.assertIn("GetStringTextLen(str)", _function_body(
+            opinfo, "ClassIntro_Init"
+        ))
+        self.assertIn("Text_DrawString", _function_body(
+            opinfo, "ClassStatsDisplay_Loop"
+        ))
+
+        classchg = self._read("src/classchg-sel.c")
+        palette = _function_body(classchg, "LoadClassReelFontPalette")
+        draw = _function_body(classchg, "LoadClassNameInClassReelFont")
+        self.assertIn("CLASS_CHANGE_NAME_CAPACITY", palette)
+        self.assertIn("GetStringTextLen", palette)
+        self.assertIn("CLASS_CHANGE_NAME_CAPACITY", draw)
+        self.assertIn("Text_DrawString", draw)
+
+        tactician = self._read("src/sio_tactician.c")
+        mapping = _function_body(
+            tactician, "Tactician_MapNameToConfIndices"
+        )
+        drawing = _function_body(tactician, "TacticianDrawCharacters")
+        loop = _function_body(tactician, "Tactician_Loop")
+        self.assertIn("TextUtf8_Next", mapping)
+        self.assertIn("Text_DrawString", drawing)
+        self.assertIn("GetStringTextLen(proc->str)", loop)
+
+        rankings = self._read("src/bmsave-multiarena.c")
+        self.assertIn("MULTIARENA_RANKING_LABEL", rankings)
+        self.assertIn(
+            "sizeof(name) <= MULTIARENA_TEAMNAME_SIZE + 1", rankings
+        )
+        self.assertIn(
+            "GetLocalizedInitialMultiArenaRankingName", rankings
+        )
+
+    def test_equivalent_byte_walker_sites_match_reviewed_allowlist(self):
+        pattern = re.compile(
+            r"\b(?:str|str_buf|iter|it|ptr)\s*\+=\s*2\b"
+            r"|gActiveFont->glyphs\[\*"
+            r"|gOpinfo_1\[\*"
+            r"|GetClassDisplayFontInfo\([^)]*\[[^]]+\]"
+        )
+        function_pattern = re.compile(
+            r"^[A-Za-z_][A-Za-z0-9_\s\*]*\b"
+            r"([A-Za-z_][A-Za-z0-9_]*)\s*"
+            r"\([^;{}]*\)\s*\{",
+            re.M,
+        )
+        allowed = {
+            ("src/bmmenu.c", "IsAdjacentForSupply"),
+            ("src/cgtext.c", "CgText_DrawNameBox"),
+            ("src/cgtext.c", "GetCgTextDimensions"),
+            ("src/cgtext.c", "GetCgTextBoxDimensions"),
+            ("src/classchg-sel.c", "LoadClassReelFontPalette"),
+            ("src/classchg-sel.c", "LoadClassNameInClassReelFont"),
+            ("src/eventinfo.c", "StartAvailableTileEvent"),
+            ("src/fontgrp.c", "Text_DrawStringASCII"),
+            ("src/fontgrp.c", "Text_DrawCharacterAscii"),
+            ("src/fontgrp.c", "GetCharTextLenASCII"),
+            ("src/fontgrp.c", "GetStringTextLenASCII"),
+            ("src/helpbox.c", "GetBoxDialogueSize"),
+            ("src/helpbox.c", "DialogBoxGetGlyphLen"),
+            ("src/mapanim_infobox.c", "MapAnim_DrawBar"),
+            ("src/opinfo.c", "ClassIntro_Init"),
+            ("src/opinfo.c", "ClassStatsDisplay_Init"),
+            ("src/opinfo.c", "ClassStatsDisplay_Loop"),
+            ("src/scene.c", "TalkInterpret"),
+            ("src/scene.c", "GetStrTalkLen"),
+            ("src/sio_tactician.c", "Tactician_MapNameToConfIndices"),
+        }
+        found = set()
+        for path in (ROOT / "src").rglob("*.c"):
+            relative = str(path.relative_to(ROOT))
+            if relative.startswith("src/data/"):
+                continue
+            source = path.read_text(encoding="utf-8")
+            functions = [
+                (match.start(), match.group(1))
+                for match in function_pattern.finditer(source)
+            ]
+            for match in pattern.finditer(source):
+                function = "<global>"
+                for offset, name in functions:
+                    if offset > match.start():
+                        break
+                    function = name
+                found.add((relative, function))
+
+        self.assertEqual(found, allowed)
 
     def test_unbounded_modern_abi_fails_with_actionable_marker(self):
         msg = self._read("src/msg.c")

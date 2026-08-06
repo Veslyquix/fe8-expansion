@@ -93,7 +93,11 @@ char* GetItemNameWithArticle(int item, s8 capitalize) {
             article = NULL;
 
         result = GetItemName(item);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+        result = InsertPrefix(result, article, capitalize);
+#else
         InsertPrefix(result, article, capitalize);
+#endif
 
         return result;
     }

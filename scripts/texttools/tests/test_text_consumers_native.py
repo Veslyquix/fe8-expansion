@@ -54,6 +54,7 @@ class TextConsumerNativeTests(unittest.TestCase):
             "-ffunction-sections",
             "-fdata-sections",
             "-DMODERN=1",
+            "-DNONMATCHING=1",
             "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x07u",
             "-DFE8_TEXT_CONSUMER_HOST_TEST=1",
             "-I",
@@ -90,6 +91,68 @@ class TextConsumerNativeTests(unittest.TestCase):
         )
         result = self._run([binary])
         self.assertEqual(result.stdout.strip(), "text_consumer_host_test: ok")
+
+    def test_reviewed_consumer_functions(self):
+        common = [
+            "cc",
+            "-std=gnu89",
+            "-Wall",
+            "-Wextra",
+            "-Werror=implicit-function-declaration",
+            "-Werror=declaration-after-statement",
+            "-Wno-int-to-pointer-cast",
+            "-Wno-pointer-to-int-cast",
+            "-Wno-address-of-packed-member",
+            "-Wno-unused-parameter",
+            "-no-pie",
+            "-fsigned-char",
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-DMODERN=1",
+            "-DNONMATCHING=1",
+            "-DFE8_EXPANSION_ENABLED_LOCALE_MASK=0x07u",
+            "-DFE8_TEXT_CONSUMER_HOST_TEST=1",
+            "-I",
+            ROOT / "include",
+        ]
+        objects = []
+        for source in (
+            "opinfo.c",
+            "classchg-sel.c",
+            "bmsave-multiarena.c",
+            "sio_tactician.c",
+        ):
+            output = BUILD_DIR / f"{Path(source).stem}.reviewed.o"
+            self._run(
+                common
+                + [
+                    "-c",
+                    ROOT / "src" / source,
+                    "-o",
+                    output,
+                ]
+            )
+            objects.append(output)
+
+        binary = BUILD_DIR / "text_reviewed_consumers_host_test"
+        self._run(
+            common
+            + [
+                ROOT / "src" / "text_utf8.c",
+                TEST_DIR / "text_reviewed_consumers_host_test.c",
+            ]
+            + objects
+            + [
+                "-Wl,--gc-sections",
+                "-Wl,--unresolved-symbols=ignore-all",
+                "-o",
+                binary,
+            ]
+        )
+        result = self._run([binary])
+        self.assertEqual(
+            result.stdout.strip(), "text_reviewed_consumers_host_test: ok"
+        )
 
 
 if __name__ == "__main__":

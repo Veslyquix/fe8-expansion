@@ -1,4 +1,5 @@
 #include "global.h"
+#include <string.h>
 #include "fontgrp.h"
 #include "hardware.h"
 #include "proc.h"
@@ -9,6 +10,7 @@
 #include "bmsave.h"
 #include "prepscreen.h"
 #include "uiutils.h"
+#include "text_utf8.h"
 #include "constants/characters.h"
 
 struct ProcCmd CONST_DATA ProcScr_TacticianNameSelection[] = {
@@ -570,14 +572,166 @@ const struct TacticianTextConf * GetTacticianTextConf(s16 idx)
     return gTacticianTextConf + idx;
 }
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+static int TacticianName_GetInfo(
+    const char *str,
+    u32 *outByteLength,
+    u32 *outTokenCount)
+{
+    struct TextUtf8Token token;
+    const char *cursor;
+    const char *next;
+    u32 tokenCount;
+
+    cursor = str;
+    tokenCount = 0;
+    for (;;)
+    {
+        next = TextUtf8_Next(cursor, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+        {
+            *outByteLength = (u32)(cursor - str);
+            *outTokenCount = tokenCount;
+            return TRUE;
+        }
+        if (token.kind != TEXT_UTF8_TOKEN_SCALAR || next == cursor)
+            return FALSE;
+
+        tokenCount++;
+        cursor = next;
+    }
+}
+
+static int TacticianName_CopyBounded(
+    char *dst,
+    u32 capacity,
+    const char *src,
+    u32 maxTokens)
+{
+    u32 byteLength;
+    u32 tokenCount;
+
+    if (!TacticianName_GetInfo(src, &byteLength, &tokenCount)
+        || tokenCount > maxTokens
+        || byteLength >= capacity)
+    {
+        if (capacity != 0)
+            dst[0] = '\0';
+        return FALSE;
+    }
+
+    memcpy(dst, src, byteLength + 1);
+    return TRUE;
+}
+
+static int TacticianName_TokensEqual(
+    const char *left,
+    const char *right)
+{
+    struct TextUtf8Token leftToken;
+    struct TextUtf8Token rightToken;
+    const char *leftNext;
+    const char *rightNext;
+    u32 leftLength;
+    u32 rightLength;
+
+    leftNext = TextUtf8_Next(left, &leftToken);
+    rightNext = TextUtf8_Next(right, &rightToken);
+    if (leftToken.kind != TEXT_UTF8_TOKEN_SCALAR
+        || rightToken.kind != TEXT_UTF8_TOKEN_SCALAR
+        || *rightNext != '\0')
+        return FALSE;
+
+    leftLength = (u32)(leftNext - left);
+    rightLength = (u32)(rightNext - right);
+    return leftLength == rightLength
+        && memcmp(left, right, leftLength) == 0;
+}
+
+#ifdef FE8_TEXT_CONSUMER_HOST_TEST
+int Tactician_TestTokensEqual(const char *left, const char *right)
+{
+    return TacticianName_TokensEqual(left, right);
+}
+#endif
+
+static char *TacticianName_GetLastToken(char *str)
+{
+    struct TextUtf8Token token;
+    char *cursor;
+    char *last;
+    const char *next;
+
+    cursor = str;
+    last = str;
+    for (;;)
+    {
+        next = TextUtf8_Next(cursor, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+            return last;
+        if (token.kind != TEXT_UTF8_TOKEN_SCALAR || next == cursor)
+            return NULL;
+
+        last = cursor;
+        cursor = (char *)next;
+    }
+}
+#endif
+
 void Tactician_MapNameToConfIndices(struct ProcTactician * proc, u8 * str_buf)
 {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct TextUtf8Token token;
+    const char *cursor;
+    const char *next;
+#endif
     int i;
     int j;
     int k;
 
     int idx = 0;
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    cursor = (const char *)str_buf;
+    for (;;)
+    {
+        next = TextUtf8_Next(cursor, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+            break;
+        if (token.kind != TEXT_UTF8_TOKEN_SCALAR || next == cursor)
+            break;
+
+        for (i = 0; i <= 0x50; i++)
+        {
+            const struct TacticianTextConf * conf =
+                GetTacticianTextConf(i);
+
+            for (j = 0; j < 3; j++)
+            {
+                for (k = 0; k < 3; k++)
+                {
+                    const char *candidate = (const char *)
+                        conf->str[j * 3 + k];
+
+                    if (TacticianName_TokensEqual(cursor, candidate))
+                    {
+                        if (idx < (int)ARRAY_COUNT(proc->unk4C))
+                        {
+                            proc->unk4C[idx] =
+                                ((j & 3) << 14) | (i & 0x3FFF);
+                            proc->unk39 = k;
+                            idx++;
+                        }
+                        goto next_token;
+                    }
+                }
+            }
+        }
+
+    next_token:
+        cursor = next;
+    }
+#else
     for (; *str_buf != 0 ; str_buf += 2)
     {
         for (i = 0; i <= 0x50; i++)
@@ -607,6 +761,7 @@ void Tactician_MapNameToConfIndices(struct ProcTactician * proc, u8 * str_buf)
         // need a semi-colon for modern compilers
         ; // exit loop
     }
+#endif
 
     return;
 }
@@ -645,7 +800,9 @@ void Tactician_DrawCharGrid(struct ProcTactician * proc)
 
 void TacticianDrawCharacters(struct ProcTactician * proc)
 {
+#if !FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
     int x;
+#endif
     struct Text * text;
     const char * str = proc->str;
 
@@ -654,6 +811,10 @@ void TacticianDrawCharacters(struct ProcTactician * proc)
     if (*str != '\0')
     {
         text = &Text_0;
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+        Text_SetCursor(text, 0);
+        Text_DrawString(text, str);
+#else
         x = 0;
     
         while (*str != '\0')
@@ -662,6 +823,7 @@ void TacticianDrawCharacters(struct ProcTactician * proc)
             str = Text_DrawCharacter(text, str);
             x = x + 7;
         }
+#endif
     }
     PutText(&Text_0, TILEMAP_LOCATED(gBG0TilemapBuffer, 12, 5));
     BG_EnableSyncByMask(BG0_SYNC_BIT);
@@ -680,9 +842,15 @@ int StrLen(u8 * buf)
 
 void Tactician_InitScreen(struct ProcTactician * proc)
 {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    int i;
+#else
     int i, char_cnt;
+#endif
     char * str;
+#if !FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
     u8 str_buf[0x10];
+#endif
     const struct TacticianTextConf * conf;
 
     ClearSioBG();
@@ -706,10 +874,10 @@ void Tactician_InitScreen(struct ProcTactician * proc)
         proc->max_len = 5;
     }
 
-    for (i = 0; i < (proc->max_len * 2 + 1); i++)
+    for (i = 0; i < (int)sizeof(proc->str); i++)
         proc->str[i] = '\0';
 
-    for (i = 0; i < proc->max_len; i++)
+    for (i = 0; i < (int)ARRAY_COUNT(proc->unk4C); i++)
         proc->unk4C[i] = 0;
 
     if (CheckInLinkArena())
@@ -737,6 +905,25 @@ void Tactician_InitScreen(struct ProcTactician * proc)
     /* 80448DE */
     if (proc->unk32 != 0)
     {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+        str = GetTacticianName();
+        if (TacticianName_CopyBounded(
+                proc->str,
+                (u32)sizeof(proc->str),
+                str,
+                proc->max_len))
+        {
+            u32 byteLength;
+            u32 tokenCount;
+
+            TacticianName_GetInfo(
+                proc->str, &byteLength, &tokenCount);
+            proc->cur_len = byteLength;
+            Tactician_MapNameToConfIndices(proc, (u8 *)proc->str);
+            TacticianDrawCharacters(proc);
+            proc->child1->unk40 = GetStringTextLen(proc->str);
+        }
+#else
         i = 0;
         str = GetTacticianName();
         while (*str != '\0')
@@ -754,6 +941,7 @@ void Tactician_InitScreen(struct ProcTactician * proc)
         Tactician_MapNameToConfIndices(proc, str_buf);
         TacticianDrawCharacters(proc);
         proc->child1->unk40 = proc->cur_len * 7;
+#endif
     }
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT | BG3_SYNC_BIT);
 }
@@ -803,6 +991,41 @@ void Tactician_MoveHand(struct ProcTactician * proc, int pos, const struct Tacti
 
 void TacticianTryAppendChar(struct ProcTactician * proc, const struct TacticianTextConf * conf)
 {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    const char *source;
+    u32 byteLength;
+    u32 sourceByteLength;
+    u32 sourceTokenCount;
+    u32 tokenCount;
+
+    source = (const char *)conf->str[proc->line_idx * 3];
+    if (TacticianName_GetInfo(
+            proc->str, &byteLength, &tokenCount)
+        && TacticianName_GetInfo(
+            source, &sourceByteLength, &sourceTokenCount)
+        && sourceTokenCount == 1
+        && tokenCount < proc->max_len
+        && byteLength + sourceByteLength < sizeof(proc->str))
+    {
+        SioPlaySoundEffect(2);
+        memcpy(
+            proc->str + byteLength, source, sourceByteLength + 1);
+        proc->unk4C[tokenCount] =
+            (0x3FFF & proc->conf_idx)
+            | ((3 & proc->line_idx) << 14);
+        proc->cur_len = byteLength + sourceByteLength;
+
+        if (tokenCount + 1 >= proc->max_len)
+            proc->conf_idx = 5;
+
+        TacticianDrawCharacters(proc);
+        proc->unk39 = 0;
+    }
+    else
+    {
+        SioPlaySoundEffect(0);
+    }
+#else
     int cur_len;
 
     if (proc->cur_len < proc->max_len)
@@ -825,10 +1048,37 @@ void TacticianTryAppendChar(struct ProcTactician * proc, const struct TacticianT
     {
         SioPlaySoundEffect(0);
     }
+#endif
 }
 
 void TacticianTryDeleteChar(struct ProcTactician * proc, const struct TacticianTextConf * conf)
 {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    char *last;
+    u32 byteLength;
+    u32 tokenCount;
+
+    (void)conf;
+    if (TacticianName_GetInfo(
+            proc->str, &byteLength, &tokenCount)
+        && tokenCount != 0)
+    {
+        SioPlaySoundEffect(2);
+        last = TacticianName_GetLastToken(proc->str);
+        if (last != NULL)
+        {
+            *last = '\0';
+            proc->cur_len = (u32)(last - proc->str);
+            proc->unk4C[tokenCount - 1] = 0;
+            proc->unk39 = 0;
+            TacticianDrawCharacters(proc);
+        }
+    }
+    else
+    {
+        SioPlaySoundEffect(0);
+    }
+#else
     int cur_len;
 
     if (proc->cur_len != 0)
@@ -848,6 +1098,7 @@ void TacticianTryDeleteChar(struct ProcTactician * proc, const struct TacticianT
     {
         SioPlaySoundEffect(0);
     }
+#endif
 }
 
 void SaveTactician(struct ProcTactician * proc, const struct TacticianTextConf * conf)
@@ -871,6 +1122,68 @@ void SaveTactician(struct ProcTactician * proc, const struct TacticianTextConf *
 
 bool Tactician_TryChangeLastCharVariant(struct ProcTactician * proc, const struct TacticianTextConf * conf, u32 c, int d)
 {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    const struct TacticianTextConf *conf2;
+    const char *replacement;
+    char *last;
+    u16 conf_idx;
+    u32 byteLength;
+    u32 lastLength;
+    u32 line_idx;
+    u32 replacementLength;
+    u32 replacementTokens;
+    u32 tokenCount;
+
+    if (proc->line_idx > 1 && d == 0)
+    {
+        SioPlaySoundEffect(2);
+        TacticianTryAppendChar(proc, conf);
+        return false;
+    }
+
+    if (!TacticianName_GetInfo(
+            proc->str, &byteLength, &tokenCount)
+        || tokenCount == 0)
+    {
+        if (d == 0)
+            SioPlaySoundEffect(0);
+        return false;
+    }
+
+    conf_idx = 0x3FFF & proc->unk4C[tokenCount - 1];
+    conf2 = GetTacticianTextConf(conf_idx);
+    line_idx = proc->unk4C[tokenCount - 1] >> 14;
+    replacement = (const char *)conf2->str[line_idx * 3 + c];
+    if (!TacticianName_GetInfo(
+            replacement, &replacementLength, &replacementTokens)
+        || replacementTokens != 1)
+    {
+        if (d == 0)
+            SioPlaySoundEffect(0);
+        return false;
+    }
+
+    last = TacticianName_GetLastToken(proc->str);
+    if (last == NULL)
+        return false;
+    lastLength = byteLength - (u32)(last - proc->str);
+    if (byteLength - lastLength + replacementLength
+        >= sizeof(proc->str))
+    {
+        if (d == 0)
+            SioPlaySoundEffect(0);
+        return false;
+    }
+
+    SioPlaySoundEffect(2);
+    memcpy(last, replacement, replacementLength);
+    last[replacementLength] = '\0';
+    proc->cur_len =
+        (u32)(last - proc->str) + replacementLength;
+    TacticianDrawCharacters(proc);
+    proc->unk39 = c;
+    return true;
+#else
     if (proc->line_idx > 1 && d == 0)
     {
         SioPlaySoundEffect(2);
@@ -908,6 +1221,7 @@ bool Tactician_TryChangeLastCharVariant(struct ProcTactician * proc, const struc
         SioPlaySoundEffect(0);
 
     return false;
+#endif
 }
 
 //! FE8U = 0x08044C54
@@ -1087,7 +1401,9 @@ void Tactician_LoopCore(struct ProcTactician * proc, const struct TacticianTextC
 //! FE8U = 0x08044ED8
 void Tactician_Loop(struct ProcTactician * proc)
 {
+#if !FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
     char _cbuf[proc->max_len + 1];
+#endif
     const struct TacticianTextConf * conf = GetTacticianTextConf(proc->conf_idx);
     proc->conf_idx_bak = proc->conf_idx;
 
@@ -1098,11 +1414,21 @@ void Tactician_Loop(struct ProcTactician * proc)
     }
 
     conf = GetTacticianTextConf(proc->conf_idx);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    UpdateNameEntrySpriteDraw(
+        proc->child1,
+        conf->x - 4,
+        conf->y + 1,
+        GetStringTextLen(proc->str),
+        conf->kind,
+        (proc->line_idx <= 1) ? proc->line_idx : 2);
+#else
     SioStrCpy(proc->str, _cbuf);
 
     _cbuf[proc->max_len - 1] = 0;
 
     UpdateNameEntrySpriteDraw(proc->child1, conf->x - 4, conf->y + 1, StrLen(_cbuf) * 7, conf->kind, (proc->line_idx <= 1) ? proc->line_idx : 2);
+#endif
 }
 
 //! FE8U = 0x08044F84

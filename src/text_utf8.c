@@ -83,9 +83,6 @@ static const char *TextUtf8_NextInternal(
             if (bounded && available < 3)
                 return TextUtf8_Invalid(
                     text, out, TEXT_UTF8_TOKEN_FLAG_TRUNCATED);
-            if (bytes[1] == 0 || bytes[2] == 0)
-                return TextUtf8_Invalid(
-                    text, out, TEXT_UTF8_TOKEN_FLAG_TRUNCATED);
 
             TextUtf8_SetToken(
                 out,

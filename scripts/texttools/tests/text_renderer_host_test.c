@@ -60,6 +60,7 @@ static int TestValidUtf8AndControls(void)
     static const u8 fourByte[] = {0xF0, 0x9F, 0x98, 0x80, 0};
     static const u8 control[] = {0x0F, 0};
     static const u8 face[] = {0x10, 0x93, 0x94, 0};
+    static const u8 zeroByteFace[] = {0x10, 0x00, 0x7F, 0};
     static const u8 extended[] = {0x80, 0x21, 0};
     static const u8 extendedArgument[] = {0x80, 0x01, 0x03, 0};
     static const u8 legacySpace[] = {0x81, 0x40, 0};
@@ -90,6 +91,17 @@ static int TestValidUtf8AndControls(void)
     if (!CheckToken(
             face, TEXT_UTF8_TOKEN_CONTROL, 0, 0x9493, 3, 0x10, 0,
             TEXT_UTF8_TOKEN_FLAG_FACE_PAYLOAD))
+        return 0;
+    if (!CheckToken(
+            zeroByteFace, TEXT_UTF8_TOKEN_CONTROL, 0, 0x7F00, 3, 0x10, 0,
+            TEXT_UTF8_TOKEN_FLAG_FACE_PAYLOAD))
+        return 0;
+    next = TextUtf8_NextBounded(
+        (const char *)zeroByteFace, 3, &token);
+    if (token.kind != TEXT_UTF8_TOKEN_CONTROL
+        || token.argument != 0x7F00
+        || token.length != 3
+        || next != (const char *)zeroByteFace + 3)
         return 0;
     if (!CheckToken(
             extended, TEXT_UTF8_TOKEN_EXTENDED_CONTROL, 0, 0, 2, 0x80,
