@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import re
 import unittest
 from pathlib import Path
@@ -39,6 +40,17 @@ def _modern_branch(body: str) -> str:
         return body
     branch = body.split(marker, 1)[1]
     return branch.split("#else", 1)[0]
+
+
+def _string_constant(source: str, name: str) -> str:
+    match = re.search(
+        rf"static const char {re.escape(name)}\[\]\s*=\s*"
+        r"((?:\s*\"[^\"]*\")+)\s*;",
+        source,
+    )
+    if match is None:
+        raise AssertionError(f"missing string constant {name}")
+    return "".join(re.findall(r'"([^"]*)"', match.group(1)))
 
 
 class TextConsumerAuditTests(unittest.TestCase):
@@ -162,6 +174,84 @@ class TextConsumerAuditTests(unittest.TestCase):
         self.assertIn(
             "GetLocalizedInitialMultiArenaRankingName", rankings
         )
+
+    def test_tactician_locale_grids_match_committed_sources_and_fonts(self):
+        source = self._read("src/sio_tactician.c")
+        ja_pages = (
+            _string_constant(source, "sTacticianGridJaHiragana"),
+            _string_constant(source, "sTacticianGridJaKatakana"),
+        )
+        zh_pages = (
+            _string_constant(source, "sTacticianGridZhHansFrequent"),
+            _string_constant(source, "sTacticianGridZhHansExtended"),
+        )
+
+        ja_corpus = self._read("texts/locales/ja/indexed.txt")
+        zh_lines = [
+            line
+            for line in self._read(
+                "texts/locales/zh-Hans/indexed.txt"
+            ).splitlines()
+            if not line.startswith("#")
+        ]
+        frequencies = Counter(
+            character
+            for character in "\n".join(zh_lines)
+            if "\u4e00" <= character <= "\u9fff"
+        )
+        expected_zh = "".join(
+            sorted(
+                frequencies,
+                key=lambda character: (
+                    -frequencies[character],
+                    ord(character),
+                ),
+            )[:150]
+        )
+
+        font_maps = {}
+        for locale in ("ja", "zh-Hans"):
+            font_maps[locale] = {
+                line.split("\t")[1]
+                for line in self._read(
+                    f"fonts/cjk/maps/{locale}.txt"
+                ).splitlines()
+                if "\t" in line
+            }
+
+        for page in ja_pages:
+            self.assertEqual(len(page), 75)
+            self.assertTrue(all(character in ja_corpus for character in page))
+            self.assertTrue(
+                all(character in font_maps["ja"] for character in page)
+            )
+            self.assertTrue(
+                all(
+                    len(character.encode("utf-8")) == 3
+                    for character in page
+                )
+            )
+
+        self.assertEqual("".join(zh_pages), expected_zh)
+        for page in zh_pages:
+            self.assertEqual(len(page), 75)
+            self.assertTrue(
+                all(character in font_maps["zh-Hans"] for character in page)
+            )
+            self.assertTrue(
+                all(len(character.encode("utf-8")) == 3 for character in page)
+            )
+
+        self.assertIn("ExpansionLocale_GetCurrent()", source)
+        self.assertIn("TACTICIAN_NAME_MAX_BYTES", source)
+        self.assertIn("TrySetTacticianName(proc->str)", source)
+
+        bmio = self._read("src/bmio.c")
+        setter = _modern_branch(_function_body(bmio, "SetTacticianName"))
+        bounded = _function_body(bmio, "TrySetTacticianName")
+        self.assertIn("TrySetTacticianName(newName)", setter)
+        self.assertIn("TACTICIAN_NAME_CAPACITY", bounded)
+        self.assertNotIn("strcpy", bounded)
 
     def test_equivalent_byte_walker_sites_match_reviewed_allowlist(self):
         pattern = re.compile(

@@ -117,10 +117,12 @@ class TextConsumerNativeTests(unittest.TestCase):
         ]
         objects = []
         for source in (
+            "bmio.c",
             "opinfo.c",
             "classchg-sel.c",
             "bmsave-multiarena.c",
             "sio_tactician.c",
+            "localized_font.c",
         ):
             output = BUILD_DIR / f"{Path(source).stem}.reviewed.o"
             self._run(
@@ -133,6 +135,70 @@ class TextConsumerNativeTests(unittest.TestCase):
                 ]
             )
             objects.append(output)
+
+        font_symbols = (
+            (
+                "gLocalizedFontJaSystemCodepoints",
+                ROOT / "graphics/fonts/cjk/ja.system.codepoints.bin",
+            ),
+            (
+                "gLocalizedFontJaSystemWidths",
+                ROOT / "graphics/fonts/cjk/ja.system.widths.bin",
+            ),
+            (
+                "gLocalizedFontJaSystemBitmaps",
+                ROOT / "graphics/fonts/cjk/ja.system.glyphs.2bpp",
+            ),
+            (
+                "gLocalizedFontJaTalkCodepoints",
+                ROOT / "graphics/fonts/cjk/ja.talk.codepoints.bin",
+            ),
+            (
+                "gLocalizedFontJaTalkWidths",
+                ROOT / "graphics/fonts/cjk/ja.talk.widths.bin",
+            ),
+            (
+                "gLocalizedFontJaTalkBitmaps",
+                ROOT / "graphics/fonts/cjk/ja.talk.glyphs.2bpp",
+            ),
+            (
+                "gLocalizedFontZhHansSystemCodepoints",
+                ROOT / "graphics/fonts/cjk/zh-Hans.system.codepoints.bin",
+            ),
+            (
+                "gLocalizedFontZhHansSystemWidths",
+                ROOT / "graphics/fonts/cjk/zh-Hans.system.widths.bin",
+            ),
+            (
+                "gLocalizedFontZhHansSystemBitmaps",
+                ROOT / "graphics/fonts/cjk/zh-Hans.system.glyphs.2bpp",
+            ),
+            (
+                "gLocalizedFontZhHansTalkCodepoints",
+                ROOT / "graphics/fonts/cjk/zh-Hans.talk.codepoints.bin",
+            ),
+            (
+                "gLocalizedFontZhHansTalkWidths",
+                ROOT / "graphics/fonts/cjk/zh-Hans.talk.widths.bin",
+            ),
+            (
+                "gLocalizedFontZhHansTalkBitmaps",
+                ROOT / "graphics/fonts/cjk/zh-Hans.talk.glyphs.2bpp",
+            ),
+        )
+        font_data_lines = [".section .rodata", ".balign 4"]
+        font_data_lines.extend(
+            f'.globl {symbol}\n{symbol}:\n.incbin "{path}"'
+            for symbol, path in font_symbols
+        )
+        font_data_lines.extend(
+            [".section .note.GNU-stack,\"\",@progbits", ""]
+        )
+        font_data = BUILD_DIR / "localized_font_host_data.S"
+        font_data.write_text("\n".join(font_data_lines), encoding="utf-8")
+        font_data_object = BUILD_DIR / "localized_font_host_data.o"
+        self._run(["cc", "-c", font_data, "-o", font_data_object])
+        objects.append(font_data_object)
 
         binary = BUILD_DIR / "text_reviewed_consumers_host_test"
         self._run(

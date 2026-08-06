@@ -1,19 +1,27 @@
 #include "global.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "bmio.h"
 #include "bmsave.h"
 #include "classchg.h"
 #include "classdisplayfont.h"
 #include "fontgrp.h"
+#include "hardware.h"
+#include "localized_font.h"
 #include "opinfo.h"
 #include "sio.h"
 #include "text_utf8.h"
 
+#undef ApplyPalettes
+
 void ClassStatsDisplay_Init(struct OpInfoGaugeDrawProc *proc);
 void ClassStatsDisplay_Loop(struct OpInfoGaugeDrawProc *proc);
 int Tactician_TestTokensEqual(const char *left, const char *right);
+int Tactician_TestGetGridScalar(int page, int slot, char *out, u32 capacity);
+int Tactician_TestGetGridX(int slot);
 
 static int sFailures;
 static const char *sClassName;
@@ -24,9 +32,13 @@ static int sClassDisplayFontCalls;
 static int sTextDrawCharacterCalls;
 static int sTextDrawStringCalls;
 static int sLastTextWidth;
+static int sLastNameCursorWidth;
+static int sLastNameCursorX;
+static int sProcBreakCalls;
 static char sLastDrawnText[128];
 static struct MultiArenaSaveBlock sArenaSave;
 static struct ClassData sClassData;
+static struct KeyStatusBuffer sKeyStatus;
 
 u16 gBG0TilemapBuffer[32 * 32];
 u16 gBG1TilemapBuffer[32 * 32];
@@ -34,6 +46,9 @@ u16 gBG2TilemapBuffer[32 * 32];
 u16 gBG3TilemapBuffer[32 * 32];
 struct Text Text_0;
 struct Text Texts_1[10];
+struct PlaySt gPlaySt;
+struct LinkArenaStMaybe gLinkArenaSt;
+struct KeyStatusBuffer * CONST_DATA gKeyStatusPtr = &sKeyStatus;
 u8 Img_ClassReelFont[1];
 u8 Pal_ClassReelFont[1];
 
@@ -246,6 +261,33 @@ void SioPlaySoundEffect(int soundId)
     (void)soundId;
 }
 
+bool CheckInLinkArena(void)
+{
+    return FALSE;
+}
+
+void Proc_Break(ProcPtr proc)
+{
+    (void)proc;
+    sProcBreakCalls++;
+}
+
+void UpdateNameEntrySpriteDraw(
+    void *proc,
+    int xNew,
+    int yNew,
+    int xPointer,
+    int cursorKind,
+    int page)
+{
+    (void)proc;
+    (void)yNew;
+    (void)cursorKind;
+    (void)page;
+    sLastNameCursorX = xNew;
+    sLastNameCursorWidth = xPointer;
+}
+
 u32 SioStrCpy(u8 const *src, u8 *dst)
 {
     u32 length;
@@ -300,6 +342,8 @@ static void ResetTextSpies(void)
     sLastTextWidth = 0;
     sLastDrawnText[0] = '\0';
     sLastResolveCapacity = 0;
+    sLastNameCursorWidth = 0;
+    sLastNameCursorX = 0;
 }
 
 static void TestOpInfoUsesLocalizedRenderer(void)
@@ -408,47 +452,207 @@ static void TestLocalizedRankingNamesFitSave(void)
     CHECK(sResolveCalls == MULTIARENA_MAX_RANKINGS);
 }
 
-static void TestTacticianTokenTraversalAndWidth(void)
+static void ResetTacticianProc(struct ProcTactician *proc, int maxLength)
+{
+    memset(proc, 0, sizeof(*proc));
+    proc->max_len = maxLength;
+    proc->conf_idx = SioTacticianIndexMap[0];
+}
+
+static void AppendGridEntry(struct ProcTactician *proc, int page, int slot)
+{
+    proc->line_idx = page;
+    proc->conf_idx = SioTacticianIndexMap[slot];
+    TacticianTryAppendChar(proc, GetTacticianTextConf(proc->conf_idx));
+}
+
+static void ResetPlayerNameGuards(void)
+{
+    u8 *bytes;
+    size_t offset;
+
+    memset(&gPlaySt, 0, sizeof(gPlaySt));
+    bytes = (u8 *)&gPlaySt;
+    offset = offsetof(struct PlaySt, playerName);
+    bytes[offset - 1] = 0xA5;
+    bytes[offset + TACTICIAN_NAME_CAPACITY] = 0x5A;
+}
+
+static void CheckPlayerNameGuards(void)
+{
+    const u8 *bytes;
+    size_t offset;
+
+    bytes = (const u8 *)&gPlaySt;
+    offset = offsetof(struct PlaySt, playerName);
+    CHECK(bytes[offset - 1] == 0xA5);
+    CHECK(bytes[offset + TACTICIAN_NAME_CAPACITY] == 0x5A);
+}
+
+static void TestLocaleGridCoverage(ExpansionLocaleId locale)
+{
+    struct LocalizedFontGlyph glyph;
+    struct TextUtf8Token token;
+    char scalar[5];
+    const char *next;
+    int page;
+    int slot;
+
+    sLocale = locale;
+    for (page = 0; page < 2; page++)
+    {
+        for (slot = 0; slot < 75; slot++)
+        {
+            CHECK(Tactician_TestGetGridScalar(
+                page, slot, scalar, sizeof(scalar)));
+            next = TextUtf8_Next(scalar, &token);
+            CHECK(token.kind == TEXT_UTF8_TOKEN_SCALAR);
+            CHECK(token.scalar >= 0x80);
+            CHECK(*next == '\0');
+            CHECK(LocalizedFont_Lookup(
+                locale,
+                LOCALIZED_FONT_STYLE_SYSTEM,
+                token.scalar,
+                &glyph));
+            CHECK(glyph.width <= 12);
+            CHECK(Tactician_TestGetGridX(slot)
+                == 0x10 + (slot % 15) * 12);
+        }
+    }
+}
+
+static void TestThreeCjkScalarsSaveSafely(ExpansionLocaleId locale)
 {
     struct ProcTactician proc;
-    struct TacticianTextConf conf;
-    int i;
+    char accepted[sizeof(proc.str)];
+    int slot;
 
-    memset(&proc, 0, sizeof(proc));
-    memset(&conf, 0, sizeof(conf));
-    proc.max_len = 9;
-    proc.conf_idx = 6;
-    proc.line_idx = 0;
-    conf.str[0] = (u8 *)"\xE7\x8C\xAB";
-    for (i = 0; i < (int)ARRAY_COUNT(proc.unk4C); i++)
-        proc.unk4C[i] = 0xA5A5;
+    sLocale = locale;
+    ResetTacticianProc(&proc, 5);
+    for (slot = 0; slot < 3; slot++)
+        AppendGridEntry(&proc, 0, slot);
 
-    TacticianTryAppendChar(&proc, &conf);
-    TacticianTryAppendChar(&proc, &conf);
-    TacticianTryAppendChar(&proc, &conf);
-    TacticianTryAppendChar(&proc, &conf);
-    CHECK(strlen(proc.str) == 12);
-    CHECK(proc.cur_len == 12);
-    CHECK(proc.unk4C[4] == 0xA5A5);
-
-    TacticianTryAppendChar(&proc, &conf);
-    CHECK(strlen(proc.str) == 12);
-    CHECK(proc.cur_len == 12);
-    CHECK(proc.unk4C[4] == 0xA5A5);
-
-    sTextDrawCharacterCalls = 0;
-    sTextDrawStringCalls = 0;
-    TacticianDrawCharacters(&proc);
-    CHECK(sTextDrawStringCalls == 1);
-    CHECK(sTextDrawCharacterCalls == 0);
-    CHECK(sLastTextWidth == 48);
-
-    TacticianTryDeleteChar(&proc, &conf);
     CHECK(strlen(proc.str) == 9);
     CHECK(proc.cur_len == 9);
-    CHECK(proc.unk4C[3] == 0);
+    strcpy(accepted, proc.str);
+
+    AppendGridEntry(&proc, 0, 3);
+    CHECK(strcmp(proc.str, accepted) == 0);
+    CHECK(proc.cur_len == 9);
+
+    ResetTextSpies();
+    memset(&sKeyStatus, 0, sizeof(sKeyStatus));
+    Tactician_Loop(&proc);
+    CHECK(sLastNameCursorWidth == 36);
+    CHECK(sLastNameCursorX == Tactician_TestGetGridX(3) - 4);
+
+    ResetPlayerNameGuards();
+    sProcBreakCalls = 0;
+    SaveTactician(&proc, GetTacticianTextConf(proc.conf_idx));
+    CHECK(strcmp(gPlaySt.playerName, accepted) == 0);
+    CHECK(sProcBreakCalls == 1);
+    CheckPlayerNameGuards();
+
+    TacticianTryDeleteChar(
+        &proc, GetTacticianTextConf(proc.conf_idx));
+    CHECK(strlen(proc.str) == 6);
+    CHECK(proc.cur_len == 6);
+    CHECK(IsValidUtf8Name(proc.str));
+}
+
+static void TestMixedNameAtExactCapacity(void)
+{
+    struct ProcTactician proc;
+    char accepted[sizeof(proc.str)];
+
+    sLocale = EXPANSION_LOCALE_JA;
+    ResetTacticianProc(&proc, 5);
+    AppendGridEntry(&proc, 0, 0);
+    AppendGridEntry(&proc, 0, 1);
+    AppendGridEntry(&proc, 0, 2);
+    AppendGridEntry(&proc, 2, 0);
+    CHECK(strlen(proc.str) == TACTICIAN_NAME_MAX_BYTES);
+    strcpy(accepted, proc.str);
+
+    AppendGridEntry(&proc, 2, 1);
+    CHECK(strcmp(proc.str, accepted) == 0);
+
+    ResetPlayerNameGuards();
+    sProcBreakCalls = 0;
+    SaveTactician(&proc, GetTacticianTextConf(proc.conf_idx));
+    CHECK(strcmp(gPlaySt.playerName, accepted) == 0);
+    CHECK(sProcBreakCalls == 1);
+    CheckPlayerNameGuards();
+}
+
+static void TestBoundedSetterRejectsOversize(void)
+{
+    struct ProcTactician proc;
+    const char *oversize =
+        "\xE7\x8C\xAB\xE7\x8C\xAB\xE7\x8C\xAB\xE7\x8C\xAB";
+
+    ResetPlayerNameGuards();
+    strcpy(gPlaySt.playerName, "SAFE");
+    SetTacticianName(oversize);
+    CHECK(strcmp(gPlaySt.playerName, "SAFE") == 0);
+    CheckPlayerNameGuards();
+
+    ResetTacticianProc(&proc, 5);
+    strcpy(proc.str, oversize);
+    proc.cur_len = strlen(proc.str);
+    sProcBreakCalls = 0;
+    SaveTactician(&proc, GetTacticianTextConf(proc.conf_idx));
+    CHECK(strcmp(gPlaySt.playerName, "SAFE") == 0);
+    CHECK(sProcBreakCalls == 0);
+    CheckPlayerNameGuards();
+}
+
+static void TestAsciiNameEntryLimitsRemainCompatible(
+    ExpansionLocaleId locale)
+{
+    struct ProcTactician proc;
+    char accepted[sizeof(proc.str)];
+    int slot;
+
+    sLocale = locale;
+    ResetTacticianProc(&proc, 5);
+    for (slot = 0; slot < 5; slot++)
+        AppendGridEntry(&proc, 0, slot);
+    CHECK(strcmp(proc.str, "ABCDE") == 0);
+    strcpy(accepted, proc.str);
+    AppendGridEntry(&proc, 0, 5);
+    CHECK(strcmp(proc.str, accepted) == 0);
+
+    ResetPlayerNameGuards();
+    sProcBreakCalls = 0;
+    SaveTactician(&proc, GetTacticianTextConf(proc.conf_idx));
+    CHECK(strcmp(gPlaySt.playerName, "ABCDE") == 0);
+    CHECK(sProcBreakCalls == 1);
+    CheckPlayerNameGuards();
+
+    ResetTacticianProc(&proc, 9);
+    for (slot = 0; slot < 9; slot++)
+        AppendGridEntry(&proc, 0, slot);
+    CHECK(strcmp(proc.str, "ABCDEFGHI") == 0);
+    AppendGridEntry(&proc, 0, 9);
+    CHECK(strcmp(proc.str, "ABCDEFGHI") == 0);
+}
+
+static void TestTacticianProductionPaths(void)
+{
+    struct ProcTactician proc;
+
+    TestLocaleGridCoverage(EXPANSION_LOCALE_JA);
+    TestLocaleGridCoverage(EXPANSION_LOCALE_ZH_HANS);
+    TestThreeCjkScalarsSaveSafely(EXPANSION_LOCALE_JA);
+    TestThreeCjkScalarsSaveSafely(EXPANSION_LOCALE_ZH_HANS);
+    TestMixedNameAtExactCapacity();
+    TestBoundedSetterRejectsOversize();
+    TestAsciiNameEntryLimitsRemainCompatible(EXPANSION_LOCALE_EN);
+    TestAsciiNameEntryLimitsRemainCompatible(EXPANSION_LOCALE_QPS_PLOC);
 
     memset(&proc, 0, sizeof(proc));
+    sLocale = EXPANSION_LOCALE_EN;
     Tactician_MapNameToConfIndices(&proc, (u8 *)"AB");
     CHECK((proc.unk4C[0] & 0x3FFF) == 6);
     CHECK((proc.unk4C[1] & 0x3FFF) == 7);
@@ -463,7 +667,7 @@ int main(void)
     TestOpInfoUsesLocalizedRenderer();
     TestClassChangeLongNamesAndGuards();
     TestLocalizedRankingNamesFitSave();
-    TestTacticianTokenTraversalAndWidth();
+    TestTacticianProductionPaths();
 
     if (sFailures == 0)
     {

@@ -51,6 +51,9 @@ struct BMapMainProc {
     /* 54 */ struct GameCtrlProc* gameCtrl;
 };
 
+#define TACTICIAN_NAME_CAPACITY ((u32)sizeof(((struct PlaySt *)0)->playerName))
+#define TACTICIAN_NAME_MAX_BYTES (TACTICIAN_NAME_CAPACITY - 1)
+
 void BMapVSync_Start(void);
 void BMapVSync_End(void);
 void BMapDispSuspend(void);
@@ -84,6 +87,9 @@ void MapMain_ResumeFromPhaseChange(struct BMapMainProc* mapMain);
 void GameCtrl_DeclareCompletedChapter(void);
 void GameCtrl_SavePlayThroughData(void);
 char* GetTacticianName(void);
+#if defined(MODERN)
+bool TrySetTacticianName(const char* newName);
+#endif
 void SetTacticianName(const char* newName);
 
 extern struct ProcCmd gProc_MapTask[];

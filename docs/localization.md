@@ -108,6 +108,25 @@ The framework is layered, each layer independently testable:
    unboundedly. Production callers use
    `GetStringFromIndexInBufferWithLimit()`.
 
+7. **Tactician name entry** (`src/sio_tactician.c`, `src/bmio.c`): the
+   persistent `PlaySt.playerName` field remains 11 bytes, so every modern
+   entry and setter path accepts at most 10 encoded bytes plus one NUL.
+   Oversize input is rejected atomically; UTF-8 is never truncated inside a
+   scalar. English, qps-ploc, and the archival grid retain their original
+   five-character story / nine-character Link Arena behavior.
+
+   Japanese page 1 is the supported hiragana gojuon, voiced/semi-voiced
+   kana, and practical small kana; page 2 is the supported katakana
+   counterpart plus the long-vowel mark.
+   Every scalar occurs in the committed normalized FE8J source
+   `texts/locales/ja/indexed.txt` and `fonts/cjk/maps/ja.txt`. Simplified
+   Chinese pages are deterministic: ignore `#` metadata lines in
+   `texts/locales/zh-Hans/indexed.txt`, count U+4E00--U+9FFF occurrences,
+   sort by descending frequency then ascending scalar value, and take the
+   first 150 scalars as two row-major 75-cell pages. Page 3 uses the existing
+   ASCII grid. Locale pages use a 12-pixel cell pitch; selected glyph widths
+   are validated against the committed production font codepoint/width data.
+
 ## Config
 
 Set at `modern.mk`/`make` invocation time (see
