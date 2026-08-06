@@ -64,16 +64,53 @@ u32 PromoHandler_SetupAndStartUI(struct ProcPromoHandler *proc)
 
     if (proc->bmtype == PROMO_HANDLER_TYPE_TRANINEE) {
         u8 i;
+        /* Preserve the original out-of-bounds loop only for archival matching. */
+#if !defined(MODERN) && !BUGFIX
         u8 flag;
+#endif
         proc->bmtype = PROMO_HANDLER_TYPE_TRANINEE;
         proc->sel_en = 1;
+
+#if defined(MODERN) || BUGFIX
+        for (i = 0; i < ARRAY_COUNT(trainees); i++) {
+            unit = GetUnitFromCharId(trainees[i].charId);
+            if (!unit)
+                continue;
+
+            if (unit->state & (US_BIT16 | US_DEAD))
+                continue;
+
+            if (unit->level < trainees[i].promotionLevel)
+                continue;
+
+            classNumber = unit->pClassData->number;
+            if (classNumber != trainees[i].class)
+                continue;
+
+            if (!gPromoJidLut[classNumber][0] && !gPromoJidLut[classNumber][1])
+                continue;
+
+            if (gPromoJidLut[classNumber][0] && !gPromoJidLut[classNumber][1]) {
+                proc->jid = gPromoJidLut[classNumber][0];
+                proc->sel_en = 0;
+            }
+
+            if (!gPromoJidLut[classNumber][0] && gPromoJidLut[classNumber][1]) {
+                proc->jid = gPromoJidLut[classNumber][1];
+                proc->sel_en = 0;
+            }
+
+            if (trainees[i].charId != terrain)
+                MakePromotionScreen(proc, trainees[i].charId, terrain);
+            else
+                MakePromotionScreen(proc, trainees[i].charId, TERRAIN_ROAD);
+
+            return PROMO_HANDLER_STAT_IDLE;
+        }
+#else
         flag = 0;
 
-#if BUGFIX
-        for (i = 0; i < 3; i++) {
-#else
         for (i = 0; i < 7; i++) {
-#endif
             unit = GetUnitFromCharId(trainees[i].charId);
             if (!unit)
                 flag = true;
@@ -111,6 +148,7 @@ u32 PromoHandler_SetupAndStartUI(struct ProcPromoHandler *proc)
             }
             flag = 0;
         }
+#endif
         return PROMO_HANDLER_STAT_END;
     } else if (proc->bmtype == PROMO_HANDLER_TYPE_BM) {
         proc->bmtype = PROMO_HANDLER_TYPE_BM;

@@ -23,12 +23,15 @@ valid oracle — it holds relocated pointers (= shifted addresses); only the
 | `fingerprint.lua` | GBAHawk Lua: replay the loaded movie headless (`invisibleemulation`), screenshot the framebuffer at ~40 evenly-spaced checkpoints + the final frame, write a manifest, `client.exit()`. |
 | `run_tas.sh` | Drive `GBAHawk.exe` from WSL2 for one (rom, movie, tag). |
 | `compare.py` | Hash the matching vs shifted checkpoint PNGs; report identical / first divergent checkpoint and whether both reached the movie end. |
+| `capture_poll_inputs.lua` | Reduce a loaded reference movie to the input stream actually consumed on non-lag frames. |
+| `adaptive_replay.lua` | Diagnostic-only replay of that logical stream, advancing only when the target ROM polls input. |
 | `get_vba_rr_sdl.sh` | Build exact source revision `fe4a46bd` (svn421) with a native SDL/C-core frontend and pinned non-root runtime dependencies. |
 | `vba_fingerprint.lua` | Advance the public VBM and save raw GD framebuffer snapshots at evenly spaced checkpoints plus the endpoint. |
 | `prepare_vba_movie.py` | Append one duplicated guard input frame so svn421 exits cleanly after capturing the original movie endpoint. |
 | `collect_vba_fingerprint.py` | Hash GD snapshots, verify the manifest/end marker, and emit deterministic JSON with ROM provenance. |
 | `run_vba_tas.sh` | Stage an isolated ROM/movie run and drive native VBA-rr SDL with dummy audio/video drivers. |
 | `compare_vba.py` | Compare vanilla vs modern JSON fingerprints and require both runs to reach the public movie endpoint. |
+| `retime_gbahawk_movie.py` | Apply a reviewed JSON edit manifest (set/add/remove/move keys, insert/delete frames) to produce a reproducible modern-specific GBMV resync. |
 
 ## How to run
 
@@ -91,6 +94,81 @@ The default `exact` policy compares every captured diagnostic checkpoint.
 `--policy endpoint` only requires both runs and their final frame to match. A short
 calibration run can pass an explicit fourth argument, for example `3000`.
 
+## Modern-specific GBAHawk resync
+
+Compiler-cycle changes alter GBAHawk lag frames, so a movie recorded against the
+vanilla binary may need a reviewed input resync even when game behavior is correct.
+Record each TAStudio edit in a JSON manifest instead of hand-editing the GBMV:
+
+```json
+{
+  "schema_version": 1,
+  "operations": [
+    {"op": "move", "from": 1428, "to": 1430, "keys": ["START"]},
+    {"op": "insert", "frame": 2000, "count": 1, "keys": []}
+  ]
+}
+```
+
+```bash
+python3 scripts/shiftcheck/tas/retime_gbahawk_movie.py \
+    vanilla.gbmv modern.gba modern-resync.json modern-resync.gbmv
+```
+
+Operations are applied sequentially, so frame numbers include all preceding
+inserts/deletes. Supported operations are `set`, `add`, `remove`, `move`,
+`insert`, and `delete`. Use TAStudio/greenzone to locate each semantic
+divergence, update the manifest, regenerate the GBMV, and replay from the last
+stable checkpoint. Completion still requires the full credits endpoint; movie
+frame exhaustion alone is not success.
+
+### Poll-adaptive diagnostic replay
+
+For diagnosing compiler-cycle desync separately from fixed movie frames, first
+run the vanilla movie with `capture_poll_inputs.lua`. Configure its output tag
+in `C:\gbahawk_test\out\poll-input-config.txt`:
+
+```text
+vanilla
+0
+```
+
+The second line selects the full movie; use a positive frame count for a short
+diagnostic capture. This writes `vanilla-poll-inputs.tsv`. Then start the modern
+ROM **without a movie loaded** and run `adaptive_replay.lua` with
+`C:\gbahawk_test\out\adaptive-config.txt`:
+
+```text
+C:\gbahawk_test\out\vanilla-poll-inputs.tsv
+modern
+0
+40
+```
+
+The remaining lines select the full source stream (`0`) and 40 screenshot
+checkpoints. The script repeats the current logical input across modern lag
+frames and writes the exact physical input rows it applied.
+
+This is a diagnostic and candidate-generation tool, not a synchronization
+oracle. The FE8U route has timing-sensitive menus and map state: the current
+modern experiment passed the Prologue save screen but later entered different
+menus and did not reach credits. Do not accept an adaptive run unless semantic
+chapter/phase state and the continuation agree; do not run it with a movie
+loaded because GBAHawk merges movie and Lua inputs.
+
+Issue #22 used this diagnostic to reproduce a graphics-corruption failure near
+reference source frame 18,505. The desynchronized route started trainee
+promotion with no eligible trainee: the original handler read beyond its
+three-entry trainee table, produced character/portrait ID zero, and passed the
+preceding Proc script bytes to the BIOS Huffman decompressor as face graphics.
+The decompressor then wrote through VRAM mirrors for thousands of frames.
+
+For this regression, replay the same poll-input stream through at least source
+frame 19,000 and require coherent rendering without a multi-thousand-frame
+input-poll stall. A valid run may take a different semantic route after the
+fixed handler rejects the nonexistent trainee; matching the old corrupt frame
+is neither expected nor desired.
+
 ## Confirmed setup (this run)
 
 - TAS: `vykan12-v2-fesacredstones.gbmv` (254,468 frames, ~71 min). Its `Header.txt`
@@ -123,6 +201,9 @@ the ending.
 - `.gbmv` = BizHawk BK2 zip (`Header.txt` / `Input Log.txt` / `SyncSettings.json`).
 - Files must live under a `C:\` working dir (`/mnt/c/...`); the Windows `GBAHawk.exe`
   can't conveniently read the WSL filesystem. Use Windows-style path args.
+- `run_tas.sh` creates one dummy-audio GBAHawk config per tag
+  (`C:\gbahawk_test\config-<tag>.ini`) so stale/concurrent emulator processes
+  cannot contend on the portable install's shared `config.ini`.
 - GBAHawk's accurate core runs ~80 fps; `invisibleemulation` only saves ~10%, so the
   cost is the ~254k frames. Two parallel instances (separate extracted dirs to avoid
   `config.ini` clashes) halve wall-clock.

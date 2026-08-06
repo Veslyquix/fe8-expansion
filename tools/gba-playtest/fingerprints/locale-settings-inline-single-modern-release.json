@@ -2,7 +2,7 @@
   "checkpoints": [
     {
       "frame": 5200,
-      "framebuffer_hash": "fnv1a64-rgb24:98f51b4d0f5c86f1",
+      "framebuffer_hash": "fnv1a64-rgb24:0254c32fb00b0894",
       "name": "single-locale-row-before-right",
       "probes": [
         {
@@ -39,7 +39,7 @@
     },
     {
       "frame": 5500,
-      "framebuffer_hash": "fnv1a64-rgb24:d60fab0634415190",
+      "framebuffer_hash": "fnv1a64-rgb24:f41f3a61603df658",
       "name": "single-locale-right-is-noop",
       "probes": [
         {
@@ -76,7 +76,7 @@
     },
     {
       "frame": 5650,
-      "framebuffer_hash": "fnv1a64-rgb24:3ca2328b37fc3190",
+      "framebuffer_hash": "fnv1a64-rgb24:609624e1fd3b5281",
       "name": "single-locale-row-remains-stable",
       "probes": [
         {
@@ -115,7 +115,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "99c6ece3307f2bb2e420c841bdfed69d81d625c4",
+    "sha1": "030021c418ef31b23b61f1b16633d6c0a9f70b1b",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },

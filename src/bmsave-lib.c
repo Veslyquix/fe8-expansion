@@ -695,7 +695,7 @@ void WriteSaveBlockInfo(struct SaveBlockInfo *chunk, int index)
 
     chunk->magic16 = SAVEMAGIC16;
 #if BUGFIX
-    chuck->offset = SramAddrToOffset(GetSaveWriteAddr(index));
+    chunk->offset = SramAddrToOffset(GetSaveWriteAddr(index));
 #else
     chunk->offset = (uintptr_t)GetSaveWriteAddr(index);
 #endif

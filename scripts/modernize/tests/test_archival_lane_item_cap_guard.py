@@ -315,6 +315,7 @@ class NonArchivalLanesUnaffectedTests(_GuardAssertions):
         )
         self.assertIsNotNone(line, result.stdout[:400])
         self.assertNotIn("FE8_ITEM_ID_CAP", line)
+        self.assertIn("-DBUGFIX=1", line)
 
 
 class DependencyGraphInheritanceTests(_GuardAssertions):

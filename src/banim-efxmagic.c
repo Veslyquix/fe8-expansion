@@ -97,7 +97,7 @@ void StartSpellAnimation(struct Anim *anim)
     s16 index = gEkrSpellAnimIndex[GetAnimPosition(anim)];
 
 #if BUGFIX
-    if (gEkrSpellAnimLut[index](anim) == NULL)
+    if (gEkrSpellAnimLut[index] == NULL)
         return;
 #endif
 
