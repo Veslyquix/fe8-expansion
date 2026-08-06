@@ -89,6 +89,25 @@ The framework is layered, each layer independently testable:
    upper bank at 32 MiB. Captured CJK scenarios cover first start,
    Japanese/Chinese choice, Config switching, and soft-reset persistence.
 
+6. **Runtime text-stream consumers** (`include/text_utf8.h`,
+   `src/text_utf8.c`, `src/msg.c`, `src/scene.c`, `src/cgtext.c`,
+   `src/helpbox.c`): modern CJK builds decode FE controls and UTF-8 scalars
+   through one token iterator. Low controls, `[LoadFace]` plus its FID,
+   extended `0x80` controls, color arguments, U+3000/legacy spacing, valid
+   scalars, and invalid/truncated input have explicit token boundaries.
+   Dialogue, CG/name-box, and help-box interpreters never inspect UTF-8
+   continuation bytes as controls. Message substitutions use the existing
+   `gBufPrep[0x2000]` as a transient derived bounded layout: one
+   generated-message-capacity output region plus a disjoint `0x100`-byte
+   insertion/name region. Successful transforms are committed back to the
+   persistent localized message buffer; a compile-time assertion prevents
+   the two `gBufPrep` regions from overlapping. The
+   historical two-argument `GetStringFromIndexInBuffer()` ABI remains for
+   legacy builds; an unknown-size call in a modern CJK build returns
+   `<!LOC_CAP!>` with `LEGACY_BUFFER_UNBOUNDED` instead of writing
+   unboundedly. Production callers use
+   `GetStringFromIndexInBufferWithLimit()`.
+
 ## Config
 
 Set at `modern.mk`/`make` invocation time (see
@@ -219,6 +238,27 @@ descriptor slots.
    which this sprint does not touch).
 
 ## Testing -- real libmGBA runtime evidence (Sprint 4)
+
+The byte-consumer closure adds three focused host gates:
+
+```sh
+python3 scripts/texttools/tests/test_text_renderer_native.py
+python3 scripts/texttools/tests/test_text_consumers_native.py
+python3 scripts/texttools/tests/test_text_consumer_audit.py
+```
+
+They execute the real `msg.c` bounded substitutions and the real
+scene/CG/help measurement/name-copy functions on the host, including a UTF-8
+continuation byte equal to `0x80`, `[Tact]`/`[Item]`/FID/`[SetName]`,
+U+3000, pauses/newlines, exact-capacity output, guard bytes, malformed and
+truncated tokens, English/qps behavior, and the no-unknown-size-caller audit.
+The production CJK debug scenarios remain
+`expansion-modern-localization-runtime-cjk-check`; they prove the linked
+32 MiB ROM boots and switches/persists Japanese and Chinese. No committed
+scenario currently navigates far enough into a chapter to reach a dialogue,
+help box, and CG name box in one deterministic replay, so those three
+consumer paths are covered by host-native execution plus debug/release ARM
+compile/link rather than a new synthetic fingerprint.
 
 Sprint 4 adds `tools/gba-playtest` scenario/fingerprint pairs that boot the
 **actual compiled ROM** under libmGBA and assert real, reached runtime

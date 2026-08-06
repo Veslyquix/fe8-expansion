@@ -17,6 +17,7 @@
 #include "bmlib.h"
 #include "bmshop.h"
 #include "scene.h"
+#include "text_utf8.h"
 #include "constants/songs.h"
 
 // various bits of the box opening animation
@@ -738,8 +739,28 @@ void TalkToggleInvertedPalette(int flag) {
 int TalkInterpret(ProcPtr proc) {
     struct Proc* unkProc;
     int i;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     while (1) {
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(sTalkState->str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL
+            && (token.control == CHFE_L_NormalPrint
+                || token.control == CHFE_L_FastPrint
+                || token.control == CHFE_L_CloseSpeechFast))
+        {
+            sTalkState->str = next;
+            sTalkState->activeWidth =
+                2 + Div(
+                    GetStrTalkLen(
+                        sTalkState->str, TalkHasCorrectBubble()) + 7,
+                    8);
+            continue;
+        }
+#else
         switch (*sTalkState->str) {
             case CHFE_L_NormalPrint:
             case CHFE_L_FastPrint:
@@ -748,10 +769,19 @@ int TalkInterpret(ProcPtr proc) {
                 sTalkState->activeWidth = 2 + Div(GetStrTalkLen(sTalkState->str, TalkHasCorrectBubble()) + 7, 8);
                 continue;
         }
+#endif
         break;
     }
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+    next = TextUtf8_Next(sTalkState->str, &token);
+    if (token.kind == TEXT_UTF8_TOKEN_SCALAR
+        || token.kind == TEXT_UTF8_TOKEN_INVALID)
+        return 1;
+#endif
+
     switch (*sTalkState->str) {
+#ifndef FE8_TEXT_UTF8_ENABLED
         case 0x81:
             // _08007238
             if (sTalkState->str[1] == 0x40) {
@@ -769,6 +799,7 @@ int TalkInterpret(ProcPtr proc) {
             }
 
             return 1;
+#endif
 
         case CHFE_L_X: // [X]
             // _08007298
@@ -2124,10 +2155,30 @@ void PrintStringToTexts(struct Text** texts, const char* str, u16 * tm, int unk)
     int uh;
 
     int line = 0;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     while (1) {
         uh = 0;
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+        {
+            uh = 1;
+        }
+        else if (token.kind == TEXT_UTF8_TOKEN_CONTROL
+            && token.control == CHFE_L_NL)
+        {
+            PutText(texts[line], tm + line * 0x40);
+            line++;
+            str = next;
+            if (line >= unk)
+                return;
+        }
+#else
         switch (*str) {
             case 0:
                 uh += 1;
@@ -2145,6 +2196,7 @@ void PrintStringToTexts(struct Text** texts, const char* str, u16 * tm, int unk)
 
                 break;
         }
+#endif
 
         if (uh != 0) {
             break;
@@ -2193,8 +2245,155 @@ void TalkPutSpriteText_OnEnd(void) {
     return;
 }
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+static int GetStrTalkLenUtf8(const char *str, s8 isBubbleOpen)
+{
+    char buf[0x20];
+    struct TextUtf8Token token;
+    const char *next;
+    u32 chrLen;
+    int speakFace;
+    int activeFace;
+    int currentLineLen;
+    int maxLineLen;
+
+    speakFace = sTalkState->speakingFaceSlot;
+    activeFace = sTalkState->activeFaceSlot;
+    currentLineLen = 0;
+    maxLineLen = 24;
+
+    for (;;)
+    {
+        next = TextUtf8_Next(str, &token);
+
+        if (token.kind == TEXT_UTF8_TOKEN_END
+            || (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                && token.control == CHFE_L_CloseSpeechSlow))
+        {
+            if (currentLineLen > maxLineLen)
+                maxLineLen = currentLineLen;
+            return maxLineLen;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            switch (token.control)
+            {
+            case CHFE_L_NL:
+            case CHFE_L_2NL:
+                if (currentLineLen > maxLineLen)
+                    maxLineLen = currentLineLen;
+                currentLineLen = 0;
+                break;
+
+            case CHFE_L_A:
+                currentLineLen += 12;
+                break;
+
+            case CHFE_L_OpenFarLeft:
+            case CHFE_L_OpenMidLeft:
+            case CHFE_L_OpenLeft:
+            case CHFE_L_OpenRight:
+            case CHFE_L_OpenMidRight:
+            case CHFE_L_OpenFarRight:
+            case CHFE_L_OpenFarFarLeft:
+            case CHFE_L_OpenFarFarRight:
+                activeFace = token.control - CHFE_L_OpenFarLeft;
+                break;
+
+            case CHFE_L_ClearFace:
+                if (activeFace == speakFace)
+                {
+                    if (currentLineLen > maxLineLen)
+                        maxLineLen = currentLineLen;
+                    return maxLineLen;
+                }
+                break;
+
+            case CHFE_L_NormalPrint:
+            case CHFE_L_FastPrint:
+            case CHFE_L_CloseSpeechFast:
+                if (!isBubbleOpen)
+                {
+                    if (currentLineLen > maxLineLen)
+                        maxLineLen = currentLineLen;
+                    return maxLineLen;
+                }
+                break;
+
+            case CHFE_L_Yes:
+            case CHFE_L_No:
+            case CHFE_L_BuySell:
+            case CHFE_L_ShopContinue:
+                currentLineLen += 0x80;
+                break;
+            }
+
+            str = next;
+            continue;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            switch (token.payload)
+            {
+            case 0x05:
+                NumberToStringAscii(sTalkState->userNumber, buf);
+                currentLineLen += GetStrTalkLenUtf8(buf, isBubbleOpen);
+                break;
+
+            case 0x20:
+                currentLineLen += GetStringTextLen(GetTacticianName());
+                break;
+
+            case 0x06:
+                currentLineLen +=
+                    GetStrTalkLenUtf8(sTalkState->userString, isBubbleOpen);
+                break;
+
+            case 0x0A:
+            case 0x0B:
+            case 0x0C:
+            case 0x0D:
+            case 0x0E:
+            case 0x0F:
+            case 0x10:
+            case 0x11:
+                activeFace = token.payload - 0x0A;
+                break;
+            }
+
+            str = next;
+            continue;
+        }
+
+        if ((activeFace != speakFace) && (activeFace != 0xFF))
+        {
+            if (!isBubbleOpen)
+            {
+                isBubbleOpen = TRUE;
+                speakFace = activeFace;
+            }
+            else
+            {
+                if (currentLineLen > maxLineLen)
+                    maxLineLen = currentLineLen;
+                return maxLineLen;
+            }
+        }
+
+        GetCharTextLen(str, &chrLen);
+        currentLineLen += chrLen;
+        str = next;
+    }
+}
+#endif
+
 //! FE8U = 0x08008B44
 int GetStrTalkLen(const char* str, s8 isBubbleOpen) {
+#ifdef FE8_TEXT_UTF8_ENABLED
+    return GetStrTalkLenUtf8(str, isBubbleOpen);
+#else
     char buf[0x20];
     u32 chrLen;
 
@@ -2442,6 +2641,7 @@ int GetStrTalkLen(const char* str, s8 isBubbleOpen) {
 
 _08008F06:
     return maxLineLen;
+#endif
 }
 
 //! FE8U = 0x08008F18

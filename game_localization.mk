@@ -29,6 +29,9 @@ game-localization-check: game-localization-generate
 game-localization-test:
 	$(PYTEST_ENV) $(PYTHON3) -m unittest discover \
 		-s scripts/localization/game_catalog/tests -p 'test_*.py' -v
+	$(PYTEST_ENV) $(PYTHON3) scripts/texttools/tests/test_text_renderer_native.py
+	$(PYTEST_ENV) $(PYTHON3) scripts/texttools/tests/test_text_consumers_native.py
+	$(PYTEST_ENV) $(PYTHON3) scripts/texttools/tests/test_text_consumer_audit.py
 
 game-localization-budget:
 	@mkdir -p $(GAME_LOCALIZATION_OUT_DIR)

@@ -891,7 +891,8 @@ signed char* GetClassReelName(u8 classId, signed char* buffer) {
     if (buffer == NULL) {
         buffer = GetStringFromIndex(class->nameTextId);
     } else {
-        GetStringFromIndexInBuffer(class->nameTextId, buffer);
+        GetStringFromIndexInBufferWithLimit(
+            class->nameTextId, (char *)buffer, 32);
     }
 
     str = strstr(buffer, "Kn.");

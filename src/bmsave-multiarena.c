@@ -124,7 +124,8 @@ void WriteNewMultiArenaSave(void)
         ranking_ent.mode = gInitialMultiArenaRankings[i].mode;
         ranking_ent.points = gInitialMultiArenaRankings[i].points;
 
-        GetStringFromIndexInBuffer(sArenaCpTeamNameLut[i], rank_name);
+        GetStringFromIndexInBufferWithLimit(
+            sArenaCpTeamNameLut[i], rank_name, (u32)sizeof(rank_name));
         SioStrCpy(rank_name, ranking_ent.name);
         WriteAndVerifySramFast(&ranking_ent, &dst->rankings[i], sizeof(ranking_ent));
     }

@@ -6,6 +6,7 @@
 #include "bmmap.h"
 #include "bm.h"
 #include "bb.h"
+#include "text_utf8.h"
 
 void PutSubtitleHelpText(struct SubtitleHelpProc * proc, int y)
 {
@@ -51,12 +52,19 @@ void InitSubtitleHelpText(struct SubtitleHelpProc * proc)
 
     if (iter != 0) {
         while (*iter > 1) {
+#ifdef FE8_TEXT_UTF8_ENABLED
+            const char * charStart = iter;
+#endif
 
             iter = Text_DrawCharacter(proc->text + line, iter);
 
             if (Text_GetCursor(proc->text + line) > 0xE0) {
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+                iter = charStart;
+#else
                 iter -= 2;
+#endif
                 line++;
 
                 GetCharTextLen(iter, &width);

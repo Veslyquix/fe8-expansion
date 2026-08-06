@@ -39,6 +39,17 @@ JA_MESSAGES = (
     None,
     None,
     None,
+    (
+        "候".encode("utf-8")
+        + b"\x80\x20"
+        + "猫".encode("utf-8")
+        + b"\x80\x22\x80\x12\x10\x93\x94\x1f\x00"
+    ),
+    ("診".encode("utf-8") + b"\x80\x20\x00"),
+    "艾莉\x00".encode("utf-8"),
+    ((b"\x80\x20" * 2800) + b"\x00"),
+    ((b"\x80\x20" * 938) + "猫\x00".encode("utf-8")),
+    "剣\x00".encode("utf-8"),
 )
 
 ENGLISH_MESSAGES = (
@@ -55,6 +66,12 @@ ENGLISH_MESSAGES = (
     b"English ten\x00",
     b"English eleven\x00",
     b"English twelve\x00",
+    b"A\x80\x20B\x80\x22\x80\x12\x10\x93\x94\x1f\x00",
+    b"C\x80\x20\x00",
+    b"Eirika\x00",
+    b"D\x80\x20\x00",
+    b"E\x80\x20\x00",
+    b"Item\x00",
 )
 
 
@@ -293,6 +310,7 @@ class LocalizedGameTextRuntimeTests(unittest.TestCase):
                 str(build_dir),
                 str(ROOT / "src" / "localized_text_codec.c"),
                 str(ROOT / "src" / "localized_game_text.c"),
+                str(ROOT / "src" / "text_utf8.c"),
                 str(ROOT / "src" / "msg.c"),
                 str(fixture_c),
                 str(RUNTIME_DRIVER),

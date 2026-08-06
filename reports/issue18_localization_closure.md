@@ -587,3 +587,46 @@ mode is actually caught, not merely a vacuously-passing assertion.
 `docs/localization.md` gained a matching scenario-table row and a new
 "The real multi-locale repair matrix (issue #18 sprint 7)" subsection
 with the same checkpoint-by-checkpoint evidence summary.
+
+## Addendum: issue #18 runtime byte-consumer closure
+
+The final runtime slice removes the remaining modern-CJK byte/fixed-pair
+walkers from `msg.c`, `scene.c`, `cgtext.c`, and `helpbox.c`, plus the
+tightly-coupled subtitle rewind in `bb.c`. `TextUtf8_Next` now owns FE
+stream tokenization for low controls, three-byte `[LoadFace]+FID`, extended
+controls and color arguments, U+3000/legacy spacing, strict UTF-8, and
+invalid/truncated input. Legacy/English-only preprocessing retains the old
+walkers and layouts.
+
+`StringInsertSpecialPrefixByCtrl` and `StrInsertTact` now preserve control
+tokens while inserting UTF-8 tactician/item/character names with bounded
+writes. They reuse `gBufPrep` transiently as a generated-capacity output
+region plus disjoint `0x100` insertion scratch, then commit the result back
+to the persistent localized message buffer; no full-message EWRAM scratch
+was added. Unknown-size modern CJK
+`GetStringFromIndexInBuffer` calls fail with `<!LOC_CAP!>`, and every
+production caller was migrated to an explicit capacity. Audited safe
+non-owned walkers are `SysboxTextMain`, `GetStringNextLine`,
+`SplitObjectiveTextOnNewline`, and `CopyTextChar`: each starts at a renderer
+returned token boundary and advances with `Text_DrawCharacter` or
+`GetCharTextLen`; `CopyTextChar` has no production caller.
+
+Evidence commands:
+
+```sh
+python3 -m unittest discover -s scripts/texttools/tests -p 'test_*.py'
+make localization-test
+make game-localization-test
+make
+make expansion-modern-localization-profile-en-ja-zh-hans MODERN_CONFIG=debug MODERN_ABI=aapcs
+make expansion-modern-localization-profile-en-ja-zh-hans MODERN_CONFIG=release MODERN_ABI=aapcs
+make expansion-modern-localization-runtime-cjk-check MODERN_CONFIG=debug MODERN_ABI=aapcs
+make legacy
+```
+
+The native suites cover continuation-byte `0x80` collisions, substitutions,
+FID/SetName preservation, exact-capacity and overflow guards, U+3000,
+newlines/pauses/dimensions, malformed/truncated streams, English/qps, and
+the static no-unsafe-caller audit. The ARM evidence covers default English
+16 MiB boot, CJK 32 MiB debug/release links, four existing libmGBA CJK
+selection/persistence scenarios, and the archival agbcc lane.

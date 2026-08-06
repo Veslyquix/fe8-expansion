@@ -51,10 +51,20 @@ void CallARM_FillMovementMap(void);
 
 const char * GetStrPrefix(s8 * str, bool capital);
 void InsertPrefix(char * str, const char * prefix, bool capital);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+void InsertPrefixWithLimit(
+    char *str,
+    u32 capacity,
+    const char *prefix,
+    bool capital);
+#endif
 void SetMsgTerminator(signed char * str);
 char *GetStringFromIndex(int index);
 #if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
 char *GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCapacity);
+#else
+#define GetStringFromIndexInBufferWithLimit(index, buffer, bufferCapacity) \
+    GetStringFromIndexInBuffer((index), (buffer))
 #endif
 char *GetStringFromIndexInBuffer(int index, char *buffer);
 

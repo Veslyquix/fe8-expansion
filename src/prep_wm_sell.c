@@ -46,7 +46,10 @@ void WmSell_ShowDialoguePrompt(int index, ProcPtr parent) {
     NewSysboxText(
         0x7000,
         13,
-        GetStringFromIndexInBuffer(gShopSellTextIndexLookup[index], gpShopSellStringBuffer),
+        GetStringFromIndexInBufferWithLimit(
+            gShopSellTextIndexLookup[index],
+            gpShopSellStringBuffer,
+            (u32)sizeof(gBufPrep)),
         1,
         1,
         1,

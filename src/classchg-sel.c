@@ -50,7 +50,8 @@ void LoadClassReelFontPalette(struct ProcPromoSel *proc, int class_id) {
     proc->u46 = 0;
     proc->u47 = 0x78;
     class = GetClassData(jid);
-    GetStringFromIndexInBuffer(class->nameTextId, str);
+    GetStringFromIndexInBufferWithLimit(
+        class->nameTextId, (char *)str, (u32)sizeof(str));
 
     for (i = 0; i < 20 /* sizeof(str) */ && str[i] != '\0'; i++) {
         struct ClassDisplayFont *font = GetClassDisplayFontInfo(str[i]);
@@ -71,7 +72,8 @@ void LoadClassNameInClassReelFont(struct ProcPromoSel *proc) {
     u16 classNum = proc->jid[idx];
     u32 xOffs = 0x74;
     const struct ClassData *class = GetClassData(classNum);
-    GetStringFromIndexInBuffer(class->nameTextId, str);
+    GetStringFromIndexInBufferWithLimit(
+        class->nameTextId, (char *)str, (u32)sizeof(str));
     for (index = 0; index < 0x14 && str[index] != '\0'; index++) {
         struct ClassDisplayFont *font = GetClassDisplayFontInfo(str[index]);
         if (font) {

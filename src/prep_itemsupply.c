@@ -51,7 +51,10 @@ void PrepItemSupply_StartPromptText(int idx, ProcPtr proc)
     NewSysboxText(
         0x7800,
         0xd,
-        GetStringFromIndexInBuffer(gSupplyTextIndexLookup[idx], gpPrepItemSupplyStringBuffer),
+        GetStringFromIndexInBufferWithLimit(
+            gSupplyTextIndexLookup[idx],
+            gpPrepItemSupplyStringBuffer,
+            (u32)sizeof(gBufPrep)),
         1,
         2,
         3,

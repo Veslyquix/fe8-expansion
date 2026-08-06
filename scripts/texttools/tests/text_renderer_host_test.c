@@ -13,9 +13,11 @@ static int CheckToken(
     const u8 *bytes,
     enum TextUtf8TokenKind kind,
     u32 scalar,
+    u16 argument,
     u8 length,
     u8 control,
-    u8 payload)
+    u8 payload,
+    u8 flags)
 {
     struct TextUtf8Token token;
     const char *next;
@@ -23,15 +25,31 @@ static int CheckToken(
     next = TextUtf8_Next((const char *)bytes, &token);
     return token.kind == kind
         && token.scalar == scalar
+        && token.argument == argument
         && token.length == length
         && token.control == control
         && token.payload == payload
+        && token.flags == flags
         && next == (const char *)bytes + length;
 }
 
 static int CheckInvalid(const u8 *bytes)
 {
-    return CheckToken(bytes, TEXT_UTF8_TOKEN_INVALID, 0, 1, 0, 0);
+    return CheckToken(
+        bytes, TEXT_UTF8_TOKEN_INVALID, 0, 0, 1, 0, 0,
+        TEXT_UTF8_TOKEN_FLAG_NONE);
+}
+
+static int CheckTruncated(const u8 *bytes, u32 available)
+{
+    struct TextUtf8Token token;
+    const char *next;
+
+    next = TextUtf8_NextBounded((const char *)bytes, available, &token);
+    return token.kind == TEXT_UTF8_TOKEN_INVALID
+        && token.length == 1
+        && token.flags == TEXT_UTF8_TOKEN_FLAG_TRUNCATED
+        && next == (const char *)bytes + 1;
 }
 
 static int TestValidUtf8AndControls(void)
@@ -40,23 +58,50 @@ static int TestValidUtf8AndControls(void)
     static const u8 twoByte[] = {0xC2, 0x80, 0};
     static const u8 threeByte[] = {0xE8, 0xA8, 0xBA, 0};
     static const u8 fourByte[] = {0xF0, 0x9F, 0x98, 0x80, 0};
-    static const u8 control[] = {0x10, 0x02, 0};
+    static const u8 control[] = {0x0F, 0};
+    static const u8 face[] = {0x10, 0x93, 0x94, 0};
     static const u8 extended[] = {0x80, 0x21, 0};
+    static const u8 extendedArgument[] = {0x80, 0x01, 0x03, 0};
+    static const u8 legacySpace[] = {0x81, 0x40, 0};
     static const u8 collision[] = {0xC2, 0x80, 0x80, 0x21, 0};
     struct TextUtf8Token token;
     const char *next;
 
-    if (!CheckToken(ascii, TEXT_UTF8_TOKEN_SCALAR, 'A', 1, 0, 0))
+    if (!CheckToken(
+            ascii, TEXT_UTF8_TOKEN_SCALAR, 'A', 0, 1, 0, 0,
+            TEXT_UTF8_TOKEN_FLAG_NONE))
         return 0;
-    if (!CheckToken(twoByte, TEXT_UTF8_TOKEN_SCALAR, 0x80, 2, 0, 0))
+    if (!CheckToken(
+            twoByte, TEXT_UTF8_TOKEN_SCALAR, 0x80, 0, 2, 0, 0,
+            TEXT_UTF8_TOKEN_FLAG_NONE))
         return 0;
-    if (!CheckToken(threeByte, TEXT_UTF8_TOKEN_SCALAR, 0x8A3A, 3, 0, 0))
+    if (!CheckToken(
+            threeByte, TEXT_UTF8_TOKEN_SCALAR, 0x8A3A, 0, 3, 0, 0,
+            TEXT_UTF8_TOKEN_FLAG_NONE))
         return 0;
-    if (!CheckToken(fourByte, TEXT_UTF8_TOKEN_SCALAR, 0x1F600, 4, 0, 0))
+    if (!CheckToken(
+            fourByte, TEXT_UTF8_TOKEN_SCALAR, 0x1F600, 0, 4, 0, 0,
+            TEXT_UTF8_TOKEN_FLAG_NONE))
         return 0;
-    if (!CheckToken(control, TEXT_UTF8_TOKEN_CONTROL, 0, 1, 0x10, 0))
+    if (!CheckToken(
+            control, TEXT_UTF8_TOKEN_CONTROL, 0, 0, 1, 0x0F, 0,
+            TEXT_UTF8_TOKEN_FLAG_NONE))
         return 0;
-    if (!CheckToken(extended, TEXT_UTF8_TOKEN_EXTENDED_CONTROL, 0, 2, 0x80, 0x21))
+    if (!CheckToken(
+            face, TEXT_UTF8_TOKEN_CONTROL, 0, 0x9493, 3, 0x10, 0,
+            TEXT_UTF8_TOKEN_FLAG_FACE_PAYLOAD))
+        return 0;
+    if (!CheckToken(
+            extended, TEXT_UTF8_TOKEN_EXTENDED_CONTROL, 0, 0, 2, 0x80,
+            0x21, TEXT_UTF8_TOKEN_FLAG_NONE))
+        return 0;
+    if (!CheckToken(
+            extendedArgument, TEXT_UTF8_TOKEN_EXTENDED_CONTROL, 0, 3, 3,
+            0x80, 0x01, TEXT_UTF8_TOKEN_FLAG_EXTENDED_ARGUMENT))
+        return 0;
+    if (!CheckToken(
+            legacySpace, TEXT_UTF8_TOKEN_SCALAR, 0x3000, 0, 2, 0, 0,
+            TEXT_UTF8_TOKEN_FLAG_LEGACY_SPACE))
         return 0;
 
     next = TextUtf8_Next((const char *)collision, &token);
@@ -92,6 +137,8 @@ static int TestMalformedUtf8(void)
     static const u8 truncatedThree[] = {0xE1, 0x80, 0};
     static const u8 truncatedFour[] = {0xF1, 0x80, 0x80, 0};
     static const u8 truncatedExtended[] = {0x80, 0};
+    static const u8 truncatedExtendedArgument[] = {0x80, 0x01};
+    static const u8 truncatedFace[] = {0x10, 0x93};
 
     return CheckInvalid(strayContinuation)
         && CheckInvalid(overlongTwo)
@@ -103,10 +150,12 @@ static int TestMalformedUtf8(void)
         && CheckInvalid(surrogate)
         && CheckInvalid(aboveMaximum)
         && CheckInvalid(invalidLead)
-        && CheckInvalid(truncatedTwo)
-        && CheckInvalid(truncatedThree)
-        && CheckInvalid(truncatedFour)
-        && CheckInvalid(truncatedExtended);
+        && CheckTruncated(truncatedTwo, 2)
+        && CheckTruncated(truncatedThree, 3)
+        && CheckTruncated(truncatedFour, 4)
+        && CheckTruncated(truncatedExtended, 1)
+        && CheckTruncated(truncatedExtendedArgument, 2)
+        && CheckTruncated(truncatedFace, 2);
 }
 
 static int BitmapIsVisible(const u8 *bitmap)

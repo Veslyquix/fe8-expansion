@@ -3,15 +3,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "bmitem.h"
+
 char *GetStringFromIndex(int index);
 char *GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCapacity);
 char *GetStringFromIndexInBuffer(int index, char *buffer);
+char *StringInsertSpecialPrefixByCtrl(void);
+char *StrInsertTact(void);
 extern struct MsgBuffer sMsgString;
 
 static int failures = 0;
 static int sArmDecompCalls = 0;
 static ExpansionLocaleId sCurrentLocale = EXPANSION_LOCALE_EN;
-static struct CharacterData sCharacterData = { 4 };
+static struct CharacterData sCharacterData = { 15 };
+static struct ItemData sItemData = { 18 };
 
 char gBufPrep[0x2000];
 struct ActionData gActionData = { 0 };
@@ -88,13 +93,32 @@ void CopyString(void *dst, const void *src)
 
 char *GetTacticianName(void)
 {
+    if (sCurrentLocale == EXPANSION_LOCALE_JA)
+        return "\xE8\xBB\x8D\xE5\xB8\xAB";
+    if (sCurrentLocale == EXPANSION_LOCALE_ZH_HANS)
+        return "\xE5\x86\x9B\xE5\xB8\x88";
     return "Tact";
 }
 
 char *GetItemName(int item)
 {
     (void)item;
+    if (sCurrentLocale == EXPANSION_LOCALE_JA)
+        return "\xE5\x89\xA3";
+    if (sCurrentLocale == EXPANSION_LOCALE_ZH_HANS)
+        return "\xE5\x89\x91";
     return "Item";
+}
+
+int GetItemIndex(int item)
+{
+    return item;
+}
+
+const struct ItemData *GetItemData(int item)
+{
+    (void)item;
+    return &sItemData;
 }
 
 const struct CharacterData *GetCharacterData(int id)
@@ -349,10 +373,70 @@ static void TestLegacyUnknownBufferStatus(void)
     const char *result;
 
     ResetHarness(EXPANSION_LOCALE_JA);
+    memset(local, 0xA5, sizeof(local));
     result = GetStringFromIndexInBuffer(0, local);
-    CHECK(strcmp(result, "猫") == 0);
-    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
+    CHECK(strcmp(result, LOCALIZED_GAME_TEXT_MARKER_UNBOUNDED) == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED);
+    CHECK((u8)local[0] == 0xA5);
     CHECK(sArmDecompCalls == 0);
+}
+
+static void TestUtf8ControlSubstitutions(void)
+{
+    static const u8 expected[] = {
+        0xE5, 0x80, 0x99,
+        0xE8, 0xBB, 0x8D, 0xE5, 0xB8, 0xAB,
+        0xE7, 0x8C, 0xAB,
+        0xE5, 0x89, 0xA3,
+        0xE8, 0x89, 0xBE, 0xE8, 0x8E, 0x89,
+        0x10, 0x93, 0x94,
+        0
+    };
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    GetStringFromIndex(13);
+    result = StringInsertSpecialPrefixByCtrl();
+    CHECK(memcmp(result, expected, sizeof(expected)) == 0);
+    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
+}
+
+static void TestTactSubstitutionKeepsUtf8Boundaries(void)
+{
+    static const u8 expected[] = {
+        0xE8, 0xA8, 0xBA,
+        0xE8, 0xBB, 0x8D, 0xE5, 0xB8, 0xAB,
+        0
+    };
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    GetStringFromIndex(14);
+    result = StrInsertTact();
+    CHECK(memcmp(result, expected, sizeof(expected)) == 0);
+    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
+}
+
+static void TestSubstitutionCapacityBoundary(void)
+{
+    const char *result;
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    GetStringFromIndex(16);
+    result = StrInsertTact();
+    CHECK(strcmp(result, LOCALIZED_GAME_TEXT_MARKER_OVERFLOW) == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_DECODE_OVERFLOW);
+
+    ResetHarness(EXPANSION_LOCALE_JA);
+    GetStringFromIndex(17);
+    result = StrInsertTact();
+    CHECK(strlen(result) == 5631u);
+    CHECK(memcmp(result + 5628, "\xE7\x8C\xAB", 3) == 0);
+    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_OK);
 }
 
 static void TestCacheLocaleSwitchAndExplicitInvalidation(void)
@@ -404,7 +488,7 @@ static void TestInvalidIndicesDoNotReadEnglishTable(void)
     const char *result;
 
     ResetHarness(EXPANSION_LOCALE_EN);
-    result = GetStringFromIndex(13);
+    result = GetStringFromIndex(19);
     CHECK(strcmp(result, LOCALIZED_GAME_TEXT_MARKER_INVALID) == 0);
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID);
     CHECK(sArmDecompCalls == 0);
@@ -415,9 +499,11 @@ static void TestInvalidIndicesDoNotReadEnglishTable(void)
     CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID);
     CHECK(sArmDecompCalls == 0);
 
-    result = GetStringFromIndexInBuffer(13, local);
-    CHECK(strcmp(result, "") == 0);
-    CHECK(LocalizedGameText_GetLastStatus() == LOCALIZED_GAME_TEXT_STATUS_DECODE_INVALID);
+    result = GetStringFromIndexInBuffer(19, local);
+    CHECK(strcmp(result, LOCALIZED_GAME_TEXT_MARKER_UNBOUNDED) == 0);
+    CHECK(
+        LocalizedGameText_GetLastStatus()
+        == LOCALIZED_GAME_TEXT_STATUS_LEGACY_BUFFER_UNBOUNDED);
     CHECK(sArmDecompCalls == 0);
 }
 
@@ -449,6 +535,9 @@ int main(void)
     TestCorruptMarker();
     TestOverflowMarkerAndGuards();
     TestLegacyUnknownBufferStatus();
+    TestUtf8ControlSubstitutions();
+    TestTactSubstitutionKeepsUtf8Boundaries();
+    TestSubstitutionCapacityBoundary();
     TestCacheLocaleSwitchAndExplicitInvalidation();
     TestDefaultEnglishBehavior();
     TestInvalidIndicesDoNotReadEnglishTable();
