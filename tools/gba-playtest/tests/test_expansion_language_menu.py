@@ -437,6 +437,8 @@ class UiConfigLanguageEntryStructureTests(unittest.TestCase):
     def test_game_options_entry_is_modern_guarded_and_uses_entry_handler(self):
         entry_idx = self.text.index("[GAME_OPTION_LANGUAGE] =")
         preceding = self.text[:entry_idx]
+        subtitle_idx = self.text.index("[GAME_OPTION_SUBTITLE_HELP] =")
+        subtitle_end = self.text.index("[GAME_OPTION_AUTOEND_TURNS] =", subtitle_idx)
 
         last_ifdef = preceding.rfind("#ifdef")
         last_endif = preceding.rfind("#endif")
@@ -449,9 +451,13 @@ class UiConfigLanguageEntryStructureTests(unittest.TestCase):
             "gGameOptions[GAME_OPTION_LANGUAGE]'s enclosing guard must be #ifdef MODERN",
         )
 
-        following = self.text[entry_idx:entry_idx + 600]
+        following = self.text[entry_idx:self.text.index("#endif", entry_idx)]
+        subtitle_following = self.text[subtitle_idx:subtitle_end]
         self.assertIn("LanguageOptionEntryHandler", following)
-        self.assertIn(".icon = 0x16", following)
+        self.assertIn(".icon = 0x22", following)
+        self.assertNotIn(".icon = 0x16", following)
+        self.assertIn(".icon = 0x16", subtitle_following)
+        self.assertNotIn(".icon = 0x22", subtitle_following)
         self.assertIn("{ MSG_000, MSG_000, 112, 0 }", following)
         self.assertIn("{ MSG_000, MSG_000, 152, 0 }", following)
         self.assertIn("{ MSG_000, MSG_000, 192, 0 }", following)

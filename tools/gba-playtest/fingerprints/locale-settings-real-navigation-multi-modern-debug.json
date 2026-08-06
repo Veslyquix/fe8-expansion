@@ -33,7 +33,7 @@
     },
     {
       "frame": 5550,
-      "framebuffer_hash": "fnv1a64-rgb24:81bfdac15a261e80",
+      "framebuffer_hash": "fnv1a64-rgb24:c7f0eb4a6fd14fe3",
       "name": "cursor-on-language-row",
       "probes": [
         {
@@ -50,7 +50,7 @@
     },
     {
       "frame": 5800,
-      "framebuffer_hash": "fnv1a64-rgb24:1921c878e00c052f",
+      "framebuffer_hash": "fnv1a64-rgb24:d4a4e5a722cd4380",
       "name": "qps-inline-selected",
       "probes": [
         {
@@ -72,7 +72,7 @@
     },
     {
       "frame": 6200,
-      "framebuffer_hash": "fnv1a64-rgb24:553ff0c50dab8a2e",
+      "framebuffer_hash": "fnv1a64-rgb24:043416b58afbbded",
       "name": "english-inline-selected",
       "probes": [
         {
@@ -160,7 +160,7 @@
     },
     {
       "frame": 6500,
-      "framebuffer_hash": "fnv1a64-rgb24:dd27bc270fd477f0",
+      "framebuffer_hash": "fnv1a64-rgb24:5f20dff932a50c71",
       "name": "qps-inline-reselected",
       "probes": [
         {
@@ -246,7 +246,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "81cbf31146e0fbb7e737f5bdb343abafd898f09f",
+    "sha1": "f27171105527cd8196e140dbd959fc947d0f653b",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },
