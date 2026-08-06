@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "locale-cjk-settings-inline-modern-debug",
-  "description": "Production-profile Config evidence for the 32 MiB en,ja,zh-Hans debug ROM with a valid explicit-English prefs fixture. Real Prep Map -> Options -> Configuration navigation reaches the Language row; RIGHT selects Japanese inline, a second RIGHT selects Simplified Chinese inline, and settingsOpenCount stays zero because all three locales fit without More.",
+  "description": "Production-profile Config evidence for the 32 MiB en,ja,zh-Hans debug ROM with a valid explicit-English prefs fixture. Real Prep Map -> Options -> Configuration navigation reaches the dedicated globe-icon Language row; RIGHT selects Japanese inline, a second RIGHT selects Simplified Chinese inline, and settingsOpenCount stays zero because all three locales fit without More.",
   "frames": [
     {"start": 90, "end": 95, "keys": ["A"]},
     {"start": 150, "end": 155, "keys": ["START"]},
@@ -64,6 +64,9 @@
         {"address": "0x02031a9b", "size": 1, "expected": "0x00"},
         {"address": "0x02031a9c", "size": 1, "expected": "0x03"},
         {"address": "0x02031aa2", "size": 2, "expected": "0x0000"}
+      ],
+      "regions": [
+        {"name": "language-globe-icon", "x": 16, "y": 120, "width": 16, "height": 16}
       ]
     },
     {
@@ -78,6 +81,9 @@
         {"address": "0x02031a9e", "size": 2, "expected": "0x0001"},
         {"address": "0x02031aa2", "size": 2, "expected": "0x0000"},
         {"address": "0x02031aa4", "size": 2, "expected": "0x0001"}
+      ],
+      "regions": [
+        {"name": "language-globe-icon", "x": 16, "y": 120, "width": 16, "height": 16}
       ]
     },
     {
@@ -93,6 +99,9 @@
         {"address": "0x02031aa2", "size": 2, "expected": "0x0000"},
         {"address": "0x02031aa4", "size": 2, "expected": "0x0002"},
         {"address": "0x0e0073d6", "size": 1, "expected": "0x02"}
+      ],
+      "regions": [
+        {"name": "language-globe-icon", "x": 16, "y": 120, "width": 16, "height": 16}
       ]
     }
   ]

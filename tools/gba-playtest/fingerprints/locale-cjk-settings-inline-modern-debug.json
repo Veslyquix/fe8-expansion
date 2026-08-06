@@ -2,50 +2,160 @@
   "checkpoints": [
     {
       "frame": 5550,
-      "framebuffer_hash": "fnv1a64-rgb24:f7b76b59b85084d1",
+      "framebuffer_hash": "fnv1a64-rgb24:94dc8281cfc35712",
       "name": "cursor-on-three-language-row",
       "probes": [
-        {"address": "0x02031a94", "size": 1, "value": "0x00"},
-        {"address": "0x02031a95", "size": 1, "value": "0x00"},
-        {"address": "0x02031a9b", "size": 1, "value": "0x00"},
-        {"address": "0x02031a9c", "size": 1, "value": "0x03"},
-        {"address": "0x02031aa2", "size": 2, "value": "0x0000"}
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9c",
+          "size": 1,
+          "value": "0x03"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        }
+      ],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:c6a3e45929fb9ee0",
+          "height": 16,
+          "name": "language-globe-icon",
+          "width": 16,
+          "x": 16,
+          "y": 120
+        }
       ]
     },
     {
       "frame": 5800,
-      "framebuffer_hash": "fnv1a64-rgb24:695b25fd17d89159",
+      "framebuffer_hash": "fnv1a64-rgb24:1366ff38fc19bebe",
       "name": "japanese-inline-selected",
       "probes": [
-        {"address": "0x02031a94", "size": 1, "value": "0x00"},
-        {"address": "0x02031a95", "size": 1, "value": "0x00"},
-        {"address": "0x02031a9a", "size": 1, "value": "0x01"},
-        {"address": "0x02031a9b", "size": 1, "value": "0x01"},
-        {"address": "0x02031a9e", "size": 2, "value": "0x0001"},
-        {"address": "0x02031aa2", "size": 2, "value": "0x0000"},
-        {"address": "0x02031aa4", "size": 2, "value": "0x0001"}
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x01"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0001"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0001"
+        }
+      ],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:f2f1700ad46cc8cb",
+          "height": 16,
+          "name": "language-globe-icon",
+          "width": 16,
+          "x": 16,
+          "y": 120
+        }
       ]
     },
     {
       "frame": 6200,
-      "framebuffer_hash": "fnv1a64-rgb24:678b27f3ab7e77ee",
+      "framebuffer_hash": "fnv1a64-rgb24:5602ccf00c10aaa9",
       "name": "simplified-chinese-inline-selected",
       "probes": [
-        {"address": "0x02031a94", "size": 1, "value": "0x00"},
-        {"address": "0x02031a95", "size": 1, "value": "0x00"},
-        {"address": "0x02031a9a", "size": 1, "value": "0x02"},
-        {"address": "0x02031a9b", "size": 1, "value": "0x02"},
-        {"address": "0x02031a9e", "size": 2, "value": "0x0002"},
-        {"address": "0x02031aa2", "size": 2, "value": "0x0000"},
-        {"address": "0x02031aa4", "size": 2, "value": "0x0002"},
-        {"address": "0x0e0073d6", "size": 1, "value": "0x02"}
+        {
+          "address": "0x02031a94",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a95",
+          "size": 1,
+          "value": "0x00"
+        },
+        {
+          "address": "0x02031a9a",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9b",
+          "size": 1,
+          "value": "0x02"
+        },
+        {
+          "address": "0x02031a9e",
+          "size": 2,
+          "value": "0x0002"
+        },
+        {
+          "address": "0x02031aa2",
+          "size": 2,
+          "value": "0x0000"
+        },
+        {
+          "address": "0x02031aa4",
+          "size": 2,
+          "value": "0x0002"
+        },
+        {
+          "address": "0x0e0073d6",
+          "size": 1,
+          "value": "0x02"
+        }
+      ],
+      "regions": [
+        {
+          "hash": "fnv1a64-region:7ec5a6117001fcc8",
+          "height": 16,
+          "name": "language-globe-icon",
+          "width": 16,
+          "x": 16,
+          "y": 120
+        }
       ]
     }
   ],
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "04c3b20dd41f62f915002bdf58e11dc7bac6785b",
+    "sha1": "dd485636090eae056269bce59e605ac23d3d44c7",
     "size": 33554432,
     "title": "FIREEMBLEM2E"
   },

@@ -24,6 +24,7 @@ submenu lifecycle, cache invalidation) is proven separately by
 tools/gba-playtest scenarios.
 """
 
+import json
 import re
 import shutil
 import subprocess
@@ -42,6 +43,14 @@ UICONFIG_SRC = REPO_ROOT / "src" / "uiconfig.c"
 SAVE_COMPAT_MENU_SRC = REPO_ROOT / "src" / "save_compat_menu.c"
 DEBUGTOOLS_REGISTRY_SRC = REPO_ROOT / "src" / "debugtools_registry.c"
 DEBUGTOOLS_HEADER = REPO_ROOT / "include" / "expansion_debugtools.h"
+CJK_SETTINGS_SCENARIO = (
+    REPO_ROOT / "tools" / "gba-playtest" / "scenarios"
+    / "locale-cjk-settings-inline-modern-debug.json"
+)
+CJK_SETTINGS_FINGERPRINT = (
+    REPO_ROOT / "tools" / "gba-playtest" / "fingerprints"
+    / "locale-cjk-settings-inline-modern-debug.json"
+)
 
 CC = shutil.which("gcc") or shutil.which("cc")
 
@@ -482,6 +491,46 @@ class UiConfigLanguageEntryStructureTests(unittest.TestCase):
         )
         self.assertIsNotNone(match)
         self.assertIn("gExpansionLanguageMenuProbe.settingsActive", match.group(1))
+
+
+class CjkSettingsFingerprintContractTests(unittest.TestCase):
+    """Binds the CJK settings oracle to the dedicated language icon surface."""
+
+    def test_cjk_settings_fingerprint_covers_globe_icon_and_locale_states(self):
+        scenario = json.loads(CJK_SETTINGS_SCENARIO.read_text(encoding="utf-8"))
+        fingerprint = json.loads(CJK_SETTINGS_FINGERPRINT.read_text(encoding="utf-8"))
+
+        expected_framebuffer_hashes = [
+            "fnv1a64-rgb24:94dc8281cfc35712",
+            "fnv1a64-rgb24:1366ff38fc19bebe",
+            "fnv1a64-rgb24:5602ccf00c10aaa9",
+        ]
+        expected_region_hashes = [
+            "fnv1a64-region:c6a3e45929fb9ee0",
+            "fnv1a64-region:f2f1700ad46cc8cb",
+            "fnv1a64-region:7ec5a6117001fcc8",
+        ]
+        expected_region = {
+            "name": "language-globe-icon",
+            "x": 16,
+            "y": 120,
+            "width": 16,
+            "height": 16,
+        }
+
+        self.assertEqual(fingerprint["scenario"], scenario["name"])
+        self.assertEqual(
+            [checkpoint["framebuffer_hash"] for checkpoint in fingerprint["checkpoints"]],
+            expected_framebuffer_hashes,
+        )
+        for index, (scenario_checkpoint, fingerprint_checkpoint) in enumerate(
+            zip(scenario["checkpoints"], fingerprint["checkpoints"], strict=True)
+        ):
+            self.assertEqual(scenario_checkpoint["regions"], [expected_region])
+            self.assertEqual(
+                fingerprint_checkpoint["regions"],
+                [{**expected_region, "hash": expected_region_hashes[index]}],
+            )
 
 
 class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
