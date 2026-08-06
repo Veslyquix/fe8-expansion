@@ -2504,8 +2504,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
-    "oid": "23b69d541de267d43e724101385aeaa839cc859f",
-    "sha256": "5024a45742fca50f3e6f382bd505ce00fe2fa66af24e8903eb5203a333164bdd"
+    "oid": "56245913857fbfc2c7e3c4b5d97ff7579a73abe4",
+    "sha256": "fa186b79950379a500cc45aea5f5d33589ab8aa0354188222eff03a682b27943"
   },
   {
     "path": "fonts/cjk/corpora/ja.system.txt",
