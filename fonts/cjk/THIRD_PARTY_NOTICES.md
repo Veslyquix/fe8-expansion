@@ -9,10 +9,9 @@ The vendored files `upstream/NotoSansJP-Regular.otf` and
 - pinned upstream commit: `f8d157532fbfaeda587e826d4cd5b21a49186f7c`
 - license: SIL Open Font License 1.1 (`OFL-1.1`)
 - license text: `licenses/Noto-CJK-OFL-1.1.txt`
-- Japanese copyright notice: © 2014-2021 Adobe
-  (<https://github.com/adobe-fonts/source-han-sans>).
-- Simplified Chinese copyright notice: © 2014-2021 Adobe
-  (<https://github.com/adobe-fonts/source-han-sans>).
+- embedded copyright notice (verbatim in both fonts):
+  © 2014-2021 Adobe (http://www.adobe.com/).
+- contextual upstream project: <https://github.com/adobe-fonts/source-han-sans>
 
 The exact font, license, family, version, byte-length, source URL, and SHA-256
 pins are machine-readable in `font-sources.json` and

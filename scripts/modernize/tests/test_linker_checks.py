@@ -135,9 +135,10 @@ class LinkerCheckTargetTests(unittest.TestCase):
                     f"MODERN_BUILD_ROOT={self.PROFILE_SCRATCH / str(index)}",
                 )
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn("not yet populated", result.stdout)
+                self.assertIn("which require MODERN_ROM_SIZE=32M", result.stdout)
+                self.assertIn("Use MODERN_ROM_SIZE=32M or remove", result.stdout)
 
-    def test_real_cjk_profiles_fail_fast_at_32m(self):
+    def test_real_cjk_profiles_dry_run_at_32m(self):
         for index, locales in enumerate(
             ("en,ja", "en,zh-Hans", "zh-Hans,en,ja")
         ):
@@ -149,8 +150,7 @@ class LinkerCheckTargetTests(unittest.TestCase):
                     f"EXPANSION_ENABLED_LOCALES={locales}",
                     f"MODERN_BUILD_ROOT={self.PROFILE_SCRATCH / str(index)}",
                 )
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("not yet populated", result.stdout)
+                self.assertEqual(result.returncode, 0, result.stdout[-2000:])
 
     def test_invalid_default_locale_still_fails_dry_run(self):
         result = self.make(

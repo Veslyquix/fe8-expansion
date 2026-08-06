@@ -56,6 +56,7 @@ repo) instead of one registry line per pinned link.
 - prefix:https://github.com/laqieer/decomp-permuter-arm | laqieer | third-party-reference | laqieer's ARM fork of the decomp-permuter tool, linked as an external tool reference.
 - prefix:https://github.com/StanHash/mgfembp | laqieer | third-party-reference | Upstream source of the mgfembp submodule.
 - prefix:https://github.com/adobe-fonts/source-han-sans | laqieer | third-party-reference | Authoritative Adobe Source Han Sans project referenced by the vendored Noto CJK copyright notice.
+- prefix:http://www.adobe.com/ | laqieer | third-party-reference | Exact HTTP URL retained only because it appears verbatim in the embedded Noto CJK copyright notice; the contextual Source Han Sans project uses the separate HTTPS rule above.
 - prefix:https://github.com/pret/ | laqieer | third-party-reference | pret project tools/references (agbcc, pokeemerald, pokeruby INSTALL.md docs).
 - prefix:https://github.com/SBird1337/cexplore | laqieer | third-party-reference | Compiler Explorer fork source, linked as a tool reference.
 - prefix:https://github.com/TwitchPlaysPokemon/pret3 | laqieer | third-party-reference | External datadump & funchash tool reference.

@@ -610,7 +610,7 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("_site", "asset", _NOTE_ASSET),
     RootSeed("asm", "asset", _NOTE_ASSET),
     RootSeed("banim", "asset", _NOTE_ASSET),
-    RootSeed("fonts", "asset", _NOTE_CJK_FONT_ASSETS),
+    RootSeed("fonts/cjk", "asset", _NOTE_CJK_FONT_ASSETS),
     RootSeed("graphics", "asset", _NOTE_ASSET),
     RootSeed("preview", "asset", _NOTE_ASSET),
     RootSeed("reports", "asset", _NOTE_ASSET),
