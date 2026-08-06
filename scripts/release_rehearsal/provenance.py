@@ -587,6 +587,7 @@ PROVENANCE_ROOT_SEED: Tuple[RootSeed, ...] = (
     RootSeed("config", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("config.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("docs", "code", _NOTE_CODE_DOCUMENTATION),
+    RootSeed("game_localization.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("generated_data.mk", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("githooks", "code", _NOTE_CODE_BUILD_TOOLING),
     RootSeed("graphics_file_rules.mk", "code", _NOTE_CODE_BUILD_TOOLING),
