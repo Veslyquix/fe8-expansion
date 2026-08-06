@@ -11,12 +11,15 @@ Linker script and memory map
                 0x08000000                        __text_start = ORIGIN (rom)
                 0x02000000                        __ewram_start = ORIGIN (ewram)
                 0x03000000                        __iwram_start = ORIGIN (iwram)
+                0x03006e00                        __iwram_static_limit = (__sp_usr - 0x1000)
+                0x03007e00                        __sp_usr = (__sp_irq - 0x1a0)
                 0x03007fa0                        __sp_irq = (ORIGIN (iwram) + LENGTH (iwram) - 0x60)
                 0x03008000                        __iwram_top = (ORIGIN (iwram) + LENGTH (iwram))
 
 ewram_data      0x02000000     0x3000
 
 IWRAM           0x03000000     0x2000
+                0x03002000                        __iwram_static_end = (ADDR (IWRAM) + SIZEOF (IWRAM))
 
 ROM             0x08000000   0x100000
  src/crt0.o(.text)

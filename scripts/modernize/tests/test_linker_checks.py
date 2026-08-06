@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 MODERN_MK = ROOT / "modern.mk"
+EXPANSION_LD = ROOT / "linker" / "expansion.ld"
 
 
 class LinkerCheckTargetTests(unittest.TestCase):
@@ -63,6 +64,26 @@ class LinkerCheckTargetTests(unittest.TestCase):
             "scan_raw_casts.sh",
         ):
             self.assertIn(expected, result.stdout)
+
+    def test_budget_check_requires_elf_identity_and_user_stack_margin(self):
+        result = self.make("-n", "expansion-modern-budget-check")
+        self.assertEqual(result.returncode, 0, result.stdout[-1000:])
+        self.assertIn("--validate-elf", result.stdout)
+        self.assertIn("--require-positive-headroom ewram", result.stdout)
+        self.assertIn("--require-positive-headroom iwram", result.stdout)
+
+    def test_linker_reserves_nonzero_user_stack_floor(self):
+        text = EXPANSION_LD.read_text(encoding="utf-8")
+        self.assertIn("__iwram_static_limit = __sp_usr - 0x1000;", text)
+        self.assertIn(
+            "__iwram_static_end = ADDR(IWRAM) + SIZEOF(IWRAM);", text
+        )
+        self.assertIn(
+            "ASSERT(__iwram_static_end < __sp_usr,", text
+        )
+        self.assertIn(
+            "ASSERT(__iwram_static_end <= __iwram_static_limit,", text
+        )
 
     def test_nonzero_shift_is_forwarded_to_linker(self):
         result = self.make(

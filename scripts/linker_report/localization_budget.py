@@ -255,16 +255,33 @@ def build_report(
 ) -> dict[str, Any]:
     sizes = _nm_sizes(elf)
     region_by_name = {r["name"]: r for r in map_report["regions"]}
+    optional_region_fields = (
+        "physical_free_bytes",
+        "static_usable_capacity_bytes",
+        "reserved_stack_bytes",
+        "usable_static_headroom_bytes",
+        "minimum_user_stack_margin_bytes",
+        "static_growth_headroom_bytes",
+        "static_overflow",
+        "stack_margin_violation",
+    )
 
     report: dict[str, Any] = {
         "schema_version": 1,
         "regions_headroom": {
-            name: {
-                "free_bytes": region_by_name[name]["free_bytes"],
-                "capacity_bytes": region_by_name[name]["capacity_bytes"],
-                "occupied_bytes": region_by_name[name]["occupied_bytes"],
-                "overflow": region_by_name[name]["overflow"],
-            }
+            name: (
+                {
+                    "free_bytes": region_by_name[name]["free_bytes"],
+                    "capacity_bytes": region_by_name[name]["capacity_bytes"],
+                    "occupied_bytes": region_by_name[name]["occupied_bytes"],
+                    "overflow": region_by_name[name]["overflow"],
+                }
+                | {
+                    field: region_by_name[name][field]
+                    for field in optional_region_fields
+                    if field in region_by_name[name]
+                }
+            )
             for name in ("ewram", "iwram", "rom")
             if name in region_by_name
         },

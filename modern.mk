@@ -1603,9 +1603,10 @@ expansion-modern-localization-profile-en-ja-zh-hans-qps:
 # Build the product profiles serially: every private modern build root still
 # shares the generated battle-animation sidecar, so parallel recursive profile
 # builds would race that one legacy asset. Each real linked map/ELF pair must
-# agree on all non-empty allocatable output sections and retain positive
-# EWRAM headroom; this is intentionally stronger than the generic overflow
-# assertion and cannot be satisfied by a source-only aggregate budget.
+# agree on every non-empty allocatable output section's name, VMA, and size.
+# They must also retain positive EWRAM headroom and the linker's minimum
+# user-stack margin below __sp_usr; neither gate can be satisfied by a
+# source-only aggregate budget or by physical IWRAM space reserved for stacks.
 expansion-modern-localization-profile-headroom-check:
 	+$(MAKE) expansion-modern-localization-profile-en-ja \
 		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
@@ -2882,7 +2883,9 @@ expansion-modern-budget-check: expansion-modern-elf
 		--map "$(MODERN_MAP)" \
 		--elf "$(MODERN_ELF)" \
 		--output "$(MODERN_BUDGET_REPORT)" \
-		--check
+		--check --validate-elf \
+		--require-positive-headroom ewram \
+		--require-positive-headroom iwram
 
 # Localization-specific runtime budget rollup (issue #18 sprint 4): combines
 # the real per-region headroom already computed above (real floating_end ->

@@ -96,6 +96,33 @@ class LocaleBankBudgetTests(unittest.TestCase):
         self.assertEqual(report["locale_bank"]["headroom_bytes"], 0x00FFFE00)
         self.assertTrue(report["locale_bank"]["section_present"])
 
+    def test_iwram_static_headroom_fields_are_preserved(self):
+        map_report = base_map_report()
+        map_report["regions"].append({
+            "name": "iwram",
+            "origin": 0x03000000,
+            "capacity_bytes": 0x8000,
+            "occupied_bytes": 0x6CA8,
+            "physical_free_bytes": 0x1358,
+            "free_bytes": 0x1158,
+            "static_usable_capacity_bytes": 0x7E00,
+            "reserved_stack_bytes": 0x200,
+            "usable_static_headroom_bytes": 0x1158,
+            "minimum_user_stack_margin_bytes": 0x1000,
+            "static_growth_headroom_bytes": 0x158,
+            "static_overflow": False,
+            "stack_margin_violation": False,
+            "overflow": False,
+        })
+
+        iwram = self.build_report(map_report)["regions_headroom"]["iwram"]
+        self.assertEqual(iwram["free_bytes"], 0x1158)
+        self.assertEqual(iwram["physical_free_bytes"], 0x1358)
+        self.assertEqual(iwram["reserved_stack_bytes"], 0x200)
+        self.assertEqual(iwram["usable_static_headroom_bytes"], 0x1158)
+        self.assertEqual(iwram["minimum_user_stack_margin_bytes"], 0x1000)
+        self.assertEqual(iwram["static_growth_headroom_bytes"], 0x158)
+
 
 def source_budget(locales):
     return {

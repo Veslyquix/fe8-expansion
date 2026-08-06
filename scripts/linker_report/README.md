@@ -16,7 +16,7 @@ python3 scripts/linker_report/budget.py \
     --elf fireemblem8.elf \
     --output reports/linker-budget.json
 
-# Product gate: require real ELF/map agreement and positive RAM headroom:
+# Product gate: require real ELF/map identity and safe RAM headroom:
 python3 scripts/linker_report/budget.py \
     --map fireemblem8.map \
     --elf fireemblem8.elf \
@@ -35,7 +35,11 @@ python3 scripts/linker_report/budget.py \
 
 A JSON report with:
 
-- **regions** — per-region capacity, occupied bytes, free bytes, utilization %.
+- **regions** — per-region physical capacity, occupied bytes, usable free
+  bytes, and utilization. IWRAM additionally reports physical free bytes,
+  bytes reserved above `__sp_usr`, statically usable capacity, usable static
+  headroom below `__sp_usr`, the minimum user-stack margin, and remaining
+  static-growth headroom beyond that margin.
 - **sections** — every output section with address, size, overlay flag, region.
 - **overlays** — EWRAM overlays grouped by base address with per-group peak.
 - **pinned_assignments** — linker symbol assignments at GBA memory addresses.
@@ -49,12 +53,24 @@ assignments, and overflow state. Derived shift/end markers such as
 `__floating_end` are reported but not baselined because linker veneer insertion
 may move them without changing any memory boundary. Optional ELF diagnostics
 also remain inspectable without becoming host-sensitive baseline fields.
-ELF comparison uses non-empty mapped output sections versus allocatable ELF
+ELF comparison matches every non-empty mapped output section to an allocatable
+ELF section by output-section name, VMA, and size. Indented map-only input
+subsections such as `.locale_data.font.*` are not treated as ELF output
 sections. This models GNU ld's zero-sized, non-allocatable output placeholders
 (for example an empty 16 MiB `.locale_data`) without exempting a populated
-locale bank: any non-zero map section missing from the allocatable ELF still
-fails `--validate-elf` and `--check`. Unlike diagnostic-only `--elf`,
-`--validate-elf` also fails closed when readelf is unavailable.
+locale bank: a missing section or a same-name address/size mismatch fails
+actionably. Unlike diagnostic-only `--elf`, `--validate-elf` also fails closed
+when readelf is unavailable.
+
+For IWRAM, `capacity_bytes` remains the physical 32 KiB region size while
+`free_bytes` is the statically usable headroom ending at `__sp_usr`;
+`physical_free_bytes` retains the hardware-region view. The linker exports
+`__iwram_static_end`, `__iwram_static_limit`, and `__sp_usr`. `crt0` initializes
+the downward-growing system/user stack at `__sp_usr`; the historical fixed
+layout left `0x1658` bytes below it and the current CJK scratch leaves `0x1158`.
+The linker therefore preserves a `0x1000` minimum user-stack margin, leaving
+`0x158` bytes of current static-growth headroom. Both the linker assertion and
+`--require-positive-headroom iwram` enforce that floor.
 
 ## Exit codes
 

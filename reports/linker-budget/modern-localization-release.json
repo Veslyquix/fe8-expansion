@@ -34,19 +34,29 @@
       "capacity_bytes": 262144,
       "free_bytes": 3136,
       "occupied_bytes": 259008,
-      "overflow": false
+      "overflow": false,
+      "physical_free_bytes": 3136
     },
     "iwram": {
       "capacity_bytes": 32768,
-      "free_bytes": 6232,
+      "free_bytes": 5720,
+      "minimum_user_stack_margin_bytes": 4096,
       "occupied_bytes": 26536,
-      "overflow": false
+      "overflow": false,
+      "physical_free_bytes": 6232,
+      "reserved_stack_bytes": 512,
+      "stack_margin_violation": false,
+      "static_growth_headroom_bytes": 1624,
+      "static_overflow": false,
+      "static_usable_capacity_bytes": 32256,
+      "usable_static_headroom_bytes": 5720
     },
     "rom": {
       "capacity_bytes": 16777216,
       "free_bytes": 256,
       "occupied_bytes": 16776960,
-      "overflow": false
+      "overflow": false,
+      "physical_free_bytes": 256
     }
   },
   "rom_catalog_descriptors": {

@@ -18,6 +18,34 @@ ROOT = Path(__file__).resolve().parents[3]
 REAL_MODERN_MAP = (
     ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.map"
 )
+REAL_MODERN_ELF = (
+    ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.elf"
+)
+REAL_CJK_MAP = (
+    ROOT / "build" / "expansion-modern-locale-en-ja-zh-hans"
+    / "debug" / "aapcs" / "fireemblem8.map"
+)
+REAL_CJK_ELF = (
+    ROOT / "build" / "expansion-modern-locale-en-ja-zh-hans"
+    / "debug" / "aapcs" / "fireemblem8.elf"
+)
+
+
+def iwram_assignments(
+    static_end: int,
+    *,
+    stack_pointer: int = 0x03007E00,
+    static_limit: int = 0x03006E00,
+) -> list[budget.SymbolAssignment]:
+    return [
+        budget.SymbolAssignment(
+            "__iwram_static_end", static_end, "ADDR (IWRAM) + SIZEOF (IWRAM)"
+        ),
+        budget.SymbolAssignment(
+            "__iwram_static_limit", static_limit, "__sp_usr - 0x1000"
+        ),
+        budget.SymbolAssignment("__sp_usr", stack_pointer, "__sp_irq - 0x1a0"),
+    ]
 
 
 def run_budget(*args: str) -> subprocess.CompletedProcess:
@@ -212,7 +240,11 @@ class TestMapParsing(unittest.TestCase):
 
         self.assertEqual(
             report["elf"]["cross_validation"],
-            {"in_elf_not_map": [], "in_map_not_elf": []},
+            {
+                "in_elf_not_map": [],
+                "in_map_not_elf": [],
+                "section_mismatches": [],
+            },
         )
         self.assertIn(
             ".locale_data",
@@ -259,6 +291,113 @@ class TestMapParsing(unittest.TestCase):
 
         self.assertEqual(budget.elf_cross_validation_errors(report), [])
 
+    def test_same_name_wrong_address_is_rejected_actionably(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("rom", 0x08000000, 0x01000000)],
+            [budget.OutputSection("ROM", 0x08000000, 0x100)],
+            [],
+            [
+                budget.ElfSection(
+                    "ROM", "PROGBITS", 0x08000100, 0x100, "AX"
+                ),
+            ],
+        )
+
+        self.assertEqual(
+            budget.elf_cross_validation_errors(report),
+            [
+                "section_mismatch: ROM address"
+                "(map=0x8000000, elf=0x8000100)"
+            ],
+        )
+
+    def test_same_name_wrong_size_is_rejected_actionably(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("rom", 0x08000000, 0x01000000)],
+            [budget.OutputSection("ROM", 0x08000000, 0x100)],
+            [],
+            [
+                budget.ElfSection(
+                    "ROM", "PROGBITS", 0x08000000, 0x180, "AX"
+                ),
+            ],
+        )
+
+        self.assertEqual(
+            budget.elf_cross_validation_errors(report),
+            [
+                "section_mismatch: ROM size_bytes"
+                "(map=0x100, elf=0x180)"
+            ],
+        )
+
+    def test_map_input_subsections_are_not_elf_output_sections(self):
+        map_text = """\
+Memory Configuration
+
+Name             Origin             Length             Attributes
+rom              0x08000000         0x02000000
+
+Linker script and memory map
+
+.locale_data    0x09000000       0x20
+ *(.locale_data .locale_data.*)
+ .locale_data.font.fixture
+                0x09000000       0x20 fixture.o
+"""
+        regions, sections, assignments = budget.parse_map(map_text)
+        self.assertEqual([section.name for section in sections], [".locale_data"])
+
+        report = budget.generate_report(
+            regions,
+            sections,
+            assignments,
+            [
+                budget.ElfSection(
+                    ".locale_data", "PROGBITS", 0x09000000, 0x20, "A"
+                ),
+            ],
+        )
+        self.assertEqual(budget.elf_cross_validation_errors(report), [])
+
+    def test_iwram_physical_free_space_cannot_mask_zero_user_stack(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("iwram", 0x03000000, 0x8000)],
+            [budget.OutputSection("IWRAM", 0x03000000, 0x7E00)],
+            iwram_assignments(0x03007E00),
+            None,
+        )
+        iwram = report["regions"][0]
+
+        self.assertEqual(iwram["physical_free_bytes"], 0x200)
+        self.assertEqual(iwram["reserved_stack_bytes"], 0x200)
+        self.assertEqual(iwram["free_bytes"], 0)
+        self.assertEqual(iwram["usable_static_headroom_bytes"], 0)
+        self.assertEqual(
+            budget.positive_headroom_errors(report, ["iwram"]),
+            [
+                "iwram requires the linker-defined user-stack margin: "
+                "usable_static_headroom_bytes=0 "
+                "minimum_user_stack_margin_bytes=4096 "
+                "physical_free_bytes=512 overflow=True"
+            ],
+        )
+
+    def test_iwram_exact_minimum_user_stack_margin_passes(self):
+        report = budget.generate_report(
+            [budget.MemoryRegion("iwram", 0x03000000, 0x8000)],
+            [budget.OutputSection("IWRAM", 0x03000000, 0x6E00)],
+            iwram_assignments(0x03006E00),
+            None,
+        )
+        iwram = report["regions"][0]
+
+        self.assertEqual(iwram["reserved_stack_bytes"], 0x200)
+        self.assertEqual(iwram["usable_static_headroom_bytes"], 0x1000)
+        self.assertEqual(iwram["minimum_user_stack_margin_bytes"], 0x1000)
+        self.assertEqual(iwram["static_growth_headroom_bytes"], 0)
+        self.assertEqual(budget.positive_headroom_errors(report, ["iwram"]), [])
+
     def test_positive_headroom_requirement_rejects_full_region(self):
         report = {
             "regions": [
@@ -269,7 +408,12 @@ class TestMapParsing(unittest.TestCase):
                 },
                 {
                     "name": "iwram",
-                    "free_bytes": 1,
+                    "free_bytes": 0x1000,
+                    "physical_free_bytes": 0x1200,
+                    "usable_static_headroom_bytes": 0x1000,
+                    "minimum_user_stack_margin_bytes": 0x1000,
+                    "static_budget_available": True,
+                    "stack_margin_violation": False,
                     "overflow": False,
                 },
             ]
@@ -294,6 +438,9 @@ class TestMapParsing(unittest.TestCase):
         self.assertIn("__text_start", names)
         self.assertIn("__ewram_start", names)
         self.assertIn("__iwram_start", names)
+        self.assertIn("__iwram_static_end", names)
+        self.assertIn("__iwram_static_limit", names)
+        self.assertIn("__sp_usr", names)
         self.assertIn("__sp_irq", names)
         self.assertIn("__iwram_top", names)
 
@@ -381,6 +528,48 @@ class TestMapParsing(unittest.TestCase):
         self.assertTrue(all(ov["address"] == 0x02000000 for ov in overlays))
         peaks = {ov["peak_bytes"] for ov in overlays}
         self.assertEqual(peaks, {0x2018C})
+        iwram = next(reg for reg in report["regions"] if reg["name"] == "iwram")
+        self.assertTrue(iwram["static_budget_available"])
+        self.assertEqual(iwram["physical_free_bytes"], 0x1858)
+        self.assertEqual(iwram["reserved_stack_bytes"], 0x200)
+        self.assertEqual(iwram["usable_static_headroom_bytes"], 0x1658)
+        self.assertEqual(iwram["minimum_user_stack_margin_bytes"], 0x1000)
+        self.assertEqual(iwram["static_growth_headroom_bytes"], 0x658)
+
+    @unittest.skipUnless(
+        REAL_CJK_MAP.exists() and REAL_CJK_ELF.exists(),
+        "CJK map/ELF artifacts not available",
+    )
+    def test_real_cjk_map_and_elf_preserve_stack_margin_and_locale_identity(self):
+        out = self.make_output_path("real-cjk")
+        r = run_budget(
+            "--map", str(REAL_CJK_MAP),
+            "--elf", str(REAL_CJK_ELF),
+            "--output", str(out),
+            "--validate-elf",
+            "--require-positive-headroom", "iwram",
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        report = json.loads(out.read_text())
+        iwram = next(reg for reg in report["regions"] if reg["name"] == "iwram")
+        self.assertEqual(iwram["physical_free_bytes"], 0x1358)
+        self.assertEqual(iwram["reserved_stack_bytes"], 0x200)
+        self.assertEqual(iwram["usable_static_headroom_bytes"], 0x1158)
+        self.assertEqual(iwram["minimum_user_stack_margin_bytes"], 0x1000)
+        self.assertEqual(iwram["static_growth_headroom_bytes"], 0x158)
+        self.assertEqual(
+            report["elf"]["cross_validation"]["section_mismatches"], []
+        )
+        locale = next(
+            section for section in report["sections"]
+            if section["name"] == ".locale_data"
+        )
+        elf_locale = next(
+            section for section in report["elf"]["sections"]
+            if section["name"] == ".locale_data"
+        )
+        self.assertEqual(locale["address"], elf_locale["address"])
+        self.assertEqual(locale["size_bytes"], elf_locale["size_bytes"])
 
 
 if __name__ == "__main__":
