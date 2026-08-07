@@ -19,7 +19,7 @@ Do not hand-edit the text between the two HTML comment markers below --
 
 - Add four independent, default-off starter-feature build flags (EXPANSION_MECHANICS_HOOKS, EXPANSION_MECHANICS_SAMPLE, EXPANSION_DANGER_OVERLAY_MENU, EXPANSION_STARTER_CONTENT), the public battle-stat mechanics hook registry, the player-facing danger/range overlay menu surface, and the bundled generated-data content example they gate; a default build links none of them and stays byte-identical (see docs/starter_features.md). (#6)
 - Add a typed ID space (include/id_space.h, generated from scripts/generated_data/idspace.py) with per-domain technical-max/configured-cap macros and compile-time range diagnostics, and raise the configurable item ID cap to 0xCE (the default build's cap is unchanged); no EXPANSION_SAVE_COMPAT_EPOCH change (see docs/id_space.md, reports/id_space_audit.md). (#10)
-- Add the expansion locale catalog/config/runtime resolver, EXPANSION_ENABLED_LOCALES/EXPANSION_DEFAULT_LOCALE/EXPANSION_PSEUDO_LOCALE config.mk fields, localization.mk's host-test/generation/budget targets, and the blocking first-start language selector plus settings submenu (see docs/localization.md). (#18)
+- Add production 32 MiB Japanese and Simplified Chinese support: verified full-game locale imports with FE8U mapping and explicit fallback catalogs, licensed deterministic CJK font assets and a multilingual Huffman codec, UTF-8 language UI with persisted first-start/Config switching, localization host/build/runtime gates, and captured CJK playtest scenarios (see docs/localization.md, docs/game_locale_sources.md, and docs/cjk_fonts.md). (#18)
 
 ### Changed
 

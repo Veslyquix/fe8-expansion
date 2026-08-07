@@ -15,6 +15,7 @@
 #include "savemenu.h"
 #include "cgtext.h"
 #include "helpbox.h"
+#include "text_utf8.h"
 #include "constants/songs.h"
 
 EWRAM_DATA u32 unuesed_Helpbox_0 = 0;
@@ -293,6 +294,10 @@ void DrawHelpBoxSaveMenuStats(void)
 void HelpBoxTextScroll_OnLoop(struct HelpBoxScrollProc * proc)
 {
     int i;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     proc->step--;
 
@@ -306,6 +311,26 @@ void HelpBoxTextScroll_OnLoop(struct HelpBoxScrollProc * proc)
 
     for (i = 0; i < proc->chars_per_step; i++) {
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(proc->string, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+        {
+            Proc_Break(proc);
+            goto _08089EE0;
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            proc->string = next;
+            if (token.control == CHFE_L_NL)
+                proc->pretext_lines++;
+            continue;
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            proc->string = next;
+            continue;
+        }
+#else
         switch (*proc->string) {
         case CHFE_L_X:
             Proc_Break(proc);
@@ -325,7 +350,11 @@ void HelpBoxTextScroll_OnLoop(struct HelpBoxScrollProc * proc)
             proc->string = Text_DrawCharacter(proc->texts[proc->pretext_lines], proc->string);
             continue;
         }
+#endif
 
+        proc->string =
+            Text_DrawCharacter(
+                proc->texts[proc->pretext_lines], proc->string);
     }
 
 _08089EE0:
@@ -340,6 +369,10 @@ struct ProcCmd CONST_DATA gProcScr_HelpBoxTextScroll[] = {
 //! FE8U = 0x08089EEC
 void HelpBoxDrawOneLineExt(struct HelpBoxScrollProc * proc) {
     int i;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     SetTextFont(proc->font);
 
@@ -351,6 +384,28 @@ _08089EF8:
         Text_SetCursor(th, GetStringTextCenteredPos(th->tile_width * 8, proc->string));
 
         while (1) {
+#ifdef FE8_TEXT_UTF8_ENABLED
+            next = TextUtf8_Next(proc->string, &token);
+            if (token.kind == TEXT_UTF8_TOKEN_END)
+                goto _08089F4C;
+            if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+            {
+                proc->string = next;
+                if (token.control == CHFE_L_NL)
+                {
+                    i++;
+                    if (i < 6)
+                        goto _08089EF8;
+                    goto _08089F4C;
+                }
+                continue;
+            }
+            if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+            {
+                proc->string = next;
+                continue;
+            }
+#else
             switch (*proc->string) {
             case CHFE_L_X:
                 goto _08089F4C;
@@ -375,6 +430,9 @@ _08089EF8:
                 proc->string = Text_DrawCharacter(th, proc->string);
                 continue;
             }
+#endif
+
+            proc->string = Text_DrawCharacter(th, proc->string);
         }
     }
 
@@ -1204,6 +1262,10 @@ void StartBoxDialogueExt(int x, int y, int msgId, u16* unkA, int unkB, ProcPtr p
 //! FE8U = 0x0808AADC
 void GetBoxDialogueSize(const char* str, int* wOut, int* hOut) {
     u32 charWidth;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     int w = 0;
     int h = 16;
@@ -1213,6 +1275,70 @@ void GetBoxDialogueSize(const char* str, int* wOut, int* hOut) {
 
     while (1) {
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END
+            || (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                && (token.control == CHFE_L_NormalPrint
+                    || token.control == CHFE_L_FastPrint
+                    || token.control == CHFE_L_CloseSpeechFast)))
+        {
+            if (*wOut < w)
+                *wOut = w;
+            if (*hOut < h)
+                *hOut = h;
+            return;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            switch (token.control)
+            {
+            case CHFE_L_NL:
+                h += 16;
+                if (*wOut < w)
+                    *wOut = w;
+                w = 0;
+                break;
+
+            case CHFE_L_Yes:
+            case CHFE_L_No:
+                w = 0;
+                break;
+
+            case CHFE_L_2NL:
+                if (*hOut < h)
+                    *hOut = h;
+                h = 0;
+                if (*wOut < w)
+                    *wOut = w;
+                w = 0;
+                break;
+
+            case CHFE_L_A:
+                if (*hOut < h)
+                    *hOut = h;
+                h = 0;
+                if (*wOut < w + 8)
+                    *wOut = w + 8;
+                w = 0;
+                break;
+            }
+
+            str = next;
+            continue;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            str = next;
+            continue;
+        }
+
+        GetCharTextLen(str, &charWidth);
+        w += charWidth;
+        str = next;
+#else
         switch (*str) {
             case 0x12: // [NormalPrint] // FE6 only?
             case 0x13: // [FastPrint] // FE6 only?
@@ -1313,15 +1439,18 @@ void GetBoxDialogueSize(const char* str, int* wOut, int* hOut) {
         }
 
         break;
+#endif
     }
-
-    return;
 }
 
 //! FE8U = 0x0808AB98
 void DialogBoxGetGlyphLen(const char* str, u8* xOut) {
     u32 charWidth;
     u8 a;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     int x = 0;
     const char* it = str;
@@ -1331,6 +1460,37 @@ void DialogBoxGetGlyphLen(const char* str, u8* xOut) {
     SetTextFontGlyphs(1);
 
     while (1) {
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(it, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END
+            || (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                && token.control == CHFE_L_A))
+        {
+            a = x + 2;
+            *xOut = a;
+            return;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            if (token.control == CHFE_L_NL
+                || token.control == CHFE_L_Yes
+                || token.control == CHFE_L_No)
+                x = 0;
+            it = next;
+            continue;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            it = next;
+            continue;
+        }
+
+        GetCharTextLen(it, &charWidth);
+        x += charWidth;
+        it = next;
+#else
         switch (*it) {
             case 0x02: // [NL2]
             case 0x04: // [....]
@@ -1371,6 +1531,7 @@ void DialogBoxGetGlyphLen(const char* str, u8* xOut) {
 
                 return;
         }
+#endif
     }
 }
 
@@ -1574,6 +1735,10 @@ void BoxDialogue_ClearTextLines(struct ProcBoxDialogueDrawTextExt* proc) {
 void BoxDialogueInterpreter_Main(struct ProcBoxDialogueDrawTextExt* proc) {
     int iVar5;
     int i;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     iVar5 = proc->unk_4e;
 
@@ -1595,9 +1760,45 @@ void BoxDialogueInterpreter_Main(struct ProcBoxDialogueDrawTextExt* proc) {
 
     for (i = 0; i < iVar5; i++) {
         struct HelpBoxProc * r3;
+#ifndef FE8_TEXT_UTF8_ENABLED
         const char* r1;
         int r0;
+#endif
         int a, b;
+
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(proc->str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            switch (token.payload)
+            {
+            case 0x21: // [ToggleRed]
+                proc->unk_59 = (proc->unk_59 + 1) & 1;
+                proc->str = next;
+                i--;
+                continue;
+
+            case 0x04: // [LoadOverworldFaces]
+                BoxDialogue_StopFaceMouthMove();
+                Proc_Goto(Proc_Find(gProcScr_BoxDialogue), 1);
+                Proc_Goto(proc, 1);
+                Proc_EndEach(ProcScr_TalkBoxIdle);
+                proc->str = next;
+                goto _0808B772;
+
+            case 0x25: // [ToggleColorInvert]
+                proc->str = next;
+                goto _0808B772;
+
+            default:
+                proc->str = next;
+                continue;
+            }
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_SCALAR
+            || token.kind == TEXT_UTF8_TOKEN_INVALID)
+            goto draw_character;
+#endif
 
         switch (*proc->str) {
             case 0x18: // [Yes]
@@ -1620,6 +1821,7 @@ void BoxDialogueInterpreter_Main(struct ProcBoxDialogueDrawTextExt* proc) {
                 proc->str++;
                 goto _0808B772;
 
+#ifndef FE8_TEXT_UTF8_ENABLED
             case 0x80:
                 r1 = proc->str + 1;
                 proc->str = r1;
@@ -1649,6 +1851,7 @@ void BoxDialogueInterpreter_Main(struct ProcBoxDialogueDrawTextExt* proc) {
                 }
 
                 // fallthrough
+#endif
 
             case 0x12: // [NormalPrint] fe6 only?
             case 0x13: // [FastPrint] fe6 only?
@@ -1800,6 +2003,9 @@ void BoxDialogueInterpreter_Main(struct ProcBoxDialogueDrawTextExt* proc) {
             continue;
         }
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+    draw_character:
+#endif
         if (GetDialogueBoxConfig() & 1) {
             Text_SetColor(proc->texts[proc->current_line], 1);
         } else {

@@ -508,6 +508,19 @@ class ValidateEnabledLocalesTests(unittest.TestCase):
     def test_list_input_accepted(self):
         self.assertEqual(ec.validate_enabled_locales(["en", "qps-ploc"]), ("en", "qps-ploc"))
 
+    def test_real_cjk_locales_are_configurable_and_stably_ordered(self):
+        expected = {
+            "en,ja": ("en", "ja"),
+            "en,zh-Hans": ("en", "zh-Hans"),
+            "zh-Hans,en,ja": ("en", "ja", "zh-Hans"),
+        }
+        for configured, normalized in expected.items():
+            with self.subTest(configured=configured):
+                self.assertEqual(
+                    ec.validate_enabled_locales(configured),
+                    normalized,
+                )
+
     def test_empty_rejected(self):
         with self.assertRaises(ec.ConfigError):
             ec.validate_enabled_locales("")
@@ -524,10 +537,8 @@ class ValidateEnabledLocalesTests(unittest.TestCase):
         with self.assertRaises(ec.ConfigError):
             ec.validate_enabled_locales("en,en")
 
-    def test_reserved_but_unsupported_locale_rejected(self):
-        """ja/zh-Hans/fr/de/es/it are stable, known locale ids -- but not
-        yet supported in sprint 1 -- and must still be rejected."""
-        for locale in ("ja", "zh-Hans", "fr", "de", "es", "it"):
+    def test_reserved_but_unconfigurable_locale_rejected(self):
+        for locale in ("fr", "de", "es", "it"):
             with self.assertRaises(ec.ConfigError):
                 ec.validate_enabled_locales(f"en,{locale}")
 
@@ -566,6 +577,32 @@ class ValidatePseudoLocaleTests(unittest.TestCase):
                 ec.validate_pseudo_locale(bogus, ("en",))
 
 
+class ValidateLocaleRomSizeTests(unittest.TestCase):
+    def test_english_and_pseudo_profiles_allow_16m(self):
+        ec.validate_locale_rom_size(("en",), 16 * 1024 * 1024)
+        ec.validate_locale_rom_size(("en", "qps-ploc"), 16 * 1024 * 1024)
+
+    def test_real_cjk_profiles_require_32m(self):
+        for locales in (
+            ("en", "ja"),
+            ("en", "zh-Hans"),
+            ("en", "ja", "zh-Hans"),
+        ):
+            with self.subTest(locales=locales):
+                with self.assertRaises(ec.ConfigError) as ctx:
+                    ec.validate_locale_rom_size(locales, 16 * 1024 * 1024)
+                self.assertIn("MODERN_ROM_SIZE=32M", str(ctx.exception))
+
+    def test_real_cjk_profiles_allow_32m(self):
+        for locales in (
+            ("en", "ja"),
+            ("en", "zh-Hans"),
+            ("en", "ja", "zh-Hans"),
+        ):
+            with self.subTest(locales=locales):
+                ec.validate_locale_rom_size(locales, 32 * 1024 * 1024)
+
+
 class ComputeLocaleMaskTests(unittest.TestCase):
     def test_en_only_mask_is_bit_zero(self):
         self.assertEqual(ec.compute_locale_mask(("en",)), 0x1)
@@ -573,6 +610,9 @@ class ComputeLocaleMaskTests(unittest.TestCase):
     def test_en_and_qps_mask_matches_bit_positions(self):
         # en=0, qps-ploc=7 -- see scripts/localization/schema.py LOCALE_IDS.
         self.assertEqual(ec.compute_locale_mask(("en", "qps-ploc")), 0x81)
+
+    def test_en_ja_zh_mask_matches_stable_bit_positions(self):
+        self.assertEqual(ec.compute_locale_mask(("en", "ja", "zh-Hans")), 0x7)
 
 
 class LoadIdentityLocaleTests(unittest.TestCase):
@@ -626,6 +666,56 @@ class LoadIdentityLocaleTests(unittest.TestCase):
                     config_mk_path=config_mk, config_preset="debug", abi="aapcs",
                     rom_size="16M", repo_root=Path(tmp),
                 )
+
+    def test_cjk_profiles_reject_16m_and_resolve_at_32m(self):
+        for configured in ("en,ja", "en,zh-Hans", "zh-Hans,en,ja"):
+            with self.subTest(configured=configured):
+                with tempfile.TemporaryDirectory() as tmp:
+                    config_mk = write_config_mk(
+                        Path(tmp), enabled_locales=configured
+                    )
+                    with self.assertRaises(ec.ConfigError) as ctx:
+                        ec.load_identity(
+                            config_mk_path=config_mk,
+                            config_preset="debug",
+                            abi="aapcs",
+                            rom_size="16M",
+                            repo_root=Path(tmp),
+                        )
+                    identity = ec.load_identity(
+                        config_mk_path=config_mk,
+                        config_preset="debug",
+                        abi="aapcs",
+                        rom_size="32M",
+                        repo_root=Path(tmp),
+                    )
+                self.assertIn("MODERN_ROM_SIZE=32M", str(ctx.exception))
+                expected = tuple(
+                    locale
+                    for locale in ("en", "ja", "zh-Hans")
+                    if locale in configured.split(",")
+                )
+                self.assertEqual(identity.enabled_locales, expected)
+
+    def test_cjk_default_locale_ja_and_zh_hans_resolve(self):
+        for default_locale, expected_id in (("ja", 1), ("zh-Hans", 2)):
+            with self.subTest(default_locale=default_locale):
+                with tempfile.TemporaryDirectory() as tmp:
+                    config_mk = write_config_mk(
+                        Path(tmp),
+                        enabled_locales="en,ja,zh-Hans",
+                        default_locale=default_locale,
+                    )
+                    identity = ec.load_identity(
+                        config_mk_path=config_mk,
+                        config_preset="release",
+                        abi="aapcs",
+                        rom_size="32M",
+                        repo_root=Path(tmp),
+                    )
+                self.assertEqual(identity.default_locale, default_locale)
+                self.assertEqual(identity.default_locale_id, expected_id)
+                self.assertEqual(identity.enabled_locale_mask, 0x7)
 
     def test_locale_config_changes_fingerprint(self):
         with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
@@ -863,6 +953,35 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("error:", result.stderr)
         self.assertEqual(result.stdout, "")
+
+    def test_resolve_cjk_profiles_require_32m_and_emit_real_tokens(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_mk = write_config_mk(Path(tmp))
+            rejected = self.run_cli(
+                "resolve",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "16M",
+                "--repo-root", tmp,
+                "--enabled-locales", "en,ja",
+            )
+            accepted = self.run_cli(
+                "resolve",
+                "--config-mk", str(config_mk),
+                "--config", "debug",
+                "--abi", "aapcs",
+                "--rom-size", "32M",
+                "--repo-root", tmp,
+                "--enabled-locales", "zh-Hans,en,ja",
+                "--default-locale", "zh-Hans",
+            )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("MODERN_ROM_SIZE=32M", rejected.stderr)
+        self.assertEqual(rejected.stdout, "")
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertIn("MODERN_EXPANSION_ENABLED_LOCALE_MASK=7", accepted.stdout)
+        self.assertIn("MODERN_EXPANSION_DEFAULT_LOCALE_ID=2", accepted.stdout)
 
     def test_generate_writes_metadata_files(self):
         with tempfile.TemporaryDirectory() as tmp:

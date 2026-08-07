@@ -258,16 +258,15 @@ EWRAM_DATA struct ExpansionLanguageMenuProbe gExpansionLanguageMenuProbe = {0};
 /* Parallel-indexed to ExpansionLocaleId (include/expansion_locale.h):
  * which catalog message (if any) names that locale, always resolved
  * against EXPANSION_LOCALE_EN specifically -- these are self-referential
- * proper nouns ("English", "Pseudo (Test)"), never translated content.
- * Every reserved (not-yet-populated) locale slot maps to
- * EXPANSION_MSG_ID_INVALID; sprint 1 only ships real catalog content
- * for EN/QPS_PLOC (see include/expansion_locale.h), matching what
- * FE8_EXPANSION_ENABLED_LOCALE_MASK can ever actually enable today. */
+ * proper nouns/identifiers, never translated display content. Japanese
+ * and Simplified Chinese deliberately use bootstrap-safe English names
+ * and ASCII codes here until a common selector CJK font exists. Other
+ * unpopulated locale slots remain EXPANSION_MSG_ID_INVALID. */
 static const ExpansionMsgId sLocaleNameMsgIds[EXPANSION_LOCALE_COUNT] =
 {
     EXP_MSG_FRAMEWORK_LOCALE_NAME_EN,       /* EXPANSION_LOCALE_EN */
-    EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_JA (reserved) */
-    EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_ZH_HANS (reserved) */
+    EXP_MSG_FRAMEWORK_LOCALE_NAME_JA,       /* EXPANSION_LOCALE_JA */
+    EXP_MSG_FRAMEWORK_LOCALE_NAME_ZH_HANS,  /* EXPANSION_LOCALE_ZH_HANS */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_FR (reserved) */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_DE (reserved) */
     EXPANSION_MSG_ID_INVALID,               /* EXPANSION_LOCALE_ES (reserved) */
@@ -278,8 +277,8 @@ static const ExpansionMsgId sLocaleNameMsgIds[EXPANSION_LOCALE_COUNT] =
 static const ExpansionMsgId sLocaleShortNameMsgIds[EXPANSION_LOCALE_COUNT] =
 {
     EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_EN,       /* EXPANSION_LOCALE_EN */
-    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_JA (reserved) */
-    EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_ZH_HANS (reserved) */
+    EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_JA,       /* EXPANSION_LOCALE_JA */
+    EXP_MSG_FRAMEWORK_LOCALE_SHORT_NAME_ZH_HANS,  /* EXPANSION_LOCALE_ZH_HANS */
     EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_FR (reserved) */
     EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_DE (reserved) */
     EXPANSION_MSG_ID_INVALID,                     /* EXPANSION_LOCALE_ES (reserved) */
@@ -329,12 +328,9 @@ static ExpansionLocaleId ExpansionLanguageMenu_FindSoleEnabledLocale(void)
 
 /* Shared onDraw for every locale-name/Back row in both the first-start
  * selector and the settings submenu: resolves the row's own label via
- * ExpansionLocale_Resolve/ExpansionLocale_ResolveCurrent and draws it
- * with Text_DrawStringASCII -- never GetStringFromIndex/vanilla MSG_*,
- * and never Text_DrawString (which only ever decodes via the vanilla
- * Huffman/GetStringFromIndex pipeline for a non-zero nameMsgId, or
- * item->def->name otherwise -- neither of which is what this row's
- * helpMsgId-keyed catalog lookup needs). */
+ * ExpansionLocale_Resolve/ExpansionLocale_ResolveCurrent and draws the
+ * already-resolved UTF-8 bytes directly through Text_DrawString -- never
+ * GetStringFromIndex/vanilla MSG_* or an ASCII-only renderer. */
 static int ExpansionLanguageMenu_RowDraw(struct MenuProc *menu, struct MenuItemProc *item)
 {
     u16 rowKey = item->def->helpMsgId;
@@ -351,7 +347,7 @@ static int ExpansionLanguageMenu_RowDraw(struct MenuProc *menu, struct MenuItemP
     else
         label = ExpansionLocale_Resolve(EXPANSION_LOCALE_EN, sLocaleNameMsgIds[(ExpansionLocaleId)rowKey]);
 
-    Text_DrawStringASCII(&item->text, label);
+    Text_DrawString(&item->text, label);
 
     PutText(
         &item->text,

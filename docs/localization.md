@@ -1,9 +1,16 @@
 # In-game localization framework (issue #18)
 
-Status: the issue #18 implementation and its real libmGBA evidence are
-merged into the current source tree. This is an architecture/authoring/testing
-reference, not a GitHub issue-state or closure claim; historical sprint
-evidence remains in `reports/issue18_localization_closure.md`.
+Status: English/pseudo plus Japanese (`ja`) and Simplified Chinese
+(`zh-Hans`) are production-configurable. The default remains English-only
+and 16 MiB; any profile enabling either real CJK locale is an explicit
+32 MiB build. Expansion and full-game catalogs, CJK fonts, UTF-8 rendering,
+locale preference persistence, and cache switching share the same validated
+profile. Focused CJK gba-playtest scenarios and committed fingerprints cover
+first start, Japanese/Chinese choice, Config switching, and soft-reset
+persistence.
+This is an architecture/authoring/testing reference, not a GitHub issue-state
+or closure claim; historical English/pseudo sprint evidence remains in
+`reports/issue18_localization_closure.md`.
 
 ## Architecture
 
@@ -19,20 +26,32 @@ The framework is layered, each layer independently testable:
 2. **Source catalog + registry** (`texts/expansion/registry.json`,
    `texts/expansion/catalog.<locale>.json`, `scripts/localization/catalog.py`):
    the source of truth for which message IDs exist and their per-locale
-   text. `scripts/localization/generate.py` compiles this into
+   UTF-8 text. The authored mapping currently contains `en`, `ja`, and
+   `zh-Hans`; `qps-ploc` is derived from English. Validation rejects invalid
+   Unicode scalars, control/format/private-use text, whitespace controls
+   other than `\n`, malformed placeholders, placeholder/newline drift,
+   surface-width overflow, and UTF-8 decoded-byte overflow.
+   `scripts/localization/generate.py` compiles this into
    `expansion_locale_catalog.c` (ROM data) and `expansion_msg_ids.h`
-   (generated header), write-if-unchanged, and reports a source-catalog
-   budget (string bytes, index bytes, decoded-max scratch, glyph/codepoint
-   usage).
+   (generated header), write-if-unchanged. Its descriptor table is indexed
+   by stable `ExpansionLocaleId`: populated locales point to their tables and
+   unpopulated slots are explicit null descriptors. The budget reports actual
+   authored/generated locales, populated descriptor count, missing entries,
+   UTF-8 string bytes, pointer/descriptor bytes, decoded-max scratch, and
+   Unicode scalar/glyph usage.
 3. **Runtime resolver** (`src/expansion_locale.c`,
    `include/expansion_locale.h`): `ExpansionLocale_GetCurrent()` /
    `_SetCurrent()` / `_Resolve()` / `_InvalidateCache()`. Holds the
    current locale, a decoded-string cache (locale+msg-id keyed,
    invalidated on any locale change), and a small decode scratch buffer --
    all in `EWRAM_DATA` (see "The EWRAM-placement bug" below for why this
-   matters). Never reads/writes vanilla `GetLang()`/`SetLang()`/
+   matters). Resolution uses the generated descriptor indexed by stable
+   locale ID, then performs at most one English lookup when the descriptor
+   or requested entry is absent. Never reads/writes vanilla `GetLang()`/`SetLang()`/
    `gLanguageMode`/`gMsgTable`; entirely independent of the vanilla
-   multi-language ROM mechanism.
+   multi-language ROM mechanism. `ExpansionLocale_InvalidateCache()` also
+   invalidates the full-game localized message cache in CJK profiles, so
+   expansion UI and `GetStringFromIndex()` cannot disagree after a switch.
 4. **User preferences** (`include/expansion_save_prefs.h`,
    versioned/checksummed `ExpansionUserPrefs`, Sprint 2): a small SRAM
    record (locale choice + validity state) with its own version/checksum,
@@ -64,25 +83,109 @@ The framework is layered, each layer independently testable:
    this kind of diagnostic read -- a plain, bounded, fixed-layout struct,
    never a raw/arbitrary pointer oracle.
 
-   Current validated profiles enable at most `en,qps-ploc`, so the 4+
-   `More` threshold is host-executed through
-   `ExpansionLanguageMenu_DecideSettingsAction()`; the 1- and 2-locale
-   product paths are additionally captured in real release/debug ROMs.
+   Host-native tests resolve exact Japanese/Chinese expansion strings,
+   sparse-entry English fallback, invalid/unpopulated slots, and both
+   expansion/full-game cache invalidation. Production CJK profiles use the
+   upper bank at 32 MiB. Captured CJK scenarios cover first start,
+   Japanese/Chinese choice, Config switching, and soft-reset persistence.
+
+6. **Runtime text-stream consumers** (`include/text_utf8.h`,
+   `src/text_utf8.c`, `src/msg.c`, `src/scene.c`, `src/cgtext.c`,
+   `src/helpbox.c`): modern CJK builds decode FE controls and UTF-8 scalars
+   through one token iterator. Low controls, `[LoadFace]` plus its FID,
+   extended `0x80` controls, color arguments, U+3000/legacy spacing, valid
+   scalars, and invalid/truncated input have explicit token boundaries.
+   Dialogue, CG/name-box, and help-box interpreters never inspect UTF-8
+   continuation bytes as controls. Message substitutions use a private,
+   CJK-only `msg.c` workspace with a `0x400`-byte derived-output region and
+   a disjoint `0x100`-byte insertion region; the production catalog test
+   conservatively bounds every current substitution stream at 273 bytes.
+   The active localized-message cache remains separate, and CG name-box
+   copies use a caller-owned `0x100`-byte stack buffer. Neither path borrows
+   `gBufPrep`, which is live support-screen/preparation overlay state.
+   English-only and archival builds emit none of this CJK workspace. The
+   historical two-argument `GetStringFromIndexInBuffer()` ABI remains for
+   legacy builds; an unknown-size call in a modern CJK build returns
+   `<!LOC_CAP!>` with `LEGACY_BUFFER_UNBOUNDED` instead of writing
+   unboundedly. Production callers use
+   `GetStringFromIndexInBufferWithLimit()`.
+
+7. **Tactician name entry** (`src/sio_tactician.c`, `src/bmio.c`): the
+   persistent `PlaySt.playerName` field remains 11 bytes, so every modern
+   entry and setter path accepts at most 10 encoded bytes plus one NUL.
+   Oversize input is rejected atomically; UTF-8 is never truncated inside a
+   scalar. English, qps-ploc, and the archival grid retain their original
+   five-character story / nine-character Link Arena behavior.
+
+   Japanese page 1 is the supported hiragana gojuon, voiced/semi-voiced
+   kana, and practical small kana; page 2 is the supported katakana
+   counterpart plus the long-vowel mark.
+   Every scalar occurs in the committed normalized FE8J source
+   `texts/locales/ja/indexed.txt` and `fonts/cjk/maps/ja.txt`. Simplified
+   Chinese pages are deterministic: ignore `#` metadata lines in
+   `texts/locales/zh-Hans/indexed.txt`, count U+4E00--U+9FFF occurrences,
+   sort by descending frequency then ascending scalar value, and take the
+   first 150 scalars as two row-major 75-cell pages. Page 3 uses the existing
+   ASCII grid. Locale pages use a 12-pixel cell pitch; selected glyph widths
+   are validated against the committed production font codepoint/width data.
 
 ## Config
 
 Set at `modern.mk`/`make` invocation time (see
 `scripts/modernize/expansion_config.py` for validation):
 
-- `EXPANSION_ENABLED_LOCALES` -- comma-separated subset of the stable
-  locale-ID list (default: `en`). Sprint 1-4 only ship real content for
-  `en`, plus the derived pseudo locale.
+- `EXPANSION_ENABLED_LOCALES` -- comma-separated subset of the production
+  allowlist `en`, `ja`, `zh-Hans`, and `qps-ploc` (default: `en`), always
+  including `en` for fallback. Input order is normalized to stable locale-ID
+  order.
 - `EXPANSION_DEFAULT_LOCALE` -- must be a member of
   `EXPANSION_ENABLED_LOCALES` (default: `en`).
 - `EXPANSION_PSEUDO_LOCALE` -- `1` enables `qps-ploc`, and requires
   `qps-ploc` to actually be present in `EXPANSION_ENABLED_LOCALES` (the two
   can never silently disagree -- `validate_pseudo_locale` rejects that
   combination outright).
+- `MODERN_ROM_SIZE` -- remains `16M` by default. Enabling `ja` or `zh-Hans`
+  requires exactly `32M`; English-only and English+pseudo remain valid at
+  either size.
+
+Profile examples:
+
+```bash
+# Supported default: unchanged English-only 16 MiB ROM.
+make expansion-modern-rom
+
+# Existing pseudo-locale test profile, still 16 MiB.
+make expansion-modern-rom \
+  EXPANSION_ENABLED_LOCALES=en,qps-ploc \
+  EXPANSION_PSEUDO_LOCALE=1
+
+# Named 32 MiB production profiles (MODERN_CONFIG=debug or release).
+make expansion-modern-localization-profile-en-ja
+make expansion-modern-localization-profile-en-zh-hans
+make expansion-modern-localization-profile-en-ja-zh-hans
+
+# Optional four-locale profile; Config shows EN, JA, More.
+make expansion-modern-localization-profile-en-ja-zh-hans-qps
+```
+
+Equivalent direct builds may set `EXPANSION_ENABLED_LOCALES`,
+`EXPANSION_DEFAULT_LOCALE`, and `MODERN_ROM_SIZE=32M` explicitly. A CJK
+profile with `MODERN_ROM_SIZE=16M` fails before compilation. The named targets
+use private build roots so their generated catalogs, fonts, metadata, and
+objects cannot cross-contaminate one another.
+
+`make expansion-modern-localization-profile-headroom-check
+MODERN_CONFIG={debug,release}` builds those four roots serially, validates each
+real map against its ELF by output-section name, VMA, and size (including
+populated `.locale_data`), and requires positive EWRAM headroom plus the
+linker's IWRAM user-stack margin. The CJK runtime gate runs this matrix before
+its trilingual libmGBA scenarios. The 0x1600 decoded-message cache remains in
+EWRAM; the separate 0x500 private transformation workspace is transient and
+linked after the fixed IWRAM layout. `crt0` initializes the downward-growing
+system/user stack at `__sp_usr`; the historical fixed layout left 0x1658 bytes
+below it and the CJK workspace leaves 0x1158, so the linker and budget gate
+preserve a 0x1000 minimum while retaining 0x158 bytes of static-growth
+headroom. No generated maximum or transform capacity is reduced.
 
 These are baked into the ROM's embedded `ExpansionMetadata` (build-commit,
 enabled-locale mask, default-locale id, pseudo-locale flag) so a given ROM's
@@ -124,34 +227,72 @@ ASCII test markers), generated at build time from `catalog.en.json` --
 **never a translation, never hand-authored foreign text, and never
 represents any real language**. Every user-facing surface that can display
 it (the selector list and the More submenu) labels it `"Pseudo (Test)"`;
-the compact Config-row label is the cataloged code `QPS`. Locale names/codes
-are resolved against `EXPANSION_LOCALE_EN` (proper nouns/identifiers), never
-through themselves. This repository has authored **no**
-foreign-language content anywhere in this framework; every non-English
-stable locale ID beyond `en`/`qps-ploc` is a reserved, unpopulated slot for
-future sprints.
+the compact Config-row label is the cataloged code `QPS`. Locale proper
+names/codes remain resolved against `EXPANSION_LOCALE_EN`
+(`Japanese`/`Simplified Chinese`, `JA`/`ZH`) so every first-start row is
+readable before a locale is chosen. Most Japanese/Chinese expansion-catalog
+text is original expansion-framework UI/debug text.
+The two `raw_surface.unit_action.*` keys are the deliberate exception: they are
+semantic modern adapters for two regional game commands that share one FE8U
+message ID. Their Japanese/Chinese strings retain authorized raw-source
+provenance documented in `docs/game_locale_sources.md`; the raw address/import
+ID never becomes the runtime key.
+All current-locale labels/help/back/debug
+strings, including Japanese and Chinese text, render through UTF-8-aware
+`Text_DrawString`; no expansion-resolved framework surface uses
+`Text_DrawStringASCII`. `ja`/`zh-Hans` are production-configurable for explicit
+32 MiB builds as described above; `fr`/`de`/`es`/`it` remain unpopulated null
+descriptor slots.
 
 ## Authoring
 
-1. Add/edit entries in `texts/expansion/registry.json` (id name, never
-   renumbering or reusing a retired id) and `texts/expansion/catalog.en.
-   json` (the English text).
+1. Add/edit entries in `texts/expansion/registry.json` (append-only IDs,
+   never renumbering or reusing a retired id) and each authored
+   `texts/expansion/catalog.<locale>.json`. English is the required fallback.
+   The committed `ja`/`zh-Hans` catalogs intentionally cover every active
+   key, although the generic resolver also handles a missing non-English
+   entry with one deterministic English fallback.
+   Raw-only game surfaces must use a semantic `raw_surface.*` key, not a ROM
+   address or `fe8cn.raw.import-*` identifier, and must be recorded in the raw
+   closure ledger.
 2. `make localization-generate` (or let any modern build target
    depend on it) regenerates `expansion_locale_catalog.c`/
    `expansion_msg_ids.h`/the localization budget JSON, write-if-unchanged.
 3. `python3 -m unittest discover -s scripts/localization/tests -p
    'test_*.py' -v` (or `make localization-test`) re-validates schema,
-   catalog parsing, pseudo transform, generated output, host-native resolver
-   behavior, and vanilla-isolation audits.
-4. To enable another real (non-English) locale in the future: populate its
-   `catalog.<locale>.json`, add it to `EXPANSION_ENABLED_LOCALES`, and
-   extend the runtime/host test matrix analogous to `en`/`qps-ploc` --
-   never hand-copy or paraphrase copyrighted third-party translation text
-   into this repository (see issue #18's own non-goals; also see
-   `CONTRIBUTING.md`/#6/#10's manual-copy prohibition, which this sprint
-   does not touch).
+   strict UTF-8/control, surface-width and UTF-8 byte budgets, placeholder/
+   newline parity, pseudo transform, descriptor generation, host-native
+   exact/fallback/cache behavior, and vanilla-isolation audits.
+4. CJK builds must use `MODERN_ROM_SIZE=32M`; English/qps-only builds may
+   remain 16 MiB. Other real locale IDs must first gain populated catalogs,
+   fonts, game-text providers, and configuration validation. Never hand-copy
+   or paraphrase copyrighted
+   third-party translation text into this repository (see issue #18's own
+   non-goals; also see `CONTRIBUTING.md`/#6/#10's manual-copy prohibition,
+   which this sprint does not touch).
 
 ## Testing -- real libmGBA runtime evidence (Sprint 4)
+
+The byte-consumer closure adds three focused host gates:
+
+```sh
+python3 scripts/texttools/tests/test_text_renderer_native.py
+python3 scripts/texttools/tests/test_text_consumers_native.py
+python3 scripts/texttools/tests/test_text_consumer_audit.py
+```
+
+They execute the real `msg.c` bounded substitutions and the real
+scene/CG/help measurement/name-copy functions on the host, including a UTF-8
+continuation byte equal to `0x80`, `[Tact]`/`[Item]`/FID/`[SetName]`,
+U+3000, pauses/newlines, exact-capacity output, guard bytes, malformed and
+truncated tokens, English/qps behavior, and the no-unknown-size-caller audit.
+The production CJK debug scenarios remain
+`expansion-modern-localization-runtime-cjk-check`; they prove the linked
+32 MiB ROM boots and switches/persists Japanese and Chinese. No committed
+scenario currently navigates far enough into a chapter to reach a dialogue,
+help box, and CG name box in one deterministic replay, so those three
+consumer paths are covered by host-native execution plus debug/release ARM
+compile/link rather than a new synthetic fingerprint.
 
 Sprint 4 adds `tools/gba-playtest` scenario/fingerprint pairs that boot the
 **actual compiled ROM** under libmGBA and assert real, reached runtime
@@ -178,11 +319,20 @@ fingerprints in the matching `tools/gba-playtest/fingerprints/` file):
 | `locale-settings-inline-single-modern-release` | Real release navigation to the single-locale Language row; Right is a no-op and never opens a redundant submenu (`settingsActive`/`settingsOpenCount` stay zero). |
 | `locale-settings-real-navigation-multi-modern-debug` | Real Prep Map -> Options -> Configuration navigation in the two-locale build. RIGHT/LEFT/RIGHT selects `QPS`/`EN`/`QPS` inline, persists every change, and proves `settingsActive`/`settingsOpenCount` stay zero. |
 | `locale-softreset-persistence-multi-modern-debug` | Real first-run selector chooses `qps-ploc`, then a genuine A+B+SELECT+START soft-reset key combo (held ~20-24 frames through libmGBA's own HLE BIOS -- a real hardware reboot, not a fixture swap) reboots the ROM; continuous, never-swapped SRAM: selector is skipped post-reset (`promptShown`/`active` stay 0) and `currentLocale` is `qps-ploc` again without re-selection. |
+| `locale-cjk-first-start-{ja,zh-hans}-modern-debug` | Captured three-locale `en,ja,zh-Hans` first-start selector evidence with bounded probes for choosing locale id 1 or 2. |
+| `locale-cjk-settings-inline-modern-debug` | Captured real Config navigation for inline EN -> JA -> ZH switching; `settingsOpenCount` stays zero because three locales fit inline. |
+| `locale-cjk-softreset-persistence-modern-debug` | Captured Simplified Chinese first-start choice plus real soft-reset persistence. |
 
 Every save/load and suspend/resume regression coverage for locale prefs
 reuses the existing, unmodified `expansion-modern-saveload-check`/
 `expansion-modern-savefmt-check` gates (see the `-runtime-save-check`
 Make target below) rather than duplicating that harness.
+
+Run the captured production CJK matrix with:
+
+```bash
+make expansion-modern-localization-runtime-cjk-check MODERN_CONFIG=debug
+```
 
 ### The "no-wipe" SRAM-hash exclusions
 
@@ -393,7 +543,8 @@ sub-`$(MAKE)` invocations; always verify the full gate sequentially).
   `gExpansionLanguageMenuProbe` and the resolver's EWRAM cache/scratch
   symbols.
 - `source_catalog_budget`: the source-side string/index/decoded-max/
-  glyph-usage numbers from `scripts/localization/generate.py`.
+  populated-descriptor, UTF-8 byte, Unicode-scalar, and glyph-usage numbers
+  from `scripts/localization/generate.py`.
 - `regions_headroom`: per-region (`rom`/`ewram`/`iwram`) `capacity_bytes`/
   `occupied_bytes`/`free_bytes`/`overflow`, computed from the **real**
   linker `.map` for this exact build -- including the floating `.data`/
@@ -402,3 +553,13 @@ sub-`$(MAKE)` invocations; always verify the full gate sequentially).
   itself; there is no fixed byte threshold anywhere in this tool (in
   particular, no hardcoded "2820"/"3508" pass criterion from earlier
   research notes -- those numbers were never load-bearing here).
+- `locale_bank` (when the current linker map exposes `.locale_data` and/or
+  `__locale_bank_start`/`__locale_bank_end`): actual upper-bank start/end,
+  occupancy, and headroom to `0x0A000000`. Older reports/maps without those
+  symbols remain readable and simply omit this optional field.
+
+The generic map/ELF comparison treats only non-empty mapped sections as
+allocatable expectations. GNU ld emits an empty 16 MiB `.locale_data` output
+placeholder without `SHF_ALLOC`, while every populated CJK bank is non-empty
+and allocatable; therefore empty default builds compare cleanly and a genuine
+populated-bank omission still fails.

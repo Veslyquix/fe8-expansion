@@ -2496,6 +2496,210 @@
     "sha256": "e5ebc56c47cc1882780ced57ecc14b40d79cba10b02f2b2fda5390d2e1c4868b"
   },
   {
+    "path": "fonts/cjk/THIRD_PARTY_NOTICES.md",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "56245913857fbfc2c7e3c4b5d97ff7579a73abe4",
+    "sha256": "fa186b79950379a500cc45aea5f5d33589ab8aa0354188222eff03a682b27943"
+  },
+  {
+    "path": "fonts/cjk/corpora/ja.system.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "7d635877745451e8fdb1889a67f7e20dc202d367",
+    "sha256": "a561527f82574fb5243226b29d6001347cbfd95a49b31ffbb1b1f10d528c2bc0"
+  },
+  {
+    "path": "fonts/cjk/corpora/ja.talk.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "7d635877745451e8fdb1889a67f7e20dc202d367",
+    "sha256": "a561527f82574fb5243226b29d6001347cbfd95a49b31ffbb1b1f10d528c2bc0"
+  },
+  {
+    "path": "fonts/cjk/corpora/union.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "27c11de06c42b3ecd1f36ba752d47e2834b88b97",
+    "sha256": "551d8bf75cdedaf0240a104a256d2d7783a1e704b0325554aa85ff91a6ef023c"
+  },
+  {
+    "path": "fonts/cjk/corpora/zh-Hans.system.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "dd5148c4aa6d0922ad75b386586986aa435e417a",
+    "sha256": "79ece233ea7d2d0e66ca867c30d9fe503ab1ad4ab729ea66fbbf5ee599c78afe"
+  },
+  {
+    "path": "fonts/cjk/corpora/zh-Hans.talk.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "dd5148c4aa6d0922ad75b386586986aa435e417a",
+    "sha256": "79ece233ea7d2d0e66ca867c30d9fe503ab1ad4ab729ea66fbbf5ee599c78afe"
+  },
+  {
+    "path": "fonts/cjk/febuilder-manifest.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "66fa2ef69598e515b4505ad19817dcf7f875563b",
+    "sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe"
+  },
+  {
+    "path": "fonts/cjk/font-sources.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "790e5a57d653e1d312515f43063795904394dcf9",
+    "sha256": "56e52f5ae437b4de11a2a83f770d7fa06cd37a3eac15770f3465a8ed3aba8437"
+  },
+  {
+    "path": "fonts/cjk/inventory.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "4248f865d4bc7b5bbfd9ed478e059cade0fb81d1",
+    "sha256": "f1f1eb15cf073415355554df7f697e078fe0e8b449aa7988fdfe3c3984832cad"
+  },
+  {
+    "path": "fonts/cjk/licenses/Noto-CJK-OFL-1.1.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "d952d62c065f3f35fb83a173496e90b21525aef3",
+    "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+  },
+  {
+    "path": "fonts/cjk/maps/ja.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "a3737ad3eaff458ce23d0d2db5154f3b30cb86ff",
+    "sha256": "42c78ec4293acce54a30283c1a6e5506ef51a65b1b4fb450048d10754704c4ed"
+  },
+  {
+    "path": "fonts/cjk/maps/union.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "a3284edccec8fa5054ff302a5d6d5c960b5b9e4c",
+    "sha256": "437726972d419a9d67bfb4f358a30a862158fb87043227a18c8b1054e0387175"
+  },
+  {
+    "path": "fonts/cjk/maps/zh-Hans.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "74f4bd014e754c7f5d7945fa9959f0e3f47fa0b7",
+    "sha256": "c16383a81f7e37860874f85634011d7a8820432713e3e9bac142687d714e2a05"
+  },
+  {
+    "path": "fonts/cjk/reports/febuilder-gates.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "7bd6588f54e20215d6727c76134f513260ef2c1a",
+    "sha256": "f919ba04a80c57ef602a39854234ee20d592e3a3eca484621ea1170589639042"
+  },
+  {
+    "path": "fonts/cjk/reports/febuilder-generation-report.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "1c0d2758445b17a732670963b2935607a946af5d",
+    "sha256": "95a55f9100e03c30f54d67f3a1e702e99352e619589d444f5ce61150b2904f03"
+  },
+  {
+    "path": "fonts/cjk/upstream/NotoSansJP-Regular.otf",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "4af556abb9cc42e585aab777b01857246a110746",
+    "sha256": "dff723ba59d57d136764a04b9b2d03205544f7cd785a711442d6d2d085ac5073"
+  },
+  {
+    "path": "fonts/cjk/upstream/NotoSansSC-Regular.otf",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 CJK font asset/provenance surface under fonts/cjk: unmodified Noto CJK OTF inputs, the vendored OFL-1.1 text, deterministic corpora/maps/manifests/reports, and third-party notices. Exact upstream commit, source URLs, licenses, and hashes are recorded in this tree; no human release/legal approval is inferred from those factual records.",
+    "oid": "fc0fda9394367c16c1af7555a2ae4d5e2e6a6f02",
+    "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9"
+  },
+  {
     "path": "graphics/banim/assets/img/005DE984_Img_EfxHurtmutEff00OBJ1.png",
     "category": "asset",
     "author": "NOASSERTION",
@@ -38736,6 +38940,162 @@
     "sha256": "f57e899830e52d57bede283b19c4a8e9b3d4126f5ebbcabcd64a5792a61a7cf8"
   },
   {
+    "path": "graphics/fonts/cjk/ja.system.codepoints.u32le",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "8c96545efaef868d79f146ab4c2cd0f95b7fd84b",
+    "sha256": "231dc726d09322323b7898a396acba93d894dccc63baba969d3f5001f8433169"
+  },
+  {
+    "path": "graphics/fonts/cjk/ja.system.glyphs.2bpp",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "ecd4f28df3af6252d13d936a3125b65ee46aef0f",
+    "sha256": "04c391dad1c7526cc84c84f423ed4f7524ef54e12cc3e1c1b7cc6341e430c6aa"
+  },
+  {
+    "path": "graphics/fonts/cjk/ja.system.widths.u8",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "9ae9c4b35db7f6bd51e1e6706fb4495396d543a8",
+    "sha256": "afc94433ef480762c4090a3bc7d91c845e4f6a176df9ed6fda0e7b6ed2a813ff"
+  },
+  {
+    "path": "graphics/fonts/cjk/ja.talk.codepoints.u32le",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "8c96545efaef868d79f146ab4c2cd0f95b7fd84b",
+    "sha256": "231dc726d09322323b7898a396acba93d894dccc63baba969d3f5001f8433169"
+  },
+  {
+    "path": "graphics/fonts/cjk/ja.talk.glyphs.2bpp",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "eea15b30debfa03a2ad9ef81ec6091e315aae23c",
+    "sha256": "0be51e87ce92daee6e6f27307c7b79a705fdf19a5002494e4047975fffe45d0c"
+  },
+  {
+    "path": "graphics/fonts/cjk/ja.talk.widths.u8",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "43235f142f1e5d5ef2246ad5901626394de40395",
+    "sha256": "3549fdf3599c8cc34e3a6bba094a1df7b7d227252c9b50d6c4bb5c1f9ba4de4b"
+  },
+  {
+    "path": "graphics/fonts/cjk/manifest.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "72776f67f5a15cb6ba518318fed7573b5a692d18",
+    "sha256": "b4fa6d3c5ee904d3694bc698a2d495e9dd29e6f35a54c7172f4a473f946615b8"
+  },
+  {
+    "path": "graphics/fonts/cjk/zh-Hans.system.codepoints.u32le",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "54d65ccb49d6b3b19ab76c5158bc54d9074218bf",
+    "sha256": "add7c909c8ddf248ba95e2a6490dd417cbf527e0e95ce3c2378524b906f88f8f"
+  },
+  {
+    "path": "graphics/fonts/cjk/zh-Hans.system.glyphs.2bpp",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "a1ca373d155ebb21353f47c9733794ba560ab437",
+    "sha256": "850da168b49882b96be9d4552245ff73d3f1b98742d33d94832b69826f941645"
+  },
+  {
+    "path": "graphics/fonts/cjk/zh-Hans.system.widths.u8",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "902e3bedac62eeb1dc3c5218001ebf7b9a60d616",
+    "sha256": "ad34d24b5d40247e4c09460cd3761e5f083067f14dcf5178734ef6185556bac3"
+  },
+  {
+    "path": "graphics/fonts/cjk/zh-Hans.talk.codepoints.u32le",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "54d65ccb49d6b3b19ab76c5158bc54d9074218bf",
+    "sha256": "add7c909c8ddf248ba95e2a6490dd417cbf527e0e95ce3c2378524b906f88f8f"
+  },
+  {
+    "path": "graphics/fonts/cjk/zh-Hans.talk.glyphs.2bpp",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "412cb853b0e87bfcc5865afc775db5d5f6c2dabf",
+    "sha256": "f653cd5e1bba591d098ba26a789b1978797931d79e17b16f839aeed86036064c"
+  },
+  {
+    "path": "graphics/fonts/cjk/zh-Hans.talk.widths.u8",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
+    "oid": "f848468b3a6d9cb405d0c1315d97d517b2827598",
+    "sha256": "2256a73af0554a4af9444f2e28bade455b4209385088ddfedea12dd429e8cf5a"
+  },
+  {
     "path": "graphics/generic_icon/0.pal",
     "category": "asset",
     "author": "NOASSERTION",
@@ -45644,8 +46004,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "088162b75a8e2129e703f2b3a5730fbed9b673ec",
-    "sha256": "be78513e44dcb68d08a65b42bdfb63776f93d4fcd12f9793b34074fb6f7a3baf"
+    "oid": "7ec2d80e0f8f840f86d340486328928e7fa034a9",
+    "sha256": "c7efb58b57bb624205cf9e7fa92a3bc9972f351561b7aa64dd5dd9bd4ef69584"
   },
   {
     "path": "graphics/misc/Img_ConfigUiSprites.png",
@@ -75932,8 +76292,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "73ccac18e3a3faa11b9f5c970d6cc7f0f79c628d",
-    "sha256": "56f724599eacf1afde9d41dcbb423c7623bffa3d48b51083d6a4f7ab7f8f93f7"
+    "oid": "64c8d5513b1cda430a3a6071ab32a242d45f7bb5",
+    "sha256": "d98039ce66502091d53bc58a640ea22ee90078b4464a82f7d581eb5d1f714fe6"
   },
   {
     "path": "reports/id_space_audit.md",
@@ -75944,8 +76304,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "a01a07d2c65f0a03a4a5987252d424d7339e18df",
-    "sha256": "b0a86abca12701099b870df27f282be8ca14238ddc7740aa17cc798e5e841adc"
+    "oid": "3850ab1b18a0942cb0cfaabb205e00b71a727b78",
+    "sha256": "cd9ccc17f8498f68c79be25ad094a38c0a4ebcc50bac5f7cc7a8e511f504c1fd"
   },
   {
     "path": "reports/issue10_closure.md",
@@ -75992,8 +76352,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "29fd108c5514b2e96e87fc66d05d16984ecab662",
-    "sha256": "a198fdb35fa0e8fabd87a16e3c82b92cdafd5ef805a9810b757f2ee6d285c2e8"
+    "oid": "557db6c143f0d6542f737e974abcb3668275b43a",
+    "sha256": "7b3c42b47eb75bd16d522ad84be5da5765bc153c80c84bca248b1052c384826d"
   },
   {
     "path": "reports/issue6_closure.md",
@@ -76052,8 +76412,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "26739f3dfe4a95515a14956940197172a6687186",
-    "sha256": "24f780bdfdab2ae9933bd6e43e0b93b1b0c1aa19f6b840a3cafa8b0b910d4111"
+    "oid": "d87c82c5b18002dbaf5311def9495bedb5513112",
+    "sha256": "b714da9418aba33e4b3444b848c5b26b658822089e1bc7907adc528474b37267"
   },
   {
     "path": "reports/linker-budget/modern-localization-debug.json",
@@ -76064,8 +76424,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "57179e04af9e62317c55893e50f7dfe3744c38ad",
-    "sha256": "77ef291f4a2bb992ec974394bfac6898c3da1cdb2214ba5d385991c063b8ba70"
+    "oid": "f81a028e1d2a635ddaab04813156a92ba0246d83",
+    "sha256": "b74d0762f32ca6b7da89f25a3ccbd43bd68ad94e4e931ba131572ede5804c4f4"
   },
   {
     "path": "reports/linker-budget/modern-localization-release.json",
@@ -76076,8 +76436,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "d4128e6eed56153c43a2fdf572646ffed534d455",
-    "sha256": "61fc0bf46a15c90bc0fc9cc9d1bfadef55892678c24d4bcf6b78d42676258a34"
+    "oid": "c9049376d5c8752d5fc286960605851d4a6f8b9e",
+    "sha256": "35cfdfe8799cc5e4572b15f3cec8a15ca7d5e8276cecce978a83e36082b960d9"
   },
   {
     "path": "reports/linker-budget/modern-release.json",
@@ -76088,8 +76448,8 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Wave 0/issue #9 seed: extracted/derived original-game asset or generated-report content (graphics/sound/text/animation data, or GitHub Pages report output). Original Fire Emblem: The Sacred Stones copyright/trademark ownership is Nintendo/Intelligent Systems and is NOT asserted or cleared by this repository. No human legal/provenance review has been recorded yet.",
-    "oid": "23359057c5bb977c2559bbe0a1e3036e30f26825",
-    "sha256": "5b7ee719d559053caf68f7972cfafd968a34a391b8037790f9d70c5a8f5ad7ed"
+    "oid": "fdd6a56340cac38595034ca3e9fcf49ebb50ede0",
+    "sha256": "79c28b13265d2a69dc4224b53db11f535f16f0fa21128641b17c8eae54a5c737"
   },
   {
     "path": "reports/modernize/inventory.json",
@@ -89828,8 +90188,32 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Issue #9 disclosure-correction seed (issue #18 localization): tracked localization catalog/source under texts/expansion -- repository-authored framework message keys and locale catalog content (e.g. registry.json / catalog.<locale>.json), never extracted or derived from the original Fire Emblem: The Sacred Stones ROM/game text. This path previously, inaccurately inherited the general 'texts' root's original-game-asset note (Nintendo/Intelligent Systems copyright) via directory-prefix seeding; that note never applied here. Author/rightsholder/license/redistribution-approval remain exactly as unresolved as every other tracked path -- this correction states the provenance *kind* honestly, it does not invent or assert an author, rightsholder, license, or approval.",
-    "oid": "28853d09368bbe6b5d4d72f6fd6d372bcc22cb6c",
-    "sha256": "10a4015eaba156ce85d94f6bb908f64e0d00cb5710fd9c4ce66f84c5f00c72eb"
+    "oid": "d1420808b956c8e38ba14b6f96062dbdb86f1852",
+    "sha256": "6d0710dcb9a7f922b93f3da2dfbf696c6c4c6f0c5a83db29d08f49e8657f6c96"
+  },
+  {
+    "path": "texts/expansion/catalog.ja.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 disclosure-correction seed (issue #18 localization): tracked localization catalog/source under texts/expansion -- repository-authored framework message keys and locale catalog content (e.g. registry.json / catalog.<locale>.json), never extracted or derived from the original Fire Emblem: The Sacred Stones ROM/game text. This path previously, inaccurately inherited the general 'texts' root's original-game-asset note (Nintendo/Intelligent Systems copyright) via directory-prefix seeding; that note never applied here. Author/rightsholder/license/redistribution-approval remain exactly as unresolved as every other tracked path -- this correction states the provenance *kind* honestly, it does not invent or assert an author, rightsholder, license, or approval.",
+    "oid": "a486a7a25fbeac80fbb37d0e19fba98a23a7df4b",
+    "sha256": "9666bf73cf052149f86d0563d5785506f62ac4534262ce201df7b9027d894878"
+  },
+  {
+    "path": "texts/expansion/catalog.zh-Hans.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #9 disclosure-correction seed (issue #18 localization): tracked localization catalog/source under texts/expansion -- repository-authored framework message keys and locale catalog content (e.g. registry.json / catalog.<locale>.json), never extracted or derived from the original Fire Emblem: The Sacred Stones ROM/game text. This path previously, inaccurately inherited the general 'texts' root's original-game-asset note (Nintendo/Intelligent Systems copyright) via directory-prefix seeding; that note never applied here. Author/rightsholder/license/redistribution-approval remain exactly as unresolved as every other tracked path -- this correction states the provenance *kind* honestly, it does not invent or assert an author, rightsholder, license, or approval.",
+    "oid": "9dd6140137f6881c5c0870272a17f5b4de8446dc",
+    "sha256": "9d11e19644cf6280b73d7c4e01d9dc378cdb6d56cd4fbe22eec72c5a4d2c6d89"
   },
   {
     "path": "texts/expansion/registry.json",
@@ -89840,8 +90224,200 @@
     "redistribution_approved": false,
     "reviewer": null,
     "notes": "Issue #9 disclosure-correction seed (issue #18 localization): tracked localization catalog/source under texts/expansion -- repository-authored framework message keys and locale catalog content (e.g. registry.json / catalog.<locale>.json), never extracted or derived from the original Fire Emblem: The Sacred Stones ROM/game text. This path previously, inaccurately inherited the general 'texts' root's original-game-asset note (Nintendo/Intelligent Systems copyright) via directory-prefix seeding; that note never applied here. Author/rightsholder/license/redistribution-approval remain exactly as unresolved as every other tracked path -- this correction states the provenance *kind* honestly, it does not invent or assert an author, rightsholder, license, or approval.",
-    "oid": "eb5d8280e9ad3b1df902820cb1d75ea7d936331d",
-    "sha256": "cbb278147179bb37bc5c5aa4fa619e92e1b41fe6a0de686f00688453188178c7"
+    "oid": "e6ba1f4de6db27fe726a91060f072511fcad4641",
+    "sha256": "705dd6b4161e58f02e39845b1bb72f03869b2a1234b9d5a5cc4ed54eb1913782"
+  },
+  {
+    "path": "texts/locales/ja/control_defs.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "ed30233f2a53db491e31bd1fe6887df610f915d7",
+    "sha256": "329161ac60d9be4a6f4b1ce4d8fb91818a1ab5033f092fa1d9f924ec65cb72eb"
+  },
+  {
+    "path": "texts/locales/ja/indexed.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "f9a2598541ab263479d2d004aafea6033cf3e715",
+    "sha256": "1267e2ac0b1bc13febb21104513649cb7f7740b32ae4934f6348b73438a8633d"
+  },
+  {
+    "path": "texts/locales/manifest.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "6471d1acc75861981c3fef67e595de3df3caaa5b",
+    "sha256": "6b7d88007088ff1b038bb34dd59082fec871faa59710178f0674a9e2025ed288"
+  },
+  {
+    "path": "texts/locales/mapping/fe8j_to_fe8u.candidates.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "8eb78dc17d4769273890dc1f83fa3419f0c8240a",
+    "sha256": "1ddac63340d04568d03c8356d85f488dfa1a4e7a58f0ce86e815ce7a56358b45"
+  },
+  {
+    "path": "texts/locales/mapping/fe8u_structural_evidence.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "c10d6b5be555970d45dba82230fb410c499930d0",
+    "sha256": "28726a36fab85d9d087a931e3d621837f8168e1ab5cab9c3ede45defcaef1dec"
+  },
+  {
+    "path": "texts/locales/mapping/fe8u_target_map.coverage.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "f990be3d014ec9014e7e112c59aa3a9a3e2811be",
+    "sha256": "58d6e2e0c065108550980a7e3332161800b23ca67b93f90645296dbad0659ce4"
+  },
+  {
+    "path": "texts/locales/mapping/fe8u_target_map.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "067e2af8ca6cb3fc2bf57fed2f46d3a9ab40de6c",
+    "sha256": "dfc01d1f5b8b001fc9bacc67bf45bd4a4edeee89b22ed0f8a4225847c0fbf3d7"
+  },
+  {
+    "path": "texts/locales/mapping/raw_surface_closure.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "c0fd04c614ce60ebb1b2a7ac98140a4e49e45a6d",
+    "sha256": "7334e2fb3dcccf1771c6dcb5528efb69ca46affb2e2e8058cab1d51ff335e155"
+  },
+  {
+    "path": "texts/locales/mapping/raw_surface_decisions.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "aad1c59baf3600b36532026031cdc6e2a5f5abee",
+    "sha256": "2541aa7dabb43a0d111368604c449c0fc95e86d770e0de0d891d1183c97c03b1"
+  },
+  {
+    "path": "texts/locales/source/fe8cn/.gitattributes",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "39e21cfe73a30354f6868094f854eb507d8d5d6e",
+    "sha256": "570a3614eaaa9f79237d824c6041b62ca292357ed0f1daf091f262ee651be3d5"
+  },
+  {
+    "path": "texts/locales/source/fe8cn/FE8CN.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "b0d900aaf653d069319cd0b4b24105b455987e5a",
+    "sha256": "bef561dd5a45f81658d4f06b0b9f58bdc6fde2ed4b4c57034d17b88cb595f517"
+  },
+  {
+    "path": "texts/locales/source/fe8j/jp_textdefs.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "05ec0e53d0533a3652b7364710ddb993711651b9",
+    "sha256": "93186c5645192ef46484b34f0d6dc4237cf21b61ffac317077ac5892067cc0b5"
+  },
+  {
+    "path": "texts/locales/source/fe8j/jp_texts.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "808d152be028f89ed0b5f77ba03968704ce7dc54",
+    "sha256": "511ce51cadd2ac94ec3f5219a81205f6aa52de3c3c659c9efd1f0f75f9079a8a"
+  },
+  {
+    "path": "texts/locales/source/fe8j/msg_map.tsv",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "b391796523e8cf0f855013448a671e7757b6b789",
+    "sha256": "9acb014c27148366cec70ce7bf2c64e021bf10bfc4e55df7cfe99d12ad40c751"
+  },
+  {
+    "path": "texts/locales/zh-Hans/indexed.txt",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "2ec0e68c91a7e09203781539069bbc83e20f3215",
+    "sha256": "c139d6a16bea97da4cad85c166e1a94576e0352897a8e45fd293988d390ec790"
+  },
+  {
+    "path": "texts/locales/zh-Hans/raw.json",
+    "category": "asset",
+    "author": "NOASSERTION",
+    "rightsholder": "NOASSERTION",
+    "license": "NOASSERTION",
+    "redistribution_approved": false,
+    "reviewer": null,
+    "notes": "Issue #18 full-game locale source/provenance surface under texts/locales: hash-pinned authorized FE8J/FE8CN input snapshots plus deterministic normalized catalogs, mapping evidence, fallback decisions, and manifests. Exact source and regeneration facts are documented in docs/game_locale_sources.md; no human release/legal approval is inferred.",
+    "oid": "69c190b895f4cfddc0d9359df9f8070937c41616",
+    "sha256": "2c2f3ac5fef9117a01d92cdc0098c1b83903719507048c8b5541f4cccc50b6ff"
   },
   {
     "path": "texts/textdefs.txt",

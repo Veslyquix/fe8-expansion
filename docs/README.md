@@ -19,6 +19,7 @@ the authoritative technical documentation and are checked by CI.
 | Author game content (characters/classes/items/etc.) | [`generated_data_tutorial.md`](generated_data_tutorial.md) |
 | Enable/extend starter content, mechanics, or Threat Range QoL | [`starter_features.md`](starter_features.md) |
 | Author expansion-localized UI text/locales | [`localization.md`](localization.md) |
+| Generate or test localized full-game message catalogs | [`game_localization_catalog.md`](game_localization_catalog.md) |
 | Contribute code/docs and know the review process | [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`project-governance.md`](project-governance.md) |
 | Come from the old decomp-base/agbcc workflow | [`migration-from-decomp.md`](migration-from-decomp.md) |
 | Do byte-for-byte decomp-matching work | [`archival-decomp.md`](archival-decomp.md) |
@@ -109,6 +110,7 @@ and
 | [`generated_data_tutorial.md`](generated_data_tutorial.md) | Current, tutorial | Contributor-facing generated-data walkthrough |
 | [`starter_features.md`](starter_features.md) | Current | Four opt-in flags, typed mechanics/content API, QoL and matrices (issue #6) |
 | [`localization.md`](localization.md) | Current | Stable locale/message IDs, authoring, prefs/UI, budgets and matrices (issue #18) |
+| [`game_localization_catalog.md`](game_localization_catalog.md) | Current | Full-game FE8U-indexed CJK catalog generation, runtime bounds, and synthetic link gate |
 | [`documentation-inventory.md`](documentation-inventory.md) | Current | Exact recognized-Markdown inventory |
 | [`external-link-registry.md`](external-link-registry.md) | Current | Offline URL ownership/status coverage |
 | [`upstream-porting.md`](upstream-porting.md) | Current | Canonical upstream drift tooling (issue #12) |

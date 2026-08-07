@@ -13,6 +13,14 @@ __iwram_start = ORIGIN(iwram);
 __iwram_top   = ORIGIN(iwram) + LENGTH(iwram);
 __sp_irq      = __iwram_top - 0x060;
 __sp_usr      = __sp_irq - 0x1A0;
+/*
+ * crt0 initializes the downward-growing system/user stack at __sp_usr.
+ * The historical fixed IWRAM layout ended at 0x030067A8, leaving 0x1658
+ * bytes below that pointer. The modern CJK scratch ends at 0x03006CA8,
+ * leaving 0x1158. Preserve a 0x1000-byte user-stack floor while retaining
+ * 0x158 bytes of current static-growth headroom.
+ */
+__iwram_static_limit = __sp_usr - 0x1000;
 __irq_flags   = 0x03007ff8;
 
 ENTRY(Init)
@@ -204,6 +212,7 @@ SECTIONS
     {
         INCLUDE "linker/iwram.ld"
     } > iwram
+    __iwram_static_end = ADDR(IWRAM) + SIZEOF(IWRAM);
 
     .bss (NOLOAD) : ALIGN(4)
     {
@@ -289,8 +298,29 @@ SECTIONS
         *data_FFF000.o(.data)
     } > rom = 0xFF
 
+    /* === UPPER ROM: locale bank (32 MiB profiles only) === */
+    __locale_bank_start = 0x09000000;
+    .locale_data __locale_bank_start : ALIGN(4)
+    {
+        *(.locale_data .locale_data.*)
+        . = ALIGN(4);
+    } > rom = 0xFF
+    __locale_bank_end = __locale_bank_start + SIZEOF(.locale_data);
+    __locale_bank_size = SIZEOF(.locale_data);
+    ASSERT(__locale_bank_size == 0 || __rom_size == 0x02000000,
+        "Locale data requires MODERN_ROM_SIZE=32M")
+    ASSERT(__locale_bank_end <= 0x0A000000,
+        "Locale data exceeds the 32 MiB ROM boundary")
+    /* === END UPPER ROM LOCALE BANK === */
+
     ASSERT(SIZEOF(ROM) <= __rom_size, "ROM content exceeds configured ROM size")
     ASSERT(SIZEOF(IWRAM) <= 32K, "IWRAM overflow")
+    ASSERT(__iwram_static_end <= __sp_usr,
+        "IWRAM data overlaps the reserved user/IRQ stacks")
+    ASSERT(__iwram_static_end < __sp_usr,
+        "IWRAM data leaves no user stack")
+    ASSERT(__iwram_static_end <= __iwram_static_limit,
+        "IWRAM data leaves less than 0x1000 bytes for the user stack")
     ASSERT(__ewram_used_end <= ORIGIN(ewram) + LENGTH(ewram), "EWRAM overflow")
     ASSERT(gOpAnimSt - gGenericBuffer == 0x2000,
         "gGenericBuffer must immediately precede gOpAnimSt")

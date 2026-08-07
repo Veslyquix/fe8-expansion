@@ -1,9 +1,10 @@
 #include "global.h"
 #include <string.h>
 #include "expansion_locale.h"
+#include "localized_game_text.h"
 
 /*
- * Runtime message resolver (issue #18 sprint 1). Reads only the
+ * Runtime message resolver (issue #18). Reads only the
  * generated, read-only ROM catalog tables declared in
  * include/expansion_locale.h (defined by the generated
  * expansion_locale_catalog.c -- see scripts/localization/generate.py) and
@@ -15,13 +16,6 @@
  * stay strict C89: declarations only at the top of a block, no `//`
  * comments, no mixed declarations/statements.
  */
-
-struct ExpansionLocaleCatalogView
-{
-    const ExpansionMsgId *ids;
-    const char *const *strings;
-    u16 count;
-};
 
 /*
  * EWRAM_DATA (not a bare `static`): this project's modern linker
@@ -74,32 +68,28 @@ static bool8 sCacheValid = FALSE;
  * absent/corrupt. */
 static const char sMissingMarker[] = "<!MISSING!>";
 
-static const struct ExpansionLocaleCatalogView *GetCatalogView(ExpansionLocaleId locale)
+static const struct ExpansionLocaleCatalogDescriptor *GetCatalogView(
+    ExpansionLocaleId locale)
 {
-    static struct ExpansionLocaleCatalogView sEnView;
-    static struct ExpansionLocaleCatalogView sQpsView;
+    const struct ExpansionLocaleCatalogDescriptor *descriptor;
 
-    if (locale == EXPANSION_LOCALE_EN)
-    {
-        sEnView.ids = gExpansionLocaleMsgIds;
-        sEnView.strings = gExpansionCatalog_en;
-        sEnView.count = gExpansionLocaleMsgCount;
-        return &sEnView;
-    }
-    if (locale == EXPANSION_LOCALE_QPS_PLOC)
-    {
-        sQpsView.ids = gExpansionLocaleMsgIds;
-        sQpsView.strings = gExpansionCatalog_qps_ploc;
-        sQpsView.count = gExpansionLocaleMsgCount;
-        return &sQpsView;
-    }
-    return NULL;
+    if (!ExpansionLocale_IsSupported(locale))
+        return NULL;
+
+    descriptor = &gExpansionLocaleCatalogs[locale];
+    if (descriptor->ids == NULL || descriptor->strings == NULL)
+        return NULL;
+    if (descriptor->count == 0)
+        return NULL;
+    return descriptor;
 }
 
 /* Binary search over view->ids[] (generated ascending-sorted by
  * scripts/localization/generate.py). Returns NULL if msgId is not
  * present in this view -- never partial/garbage data. */
-static const char *FindInView(const struct ExpansionLocaleCatalogView *view, ExpansionMsgId msgId)
+static const char *FindInView(
+    const struct ExpansionLocaleCatalogDescriptor *view,
+    ExpansionMsgId msgId)
 {
     u16 low;
     u16 high;
@@ -165,6 +155,10 @@ void ExpansionLocale_InvalidateCache(void)
     sCacheValid = FALSE;
     sCacheLocale = EXPANSION_LOCALE_INVALID;
     sCacheMsgId = EXPANSION_MSG_ID_INVALID;
+
+#if (FE8_EXPANSION_ENABLED_LOCALE_MASK & 0x06u) != 0
+    LocalizedGameText_InvalidateCache();
+#endif
 }
 
 const char *ExpansionLocale_Resolve(ExpansionLocaleId locale, ExpansionMsgId msgId)
@@ -211,24 +205,41 @@ void ExpansionLocale_GetCatalogStats(struct ExpansionLocaleCatalogStats *out)
 {
     u16 populatedLocales;
     u32 stringBytes;
+    u32 pointerTableBytes;
+    const struct ExpansionLocaleCatalogDescriptor *descriptor;
+    const char *text;
+    u16 locale;
     u16 i;
 
     if (out == NULL)
         return;
 
-    populatedLocales = 2; /* en, qps-ploc -- see GetCatalogView */
+    populatedLocales = 0;
     stringBytes = 0;
-    for (i = 0; i < gExpansionLocaleMsgCount; i++)
+    pointerTableBytes = 0;
+    for (locale = 0; locale < EXPANSION_LOCALE_COUNT; locale++)
     {
-        stringBytes += (u32)(strlen(gExpansionCatalog_en[i]) + 1);
-        stringBytes += (u32)(strlen(gExpansionCatalog_qps_ploc[i]) + 1);
+        descriptor = GetCatalogView((ExpansionLocaleId)locale);
+        if (descriptor == NULL)
+            continue;
+
+        populatedLocales++;
+        pointerTableBytes += (u32)(descriptor->count * sizeof(char *));
+        for (i = 0; i < descriptor->count; i++)
+        {
+            text = descriptor->strings[i];
+            if (text != NULL)
+                stringBytes += (u32)(strlen(text) + 1);
+        }
     }
 
     out->activeMessageCount = gExpansionLocaleMsgCount;
     out->tombstoneCount = gExpansionLocaleTombstoneCount;
+    out->populatedLocaleCount = populatedLocales;
     out->catalogStringBytes = stringBytes;
     out->catalogIndexBytes = (u32)(gExpansionLocaleMsgCount * sizeof(ExpansionMsgId))
-        + (u32)(gExpansionLocaleMsgCount * sizeof(char *) * populatedLocales);
+        + pointerTableBytes
+        + (u32)sizeof(gExpansionLocaleCatalogs);
     out->scratchBytes = (u32)sizeof(sScratch);
     out->scratchBudgetBytes = (u32)EXPANSION_LOCALE_SCRATCH_SLOT_BYTES;
 }

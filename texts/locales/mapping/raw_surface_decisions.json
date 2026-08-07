@@ -1,0 +1,447 @@
+{
+  "decisions": [
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6b9, 0, 0, 3,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0000",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06B9",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ba, 0, 0, 4,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0001",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06BA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6bb, 0, 0, 5,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0002",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06BB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6bc, 0, 0, 6,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0003",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06BC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6bd, 0, 4, 7,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0004",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06BD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x26, 0, 0, 0xa,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0005",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x0026",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x27, 0, 0, 0xb,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0006",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x0027",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x28, 0, 0, 0xc,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0007",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x0028",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x29, 0, 0, 0xd,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0008",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x0029",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6a4, 0, 0, 0x10,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0009",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06A4",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6aa, 0, 0, 0x11,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0010",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06AA",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ab, 0, 0, 0x12,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0011",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06AB",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ac, 0, 0, 0x13,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0012",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06AC",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ad, 0, 0, 0x14,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0013",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06AD",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6ae, 0, 0, 0x15,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0014",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06AE",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6af, 0, 0, 0x16,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0015",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06AF",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x6b0, 0, 0, 0x18,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0016",
+      "rationale": "The menu row already uses this stable FE8U message ID; verified regional raw text now supplies Japanese and Chinese catalog payloads.",
+      "target_id": "0x06B0",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x67B, 0x6C0, 0, 0x50,"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0025",
+      "rationale": "This is the ballista Attack pointer, an intentional duplicate of the adjacent Attack row and the same stable FE8U message ID.",
+      "target_id": "0x067B",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x693, 0x6DD, 0, 0x57, SummonCommandUsability, LOCALIZED_RAW_UNIT_ACTION_DRAW"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "expansion_message",
+      "expansion_key": "raw_surface.unit_action.summon",
+      "import_id": "fe8cn.raw.import-0032",
+      "rationale": "Summon shares FE8U message ID 0x0693 with a distinct command, so the modern row uses a semantic expansion key.",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x693, 0x6DD, 0, 0x58, YobimaCommandUsability, LOCALIZED_RAW_UNIT_ACTION_DRAW"
+          ],
+          "path": "src/menu_def.c"
+        }
+      ],
+      "classification": "expansion_message",
+      "expansion_key": "raw_surface.unit_action.call_monster",
+      "import_id": "fe8cn.raw.import-0033",
+      "rationale": "Call Monster shares FE8U message ID 0x0693 with Summon, so the modern row uses its own semantic expansion key.",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x23,   /* Change */"
+          ],
+          "path": "src/classchg-menuconfirm.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0060",
+      "rationale": "The promotion confirmation row already supports the stable FE8U Change message ID.",
+      "target_id": "0x0023",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "0x24,   /* Cancel */"
+          ],
+          "path": "src/classchg-menuconfirm.c"
+        }
+      ],
+      "classification": "game_message",
+      "import_id": "fe8cn.raw.import-0061",
+      "rationale": "The promotion confirmation row already supports the stable FE8U Cancel message ID.",
+      "target_id": "0x0024",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "\"　第１兵種\"",
+            "ClassChgMenuItem_OnTextDraw"
+          ],
+          "path": "src/classchg-menuselect.c"
+        }
+      ],
+      "classification": "non_user_facing_exclusion",
+      "import_id": "fe8cn.raw.import-0062",
+      "rationale": "The initializer name is never drawn: the row-specific onDraw callback replaces it with the locale-aware promoted class name from GetStringFromIndex.",
+      "user_facing": false
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "\"　第２兵種\"",
+            "ClassChgMenuItem_OnTextDraw"
+          ],
+          "path": "src/classchg-menuselect.c"
+        }
+      ],
+      "classification": "non_user_facing_exclusion",
+      "import_id": "fe8cn.raw.import-0063",
+      "rationale": "The initializer name is never drawn: the row-specific onDraw callback replaces it with the locale-aware promoted class name from GetStringFromIndex.",
+      "user_facing": false
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "\"　第３兵種\"",
+            "ClassChgMenuItem_OnTextDraw"
+          ],
+          "path": "src/classchg-menuselect.c"
+        }
+      ],
+      "classification": "non_user_facing_exclusion",
+      "import_id": "fe8cn.raw.import-0064",
+      "rationale": "The initializer name is never drawn: the row-specific onDraw callback replaces it with the locale-aware promoted class name from GetStringFromIndex.",
+      "user_facing": false
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "GetStringFromIndex(MSG_1C1)"
+          ],
+          "path": "src/player_interface.c"
+        }
+      ],
+      "classification": "english_fallback",
+      "fallback_reason": "japanese-literal-source-unverified",
+      "import_id": "fe8cn.raw.import-0139",
+      "rationale": "Japanese goal-window label for FE8U 0x01C1 has no exact committed-source literal anchor.",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "GetStringFromIndex(MSG_1C3)"
+          ],
+          "path": "src/player_interface.c"
+        }
+      ],
+      "classification": "english_fallback",
+      "fallback_reason": "japanese-literal-source-unverified",
+      "import_id": "fe8cn.raw.import-0140",
+      "rationale": "Japanese goal-window label for FE8U 0x01C3 has no exact committed-source literal anchor.",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "GetStringFromIndex(MSG_1C2)"
+          ],
+          "path": "src/player_interface.c"
+        }
+      ],
+      "classification": "english_fallback",
+      "fallback_reason": "japanese-literal-source-unverified",
+      "import_id": "fe8cn.raw.import-0141",
+      "rationale": "Japanese goal-window label for FE8U 0x01C2 has no exact committed-source literal anchor.",
+      "user_facing": true
+    },
+    {
+      "call_sites": [
+        {
+          "anchors": [
+            "const char gBuildDateTime[]"
+          ],
+          "path": "src/main.c"
+        },
+        {
+          "anchors": [
+            "PrintDebugStringToBG(bg, gBuildDateTime)"
+          ],
+          "path": "src/fe3_dummy.c"
+        }
+      ],
+      "classification": "diagnostic_exclusion",
+      "import_id": "fe8cn.raw.import-0142",
+      "rationale": "This fixed build timestamp is diagnostic identity printed by PrintDebugBuildDateAndTime, not natural-language UI; translating it would corrupt the diagnostic value.",
+      "user_facing": false
+    }
+  ],
+  "deferred_record_count": 29,
+  "kind": "fe8cn-raw-surface-decisions",
+  "schema_version": 1
+}

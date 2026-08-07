@@ -3,6 +3,7 @@
 
 #include "prelude.h"
 #include "gba/types.h"
+#include "localized_game_text.h"
 #include <limits.h>
 
 #ifndef __STDBOOL_H__
@@ -264,11 +265,26 @@ enum PlaySt_chapterModeIndex {
 
 struct MsgBuffer
 {
-    u8 buffer1[0x555];
-    u8 buffer2[0x555];
-    u8 buffer3[0x356];
-    u8 buffer4[0x100];
-    u8 buffer5[0x100];
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    union
+    {
+        struct
+        {
+            u8 buffer1[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER1_BYTES];
+            u8 buffer2[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER2_BYTES];
+            u8 buffer3[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER3_BYTES];
+            u8 buffer4[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER4_BYTES];
+            u8 buffer5[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER5_BYTES];
+        } legacy;
+        u8 localized[FE8_LOCALIZED_GAME_TEXT_REQUIRED_STORAGE_BYTES];
+    } storage;
+#else
+    u8 buffer1[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER1_BYTES];
+    u8 buffer2[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER2_BYTES];
+    u8 buffer3[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER3_BYTES];
+    u8 buffer4[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER4_BYTES];
+    u8 buffer5[FE8_LOCALIZED_GAME_TEXT_LEGACY_BUFFER5_BYTES];
+#endif
 };
 
 enum

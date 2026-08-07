@@ -10,6 +10,24 @@
 
 #define CHAR_NEWLINE 0x01
 
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+#define LOCALIZED_FONT_INVALID_SCALAR 0xFFFDu
+
+static enum LocalizedFontStyle Text_GetLocalizedFontStyle(struct Font *font);
+static bool8 Text_UsesLocalizedFont(void);
+static u32 Text_GetLocalizedScalarWidth(u32 scalar);
+static void Text_DrawLocalizedScalar(struct Text *text, u32 scalar);
+static void Text_DrawLocalizedBitmap(
+    struct Text *text, const u8 *bitmap, u8 width);
+void DrawTextGlyphNoClear(struct Text *text, struct Glyph *glyph);
+static void DrawTextGlyphBitmap(
+    struct Text *text, const u32 *bitmap, int width);
+static void DrawTextGlyphNoClearBitmap(
+    struct Text *text, const u32 *bitmap, int width);
+static void DrawSpriteTextGlyphBitmap(
+    struct Text *text, const u32 *bitmap, int width);
+#endif
+
 struct Struct02026E30
 {
     u32 tileDataOffset;
@@ -378,6 +396,85 @@ void SetTextFont(struct Font * font)
         gActiveFont = font;
 }
 
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+static enum LocalizedFontStyle Text_GetLocalizedFontStyle(struct Font *font)
+{
+    if (font != NULL && font->glyphs == TextGlyphs_Talk)
+        return LOCALIZED_FONT_STYLE_TALK;
+    return LOCALIZED_FONT_STYLE_SYSTEM;
+}
+
+static bool8 Text_UsesLocalizedFont(void)
+{
+    return LocalizedFont_IsLocale(ExpansionLocale_GetCurrent());
+}
+
+static struct Glyph *Text_GetLocalizedAsciiGlyph(u32 scalar)
+{
+    struct Glyph *glyph;
+
+    glyph = NULL;
+    if (scalar < 0x80)
+        glyph = gActiveFont->glyphs[scalar];
+    if (glyph == NULL)
+    {
+        LocalizedFont_RecordMissing(scalar);
+        glyph = gActiveFont->glyphs['?'];
+    }
+    return glyph;
+}
+
+static u32 Text_GetLocalizedScalarWidth(u32 scalar)
+{
+    struct LocalizedFontGlyph glyph;
+    struct Glyph *asciiGlyph;
+
+    if (scalar < 0x80)
+    {
+        asciiGlyph = Text_GetLocalizedAsciiGlyph(scalar);
+        return asciiGlyph->width;
+    }
+
+    if (LocalizedFont_Lookup(
+            ExpansionLocale_GetCurrent(),
+            Text_GetLocalizedFontStyle(gActiveFont),
+            scalar,
+            &glyph))
+        return glyph.width;
+
+    LocalizedFont_RecordMissing(scalar);
+    asciiGlyph = gActiveFont->glyphs['?'];
+    return asciiGlyph->width;
+}
+
+static void Text_DrawLocalizedScalar(struct Text *text, u32 scalar)
+{
+    struct LocalizedFontGlyph glyph;
+    struct Glyph *asciiGlyph;
+
+    if (scalar < 0x80)
+    {
+        asciiGlyph = Text_GetLocalizedAsciiGlyph(scalar);
+        gActiveFont->drawGlyph(text, asciiGlyph);
+        return;
+    }
+
+    if (LocalizedFont_Lookup(
+            ExpansionLocale_GetCurrent(),
+            Text_GetLocalizedFontStyle(gActiveFont),
+            scalar,
+            &glyph))
+    {
+        Text_DrawLocalizedBitmap(text, glyph.bitmap, glyph.width);
+        return;
+    }
+
+    LocalizedFont_RecordMissing(scalar);
+    asciiGlyph = gActiveFont->glyphs['?'];
+    gActiveFont->drawGlyph(text, asciiGlyph);
+}
+#endif
+
 void InitText(struct Text *text, int tileWidth)
 {
     text->chr_position = gActiveFont->chr_counter;
@@ -490,6 +587,39 @@ int GetStringTextLen(const char *str)
     char byte1;
     char byte2;
 
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    if (Text_UsesLocalizedFont())
+    {
+        struct TextUtf8Token token;
+        const char *next;
+
+        for (;;)
+        {
+            next = TextUtf8_Next(str, &token);
+            if (token.kind == TEXT_UTF8_TOKEN_END)
+                break;
+            if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+            {
+                if (token.control == CHAR_NEWLINE)
+                    break;
+                str = next;
+                continue;
+            }
+            if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+            {
+                str = next;
+                continue;
+            }
+            if (token.kind == TEXT_UTF8_TOKEN_INVALID)
+                width += Text_GetLocalizedScalarWidth(LOCALIZED_FONT_INVALID_SCALAR);
+            else
+                width += Text_GetLocalizedScalarWidth(token.scalar);
+            str = next;
+        }
+        return width;
+    }
+#endif
+
     if (gActiveFont->lang)
         return GetStringTextLenASCII(str);
     while (*str != 0 && *str != CHAR_NEWLINE) {
@@ -515,6 +645,22 @@ const char *GetCharTextLen(const char *str, u32 *pWidth)
     struct Glyph *glyph;
     char byte1;
     char byte2;
+
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    if (Text_UsesLocalizedFont())
+    {
+        struct TextUtf8Token token;
+        const char *next;
+
+        next = TextUtf8_Next(str, &token);
+        *pWidth = 0;
+        if (token.kind == TEXT_UTF8_TOKEN_SCALAR)
+            *pWidth = Text_GetLocalizedScalarWidth(token.scalar);
+        else if (token.kind == TEXT_UTF8_TOKEN_INVALID)
+            *pWidth = Text_GetLocalizedScalarWidth(LOCALIZED_FONT_INVALID_SCALAR);
+        return next;
+    }
+#endif
 
     if (gActiveFont->lang)
         return GetCharTextLenASCII(str, pWidth);
@@ -562,6 +708,26 @@ void GetStringTextBox(const char* _str, int *out_width, int *out_height)
 char *GetStringLineEnd(char *str)
 {
     char c = *str;
+
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    if (Text_UsesLocalizedFont())
+    {
+        struct TextUtf8Token token;
+        const char *next;
+
+        for (;;)
+        {
+            next = TextUtf8_Next(str, &token);
+            if (token.kind == TEXT_UTF8_TOKEN_END)
+                return str;
+            if (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                && token.control == CHAR_NEWLINE)
+                return str;
+            str = (char *)next;
+        }
+    }
+#endif
+
     while (c > 1) {
         str++;
         c = *str;
@@ -575,6 +741,39 @@ void Text_DrawString(struct Text *text, const char* str)
     struct Glyph *glyph;
     char byte1;
     char byte2;
+
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    if (Text_UsesLocalizedFont())
+    {
+        struct TextUtf8Token token;
+        const char *next;
+
+        for (;;)
+        {
+            next = TextUtf8_Next(str, &token);
+            if (token.kind == TEXT_UTF8_TOKEN_END)
+                break;
+            if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+            {
+                if (token.control == CHAR_NEWLINE)
+                    break;
+                str = next;
+                continue;
+            }
+            if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+            {
+                str = next;
+                continue;
+            }
+            if (token.kind == TEXT_UTF8_TOKEN_INVALID)
+                Text_DrawLocalizedScalar(text, LOCALIZED_FONT_INVALID_SCALAR);
+            else
+                Text_DrawLocalizedScalar(text, token.scalar);
+            str = next;
+        }
+        return;
+    }
+#endif
 
     if (gActiveFont->lang != LANG_JAPANESE) {
         Text_DrawStringASCII(text, str);
@@ -672,6 +871,21 @@ char const * Text_DrawCharacter(struct Text * text, char const * str)
     struct Glyph *glyph;
     char byte2, byte1;
 
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    if (Text_UsesLocalizedFont())
+    {
+        struct TextUtf8Token token;
+        const char *next;
+
+        next = TextUtf8_Next(str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_SCALAR)
+            Text_DrawLocalizedScalar(text, token.scalar);
+        else if (token.kind == TEXT_UTF8_TOKEN_INVALID)
+            Text_DrawLocalizedScalar(text, LOCALIZED_FONT_INVALID_SCALAR);
+        return next;
+    }
+#endif
+
     if (gActiveFont->lang != LANG_JAPANESE)
         return Text_DrawCharacterAscii(text, str);
 
@@ -729,18 +943,102 @@ u16 *GetColorLut(int color)
     return s2bppTo4bppLutTable[color];
 }
 
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+static void DrawTextGlyphBitmap(struct Text *text, const u32 *bitmap, int width)
+{
+    void *drawDest;
+    int subx;
+
+    drawDest = gActiveFont->get_draw_dest(text);
+    subx = text->x & 7;
+    DrawGlyphRam(GetColorLut(text->colorId), drawDest, (u32 *)bitmap, subx);
+    text->x += width;
+}
+
+static void DrawTextGlyphNoClearBitmap(
+    struct Text *text, const u32 *bitmap, int width)
+{
+    int i;
+    u32 *dst;
+    int subx;
+    u64 bitmapRow;
+    const u16 *maskLut;
+    const u16 *colorLut;
+
+    dst = (u32 *)gActiveFont->get_draw_dest(text);
+    subx = text->x & 7;
+    maskLut = GetColorLut(TEXT_COLOR_MASK);
+    colorLut = GetColorLut(text->colorId);
+
+    for (i = 0; i < 16; ++i)
+    {
+        bitmapRow = (u64)*bitmap << subx * 2;
+
+        dst[0x00] &= maskLut[bitmapRow & 0xFF]
+            | (maskLut[(bitmapRow >> 8) & 0xFF] << 16);
+        dst[0x00] |= colorLut[bitmapRow & 0xFF]
+            | (colorLut[(bitmapRow >> 8) & 0xFF] << 16);
+
+        dst[0x10] &= maskLut[(bitmapRow >> 16) & 0xFF]
+            | (maskLut[(bitmapRow >> 24) & 0xFF] << 16);
+        dst[0x10] |= colorLut[(bitmapRow >> 16) & 0xFF]
+            | (colorLut[(bitmapRow >> 24) & 0xFF] << 16);
+
+        dst[0x20] &= maskLut[(bitmapRow >> 32) & 0xFF]
+            | (maskLut[(bitmapRow >> 40) & 0xFF] << 16);
+        dst[0x20] |= colorLut[(bitmapRow >> 32) & 0xFF]
+            | (colorLut[(bitmapRow >> 40) & 0xFF] << 16);
+
+        dst++;
+        bitmap++;
+    }
+
+    text->x += width;
+}
+
+static void Text_DrawLocalizedBitmap(struct Text *text, const u8 *bitmap, u8 width)
+{
+    if (bitmap == NULL)
+    {
+        text->x += width;
+        return;
+    }
+
+    if (gActiveFont->drawGlyph == DrawSpriteTextGlyph)
+    {
+        DrawSpriteTextGlyphBitmap(text, (const u32 *)bitmap, width);
+        return;
+    }
+
+    if (gActiveFont->drawGlyph == DrawTextGlyphNoClear)
+    {
+        DrawTextGlyphNoClearBitmap(text, (const u32 *)bitmap, width);
+        return;
+    }
+
+    DrawTextGlyphBitmap(text, (const u32 *)bitmap, width);
+}
+#endif
+
 void DrawTextGlyph(struct Text *text, struct Glyph *glyph)
 {
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    DrawTextGlyphBitmap(text, glyph->bitmap, glyph->width);
+#else
     void *draw_dest = gActiveFont->get_draw_dest(text);
     int subx = text->x & 7;
     u32 *bitmap = glyph->bitmap;
 
     DrawGlyphRam(GetColorLut(text->colorId), draw_dest, bitmap, subx);
     text->x += glyph->width;
+#endif
 }
 
 void DrawTextGlyphNoClear(struct Text * text, struct Glyph *glyph)
 {
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    DrawTextGlyphNoClearBitmap(text, glyph->bitmap, glyph->width);
+#else
     int i;
 
     u32 * dst = (u32 *) gActiveFont->get_draw_dest(text);
@@ -772,6 +1070,7 @@ void DrawTextGlyphNoClear(struct Text * text, struct Glyph *glyph)
     }
 
     text->x += glyph->width;
+#endif
 }
 
 void InitSystemTextFont(void)
@@ -888,6 +1187,9 @@ void InitSpriteTextFont(struct Font *font, void *vramDest, int c)
     font->lang = GetLang();
     SetTextFont(font);
     font->drawGlyph = DrawSpriteTextGlyph;
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    SetTextFontGlyphs(TEXT_GLYPHS_SYSTEM);
+#endif
 }
 
 void InitSpriteText(struct Text *th)
@@ -933,8 +1235,60 @@ void *GetSpriteTextDrawDest(struct Text *text)
     return gActiveFont->vramDest + r1 * 32;
 }
 
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+static void DrawSpriteTextGlyphBitmap(
+    struct Text *text, const u32 *bitmap, int width)
+{
+    u64 bmpRow;
+    int i;
+    u32 *dest;
+    int xoffset;
+    u16 *colorLut;
+
+    dest = gActiveFont->get_draw_dest(text);
+    xoffset = text->x & 7;
+    colorLut = GetColorLut(text->colorId);
+
+    for (i = 0; i < 8; i++)
+    {
+        bmpRow = (u64)*bitmap << xoffset * 2;
+        bitmap++;
+
+        dest[0] |= colorLut[bmpRow & 0xFF]
+            | (colorLut[(bmpRow >> 8) & 0xFF] << 16);
+        dest[8] |= colorLut[(bmpRow >> 16) & 0xFF]
+            | (colorLut[(bmpRow >> 24) & 0xFF] << 16);
+        dest[16] |= colorLut[(bmpRow >> 32) & 0xFF]
+            | (colorLut[(bmpRow >> 40) & 0xFF] << 16);
+
+        dest++;
+    }
+
+    dest = gActiveFont->get_draw_dest(text) + 0x400;
+    for (i = 0; i < 8; i++)
+    {
+        bmpRow = (u64)*bitmap << xoffset * 2;
+        bitmap++;
+
+        dest[0] |= colorLut[bmpRow & 0xFF]
+            | (colorLut[(bmpRow >> 8) & 0xFF] << 16);
+        dest[8] |= colorLut[(bmpRow >> 16) & 0xFF]
+            | (colorLut[(bmpRow >> 24) & 0xFF] << 16);
+        dest[16] |= colorLut[(bmpRow >> 32) & 0xFF]
+            | (colorLut[(bmpRow >> 40) & 0xFF] << 16);
+
+        dest++;
+    }
+
+    text->x += width;
+}
+#endif
+
 void DrawSpriteTextGlyph(struct Text *text, struct Glyph *glyph)
 {
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+    DrawSpriteTextGlyphBitmap(text, glyph->bitmap, glyph->width);
+#else
     u64 bmpRow;
     int i;
     u32 *dest = gActiveFont->get_draw_dest(text);
@@ -969,6 +1323,7 @@ void DrawSpriteTextGlyph(struct Text *text, struct Glyph *glyph)
     }
 
     text->x += glyph->width;
+#endif
 }
 
 void TextPrint_OnLoop(struct TextPrintProc * proc)
@@ -982,6 +1337,34 @@ void TextPrint_OnLoop(struct TextPrintProc * proc)
     proc->clock = proc->interval;
 
     for (i = 0; i < proc->char_per_tick; ++i) {
+#ifdef FE8_LOCALIZED_FONT_ENABLED
+        if (Text_UsesLocalizedFont())
+        {
+            struct TextUtf8Token token;
+            const char *next;
+
+            next = TextUtf8_Next(proc->str, &token);
+            if (token.kind == TEXT_UTF8_TOKEN_END
+                || (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                    && token.control == CHAR_NEWLINE))
+            {
+                proc->text->is_printing = false;
+                Proc_Break(proc);
+                return;
+            }
+
+            if (token.kind == TEXT_UTF8_TOKEN_CONTROL && token.control == 4)
+                Text_Skip(proc->text, 6);
+
+            if (token.kind == TEXT_UTF8_TOKEN_SCALAR
+                || token.kind == TEXT_UTF8_TOKEN_INVALID)
+                proc->str = Text_DrawCharacter(proc->text, proc->str);
+            else
+                proc->str = next;
+            continue;
+        }
+#endif
+
         switch (*proc->str) {
         case 0: // end
             // fallthrough

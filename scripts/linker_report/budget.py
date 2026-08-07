@@ -55,6 +55,15 @@ DYNAMIC_ASSIGNMENT_NAMES = {
     "_banim_pal_size",
 }
 
+IWRAM_STACK_POINTER_SYMBOL = "__sp_usr"
+IWRAM_STATIC_END_SYMBOL = "__iwram_static_end"
+IWRAM_STATIC_LIMIT_SYMBOL = "__iwram_static_limit"
+IWRAM_BUDGET_SYMBOLS = (
+    IWRAM_STACK_POINTER_SYMBOL,
+    IWRAM_STATIC_END_SYMBOL,
+    IWRAM_STATIC_LIMIT_SYMBOL,
+)
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -322,6 +331,47 @@ def _merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return merged
 
 
+def _iwram_static_budget(
+    region: MemoryRegion,
+    assignments: list[SymbolAssignment],
+) -> dict[str, Any]:
+    """Describe IWRAM capacity below the initialized user stack pointer."""
+    addresses = {assignment.name: assignment.address for assignment in assignments}
+    missing = [name for name in IWRAM_BUDGET_SYMBOLS if name not in addresses]
+    if missing:
+        return {
+            "static_budget_available": False,
+            "static_budget_missing_symbols": missing,
+        }
+
+    static_end = addresses[IWRAM_STATIC_END_SYMBOL]
+    static_limit = addresses[IWRAM_STATIC_LIMIT_SYMBOL]
+    stack_pointer = addresses[IWRAM_STACK_POINTER_SYMBOL]
+    physical_end = region.origin + region.length
+    static_capacity = max(0, stack_pointer - region.origin)
+    static_occupied = max(0, static_end - region.origin)
+    usable_headroom = max(0, stack_pointer - static_end)
+    minimum_margin = max(0, stack_pointer - static_limit)
+
+    return {
+        "static_budget_available": True,
+        "static_end_address": static_end,
+        "static_limit_address": static_limit,
+        "user_stack_pointer_address": stack_pointer,
+        "static_usable_capacity_bytes": static_capacity,
+        "reserved_stack_bytes": max(0, physical_end - stack_pointer),
+        "usable_static_headroom_bytes": usable_headroom,
+        "minimum_user_stack_margin_bytes": minimum_margin,
+        "static_growth_headroom_bytes": max(0, static_limit - static_end),
+        "static_utilization_percent": (
+            round(static_occupied * 100.0 / static_capacity, 2)
+            if static_capacity > 0 else 0.0
+        ),
+        "static_overflow": static_end >= stack_pointer,
+        "stack_margin_violation": static_end > static_limit,
+    }
+
+
 def generate_report(
     regions: list[MemoryRegion],
     sections: list[OutputSection],
@@ -365,18 +415,36 @@ def generate_report(
         occupied = sum(end - start for start, end in merged)
         util = round(occupied * 100.0 / r.length, 2) if r.length > 0 else 0.0
         region_limit = r.origin + r.length
-        region_overflow = any(start < r.origin or end > region_limit for start, end in merged)
-        if region_overflow:
-            overflow = True
-        region_report.append({
+        physical_free = max(0, r.length - occupied)
+        region_overflow = any(
+            start < r.origin or end > region_limit for start, end in merged
+        )
+        region_entry = {
             "name": r.name,
             "origin": r.origin,
             "capacity_bytes": r.length,
             "occupied_bytes": occupied,
-            "free_bytes": max(0, r.length - occupied),
+            "physical_free_bytes": physical_free,
+            "free_bytes": physical_free,
             "utilization_percent": util,
             "overflow": region_overflow,
-        })
+        }
+
+        if r.name == "iwram":
+            static_budget = _iwram_static_budget(r, assignments)
+            region_entry.update(static_budget)
+            if static_budget["static_budget_available"]:
+                region_entry["free_bytes"] = static_budget[
+                    "usable_static_headroom_bytes"
+                ]
+                region_entry["overflow"] = (
+                    region_overflow or static_budget["static_overflow"]
+                )
+
+        region_overflow = region_entry["overflow"]
+        if region_overflow:
+            overflow = True
+        region_report.append(region_entry)
 
     # Overlays: group by base address
     overlay_report = []
@@ -431,8 +499,36 @@ def generate_report(
     # ELF cross-validation
     elf_report: dict[str, Any]
     if elf_sections is not None:
-        elf_names = {es.name for es in elf_sections}
-        map_names = {s.name for s in budget_sections}
+        # readelf's allocatable-section view deliberately omits zero-sized
+        # output placeholders such as an empty 16 MiB .locale_data bank.
+        # Compare only map sections that occupy bytes; a populated locale
+        # bank remains non-zero/allocatable and is still cross-validated.
+        elf_by_name = {es.name: es for es in elf_sections if es.size > 0}
+        map_by_name = {s.name: s for s in budget_sections if s.size > 0}
+        elf_names = set(elf_by_name)
+        map_names = set(map_by_name)
+        section_mismatches = []
+        for name in sorted(elf_names & map_names):
+            map_section = map_by_name[name]
+            elf_section = elf_by_name[name]
+            mismatched_fields = []
+            if map_section.address != elf_section.address:
+                mismatched_fields.append("address")
+            if map_section.size != elf_section.size:
+                mismatched_fields.append("size_bytes")
+            if mismatched_fields:
+                section_mismatches.append({
+                    "name": name,
+                    "mismatched_fields": mismatched_fields,
+                    "map": {
+                        "address": map_section.address,
+                        "size_bytes": map_section.size,
+                    },
+                    "elf": {
+                        "address": elf_section.address,
+                        "size_bytes": elf_section.size,
+                    },
+                })
         elf_report = {
             "available": True,
             "section_count": len(elf_sections),
@@ -449,6 +545,7 @@ def generate_report(
             "cross_validation": {
                 "in_elf_not_map": sorted(elf_names - map_names),
                 "in_map_not_elf": sorted(map_names - elf_names),
+                "section_mismatches": section_mismatches,
             },
         }
     else:
@@ -499,11 +596,13 @@ def render_check_diff(
     ))
 
 
-def elf_cross_validation_errors(report: dict[str, Any]) -> list[str]:
-    """Return section-name mismatches from the current ELF diagnostics."""
+def elf_cross_validation_errors(
+    report: dict[str, Any], require_available: bool = False,
+) -> list[str]:
+    """Return actionable output-section mismatches from ELF diagnostics."""
     elf_report = report.get("elf", {})
     if not elf_report.get("available"):
-        return []
+        return ["ELF cross-validation unavailable"] if require_available else []
 
     cross_validation = elf_report.get("cross_validation", {})
     errors = []
@@ -511,6 +610,66 @@ def elf_cross_validation_errors(report: dict[str, Any]) -> list[str]:
         values = cross_validation.get(key, [])
         if values:
             errors.append(f"{key}: {', '.join(values)}")
+    for mismatch in cross_validation.get("section_mismatches", []):
+        name = mismatch.get("name", "<unnamed>")
+        map_section = mismatch.get("map", {})
+        elf_section = mismatch.get("elf", {})
+        for field in mismatch.get("mismatched_fields", []):
+            map_value = map_section.get(field)
+            elf_value = elf_section.get(field)
+            if isinstance(map_value, int) and isinstance(elf_value, int):
+                errors.append(
+                    f"section_mismatch: {name} {field}"
+                    f"(map=0x{map_value:x}, elf=0x{elf_value:x})"
+                )
+            else:
+                errors.append(
+                    f"section_mismatch: {name} {field}"
+                    f"(map={map_value}, elf={elf_value})"
+                )
+    return errors
+
+
+def positive_headroom_errors(
+    report: dict[str, Any], region_names: list[str],
+) -> list[str]:
+    """Return errors for requested regions without safe usable headroom."""
+    regions = {region["name"]: region for region in report.get("regions", ())}
+    errors = []
+    for name in dict.fromkeys(region_names):
+        region = regions.get(name)
+        if region is None:
+            errors.append(f"required region is missing: {name}")
+            continue
+        if name == "iwram":
+            if not region.get("static_budget_available"):
+                missing = region.get("static_budget_missing_symbols", [])
+                errors.append(
+                    "iwram static budget unavailable: missing linker symbols: "
+                    + ", ".join(missing)
+                )
+                continue
+            usable = region.get("usable_static_headroom_bytes", 0)
+            minimum = region.get("minimum_user_stack_margin_bytes", 0)
+            if (
+                region.get("overflow")
+                or region.get("stack_margin_violation")
+                or usable < minimum
+            ):
+                errors.append(
+                    "iwram requires the linker-defined user-stack margin: "
+                    f"usable_static_headroom_bytes={usable} "
+                    f"minimum_user_stack_margin_bytes={minimum} "
+                    f"physical_free_bytes={region.get('physical_free_bytes', 0)} "
+                    f"overflow={region.get('overflow')}"
+                )
+            continue
+        if region.get("overflow") or region.get("free_bytes", 0) <= 0:
+            errors.append(
+                f"{name} requires positive headroom: "
+                f"free_bytes={region.get('free_bytes', 0)} "
+                f"overflow={region.get('overflow')}"
+            )
     return errors
 
 
@@ -529,7 +688,24 @@ def main(argv: list[str] | None = None) -> int:
         "--check", action="store_true",
         help="Compare generated report against existing --output; exit 1 on drift"
     )
+    parser.add_argument(
+        "--validate-elf", action="store_true",
+        help="Fail if non-empty mapped output sections and allocatable ELF "
+             "sections diverge. Requires --elf.",
+    )
+    parser.add_argument(
+        "--require-positive-headroom",
+        action="append",
+        default=[],
+        choices=tuple(REGION_RANGES),
+        metavar="REGION",
+        help="Fail unless REGION has safe usable headroom. IWRAM uses the "
+             "linker-defined user-stack margin. Repeatable.",
+    )
     args = parser.parse_args(argv)
+
+    if args.validate_elf and not args.elf:
+        parser.error("--validate-elf requires --elf")
 
     map_path = Path(args.map)
     if not map_path.is_file():
@@ -562,6 +738,16 @@ def main(argv: list[str] | None = None) -> int:
     report_json = json.dumps(report, indent=2) + "\n"
 
     output_path = Path(args.output)
+    elf_errors = (
+        elf_cross_validation_errors(
+            report, require_available=args.validate_elf,
+        )
+        if args.check or args.validate_elf
+        else []
+    )
+    headroom_errors = positive_headroom_errors(
+        report, args.require_positive_headroom,
+    )
 
     if args.check:
         if not output_path.is_file():
@@ -573,10 +759,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: cannot read expected report: {exc}", file=sys.stderr)
             return 2
 
-        cross_validation_errors = elf_cross_validation_errors(report)
-        if cross_validation_errors:
+        if elf_errors:
             print("check failed: ELF/map section mismatch", file=sys.stderr)
-            for error in cross_validation_errors:
+            for error in elf_errors:
+                print(f"  - {error}", file=sys.stderr)
+            return 1
+
+        if headroom_errors:
+            print("check failed: memory headroom requirement", file=sys.stderr)
+            for error in headroom_errors:
                 print(f"  - {error}", file=sys.stderr)
             return 1
 
@@ -596,6 +787,18 @@ def main(argv: list[str] | None = None) -> int:
         f"wrote {n_sections} sections, {n_overlays} overlays to {args.output}",
         file=sys.stderr,
     )
+
+    if elf_errors:
+        print("validation failed: ELF/map section mismatch", file=sys.stderr)
+        for error in elf_errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+
+    if headroom_errors:
+        print("validation failed: memory headroom requirement", file=sys.stderr)
+        for error in headroom_errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
 
     return 1 if report["overflow"] else 0
 

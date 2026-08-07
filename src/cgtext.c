@@ -13,9 +13,94 @@
 #include "event.h"
 #include "sysutil.h"
 #include "cgtext.h"
+#include "localized_game_text.h"
+#include "text_utf8.h"
 #include "constants/songs.h"
 
 EWRAM_DATA struct CgTextSt gCgTextSt = { 0 };
+
+#ifdef FE8_TEXT_UTF8_ENABLED
+#define CG_TEXT_NAME_BUFFER_CAPACITY 0x100u
+
+static int CgText_CopyName(char *buffer, u32 capacity, const char **source)
+{
+    struct TextUtf8Token token;
+    const char *cursor;
+    const char *next;
+    u32 length;
+    u32 i;
+    int status;
+
+    cursor = *source;
+    length = 0;
+    status = 0;
+    if (buffer == NULL || capacity == 0)
+        return FALSE;
+
+    for (;;)
+    {
+        next = TextUtf8_Next(cursor, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+        {
+            status = 2;
+            break;
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_INVALID || next == cursor)
+        {
+            status = 2;
+            cursor = next;
+            break;
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL
+            && token.control == CHFE_L_NL)
+        {
+            cursor = next;
+            break;
+        }
+
+        if ((u32)(next - cursor) > capacity - 1 - length)
+        {
+            if (status == 0)
+                status = 1;
+        }
+        else if (status == 0)
+        {
+            for (i = 0; i < (u32)(next - cursor); i++)
+                buffer[length++] = cursor[i];
+        }
+        cursor = next;
+    }
+
+    *source = cursor;
+    if (status == 0)
+    {
+        buffer[length] = '\0';
+        return TRUE;
+    }
+
+    for (i = 0; i + 1 < capacity; i++)
+    {
+        const char *marker =
+            status == 1
+                ? LOCALIZED_GAME_TEXT_MARKER_OVERFLOW
+                : LOCALIZED_GAME_TEXT_MARKER_CORRUPT;
+
+        if (marker[i] == '\0')
+            break;
+        buffer[i] = marker[i];
+    }
+    if (capacity != 0)
+        buffer[i] = '\0';
+    return FALSE;
+}
+
+#ifdef FE8_TEXT_CONSUMER_HOST_TEST
+int CgText_TestCopyName(char *buffer, u32 capacity, const char **source)
+{
+    return CgText_CopyName(buffer, capacity, source);
+}
+#endif
+#endif
 
 // clang-format off
 
@@ -123,6 +208,18 @@ void CgText_DrawNameBox(struct CgTextMainProc * proc)
 {
     struct Font font;
     struct Text th;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+    char buf[CG_TEXT_NAME_BUFFER_CAPACITY];
+
+    next = TextUtf8_Next(proc->str, &token);
+    if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL
+        && token.payload == 0x23)
+    {
+        proc->str = next;
+        CgText_CopyName(buf, CG_TEXT_NAME_BUFFER_CAPACITY, &proc->str);
+#else
     char buf[32];
 
     char * iter = buf;
@@ -141,6 +238,7 @@ void CgText_DrawNameBox(struct CgTextMainProc * proc)
 
         proc->str++;
         *iter = 0;
+#endif
 
         SetCgTextFlag(CG_TEXT_FLAG_16);
 
@@ -645,6 +743,10 @@ void CgText_ResetSpriteTextCursors(struct CgTextMainProc * proc)
 void GetCgTextDimensions(const char * str, u8 * wOut, u8 * hOut)
 {
     u32 charWidth;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     int w = 0;
     int h = *hOut;
@@ -653,6 +755,39 @@ void GetCgTextDimensions(const char * str, u8 * wOut, u8 * hOut)
 
     while (1)
     {
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END
+            || (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                && (token.control == CHFE_L_A
+                    || token.control == CHFE_L_Yes
+                    || token.control == CHFE_L_No)))
+        {
+            *wOut = w;
+            *hOut = h;
+            return;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            if (token.control == CHFE_L_NL)
+            {
+                h += 16;
+                w = 0;
+            }
+            str = next;
+            continue;
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            str = next;
+            continue;
+        }
+
+        GetCharTextLen(str, &charWidth);
+        w += charWidth;
+        str = next;
+#else
         switch (*str)
         {
             case 0x00: // [X]
@@ -693,9 +828,8 @@ void GetCgTextDimensions(const char * str, u8 * wOut, u8 * hOut)
 
                 continue;
         }
+#endif
     }
-
-    return;
 }
 
 //! FE8U = 0x0808F3D8
@@ -724,6 +858,10 @@ void CgText_AdjustBoxPosition(struct CgTextMainProc * proc)
 void GetCgTextBoxDimensions(const char * str, int * wOut, int * hOut)
 {
     u32 charWidth;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     int w = 0;
     int h = 16;
@@ -735,6 +873,62 @@ void GetCgTextBoxDimensions(const char * str, int * wOut, int * hOut)
 
     while (1)
     {
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(str, &token);
+
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+        {
+            if (*wOut < w)
+                *wOut = w;
+            if (*hOut < h)
+                *hOut = h;
+            return;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL
+            && (token.control == CHFE_L_NL
+                || token.control == CHFE_L_2NL
+                || token.control == CHFE_L_A
+                || token.control == CHFE_L_Yes
+                || token.control == CHFE_L_No))
+        {
+            if (token.control == CHFE_L_A)
+                w += 8;
+            if (*wOut < w)
+                *wOut = w;
+            w = 0;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            if (token.control == CHFE_L_NL
+                || token.control == CHFE_L_Yes
+                || token.control == CHFE_L_No)
+                h += 16;
+            else if (token.control == CHFE_L_2NL
+                || token.control == CHFE_L_A)
+            {
+                if (*hOut < h)
+                    *hOut = h;
+                h = 0;
+            }
+
+            if (token.control == CHFE_L_X)
+                return;
+            str = next;
+            continue;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            str = next;
+            continue;
+        }
+
+        GetCharTextLen(str, &charWidth);
+        w += charWidth;
+        str = next;
+#else
         switch (*str)
         {
             case 0x03: // [A]
@@ -807,14 +1001,28 @@ void GetCgTextBoxDimensions(const char * str, int * wOut, int * hOut)
 
                 continue;
         }
+#endif
     }
-
-    return;
 }
 
 //! FE8U = 0x0808F5A0
 s8 DoesStringContainTact(const char * str)
 {
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+
+    for (;;)
+    {
+        next = TextUtf8_Next(str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_END)
+            return FALSE;
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL
+            && token.payload == 0x20)
+            return TRUE;
+        str = next;
+    }
+#else
     while (1)
     {
         switch (*str)
@@ -833,6 +1041,7 @@ s8 DoesStringContainTact(const char * str)
 
         str++;
     }
+#endif
 }
 
 //! FE8U = 0x0808F5C8
@@ -975,6 +1184,10 @@ void CgTextInterpreter_Loop_Main(struct CgTextInterpreterProc * proc)
 {
     u16 faceDisp;
     int i;
+#ifdef FE8_TEXT_UTF8_ENABLED
+    struct TextUtf8Token token;
+    const char *next;
+#endif
 
     struct CgTextMainProc * parent = proc->proc_parent;
 
@@ -1021,6 +1234,20 @@ void CgTextInterpreter_Loop_Main(struct CgTextInterpreterProc * proc)
 
     for (i = 0; i < numCharsVisible; i++)
     {
+#ifdef FE8_TEXT_UTF8_ENABLED
+        next = TextUtf8_Next(parent->str, &token);
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            if (token.payload == 0x21)
+                parent->unk_5e = 1 - parent->unk_5e;
+            parent->str = next;
+            continue;
+        }
+        if (token.kind == TEXT_UTF8_TOKEN_SCALAR
+            || token.kind == TEXT_UTF8_TOKEN_INVALID)
+            goto draw_character;
+#endif
+
         switch (*parent->str)
         {
             case 0x18: // [Yes]
@@ -1179,6 +1406,7 @@ void CgTextInterpreter_Loop_Main(struct CgTextInterpreterProc * proc)
 
                 goto _0808FE68;
 
+#ifndef FE8_TEXT_UTF8_ENABLED
             case 0x80:
                 parent->str++;
 
@@ -1190,8 +1418,12 @@ void CgTextInterpreter_Loop_Main(struct CgTextInterpreterProc * proc)
                 parent->str++;
 
                 continue;
+#endif
         }
 
+#ifdef FE8_TEXT_UTF8_ENABLED
+    draw_character:
+#endif
         if (parent->unk_5e != 0)
         {
             Text_SetColor(parent->pTexts[parent->thIndex], 0xc);

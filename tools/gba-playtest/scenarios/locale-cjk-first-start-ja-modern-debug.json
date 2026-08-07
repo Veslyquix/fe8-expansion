@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "name": "locale-cjk-first-start-ja-modern-debug",
+  "description": "Production-profile evidence for the 32 MiB en,ja,zh-Hans debug ROM. A fresh UNSET prefs record shows the three-row first-start selector, DOWN+A chooses Japanese, and the captured locale probe proves the persisted/runtime choice is locale id 1.",
+  "frames": [
+    {"start": 90, "end": 95, "keys": ["A"]},
+    {"start": 155, "end": 160, "keys": ["START"]},
+    {"start": 220, "end": 225, "keys": ["A"]},
+    {"start": 285, "end": 290, "keys": ["START"]},
+    {"start": 650, "end": 656, "keys": ["DOWN"]},
+    {"start": 700, "end": 706, "keys": ["A"]}
+  ],
+  "checkpoints": [
+    {
+      "frame": 600,
+      "framebuffer": true,
+      "name": "three-language-selector-shown",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a96", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a97", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a98", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a99", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9c", "size": 1, "expected": "0x03"},
+        {"address": "0x02031a9e", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031aa0", "size": 2, "expected": "0x0001"},
+        {"address": "0x02031aa6", "size": 1, "expected": "0x01"}
+      ]
+    },
+    {
+      "frame": 800,
+      "framebuffer": true,
+      "name": "japanese-committed",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a9c", "size": 1, "expected": "0x03"},
+        {"address": "0x02031a9e", "size": 2, "expected": "0x0001"},
+        {"address": "0x02031aa6", "size": 1, "expected": "0x00"}
+      ]
+    }
+  ]
+}

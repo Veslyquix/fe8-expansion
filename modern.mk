@@ -27,12 +27,15 @@ MODERN_GOALS := \
 	expansion-modern-linker-check \
 	expansion-modern-localization-budget \
 	expansion-modern-localization-budget-check \
+	expansion-modern-localization-profile-headroom-check \
 	expansion-modern-localization-runtime-debug-check \
 	expansion-modern-localization-runtime-release-check \
 	expansion-modern-localization-runtime-multi-check \
+	expansion-modern-localization-runtime-cjk-check \
 	expansion-modern-localization-runtime-prefs-check \
 	expansion-modern-localization-runtime-save-check \
 	expansion-modern-localization-runtime-shifted-check \
+	expansion-modern-game-localization-config-check \
 	expansion-modern-starter-hook-check \
 	expansion-modern-starter-qol-check \
 	expansion-modern-starter-runtime-check \
@@ -334,7 +337,7 @@ tools/scaninc/scaninc$(EXE): $(wildcard tools/scaninc/*.cpp tools/scaninc/*.h to
 # MODERN_ALL_C_OBJECTS. The generated catalog/header/budget files
 # themselves live under $(MODERN_BUILD_ROOT) (their content never depends
 # on MODERN_CONFIG/MODERN_ABI/MODERN_ROM_SIZE -- only on
-# texts/expansion/registry.json + catalog.en.json), so every
+# texts/expansion/registry.json + the authored locale catalogs), so every
 # MODERN_CONFIG/MODERN_ABI combination *within the same build root* shares
 # one generated copy instead of needlessly regenerating an identical copy
 # per $(MODERN_OUTPUT_DIR).
@@ -372,6 +375,45 @@ MODERN_LOCALIZATION_GENERATED_DIR := $(MODERN_LOCALIZATION_ROOT)/generated
 MODERN_LOCALIZATION_CATALOG_C := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_locale_catalog.c
 MODERN_LOCALIZATION_MSG_IDS_H := $(MODERN_LOCALIZATION_GENERATED_DIR)/expansion_msg_ids.h
 MODERN_LOCALIZATION_BUDGET_JSON := $(MODERN_LOCALIZATION_GENERATED_DIR)/budget.json
+
+# --- Full-game CJK catalog (issue #18 game-catalog slice) -------------------
+# The validated production EXPANSION_ENABLED_LOCALES profile is the only
+# source of truth for framework identity, full-game catalogs, and localized
+# fonts. The generator receives the selected real CJK subset in stable locale
+# order; English is emitted once as the bounded fallback whenever that subset
+# is non-empty. English/qps-only profiles emit no full-game localization
+# payload and keep the historical message buffer/decoder path.
+MODERN_COMMA := ,
+MODERN_ENABLED_LOCALE_WORDS := $(strip \
+	$(subst $(MODERN_COMMA), ,$(EXPANSION_ENABLED_LOCALES)))
+MODERN_GAME_LOCALIZATION_CATALOG_LOCALES :=
+ifneq ($(filter ja,$(MODERN_ENABLED_LOCALE_WORDS)),)
+MODERN_GAME_LOCALIZATION_CATALOG_LOCALES := ja
+endif
+ifneq ($(filter zh-Hans,$(MODERN_ENABLED_LOCALE_WORDS)),)
+ ifeq ($(strip $(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)),)
+MODERN_GAME_LOCALIZATION_CATALOG_LOCALES := zh-Hans
+ else
+MODERN_GAME_LOCALIZATION_CATALOG_LOCALES := $(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES),zh-Hans
+ endif
+endif
+MODERN_GAME_LOCALIZATION_AVAILABLE := $(and \
+	$(wildcard scripts/localization/game_catalog/cli.py),\
+	$(wildcard texts/locales/mapping/fe8u_target_map.json))
+MODERN_GAME_LOCALIZATION_ROOT := $(MODERN_BUILD_ROOT)/game-localization
+MODERN_GAME_LOCALIZATION_GENERATED_DIR := $(MODERN_GAME_LOCALIZATION_ROOT)/generated
+MODERN_GAME_LOCALIZATION_CONFIG_H := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/localized_game_text_data.h
+MODERN_GAME_LOCALIZATION_HEADER := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_catalog.h
+MODERN_GAME_LOCALIZATION_C := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_catalog.c
+MODERN_GAME_LOCALIZATION_REPORT_JSON := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_report.json
+MODERN_GAME_LOCALIZATION_BUDGET_JSON := $(MODERN_GAME_LOCALIZATION_GENERATED_DIR)/game_localization_budget.json
+
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)),)
+ ifeq ($(strip $(MODERN_GAME_LOCALIZATION_AVAILABLE)),)
+  $(error Full-game localization inputs/generator are unavailable)
+ endif
+ MODERN_CFLAGS += -I$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)
+endif
 
 # Lets a future sprint's C source #include "expansion_msg_ids.h" (the
 # generated EXP_MSG_* numeric-id header) without a further modern.mk change;
@@ -565,6 +607,10 @@ endif
 # defined further below, alongside the generation stamp.
 ifneq ($(strip $(MODERN_LOCALIZATION_AVAILABLE)),)
 MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o
+endif
+
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)),)
+MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/localized_game_text-catalog.o
 endif
 
 MODERN_ALL_DATA_PRE := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.pre.c))
@@ -1285,7 +1331,9 @@ MODERN_CLEAN_LDSCRIPT := linker/expansion.ld
 MODERN_CLEAN_IWRAM := linker/iwram.ld
 $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 
-# ROM size configuration: 16M (default) or 32M.
+# ROM size configuration: 16M (English/pseudo default) or 32M. Production
+# profiles enabling ja or zh-Hans are validated below as 32M-only; the upper
+# locale bank carries their full-game catalog and localized font data.
 MODERN_ROM_SIZE ?= 16M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
@@ -1306,6 +1354,7 @@ endif
 # ExpansionMetadata record (include/expansion_metadata.h,
 # src/expansion_metadata.c).
 MODERN_EXPANSION_CONFIG_TOOL := scripts/modernize/expansion_config.py
+MODERN_EXPANSION_CONFIG_RUNNER := python3 "$(MODERN_EXPANSION_CONFIG_TOOL)"
 
 # Whether this checkout actually has the issue #8 framework files (config.mk
 # plus the tool itself). True for the real repository always (both are
@@ -1350,7 +1399,7 @@ FORCE_MODERN_BUILD_METADATA:
 $(MODERN_BUILD_METADATA_JSON): FORCE_MODERN_BUILD_METADATA
 	@mkdir -p "$(MODERN_GENERATED_DIR)"
 ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
-	@python3 "$(MODERN_EXPANSION_CONFIG_TOOL)" generate \
+	@$(MODERN_EXPANSION_CONFIG_RUNNER) generate \
 		--config-mk config.mk \
 		--config "$(MODERN_CONFIG)" \
 		--abi "$(MODERN_ABI)" \
@@ -1410,7 +1459,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
   # embedded in the ROM, and checked by the verifier -- never re-derived
   # from config.mk alone (which would silently ignore a command-line
   # override and desync the compiled ROM from the generated metadata).
-  MODERN_EXPANSION_CONFIG_RESOLVE := $(shell python3 "$(MODERN_EXPANSION_CONFIG_TOOL)" resolve \
+  MODERN_EXPANSION_CONFIG_RESOLVE := $(shell $(MODERN_EXPANSION_CONFIG_RUNNER) resolve \
 	--config-mk config.mk \
 	--config "$(MODERN_CONFIG)" \
 	--abi "$(MODERN_ABI)" \
@@ -1468,6 +1517,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
     $(error modern.mk: failed to resolve MODERN_EXPANSION_ENABLED_LOCALE_MASK from '$(MODERN_EXPANSION_CONFIG_TOOL) resolve'; got: $(MODERN_EXPANSION_CONFIG_RESOLVE))
   endif
 
+  MODERN_COMPILED_ENABLED_LOCALE_MASK := $(MODERN_EXPANSION_ENABLED_LOCALE_MASK)
+
   # Modern-only compiler defines feeding include/expansion_config.h. These
   # are never added to the legacy Makefile's CFLAGS, so the legacy build
   # keeps that header's hardcoded #ifndef fallbacks (today's exact ROM
@@ -1487,7 +1538,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_ROM_REVISION=$(EXPANSION_ROM_REVISION) \
 	-DFE8_EXPANSION_ROM_SIZE_BYTES=$(MODERN_ROM_SIZE_BYTES) \
 	-DFE8_EXPANSION_SAVE_COMPAT_EPOCH=$(MODERN_SAVE_COMPAT_EPOCH) \
-	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)u \
+	-DFE8_EXPANSION_ENABLED_LOCALE_MASK=$(MODERN_COMPILED_ENABLED_LOCALE_MASK)u \
 	-DFE8_EXPANSION_DEFAULT_LOCALE_ID=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID) \
 	-DFE8_EXPANSION_PSEUDO_LOCALE_ENABLED=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED) \
 	-DFE8_EXPANSION_MECHANICS_HOOKS=$(EXPANSION_MECHANICS_HOOKS) \
@@ -1504,6 +1555,102 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
   MODERN_CFLAGS += -DFE8_EXPANSION_MODERN_BUILD=1
  endif
 endif
+
+.PHONY: expansion-modern-game-localization-config-check
+expansion-modern-game-localization-config-check: $(MODERN_BUILD_METADATA_JSON)
+	@python3 -c 'import json, pathlib, sys; from scripts.localization import schema; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")); requested = set(sys.argv[4].split(",")); expected_locales = [name for name in schema.LOCALE_IDS if name in requested]; assert data["config_fingerprint"] == sys.argv[2], (data["config_fingerprint"], sys.argv[2]); assert data["enabled_locale_mask"] == int(sys.argv[3], 0), (data["enabled_locale_mask"], sys.argv[3]); assert data["enabled_locales"] == expected_locales, (data["enabled_locales"], expected_locales); print("game-localization identity: fingerprint={} mask={} locales={}".format(sys.argv[2], sys.argv[3], ",".join(expected_locales)))' \
+		"$(MODERN_BUILD_METADATA_JSON)" "$(MODERN_CONFIG_FINGERPRINT)" \
+		"$(MODERN_COMPILED_ENABLED_LOCALE_MASK)" "$(EXPANSION_ENABLED_LOCALES)"
+
+# Named production CJK profiles. Each uses a private build root so callers can
+# build/compare profiles without cleaning or cross-contaminating generated
+# catalogs, metadata, fonts, or objects. MODERN_CONFIG remains caller-selectable
+# (debug by default); all profiles keep English as the mandatory fallback.
+MODERN_LOCALE_PROFILE_EN_JA_ROOT := $(MODERN_BUILD_ROOT)-locale-en-ja
+MODERN_LOCALE_PROFILE_EN_ZH_HANS_ROOT := $(MODERN_BUILD_ROOT)-locale-en-zh-hans
+MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT := $(MODERN_BUILD_ROOT)-locale-en-ja-zh-hans
+MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_ROOT := \
+	$(MODERN_BUILD_ROOT)-locale-en-ja-zh-hans-qps
+MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
+
+expansion-modern-localization-profile-en-ja:
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_ROM_SIZE=32M MODERN_BUILD_ROOT=$(MODERN_LOCALE_PROFILE_EN_JA_ROOT) \
+		EXPANSION_ENABLED_LOCALES=en,ja
+
+expansion-modern-localization-profile-en-zh-hans:
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_ROM_SIZE=32M MODERN_BUILD_ROOT=$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_ROOT) \
+		EXPANSION_ENABLED_LOCALES=en,zh-Hans
+
+expansion-modern-localization-profile-en-ja-zh-hans:
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_ROM_SIZE=32M MODERN_BUILD_ROOT=$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT) \
+		EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans
+
+expansion-modern-localization-profile-en-ja-zh-hans-qps:
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI) \
+		MODERN_ROM_SIZE=32M \
+		MODERN_BUILD_ROOT=$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_ROOT) \
+		EXPANSION_ENABLED_LOCALES=en,ja,zh-Hans,qps-ploc \
+		EXPANSION_PSEUDO_LOCALE=1
+
+# Build the product profiles serially: every private modern build root still
+# shares the generated battle-animation sidecar, so parallel recursive profile
+# builds would race that one legacy asset. Each real linked map/ELF pair must
+# agree on every non-empty allocatable output section's name, VMA, and size.
+# They must also retain positive EWRAM headroom and the linker's minimum
+# user-stack margin below __sp_usr; neither gate can be satisfied by a
+# source-only aggregate budget or by physical IWRAM space reserved for stacks.
+expansion-modern-localization-profile-headroom-check:
+	+$(MAKE) expansion-modern-localization-profile-en-ja \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_JA_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	+$(MAKE) expansion-modern-localization-profile-en-zh-hans \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_ZH_HANS_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	+$(MAKE) expansion-modern-localization-profile-en-ja-zh-hans \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	+$(MAKE) expansion-modern-localization-profile-en-ja-zh-hans-qps \
+		MODERN_CONFIG=$(MODERN_CONFIG) MODERN_ABI=$(MODERN_ABI)
+	READELF="$(MODERN_READELF)" "$(PYTHON)" scripts/linker_report/budget.py \
+		--map "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR)/fireemblem8.map" \
+		--elf "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR)/fireemblem8.elf" \
+		--output "$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_QPS_OUTPUT_DIR)/linker-budget.json" \
+		--validate-elf --require-positive-headroom ewram \
+		--require-positive-headroom iwram
+	@printf 'Modern localization profile headroom checks passed (config=%s abi=%s)\n' \
+		'$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
+.PHONY: \
+	expansion-modern-localization-profile-en-ja \
+	expansion-modern-localization-profile-en-zh-hans \
+	expansion-modern-localization-profile-en-ja-zh-hans \
+	expansion-modern-localization-profile-en-ja-zh-hans-qps \
+	expansion-modern-localization-profile-headroom-check
 
 # Compile-settings stamp: a content-addressed prerequisite of every modern
 # C/data object that can observe include/expansion_config.h (global.h
@@ -1551,7 +1698,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rom_revision=$(EXPANSION_ROM_REVISION)'; \
 		printf '%s\n' 'rom_size_bytes=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'save_compat_epoch=$(MODERN_SAVE_COMPAT_EPOCH)'; \
-		printf '%s\n' 'enabled_locale_mask=$(MODERN_EXPANSION_ENABLED_LOCALE_MASK)'; \
+		printf '%s\n' 'enabled_locale_mask=$(MODERN_COMPILED_ENABLED_LOCALE_MASK)'; \
+		printf '%s\n' 'game_localization_catalog_locales=$(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)'; \
 		printf '%s\n' 'default_locale_id=$(MODERN_EXPANSION_DEFAULT_LOCALE_ID)'; \
 		printf '%s\n' 'pseudo_locale_enabled=$(MODERN_EXPANSION_PSEUDO_LOCALE_ENABLED)'; \
 		printf '%s\n' 'mechanics_hooks=$(EXPANSION_MECHANICS_HOOKS)'; \
@@ -1585,7 +1733,7 @@ $(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): $(MODERN_COMPILE_SETTINGS)
 # --- Localization catalog generation (issue #18 sprint 1) -------------------
 # Regenerates $(MODERN_BUILD_ROOT)/expansion-localization/generated/{expansion_locale_catalog.c,
 # expansion_msg_ids.h,budget.json} from texts/expansion/registry.json +
-# catalog.en.json via scripts/localization/generate.py (invoked through its
+# the authored locale catalogs via scripts/localization/generate.py (invoked through its
 # CLI, scripts/localization/cli.py -- see also localization.mk's own
 # standalone, toolchain-independent localization-* targets for the same
 # generator run outside of any modern build). Uses the same FORCE +
@@ -1671,6 +1819,32 @@ endif
 # reachable, since nothing adds this path to MODERN_ALL_C_OBJECTS in that
 # case.
 $(MODERN_OUTPUT_DIR)/src/expansion_locale-catalog.o: $(MODERN_LOCALIZATION_CATALOG_C)
+	@mkdir -p $(@D)
+	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
+
+# The full-game CJK catalog plus its single shared modern English bundle are
+# generated and linked only when the production profile enables real CJK.
+# Grouped outputs prevent parallel compiles from racing the deterministic
+# writer when the runtime headers and generated source are requested together.
+.PHONY: FORCE_MODERN_GAME_LOCALIZATION
+FORCE_MODERN_GAME_LOCALIZATION:
+
+$(MODERN_GAME_LOCALIZATION_CONFIG_H) $(MODERN_GAME_LOCALIZATION_HEADER) \
+$(MODERN_GAME_LOCALIZATION_C) $(MODERN_GAME_LOCALIZATION_REPORT_JSON) \
+$(MODERN_GAME_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_GAME_LOCALIZATION
+	@mkdir -p "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)"
+	@python3 -m scripts.localization.game_catalog generate \
+		--out-dir "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)" \
+		--enabled-locales "$(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)"
+
+ifneq ($(strip $(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)),)
+$(MODERN_ALL_C_OBJECTS) $(MODERN_ALL_DATA_OBJECTS): \
+	$(MODERN_GAME_LOCALIZATION_CONFIG_H) $(MODERN_GAME_LOCALIZATION_HEADER)
+game_localization_catalog.h: $(MODERN_GAME_LOCALIZATION_HEADER) ;
+localized_game_text_data.h: $(MODERN_GAME_LOCALIZATION_CONFIG_H) ;
+endif
+
+$(MODERN_OUTPUT_DIR)/src/localized_game_text-catalog.o: $(MODERN_GAME_LOCALIZATION_C)
 	@mkdir -p $(@D)
 	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
@@ -2711,7 +2885,9 @@ expansion-modern-budget-check: expansion-modern-elf
 		--map "$(MODERN_MAP)" \
 		--elf "$(MODERN_ELF)" \
 		--output "$(MODERN_BUDGET_REPORT)" \
-		--check
+		--check --validate-elf \
+		--require-positive-headroom ewram \
+		--require-positive-headroom iwram
 
 # Localization-specific runtime budget rollup (issue #18 sprint 4): combines
 # the real per-region headroom already computed above (real floating_end ->
@@ -3038,7 +3214,41 @@ ifeq ($(MODERN_CONFIG),debug)
 endif
 	@printf 'Modern ROM localization-runtime multi-check passed (config=%s): %s\n' '$(MODERN_CONFIG)' "$(MODERN_LOCALE_MULTI_ROM)"
 
-# 4. Corrupt/unknown-locale/disabled-locale ExpansionUserPrefs sub-states
+# 4. Production CJK matrix: all four named profiles first pass the exact
+#    product map/ELF headroom gate above. The trilingual profile then runs
+#    captured first-start Japanese/Chinese choices, inline Config switching
+#    across all three real locales, and Simplified Chinese persistence across
+#    a real soft reset.
+MODERN_LOCALE_CJK_ROM := \
+	$(MODERN_LOCALE_PROFILE_EN_JA_ZH_HANS_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)/fireemblem8.gba
+
+expansion-modern-localization-runtime-cjk-check: expansion-modern-boot-preflight \
+		expansion-modern-localization-profile-headroom-check \
+		$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav \
+		$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav
+ifeq ($(MODERN_CONFIG),debug)
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_CJK_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-cjk-first-start-ja-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-cjk-first-start-ja-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_CJK_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-cjk-first-start-zh-hans-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-cjk-first-start-zh-hans-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_CJK_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-cjk-settings-inline-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-cjk-settings-inline-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/valid_explicit_en.sav" --policy behavior
+	"$(PYTHON)" "$(MODERN_PLAYTEST)" verify --rom "$(MODERN_LOCALE_CJK_ROM)" \
+		--scenario "$(MODERN_LOCALE_SCEN)/locale-cjk-softreset-persistence-modern-debug.json" \
+		--expected "$(MODERN_LOCALE_FP)/locale-cjk-softreset-persistence-modern-debug.json" \
+		--sram-image "$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" --policy behavior
+	@printf 'Modern ROM localization-runtime CJK check passed: %s\n' "$(MODERN_LOCALE_CJK_ROM)"
+else
+	@printf 'Modern ROM localization-runtime CJK check skipped for config=%s (debug fingerprints only)\n' '$(MODERN_CONFIG)'
+endif
+
+# 5. Corrupt/unknown-locale/disabled-locale ExpansionUserPrefs sub-states
 #    all re-prompt (collapsing to AUTO_SELECT on this single-locale
 #    default build, debug-only boot-timing calibration) and provably
 #    never wipe SRAM outside (a) the 12-byte prefs record itself and (b)
@@ -3076,14 +3286,14 @@ else
 	@printf 'Modern ROM localization-runtime prefs-check skipped for config=%s (debug-only boot-timing calibration)\n' '$(MODERN_CONFIG)'
 endif
 
-# 5. Locale prefs must not regress ordinary normal save/load and
+# 6. Locale prefs must not regress ordinary normal save/load and
 #    suspend/resume behavior -- reruns the existing (unmodified) issue #13
 #    save-path gates as-is; this is a regression check, not a new scenario.
 expansion-modern-localization-runtime-save-check: expansion-modern-saveload-check \
 		expansion-modern-savefmt-check
 	@printf 'Modern ROM localization-runtime save-check passed (normal save/load + suspend/resume unaffected, config=%s)\n' '$(MODERN_CONFIG)'
 
-# 6. Shifted ROM layout (P9-A __text_shift regression class): locale
+# 7. Shifted ROM layout (P9-A __text_shift regression class): locale
 #    resolver/selector probes must behave identically after the whole ROM
 #    is relocated -- EWRAM probe addresses are unaffected by a ROM-only
 #    text shift, so the exact same debug scenarios/fingerprints are reused
@@ -3124,6 +3334,7 @@ endif
 	expansion-modern-localization-runtime-debug-check \
 	expansion-modern-localization-runtime-release-check \
 	expansion-modern-localization-runtime-multi-check \
+	expansion-modern-localization-runtime-cjk-check \
 	expansion-modern-localization-runtime-prefs-check \
 	expansion-modern-localization-runtime-save-check \
 	expansion-modern-localization-runtime-shifted-check
@@ -3208,6 +3419,7 @@ expansion-modern-linker-check: expansion-modern-budget-check \
 		expansion-modern-localization-runtime-debug-check \
 		expansion-modern-localization-runtime-release-check \
 		expansion-modern-localization-runtime-multi-check \
+		expansion-modern-localization-runtime-cjk-check \
 		expansion-modern-localization-runtime-prefs-check \
 		expansion-modern-localization-runtime-save-check \
 		expansion-modern-localization-runtime-shifted-check

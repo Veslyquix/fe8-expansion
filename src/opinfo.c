@@ -22,6 +22,11 @@
 
 EWRAM_OVERLAY(gamestart) struct AnimBuffer gOpInfoData = {0};
 EWRAM_OVERLAY(gamestart) static u8 sOpInfoImgSheetBuf[0x2000] = {0};
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+#define OPINFO_CLASS_NAME_CAPACITY 64
+#define OPINFO_CLASS_STATS_NAME_TILE_X 12
+#define OPINFO_CLASS_STATS_NAME_TILE_WIDTH 18
+#endif
 
 // TODO: Move elsewhere
 void InitBanimTerrain(void *);
@@ -262,8 +267,13 @@ extern u8* CONST_DATA gOpinfo_1[];
 void ClassIntro_Init(struct OpInfoEnterProc* proc) {
 
     int i;
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct Text classNameText;
+    char *str;
+#else
     u16 ptr;
     signed char* str;
+#endif
 
     u16 bgConfig[12] = {
         0x0000, 0x6000, 0,
@@ -312,10 +322,13 @@ void ClassIntro_Init(struct OpInfoEnterProc* proc) {
 
     ApplyPalette(gPal_ClassIntroLetterFont, 0x10);
 
-    str = GetClassReelName(proc->classReelEnt->classId, NULL);
-
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    str = GetStringFromIndex(
+        GetClassData(proc->classReelEnt->classId)->nameTextId);
+    proc->classNameLength = 0;
+#else
     ptr = 0;
-
+    str = GetClassReelName(proc->classReelEnt->classId, NULL);
     proc->classNameLength = strlen(str);
 
     while (*str != 0) {
@@ -325,6 +338,7 @@ void ClassIntro_Init(struct OpInfoEnterProc* proc) {
         str++;
         ptr += 0x40;
     }
+#endif
 
     ApplyPalette(gPal_ClassIntroNameSprites, 0x1E);
     ApplyPalette(gPal_ClassIntroNameSprites, 0x1F);
@@ -333,7 +347,9 @@ void ClassIntro_Init(struct OpInfoEnterProc* proc) {
 
     proc->unk_2c = ((240 - (((proc->classNameLength << 1) + proc->classNameLength) << 2)) >> 1) - 8;
 
+#if !FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
     *proc->letterProcsPtr = StartClassNameIntroLetter(proc, 0);
+#endif
 
     Decompress(gImg_ClassIntroBg0, (void *)VRAM);
 
@@ -352,7 +368,25 @@ void ClassIntro_Init(struct OpInfoEnterProc* proc) {
 
     ApplyPalettes(Pal_ChapterIntro_LensFlare, 0, 3);
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    ResetText();
+    InitSystemTextFont();
+    InitText(&classNameText, 30);
+    ClearText(&classNameText);
+    Text_SetColor(&classNameText, TEXT_COLOR_SYSTEM_WHITE);
+    Text_SetCursor(
+        &classNameText, (240 - GetStringTextLen(str)) / 2);
+    Text_DrawString(&classNameText, str);
+    PutText(
+        &classNameText, TILEMAP_LOCATED(gBG0TilemapBuffer, 0, 2));
+    gLCDControlBuffer.dispcnt.bg0_on = 1;
+#endif
+
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
+#else
     BG_EnableSyncByMask(4);
+#endif
 
     return;
 }
@@ -891,7 +925,8 @@ signed char* GetClassReelName(u8 classId, signed char* buffer) {
     if (buffer == NULL) {
         buffer = GetStringFromIndex(class->nameTextId);
     } else {
-        GetStringFromIndexInBuffer(class->nameTextId, buffer);
+        GetStringFromIndexInBufferWithLimit(
+            class->nameTextId, (char *)buffer, 32);
     }
 
     str = strstr(buffer, "Kn.");
@@ -1374,18 +1409,30 @@ ProcPtr StartClassAnimDisplay(ProcPtr parent, struct ClassReelEnt* entry) {
 }
 
 void ClassStatsDisplay_Init(struct OpInfoGaugeDrawProc* proc) {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct Text classNameText;
+    char buffer[OPINFO_CLASS_NAME_CAPACITY];
+#else
     struct ClassDisplayFont* res;
     int i;
-
     signed char buffer[32];
+#endif
 
     proc->unk_30 = proc->proc_parent;
     proc->unk_2a = 0;
     proc->unk_34 = 0;
     proc->unk_35 = 100;
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    GetStringFromIndexInBufferWithLimit(
+        GetClassData(proc->unk_30->classReelEnt->classId)->nameTextId,
+        buffer,
+        (u32)sizeof(buffer));
+    proc->unk_34 = GetStringTextLen(buffer);
+    InitText(&classNameText, OPINFO_CLASS_STATS_NAME_TILE_WIDTH);
+    proc->unk_2c = classNameText.chr_position;
+#else
     GetClassReelName(proc->unk_30->classReelEnt->classId, buffer);
-
     for (i = 0; buffer[i] != 0; ) {
 
         res = GetClassDisplayFontInfo(buffer[i]);
@@ -1406,6 +1453,7 @@ void ClassStatsDisplay_Init(struct OpInfoGaugeDrawProc* proc) {
     Decompress(Img_ClassReelFont, (void *)0x06010000);
 
     ApplyPalettes(Pal_ClassReelFont, 0x14, 2);
+#endif
 
     return;
 }
@@ -1413,7 +1461,12 @@ void ClassStatsDisplay_Init(struct OpInfoGaugeDrawProc* proc) {
 extern u16* CONST_DATA sSpriteLut_GaugePips[];
 
 void ClassStatsDisplay_Loop(struct OpInfoGaugeDrawProc* proc) {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct Text classNameText;
+    char buffer[OPINFO_CLASS_NAME_CAPACITY];
+#else
     signed char buffer[32];
+#endif
 
     u8 value;
     int i;
@@ -1449,6 +1502,34 @@ void ClassStatsDisplay_Loop(struct OpInfoGaugeDrawProc* proc) {
 
     x = ((120 - proc->unk_34) / 2) + proc->unk_35;
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    GetStringFromIndexInBufferWithLimit(
+        GetClassData(proc->unk_30->classReelEnt->classId)->nameTextId,
+        buffer,
+        (u32)sizeof(buffer));
+    TileMap_FillRect(
+        TILEMAP_LOCATED(
+            gBG0TilemapBuffer, OPINFO_CLASS_STATS_NAME_TILE_X, 0),
+        OPINFO_CLASS_STATS_NAME_TILE_WIDTH,
+        2,
+        0);
+    classNameText.chr_position = proc->unk_2c;
+    classNameText.tile_width = OPINFO_CLASS_STATS_NAME_TILE_WIDTH;
+    classNameText.db_id = 0;
+    classNameText.db_enabled = FALSE;
+    classNameText.is_printing = FALSE;
+    ClearText(&classNameText);
+    Text_SetColor(&classNameText, TEXT_COLOR_SYSTEM_WHITE);
+    Text_SetCursor(
+        &classNameText,
+        x - OPINFO_CLASS_STATS_NAME_TILE_X * 8);
+    Text_DrawString(&classNameText, buffer);
+    PutText(
+        &classNameText,
+        TILEMAP_LOCATED(
+            gBG0TilemapBuffer, OPINFO_CLASS_STATS_NAME_TILE_X, 0));
+    BG_EnableSyncByMask(BG0_SYNC_BIT);
+#else
     GetClassReelName(proc->unk_30->classReelEnt->classId, buffer);
 
     for (i = 0; (buffer[i] != 0); ) {
@@ -1478,6 +1559,7 @@ void ClassStatsDisplay_Loop(struct OpInfoGaugeDrawProc* proc) {
             break;
         }
     }
+#endif
 
     if (proc->unk_2a < 255) {
         proc->unk_2a++;

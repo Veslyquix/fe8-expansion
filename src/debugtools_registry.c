@@ -134,7 +134,9 @@ static int DebugToolsHub_BuiltinActionRowDraw(struct MenuProc* proc, struct Menu
     if (item->availability == MENU_DISABLED)
         Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
 
-    Text_DrawStringASCII(&item->text, ExpansionLocale_ResolveCurrent((ExpansionMsgId)item->def->helpMsgId));
+    Text_DrawString(
+        &item->text,
+        ExpansionLocale_ResolveCurrent((ExpansionMsgId)item->def->helpMsgId));
 
     PutText(&item->text, TILEMAP_LOCATED(BG_GetMapBuffer(proc->frontBg), item->xTile, item->yTile));
 

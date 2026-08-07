@@ -5,9 +5,10 @@
       "name": "ewram",
       "origin": 33554432,
       "capacity_bytes": 262144,
-      "occupied_bytes": 260324,
-      "free_bytes": 1820,
-      "utilization_percent": 99.31,
+      "occupied_bytes": 260300,
+      "physical_free_bytes": 1844,
+      "free_bytes": 1844,
+      "utilization_percent": 99.3,
       "overflow": false
     },
     {
@@ -15,15 +16,29 @@
       "origin": 50331648,
       "capacity_bytes": 32768,
       "occupied_bytes": 26536,
-      "free_bytes": 6232,
+      "physical_free_bytes": 6232,
+      "free_bytes": 5720,
       "utilization_percent": 80.98,
-      "overflow": false
+      "overflow": false,
+      "static_budget_available": true,
+      "static_end_address": 50358184,
+      "static_limit_address": 50359808,
+      "user_stack_pointer_address": 50363904,
+      "static_usable_capacity_bytes": 32256,
+      "reserved_stack_bytes": 512,
+      "usable_static_headroom_bytes": 5720,
+      "minimum_user_stack_margin_bytes": 4096,
+      "static_growth_headroom_bytes": 1624,
+      "static_utilization_percent": 82.27,
+      "static_overflow": false,
+      "stack_margin_violation": false
     },
     {
       "name": "rom",
       "origin": 134217728,
       "capacity_bytes": 16777216,
       "occupied_bytes": 16776960,
+      "physical_free_bytes": 256,
       "free_bytes": 256,
       "utilization_percent": 100.0,
       "overflow": false
@@ -96,7 +111,7 @@
     {
       "name": ".bss",
       "address": 33813560,
-      "size_bytes": 1196,
+      "size_bytes": 1172,
       "is_overlay": false,
       "region": "ewram"
     },
@@ -111,6 +126,13 @@
       "name": "ROM",
       "address": 134217728,
       "size_bytes": 16776960,
+      "is_overlay": false,
+      "region": "rom"
+    },
+    {
+      "name": ".locale_data",
+      "address": 150994944,
+      "size_bytes": 0,
       "is_overlay": false,
       "region": "rom"
     }
@@ -236,7 +258,7 @@
     },
     {
       "name": "__ewram_used_end",
-      "address": 33814756,
+      "address": 33814732,
       "expression": ".",
       "region": "ewram"
     },
@@ -955,6 +977,30 @@
       "region": "iwram"
     },
     {
+      "name": "__iwram_static_end",
+      "address": 50358184,
+      "expression": "(ADDR (IWRAM) + SIZEOF (IWRAM))",
+      "region": "iwram"
+    },
+    {
+      "name": "__localized_msg_transform_scratch_end",
+      "address": 50358184,
+      "expression": ".",
+      "region": "iwram"
+    },
+    {
+      "name": "__localized_msg_transform_scratch_start",
+      "address": 50358184,
+      "expression": ".",
+      "region": "iwram"
+    },
+    {
+      "name": "__iwram_static_limit",
+      "address": 50359808,
+      "expression": "(__sp_usr - 0x1000)",
+      "region": "iwram"
+    },
+    {
       "name": "__sp_usr",
       "address": 50363904,
       "expression": "(__sp_irq - 0x1a0)",
@@ -1005,7 +1051,7 @@
     },
     {
       "name": "__floating_end",
-      "address": 145913812,
+      "address": 145915508,
       "expression": ".",
       "region": "rom"
     },
@@ -1019,6 +1065,18 @@
       "name": "_banim_pal_end",
       "address": 149926624,
       "expression": ".",
+      "region": "rom"
+    },
+    {
+      "name": "__locale_bank_end",
+      "address": 150994944,
+      "expression": "(__locale_bank_start + SIZEOF (.locale_data))",
+      "region": "rom"
+    },
+    {
+      "name": "__locale_bank_start",
+      "address": 150994944,
+      "expression": "0x9000000",
       "region": "rom"
     }
   ],
@@ -1093,7 +1151,7 @@
         "name": ".bss",
         "type": "NOBITS",
         "address": 33813560,
-        "size_bytes": 1196,
+        "size_bytes": 1172,
         "flags": "WA"
       },
       {
@@ -1113,7 +1171,8 @@
     ],
     "cross_validation": {
       "in_elf_not_map": [],
-      "in_map_not_elf": []
+      "in_map_not_elf": [],
+      "section_mismatches": []
     }
   },
   "overflow": false

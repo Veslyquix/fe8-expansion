@@ -6,10 +6,10 @@
  * src/bmsave-lib.c: unlike ExpansionUserPrefs_StoreRaw()/_Build()/
  * _ValidateRaw()/_Load()/_Normalize() (all pure struct/macro logic, no
  * expansion_locale.c symbol references, so they stay legacy-linkable),
- * this function must call the real ExpansionLocale_SetCurrent()/
- * ExpansionLocale_InvalidateCache() (src/expansion_locale.c) to keep the
- * runtime resolver's locale/cache state coherent with whatever was just
- * persisted -- and those symbols are only linked into the modern ROM
+ * this function must call the real ExpansionLocale_SetCurrent()
+ * (src/expansion_locale.c) to keep the runtime resolver and its dependent
+ * expansion/full-game caches coherent with whatever was just persisted --
+ * and that symbol is only linked into the modern ROM
  * (see include/expansion_locale.h's file comment). This file is compiled
  * by both the legacy agbcc build and every modern build cell (so it must
  * stay strict C89-typecheckable) but -- exactly like
@@ -29,10 +29,10 @@ bool8 ExpansionUserPrefs_Store(ExpansionLocaleId localeId, bool8 explicitSelecti
 
     /*
      * ExpansionLocale_SetCurrent() already calls
-     * ExpansionLocale_InvalidateCache() itself whenever the current
-     * locale actually changes (src/expansion_locale.c) -- covering the
-     * "cache invalidation signal" contract without a separate explicit
-     * call here. It cannot fail here: localeId was already proven
+     * ExpansionLocale_InvalidateCache() itself whenever the current locale
+     * actually changes (src/expansion_locale.c), which clears both the
+     * expansion catalog cache and the localized full-game message cache.
+     * It cannot fail here: localeId was already proven
      * supported+enabled above.
      */
     return ExpansionLocale_SetCurrent(localeId);

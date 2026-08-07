@@ -15,6 +15,7 @@ from scripts.localization.generate import (
     build_msg_ids_header,
     generate,
     key_to_macro,
+    locale_to_symbol,
 )
 
 
@@ -51,6 +52,9 @@ class BuildOutputsTests(unittest.TestCase):
         active_count = len(self.catalog.active_entries)
         self.assertIn(f"const u16 gExpansionLocaleMsgCount = {active_count}u;", source)
         self.assertEqual(source.count("u,\n"), active_count)  # gExpansionLocaleMsgIds entries
+        self.assertIn(
+            "gExpansionLocaleCatalogs[EXPANSION_LOCALE_COUNT]", source
+        )
 
     def test_catalog_c_ids_ascending(self):
         source = build_catalog_c(self.catalog)
@@ -81,10 +85,28 @@ class BuildOutputsTests(unittest.TestCase):
             budget["scratch_slot_bytes_used_max"], budget["scratch_budget_bytes"]
         )
 
-    def test_budget_codepoints_within_ascii_allowlist(self):
+    def test_budget_reports_real_utf8_codepoints(self):
         budget = build_budget(self.catalog)
-        self.assertEqual(budget["codepoints"]["allowed_min_codepoint"], 0x20)
-        self.assertEqual(budget["codepoints"]["allowed_max_codepoint"], 0x7E)
+        self.assertEqual(budget["populated_descriptor_count"], 4)
+        self.assertIn("ja", budget["codepoints"]["per_locale"])
+        self.assertIn("zh-Hans", budget["codepoints"]["per_locale"])
+        self.assertIn("U+62E1", budget["codepoints"]["utf8_scalars"])
+
+    def test_generated_c_uses_exact_utf8_byte_escapes(self):
+        source = build_catalog_c(self.catalog)
+        self.assertNotIn("拡張フレームワーク", source)
+        self.assertIn(r"\346\213\241", source)
+
+    def test_every_stable_locale_has_descriptor_slot(self):
+        source = build_catalog_c(self.catalog)
+        for locale in schema.LOCALE_IDS:
+            self.assertIn(f"/* {locale} */", source)
+        self.assertEqual(source.count("{ NULL, NULL, 0u }"), 4)
+
+    def test_locale_symbol_sanitizes_bcp47_separator(self):
+        self.assertEqual(
+            locale_to_symbol("zh-Hans"), "gExpansionCatalog_zh_Hans"
+        )
 
 
 class GenerateWritesFilesTests(unittest.TestCase):
@@ -120,7 +142,11 @@ class GenerateWritesFilesTests(unittest.TestCase):
                 "gExpansionLocaleMsgIds",
                 "gExpansionLocaleMsgCount",
                 "gExpansionCatalog_en",
+                "gExpansionCatalog_ja",
+                "gExpansionCatalog_zh_Hans",
                 "gExpansionCatalog_qps_ploc",
+                "gExpansionLocaleCatalogs",
+                "gExpansionLocalePopulatedCount",
                 "gExpansionLocaleTombstoneCount",
             ):
                 self.assertIn(symbol, source)
@@ -145,8 +171,12 @@ class DefensiveIdBypassTests(unittest.TestCase):
             entries=(entry,),
             active_entries=(entry,),
             tombstone_entries=(),
-            en_strings={"a.bad": "Hello"},
-            pseudo_strings={"a.bad": "Hello"},
+            locale_strings={
+                "en": {"a.bad": "Hello"},
+                schema.PSEUDO_LOCALE: {"a.bad": "Hello"},
+            },
+            authored_locales=("en",),
+            generated_locales=("en", schema.PSEUDO_LOCALE),
         )
 
     def test_build_msg_ids_header_rejects_sentinel_bypass(self):

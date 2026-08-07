@@ -50,10 +50,44 @@ void CallARM_FillMovementMap(void);
 // ??? LoadIconObjectGraphics(???);
 
 const char * GetStrPrefix(s8 * str, bool capital);
-void InsertPrefix(char * str, const char * prefix, bool capital);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+char *InsertPrefix(char *str, const char *prefix, bool capital);
+#else
+void InsertPrefix(char *str, const char *prefix, bool capital);
+#endif
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+void InsertPrefixWithLimit(
+    char *str,
+    u32 capacity,
+    const char *prefix,
+    bool capital);
+#endif
 void SetMsgTerminator(signed char * str);
 char *GetStringFromIndex(int index);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+char *GetStringFromIndexInBufferWithLimit(int index, char *buffer, u32 bufferCapacity);
+#else
+#define GetStringFromIndexInBufferWithLimit(index, buffer, bufferCapacity) \
+    GetStringFromIndexInBuffer((index), (buffer))
+#endif
 char *GetStringFromIndexInBuffer(int index, char *buffer);
+
+/* Modern GCC/Clang callers with a compile-time-known buffer size are routed
+ * automatically to the bounded helper above. The historical two-argument
+ * symbol remains available for legacy/unbounded semantics and for compilers
+ * that cannot prove an object size. */
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED \
+    && (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 4)))
+#define FE8_GET_STRING_FROM_INDEX_BUFFER_OBJECT_SIZE(buffer) \
+    ((unsigned long)__builtin_object_size((buffer), 0))
+#define GetStringFromIndexInBuffer(index, buffer) \
+    ((FE8_GET_STRING_FROM_INDEX_BUFFER_OBJECT_SIZE(buffer) == (unsigned long)-1) \
+        ? GetStringFromIndexInBuffer((index), (buffer)) \
+        : GetStringFromIndexInBufferWithLimit(\
+            (index), (buffer), \
+            (u32)FE8_GET_STRING_FROM_INDEX_BUFFER_OBJECT_SIZE(buffer)))
+#endif
+
 char *StringInsertSpecialPrefixByCtrl(void);
 char* StrInsertTact(void);
 

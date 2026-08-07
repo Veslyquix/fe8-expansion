@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "name": "locale-cjk-settings-inline-modern-debug",
+  "description": "Production-profile Config evidence for the 32 MiB en,ja,zh-Hans debug ROM with a valid explicit-English prefs fixture. Real Prep Map -> Options -> Configuration navigation reaches the dedicated globe-icon Language row; RIGHT selects Japanese inline, a second RIGHT selects Simplified Chinese inline, and settingsOpenCount stays zero because all three locales fit without More.",
+  "frames": [
+    {"start": 90, "end": 95, "keys": ["A"]},
+    {"start": 150, "end": 155, "keys": ["START"]},
+    {"start": 210, "end": 215, "keys": ["A"]},
+    {"start": 270, "end": 275, "keys": ["START"]},
+    {"start": 330, "end": 335, "keys": ["A"]},
+    {"start": 390, "end": 395, "keys": ["START"]},
+    {"start": 450, "end": 455, "keys": ["A"]},
+    {"start": 600, "end": 606, "keys": ["SELECT", "R"]},
+    {"start": 650, "end": 656, "keys": ["DOWN"]},
+    {"start": 710, "end": 716, "keys": ["DOWN"]},
+    {"start": 770, "end": 776, "keys": ["DOWN"]},
+    {"start": 830, "end": 836, "keys": ["A"]},
+    {"start": 900, "end": 904, "keys": ["A"]},
+    {"start": 1300, "end": 1306, "keys": ["L"]},
+    {"start": 1360, "end": 1366, "keys": ["A"]},
+    {"start": 1650, "end": 1655, "keys": ["A"]},
+    {"start": 1760, "end": 1765, "keys": ["A"]},
+    {"start": 1870, "end": 1875, "keys": ["A"]},
+    {"start": 1980, "end": 1985, "keys": ["A"]},
+    {"start": 2090, "end": 2095, "keys": ["A"]},
+    {"start": 2200, "end": 2205, "keys": ["A"]},
+    {"start": 2310, "end": 2315, "keys": ["A"]},
+    {"start": 2420, "end": 2425, "keys": ["A"]},
+    {"start": 2530, "end": 2535, "keys": ["A"]},
+    {"start": 2640, "end": 2645, "keys": ["A"]},
+    {"start": 2750, "end": 2755, "keys": ["A"]},
+    {"start": 2860, "end": 2865, "keys": ["A"]},
+    {"start": 2970, "end": 2975, "keys": ["A"]},
+    {"start": 3080, "end": 3085, "keys": ["A"]},
+    {"start": 3250, "end": 3255, "keys": ["START"]},
+    {"start": 3550, "end": 3556, "keys": ["B"]},
+    {"start": 4400, "end": 4406, "keys": ["DOWN"]},
+    {"start": 4460, "end": 4466, "keys": ["DOWN"]},
+    {"start": 4520, "end": 4526, "keys": ["A"]},
+    {"start": 4700, "end": 4706, "keys": ["DOWN"]},
+    {"start": 4760, "end": 4766, "keys": ["DOWN"]},
+    {"start": 4820, "end": 4826, "keys": ["DOWN"]},
+    {"start": 4880, "end": 4886, "keys": ["DOWN"]},
+    {"start": 4940, "end": 4946, "keys": ["DOWN"]},
+    {"start": 5000, "end": 5006, "keys": ["DOWN"]},
+    {"start": 5060, "end": 5066, "keys": ["DOWN"]},
+    {"start": 5120, "end": 5126, "keys": ["DOWN"]},
+    {"start": 5180, "end": 5186, "keys": ["DOWN"]},
+    {"start": 5240, "end": 5246, "keys": ["DOWN"]},
+    {"start": 5300, "end": 5306, "keys": ["DOWN"]},
+    {"start": 5360, "end": 5366, "keys": ["DOWN"]},
+    {"start": 5420, "end": 5426, "keys": ["DOWN"]},
+    {"start": 5600, "end": 5606, "keys": ["RIGHT"]},
+    {"start": 5900, "end": 5906, "keys": ["RIGHT"]}
+  ],
+  "checkpoints": [
+    {
+      "frame": 5550,
+      "framebuffer": true,
+      "name": "cursor-on-three-language-row",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a95", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9c", "size": 1, "expected": "0x03"},
+        {"address": "0x02031aa2", "size": 2, "expected": "0x0000"}
+      ],
+      "regions": [
+        {"name": "language-globe-icon", "x": 16, "y": 120, "width": 16, "height": 16}
+      ]
+    },
+    {
+      "frame": 5800,
+      "framebuffer": true,
+      "name": "japanese-inline-selected",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a95", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x01"},
+        {"address": "0x02031a9e", "size": 2, "expected": "0x0001"},
+        {"address": "0x02031aa2", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031aa4", "size": 2, "expected": "0x0001"}
+      ],
+      "regions": [
+        {"name": "language-globe-icon", "x": 16, "y": 120, "width": 16, "height": 16}
+      ]
+    },
+    {
+      "frame": 6200,
+      "framebuffer": true,
+      "name": "simplified-chinese-inline-selected",
+      "probes": [
+        {"address": "0x02031a94", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a95", "size": 1, "expected": "0x00"},
+        {"address": "0x02031a9a", "size": 1, "expected": "0x02"},
+        {"address": "0x02031a9b", "size": 1, "expected": "0x02"},
+        {"address": "0x02031a9e", "size": 2, "expected": "0x0002"},
+        {"address": "0x02031aa2", "size": 2, "expected": "0x0000"},
+        {"address": "0x02031aa4", "size": 2, "expected": "0x0002"},
+        {"address": "0x0e0073d6", "size": 1, "expected": "0x02"}
+      ],
+      "regions": [
+        {"name": "language-globe-icon", "x": 16, "y": 120, "width": 16, "height": 16}
+      ]
+    }
+  ]
+}

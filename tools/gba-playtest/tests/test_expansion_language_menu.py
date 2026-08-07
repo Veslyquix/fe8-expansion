@@ -24,6 +24,7 @@ submenu lifecycle, cache invalidation) is proven separately by
 tools/gba-playtest scenarios.
 """
 
+import json
 import re
 import shutil
 import subprocess
@@ -42,6 +43,14 @@ UICONFIG_SRC = REPO_ROOT / "src" / "uiconfig.c"
 SAVE_COMPAT_MENU_SRC = REPO_ROOT / "src" / "save_compat_menu.c"
 DEBUGTOOLS_REGISTRY_SRC = REPO_ROOT / "src" / "debugtools_registry.c"
 DEBUGTOOLS_HEADER = REPO_ROOT / "include" / "expansion_debugtools.h"
+CJK_SETTINGS_SCENARIO = (
+    REPO_ROOT / "tools" / "gba-playtest" / "scenarios"
+    / "locale-cjk-settings-inline-modern-debug.json"
+)
+CJK_SETTINGS_FINGERPRINT = (
+    REPO_ROOT / "tools" / "gba-playtest" / "fingerprints"
+    / "locale-cjk-settings-inline-modern-debug.json"
+)
 
 CC = shutil.which("gcc") or shutil.which("cc")
 
@@ -484,6 +493,46 @@ class UiConfigLanguageEntryStructureTests(unittest.TestCase):
         self.assertIn("gExpansionLanguageMenuProbe.settingsActive", match.group(1))
 
 
+class CjkSettingsFingerprintContractTests(unittest.TestCase):
+    """Binds the CJK settings oracle to the dedicated language icon surface."""
+
+    def test_cjk_settings_fingerprint_covers_globe_icon_and_locale_states(self):
+        scenario = json.loads(CJK_SETTINGS_SCENARIO.read_text(encoding="utf-8"))
+        fingerprint = json.loads(CJK_SETTINGS_FINGERPRINT.read_text(encoding="utf-8"))
+
+        expected_framebuffer_hashes = [
+            "fnv1a64-rgb24:94dc8281cfc35712",
+            "fnv1a64-rgb24:1366ff38fc19bebe",
+            "fnv1a64-rgb24:5602ccf00c10aaa9",
+        ]
+        expected_region_hashes = [
+            "fnv1a64-region:c6a3e45929fb9ee0",
+            "fnv1a64-region:f2f1700ad46cc8cb",
+            "fnv1a64-region:7ec5a6117001fcc8",
+        ]
+        expected_region = {
+            "name": "language-globe-icon",
+            "x": 16,
+            "y": 120,
+            "width": 16,
+            "height": 16,
+        }
+
+        self.assertEqual(fingerprint["scenario"], scenario["name"])
+        self.assertEqual(
+            [checkpoint["framebuffer_hash"] for checkpoint in fingerprint["checkpoints"]],
+            expected_framebuffer_hashes,
+        )
+        for index, (scenario_checkpoint, fingerprint_checkpoint) in enumerate(
+            zip(scenario["checkpoints"], fingerprint["checkpoints"], strict=True)
+        ):
+            self.assertEqual(scenario_checkpoint["regions"], [expected_region])
+            self.assertEqual(
+                fingerprint_checkpoint["regions"],
+                [{**expected_region, "hash": expected_region_hashes[index]}],
+            )
+
+
 class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
     """The settings submenu shares Configuration's BG0/BG1 surfaces, so it
     needs a real terminator and a redraw after MenuProc's final clear."""
@@ -542,6 +591,66 @@ class LanguageSettingsLifecycleStructureTests(unittest.TestCase):
             match.group(1),
         )
         self.assertIn("Config_RedrawAfterLanguageMenu", self.uiconfig_text)
+
+
+class FrameworkUtf8DrawingTests(unittest.TestCase):
+    """Every framework string resolved from the expansion catalog must use
+    the UTF-8-aware renderer; clipping must advance whole rendered
+    characters instead of splitting a multibyte scalar."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sources = {
+            "language": LANGUAGE_MENU_SRC.read_text(encoding="utf-8"),
+            "uiconfig": UICONFIG_SRC.read_text(encoding="utf-8"),
+            "save_compat": SAVE_COMPAT_MENU_SRC.read_text(encoding="utf-8"),
+            "debugtools": DEBUGTOOLS_REGISTRY_SRC.read_text(encoding="utf-8"),
+        }
+
+    def test_framework_locale_surfaces_do_not_use_ascii_only_draws(self):
+        for name, text in self.sources.items():
+            with self.subTest(source=name):
+                self.assertNotIn("Text_DrawStringASCII", text)
+
+    def test_framework_locale_surfaces_use_utf8_draws(self):
+        for name, text in self.sources.items():
+            with self.subTest(source=name):
+                if "ExpansionLocale_Resolve" in text:
+                    self.assertIn("Text_DrawString", text)
+
+    def test_config_value_clipping_advances_complete_characters(self):
+        text = self.sources["uiconfig"]
+        match = re.search(
+            r"static void DrawLanguageOptionLabel\(.*?\)\s*\{(.*?)\n\}",
+            text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group(1)
+        self.assertIn("GetCharTextLen(cursor, &charWidth)", body)
+        self.assertIn("byteCount = (int)(next - cursor);", body)
+        self.assertIn("Text_DrawString(text, clipped);", body)
+        self.assertNotIn("GetStringTextLenASCII", body)
+
+
+class ExpansionLocaleVanillaIsolationTests(unittest.TestCase):
+    """Production locale selection stays independent of vanilla language
+    mode and XMAP save semantics across the owned runtime/UI files."""
+
+    def test_owned_runtime_files_have_no_vanilla_language_or_xmap_calls(self):
+        for path in (
+            REPO_ROOT / "src" / "expansion_locale.c",
+            REPO_ROOT / "src" / "expansion_save_prefs.c",
+            LANGUAGE_MENU_SRC,
+            UICONFIG_SRC,
+        ):
+            text = _strip_c_comments(path.read_text(encoding="utf-8"))
+            with self.subTest(path=path.name):
+                for token in ("GetLang", "SetLang", "gLanguageMode", "XMAP"):
+                    self.assertIsNone(
+                        re.search(rf"\b{re.escape(token)}\b", text),
+                        f"{path.name} references forbidden vanilla symbol {token}",
+                    )
 
 
 class SaveCompatMenuLegacyPathUnchangedTests(unittest.TestCase):

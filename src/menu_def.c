@@ -12,6 +12,38 @@
 
 #include "menu_def.h"
 
+#ifdef MODERN
+#include "expansion_locale.h"
+#include "expansion_msg_ids.h"
+
+static int LocalizedRawUnitActionMenuDraw(struct MenuProc * menu, struct MenuItemProc * item)
+{
+    ExpansionMsgId msgId;
+
+    if (item->def->overrideId == 0x57)
+        msgId = EXP_MSG_RAW_SURFACE_UNIT_ACTION_SUMMON;
+    else
+        msgId = EXP_MSG_RAW_SURFACE_UNIT_ACTION_CALL_MONSTER;
+
+    if (item->def->color)
+        Text_SetColor(&item->text, item->def->color);
+
+    if (item->availability == MENU_DISABLED)
+        Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
+
+    Text_DrawString(&item->text, ExpansionLocale_ResolveCurrent(msgId));
+    PutText(
+        &item->text,
+        TILEMAP_LOCATED(BG_GetMapBuffer(menu->frontBg), item->xTile, item->yTile));
+
+    return 0;
+}
+
+#define LOCALIZED_RAW_UNIT_ACTION_DRAW LocalizedRawUnitActionMenuDraw
+#else
+#define LOCALIZED_RAW_UNIT_ACTION_DRAW 0
+#endif
+
 /* MenuCommand_SelectNo (bmmenu.c) intentionally ignores the selected menu
  * item and only needs the owning menu, so its real contract takes a single
  * struct MenuProc* argument, and its direct call in bmmenu.c relies on that.
@@ -169,8 +201,8 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　奏でる", 0x67D, 0x6C3, 0, 0x54, PlayCommandUsability, 0, PlayCommandEffect, 0, 0, 0}, // Play >
     {"　踊る", 0x67E, 0x6C2, 0, 0x55, DanceCommandUsability, 0, PlayCommandEffect, 0, 0, 0}, // Dance
     {"　盗む", 0x67F, 0x6C4, 0, 0x56, StealCommandUsability, 0, StealCommandEffect, 0, 0, 0}, // Steal
-    {"　召喚", 0x693, 0x6DD, 0, 0x57, SummonCommandUsability, 0, SummonCommandEffect, 0, 0, 0}, // Summon (Shoukanshi) >
-    {"　呼魔", 0x693, 0x6DD, 0, 0x58, YobimaCommandUsability, 0, YobimaCommandEffect, 0, 0, 0}, // Summon (Deamon King) >
+    {"　召喚", 0x693, 0x6DD, 0, 0x57, SummonCommandUsability, LOCALIZED_RAW_UNIT_ACTION_DRAW, SummonCommandEffect, 0, 0, 0}, // Summon (Shoukanshi) >
+    {"　呼魔", 0x693, 0x6DD, 0, 0x58, YobimaCommandUsability, LOCALIZED_RAW_UNIT_ACTION_DRAW, YobimaCommandEffect, 0, 0, 0}, // Summon (Deamon King) >
     {"　かぎ開", 0x694, 0x6DE, 0, 0x59, PickCommandUsability, 0, PickCommandEffect, 0, 0, 0}, // Pick >
     {"　話す", 0x680, 0x6C9, 0, 0x5A, TalkCommandUsability, 0, TalkCommandEffect, 0, 0, 0}, // Talk >
     {"　支援", 0x681, 0x6CA, 0, 0x5B, SupportCommandUsability, 0, SupportCommandEffect, 0, 0, 0}, // Support

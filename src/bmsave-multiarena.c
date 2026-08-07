@@ -20,6 +20,97 @@ int CONST_DATA sArenaCpTeamNameLut[] = {
     0x2E2,      /* Druid */
 };
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+#define MULTIARENA_RANKING_LABEL(name, bytes) \
+    static const char name[] = bytes; \
+    LOCALIZED_GAME_TEXT_STATIC_ASSERT( \
+        sizeof(name) <= MULTIARENA_TEAMNAME_SIZE + 1, name##_fits_save)
+
+MULTIARENA_RANKING_LABEL(
+    sRankingJaLord, "\xE3\x83\xAD\xE3\x83\xBC\xE3\x83\x89");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaSniper, "\xE7\x8B\x99\xE6\x92\x83\xE6\x89\x8B");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaShaman, "\xE5\x91\xAA\xE8\xA1\x93\xE5\xB8\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaCavalier, "\xE9\xA8\x8E\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaFighter, "\xE6\x88\xA6\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaWarrior, "\xE5\x8B\x87\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaKnight, "\xE9\x87\x8D\xE9\xA8\x8E\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaGeneral, "\xE5\xB0\x86\xE8\xBB\x8D");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaArcher, "\xE5\xBC\x93\xE5\x85\xB5");
+MULTIARENA_RANKING_LABEL(
+    sRankingJaDruid,
+    "\xE3\x83\x89\xE3\x83\xAB\xE3\x82\xA4\xE3\x83\x89");
+
+MULTIARENA_RANKING_LABEL(
+    sRankingZhLord, "\xE9\xA2\x86\xE4\xB8\xBB");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhSniper, "\xE7\x8B\x99\xE5\x87\xBB\xE6\x89\x8B");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhShaman, "\xE5\xB7\xAB\xE5\xB8\x88");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhCavalier, "\xE9\xAA\x91\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhFighter, "\xE6\x88\x98\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhWarrior, "\xE5\x8B\x87\xE5\xA3\xAB");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhKnight, "\xE9\x87\x8D\xE7\x94\xB2");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhGeneral, "\xE5\xB0\x86\xE5\x86\x9B");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhArcher, "\xE5\xBC\x93\xE6\x89\x8B");
+MULTIARENA_RANKING_LABEL(
+    sRankingZhDruid, "\xE5\xBE\xB7\xE9\xB2\x81\xE4\xBC\x8A");
+
+static const char *const sInitialMultiArenaRankingNamesJa[] = {
+    sRankingJaLord,
+    sRankingJaSniper,
+    sRankingJaShaman,
+    sRankingJaCavalier,
+    sRankingJaFighter,
+    sRankingJaWarrior,
+    sRankingJaKnight,
+    sRankingJaGeneral,
+    sRankingJaArcher,
+    sRankingJaDruid,
+};
+
+static const char *const sInitialMultiArenaRankingNamesZh[] = {
+    sRankingZhLord,
+    sRankingZhSniper,
+    sRankingZhShaman,
+    sRankingZhCavalier,
+    sRankingZhFighter,
+    sRankingZhWarrior,
+    sRankingZhKnight,
+    sRankingZhGeneral,
+    sRankingZhArcher,
+    sRankingZhDruid,
+};
+
+static const char *GetLocalizedInitialMultiArenaRankingName(int index)
+{
+    switch (ExpansionLocale_GetCurrent())
+    {
+    case EXPANSION_LOCALE_JA:
+        return sInitialMultiArenaRankingNamesJa[index];
+
+    case EXPANSION_LOCALE_ZH_HANS:
+        return sInitialMultiArenaRankingNamesZh[index];
+
+    default:
+        return NULL;
+    }
+}
+#endif
+
 struct MultiArenaRankingEnt const gInitialMultiArenaRankings[MULTIARENA_MAX_RANKINGS] = {
     [0] = {
         .ranking = 0,
@@ -97,6 +188,9 @@ void WriteNewMultiArenaSave(void)
 {
     int i, j;
     char rank_name[MULTIARENA_TEAMNAME_SIZE + 4];
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    const char *localized_rank_name;
+#endif
     struct SaveBlockInfo block_info;
     struct GameSavePackedUnit save_unit;
     char team_name[MULTIARENA_TEAMNAME_SIZE + 2];
@@ -124,8 +218,20 @@ void WriteNewMultiArenaSave(void)
         ranking_ent.mode = gInitialMultiArenaRankings[i].mode;
         ranking_ent.points = gInitialMultiArenaRankings[i].points;
 
-        GetStringFromIndexInBuffer(sArenaCpTeamNameLut[i], rank_name);
-        SioStrCpy(rank_name, ranking_ent.name);
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+        localized_rank_name =
+            GetLocalizedInitialMultiArenaRankingName(i);
+        if (localized_rank_name != NULL)
+        {
+            SioStrCpy(localized_rank_name, ranking_ent.name);
+        }
+        else
+#endif
+        {
+            GetStringFromIndexInBufferWithLimit(
+                sArenaCpTeamNameLut[i], rank_name, (u32)sizeof(rank_name));
+            SioStrCpy(rank_name, ranking_ent.name);
+        }
         WriteAndVerifySramFast(&ranking_ent, &dst->rankings[i], sizeof(ranking_ent));
     }
 

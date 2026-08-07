@@ -178,3 +178,15 @@ PROVIDE(gUnk_86 = __iwram_start + 0x00650C);
 
 . = 0x67A8;
 . = ALIGN(4); *libc.a:libc_a-sbrkr.o(COMMON);
+
+/*
+ * Modern CJK message transforms need their decoded source and derived
+ * output at the same time, so this workspace cannot alias sMsgString or
+ * gGenericBuffer. It is transient, private to msg.c, and fits below the
+ * reserved user/IRQ stacks; English and legacy objects emit no such input
+ * section and therefore retain the historical IWRAM layout exactly.
+ */
+. = ALIGN(4);
+__localized_msg_transform_scratch_start = .;
+*src/msg.o(iwram_data.localized_msg_transform)
+__localized_msg_transform_scratch_end = .;

@@ -1,0 +1,117 @@
+{
+  "artifacts": {
+    "ja/control_defs.txt": {
+      "byte_count": 1027,
+      "sha256": "329161ac60d9be4a6f4b1ce4d8fb91818a1ab5033f092fa1d9f924ec65cb72eb"
+    },
+    "ja/indexed.txt": {
+      "byte_count": 1719196,
+      "sha256": "1267e2ac0b1bc13febb21104513649cb7f7740b32ae4934f6348b73438a8633d"
+    },
+    "mapping/fe8j_to_fe8u.candidates.json": {
+      "byte_count": 752351,
+      "sha256": "1ddac63340d04568d03c8356d85f488dfa1a4e7a58f0ce86e815ce7a56358b45"
+    },
+    "zh-Hans/indexed.txt": {
+      "byte_count": 1266521,
+      "sha256": "c139d6a16bea97da4cad85c166e1a94576e0352897a8e45fd293988d390ec790"
+    },
+    "zh-Hans/raw.json": {
+      "byte_count": 45834,
+      "sha256": "2c2f3ac5fef9117a01d92cdc0098c1b83903719507048c8b5541f4cccc50b6ff"
+    }
+  },
+  "control_grammar": {
+    "byte_order": "little",
+    "canonical_token": "[CTRL:HHHH]",
+    "control_unit": "u16",
+    "fe8cn_additional_alias_count": 20,
+    "source_alias_count": 34
+  },
+  "inputs": {
+    "fe8cn_source": {
+      "byte_count": 1203921,
+      "committed_snapshot": "texts/locales/source/fe8cn/FE8CN.txt",
+      "logical_path": "FE8CN.txt",
+      "sha256": "bef561dd5a45f81658d4f06b0b9f58bdc6fde2ed4b4c57034d17b88cb595f517"
+    },
+    "fe8j_controls": {
+      "byte_count": 997,
+      "committed_snapshot": "texts/locales/source/fe8j/jp_textdefs.txt",
+      "logical_path": "fireemblem8j/texts/jp_textdefs.txt",
+      "sha256": "93186c5645192ef46484b34f0d6dc4237cf21b61ffac317077ac5892067cc0b5"
+    },
+    "fe8j_indexed": {
+      "byte_count": 1471533,
+      "committed_snapshot": "texts/locales/source/fe8j/jp_texts.txt",
+      "logical_path": "fireemblem8j/texts/jp_texts.txt",
+      "sha256": "511ce51cadd2ac94ec3f5219a81205f6aa52de3c3c659c9efd1f0f75f9079a8a"
+    },
+    "fe8j_mapping_seed": {
+      "byte_count": 49286,
+      "committed_snapshot": "texts/locales/source/fe8j/msg_map.tsv",
+      "logical_path": "fireemblem8j/layout/msg_map.tsv",
+      "sha256": "9acb014c27148366cec70ce7bf2c64e021bf10bfc4e55df7cfe99d12ad40c751"
+    }
+  },
+  "locale_ids": [
+    "ja",
+    "zh-Hans"
+  ],
+  "locales": {
+    "ja": {
+      "control_definition_count": 34,
+      "indexed": {
+        "max_id": "0x0D0A",
+        "max_utf8_payload_bytes": 7673,
+        "max_utf8_payload_message_id": "0x0AEA",
+        "message_count": 3339,
+        "payload_codepoint_count": 1007561,
+        "unique_payload_codepoint_count": 1869
+      }
+    },
+    "zh-Hans": {
+      "indexed": {
+        "max_id": "0x0D0A",
+        "max_utf8_payload_bytes": 5727,
+        "max_utf8_payload_message_id": "0x0AEA",
+        "message_count": 3339,
+        "payload_codepoint_count": 726488,
+        "unique_payload_codepoint_count": 2518
+      },
+      "raw": {
+        "duplicate_address_count": 9,
+        "duplicate_record_count": 9,
+        "max_utf8_payload_bytes": 24,
+        "max_utf8_payload_import_id": "fe8cn.raw.import-0142",
+        "payload_codepoint_count_all_records": 468,
+        "payload_codepoint_count_unique_records": 429,
+        "record_count": 152,
+        "unique_address_count": 143,
+        "unique_import_count": 143,
+        "unique_payload_codepoint_count": 229
+      }
+    }
+  },
+  "mapping_seed": {
+    "authoritative": false,
+    "authority": "candidate",
+    "provenance_tag_counts": {
+      "auto:same": 1,
+      "auto:shifted": 338,
+      "extrap": 98,
+      "interp": 2325,
+      "seed:bmreliance-affinity": 8
+    },
+    "row_count": 2770,
+    "verified_row_count": 0
+  },
+  "schema_version": 2,
+  "source_layout": {
+    "fe8j_indexed_count": 3339,
+    "fe8j_max_id": "0x0D0A",
+    "fe8u_target_count": 3414,
+    "indexed": "FE8J",
+    "warning": "FE8J indexed identifiers are source positions, not FE8U target identifiers. A verified sparse mapping is required."
+  }
+}

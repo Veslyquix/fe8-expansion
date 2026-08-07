@@ -22,6 +22,12 @@
 #include "bmitem.h"
 #include "prepscreen.h"
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+#define CLASS_CHANGE_NAME_CAPACITY 64
+#define CLASS_CHANGE_NAME_TILE_X 14
+#define CLASS_CHANGE_NAME_TILE_WIDTH 16
+#endif
+
 void EndBanimTerrain(void *);
 void InitBanimTerrain(void *);
 void SetBanimTerrainPos(void *, s16, s16, s16, s16);
@@ -40,8 +46,13 @@ void ChangeClassDescription(u32 msg) {
 }
 
 void LoadClassReelFontPalette(struct ProcPromoSel *proc, int class_id) {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct Text classNameText;
+    char str[CLASS_CHANGE_NAME_CAPACITY];
+#else
     int i;
     s8 str[20];
+#endif
     const struct ClassData *class;
     u8 _pad_[0xC];
     u16 jid = class_id;
@@ -50,8 +61,14 @@ void LoadClassReelFontPalette(struct ProcPromoSel *proc, int class_id) {
     proc->u46 = 0;
     proc->u47 = 0x78;
     class = GetClassData(jid);
-    GetStringFromIndexInBuffer(class->nameTextId, str);
+    GetStringFromIndexInBufferWithLimit(
+        class->nameTextId, (char *)str, (u32)sizeof(str));
 
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    proc->u46 = GetStringTextLen(str);
+    InitText(&classNameText, CLASS_CHANGE_NAME_TILE_WIDTH);
+    proc->_u3e = classNameText.chr_position;
+#else
     for (i = 0; i < 20 /* sizeof(str) */ && str[i] != '\0'; i++) {
         struct ClassDisplayFont *font = GetClassDisplayFontInfo(str[i]);
         if (font)
@@ -62,16 +79,44 @@ void LoadClassReelFontPalette(struct ProcPromoSel *proc, int class_id) {
 
     Decompress(&Img_ClassReelFont, OBJ_VRAM0 + 0x1000);
     ApplyPalettes(Pal_ClassReelFont, 0x14, 0x2);
+#endif
 }
 
 void LoadClassNameInClassReelFont(struct ProcPromoSel *proc) {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct Text classNameText;
+    char str[CLASS_CHANGE_NAME_CAPACITY];
+#else
     s8 str[0x20];
     s32 index;
+#endif
     u8 idx = proc->main_select;
     u16 classNum = proc->jid[idx];
     u32 xOffs = 0x74;
     const struct ClassData *class = GetClassData(classNum);
-    GetStringFromIndexInBuffer(class->nameTextId, str);
+    GetStringFromIndexInBufferWithLimit(
+        class->nameTextId, (char *)str, (u32)sizeof(str));
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    TileMap_FillRect(
+        TILEMAP_LOCATED(gBG0TilemapBuffer, CLASS_CHANGE_NAME_TILE_X, 0),
+        CLASS_CHANGE_NAME_TILE_WIDTH,
+        2,
+        0);
+    classNameText.chr_position = proc->_u3e;
+    classNameText.tile_width = CLASS_CHANGE_NAME_TILE_WIDTH;
+    classNameText.db_id = 0;
+    classNameText.db_enabled = FALSE;
+    classNameText.is_printing = FALSE;
+    ClearText(&classNameText);
+    Text_SetColor(&classNameText, TEXT_COLOR_SYSTEM_WHITE);
+    Text_SetCursor(
+        &classNameText, xOffs - CLASS_CHANGE_NAME_TILE_X * 8);
+    Text_DrawString(&classNameText, str);
+    PutText(
+        &classNameText,
+        TILEMAP_LOCATED(gBG0TilemapBuffer, CLASS_CHANGE_NAME_TILE_X, 0));
+    BG_EnableSyncByMask(BG0_SYNC_BIT);
+#else
     for (index = 0; index < 0x14 && str[index] != '\0'; index++) {
         struct ClassDisplayFont *font = GetClassDisplayFontInfo(str[index]);
         if (font) {
@@ -83,6 +128,7 @@ void LoadClassNameInClassReelFont(struct ProcPromoSel *proc) {
             xOffs += 4;
         }
     }
+#endif
 
     if (proc->u44 < 0xff)
         proc->u44++;
@@ -277,6 +323,9 @@ void Make6C_PromotionMenuSelect(struct ProcPromoSel* proc) {
 }
 
 void ClassChgSel_InitDescAndBg(struct ProcPromoSel *proc) {
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    struct Text classNameText;
+#endif
     u16 tmp;
 
     ResetTextFont();
@@ -306,6 +355,11 @@ void ClassChgSel_InitDescAndBg(struct ProcPromoSel *proc) {
     tmp = REG_BG3CNT;
     tmp &= 0xFFFC;
     REG_BG3CNT = tmp + 1;
+
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+    InitText(&classNameText, CLASS_CHANGE_NAME_TILE_WIDTH);
+    proc->_u3e = classNameText.chr_position;
+#endif
 }
 
 void LoadBattleSpritesForBranchScreen(struct ProcPromoSel *proc) {

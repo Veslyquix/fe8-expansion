@@ -25,7 +25,7 @@ defaults (see "Legacy build path" below).
 | `EXPANSION_ROM_REVISION` | integer, `[0, 255]` | `0` | ROM header "software version" byte (fingerprint) |
 | `EXPANSION_BUILD_ID` | empty, or 4-40 hex characters | empty | embedded build commit override |
 | `EXPANSION_SAVE_COMPAT_EPOCH` | integer, `[0, 65535]` | `2` | save-format compatibility gate (see `docs/save_format.md`); **not** part of the fingerprint above |
-| `EXPANSION_ENABLED_LOCALES` | comma-separated subset of the stable `ExpansionLocaleId` list (`scripts/localization/schema.py`); must include `en` | `en` | issue #18 localization (fingerprint) -- which locales this ROM ships/enables at runtime |
+| `EXPANSION_ENABLED_LOCALES` | comma-separated subset of `en`, `ja`, `zh-Hans`, `qps-ploc`; must include `en`; enabling either CJK locale requires `MODERN_ROM_SIZE=32M` | `en` | issue #18 localization (fingerprint) -- which locale profile this ROM enables |
 | `EXPANSION_DEFAULT_LOCALE` | must be a member of `EXPANSION_ENABLED_LOCALES` | `en` | issue #18 localization (fingerprint) -- the locale `src/expansion_locale.c`'s runtime resolver starts in |
 | `EXPANSION_PSEUDO_LOCALE` | `0` or `1`; must be `1` if and only if `qps-ploc` is in `EXPANSION_ENABLED_LOCALES` | `0` | issue #18 localization (fingerprint) -- enables the deterministic ASCII pseudo-locale test harness (`scripts/localization/pseudo.py`), never a real translation |
 | `EXPANSION_MECHANICS_HOOKS` | `0` or `1` | `0` | issue #6 starter feature (fingerprint) -- link the public battle-stat mechanics hook registry |
@@ -51,6 +51,35 @@ override).
 | `MODERN_ABI` | `aapcs`, `apcs-gnu` | `aapcs` | calling convention / struct layout (fingerprint) |
 | `MODERN_ROM_SIZE` | `16M`, `32M`, or an exact byte count equal to one of those | `16M` | output ROM size / padding (fingerprint) |
 | `MODERN_TEXT_SHIFT` | non-negative integer, 4-byte aligned | `0` | link-time padding before `.text` (fingerprint) |
+
+The supported default remains English-only at 16 MiB:
+
+```bash
+make expansion-modern-rom
+```
+
+The existing ASCII pseudo-locale also remains a valid 16 MiB test profile:
+
+```bash
+make expansion-modern-rom \
+  EXPANSION_ENABLED_LOCALES=en,qps-ploc \
+  EXPANSION_PSEUDO_LOCALE=1
+```
+
+Japanese and Simplified Chinese are opt-in 32 MiB production profiles:
+
+```bash
+make expansion-modern-localization-profile-en-ja
+make expansion-modern-localization-profile-en-zh-hans
+make expansion-modern-localization-profile-en-ja-zh-hans
+```
+
+The named targets use isolated build roots and select their full-game catalog
+and localized font payload from the same validated
+`EXPANSION_ENABLED_LOCALES` profile used for metadata and fingerprinting.
+Direct builds may set the same locales plus `MODERN_ROM_SIZE=32M`.
+`MODERN_ROM_SIZE=16M` with `ja` or `zh-Hans` is rejected before compilation.
+English-only and English+pseudo remain valid/default at 16 MiB.
 
 `MODERN_ABI=apcs-gnu` is accepted only by the compile-only
 `expansion-modern-cohort`/`expansion-modern-all` object targets, for
@@ -136,7 +165,7 @@ compatibility-relevant setting changes.
 | `rom_size_bytes` | affects ROM data layout/padding |
 | `text_shift` | affects link-time ROM layout |
 | `rom_title`, `rom_game_code`, `rom_maker_code`, `rom_revision` | ROM identity; changing these produces a distinguishable ROM (e.g. for emulator save matching, patch tooling) |
-| `enabled_locales`, `default_locale`, `pseudo_locale_enabled` | issue #18 localization settings; the normalized enabled-locale set, default locale, and pseudo-locale flag each change which/how many locale catalog entries link into the ROM and how the runtime resolver starts up -- behaviourally distinguishable. Diagnostic/UI identity only -- see `docs/localization.md`; never touches the save format (`EXPANSION_SAVE_COMPAT_EPOCH` stays independent, see below) |
+| `enabled_locales`, `default_locale`, `pseudo_locale_enabled` | issue #18 localization settings; the enabled set is normalized into stable locale-ID order before hashing, so equivalent input orders share a fingerprint while different locale profiles do not. Diagnostic/UI identity only -- see `docs/localization.md`; never touches the save format (`EXPANSION_SAVE_COMPAT_EPOCH` stays independent, see below) |
 | `features.mechanics_hooks`, `features.mechanics_sample`, `features.danger_overlay_menu`, `features.starter_content` | issue #6 starter-feature opt-ins; each links different code and/or data, so two builds that differ in any of them are behaviourally distinguishable. Diagnostic identity only -- see `docs/starter_features.md`; none of them touches the save format |
 
 Settings that are **not** folded into the fingerprint (e.g. the resolved
@@ -259,8 +288,10 @@ verified ROM with a distinct, deterministic `config_fingerprint`.
 
 `scripts/modernize/expansion_config.py` validates every field (title,
 game code, maker code, revision, ROM size, semantic version, build-id
-override, preset, ABI) and rejects any malformed value or incompatible
-combination with a specific, actionable `ConfigError` message, entirely
+override, preset, ABI, locale/default/pseudo consistency, and the
+production locale allowlist, including the CJK 32 MiB requirement) and
+rejects any malformed value or
+incompatible combination with a specific, actionable `ConfigError` message, entirely
 **before** any C/assembly compilation or linking is attempted (`modern.mk`
 runs `validate`/`resolve` as part of evaluating the makefile itself, so a
 bad value fails the `make` invocation immediately) and before any ROM

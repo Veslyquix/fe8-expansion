@@ -440,6 +440,22 @@ class AssignRootTests(unittest.TestCase):
             prov._assign_root("src/lib/helper.c", overlapping_seed)
         self.assertIn("matches more than one seed root", str(ctx.exception))
 
+    def test_real_cjk_font_path_uses_narrow_cjk_seed(self):
+        assigned = prov._assign_root(
+            "fonts/cjk/upstream/NotoSansJP-Regular.otf",
+            prov.PROVENANCE_ROOT_SEED,
+        )
+        self.assertEqual(assigned.root, "fonts/cjk")
+        self.assertEqual(assigned.notes, prov._NOTE_CJK_FONT_ASSETS)
+
+    def test_unrelated_font_path_requires_separate_review(self):
+        with self.assertRaises(prov.ProvenanceError) as ctx:
+            prov._assign_root(
+                "fonts/unrelated/FutureFont-Regular.otf",
+                prov.PROVENANCE_ROOT_SEED,
+            )
+        self.assertIn("matches no seed root", str(ctx.exception))
+
     def test_real_seed_covers_the_real_exact_allowlist_and_exclusions_with_no_errors(self):
         """`PROVENANCE_ROOT_SEED` (the real, checked-in 46-root seed) must
         assign every single real, checked-in exact allowlist/exclusion

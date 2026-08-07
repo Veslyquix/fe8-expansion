@@ -1368,6 +1368,32 @@ char* GetTacticianName(void) {
     return gPlaySt.playerName;
 }
 
+#if defined(MODERN)
+bool TrySetTacticianName(const char* newName)
+{
+    u32 length;
+
+    if (newName == NULL)
+        return FALSE;
+
+    for (length = 0; length < TACTICIAN_NAME_CAPACITY; length++)
+    {
+        if (newName[length] == '\0')
+        {
+            memcpy(gPlaySt.playerName, newName, length + 1);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+void SetTacticianName(const char* newName)
+{
+    TrySetTacticianName(newName);
+}
+#else
 void SetTacticianName(const char* newName) {
     strcpy(gPlaySt.playerName, newName);
 }
+#endif

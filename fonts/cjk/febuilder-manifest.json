@@ -1,0 +1,149 @@
+{
+  "jobs": [
+    {
+      "corpus": {
+        "path": "corpora/ja.system.txt",
+        "sha256": "a561527f82574fb5243226b29d6001347cbfd95a49b31ffbb1b1f10d528c2bc0"
+      },
+      "font": {
+        "byteLength": 4533028,
+        "family": "Noto Sans JP",
+        "path": "upstream/NotoSansJP-Regular.otf",
+        "sha256": "dff723ba59d57d136764a04b9b2d03205544f7cd785a711442d6d2d085ac5073",
+        "size": 12,
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/JP/NotoSansJP-Regular.otf",
+        "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+      },
+      "format": "main-16x16",
+      "id": "ja-system",
+      "license": {
+        "licenseFile": "licenses/Noto-CJK-OFL-1.1.txt",
+        "licenseId": "OFL-1.1",
+        "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+      },
+      "locale": "ja",
+      "mapping": {
+        "mode": "range",
+        "mojiEnd": 65535,
+        "mojiStart": 32768,
+        "unicodeEnd": "U+10FFFF",
+        "unicodeStart": "U+0080"
+      },
+      "scalarRanges": [],
+      "styles": [
+        "item"
+      ],
+      "verticalOffset": 0
+    },
+    {
+      "corpus": {
+        "path": "corpora/ja.talk.txt",
+        "sha256": "a561527f82574fb5243226b29d6001347cbfd95a49b31ffbb1b1f10d528c2bc0"
+      },
+      "font": {
+        "byteLength": 4533028,
+        "family": "Noto Sans JP",
+        "path": "upstream/NotoSansJP-Regular.otf",
+        "sha256": "dff723ba59d57d136764a04b9b2d03205544f7cd785a711442d6d2d085ac5073",
+        "size": 11,
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/JP/NotoSansJP-Regular.otf",
+        "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+      },
+      "format": "main-16x16",
+      "id": "ja-talk",
+      "license": {
+        "licenseFile": "licenses/Noto-CJK-OFL-1.1.txt",
+        "licenseId": "OFL-1.1",
+        "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+      },
+      "locale": "ja",
+      "mapping": {
+        "mode": "range",
+        "mojiEnd": 65535,
+        "mojiStart": 32768,
+        "unicodeEnd": "U+10FFFF",
+        "unicodeStart": "U+0080"
+      },
+      "scalarRanges": [],
+      "styles": [
+        "text"
+      ],
+      "verticalOffset": 0
+    },
+    {
+      "corpus": {
+        "path": "corpora/zh-Hans.system.txt",
+        "sha256": "79ece233ea7d2d0e66ca867c30d9fe503ab1ad4ab729ea66fbbf5ee599c78afe"
+      },
+      "font": {
+        "byteLength": 8331336,
+        "family": "Noto Sans SC",
+        "path": "upstream/NotoSansSC-Regular.otf",
+        "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+        "size": 12,
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf",
+        "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+      },
+      "format": "main-16x16",
+      "id": "zh-hans-system",
+      "license": {
+        "licenseFile": "licenses/Noto-CJK-OFL-1.1.txt",
+        "licenseId": "OFL-1.1",
+        "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+      },
+      "locale": "zh-Hans",
+      "mapping": {
+        "mode": "range",
+        "mojiEnd": 65535,
+        "mojiStart": 32768,
+        "unicodeEnd": "U+10FFFF",
+        "unicodeStart": "U+0080"
+      },
+      "scalarRanges": [],
+      "styles": [
+        "item"
+      ],
+      "verticalOffset": 0
+    },
+    {
+      "corpus": {
+        "path": "corpora/zh-Hans.talk.txt",
+        "sha256": "79ece233ea7d2d0e66ca867c30d9fe503ab1ad4ab729ea66fbbf5ee599c78afe"
+      },
+      "font": {
+        "byteLength": 8331336,
+        "family": "Noto Sans SC",
+        "path": "upstream/NotoSansSC-Regular.otf",
+        "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+        "size": 11,
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf",
+        "version": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+      },
+      "format": "main-16x16",
+      "id": "zh-hans-talk",
+      "license": {
+        "licenseFile": "licenses/Noto-CJK-OFL-1.1.txt",
+        "licenseId": "OFL-1.1",
+        "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+        "sourceUrl": "https://raw.githubusercontent.com/googlefonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+      },
+      "locale": "zh-Hans",
+      "mapping": {
+        "mode": "range",
+        "mojiEnd": 65535,
+        "mojiStart": 32768,
+        "unicodeEnd": "U+10FFFF",
+        "unicodeStart": "U+0080"
+      },
+      "scalarRanges": [],
+      "styles": [
+        "text"
+      ],
+      "verticalOffset": 0
+    }
+  ],
+  "schemaVersion": 1
+}

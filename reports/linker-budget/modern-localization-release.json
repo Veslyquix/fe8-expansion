@@ -18,56 +18,91 @@
     },
     "total_bytes": 20
   },
+  "locale_bank": {
+    "capacity_bytes": 0,
+    "end_address": 150994944,
+    "headroom_bytes": 0,
+    "limit_address": 150994944,
+    "occupied_bytes": 0,
+    "overflow": false,
+    "section_present": true,
+    "start_address": 150994944
+  },
   "map_overflow": false,
   "regions_headroom": {
     "ewram": {
       "capacity_bytes": 262144,
-      "free_bytes": 3112,
-      "occupied_bytes": 259032,
-      "overflow": false
+      "free_bytes": 3136,
+      "occupied_bytes": 259008,
+      "overflow": false,
+      "physical_free_bytes": 3136
     },
     "iwram": {
       "capacity_bytes": 32768,
-      "free_bytes": 6232,
+      "free_bytes": 5720,
+      "minimum_user_stack_margin_bytes": 4096,
       "occupied_bytes": 26536,
-      "overflow": false
+      "overflow": false,
+      "physical_free_bytes": 6232,
+      "reserved_stack_bytes": 512,
+      "stack_margin_violation": false,
+      "static_growth_headroom_bytes": 1624,
+      "static_overflow": false,
+      "static_usable_capacity_bytes": 32256,
+      "usable_static_headroom_bytes": 5720
     },
     "rom": {
       "capacity_bytes": 16777216,
       "free_bytes": 256,
       "occupied_bytes": 16776960,
-      "overflow": false
+      "overflow": false,
+      "physical_free_bytes": 256
     }
+  },
+  "rom_catalog_descriptors": {
+    "missing": [],
+    "symbols": {
+      "gExpansionLocaleCatalogs": 96,
+      "gExpansionLocalePopulatedCount": 1
+    },
+    "total_bytes": 97
   },
   "rom_catalog_index": {
     "missing": [],
     "symbols": {
       "gExpansionLocaleMsgCount": 2,
-      "gExpansionLocaleMsgIds": 56,
+      "gExpansionLocaleMsgIds": 68,
       "gExpansionLocaleTombstoneCount": 2
     },
-    "total_bytes": 60
+    "total_bytes": 72
   },
   "rom_catalog_strings": {
     "missing": [],
     "symbols": {
-      "gExpansionCatalog_en": 112,
-      "gExpansionCatalog_qps_ploc": 112
+      "gExpansionCatalog_en": 136,
+      "gExpansionCatalog_ja": 136,
+      "gExpansionCatalog_qps_ploc": 136,
+      "gExpansionCatalog_zh_Hans": 136
     },
-    "total_bytes": 224
+    "total_bytes": 544,
+    "unexpected": []
   },
   "schema_version": 1,
   "source_catalog_budget": {
-    "active_message_count": 28,
-    "catalog_index_bytes": 280,
+    "active_message_count": 34,
+    "catalog_index_bytes": 708,
     "catalog_string_bytes": {
-      "en": 342,
-      "qps-ploc": 556,
-      "total": 898
+      "en": 392,
+      "ja": 451,
+      "qps-ploc": 646,
+      "total": 1873,
+      "zh-Hans": 384
     },
-    "glyphs_used_count": 57,
+    "glyphs_used_count": 203,
     "locales_generated": [
       "en",
+      "ja",
+      "zh-Hans",
       "qps-ploc"
     ],
     "scratch_budget_bytes": 96,

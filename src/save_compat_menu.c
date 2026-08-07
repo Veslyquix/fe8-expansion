@@ -165,7 +165,7 @@ static int SaveCompatMenu_DrawBackLabel(struct MenuProc *proc, struct MenuItemPr
     if (item->availability == MENU_DISABLED)
         Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
 
-    Text_DrawStringASCII(&item->text, ExpansionLocale_ResolveCurrent(EXP_MSG_FRAMEWORK_BACK));
+    Text_DrawString(&item->text, ExpansionLocale_ResolveCurrent(EXP_MSG_FRAMEWORK_BACK));
 
     PutText(&item->text, TILEMAP_LOCATED(BG_GetMapBuffer(proc->frontBg), item->xTile, item->yTile));
 
@@ -180,7 +180,9 @@ static int SaveCompatMenu_DrawEraseAllLabel(struct MenuProc *proc, struct MenuIt
     if (item->availability == MENU_DISABLED)
         Text_SetColor(&item->text, TEXT_COLOR_SYSTEM_GRAY);
 
-    Text_DrawStringASCII(&item->text, ExpansionLocale_ResolveCurrent(EXP_MSG_SAVE_COMPAT_MENU_ERASE_ALL));
+    Text_DrawString(
+        &item->text,
+        ExpansionLocale_ResolveCurrent(EXP_MSG_SAVE_COMPAT_MENU_ERASE_ALL));
 
     PutText(&item->text, TILEMAP_LOCATED(BG_GetMapBuffer(proc->frontBg), item->xTile, item->yTile));
 

@@ -170,29 +170,30 @@ int main(void)
         EXPANSION_LOCALE_QPS_PLOC, +1,
         EXPANSION_LANGUAGE_SETTINGS_NONE, EXPANSION_LOCALE_QPS_PLOC,
         "settings/two/right-end");
-    ok &= CheckSettings(0x07u, 1, +1,
-        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 2,
-        "settings/three/right");
-    ok &= CheckSettings(0x07u, 2, +1,
-        EXPANSION_LANGUAGE_SETTINGS_NONE, 2,
-        "settings/three/right-end");
+    ok &= CheckSettings(0x07u, EXPANSION_LOCALE_JA, +1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_ZH_HANS,
+        "settings/en-ja-zh/ja-right");
+    ok &= CheckSettings(0x07u, EXPANSION_LOCALE_ZH_HANS, +1,
+        EXPANSION_LANGUAGE_SETTINGS_NONE, EXPANSION_LOCALE_ZH_HANS,
+        "settings/en-ja-zh/zh-right-end");
 
-    /* Four or more locales expose first, second, More. */
-    ok &= CheckSettings(0x0Fu, 0, +1,
-        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 1,
-        "settings/four/first-right");
-    ok &= CheckSettings(0x0Fu, 1, +1,
+    /* The production four-locale profile (en, ja, zh-Hans, qps-ploc)
+     * exposes English, Japanese, More. */
+    ok &= CheckSettings(0x87u, EXPANSION_LOCALE_EN, +1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_JA,
+        "settings/en-ja-zh-qps/first-right");
+    ok &= CheckSettings(0x87u, EXPANSION_LOCALE_JA, +1,
         EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU, EXPANSION_LOCALE_INVALID,
-        "settings/four/second-right-more");
-    ok &= CheckSettings(0x0Fu, 3, +1,
+        "settings/en-ja-zh-qps/second-right-more");
+    ok &= CheckSettings(0x87u, EXPANSION_LOCALE_ZH_HANS, +1,
         EXPANSION_LANGUAGE_SETTINGS_OPEN_MENU, EXPANSION_LOCALE_INVALID,
-        "settings/four/out-of-line-right-more");
-    ok &= CheckSettings(0x0Fu, 3, -1,
-        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 1,
-        "settings/four/out-of-line-left");
-    ok &= CheckSettings(0x0Fu, 1, -1,
-        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, 0,
-        "settings/four/second-left");
+        "settings/en-ja-zh-qps/zh-right-more");
+    ok &= CheckSettings(0x87u, EXPANSION_LOCALE_QPS_PLOC, -1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_JA,
+        "settings/en-ja-zh-qps/qps-left");
+    ok &= CheckSettings(0x87u, EXPANSION_LOCALE_JA, -1,
+        EXPANSION_LANGUAGE_SETTINGS_SELECT_LOCALE, EXPANSION_LOCALE_EN,
+        "settings/en-ja-zh-qps/second-left");
 
     /* Defensive invalid current locale adopts the first enabled choice. */
     ok &= CheckSettings(

@@ -29,6 +29,12 @@
     "debug.action.save_state": "Save State",
     "framework.locale_short_name.en": "EN",
     "framework.locale_short_name.qps_ploc": "QPS",
-    "language.settings_more": "More"
+    "language.settings_more": "More",
+    "framework.locale_name.ja": "Japanese",
+    "framework.locale_name.zh_hans": "Simplified Chinese",
+    "framework.locale_short_name.ja": "JA",
+    "framework.locale_short_name.zh_hans": "ZH",
+    "raw_surface.unit_action.summon": " Summon",
+    "raw_surface.unit_action.call_monster": " Summon"
   }
 }

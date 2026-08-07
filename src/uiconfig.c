@@ -796,25 +796,41 @@ static u8 GetLanguageInlineSelectedIndex(void)
 static void DrawLanguageOptionLabel(struct Text *text, const char *label, int maxWidth)
 {
     char clipped[EXPANSION_LOCALE_SCRATCH_SLOT_BYTES];
-    int length = 0;
+    const char *cursor;
+    const char *next;
+    u32 charWidth;
+    int byteCount;
+    int i;
+    int length;
+    int width;
 
+    cursor = label;
+    length = 0;
+    width = 0;
     clipped[0] = '\0';
 
-    while (label[length] != '\0' && length + 1 < (int)sizeof(clipped))
+    while (*cursor != '\0')
     {
-        clipped[length] = label[length];
-        clipped[length + 1] = '\0';
-
-        if (GetStringTextLenASCII(clipped) > maxWidth)
-        {
-            clipped[length] = '\0';
+        next = GetCharTextLen(cursor, &charWidth);
+        if (next <= cursor)
             break;
-        }
 
-        length++;
+        byteCount = (int)(next - cursor);
+        if (length + byteCount + 1 > (int)sizeof(clipped))
+            break;
+        if (width + (int)charWidth > maxWidth)
+            break;
+
+        for (i = 0; i < byteCount; i++)
+            clipped[length + i] = cursor[i];
+
+        length += byteCount;
+        clipped[length] = '\0';
+        width += (int)charWidth;
+        cursor = next;
     }
 
-    Text_DrawStringASCII(text, clipped);
+    Text_DrawString(text, clipped);
 }
 
 static void DrawLanguageOptionValueTexts(struct Text *text)
@@ -906,7 +922,7 @@ void DrawGameOptionHelpText(void)
 
         Text_SetCursor(&gConfigUiState->optionHelpText, 0);
         Text_SetColor(&gConfigUiState->optionHelpText, TEXT_COLOR_SYSTEM_WHITE);
-        Text_DrawStringASCII(&gConfigUiState->optionHelpText, str);
+        Text_DrawString(&gConfigUiState->optionHelpText, str);
         PutText(&gConfigUiState->optionHelpText, TILEMAP_LOCATED(gBG0TilemapBuffer, 4, 18));
 
         return;
@@ -935,7 +951,7 @@ void DrawGameOptionText(int selectedIdx, int textIdx, int y)
 
         Text_SetCursor(&gConfigUiState->optionTexts[textIdx], 0);
         Text_SetColor(&gConfigUiState->optionTexts[textIdx], TEXT_COLOR_SYSTEM_WHITE);
-        Text_DrawStringASCII(&gConfigUiState->optionTexts[textIdx], str);
+        Text_DrawString(&gConfigUiState->optionTexts[textIdx], str);
         PutConfigTextWrapped(&gConfigUiState->optionTexts[textIdx], 4, y);
 
         return;

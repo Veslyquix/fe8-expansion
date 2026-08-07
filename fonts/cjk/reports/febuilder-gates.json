@@ -1,0 +1,56 @@
+{
+  "febuilder": {
+    "cli_command": "FEBuilderGBA.CLI --build-font-library",
+    "commit": "c1700532b27c579511585ca63e2d63222b9ea646",
+    "dotnet_sdk": "10.0.302",
+    "repository": "https://github.com/laqieer/FEBuilderGBA"
+  },
+  "files": {
+    "generation_report_sha256": "95a55f9100e03c30f54d67f3a1e702e99352e619589d444f5ce61150b2904f03",
+    "manifest_sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe"
+  },
+  "gates": {
+    "dry_run": {
+      "full_tree_sha256": "",
+      "job_count": 4,
+      "manifest_sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe",
+      "mode": "dry-run",
+      "oracle": "plan-and-provenance-only",
+      "outcomes": [],
+      "payload_tree_sha256": "",
+      "row_count": 8616
+    },
+    "generate": {
+      "full_tree_sha256": "f9b999d70da7df6dbf13339b7d0d46ea68a66faac3c5a77a7a5c3dddac3763c4",
+      "job_count": 4,
+      "manifest_sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe",
+      "mode": "generate",
+      "oracle": "generation",
+      "outcomes": [],
+      "payload_tree_sha256": "ab6b1ee883737cbb0bf3ca7e6e4b1b3d0f1adcf874aa2a6a4f28b961e80e0758",
+      "row_count": 8616
+    },
+    "roundtrip": {
+      "full_tree_sha256": "f9b999d70da7df6dbf13339b7d0d46ea68a66faac3c5a77a7a5c3dddac3763c4",
+      "job_count": 4,
+      "manifest_sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe",
+      "mode": "roundtrip",
+      "oracle": "immutable-external-report",
+      "outcomes": [],
+      "payload_tree_sha256": "ab6b1ee883737cbb0bf3ca7e6e4b1b3d0f1adcf874aa2a6a4f28b961e80e0758",
+      "row_count": 8616
+    },
+    "validate": {
+      "full_tree_sha256": "f9b999d70da7df6dbf13339b7d0d46ea68a66faac3c5a77a7a5c3dddac3763c4",
+      "job_count": 4,
+      "manifest_sha256": "fb129a5e62524e8b6f7195145947e2485486b204f1b42332d44627e4f35a73fe",
+      "mode": "validate",
+      "oracle": "immutable-external-report",
+      "outcomes": [],
+      "payload_tree_sha256": "ab6b1ee883737cbb0bf3ca7e6e4b1b3d0f1adcf874aa2a6a4f28b961e80e0758",
+      "row_count": 8616
+    }
+  },
+  "result": "all FEBuilder schema-v1 gates exited 0",
+  "schema_version": 1
+}

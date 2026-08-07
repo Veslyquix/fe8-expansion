@@ -785,7 +785,8 @@ void BonusClaim_DrawItemSentPopup(struct BonusClaimProc * proc)
     Text_SetCursor(th, 0);
 
     itemNameStr = GetItemName(itemId);
-    otherStr = GetStringFromIndexInBuffer(0x883, buf); // TODO: msgid "Sent[.]"
+    otherStr = GetStringFromIndexInBufferWithLimit(
+        0x883, buf, (u32)sizeof(buf)); // TODO: msgid "Sent[.]"
 
     width = ((GetStringTextLen(itemNameStr) + GetStringTextLen(otherStr) + 7) / 8) + 4;
     x = 15 - width / 2;
