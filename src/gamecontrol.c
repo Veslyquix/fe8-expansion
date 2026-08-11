@@ -41,6 +41,10 @@ extern struct ProcCmd CONST_DATA ProcScr_GameEarlyStartUI[]; // pre-intro cutsce
 extern struct ProcCmd CONST_DATA ProcScr_OpAnim[]; // intro cutscene
 extern struct ProcCmd CONST_DATA ProcScr_WorldMapWrapper[];
 
+#if FE8_VESLY_DEBUGGER
+int VeslyDebugger_TryApplyBootMode(ProcPtr proc);
+#endif
+
 struct ProcCmd CONST_DATA gUnused_Gamecontrol_0[] =
 {
     PROC_CALL(GameControl_0),
@@ -377,7 +381,14 @@ bool GamceControl_StartClassReel(ProcPtr proc)
 void GameControl_CallEraseSaveEventWithKeyCombo(ProcPtr proc)
 {
     if (gKeyStatusPtr->heldKeys == (L_BUTTON | DPAD_RIGHT | SELECT_BUTTON))
+    {
         Proc_Goto(proc, LGAMECTRL_ERASE_SAVE);
+        return;
+    }
+
+#if FE8_VESLY_DEBUGGER
+    VeslyDebugger_TryApplyBootMode(proc);
+#endif
 }
 
 void GameControl_CallEraseMural(ProcPtr proc)

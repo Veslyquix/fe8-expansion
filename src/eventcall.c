@@ -43,6 +43,10 @@
 #include "eventcall.h"
 #include "constants/songs.h"
 
+#if FE8_VESLY_DEBUGGER
+void VeslyDebugger_OnGameOver(void);
+#endif
+
 CONST_DATA struct ProcCmd ProcScr_BmGameOver[] = {
     PROC_SLEEP(0x1E),
     PROC_CALL(GameOver_FadeOutCurrentBgm),
@@ -62,6 +66,9 @@ PROC_LABEL(0x0),
 void EventCallGameOverExt(ProcPtr proc)
 {
     Proc_StartBlocking(ProcScr_BmGameOver, proc);
+#if FE8_VESLY_DEBUGGER
+    VeslyDebugger_OnGameOver();
+#endif
 }
 
 void GameOver_FadeOutCurrentBgm(ProcPtr proc)

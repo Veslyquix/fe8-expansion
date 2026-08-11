@@ -36,6 +36,10 @@
 #include "constants/items.h"
 #include "constants/songs.h"
 
+#if FE8_VESLY_DEBUGGER
+void StartDebuggerProc(ProcPtr proc);
+#endif
+
 // clang-format off
 
 struct ProcCmd CONST_DATA gProcScr_PlayerPhase[] =
@@ -277,6 +281,23 @@ bool CanShowUnitStatScreen(struct Unit * unit)
     return true;
 }
 
+#if FE8_VESLY_DEBUGGER
+static bool TryStartVeslyDebuggerFromPlayerPhase(ProcPtr proc)
+{
+    if (!(gKeyStatusPtr->newKeys & B_BUTTON))
+        return false;
+
+    if ((gBmMapUnit[gBmSt.playerCursor.y][gBmSt.playerCursor.x] == 0) &&
+        (GetTrapAt(gBmSt.playerCursor.x, gBmSt.playerCursor.y) == NULL))
+        return false;
+
+    StartDebuggerProc(proc);
+    gKeyStatusPtr->newKeys &= ~B_BUTTON;
+
+    return true;
+}
+#endif
+
 //! FE8U = 0x0801C940
 void PlayerPhase_MainIdle(ProcPtr proc)
 {
@@ -291,6 +312,11 @@ void PlayerPhase_MainIdle(ProcPtr proc)
         return;
 
     HandlePlayerCursorMovement();
+
+#if FE8_VESLY_DEBUGGER
+    if (TryStartVeslyDebuggerFromPlayerPhase(proc))
+        return;
+#endif
 
     if (gKeyStatusPtr->newKeys & L_BUTTON)
     {

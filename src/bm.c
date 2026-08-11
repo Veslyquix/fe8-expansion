@@ -34,6 +34,11 @@
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
 
+#if FE8_VESLY_DEBUGGER
+int StartKeyListenerProc(void);
+int VeslyDebugger_GetBgmOverride(void);
+#endif
+
 struct PalFadeSt EWRAM_DATA sPalFadeSt[0x20] = { 0 };
 struct BmSt EWRAM_DATA gBmSt = {};
 struct PlaySt EWRAM_DATA gPlaySt = {};
@@ -332,6 +337,10 @@ void OnMain(void)
 
     UpdateKeyStatus(gKeyStatusPtr);
 
+#if FE8_VESLY_DEBUGGER
+    StartKeyListenerProc();
+#endif
+
     ClearSprites();
 
     Proc_Run(gProcTreeRootArray[1]);
@@ -440,7 +449,19 @@ bool BmMain_CheckBeginPhaseEvent(void)
 //! FE8U = 0x08015450
 void BmMain_StartPhase(ProcPtr proc)
 {
-    switch (gPlaySt.faction) {
+#if FE8_VESLY_DEBUGGER
+    int phaseControl = gPlaySt.faction;
+
+    if ((gPlaySt.faction == FACTION_RED) && gPlaySt.config.debugControlRed)
+        phaseControl = FACTION_BLUE;
+
+    if ((gPlaySt.faction == FACTION_GREEN) && gPlaySt.config.debugControlGreen)
+        phaseControl = FACTION_BLUE;
+#else
+    int phaseControl = gPlaySt.faction;
+#endif
+
+    switch (phaseControl) {
     case FACTION_BLUE:
         Proc_StartBlocking(gProcScr_PlayerPhase, proc);
         break;
@@ -1221,6 +1242,15 @@ int GetCurrentMapMusicIndex(void) {
 
 //! FE8U = 0x080160D0
 void StartMapSongBgm(void) {
+#if FE8_VESLY_DEBUGGER
+    int override = VeslyDebugger_GetBgmOverride();
+
+    if (override) {
+        StartBgm(override, NULL);
+        return;
+    }
+#endif
+
     StartBgm(GetCurrentMapMusicIndex(), NULL);
     return;
 }

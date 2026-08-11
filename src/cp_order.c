@@ -7,6 +7,10 @@
 
 #include "cp_common.h"
 
+#if FE8_VESLY_DEBUGGER
+int ShouldAIControlRemainingUnits(void);
+#endif
+
 static void CpOrderMain(ProcPtr proc);
 static void CpOrderBerserkInit(ProcPtr proc);
 static void CpOrderFunc_BeginDecide(ProcPtr proc);
@@ -55,6 +59,11 @@ void CpOrderBerserkInit(ProcPtr proc)
     int i, aiNum = 0;
 
     u32 faction = gPlaySt.faction;
+#if FE8_VESLY_DEBUGGER
+    int AIControl = ShouldAIControlRemainingUnits();
+#else
+    int AIControl = false;
+#endif
 
     int factionUnitCountLut[3] = { 62, 20, 50 }; // TODO: named constant for those
 
@@ -65,7 +74,7 @@ void CpOrderBerserkInit(ProcPtr proc)
         if (!unit->pCharacterData)
             continue;
 
-        if (unit->statusIndex != UNIT_STATUS_BERSERK)
+        if (!AIControl && unit->statusIndex != UNIT_STATUS_BERSERK)
             continue;
 
         if (unit->state & (US_HIDDEN | US_UNSELECTABLE | US_DEAD | US_RESCUED | US_HAS_MOVED_AI))

@@ -25,6 +25,10 @@
 
 #include "bmmind.h"
 
+#if FE8_VESLY_DEBUGGER
+int VeslyDebugger_GetBgmOverride(void);
+#endif
+
 #include "constants/items.h"
 #include "constants/terrains.h"
 #include "constants/songs.h"
@@ -616,8 +620,14 @@ void BATTLE_HandleCombatDeaths(struct CombatActionProc* proc) {
 //! FE8U = 0x080328B0
 void RestoreMapSongBgm(void) {
     int bgmIdx = GetCurrentMapMusicIndex();
+    int curBgm = GetCurrentBgmSong();
 
-    if (GetCurrentBgmSong() != bgmIdx) {
+#if FE8_VESLY_DEBUGGER
+    if (VeslyDebugger_GetBgmOverride() == curBgm)
+        return;
+#endif
+
+    if (curBgm != bgmIdx) {
         StartBgmExt(bgmIdx, 6, NULL);
     }
 

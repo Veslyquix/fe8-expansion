@@ -44,7 +44,11 @@ EWRAM_DATA static u8 sBmMapFogPool[MAP_POOL_SIZE] = {};
 EWRAM_DATA static u8 sBmMapHiddenPool[MAP_POOL_SIZE] = {};
 EWRAM_DATA static u8 sBmMapOtherPool[MAP_POOL_SIZE] = {};
 
+#if FE8_VESLY_DEBUGGER
+EWRAM_DATA u16 sTilesetConfig[0x1000 + 0x200] = {};
+#else
 EWRAM_DATA static u16 sTilesetConfig[0x1000 + 0x200] = {};
+#endif
 
 EWRAM_DATA static u16 sBmBaseTilesPool[MAP_POOL_SIZE] = {};
 EWRAM_DATA u8 gWorkingMovementScript[0x40] = {};

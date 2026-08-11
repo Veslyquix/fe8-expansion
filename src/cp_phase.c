@@ -7,6 +7,10 @@
 
 #include "cp_common.h"
 
+#if FE8_VESLY_DEBUGGER
+int ShouldAIControlRemainingUnits(void);
+#endif
+
 static void AiPhaseInit(struct Proc* proc);
 static void AiPhaseBerserkInit(struct Proc* proc);
 static void AiPhaseCleanup(struct Proc* proc);
@@ -65,6 +69,10 @@ static void AiPhaseBerserkInit(struct Proc* proc)
     int i;
 
     gAiState.flags = AI_FLAG_BERSERKED;
+#if FE8_VESLY_DEBUGGER
+    if (ShouldAIControlRemainingUnits())
+        gAiState.flags = AI_FLAG_0;
+#endif
     gAiState.unk7E = -1;
 
     for (i = 0; i < 8; ++i)

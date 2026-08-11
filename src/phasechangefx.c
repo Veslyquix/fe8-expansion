@@ -12,6 +12,10 @@
 #include "bm.h"
 #include "bmlib.h"
 #include "phasechangefx.h"
+
+#if FE8_VESLY_DEBUGGER
+int VeslyDebugger_GetBgmOverride(void);
+#endif
 #include "constants/video-global.h"
 #include "constants/songs.h"
 
@@ -135,7 +139,13 @@ void PhaseIntroText_PutText(struct PhaseIntroSubProc *proc)
 
 void PhaseIntroInitText(struct PhaseIntroSubProc *proc)
 {
-    if (GetCurrentBgmSong() != GetCurrentMapMusicIndex())
+    int curBgm = GetCurrentBgmSong();
+
+#if FE8_VESLY_DEBUGGER
+    if ((curBgm != GetCurrentMapMusicIndex()) && (VeslyDebugger_GetBgmOverride() != curBgm))
+#else
+    if (curBgm != GetCurrentMapMusicIndex())
+#endif
         Sound_FadeOutBGM(4);
 
     PlaySoundEffect(SONG_73);

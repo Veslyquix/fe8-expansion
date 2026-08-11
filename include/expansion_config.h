@@ -278,6 +278,11 @@
 #define FE8_EXPANSION_STARTER_CONTENT 0
 #endif
 
+/* Experimental modern-build port of src/VeslyDebugger.c. */
+#ifndef FE8_VESLY_DEBUGGER
+#define FE8_VESLY_DEBUGGER 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -291,6 +296,10 @@
 
 #if FE8_EXPANSION_STARTER_CONTENT && !FE8_EXPANSION_MECHANICS_HOOKS
 #error "FE8_EXPANSION_STARTER_CONTENT=1 requires FE8_EXPANSION_MECHANICS_HOOKS=1"
+#endif
+
+#if (FE8_VESLY_DEBUGGER != 0) && (FE8_VESLY_DEBUGGER != 1)
+#error "FE8_VESLY_DEBUGGER must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

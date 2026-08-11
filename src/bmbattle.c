@@ -29,6 +29,10 @@
 #include "constants/terrains.h"
 #include "constants/chapters.h"
 
+#if FE8_VESLY_DEBUGGER
+void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit * defender);
+#endif
+
 /* Issue #5 mechanics Batch 3: sWeaponTriangleRules (the struct itself is
  * now declared in bmbattle.h, not here -- see the comment there) is
  * canonically generated from src/data/weapontriangle.json -- see
@@ -527,6 +531,10 @@ void ComputeBattleUnitEffectiveStats(struct BattleUnit* attacker, struct BattleU
     ComputeBattleUnitEffectiveCritRate(attacker, defender);
     ComputeBattleUnitSilencerRate(attacker, defender);
     ComputeBattleUnitSpecialWeaponStats(attacker, defender);
+
+#if FE8_VESLY_DEBUGGER
+    VeslyDebugger_ApplyGodMode(attacker, defender);
+#endif
 }
 
 void ComputeBattleUnitSupportBonuses(struct BattleUnit* attacker, struct BattleUnit* defender) {

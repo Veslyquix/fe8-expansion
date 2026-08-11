@@ -131,3 +131,7 @@ EXPANSION_MECHANICS_HOOKS     ?= 0
 EXPANSION_MECHANICS_SAMPLE    ?= 0
 EXPANSION_DANGER_OVERLAY_MENU ?= 0
 EXPANSION_STARTER_CONTENT     ?= 0
+
+# --- Optional Vesly debugger -------------------------------------------------
+# Press B on a unit to edit them. 
+VESLY_DEBUGGER ?= 1
