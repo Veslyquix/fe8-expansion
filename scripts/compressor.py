@@ -6,12 +6,14 @@
 import os
 import sys
 import struct
+import subprocess
 
 filename = sys.argv[1]
 comptype = sys.argv[2]
 
 if comptype == 'lz':
-    os.system('tools/gbagfx/gbagfx %s %s.lz' % (filename, filename))
+    gbagfx = 'tools/gbagfx/gbagfx.exe' if os.name == 'nt' else 'tools/gbagfx/gbagfx'
+    subprocess.check_call([gbagfx, filename, filename + '.lz'])
 elif comptype == 'fk':
     size = os.path.getsize(filename) + 4
     with open(filename, 'rb') as f:

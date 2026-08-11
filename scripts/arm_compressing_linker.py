@@ -10,6 +10,7 @@
 import os
 import sys
 import getopt
+import shlex
 
 def rreplace(self, old, new, *max):
     count = len(self)
@@ -58,10 +59,37 @@ def convert_binary_to_object(filename, objcopy, with_label, is_debug):
     os.system(cmd)
     return filename + '.o'
 
+def get_binary_label(filename):
+    label = os.path.basename(filename).split(".")
+    # omit extension name .4bpp
+    if label[1] == '4bpp':
+        return label[0]
+    return label[0] + '_' + label[1]
+
+def get_object_data_size(filename, objcopy, is_debug):
+    tmp = filename + '.size.bin'
+    cmd = '%s -O binary -j .data %s %s' % (objcopy, filename, tmp)
+    if is_debug:
+        print(cmd)
+    os.system(cmd)
+    size = os.path.getsize(tmp)
+    os.remove(tmp)
+    return size
+
+def add_symbols_to_object(filename, symbols, objcopy, is_debug):
+    for label, offset in symbols:
+        cmd = '%s --add-symbol %s=.data:0x%X %s' % (
+            objcopy, label, offset, filename)
+        if is_debug:
+            print(cmd)
+        os.system(cmd)
+
 def is_binary(filename):
     return os.path.splitext(filename)[-1] not in ('.o', '.obj', '.elf')
 
 def compress_binary(filename, comptype, compressor, is_debug):
+    if compressor.endswith('.py') or compressor.endswith('.py"'):
+        compressor = shlex.quote(sys.executable) + ' ' + compressor
     cmd = '%s %s %s' % (compressor, filename, comptype)
     if is_debug:
         print(cmd)
@@ -194,6 +222,10 @@ def link_objects(obj_list, outputfile, base_addr,
     print('Compressing linking (1/%d): %s' % (total_number, filename))
     filename = process_first_object(filename, section, objcopy,
                                     comptype, compressor, is_debug)
+    symbols = []
+    offset = 0
+    symbols.append((get_binary_label(rreplace(filename, '.o', '', 1)), offset))
+    offset += get_object_data_size(filename, objcopy, is_debug)
     link_first_object(outputfile, filename, base_addr, ld, is_debug)
     extract_symbol_file(outputfile, objcopy, is_debug)
     change_outputfile_type(outputfile, objcopy, is_debug)
@@ -207,10 +239,13 @@ def link_objects(obj_list, outputfile, base_addr,
         filename = process_input_object(filename, outputfile, section,
                                         base_addr, ld, objcopy,
                                         comptype, compressor, is_debug)
+        symbols.append((get_binary_label(rreplace(filename, '.o', '', 1)), offset))
+        offset += get_object_data_size(filename, objcopy, is_debug)
         link_to_output(outputfile, filename, section, base_addr, ld, True,
                        is_debug)
         extract_symbol_file(outputfile, objcopy, is_debug)
         change_outputfile_type(outputfile, objcopy, is_debug)
+    add_symbols_to_object(outputfile, symbols, objcopy, is_debug)
 #    cmd = 'cp %s ../%s' % (outputfile, outputfile)
 #    if is_debug:
 #        print(cmd)

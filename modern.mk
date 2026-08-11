@@ -1071,7 +1071,7 @@ $(MODERN_ALL_DATA_ASSET_DEPS): $(MODERN_OUTPUT_DIR)/%.assets.d: %.c $(MODERN_SCA
 		printf '%s\n' "error: modern scaninc not found or not executable: $(MODERN_SCANINC)" >&2; \
 		exit 1; \
 	fi
-	@assets=$$("$(MODERN_SCANINC)" -I include -I "" "$<") || { \
+	@assets=$$("$(MODERN_SCANINC)" -I include -I "" "$<" | tr -d '\r') || { \
 		printf '%s\n' "error: scaninc failed while scanning $< for INCBIN assets" >&2; \
 		exit 1; \
 	}; \
@@ -1322,6 +1322,7 @@ MODERN_ELF_LINK_DIR := $(MODERN_OUTPUT_DIR)/link
 MODERN_ELF_MANIFEST := $(MODERN_ELF_LINK_DIR)/manifest.txt
 MODERN_ELF_OBJECTS_LST := $(MODERN_ELF_LINK_DIR)/objects.lst
 MODERN_ELF_LINK_SETTINGS := $(MODERN_ELF_LINK_DIR)/settings.txt
+MODERN_ELF_LINK_PREP := $(MODERN_ELF_LINK_DIR)/prepare.stamp
 MODERN_ELF := $(MODERN_OUTPUT_DIR)/fireemblem8.elf
 MODERN_MAP := $(MODERN_OUTPUT_DIR)/fireemblem8.map
 MODERN_ELF_BANIM_SYM := $(BANIM_OBJECT).sym.o
@@ -1989,11 +1990,11 @@ expansion-modern-legacy-ready:
 # freshness, sidecar recovery, then the clean static linker inputs.
 # $(BANIM_OBJECT) is a normal prerequisite so the main scheduler builds it
 # once with no recursive-make race.
-.PHONY: expansion-modern-link-prepare
-expansion-modern-link-prepare: $(MODERN_ELF_FE6SIO) \
-		expansion-modern-legacy-ready \
+$(MODERN_ELF_LINK_PREP): $(MODERN_ELF_FE6SIO) \
 		$(MODERN_ELF_OBJECTS_LST) $(BANIM_OBJECT) \
+		$(MODERN_ELF_LEGACY_ASM) $(MODERN_ELF_LEGACY_MIDI) \
 		$(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM)
+	+$(MAKE) NODEP=0 $(MODERN_ELF_LEGACY_ASM) $(MODERN_ELF_LEGACY_MIDI)
 	@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
 		printf '%s\n' \
 			"Sidecar missing; forcing banim rebuild..." >&2; \
@@ -2007,6 +2008,10 @@ expansion-modern-link-prepare: $(MODERN_ELF_FE6SIO) \
 			"error: $(MODERN_ELF_BANIM_SYM) not produced" >&2; \
 		exit 1; \
 	fi
+	@touch "$@"
+
+.PHONY: expansion-modern-link-prepare
+expansion-modern-link-prepare: $(MODERN_ELF_LINK_PREP)
 
 # Link the modern ELF with the clean, section-oriented expansion linker.
 # Legacy objects and banim are owned by expansion-modern-link-prepare.
@@ -2040,7 +2045,7 @@ expansion-modern-link-prepare: $(MODERN_ELF_FE6SIO) \
 # docs/upstream-porting.md and this sprint's diagnosis report,
 # reports/itemexpansion_gate_order_race_diagnosis.md, for the full
 # reproduction log and regression coverage added alongside this).
-$(MODERN_ELF): expansion-modern-link-prepare $(MODERN_ELF_LINK_SETTINGS) \
+$(MODERN_ELF): $(MODERN_ELF_LINK_PREP) $(MODERN_ELF_LINK_SETTINGS) \
 		$(MODERN_ALL_OBJECTS) $(MODERN_COMPILE_SETTINGS)
 	@set -eu; \
 	libgcc_dir="$(MODERN_LIBGCC_DIR)"; \
@@ -2064,14 +2069,14 @@ $(MODERN_ELF): expansion-modern-link-prepare $(MODERN_ELF_LINK_SETTINGS) \
 		--orphan-handling=error \
 		--defsym=__rom_size=$(MODERN_ROM_SIZE_BYTES) \
 		--defsym=__text_shift=$(MODERN_TEXT_SHIFT) \
+		--defsym=__end__=end \
 		-T "$(MODERN_CLEAN_LDSCRIPT)" \
 		-Map "$(MODERN_MAP)" \
 		@"$(MODERN_ELF_OBJECTS_LST)" \
-		-R "$(MODERN_ELF_BANIM_SYM)" \
 		-L "$$libgcc_dir" \
 		-L "$$libc_dir" \
 		-o "$@" \
-		-lc -lnosys -lgcc
+		-lc -lsysbase -lc -lnosys -lgcc
 	@printf 'Linked modern ELF: %s\n' "$@"
 
 expansion-modern-elf: expansion-modern-mgfembp expansion-modern-all \

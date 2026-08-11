@@ -41,7 +41,8 @@ generated-data-validate:
 
 generated-data-generate:
 	@for table in $(GENERATED_DATA_TABLES); do \
-		$(GENERATED_DATA_PY) generate --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
+		FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+			$(GENERATED_DATA_PY) generate --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --out-dir $(GENERATED_DATA_OUT_DIR)
 	@$(GENERATED_DATA_PY).idspace generate
@@ -49,7 +50,8 @@ generated-data-generate:
 
 generated-data-check:
 	@for table in $(GENERATED_DATA_TABLES); do \
-		$(GENERATED_DATA_PY) check --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
+		FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+			$(GENERATED_DATA_PY) check --table $$table --out-dir $(GENERATED_DATA_OUT_DIR) || exit 1; \
 	done
 	@$(GENERATED_DATA_PY) manifest --check --out-dir $(GENERATED_DATA_OUT_DIR)
 	@$(GENERATED_DATA_PY).consumer_census check
@@ -305,7 +307,8 @@ $(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
 	@# here, not silently defer to a later gate. The grouped rule below (stamp
 	@# -> header) still owns the ordinary cap-flip path and source/classification
 	@# drift; this closes only the out-of-band stamp/header desync, cheaply.
-	@$(GENERATED_DATA_PY).idspace active-heal --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null
+	@FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+		$(GENERATED_DATA_PY).idspace active-heal --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null
 	@# issue #10 self-heal: FE8_ITEM_ID_CAP is an env/config input, so an
 	@# out-of-band write of build/generated/data/data_items.c at a different
 	@# cap (newer mtime than every tracked input) would otherwise be treated
@@ -315,7 +318,8 @@ $(GENERATED_DATA_ITEM_CAP_STAMP): FORCE_GENERATED_DATA_ITEM_CAP
 	@# already correct, a single rewrite (recompiling exactly the affected
 	@# object) when it was stale. generated-data-check stays the authoritative
 	@# validation/drift gate, so real drift is reported there, not here.
-	@$(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null || true
+	@FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+		$(GENERATED_DATA_PY) check --table items --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null || true
 
 # --- Issue #18: close the literal Make-DAG/state gap for the gate itself ---
 # `generated-data-check` (the CI gate above) never referenced this stamp: its
@@ -384,7 +388,8 @@ $(GENERATED_DATA_ACTIVE_OUTPUTS) &: \
 		include/constants/items.h \
 		include/constants/items_expansion.h
 	@mkdir -p $(GENERATED_DATA_OUT_DIR)
-	$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
+	FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+		$(GENERATED_DATA_PY).idspace active-generate --out-dir $(GENERATED_DATA_OUT_DIR)
 
 GENERATED_DATA_CONFIG_INPUTS_items += $(GENERATED_DATA_ACTIVE_HEADER)
 
@@ -464,7 +469,8 @@ $(GENERATED_DATA_CONTENT_TEXT_HEADER): \
 		include/constants/items.h \
 		include/constants/items_expansion.h
 	@mkdir -p $(GENERATED_DATA_OUT_DIR)
-	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+	FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+		EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
 		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
 
 # The audit catalog is written by that same one recipe.
@@ -474,7 +480,8 @@ $(GENERATED_DATA_CONTENT_TEXT_CATALOG): $(GENERATED_DATA_CONTENT_TEXT_HEADER)
 # same EXPANSION_STARTER_CONTENT value and writes only under build/.
 .PHONY: generated-data-content-text
 generated-data-content-text:
-	EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
+	FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+		EXPANSION_STARTER_CONTENT='$(EXPANSION_STARTER_CONTENT)' \
 		$(GENERATED_DATA_PY) content-text --out-dir $(GENERATED_DATA_OUT_DIR)
 
 # Each linked table's top-level generated C symbol name(s) -- used by
@@ -536,7 +543,8 @@ GENERATED_DATA_LINKED_SYMBOL_PREFIX_supports := SupportData_
 define GENERATED_DATA_LINK_TABLE_RULES
 $(GENERATED_DATA_OUT_DIR)/data_$(1).c: src/data/$(1).json $(GENERATED_DATA_SHARED_PY_SOURCES) $(wildcard scripts/generated_data/$(1)/*.py) $(GENERATED_DATA_CONFIG_INPUTS_$(1))
 	@mkdir -p $$(@D)
-	$(GENERATED_DATA_PY) generate --table $(1) --out-dir $(GENERATED_DATA_OUT_DIR)
+	FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' \
+		$(GENERATED_DATA_PY) generate --table $(1) --out-dir $(GENERATED_DATA_OUT_DIR)
 	@test -e $$@ || { echo "error: generated-data table '$(1)' did not produce $$@ (schema default_output_name mismatch?)" >&2; exit 1; }
 endef
 

@@ -52,7 +52,7 @@ int WeaponSelectMenu_SwitchIn(struct MenuProc * menu, struct MenuItemProc * menu
 int BallistaRangeMenu_SwitchOut(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 AttackMapSelect_Select(ProcPtr proc, struct SelectTarget * target);
 void BackToAttackMenu_CamWatch(void);
-void BackToAttackMenu_RestartMenu(void);
+void BackToAttackMenu_RestartMenu(struct MenuProc* menu, struct MenuItemProc * menuItem);
 u8 AttackMapSelect_Cancel(ProcPtr proc, struct SelectTarget * target);
 u8 AttackMapSelect_SwitchIn(ProcPtr proc, struct SelectTarget * target);
 int AttackMapSelect_End(ProcPtr proc);
