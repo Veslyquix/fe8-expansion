@@ -283,6 +283,11 @@
 #define FE8_VESLY_DEBUGGER 0
 #endif
 
+/* Modern-build port of src/DangerBones.c. */
+#ifndef FE8_DANGER_BONES
+#define FE8_DANGER_BONES 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -300,6 +305,10 @@
 
 #if (FE8_VESLY_DEBUGGER != 0) && (FE8_VESLY_DEBUGGER != 1)
 #error "FE8_VESLY_DEBUGGER must be 0 or 1"
+#endif
+
+#if (FE8_DANGER_BONES != 0) && (FE8_DANGER_BONES != 1)
+#error "FE8_DANGER_BONES must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

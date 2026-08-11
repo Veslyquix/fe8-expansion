@@ -40,6 +40,11 @@
 void StartDebuggerProc(ProcPtr proc);
 #endif
 
+#if FE8_DANGER_BONES
+void StartDangerBonesRange(void);
+void FinishDangerBonesRange(void);
+#endif
+
 // clang-format off
 
 struct ProcCmd CONST_DATA gProcScr_PlayerPhase[] =
@@ -236,6 +241,10 @@ void PlayerPhase_Suspend(void)
      * ordinary build. */
     if (ItemExpansionTest_IsBootSuppressionActive())
         return;
+#endif
+
+#if FE8_DANGER_BONES
+    StartDangerBonesRange();
 #endif
 
     gActionData.suspendPointType = SUSPEND_POINT_PLAYERIDLE;
@@ -481,6 +490,10 @@ void DisplayUnitEffectRange(struct Unit * unit)
 void PlayerPhase_InitUnitMovementSelect(void)
 {
     gBmSt.gameStateBits |= BM_FLAG_1;
+
+#if FE8_DANGER_BONES
+    FinishDangerBonesRange();
+#endif
 
     DisplayUnitEffectRange(gActiveUnit);
 

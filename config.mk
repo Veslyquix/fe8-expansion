@@ -135,3 +135,8 @@ EXPANSION_STARTER_CONTENT     ?= 0
 # --- Optional Vesly debugger -------------------------------------------------
 # Press B on a unit to edit them. 
 VESLY_DEBUGGER ?= 1
+
+# --- Optional DangerBones ----------------------------------------------------
+# Highlight enemies that can attack the tile currently selected by the path
+# arrow, using the fourth unit palette and map-sprite shake.
+DANGER_BONES ?= 1

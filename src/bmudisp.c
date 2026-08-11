@@ -22,6 +22,11 @@
 
 extern UnitIconWait unit_icon_wait_table[];
 
+#if FE8_DANGER_BONES
+int DangerBones_GetUnitDisplayedSpritePalette(const struct Unit * unit);
+int DangerBones_GetShakeOffset(void);
+#endif
+
 u8 EWRAM_DATA gUnitSpriteSlots[0xD0] = {};
 
 u8 EWRAM_DATA gSMSGfxBuffer[3][8*0x20*0x20] = {};
@@ -786,6 +791,9 @@ void SetStandingMuFacingWM(int frameId, u8 * dst)
 
 int GetUnitDisplayedSpritePalette(const struct Unit * unit)
 {
+#if FE8_DANGER_BONES
+    return DangerBones_GetUnitDisplayedSpritePalette(unit);
+#else
     if (unit->state & US_BIT27)
         return 0xB;
 
@@ -793,6 +801,7 @@ int GetUnitDisplayedSpritePalette(const struct Unit * unit)
         return 0xF;
 
     return GetUnitSpritePalette(unit);
+#endif
 }
 
 int GetUnitSpritePalette(const struct Unit * unit)
@@ -953,7 +962,11 @@ void PutUnitSpritesOam(void)
             continue;
 
         if (it->config & 0x40)
+#if FE8_DANGER_BONES
+            r3 = DangerBones_GetShakeOffset();
+#else
             r3 = GetGameClock() & 2;
+#endif
 
         switch ((it->config & 0xf)) {
         case 0:

@@ -11,6 +11,10 @@
 #include "bmmind.h"
 #include "variables.h"
 
+#if FE8_DANGER_BONES
+void UpdateVisualsForEnemiesWhoCanAttackTile(void);
+#endif
+
 EWRAM_DATA struct PathArrowProc gPathArrowProc = { 0 };
 
 CONST_DATA u16 gPathArrowOAMTable[5][5] = {
@@ -211,8 +215,12 @@ void UpdatePathArrowWithCursor(void) {
     {
         return;
     }
+#if FE8_DANGER_BONES
+    UpdateVisualsForEnemiesWhoCanAttackTile();
+#else
     SetLastCoords(gBmSt.playerCursor.x, gBmSt.playerCursor.y);
     SetWorkingBmMap(gBmMapMovement);
+#endif
     if (GetBmMapPointAtCursor() == -1)
         return;
     pointAlias = point = GetPointAlongPath(

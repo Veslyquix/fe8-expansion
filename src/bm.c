@@ -39,6 +39,10 @@ int StartKeyListenerProc(void);
 int VeslyDebugger_GetBgmOverride(void);
 #endif
 
+#if FE8_DANGER_BONES
+void RemoveEnemyShaking(void);
+#endif
+
 struct PalFadeSt EWRAM_DATA sPalFadeSt[0x20] = { 0 };
 struct BmSt EWRAM_DATA gBmSt = {};
 struct PlaySt EWRAM_DATA gPlaySt = {};
@@ -1085,6 +1089,10 @@ s8 EnsureCameraCenteredOnPosition(ProcPtr parent, int x, int y) {
 //! FE8U = 0x08015E0C
 s8 EnsureCameraOntoPosition(ProcPtr parent, int x, int y) {
     struct CamMoveProc* proc;
+
+#if FE8_DANGER_BONES
+    RemoveEnemyShaking();
+#endif
 
     int xTarget = GetCameraAdjustedX(x * 16);
     int yTarget = GetCameraAdjustedY(y * 16);

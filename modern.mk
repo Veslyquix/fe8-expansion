@@ -159,6 +159,9 @@ endif
 ifeq ($(VESLY_DEBUGGER),1)
 MODERN_DEFINE_FLAGS += -DFE8_VESLY_DEBUGGER=1
 endif
+ifeq ($(DANGER_BONES),1)
+MODERN_DEFINE_FLAGS += -DFE8_DANGER_BONES=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -292,6 +295,7 @@ endif
 # `include generated_data.mk`): GENERATED_DATA_LINKED_HAND_SOURCES is then
 # simply empty/undefined, so this filters out nothing.
 MODERN_ALL_C_SOURCES := $(filter-out $(GENERATED_DATA_LINKED_HAND_SOURCES),$(MODERN_ALL_C_SOURCES))
+MODERN_ALL_C_SOURCES := $(filter-out src/VeslyDebugger.c src/vesly_debugger_data.c,$(MODERN_ALL_C_SOURCES))
 ifeq ($(VESLY_DEBUGGER),1)
 MODERN_ALL_C_SOURCES += src/VeslyDebugger.c src/vesly_debugger_data.c
 endif
@@ -1428,6 +1432,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
 		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 		--vesly-debugger "$(VESLY_DEBUGGER)" \
+		--danger-bones "$(DANGER_BONES)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1489,6 +1494,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--danger-overlay-menu "$(EXPANSION_DANGER_OVERLAY_MENU)" \
 	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 	--vesly-debugger "$(VESLY_DEBUGGER)" \
+	--danger-bones "$(DANGER_BONES)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1554,7 +1560,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_MECHANICS_SAMPLE=$(EXPANSION_MECHANICS_SAMPLE) \
 	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU) \
 	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT) \
-	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER)
+	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER) \
+	-DFE8_DANGER_BONES=$(DANGER_BONES)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1717,6 +1724,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'danger_overlay_menu=$(EXPANSION_DANGER_OVERLAY_MENU)'; \
 		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
 		printf '%s\n' 'vesly_debugger=$(VESLY_DEBUGGER)'; \
+		printf '%s\n' 'danger_bones=$(DANGER_BONES)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
