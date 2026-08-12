@@ -116,6 +116,7 @@ CONFIG_MK_FEATURE_KEYS = (
     "EXPANSION_STARTER_CONTENT",
     "VESLY_DEBUGGER",
     "DANGER_BONES",
+    "PURCHASE_GENERICS",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -386,6 +387,7 @@ def validate_item_id_cap(value) -> int:
 
 def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
                            starter_content=0, vesly_debugger=0, danger_bones=0,
+                           purchase_generics=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -400,6 +402,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     content = validate_feature_flag("EXPANSION_STARTER_CONTENT", starter_content)
     debugger = validate_feature_flag("VESLY_DEBUGGER", vesly_debugger)
     bones = validate_feature_flag("DANGER_BONES", danger_bones)
+    generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -422,7 +425,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             f"0x{cap:02X}; build with FE8_ITEM_ID_CAP=0x"
             f"{ITEM_ID_EXPANSION_FIRST:02X} (or higher)"
         )
-    return hooks, sample, danger, content, debugger, bones
+    return hooks, sample, danger, content, debugger, bones, generics
 
 
 def validate_rom_size(value) -> int:
@@ -630,6 +633,7 @@ class ExpansionIdentity:
     starter_content: int = 0
     vesly_debugger: int = 0
     danger_bones: int = 0
+    purchase_generics: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -680,6 +684,7 @@ class ExpansionIdentity:
                 "starter_content": self.starter_content,
                 "vesly_debugger": self.vesly_debugger,
                 "danger_bones": self.danger_bones,
+                "purchase_generics": self.purchase_generics,
             },
         }
 
@@ -718,6 +723,7 @@ def load_identity(
     starter_content=None,
     vesly_debugger=None,
     danger_bones=None,
+    purchase_generics=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -774,7 +780,7 @@ def load_identity(
         pseudo_locale if pseudo_locale not in (None, "") else cfg["EXPANSION_PSEUDO_LOCALE"],
         resolved_enabled_locales,
     )
-    resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger, resolved_bones = validate_feature_flags(
+    resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger, resolved_bones, resolved_generics = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -793,6 +799,9 @@ def load_identity(
         danger_bones
         if danger_bones not in (None, "")
         else cfg.get("DANGER_BONES", "0"),
+        purchase_generics
+        if purchase_generics not in (None, "")
+        else cfg.get("PURCHASE_GENERICS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -828,6 +837,7 @@ def load_identity(
         starter_content=resolved_content,
         vesly_debugger=resolved_debugger,
         danger_bones=resolved_bones,
+        purchase_generics=resolved_generics,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -946,6 +956,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override DANGER_BONES (0 or 1)",
     )
     parser.add_argument(
+        "--purchase-generics",
+        default=None,
+        help="override PURCHASE_GENERICS (0 or 1)",
+    )
+    parser.add_argument(
         "--item-id-cap",
         default=None,
         help=(
@@ -1017,6 +1032,7 @@ def main(argv=None) -> int:
             starter_content=args.starter_content,
             vesly_debugger=args.vesly_debugger,
             danger_bones=args.danger_bones,
+            purchase_generics=args.purchase_generics,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

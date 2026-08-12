@@ -152,6 +152,18 @@ extern struct ItemData gItemData[];
 
 char* GetItemNameWithArticle(int item, s8 capitalize);
 
+#if FE8_PURCHASE_GENERICS
+u32 GetChapterGoldAmount(void);
+void SetChapterGoldAmount(s32 amt);
+void AddChapterGoldAmount(u32 amt);
+void SubChapterGoldAmount(u32 amt);
+void ResetChapterGoldAmount(void);
+u32 GetFactionChapterGoldAmount(int factionId);
+void SetFactionChapterGoldAmount(int factionId, s32 amt);
+void AddFactionChapterGoldAmount(int factionId, u32 amt);
+void SubFactionChapterGoldAmount(int factionId, u32 amt);
+#endif
+
 int GetItemHpBonus(int item);
 int GetItemPowBonus(int item);
 int GetItemSklBonus(int item);

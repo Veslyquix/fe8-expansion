@@ -11,6 +11,7 @@
 #include "m4a.h"
 #include "soundwrapper.h"
 #include "ctc.h"
+#include "bmitem.h"
 #include "bmio.h"
 #include "face.h"
 #include "bmudisp.h"
@@ -778,7 +779,15 @@ void DrawChapterStatusStatValues(void)
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 12, 14), TEXT_COLOR_SYSTEM_BLUE, gPlaySt.chapterTurnNumber);
 
     // Draw gold
-    PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 11, 16), TEXT_COLOR_SYSTEM_BLUE, GetPartyGoldAmount());
+    PutNumber(
+        TILEMAP_LOCATED(gBG0TilemapBuffer, 11, 16),
+        TEXT_COLOR_SYSTEM_BLUE,
+#if FE8_PURCHASE_GENERICS
+        GetChapterGoldAmount()
+#else
+        GetPartyGoldAmount()
+#endif
+    );
     PutSpecialChar(TILEMAP_LOCATED(gBG0TilemapBuffer, 12, 16), TEXT_COLOR_SYSTEM_GOLD, TEXT_SPECIAL_G);
 
     // Draw LV

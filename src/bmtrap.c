@@ -1,6 +1,7 @@
 #include "global.h"
 
 #include "constants/items.h"
+#include "constants/classes.h"
 
 #include "proc.h"
 #include "mu.h"
@@ -128,6 +129,15 @@ int GetPickTrapType(struct Unit * unit)
     case TRAP_BALLISTA:
         return TRAP_NONE;
 
+#if FE8_PURCHASE_GENERICS
+    case TRAP_PURCHASE_BASE:
+        if (unit->pClassData->number == CLASS_BRIGAND
+            && GetPurchaseBaseTrapOwner(trap) != (UNIT_FACTION(unit) >> 6))
+            return TRAP_PURCHASE_BASE;
+
+        return TRAP_NONE;
+#endif
+
     case TRAP_FIRETILE:
         if ((UNIT_CATTRIBUTES(unit) & CA_THIEF))
             return TRAP_FIRE_THIEF;
@@ -180,6 +190,14 @@ int ExecTrap(ProcPtr proc, struct Unit * unit, int exec_type)
             NewPopup2_PlanA(proc, -1, GetStringFromIndex(0x21));    /* Recovered mine. */
             UnitAddItem(unit, MakeNewItem(ITEM_MINE));
             break;
+
+#if FE8_PURCHASE_GENERICS
+        case TRAP_PURCHASE_BASE:
+            RemoveTrap(GetTrapAt(unit->xPos, unit->yPos));
+            PlaySoundEffect(SONG_B1);
+            NewPopup2_PlanA(proc, -1, GetStringFromIndex(0x20));    /* Disabled trap. */
+            break;
+#endif
     }
 
     return 0;

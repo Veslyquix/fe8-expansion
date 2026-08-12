@@ -429,6 +429,22 @@
       "category": "external-interface",
       "reason": null
     },
+    "include/bmitem.h|function-signature|unit|AddFactionChapterGoldAmount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|unit|GetFactionChapterGoldAmount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|unit|SetFactionChapterGoldAmount": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/bmitem.h|function-signature|unit|SubFactionChapterGoldAmount": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/bmitem.h|macro|item|ITEM_INDEX": {
       "category": "runtime-macro",
       "reason": null
@@ -3485,6 +3501,14 @@
       "category": "ui-buffer",
       "reason": null
     },
+    "src/VeslyDebugger.c|function-signature|item|DebuggerHelpBox": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|struct-field|item|ProcHelpBoxIntroString.item": {
+      "category": "runtime-struct",
+      "reason": null
+    },
     "src/bmarena.c|data-symbol|class|gClassList_BowArena": {
       "category": "lookup-table",
       "reason": null
@@ -3917,12 +3941,24 @@
       "category": "reviewed-exclusion",
       "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
     },
+    "src/purchase_generics.c|struct-field|class|PurchaseGenericDefinition.classId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/purchase_generics.c|struct-field|item|PurchaseGenericDefinition.items": {
+      "category": "runtime-struct",
+      "reason": null
+    },
     "src/uimenu.c|data-symbol|item|sItemCountYOffsetLookup": {
       "category": "reviewed-exclusion",
       "reason": "pixel Y-offset lookup indexed by the number of menu rows, not by an item ID"
     },
     "src/uisupport.c|function-signature|character|GetSupportScreenCharIdAt": {
       "category": "ui-buffer",
+      "reason": null
+    },
+    "src/vesly_debugger_data.c|data-symbol|class|gPromoJidLut": {
+      "category": "lookup-table",
       "reason": null
     },
     "src/worldmap_automu.c|struct-field|unit|GMapAutoMuProc.unitId": {

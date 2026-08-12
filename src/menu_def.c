@@ -9,6 +9,7 @@
 #include "uiselecttarget.h"
 #include "bmitemuse.h"
 #include "bksel.h"
+#include "purchase_generics.h"
 
 #include "menu_def.h"
 
@@ -207,6 +208,9 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　話す", 0x680, 0x6C9, 0, 0x5A, TalkCommandUsability, 0, TalkCommandEffect, 0, 0, 0}, // Talk >
     {"　支援", 0x681, 0x6CA, 0, 0x5B, SupportCommandUsability, 0, SupportCommandEffect, 0, 0, 0}, // Support
     {"　訪問", 0x682, 0x6CB, 0, 0x5C, VisitCommandUsability, 0, VisitCommandEffect, 0, 0, 0}, // Visit
+#if FE8_PURCHASE_GENERICS
+    {"Capture", 0, 0, 0, 0, PurchaseGenericsCommandUsability, PurchaseGenericsCommandDraw, PurchaseGenericsCommandEffect, 0, 0, 0},
+#endif
     {"　宝箱", 0x683, 0x6CE, 0, 0x5D, ChestCommandUsability, 0, ChestCommandEffect, 0, 0, 0}, // Chest
     {"　扉", 0x684, 0x6CD, 0, 0x5E, DoorCommandUsability, 0, DoorCommandEffect, 0, 0, 0}, // Door >
     {"　武器屋", 0x685, 0x6CF, 0, 0x5F, ArmoryCommandUsability, 0, ArmoryCommandEffect, 0, 0, 0}, //Armory > 

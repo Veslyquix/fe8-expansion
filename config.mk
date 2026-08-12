@@ -140,3 +140,9 @@ VESLY_DEBUGGER ?= 1
 # Highlight enemies that can attack the tile currently selected by the path
 # arrow, using the fourth unit palette and map-sprite shake.
 DANGER_BONES ?= 1
+
+# --- Optional gameplay features ---------------------------------------------
+# Adds chapter-scoped temporary gold and purchasable generic-unit bases on
+# eligible fort / empty-village terrain.
+PURCHASE_GENERICS ?= 1
+

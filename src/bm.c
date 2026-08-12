@@ -25,6 +25,7 @@
 #include "bmsave.h"
 #include "worldmap.h"
 #include "eventcall.h"
+#include "purchase_generics.h"
 
 #include "bm.h"
 
@@ -463,6 +464,10 @@ void BmMain_StartPhase(ProcPtr proc)
         phaseControl = FACTION_BLUE;
 #else
     int phaseControl = gPlaySt.faction;
+#endif
+
+#if FE8_PURCHASE_GENERICS
+    PurchaseGenerics_OnNewPhase();
 #endif
 
     switch (phaseControl) {

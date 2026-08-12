@@ -124,6 +124,9 @@ u32 ApplyUnitAction(ProcPtr proc) {
 
     switch (gActionData.unitActionType) {
         case UNIT_ACTION_WAIT:
+#if FE8_PURCHASE_GENERICS
+        case UNIT_ACTION_PURCHASE_GENERIC:
+#endif
         case UNIT_ACTION_TRAPPED:
             gActiveUnit->state |= US_HAS_MOVED;
             return 1;

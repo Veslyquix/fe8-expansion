@@ -14,6 +14,7 @@
 #include "bmunit.h"
 #include "bmmap.h"
 #include "bmbattle.h"
+#include "bmitem.h"
 #include "bmtrick.h"
 #include "mu.h"
 #include "uimenu.h"
@@ -983,6 +984,10 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
     ResetUnitSprites();
     ResetMenuOverrides();
     ClearTraps();
+#if FE8_PURCHASE_GENERICS
+    ResetChapterGoldAmount();
+    SetChapterGoldAmount(5000);
+#endif
 
     gPlaySt.faction = FACTION_GREEN; // TODO: PHASE/ALLEGIANCE DEFINITIONS
     gPlaySt.chapterTurnNumber = 0;
@@ -1024,6 +1029,10 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
     ClearTemporaryUnits();
     LoadChapterTraps();
 
+#if FE8_PURCHASE_GENERICS
+    InitPurchaseBaseTrapsFromTerrain();
+#endif
+
     if (gameCtrl)
         StartBMapMain(gameCtrl);
 
@@ -1058,6 +1067,11 @@ void RestartBattleMap(void) {
 
     InitMapObstacles();
     LoadChapterTraps();
+
+#if FE8_PURCHASE_GENERICS
+    InitPurchaseBaseTrapsFromTerrain();
+#endif
+
     BMapVSync_End();
     BMapVSync_Start();
 

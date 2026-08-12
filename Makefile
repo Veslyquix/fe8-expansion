@@ -34,10 +34,14 @@ MID2AGB    := tools/mid2agb/mid2agb$(EXE)
 TEXTENCODE := tools/textencode/textencode$(EXE)
 JSONPROC   := tools/jsonproc/jsonproc$(EXE)
 PREPROC    := tools/preproc/preproc$(EXE)
+ifeq ($(OS),Windows_NT)
+PYTHON    ?= C:/Python312/python.exe
+else
+PYTHON    ?= python3
+endif
 FETSATOOL  := $(PYTHON) scripts/gfxtools/tsa_generator.py
 TMAP2TSA   := $(PYTHON) scripts/tmap2tsa.py
 MARTOMAP   := $(PYTHON) scripts/mar_to_map.py
-PYTHON    ?= python3
 PAL2GBAPAL := $(GBAGFX)
 
 ifeq ($(UNAME),Darwin)
@@ -220,8 +224,13 @@ src/menu_def.o: CC1FLAGS += -Wno-error
 # (never a bare `make`/`make all` plus a lane-selection variable), so
 # there is nothing for quickstart -- or anyone else -- to set to reach the
 # archival lane except this target's name.
+ifeq ($(OS),Windows_NT)
+all:
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=release MODERN_ABI=aapcs
+else
 all:
 	+$(MAKE) expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs
+endif
 
 # Explicit, clearly-named archival alias (issue #15): builds the exact same
 # agbcc-based $(ROM) as `make fireemblem8.gba`. Kept as its own target so

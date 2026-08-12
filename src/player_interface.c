@@ -16,6 +16,7 @@
 #include "statscreen.h"
 #include "bmlib.h"
 #include "worldmap.h"
+#include "bmitem.h"
 
 #include "player_interface.h"
 
@@ -1524,6 +1525,11 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
     TileMap_FillRect(gUiTmScratchB + TILEMAP_INDEX(20, 10), 11, 9, 0);
     TileMap_FillRect(gUiTmScratchA + TILEMAP_INDEX(20, 12), 11, 9, 0);
 
+#if FE8_PURCHASE_GENERICS
+    if (proc->unitClock == 0)
+        proc->unitClock = 1;
+#endif
+
     if (proc->unitClock == 0)
     {
         CallARM_FillTileRect(gUiTmScratchB + TILEMAP_INDEX(20, 10), gTSA_GoalBox_OneLine, TILEREF(0x0, 1));
@@ -1536,6 +1542,11 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
         PutText(&proc->texts[0], gUiTmScratchA + TILEMAP_INDEX(21, 13));
         PutText(&proc->texts[1], gUiTmScratchA + TILEMAP_INDEX(21, 15));
     }
+
+#if FE8_PURCHASE_GENERICS
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(27, 15), TEXT_COLOR_SYSTEM_BLUE, GetChapterGoldAmount());
+    PutSpecialChar(gUiTmScratchA + TILEMAP_INDEX(28, 15), TEXT_COLOR_SYSTEM_GOLD, TEXT_SPECIAL_G);
+#endif
 }
 
 //! FE8U = 0x0808D288

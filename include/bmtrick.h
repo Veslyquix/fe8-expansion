@@ -25,6 +25,9 @@ enum
     TRAP_14         = 14,
     TRAP_FIRE_THIEF = 15,
     TRAP_MINE_ASSASSIN = 16,
+#if FE8_PURCHASE_GENERICS
+    TRAP_PURCHASE_BASE = 17,
+#endif
 };
 
 enum
@@ -41,7 +44,31 @@ enum
 
     // Light Rune extdata definitions
     TRAP_EXTDATA_RUNE_TURNSLEFT        = 2, // turns left beofre wearing out
+
+    // Purchase base extdata definitions
+#if FE8_PURCHASE_GENERICS
+    TRAP_EXTDATA_PURCHASE_BASE_OWNER   = 0,
+    TRAP_EXTDATA_PURCHASE_BASE_KIND    = 1,
+    TRAP_EXTDATA_PURCHASE_BASE_CAPTURER = 2,
+    TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN = 3,
+#endif
 };
+
+#if FE8_PURCHASE_GENERICS
+enum
+{
+    PURCHASE_BASE_KIND_VILLAGE = 1,
+    PURCHASE_BASE_KIND_FORT = 2,
+    PURCHASE_BASE_KIND_HOUSE = 3,
+    PURCHASE_BASE_KIND_GATE = 4,
+    PURCHASE_BASE_KIND_THRONE = 5,
+    PURCHASE_BASE_OWNER_NEUTRAL = 3,
+    PURCHASE_BASE_CAPTURE_NONE = -1,
+    PURCHASE_BASE_CAPTURE_REQUIRED = 200,
+    PURCHASE_BASE_GOLD_UNIT = 500,
+    PURCHASE_BASE_DEFAULT_GOLD_PER_TURN = 2,
+};
+#endif
 
 struct Trap
 {
@@ -68,6 +95,20 @@ void AddArrowTrap(int x, int turnCountdown, int turnInterval);
 void AddMapChangeTrap(int x, int y, int turnCountdown, int turnInterval);
 void AddTrap8(int x, int y);
 void AddTrap9(int x, int y, int meta);
+#if FE8_PURCHASE_GENERICS
+struct Trap* AddPurchaseBaseTrap(int x, int y, int owner, int kind);
+struct Trap* GetPurchaseBaseTrapAt(int x, int y);
+void SetPurchaseBaseTrapOwner(struct Trap* trap, int owner);
+int GetPurchaseBaseTrapOwner(struct Trap* trap);
+void SetPurchaseBaseTrapCapturer(struct Trap* trap, int capturer);
+int GetPurchaseBaseTrapCapturer(struct Trap* trap);
+void SetPurchaseBaseTrapCaptureProgress(struct Trap* trap, int progress);
+int GetPurchaseBaseTrapCaptureProgress(struct Trap* trap);
+void SetPurchaseBaseTrapGoldPerTurn(struct Trap* trap, int amount);
+int GetPurchaseBaseTrapGoldPerTurn(struct Trap* trap);
+bool IsPurchaseBaseTerrain(int terrain);
+void InitPurchaseBaseTrapsFromTerrain(void);
+#endif
 void InitMapObstacles(void);
 void ApplyEnabledMapChanges(void);
 void RefreshAllLightRunes(void);

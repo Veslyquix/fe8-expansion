@@ -439,7 +439,7 @@ void SaveProcVarsToIdler(DebuggerProc * proc)
     Proc_End(proc);
 }
 
-void UnlockGameIfNeeded(void)
+static void UnlockGameIfNeeded(void)
 {
     int locked = GetGameLock();
     while (locked)

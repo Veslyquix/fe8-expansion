@@ -8,6 +8,7 @@
 #include "bmdifficulty.h"
 #include "bonusclaim.h"
 #include "bmmind.h"
+#include "agb_sram.h"
 
 enum {
     UNIT_SAVE_AMOUNT_BLUE = 51,
@@ -382,6 +383,9 @@ struct GameSaveBlock {
 struct SuspendSaveBlock {
     struct PlaySt playSt;
     struct ActionData action;
+#if FE8_PURCHASE_GENERICS
+    u32 chapterGold[3];
+#endif
     struct SuspendSavePackedUnit blueUnits[UNIT_SAVE_AMOUNT_BLUE];
     struct SuspendSavePackedUnit wmMonsterUnit; // TODO: update this to `struct Dungeon dungeons[2]; u8 filler[0x1C];`?
     struct SuspendSavePackedUnit redUnits[UNIT_SAVE_AMOUNT_RED];
@@ -409,8 +413,25 @@ struct SaveBlocks {
     /* 0x7248 */ struct bmsave_unkstruct2 unkstruct2;
     /* 0x725C */ struct BonusClaimSaveData bonusClaim;
     /* 0x73A0 */ u8 reserved[4];
-    /* 0x73A4 */ struct ExpansionSaveMeta expansionSaveMeta; // see include/save_format.h, docs/save_format.md
+#if FE8_PURCHASE_GENERICS
+    u8 expansionSaveMetaPad[
+        (CART_SRAM_SIZE - sizeof(struct ExpansionSaveMeta))
+        - (sizeof(struct GlobalSaveInfo)
+            + SAVE_ID_MAX * sizeof(struct SaveBlockInfo)
+            + 2 * sizeof(struct SuspendSaveBlock)
+            + 3 * sizeof(struct GameSaveBlock)
+            + sizeof(struct MultiArenaSaveBlock)
+            + sizeof(struct GameRankSaveDataPacks)
+            + sizeof(struct SoundRoomSaveData)
+            + sizeof(struct bmsave_unkstruct2)
+            + sizeof(struct BonusClaimSaveData)
+            + 4)];
+#endif
+    /* 0x73A4, or 0x7FA4 when FE8_PURCHASE_GENERICS disables xmap */
+    struct ExpansionSaveMeta expansionSaveMeta; // see include/save_format.h, docs/save_format.md
+#if !FE8_PURCHASE_GENERICS
     /* 0x7400 */ struct ExtraMapSaveHead xmap; // see bmsave-xmap.c
+#endif
 };
 
 // TODO: figure out how these structs work

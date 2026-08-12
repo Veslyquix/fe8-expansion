@@ -189,14 +189,16 @@ void StartClassReel(u8 classSet, ProcPtr parent);
 // ??? ClassInfoDisplay_Init(???);
 // ??? ClassInfoDisplay_AutoAdvanceWorker(???);
 // ??? ClassInfoDisplay_LoopWindowIn(???);
-// ??? ClassInfoDisplay_ExecScript(???);
-// ??? ClassInfoDisplay_LoopScript(???);
+void ClassInfoDisplay_ExecScript(struct OpInfoClassDisplayProc* proc);
+void ClassInfoDisplay_LoopScript(struct OpInfoClassDisplayProc* proc);
 // ??? ClassInfoDisplay_OnEnd(???);
 // ??? StartClassAnimDisplay(???);
 // ??? ClassStatsDisplay_Init(???);
 // ??? ClassStatsDisplay_Loop(???);
 // ??? StartClassStatsDisplay(???);
 // ??? SetClassStatsDisplayNameX(???);
-// ??? GetClassReelEntry(???);
+struct ClassReelEnt* GetClassReelEntry(int classSet, int index);
+
+extern struct ClassReelEnt gClassReelData[65];
 
 #endif // GUARD_OP_INFO_H

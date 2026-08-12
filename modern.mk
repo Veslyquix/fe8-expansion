@@ -55,11 +55,11 @@ MODERN_ABIS := aapcs apcs-gnu
 # Link settings are tracked below so changing this value invalidates the
 # ELF/ROM without requiring a clean rebuild.
 MODERN_TEXT_SHIFT ?= 0
-MODERN_TEXT_SHIFT_IS_NUM := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | python3 -c "import re, sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if re.fullmatch(r'(0x[0-9a-fA-F]+|[0-9]+)', v) else '')")
+MODERN_TEXT_SHIFT_IS_NUM := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | $(PYTHON) -c "import re, sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if re.fullmatch(r'(0x[0-9a-fA-F]+|[0-9]+)', v) else '')")
 ifeq ($(MODERN_TEXT_SHIFT_IS_NUM),)
   $(error MODERN_TEXT_SHIFT '$(MODERN_TEXT_SHIFT)' is not a valid number)
 endif
-MODERN_TEXT_SHIFT_IS_ALIGNED := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | python3 -c "import sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if int(v, 0) % 4 == 0 else '')")
+MODERN_TEXT_SHIFT_IS_ALIGNED := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | $(PYTHON) -c "import sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if int(v, 0) % 4 == 0 else '')")
 ifeq ($(MODERN_TEXT_SHIFT_IS_ALIGNED),)
   $(error MODERN_TEXT_SHIFT '$(MODERN_TEXT_SHIFT)' must be 4-byte aligned)
 endif
@@ -161,6 +161,9 @@ MODERN_DEFINE_FLAGS += -DFE8_VESLY_DEBUGGER=1
 endif
 ifeq ($(DANGER_BONES),1)
 MODERN_DEFINE_FLAGS += -DFE8_DANGER_BONES=1
+endif
+ifeq ($(PURCHASE_GENERICS),1)
+MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
@@ -1365,7 +1368,7 @@ endif
 # ExpansionMetadata record (include/expansion_metadata.h,
 # src/expansion_metadata.c).
 MODERN_EXPANSION_CONFIG_TOOL := scripts/modernize/expansion_config.py
-MODERN_EXPANSION_CONFIG_RUNNER := python3 "$(MODERN_EXPANSION_CONFIG_TOOL)"
+MODERN_EXPANSION_CONFIG_RUNNER := $(PYTHON) "$(MODERN_EXPANSION_CONFIG_TOOL)"
 
 # Whether this checkout actually has the issue #8 framework files (config.mk
 # plus the tool itself). True for the real repository always (both are
@@ -1433,6 +1436,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 		--vesly-debugger "$(VESLY_DEBUGGER)" \
 		--danger-bones "$(DANGER_BONES)" \
+		--purchase-generics "$(PURCHASE_GENERICS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1495,6 +1499,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 	--vesly-debugger "$(VESLY_DEBUGGER)" \
 	--danger-bones "$(DANGER_BONES)" \
+	--purchase-generics "$(PURCHASE_GENERICS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1561,7 +1566,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU) \
 	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT) \
 	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER) \
-	-DFE8_DANGER_BONES=$(DANGER_BONES)
+	-DFE8_DANGER_BONES=$(DANGER_BONES) \
+	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1575,7 +1581,7 @@ endif
 
 .PHONY: expansion-modern-game-localization-config-check
 expansion-modern-game-localization-config-check: $(MODERN_BUILD_METADATA_JSON)
-	@python3 -c 'import json, pathlib, sys; from scripts.localization import schema; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")); requested = set(sys.argv[4].split(",")); expected_locales = [name for name in schema.LOCALE_IDS if name in requested]; assert data["config_fingerprint"] == sys.argv[2], (data["config_fingerprint"], sys.argv[2]); assert data["enabled_locale_mask"] == int(sys.argv[3], 0), (data["enabled_locale_mask"], sys.argv[3]); assert data["enabled_locales"] == expected_locales, (data["enabled_locales"], expected_locales); print("game-localization identity: fingerprint={} mask={} locales={}".format(sys.argv[2], sys.argv[3], ",".join(expected_locales)))' \
+	@$(PYTHON) -c 'import json, pathlib, sys; from scripts.localization import schema; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")); requested = set(sys.argv[4].split(",")); expected_locales = [name for name in schema.LOCALE_IDS if name in requested]; assert data["config_fingerprint"] == sys.argv[2], (data["config_fingerprint"], sys.argv[2]); assert data["enabled_locale_mask"] == int(sys.argv[3], 0), (data["enabled_locale_mask"], sys.argv[3]); assert data["enabled_locales"] == expected_locales, (data["enabled_locales"], expected_locales); print("game-localization identity: fingerprint={} mask={} locales={}".format(sys.argv[2], sys.argv[3], ",".join(expected_locales)))' \
 		"$(MODERN_BUILD_METADATA_JSON)" "$(MODERN_CONFIG_FINGERPRINT)" \
 		"$(MODERN_COMPILED_ENABLED_LOCALE_MASK)" "$(EXPANSION_ENABLED_LOCALES)"
 
@@ -1725,6 +1731,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
 		printf '%s\n' 'vesly_debugger=$(VESLY_DEBUGGER)'; \
 		printf '%s\n' 'danger_bones=$(DANGER_BONES)'; \
+		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -1808,7 +1815,7 @@ FORCE_MODERN_LOCALIZATION:
 
 $(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_LOCALIZATION
 	@mkdir -p "$(MODERN_LOCALIZATION_GENERATED_DIR)"
-	@python3 -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
+	@$(PYTHON) -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
 
 # Issue #18 sprint 3: ordinary compiles are not otherwise made to wait for
 # expansion_msg_ids.h -- only the synthetic expansion_locale-catalog.o
@@ -1852,7 +1859,7 @@ $(MODERN_GAME_LOCALIZATION_CONFIG_H) $(MODERN_GAME_LOCALIZATION_HEADER) \
 $(MODERN_GAME_LOCALIZATION_C) $(MODERN_GAME_LOCALIZATION_REPORT_JSON) \
 $(MODERN_GAME_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_GAME_LOCALIZATION
 	@mkdir -p "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)"
-	@python3 -m scripts.localization.game_catalog generate \
+	@$(PYTHON) -m scripts.localization.game_catalog generate \
 		--out-dir "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)" \
 		--enabled-locales "$(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)"
 

@@ -29,6 +29,7 @@
 #include "eventinfo.h"
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
+#include "purchase_generics.h"
 
 #include "playerphase.h"
 
@@ -366,6 +367,17 @@ void PlayerPhase_MainIdle(ProcPtr proc)
 
                     gPlaySt.xCursor = gBmSt.playerCursor.x;
                     gPlaySt.yCursor = gBmSt.playerCursor.y;
+
+#if FE8_PURCHASE_GENERICS
+                    if (PurchaseGenerics_TryStartTileMenu(gBmSt.playerCursor.x, gBmSt.playerCursor.y))
+                    {
+                        Eventinfo_CondFalse_2();
+
+                        Proc_Goto(proc, 9);
+
+                        return;
+                    }
+#endif
 
                     if (unit)
                     {

@@ -40,6 +40,11 @@ enum game_save_memory_map {
 enum suspend_save_blocks {
     SUSPENDSAVE_SIZE_PLAYST         = sizeof(struct PlaySt),
     SUSPENDSAVE_SIZE_ACTION         = sizeof(struct ActionData),
+#if FE8_PURCHASE_GENERICS
+    SUSPENDSAVE_SIZE_CHAPTERGOLD    = sizeof(((struct SuspendSaveBlock *)0)->chapterGold),
+#else
+    SUSPENDSAVE_SIZE_CHAPTERGOLD    = 0,
+#endif
     SUSPENDSAVE_SIZE_UNITS_BLUE     = UNIT_SAVE_AMOUNT_BLUE * sizeof(struct SuspendSavePackedUnit),
     SUSPENDSAVE_SIZE_GMMONSTER      = sizeof(struct SuspendSavePackedUnit),
     SUSPENDSAVE_SIZE_UNITS_RED      = UNIT_SAVE_AMOUNT_RED * sizeof(struct SuspendSavePackedUnit),
@@ -61,7 +66,8 @@ enum suspend_save_memory_map {
 
     SUSPENDSAVE_OFFSET_PLAYST         = SUSPENDSAVE_OFFSET_START,
     SUSPENDSAVE_OFFSET_ACTION         = SUSPENDSAVE_OFFSET_PLAYST         + SUSPENDSAVE_SIZE_PLAYST,
-    SUSPENDSAVE_OFFSET_UNITS_BLUE     = SUSPENDSAVE_OFFSET_ACTION         + SUSPENDSAVE_SIZE_ACTION,
+    SUSPENDSAVE_OFFSET_CHAPTERGOLD    = SUSPENDSAVE_OFFSET_ACTION         + SUSPENDSAVE_SIZE_ACTION,
+    SUSPENDSAVE_OFFSET_UNITS_BLUE     = SUSPENDSAVE_OFFSET_CHAPTERGOLD    + SUSPENDSAVE_SIZE_CHAPTERGOLD,
     SUSPENDSAVE_OFFSET_GMMONSTER      = SUSPENDSAVE_OFFSET_UNITS_BLUE     + SUSPENDSAVE_SIZE_UNITS_BLUE,
     SUSPENDSAVE_OFFSET_UNITS_RED      = SUSPENDSAVE_OFFSET_GMMONSTER      + SUSPENDSAVE_SIZE_GMMONSTER,
     SUSPENDSAVE_OFFSET_UNITS_GREEN    = SUSPENDSAVE_OFFSET_UNITS_RED      + SUSPENDSAVE_SIZE_UNITS_RED,
@@ -85,11 +91,14 @@ enum global_sram_blocks {
     SRAM_SIZE_SUSPEND   = SUSPENDSAVE_OFFSET_MAX,
     SRAM_SIZE_GAMESAVE  = GAMESAVE_OFFSET_MAX,
     SRAM_SIZE_MARENA    = sizeof(struct MultiArenaSaveBlock),
+#if FE8_PURCHASE_GENERICS
+    SRAM_SIZE_XMAP      = 0,
+#else
     SRAM_SIZE_XMAP      = 0xC00,
+#endif
 
-    /* Issue #2 slice 1: the expansion save metadata record occupies the
-     * whole 0x5C-byte pad that immediately precedes xmap -- see
-     * struct SaveBlocks (include/bmsave.h) and docs/save_format.md. */
+    /* The expansion save metadata record occupies the 0x5C-byte tail pad
+     * immediately before xmap, or the end of SRAM when xmap is disabled. */
     SRAM_SIZE_EXPANSION_SAVE_META = sizeof(struct ExpansionSaveMeta),
 };
 
@@ -109,8 +118,5 @@ enum global_sram_memory_map {
 
     SRAM_OFFSET_XMAP      = CART_SRAM_SIZE - SRAM_SIZE_XMAP,
 
-    /* Derived from SRAM_OFFSET_XMAP so it stays tied to the existing
-     * layout rather than a bare magic number: 0x7400 - 0x5C = 0x73A4,
-     * matching struct SaveBlocks.expansionSaveMeta exactly. */
     SRAM_OFFSET_EXPANSION_SAVE_META = SRAM_OFFSET_XMAP - SRAM_SIZE_EXPANSION_SAVE_META,
 };

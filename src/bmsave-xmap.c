@@ -13,6 +13,59 @@
 EWRAM_DATA struct ExtraMapSaveHead gExtraMapSaveHead = {0};
 EWRAM_DATA struct ChapterStats gExtraMapStatus = {0};
 
+#if FE8_PURCHASE_GENERICS
+
+CONST_DATA u8 *gpSramExtraData = CART_SRAM + CART_SRAM_SIZE;
+CONST_DATA struct ExtraMapInfo *gExtraMapInfo = (void *) EWRAM_START + 0x40000 - EWRAM_XMAP_SIZE; // 0x40000 = EWRAM_SIZE
+
+void LoadAndVerfySuspendSave(void)
+{
+}
+
+bool ReadExtraMapSaveHead(void)
+{
+    return FALSE;
+}
+
+void const * GetExtraMapMapReadAddr(void)
+{
+    return NULL;
+}
+
+u32 GetExtraMapMapSize(void)
+{
+    return 0;
+}
+
+void const *GetExtraMapInfoReadAddr(void)
+{
+    return NULL;
+}
+
+u32 GetExtraMapInfoSize(void)
+{
+    return 0;
+}
+
+u16 ExtraMapChecksum(void const *data, int size)
+{
+    (void)data;
+    (void)size;
+
+    return 0;
+}
+
+bool IsExtraMapAvailable(void)
+{
+    return FALSE;
+}
+
+void ReadExtraMapInfo(void)
+{
+}
+
+#else
+
 CONST_DATA u8 *gpSramExtraData = CART_SRAM + SRAM_OFFSET_XMAP;
 CONST_DATA struct ExtraMapInfo *gExtraMapInfo = (void *) EWRAM_START + 0x40000 - EWRAM_XMAP_SIZE; // 0x40000 = EWRAM_SIZE
 
@@ -134,6 +187,8 @@ void ReadExtraMapInfo(void)
     gExtraMapInfo->permanent_flags = GetPermanentFlagBits();
     gExtraMapInfo->chapter_frags = GetChapterFlagBits();
 }
+
+#endif
 
 bool GetExtraMapEmptyString(u8 *buf)
 {

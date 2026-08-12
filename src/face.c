@@ -8,11 +8,21 @@
 #include "bm.h"
 #include "bmlib.h"
 #include "prepscreen.h"
+#include "uiutils.h"
 #include "constants/faces.h"
 
 #include "face.h"
 
 struct FaceVramEntry EWRAM_DATA sFaceConfig[4] = { 0 };
+
+#if FE8_PURCHASE_GENERICS
+#define FACE_VRAM_SLOT_SIZE (0x80 * CHR_SIZE)
+
+static bool FaceUsesClassCard(struct FaceProc* proc)
+{
+    return proc->pFaceInfo->img == NULL && proc->pFaceInfo->imgCard != NULL;
+}
+#endif
 
 struct FaceVramEntry CONST_DATA gDefaultFaceConfig[FACE_SLOT_COUNT] =
 {
@@ -326,6 +336,14 @@ int FindFreeFaceSlot(void) {
 
 //! FE8U = 0x08005594
 void Face_OnInit(struct FaceProc* proc) {
+#if FE8_PURCHASE_GENERICS
+    if (FaceUsesClassCard(proc)) {
+        CpuFastFill(0, (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000), FACE_VRAM_SLOT_SIZE);
+        Decompress(proc->pFaceInfo->imgCard, (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000));
+        return;
+    }
+#endif
+
     Decompress(proc->pFaceInfo->img, (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000));
     return;
 }
@@ -345,6 +363,20 @@ void Face_OnIdle(struct FaceProc* proc) {
     }
 
     oam0 += OAM0_Y(proc->yPos);
+
+#if FE8_PURCHASE_GENERICS
+    if (FaceUsesClassCard(proc)) {
+        PutSpriteExt(
+            proc->spriteLayer,
+            0x1FF & proc->xPos,
+            oam0,
+            (GetFaceDisplayBits(proc) & FACE_DISP_FLIPPED) ? gSprite_Face80x72_Flipped : gSprite_Face80x72,
+            proc->oam2
+        );
+
+        return;
+    }
+#endif
 
     PutSpriteExt(
         proc->spriteLayer,
@@ -401,7 +433,11 @@ struct FaceProc* StartFace(int slot, int fid, int x, int y, int disp) {
     proc->xPos = x;
     proc->yPos = y;
 
-    if (disp & FACE_DISP_BIT_12) {
+    if (disp & FACE_DISP_BIT_12
+#if FE8_PURCHASE_GENERICS
+        || (info->img == NULL && info->imgCard != NULL)
+#endif
+    ) {
         proc->unk_44 = NULL;
         proc->pBlinkProc = NULL;
     } else {

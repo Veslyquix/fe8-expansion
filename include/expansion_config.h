@@ -288,6 +288,11 @@
 #define FE8_DANGER_BONES 0
 #endif
 
+/* Purchasable generic-unit bases and temporary chapter gold economy. */
+#ifndef FE8_PURCHASE_GENERICS
+#define FE8_PURCHASE_GENERICS 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -309,6 +314,10 @@
 
 #if (FE8_DANGER_BONES != 0) && (FE8_DANGER_BONES != 1)
 #error "FE8_DANGER_BONES must be 0 or 1"
+#endif
+
+#if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)
+#error "FE8_PURCHASE_GENERICS must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

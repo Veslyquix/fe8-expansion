@@ -6,6 +6,7 @@
 #include "bmunit.h"
 #include "bmmap.h"
 #include "chapterdata.h"
+#include "eventinfo.h"
 #include "proc.h"
 #include "event.h"
 #include "uiselecttarget.h"
@@ -176,6 +177,158 @@ void AddTrap9(int x, int y, int meta)
 {
     AddTrap(x, y, TRAP_9, meta);
 }
+
+#if FE8_PURCHASE_GENERICS
+struct Trap* AddPurchaseBaseTrap(int x, int y, int owner, int kind)
+{
+    struct Trap* trap = AddTrap(x, y, TRAP_PURCHASE_BASE, 0);
+
+    trap->extra = 0;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER] = owner;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] = kind;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] = PURCHASE_BASE_CAPTURE_NONE;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] = PURCHASE_BASE_DEFAULT_GOLD_PER_TURN;
+
+    return trap;
+}
+
+struct Trap* GetPurchaseBaseTrapAt(int x, int y)
+{
+    return GetTypedTrapAt(x, y, TRAP_PURCHASE_BASE);
+}
+
+void SetPurchaseBaseTrapOwner(struct Trap* trap, int owner)
+{
+    if (trap != NULL)
+        trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER] = owner;
+}
+
+int GetPurchaseBaseTrapOwner(struct Trap* trap)
+{
+    if (trap == NULL)
+        return PURCHASE_BASE_OWNER_NEUTRAL;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER];
+}
+
+void SetPurchaseBaseTrapCapturer(struct Trap* trap, int capturer)
+{
+    if (trap != NULL)
+        trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] = capturer;
+}
+
+int GetPurchaseBaseTrapCapturer(struct Trap* trap)
+{
+    if (trap == NULL)
+        return PURCHASE_BASE_CAPTURE_NONE;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER];
+}
+
+void SetPurchaseBaseTrapCaptureProgress(struct Trap* trap, int progress)
+{
+    if (trap == NULL)
+        return;
+
+    if (progress < 0)
+        progress = 0;
+
+    if (progress > PURCHASE_BASE_CAPTURE_REQUIRED)
+        progress = PURCHASE_BASE_CAPTURE_REQUIRED;
+
+    trap->extra = progress;
+}
+
+int GetPurchaseBaseTrapCaptureProgress(struct Trap* trap)
+{
+    if (trap == NULL)
+        return 0;
+
+    return trap->extra;
+}
+
+void SetPurchaseBaseTrapGoldPerTurn(struct Trap* trap, int amount)
+{
+    if (trap == NULL)
+        return;
+
+    if (amount <= 0)
+        amount = PURCHASE_BASE_DEFAULT_GOLD_PER_TURN;
+
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] = amount;
+}
+
+int GetPurchaseBaseTrapGoldPerTurn(struct Trap* trap)
+{
+    int amount;
+
+    if (trap == NULL)
+        return PURCHASE_BASE_DEFAULT_GOLD_PER_TURN;
+
+    amount = trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN];
+
+    return amount <= 0 ? PURCHASE_BASE_DEFAULT_GOLD_PER_TURN : amount;
+}
+
+bool IsPurchaseBaseTerrain(int terrain)
+{
+    switch (terrain)
+    {
+    case TERRAIN_FORT:
+    case TERRAIN_VILLAGE_REGULAR:
+    case TERRAIN_VILLAGE_CLOSED:
+    case TERRAIN_HOUSE:
+    case TERRAIN_GATE_CASTLE:
+    case TERRAIN_GATE_REGULAR:
+    case TERRAIN_THRONE:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+static int GetPurchaseBaseKindFromTerrain(int terrain)
+{
+    switch (terrain)
+    {
+    case TERRAIN_FORT:
+        return PURCHASE_BASE_KIND_FORT;
+
+    case TERRAIN_HOUSE:
+        return PURCHASE_BASE_KIND_HOUSE;
+
+    case TERRAIN_GATE_CASTLE:
+    case TERRAIN_GATE_REGULAR:
+        return PURCHASE_BASE_KIND_GATE;
+
+    case TERRAIN_THRONE:
+        return PURCHASE_BASE_KIND_THRONE;
+
+    default:
+        return PURCHASE_BASE_KIND_VILLAGE;
+    }
+}
+
+void InitPurchaseBaseTrapsFromTerrain(void)
+{
+    int ix, iy;
+
+    for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
+    {
+        for (ix = gBmMapSize.x - 1; ix >= 0; --ix)
+        {
+            int terrain = gBmMapTerrain[iy][ix];
+
+            if (GetTrapAt(ix, iy) != NULL)
+                continue;
+
+            if (IsPurchaseBaseTerrain(terrain))
+                AddPurchaseBaseTrap(ix, iy, PURCHASE_BASE_OWNER_NEUTRAL, GetPurchaseBaseKindFromTerrain(terrain));
+        }
+    }
+}
+#endif
 
 void InitMapObstacles(void)
 {

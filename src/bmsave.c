@@ -501,6 +501,17 @@ void WriteSuspendSave(int slot)
     StoreRNStateToActionStruct();
     WriteAndVerifySramFast(&gActionData, &dest->action, sizeof(struct ActionData));
 
+#if FE8_PURCHASE_GENERICS
+    {
+        u32 chapterGold[3];
+
+        for (i = 0; i < (int)(sizeof(chapterGold) / sizeof(chapterGold[0])); ++i)
+            chapterGold[i] = GetFactionChapterGoldAmount(i);
+
+        WriteAndVerifySramFast(chapterGold, dest->chapterGold, sizeof(chapterGold));
+    }
+#endif
+
     buf = (struct SuspendSavePackedUnit *)gGenericBuffer;
     for (i = 0; i < UNIT_SAVE_AMOUNT_BLUE; i++)
         EncodeSuspendSavePackedUnit(&gUnitArrayBlue[i], buf++);
@@ -560,6 +571,18 @@ void ReadSuspendSave(int slot)
 
     ReadSramFast(&src->action, &gActionData, sizeof(struct ActionData));
     LoadRNStateFromActionStruct();
+
+#if FE8_PURCHASE_GENERICS
+    {
+        u32 chapterGold[3];
+
+        ReadSramFast(src->chapterGold, chapterGold, sizeof(chapterGold));
+
+        for (i = 0; i < (int)(sizeof(chapterGold) / sizeof(chapterGold[0])); ++i)
+            SetFactionChapterGoldAmount(i, chapterGold[i]);
+    }
+#endif
+
     InitUnits();
 
     for (i = 0; i < UNIT_SAVE_AMOUNT_BLUE; i++)
