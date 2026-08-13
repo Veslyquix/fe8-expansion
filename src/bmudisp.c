@@ -829,6 +829,33 @@ int GetUnitSpritePalette(const struct Unit * unit)
     }
 }
 
+#if FE8_PURCHASE_GENERICS
+// House/Fort traps aren't struct Unit instances, so this mirrors
+// GetUnitSpritePalette's FACTION_BLUE/RED/GREEN/PURPLE cases directly from
+// a bare FACTION_ID_* owner value (as returned by GetPurchaseBaseTrapOwner)
+// instead of UNIT_FACTION(unit) -- same palette banks, so recapturing a
+// house/fort recolors it exactly like an ordinary unit changing allegiance.
+// PURCHASE_BASE_OWNER_NEUTRAL shares FACTION_ID_PURPLE's value/bank.
+int GetFactionSpritePalette(int factionId)
+{
+    switch (factionId) {
+    case FACTION_ID_BLUE:
+        return 0xC;
+
+    case FACTION_ID_RED:
+        return 0xD;
+
+    case FACTION_ID_GREEN:
+        return 0xE;
+
+    case FACTION_ID_PURPLE:
+        return 0xB;
+    }
+
+    return 0xB;
+}
+#endif
+
 void RefreshUnitSprites(void)
 {
     struct SMSHandle * smsHandle;
@@ -944,6 +971,28 @@ void RefreshUnitSprites(void)
             smsHandle->oam2Base = UseUnitSprite(smsId) + 0x80;
 
             smsHandle->config = GetInfo(smsId).size;
+        }
+
+        if (trap->type == TRAP_PURCHASE_BASE &&
+            (trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_HOUSE ||
+             trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_FORT) &&
+            GetPurchaseBaseTrapOwner(trap) != PURCHASE_BASE_OWNER_NEUTRAL)
+        {
+            // House/Fort keep the map's own native house/fort tile as-is
+            // (drawn by the BG terrain layer, not this loop) -- this only
+            // adds a small owner-colored flag on top of it, using the same
+            // per-owner palette bank ordinary units use, so a recapture
+            // recolors just the flag rather than the whole building. No
+            // flag at all while unclaimed (owner == NEUTRAL).
+            int palette = GetFactionSpritePalette(GetPurchaseBaseTrapOwner(trap));
+
+            smsHandle = AddUnitSprite(trap->yPos * 16);
+            smsHandle->yDisplay = trap->yPos * 16;
+            smsHandle->xDisplay = trap->xPos * 16;
+
+            smsHandle->oam2Base = UseUnitSprite(109) + 0x80 + (palette & 0xf) * 0x1000;
+
+            smsHandle->config = GetInfo(109).size;
         }
 #endif
     }

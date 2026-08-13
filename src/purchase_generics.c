@@ -296,6 +296,14 @@ static bool TryCapturePurchaseBase(struct Trap* trap, struct Unit* unit)
         SetPurchaseBaseTrapOwner(trap, factionId);
         SetPurchaseBaseTrapCapturer(trap, PURCHASE_BASE_CAPTURE_NONE);
         SetPurchaseBaseTrapCaptureProgress(trap, 0);
+
+        // House/Fort are drawn in the new owner's faction palette
+        // (RefreshUnitSprites) -- redraw immediately so the recolor is
+        // visible the moment capture completes, not just on the next
+        // unrelated map refresh.
+        RefreshUnitSprites();
+        ForceSyncUnitSpriteSheet();
+
         return true;
     }
 
@@ -497,7 +505,7 @@ static void StartPurchaseGenericClassCard(const struct PurchaseGenericDefinition
     if (portraitId == 0 || gFaces[PURCHASE_GENERIC_FACE_SLOT] != NULL)
         return;
 
-    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x1a0, 0xB);
+    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x1c0, 0xB);
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
     // if (StartFace(
         // PURCHASE_GENERIC_FACE_SLOT,
@@ -611,7 +619,7 @@ static void SetupPurchaseGenericPlatformAnim(struct OpInfoClassDisplayProc* proc
     gUnk_4.yOffsetObj = entry->unk_0C;
     gUnk_4.objChr = 0x280;
     gUnk_4.objPalId = 0xF;
-    gUnk_4.bgChr = 0x200;
+    gUnk_4.bgChr = 0x180;
     gUnk_4.bgPalId = 0xF;
     gUnk_4.bg = 1;
     gUnk_4.bgTmBuf = gBG2TilemapBuffer;
@@ -1022,8 +1030,12 @@ static void PurchaseGenericMenuLock_OnLoop(struct PurchaseGenericMenuLockProc* p
 
 static void PurchaseGenericMenuLock_OnEnd(struct PurchaseGenericMenuLockProc* proc)
 {
+    
     BMapDispResume();
     UnlockGame();
+    RefreshUnitSprites(); 
+    RefreshEntityBmMaps();
+    RenderBmMap();
 }
 
 const struct ProcCmd PurchaseGenericsProcCmd[] =

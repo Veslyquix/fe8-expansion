@@ -111,5 +111,6 @@ UnitIconWait unit_icon_wait_table[] = {
 	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Pontifex_sheet}, // 105
 	{0, UNIT_ICON_SIZE_16x16, unit_icon_wait_Fallen_Peer_sheet}, // 106
 	{2, UNIT_ICON_SIZE_32x32, unit_icon_wait_Camp_sheet}, // 107
-	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_TentStructure_sheet} // 108
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_TentStructure_sheet}, // 108
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Flag_sheet} // 109
 };
