@@ -298,6 +298,11 @@ void BattlePrintDebugHitInfo(void);
 void BattleGenerateHitScriptedDamage(struct BattleUnit* bu);
 void BattleUnwindScripted(void);
 
+#if FE8_PURCHASE_GENERICS
+bool BattleUnitIsCamp(struct BattleUnit* bu);
+#define BUNIT_IS_OBSTACLE(aBu) (((aBu)->terrainId == TERRAIN_WALL_DAMAGED) || ((aBu)->terrainId == TERRAIN_SNAG) || BattleUnitIsCamp(aBu))
+#else
 #define BUNIT_IS_OBSTACLE(aBu) (((aBu)->terrainId == TERRAIN_WALL_DAMAGED) || ((aBu)->terrainId == TERRAIN_SNAG))
+#endif
 
 #endif // GUARD_BMBATTLE_H

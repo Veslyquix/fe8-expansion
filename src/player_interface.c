@@ -1076,6 +1076,31 @@ void DrawTerrainDisplayWindow(struct PlayerInterfaceProc * proc)
         break;
     }
 
+#if FE8_PURCHASE_GENERICS
+    {
+        // Villages/forts/houses/gates/thrones (real terrain) and Camp/Tent
+        // (no real terrain of their own -- see bmtrick.h) are all
+        // TRAP_PURCHASE_BASE traps, so this is keyed on trap presence at
+        // the cursor rather than on terrainId, covering every kind through
+        // one path. Capture progress is tracked 0..PURCHASE_BASE_CAPTURE_REQUIRED
+        // (200) internally; displayed on a fixed 0..20 scale, reusing the
+        // same obstacle-HP number readout as walls/snags above, where full
+        // capture (200/200 progress) reads as 10/20 -- i.e. this always
+        // shows "out of 20", and reaching the halfway mark means captured.
+        struct Trap* purchaseBaseTrap = GetPurchaseBaseTrapAt(gBmSt.playerCursor.x, gBmSt.playerCursor.y);
+
+        if (purchaseBaseTrap != NULL)
+        {
+            num = (GetPurchaseBaseTrapCaptureProgress(purchaseBaseTrap) * 10) / PURCHASE_BASE_CAPTURE_REQUIRED;
+
+            CallARM_FillTileRect(gUiTmScratchA + TILEMAP_INDEX(1, 14), Tsa_TerrainMapUi_ObstacleLabels, TILEREF(0x100, 2));
+
+            StoreNumberStringToSmallBuffer(num);
+            PutDigits(gUiTmScratchA + TILEMAP_INDEX(5, 15), gNumberStr + 7, TILEREF(0x128, 2), 2);
+        }
+    }
+#endif
+
     CallARM_FillTileRect(gUiTmScratchB + TILEMAP_INDEX(0, 11), gTSA_TerrainBox, TILEREF(0x0, 1));
 }
 

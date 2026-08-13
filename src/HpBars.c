@@ -27,7 +27,7 @@
  * LoadObjUIGfx in src/bm.c) -- confirmed present by inspecting that
  * sheet's source image, not merely assumed.
  *
- * Two simplifications from the original patch, both isolated to the
+ * Simplification from the original patch, isolated to the
  * warning-icon (not the HP bar) path:
  *
  * - The original recomputes each unit's effectiveness/crit/talk-or-support
@@ -37,14 +37,7 @@
  *   instead: simpler and lower-risk to get right, and cheap enough at GBA
  *   scale (this file's unit loop is already no larger than the vanilla
  *   per-frame unit-icon loop it hooks into).
- * - The original additionally gates warning-icon display on two functions
- *   (HpBarIsFMUActive, a "trainer flag" check) that are called but never
- *   defined anywhere in the source this was ported from -- not resolvable
- *   to a real address, so not guessable. Their checks are omitted (treated
- *   as not applicable) rather than reimplemented blind; this can only
- *   result in a warning icon showing in a narrow case where the original
- *   would have suppressed it, never a missing icon or incorrect stats. */
-
+*/
 #define HP_BAR_CRIT_WARNING_CUTOFF 24
 
 static CONST_DATA u16 sHpBarFrames[12][4] = {
@@ -179,8 +172,8 @@ static void DrawUnitWarningIcons(struct Unit* unit, int x, int y)
 /* Called once per visible unit from PutUnitSpriteIconsOam. */
 void DisplayHpBarAndWarningIcons(struct Unit* unit)
 {
-    int x = unit->xPos * 16 - gBmSt.camera.x;
-    int y = unit->yPos * 16 - gBmSt.camera.y;
+    int x = unit->xPos * 16 - gBmSt.camera.x - 8;
+    int y = unit->yPos * 16 - gBmSt.camera.y + 8;
 
     if (x < -16 || x > DISPLAY_WIDTH)
         return;

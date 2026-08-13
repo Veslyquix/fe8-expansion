@@ -46,6 +46,9 @@ void BeginUnitCritDamageAnim(struct Unit*, int);
 // ??? TrapDamageDisplay_Next(???);
 
 extern struct ProcCmd CONST_DATA gProcScr_TerrainHealDisplay[];
+#if FE8_PURCHASE_GENERICS
+extern struct ProcCmd CONST_DATA gProcScr_CampTentHealDisplay[];
+#endif
 extern struct ProcCmd CONST_DATA gProcScr_PoisonDamageDisplay[];
 extern struct ProcCmd CONST_DATA gProcScr_GorgonEggHatchDisplay[];
 extern struct ProcCmd CONST_DATA gProcScr_StatusDecayDisplay[];

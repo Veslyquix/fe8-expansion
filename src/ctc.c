@@ -160,7 +160,7 @@ void PutSprite(int layer, int x, int y, const u16* object, int oam2)
 {
 #if FE8_OVERFLOW_SAFETY_CHECKS
     // Max 128 sprites
-    if ((u32)gSpriteAllocIt >= (u32)&sSpriteLayers[0])
+    if ((u32)gSpriteAllocIt >= (u32)&sSpritePool[ARRAY_COUNT(sSpritePool)])
     {
         return;
     }
@@ -179,7 +179,7 @@ void PutSpriteExt(int layer, int xOam1, int yOam0, const u16* object, int oam2)
 {
 #if FE8_OVERFLOW_SAFETY_CHECKS
     // Max 128 sprites
-    if ((u32)gSpriteAllocIt >= (u32)&sSpriteLayers[0])
+    if ((u32)gSpriteAllocIt >= (u32)&sSpritePool[ARRAY_COUNT(sSpritePool)])
     {
         return;
     }

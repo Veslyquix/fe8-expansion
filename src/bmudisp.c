@@ -921,6 +921,31 @@ void RefreshUnitSprites(void)
 
             smsHandle->config = GetInfo(0x66).size;
         }
+
+#if FE8_PURCHASE_GENERICS
+        if (trap->type == TRAP_PURCHASE_BASE &&
+            (trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_CAMP ||
+             trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_TENT))
+        {
+            // Camp/Tent are not real deployed units (no per-unit displayed
+            // palette to look up), so this follows the ordinary unit-sprite
+            // pattern above (line ~871) rather than the ballista/light-rune
+            // cases' fixed-bank subtraction hack, which exists for sprites
+            // pre-baked into a specific palette slot this trap type doesn't
+            // have. GetInfo(id).size (not a hardcoded 16x16) is what lets
+            // Camp (32x32) and Tent (16x32) render at their own registered
+            // sheet size instead of ballista/rune's shared 16x16.
+            int smsId = trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_CAMP ? 107 : 108;
+
+            smsHandle = AddUnitSprite(trap->yPos * 16);
+            smsHandle->yDisplay = trap->yPos * 16;
+            smsHandle->xDisplay = trap->xPos * 16;
+
+            smsHandle->oam2Base = UseUnitSprite(smsId) + 0x80;
+
+            smsHandle->config = GetInfo(smsId).size;
+        }
+#endif
     }
 
     if (gSMSSyncFlag != 0)

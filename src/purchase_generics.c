@@ -43,6 +43,9 @@
 #define PURCHASE_GENERIC_PLATFORM_BG_Y 138
 #define PURCHASE_GENERIC_REEL_ENTRY_COUNT 65
 
+// Palette bg IDs 0xB (class card) and 0xF (battle animation spells) won't work with fog 
+// so a BG must be set when working with fog maps, I guess 
+
 struct PurchaseGenericDefinition
 {
     const char* name;
@@ -494,7 +497,7 @@ static void StartPurchaseGenericClassCard(const struct PurchaseGenericDefinition
     if (portraitId == 0 || gFaces[PURCHASE_GENERIC_FACE_SLOT] != NULL)
         return;
 
-    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x240, 0xB);
+    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x1a0, 0xB);
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
     // if (StartFace(
         // PURCHASE_GENERIC_FACE_SLOT,
@@ -1068,7 +1071,6 @@ PROC_LABEL(0),
     PROC_CALL(PurchaseGenericPlatformPreview_CheckMenuOpen),
     PROC_CALL(ClassInfoDisplay_ExecScript),
     PROC_REPEAT(ClassInfoDisplay_LoopScript),
-    PROC_SLEEP(10),
     PROC_GOTO(0),
 
 PROC_LABEL(10),
@@ -1119,8 +1121,8 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y)
     TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
     BG_EnableSyncByMask(BG2_SYNC_BIT);
 // StartClassAnimDisplay(proc, proc->classReelEnt);
-    struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
-    menu->frontBg = 2; 
+    // struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
+    struct MenuProc* menu = StartOrphanMenuExt(&gPurchaseGenericsMenuDef, 2, TILEREF(0, 0), 0, 0); // backBg as 2, frontBg (text) as 0 
 
     return true;
 }
@@ -1155,6 +1157,7 @@ static void GrantIncomeForFaction(int factionId)
     for (i = 0; i < TRAP_MAX_COUNT; ++i)
     {
         struct Trap* trap = GetTrap(i);
+        int kind;
 
         if (trap->type == TRAP_NONE)
             break;
@@ -1164,6 +1167,18 @@ static void GrantIncomeForFaction(int factionId)
 
         if (GetPurchaseBaseTrapOwner(trap) != factionId)
             continue;
+
+        kind = trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND];
+
+        if (kind == PURCHASE_BASE_KIND_CAMP || kind == PURCHASE_BASE_KIND_TENT)
+        {
+            // Camp/Tent grant a flat amount per turn rather than the
+            // PURCHASE_BASE_GOLD_UNIT * goldPerTurn formula -- that
+            // gold-per-turn slot is repurposed to store Camp's battle HP
+            // (see AddCampTrap), so it must never be read here.
+            AddFactionChapterGoldAmount(factionId, CAMP_TENT_GOLD_PER_TURN);
+            continue;
+        }
 
         AddFactionChapterGoldAmount(
             factionId,

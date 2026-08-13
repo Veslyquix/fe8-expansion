@@ -69,7 +69,15 @@ EXPANSION_BUILD_ID ?=
 # Bumped 1 -> 2 for issue #18 sprint 2: struct ExpansionUserPrefs
 # (include/expansion_save_prefs.h) now occupies part of ExpansionSaveMeta's
 # `reserved` tail.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 2
+#
+# Bumped 2 -> 3 for the Camp/Tent structures feature: when
+# FE8_PURCHASE_GENERICS is enabled, struct GameSavePackedUnit's `jid` field
+# moves out of its packed bitfield into a standalone byte (widening the class
+# ID save field from 7 to 8 bits so classes up to 0xFF survive a normal save;
+# see docs/id_space.md's "class" domain and include/bmsave.h). This changes
+# what the game-save unit bytes mean, so it must invalidate old saves via the
+# existing save-compat gate rather than silently misreading them.
+EXPANSION_SAVE_COMPAT_EPOCH ?= 3
 
 # --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
@@ -166,7 +174,7 @@ DISPLAY_OBTAINABLE_ITEM ?= 1
 # banner per chapter. The original patch's save-select-screen per-slot
 # chapter name preview (reads chapter id out of raw SRAM save data) is not
 # ported -- see src/chapter_title.c.
-TEXT_CHAPTER_NAMES ?= 1
+TEXT_CHAPTER_NAMES ?= 0
 
 # --- Optional BattleStatsNoAnims ---------------------------------------------
 # Shows the attack forecast's Hit/Damage/Crit/AS numbers alongside the unit

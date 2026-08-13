@@ -18,6 +18,7 @@
 #include "bmsave.h"
 #include "ekrbattle.h"
 #include "bmbattle.h"
+#include "eventinfo.h"
 #include "expansion_mechanics.h"
 #include "mapanim.h"
 #include "worldmap.h"
@@ -1996,6 +1997,12 @@ void BattleInitTargetCanCounter(void) {
     }
 }
 
+#if FE8_PURCHASE_GENERICS
+bool BattleUnitIsCamp(struct BattleUnit* bu) {
+    return IsCampOrTentTrap(GetTrapAt(bu->unit.xPos, bu->unit.yPos), PURCHASE_BASE_KIND_CAMP);
+}
+#endif
+
 void InitObstacleBattleUnit(void) {
     ClearUnit(&gBattleTarget.unit);
 
@@ -2008,6 +2015,15 @@ void InitObstacleBattleUnit(void) {
 
     gBattleTarget.unit.xPos  = gActionData.xOther;
     gBattleTarget.unit.yPos  = gActionData.yOther;
+
+#if FE8_PURCHASE_GENERICS
+    if (IsCampOrTentTrap(GetTrapAt(gBattleTarget.unit.xPos, gBattleTarget.unit.yPos), PURCHASE_BASE_KIND_CAMP)) {
+        gBattleTarget.unit.pClassData = GetClassData(CLASS_CAMP);
+        gBattleTarget.unit.pCharacterData = GetCharacterData(CHARACTER_WALL);
+        gBattleTarget.unit.maxHP = CAMP_MAX_HP;
+        return;
+    }
+#endif
 
     switch (gBmMapTerrain[gBattleTarget.unit.yPos][gBattleTarget.unit.xPos]) {
 
@@ -2038,6 +2054,26 @@ void ComputeBattleObstacleStats(void) {
 
 void UpdateObstacleFromBattle(struct BattleUnit* bu) {
     struct Trap* trap = GetTrapAt(bu->unit.xPos, bu->unit.yPos);
+
+#if FE8_PURCHASE_GENERICS
+    if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP)) {
+        SetCampTrapHp(trap, bu->unit.curHP);
+
+        if (GetCampTrapHp(trap) == 0) {
+            int owner = GetPurchaseBaseTrapOwner(trap);
+
+            RemoveTrap(trap);
+            RefreshTerrainBmMap();
+            UpdateRoofedUnits();
+            RenderBmMap();
+
+            if (owner == FACTION_ID_BLUE)
+                ForceGameOver();
+        }
+
+        return;
+    }
+#endif
 
     trap->extra = bu->unit.curHP;
 

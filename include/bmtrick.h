@@ -27,6 +27,12 @@ enum
     TRAP_MINE_ASSASSIN = 16,
 #if FE8_PURCHASE_GENERICS
     TRAP_PURCHASE_BASE = 17,
+    // Authoring-only TrapData.type tags (see struct TrapData / LoadTrapData
+    // in src/bmtrap.c): both translate into a runtime TRAP_PURCHASE_BASE
+    // trap with kind PURCHASE_BASE_KIND_CAMP/_TENT -- a Camp/Tent trap never
+    // actually exists at runtime with trap->type == TRAP_CAMP/TRAP_TENT.
+    TRAP_CAMP       = 18,
+    TRAP_TENT       = 19,
 #endif
 };
 
@@ -62,11 +68,19 @@ enum
     PURCHASE_BASE_KIND_HOUSE = 3,
     PURCHASE_BASE_KIND_GATE = 4,
     PURCHASE_BASE_KIND_THRONE = 5,
+    PURCHASE_BASE_KIND_CAMP = 6,
+    PURCHASE_BASE_KIND_TENT = 7,
     PURCHASE_BASE_OWNER_NEUTRAL = 3,
     PURCHASE_BASE_CAPTURE_NONE = -1,
     PURCHASE_BASE_CAPTURE_REQUIRED = 200,
     PURCHASE_BASE_GOLD_UNIT = 500,
     PURCHASE_BASE_DEFAULT_GOLD_PER_TURN = 2,
+
+    // Camp/Tent (Advance Wars-style HQ / support structure) tuning.
+    CAMP_TENT_GOLD_PER_TURN = 1000,
+    CAMP_TENT_HEAL_PERCENT = 20,
+    CAMP_STARTING_HP = 40,
+    CAMP_MAX_HP = 60,
 };
 #endif
 
@@ -108,6 +122,11 @@ void SetPurchaseBaseTrapGoldPerTurn(struct Trap* trap, int amount);
 int GetPurchaseBaseTrapGoldPerTurn(struct Trap* trap);
 bool IsPurchaseBaseTerrain(int terrain);
 void InitPurchaseBaseTrapsFromTerrain(void);
+struct Trap* AddCampTrap(int x, int y, int owner);
+struct Trap* AddTentTrap(int x, int y, int owner);
+bool IsCampOrTentTrap(struct Trap* trap, int kind);
+void SetCampTrapHp(struct Trap* trap, int hp);
+int GetCampTrapHp(struct Trap* trap);
 #endif
 void InitMapObstacles(void);
 void ApplyEnabledMapChanges(void);

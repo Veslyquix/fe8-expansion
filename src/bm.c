@@ -96,6 +96,9 @@ PROC_LABEL(9),
 
     PROC_START_CHILD_BLOCKING(gProcScr_StatusDecayDisplay),
     PROC_START_CHILD_BLOCKING(gProcScr_TerrainHealDisplay),
+#if FE8_PURCHASE_GENERICS
+    PROC_START_CHILD_BLOCKING(gProcScr_CampTentHealDisplay),
+#endif
     PROC_START_CHILD_BLOCKING(gProcScr_PoisonDamageDisplay),
     PROC_START_CHILD_BLOCKING(gProcScr_GorgonEggHatchDisplay),
 

@@ -601,6 +601,45 @@ PROC_LABEL(1),
     PROC_END,
 };
 
+#if FE8_PURCHASE_GENERICS
+void CampTentHealDisplay_Init(struct UnknownBMUSAilmentProc* proc) {
+
+    MakeCampTentHealTargetList(gPlaySt.faction);
+
+    if (GetSelectTargetCount() == 0) {
+        Proc_End(proc);
+    } else {
+        proc->unk_4C = 0;
+    }
+
+    return;
+}
+
+// Same target-list/mass-effect-display machinery as gProcScr_TerrainHealDisplay
+// above, only the target list source differs (Camp/Tent traps' adjacent
+// units instead of units standing on healing terrain).
+struct ProcCmd CONST_DATA gProcScr_CampTentHealDisplay[] = {
+    PROC_CALL(CampTentHealDisplay_Init),
+
+PROC_LABEL(0),
+    PROC_CALL(MassEffectDisplay_Check),
+    PROC_CALL(MassEffectDisplay_Watch),
+    PROC_SLEEP(0),
+
+    PROC_CALL(TerrainHealDisplay_Display),
+    PROC_SLEEP(0),
+
+    PROC_CALL(FinishDamageDisplay),
+
+PROC_LABEL(1),
+    PROC_CALL(TerrainHealDisplay_Next),
+
+    PROC_GOTO(0),
+
+    PROC_END,
+};
+#endif
+
 void PoisonDamageDisplay_Init(struct UnknownBMUSAilmentProc* proc) {
     MakePoisonDamageTargetList(gPlaySt.faction);
     PidStatsRecordTargetListDeaths(4);

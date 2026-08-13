@@ -199,11 +199,24 @@ struct ChapterStats {
 #define WIN_ARRAY_NUM 0x30
 
 struct GameSavePackedUnit {       /* Save Data */
+#if FE8_PURCHASE_GENERICS
+    /* Class ID space is widened to a full byte here (see docs/id_space.md,
+     * "class" domain) so jid no longer shares a bitfield word with the
+     * fields below -- this keeps their relative bit-packing unchanged and
+     * confines the layout change (and the +1-byte struct growth) to this
+     * flag, matching EXPANSION_SAVE_COMPAT_EPOCH's bump for this change. */
+    /* 00 */ u8  jid;
+             u32 level      : 5;
+             u32 exp        : 7;
+             u32 xPos       : 6;
+             u32 yPos       : 6;
+#else
     /* 00 */ u32 jid      : 7;
              u32 level      : 5;
              u32 exp        : 7;
              u32 xPos       : 6;
              u32 yPos       : 6;
+#endif
 
              u32 flag       : 13;
 

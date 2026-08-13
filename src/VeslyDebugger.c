@@ -6109,7 +6109,6 @@ void SetupUnitFunc(void)
     UnitBeginAction(gActiveUnit);
 }
 
-extern u8 * pPromoJidLut;
 extern int GetPromoTable(int classNumber, int aOrB);
 u8 CanActiveUnitPromote(void)
 {
@@ -6117,11 +6116,10 @@ u8 CanActiveUnitPromote(void)
     {
         return 2;
     }
-    u8 * promoTable = pPromoJidLut;
     int classNumber = gActiveUnit->pClassData->number;
-    if ((!promoTable[classNumber * 2]) && (!promoTable[(classNumber * 2) + 1]))
-    {             // gPromoJidLut[classNumber][0];
-        return 2; // greyed out
+    if ((!gPromoJidLut[classNumber][0]) && (!gPromoJidLut[classNumber][1]))
+    {       
+        return 2; 
     }
 
     return 1;

@@ -197,6 +197,60 @@ struct Trap* GetPurchaseBaseTrapAt(int x, int y)
     return GetTypedTrapAt(x, y, TRAP_PURCHASE_BASE);
 }
 
+// Camp/Tent are runtime TRAP_PURCHASE_BASE traps with kind CAMP/TENT (see
+// PURCHASE_BASE_KIND_CAMP/_TENT); chapter authoring uses the TRAP_CAMP/
+// TRAP_TENT TrapData.type tags (LoadTrapData, src/bmtrap.c), which call
+// these constructors directly instead of going through the terrain-scan
+// InitPurchaseBaseTrapsFromTerrain path villages/forts/houses use.
+struct Trap* AddCampTrap(int x, int y, int owner)
+{
+    struct Trap* trap = AddPurchaseBaseTrap(x, y, owner, PURCHASE_BASE_KIND_CAMP);
+
+    // data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] is repurposed to store
+    // Camp's current battle HP -- Camp/Tent always grant a flat
+    // CAMP_TENT_GOLD_PER_TURN (see GrantIncomeForFaction), so the
+    // gold-per-turn slot is otherwise unused for this kind, and no other
+    // call site reads it for a CAMP-kind trap.
+    SetCampTrapHp(trap, CAMP_STARTING_HP);
+
+    return trap;
+}
+
+struct Trap* AddTentTrap(int x, int y, int owner)
+{
+    return AddPurchaseBaseTrap(x, y, owner, PURCHASE_BASE_KIND_TENT);
+}
+
+bool IsCampOrTentTrap(struct Trap* trap, int kind)
+{
+    if (trap == NULL || trap->type != TRAP_PURCHASE_BASE)
+        return FALSE;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == kind;
+}
+
+void SetCampTrapHp(struct Trap* trap, int hp)
+{
+    if (trap == NULL)
+        return;
+
+    if (hp < 0)
+        hp = 0;
+
+    if (hp > CAMP_MAX_HP)
+        hp = CAMP_MAX_HP;
+
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] = hp;
+}
+
+int GetCampTrapHp(struct Trap* trap)
+{
+    if (trap == NULL)
+        return 0;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN];
+}
+
 void SetPurchaseBaseTrapOwner(struct Trap* trap, int owner)
 {
     if (trap != NULL)

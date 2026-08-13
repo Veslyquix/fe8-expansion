@@ -777,6 +777,10 @@
       "category": "external-interface",
       "reason": null
     },
+    "include/bmtarget.h|function-signature|unit|MakeCampTentHealTargetList": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/bmtarget.h|function-signature|unit|MakeGorgonEggHatchTargetList": {
       "category": "external-interface",
       "reason": null

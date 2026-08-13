@@ -311,6 +311,16 @@ void LoadTrapData(const struct TrapData * data)
         case TRAP_GORGON_EGG:
             AddGorgonEggTrap(data->xPos, data->yPos, data->subtype, data->turn_counter, data->turn);
             break;
+
+#if FE8_PURCHASE_GENERICS
+        case TRAP_CAMP:
+            AddCampTrap(data->xPos, data->yPos, data->subtype);
+            break;
+
+        case TRAP_TENT:
+            AddTentTrap(data->xPos, data->yPos, data->subtype);
+            break;
+#endif
         }
         data++;
     }

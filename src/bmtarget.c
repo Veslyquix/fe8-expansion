@@ -152,6 +152,16 @@ void TryAddTrapsToTargetList(void) {
     struct Trap* trap;
 
     for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap) {
+#if FE8_PURCHASE_GENERICS
+        if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP)) {
+            if (gMapRangeSigned[trap->yPos][trap->xPos] != 0) {
+                AddTarget(trap->xPos, trap->yPos, 0, GetCampTrapHp(trap));
+            }
+
+            continue;
+        }
+#endif
+
         if (trap->type != TRAP_OBSTACLE) {
             continue;
         }
@@ -626,6 +636,87 @@ void MakeTerrainHealTargetList(int faction) {
 
     return;
 }
+
+#if FE8_PURCHASE_GENERICS
+static int sCampTentHealFactionId;
+
+static void TryHealAdjacentToCampTent(int x, int y) {
+    struct Unit* unit;
+    int amount;
+
+    if (gBmMapUnit[y][x] == 0) {
+        return;
+    }
+
+    unit = GetUnit(gBmMapUnit[y][x]);
+
+    if (!UNIT_IS_VALID(unit)) {
+        return;
+    }
+
+    if (unit->state & (US_DEAD | US_NOT_DEPLOYED | US_RESCUED | US_BIT16)) {
+        return;
+    }
+
+    if ((UNIT_FACTION(unit) >> 6) != sCampTentHealFactionId) {
+        return;
+    }
+
+    if (GetUnitCurrentHp(unit) == GetUnitMaxHp(unit)) {
+        return;
+    }
+
+    amount = (CAMP_TENT_HEAL_PERCENT * GetUnitMaxHp(unit)) / 100;
+    AddTarget(unit->xPos, unit->yPos, unit->index, amount);
+}
+
+// Camp/Tent aura: heals every faction-owned unit adjacent to a Camp/Tent
+// trap owned by `faction`, by CAMP_TENT_HEAL_PERCENT of its max HP. Modeled
+// on MakeTerrainHealTargetList above, but rooted at trap positions instead
+// of at each unit's own tile, and rooted at potentially several traps at
+// once -- so, unlike ForEachAdjacentPosition's usual single-root callers,
+// this accumulates every trap's adjacency range into gWorkingBmMap via
+// MapAddInRange directly (InitTargets/ForEachPosInRange run once, not once
+// per trap, since InitTargets would otherwise discard earlier traps'
+// already-added targets).
+void MakeCampTentHealTargetList(int faction) {
+    int i;
+    bool any = FALSE;
+
+    InitTargets(0, 0);
+
+    for (i = 0; i < TRAP_MAX_COUNT; i++) {
+        struct Trap* trap = GetTrap(i);
+
+        if (trap->type == TRAP_NONE) {
+            break;
+        }
+
+        if (trap->type != TRAP_PURCHASE_BASE) {
+            continue;
+        }
+
+        if (!IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP) && !IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_TENT)) {
+            continue;
+        }
+
+        if (GetPurchaseBaseTrapOwner(trap) != faction) {
+            continue;
+        }
+
+        MapAddInRange(trap->xPos, trap->yPos, 1, 1);
+        MapAddInRange(trap->xPos, trap->yPos, 0, -1);
+        any = TRUE;
+    }
+
+    if (any) {
+        sCampTentHealFactionId = faction;
+        ForEachPosInRange(TryHealAdjacentToCampTent);
+    }
+
+    return;
+}
+#endif
 
 void MakePoisonDamageTargetList(int faction) {
 
