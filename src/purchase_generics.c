@@ -495,7 +495,7 @@ static void StartPurchaseGenericClassCard(const struct PurchaseGenericDefinition
         return;
 
     PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x240, 0xB);
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
     // if (StartFace(
         // PURCHASE_GENERIC_FACE_SLOT,
         // portraitId,
@@ -611,7 +611,7 @@ static void SetupPurchaseGenericPlatformAnim(struct OpInfoClassDisplayProc* proc
     gUnk_4.bgChr = 0x200;
     gUnk_4.bgPalId = 0xF;
     gUnk_4.bg = 1;
-    gUnk_4.bgTmBuf = gBG1TilemapBuffer;
+    gUnk_4.bgTmBuf = gBG2TilemapBuffer;
     gUnk_4.bgImgBuf = gSpellAnimBgfx;
     gUnk_4.bgTsaBuf = gEkrTsaBuffer;
     gUnk_4.objImgBuf = gBuf_Banim;
@@ -668,25 +668,25 @@ static void DrawPurchaseGenericUiBoxes(const struct PurchaseGenericDefinition* d
 {
     int i;
 
-    CallARM_FillTileRect(TILEMAP_LOCATED(gBG1TilemapBuffer, 0, 0), Tsa_PurchaseGenericTopStats, 0);
-    CallARM_FillTileRect(TILEMAP_LOCATED(gBG1TilemapBuffer, 0, 5), Tsa_PurchaseGenericBottomStats, 0);
-    CallARM_FillTileRect(TILEMAP_LOCATED(gBG1TilemapBuffer, 19, 0), Tsa_PurchaseGenericPortraitBox, 0);
+    CallARM_FillTileRect(TILEMAP_LOCATED(gBG2TilemapBuffer, 0, 0), Tsa_PurchaseGenericTopStats, 0);
+    CallARM_FillTileRect(TILEMAP_LOCATED(gBG2TilemapBuffer, 0, 5), Tsa_PurchaseGenericBottomStats, 0);
+    CallARM_FillTileRect(TILEMAP_LOCATED(gBG2TilemapBuffer, 19, 0), Tsa_PurchaseGenericPortraitBox, 0);
 
     if (def == NULL)
         return;
 
-    CallARM_FillTileRect(TILEMAP_LOCATED(gBG1TilemapBuffer, 9, FUNDS_Y), Tsa_PurchaseGenericCostBox, 0);
+    CallARM_FillTileRect(TILEMAP_LOCATED(gBG2TilemapBuffer, 9, FUNDS_Y), Tsa_PurchaseGenericCostBox, 0);
 
-    for (i = 0; i < UNIT_DEFINITION_ITEM_COUNT && def->items[i] != ITEM_NONE; ++i)
-    {
-        static const u8 itemBoxX[] = { 28, 26, 28, 26 };
-        static const u8 itemBoxY[] = { 11, 11, 13, 13 };
+    // for (i = 0; i < UNIT_DEFINITION_ITEM_COUNT && def->items[i] != ITEM_NONE; ++i)
+    // {
+        // static const u8 itemBoxX[] = { 28, 26, 28, 26 };
+        // static const u8 itemBoxY[] = { 11, 11, 13, 13 };
 
-        CallARM_FillTileRect(
-            TILEMAP_LOCATED(gBG1TilemapBuffer, itemBoxX[i], itemBoxY[i]),
-            Tsa_PurchaseGenericItemBox,
-            0);
-    }
+        // CallARM_FillTileRect(
+            // TILEMAP_LOCATED(gBG2TilemapBuffer, itemBoxX[i], itemBoxY[i]),
+            // Tsa_PurchaseGenericItemBox,
+            // 0);
+    // }
 }
 #define GENERICS_MENU_X 9 
 #define GENERICS_MENU_Y 4 
@@ -714,7 +714,7 @@ static void DrawPurchaseGenericList(void)
     PutSpecialChar(TILEMAP_LOCATED(gBG0TilemapBuffer, 27, 18), TEXT_COLOR_SYSTEM_WHITE, TEXT_SPECIAL_SLASH);
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 28, 18), TEXT_COLOR_SYSTEM_BLUE, GetPurchaseGenericPageCount());
 }
-
+/*
 static void DrawPurchaseGenericStartingItems(const struct PurchaseGenericDefinition* def)
 {
     int i;
@@ -723,8 +723,8 @@ static void DrawPurchaseGenericStartingItems(const struct PurchaseGenericDefinit
         return;
 
     TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(26, 11), 4, 4, 0);
-    TileMap_FillRect(gBG1TilemapBuffer + TILEMAP_INDEX(26, 11), 4, 4, 0);
-    BG_EnableSyncByMask(BG0_SYNC_BIT|BG1_SYNC_BIT);
+    TileMap_FillRect(gBG2TilemapBuffer + TILEMAP_INDEX(26, 11), 4, 4, 0);
+    BG_EnableSyncByMask(BG0_SYNC_BIT|BG2_SYNC_BIT);
     for (i = 0; i < UNIT_DEFINITION_ITEM_COUNT && def->items[i] != ITEM_NONE; ++i)
     {
         static const u8 itemIconX[] = { 28, 26, 28, 26 };
@@ -742,7 +742,7 @@ static void DrawPurchaseGenericStartingItems(const struct PurchaseGenericDefinit
 
     LoadIconPalettes(0xC);
 }
-
+*/
 static void DrawPurchaseGenericGoldPanel(const struct PurchaseGenericDefinition* def)
 {
     if (def == NULL)
@@ -759,8 +759,8 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
 {
     const struct ClassData* class = NULL;
 
-    // TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
-    // TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
+    // TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
+    TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
     EndPurchaseGenericPlatformPreview();
     ResetIconGraphics();
     ResetTextFont();
@@ -771,7 +771,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
     if (def == NULL)
     {
         EndPurchaseGenericClassCard();
-        BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+        BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
         return;
     }
 
@@ -792,11 +792,11 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
     }
 
     DrawPurchaseGenericGoldPanel(def);
-    DrawPurchaseGenericStartingItems(def);
+    // DrawPurchaseGenericStartingItems(def);
     StartPurchaseGenericClassCard(def);
     StartPurchaseGenericPlatformPreview(def);
 
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
 }
 
 static void ClearPurchaseGenericDetails(void)
@@ -804,9 +804,9 @@ static void ClearPurchaseGenericDetails(void)
     EndPurchaseGenericPlatformPreview();
     EndPurchaseGenericClassCard();
     ResetIconGraphics();
-    TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
+    TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
     TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
 }
 
 static u8 PurchaseGenericMenuItemUsability(const struct MenuItemDef* def, int number)
@@ -1116,10 +1116,11 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y)
     sPurchaseGenericBaseX = x;
     sPurchaseGenericBaseY = y;
     sPurchaseGenericFactionId = FACTION_ID_BLUE;
-    TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
-    BG_EnableSyncByMask(BG1_SYNC_BIT);
+    TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
+    BG_EnableSyncByMask(BG2_SYNC_BIT);
 // StartClassAnimDisplay(proc, proc->classReelEnt);
-    StartOrphanMenu(&gPurchaseGenericsMenuDef);
+    struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
+    menu->frontBg = 2; 
 
     return true;
 }

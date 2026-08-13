@@ -40,7 +40,8 @@ MODERN_GOALS := \
 	expansion-modern-starter-qol-check \
 	expansion-modern-starter-runtime-check \
 	expansion-modern-idspace-active-check \
-	expansion-modern-clean
+	expansion-modern-clean \
+	sync-win
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
 endif
@@ -2167,6 +2168,20 @@ $(MODERN_ROM): $(MODERN_ELF) $(MODERN_BUILD_METADATA_JSON)
 expansion-modern-rom: expansion-modern-elf $(MODERN_ROM)
 	@printf 'Modern ROM ready: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
+# Opt-in convenience target (not part of `all`/boot-check): copy the built
+# modern ROM to a Windows-native path, for WSL setups where a GUI emulator
+# on the Windows side reads over \\wsl.localhost\ -- copying to a native
+# path avoids that bridge's file-locking/latency issues. Override
+# WIN_SYNC_DIR to point elsewhere; default targets this machine's devkitPro
+# install layout.
+WIN_SYNC_DIR := /mnt/c/devkitPro/feex
+
+.PHONY: sync-win
+sync-win: expansion-modern-rom
+	@mkdir -p "$(WIN_SYNC_DIR)"
+	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
+	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 
 # Preflight the libmGBA-backed playtest backend before spending time building
 # the ROM, with an actionable error pointing at the same backend-check
