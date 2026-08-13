@@ -184,6 +184,9 @@ endif
 ifeq ($(HP_BARS),1)
 MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
 endif
+ifeq ($(CREDITS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1462,6 +1465,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--hp-bars "$(HP_BARS)" \
+		--credits "$(CREDITS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1531,6 +1535,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
+	--credits "$(CREDITS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1604,7 +1609,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
-	-DFE8_HP_BARS=$(HP_BARS)
+	-DFE8_HP_BARS=$(HP_BARS) \
+	-DFE8_CREDITS=$(CREDITS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1775,6 +1781,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
+		printf '%s\n' 'credits=$(CREDITS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \

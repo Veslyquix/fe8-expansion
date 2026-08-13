@@ -187,6 +187,16 @@ BATTLE_STATS_NO_ANIMS ?= 1
 # src/HpBars.c for two further narrow simplifications.
 HP_BARS ?= 1
 
+# --- Optional Credits ----------------------------------------------------------
+# Scrolling end-credits sequence (big-font headers via the existing class-
+# name-intro-letter font, sprite-text body lines, per-screen background/CG
+# crossfades). Exposes StartCreditsProc(ProcPtr parent) for an event script
+# or other game-flow point to call -- not wired to any specific trigger,
+# since the original patch didn't have a real one either (only a build-
+# time-disabled test hook). See src/Credits.c for two further narrow
+# simplifications.
+CREDITS ?= 0
+
 # --- Optional bugfixes --------------------------------------------------------
 # PutSprite/PutSpriteExt (src/ctc.c) bounds-check the secondary sprite-object
 # pool before writing to it, instead of silently overflowing sSpritePool into

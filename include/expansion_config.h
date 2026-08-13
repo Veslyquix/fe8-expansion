@@ -330,6 +330,11 @@
 #define FE8_HP_BARS 0
 #endif
 
+/* Scrolling end-credits sequence (see src/Credits.c). */
+#ifndef FE8_CREDITS
+#define FE8_CREDITS 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -383,6 +388,10 @@
 
 #if FE8_HP_BARS && !FE8_DISPLAY_OBTAINABLE_ITEM
 #error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
+#endif
+
+#if (FE8_CREDITS != 0) && (FE8_CREDITS != 1)
+#error "FE8_CREDITS must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

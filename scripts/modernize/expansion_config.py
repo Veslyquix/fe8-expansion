@@ -390,7 +390,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            purchase_generics=0, extend_desc_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           hp_bars=0,
+                           hp_bars=0, credits=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -412,6 +412,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
     battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
     bars = validate_feature_flag("HP_BARS", hp_bars)
+    credits_flag = validate_feature_flag("CREDITS", credits)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -440,7 +441,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "warning-icon tiles it draws live in the icon sheet that flag "
             "loads"
         )
-    return hooks, sample, danger, content, debugger, bones, generics, desc_box, overflow_checks, obtainable_item, ch_names, battle_stats, bars
+    return hooks, sample, danger, content, debugger, bones, generics, desc_box, overflow_checks, obtainable_item, ch_names, battle_stats, bars, credits_flag
 
 
 def validate_rom_size(value) -> int:
@@ -655,6 +656,7 @@ class ExpansionIdentity:
     text_chapter_names: int = 0
     battle_stats_no_anims: int = 0
     hp_bars: int = 0
+    credits: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -712,6 +714,7 @@ class ExpansionIdentity:
                 "text_chapter_names": self.text_chapter_names,
                 "battle_stats_no_anims": self.battle_stats_no_anims,
                 "hp_bars": self.hp_bars,
+                "credits": self.credits,
             },
         }
 
@@ -757,6 +760,7 @@ def load_identity(
     text_chapter_names=None,
     battle_stats_no_anims=None,
     hp_bars=None,
+    credits=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -816,7 +820,7 @@ def load_identity(
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
      resolved_bones, resolved_generics, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_ch_names, resolved_battle_stats,
-     resolved_hp_bars) = validate_feature_flags(
+     resolved_hp_bars, resolved_credits) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -856,6 +860,9 @@ def load_identity(
         hp_bars
         if hp_bars not in (None, "")
         else cfg.get("HP_BARS", "0"),
+        credits
+        if credits not in (None, "")
+        else cfg.get("CREDITS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -898,6 +905,7 @@ def load_identity(
         text_chapter_names=resolved_ch_names,
         battle_stats_no_anims=resolved_battle_stats,
         hp_bars=resolved_hp_bars,
+        credits=resolved_credits,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1051,6 +1059,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override HP_BARS (0 or 1)",
     )
     parser.add_argument(
+        "--credits",
+        default=None,
+        help="override CREDITS (0 or 1)",
+    )
+    parser.add_argument(
         "--item-id-cap",
         default=None,
         help=(
@@ -1129,6 +1142,7 @@ def main(argv=None) -> int:
             text_chapter_names=args.text_chapter_names,
             battle_stats_no_anims=args.battle_stats_no_anims,
             hp_bars=args.hp_bars,
+            credits=args.credits,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:
