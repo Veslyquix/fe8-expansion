@@ -6,6 +6,7 @@
 #include "bmlib.h"
 #include "helpbox.h"
 #include "worldmap.h"
+#include "fontgrp.h"
 
 EWRAM_DATA struct ChapterTitleFxSt gChapterTitleFxSt = { 0 };
 
@@ -43,13 +44,94 @@ void ApplyChapterTitlePal(int config, int palId)
     ApplyPalette(pal, palId);
 }
 
+#if FE8_TEXT_CHAPTER_NAMES
+/* Modern-build port of a FEBuilder-style ROM patch (by circleseverywhere)
+ * that replaces the pre-rendered chapter-title graphic banner with the
+ * chapter's actual title text, drawn with a bitmap font, so any chapter
+ * name reads correctly instead of needing a hand-drawn banner per
+ * chapter. Ported using this project's existing sprite-text primitives
+ * (InitSpriteTextFont/Text_InsertDrawString, already used throughout the
+ * UI) rather than the original patch's own hand-rolled per-pixel VRAM
+ * plotter and custom font/glyph-metrics format, since those cannot be
+ * exercised without visually rendering the result. NEEDS VISUAL
+ * VERIFICATION IN AN EMULATOR: text color/palette selection in
+ * particular is a best-effort default (colorId 1), not verified against
+ * how this screen's palette is actually laid out.
+ *
+ * The original patch's save-select-screen per-slot chapter name preview
+ * (reading a chapter id directly out of SRAM save data) is intentionally
+ * NOT ported: its address didn't resolve to any recognizable field of
+ * this project's (byte-identical-to-vanilla) save layout, and guessing
+ * at a raw save-data offset is a correctness risk this project treats
+ * carefully (see EXPANSION_SAVE_COMPAT_EPOCH in config.mk). */
+
+/* Message ids for the few titleId sentinels that are not real chapter
+ * indices (see chapter_text/nodata_text/epilogue_text/postgame_text in
+ * the original patch). */
+enum
+{
+    CHAPTER_TITLE_ID_NO_DATA = 0x4A,
+    CHAPTER_TITLE_ID_EPILOGUE = 0x55,
+    CHAPTER_TITLE_ID_POSTGAME = 0x57,
+};
+
+static u16 GetChapterTitleTextMsgId(u32 titleId)
+{
+    const struct ROMChapterData* chapter;
+    bool8 altRoute;
+
+    switch (titleId)
+    {
+    case CHAPTER_TITLE_ID_NO_DATA:
+        return 0xCC; // "--NO DATA--"
+    case CHAPTER_TITLE_ID_EPILOGUE:
+        return 0x7CF; // "Epilogue"
+    case CHAPTER_TITLE_ID_POSTGAME:
+        return 0x7D0;
+    }
+
+    altRoute = (titleId >> 7) & 1;
+    chapter = GetROMChapterStruct(titleId & 0x7F);
+
+    return altRoute ? chapter->chapTitleTextIdInHectorStory : chapter->chapTitleTextId;
+}
+
+static void DrawChapterTitleText(int chr, u32 titleId)
+{
+    struct Font font;
+    struct Text text;
+    const char* str;
+    int width, xStart;
+
+    str = GetStringFromIndex(GetChapterTitleTextMsgId(titleId));
+
+    InitSpriteTextFont(&font, (void*)((chr * TILE_SIZE_4BPP) + VRAM), 0);
+    InitSpriteText(&text);
+    SpriteText_DrawBackground(&text);
+
+    width = GetStringTextLen(str);
+    xStart = (0xC0 - width) / 2;
+    if (xStart < 0)
+        xStart = 0;
+
+    Text_InsertDrawString(&text, xStart, 1, str);
+
+    SetTextFont(0);
+}
+#endif
+
 void PutChapterTitleGfx(int chr, u32 titleId)
 {
     if (titleId > 0x108)
         titleId = 0x54;
 
     gChapterTitleFxSt.chr_str = chr & 0x3FF;
+
+#if FE8_TEXT_CHAPTER_NAMES
+    DrawChapterTitleText(chr, titleId);
+#else
     Decompress(chap_title_data[titleId].save, (void*)((chr * TILE_SIZE_4BPP) + VRAM));
+#endif
 }
 
 void _PutChapterTitleGfx(int chr, int titleId)

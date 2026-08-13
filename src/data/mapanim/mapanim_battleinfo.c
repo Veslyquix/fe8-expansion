@@ -1,4 +1,14 @@
 #include "global.h"
+#include "expansion_config.h"
+
+#if FE8_BATTLE_STATS_NO_ANIMS
+u8 Img_BattleStatsNoAnimsInfoBox[] = INCBIN_U8("graphics/misc/Img_BattleStatsNoAnimsInfoBox.4bpp.lz");
+u16 Img_BattleStatsNoAnimsNum[] = INCBIN_U16("graphics/misc/Img_BattleStatsNoAnimsNum.4bpp.lz");
+u8 Tsa_BattleStatsNoAnimsBoxRight[] = INCBIN_U8("graphics/misc/Tsa_BattleStatsNoAnimsBoxRight.tsa.bin.lz");
+u8 Tsa_BattleStatsNoAnimsBoxLeft[] = INCBIN_U8("graphics/misc/Tsa_BattleStatsNoAnimsBoxLeft.tsa.bin.lz");
+u8 Img_BattleStatsNoAnimsLabels[] = INCBIN_U8("graphics/misc/Img_BattleStatsNoAnimsLabels.4bpp.lz");
+u16 Pal_BattleStatsNoAnimsLabels[] = INCBIN_U16("graphics/misc/Pal_BattleStatsNoAnimsLabels.raw");
+#endif
 
 u8 Img_MapBattleInfoBox[] = INCBIN_U8("graphics/misc/Img_MapBattleInfoBox.4bpp.lz");
 

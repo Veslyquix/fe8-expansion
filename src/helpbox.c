@@ -14,9 +14,15 @@
 #include "bmlib.h"
 #include "savemenu.h"
 #include "cgtext.h"
+#include "bmshop.h"
 #include "helpbox.h"
 #include "text_utf8.h"
 #include "constants/songs.h"
+
+#if FE8_EXTEND_DESC_BOX
+void InitItemDescVram(void);
+void InitProcTextHandles(struct HelpBoxScrollProc* otherProc);
+#endif
 
 EWRAM_DATA u32 unuesed_Helpbox_0 = 0;
 EWRAM_DATA struct HelpBoxSt gHelpBoxSt = { 0 };
@@ -27,12 +33,23 @@ EWRAM_DATA struct BoxDialogueConf gBoxDialogueConf = { 0 };
 //! FE8U = 0x08089804
 void LoadHelpBoxGfx(void * vram, int palId)
 {
-    if (vram == NULL) {
-        vram = (void *)0x06013000;
-    }
-
     if (palId < 0) {
         palId = 5;
+    }
+
+    if (vram == NULL) {
+#if FE8_EXTEND_DESC_BOX
+        /* The stat screen and shop's own VRAM layout collides with the
+         * vanilla default help-box bank (0x6013000), so they get the
+         * bank the prep/supply/trade screens already use instead. */
+        if (Proc_Find(gProcScr_StatScreen) || Proc_Find(gProcScr_Shop)) {
+            vram = (void *)0x06012000;
+        } else {
+            vram = (void *)0x06013000;
+        }
+#else
+        vram = (void *)0x06013000;
+#endif
     }
 
     palId = (palId & 0xF) + 0x10;
@@ -48,6 +65,10 @@ void LoadHelpBoxGfx(void * vram, int palId)
     InitSpriteText(&gHelpBoxSt.text[0]);
     InitSpriteText(&gHelpBoxSt.text[1]);
     InitSpriteText(&gHelpBoxSt.text[2]);
+#if FE8_EXTEND_DESC_BOX
+    InitSpriteText(&gHelpBoxSt.text[3]);
+    InitSpriteText(&gHelpBoxSt.text[4]);
+#endif
 
     SetTextFont(0);
 
@@ -120,9 +141,17 @@ void DisplayHelpBoxObj(int x, int y, int w, int h, int unk) {
         h = 0x10;
     }
 
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x089899BC/0x089899C0: 3 lines (0x30 = 0x10 * 3) -> 5 lines
+     * (0x50 = 0x10 * 5). */
+    if (h > 0x50) {
+        h = 0x50;
+    }
+#else
     if (h > 0x30) {
         h = 0x30;
     }
+#endif
 
     xCount = (w + 0x1f) / 0x20;
     yCount = (h + 0x0f) / 0x10;
@@ -519,11 +548,16 @@ void HelpBoxIntroDrawTexts(struct ProcHelpBoxIntro * proc)
     Proc_EndEach(gProcScr_HelpBoxTextScroll);
 
     otherProc = Proc_Start(gProcScr_HelpBoxTextScroll, PROC_TREE_3);
+
+#if FE8_EXTEND_DESC_BOX
+    InitProcTextHandles(otherProc);
+#else
     otherProc->font = &gHelpBoxSt.font;
 
     otherProc->texts[0] = &gHelpBoxSt.text[0];
     otherProc->texts[1] = &gHelpBoxSt.text[1];
     otherProc->texts[2] = &gHelpBoxSt.text[2];
+#endif
 
     otherProc->pretext_lines = proc->pretext_lines;
 
@@ -581,9 +615,13 @@ void ClearHelpBoxText(void) {
 
     SetTextFont(&gHelpBoxSt.font);
 
+#if FE8_EXTEND_DESC_BOX
+    InitItemDescVram();
+#else
     SpriteText_DrawBackground(&gHelpBoxSt.text[0]);
     SpriteText_DrawBackground(&gHelpBoxSt.text[1]);
     SpriteText_DrawBackground(&gHelpBoxSt.text[2]);
+#endif
 
     Proc_EndEach(gProcScr_HelpBoxTextScroll);
     Proc_EndEach(ProcScr_HelpBoxIntro);

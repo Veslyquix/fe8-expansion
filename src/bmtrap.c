@@ -22,6 +22,10 @@
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "popup.h"
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+void SetupCacheForStealableItems(void);
+#endif
 #include "constants/songs.h"
 
 struct ProcCmd CONST_DATA sProcScr_ExecTrap8[] = {
@@ -208,6 +212,12 @@ bool HandlePostActionTraps(ProcPtr proc) {
     if (GetUnitCurrentHp(gActiveUnit) <= 0) {
         return 1;
     }
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    if (gActionData.unitActionType == UNIT_ACTION_STEAL) {
+        SetupCacheForStealableItems();
+    }
+#endif
 
     if ((UNIT_CATTRIBUTES(gActiveUnit) & CA_CANTO) && !(gActiveUnit->state & US_CANTOING)) {
         switch (gActionData.unitActionType) {

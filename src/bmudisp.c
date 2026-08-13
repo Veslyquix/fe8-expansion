@@ -16,6 +16,14 @@
 #include "constants/event-flags.h"
 #include "constants/video-global.h"
 
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+void DrawObtainableItemIcon(struct Unit* unit);
+#endif
+
+#if FE8_HP_BARS
+void DisplayHpBarAndWarningIcons(struct Unit* unit);
+#endif
+
 /**
 * Display standing map sprites and various tile/unit markers
 */
@@ -1083,6 +1091,10 @@ void PutUnitSpriteIconsOam(void)
         if (GetUnitSpriteHideFlag(unit) != 0)
             continue;
 
+#if FE8_HP_BARS
+        DisplayHpBarAndWarningIcons(unit);
+#endif
+
         switch (unit->statusIndex) {
         case UNIT_STATUS_POISON:
             x = unit->xPos * 16 - gBmSt.camera.x;
@@ -1159,6 +1171,10 @@ void PutUnitSpriteIconsOam(void)
         case UNIT_STATUS_RECOVER:
             break;
         }
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+        DrawObtainableItemIcon(unit);
+#endif
 
         if (!displayRescueIcon)
             continue;

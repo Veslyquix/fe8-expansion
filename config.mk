@@ -146,3 +146,52 @@ DANGER_BONES ?= 1
 # eligible fort / empty-village terrain.
 PURCHASE_GENERICS ?= 1
 
+# --- Optional ExtendWeaponDescBox --------------------------------------------
+# Modern-build port of ExtendWeaponDescBox: extends the item/weapon
+# description help box from 3 to 5 lines (extra VRAM text-tile rows/handles),
+# and the associated shop/prep/supply/trade VRAM-bank and layout fixes it
+# depends on.
+EXTEND_DESC_BOX ?= 1
+
+# --- Optional DisplayObtainableItem ------------------------------------------
+# Draws a small icon over enemy units carrying a droppable or stealable
+# item, so the player can tell at a glance which enemies are worth
+# attacking/stealing without opening each unit's inventory. The icon
+# graphics themselves are not yet wired up -- see src/DisplayObtainableItem.c.
+DISPLAY_OBTAINABLE_ITEM ?= 1
+
+# --- Optional TextChNames -----------------------------------------------------
+# Draws the actual chapter title text instead of a pre-rendered graphic
+# banner, so any chapter name reads correctly without needing a hand-drawn
+# banner per chapter. The original patch's save-select-screen per-slot
+# chapter name preview (reads chapter id out of raw SRAM save data) is not
+# ported -- see src/chapter_title.c.
+TEXT_CHAPTER_NAMES ?= 1
+
+# --- Optional BattleStatsNoAnims ---------------------------------------------
+# Shows the attack forecast's Hit/Damage/Crit/AS numbers alongside the unit
+# name/HP boxes when battle animations are off, instead of that information
+# only being visible during the (skipped) battle animation. The original
+# patch's weapon-icon-at-bottom sub-feature is not ported -- see
+# ShowBattleStatsNoAnims in src/mapanim_infobox.c.
+BATTLE_STATS_NO_ANIMS ?= 1
+
+# --- Optional HpBars ----------------------------------------------------------
+# Draws a partial-fill HP bar over each visible unit, plus a small icon
+# over enemies the selected unit could hit for bonus effectiveness, land a
+# high crit on, or start a support/talk event with. Requires
+# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet (validated: HP_BARS=1
+# with DISPLAY_OBTAINABLE_ITEM=0 is a hard compile error). The in-game
+# options-menu toggle from the original patch is not ported: this is a
+# build-time flag instead, which already serves the same purpose. See
+# src/HpBars.c for two further narrow simplifications.
+HP_BARS ?= 1
+
+# --- Optional bugfixes --------------------------------------------------------
+# PutSprite/PutSpriteExt (src/ctc.c) bounds-check the secondary sprite-object
+# pool before writing to it, instead of silently overflowing sSpritePool into
+# sSpriteLayers when more than 0x80 sprites are queued in one frame. On by
+# default: this is a pure bugfix with no behavioural change short of avoiding
+# the overflow.
+OVERFLOW_SAFETY_CHECKS ?= 1
+

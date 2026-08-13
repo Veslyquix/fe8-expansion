@@ -294,10 +294,19 @@ void MapAnim_InitInfoBox(ProcPtr proc)
             {
                 actorNum = array[0] > array[1] ? 0 : 1;
 
+#if FE8_BATTLE_STATS_NO_ANIMS
+                /* Snap to one of two fixed slots clear of both units,
+                 * instead of a smoothly-offset position that can overlap
+                 * an active unit when animations are off (see
+                 * DisplayBattleInfoBox/Show_Battle_Stats -- the box is
+                 * larger with the added hit/damage/crit/AS numbers). */
+                y = (array[actorNum] >= 96) ? 0 : 88;
+#else
                 if (array[actorNum] >= 112)
                     y = array[1 - actorNum] - 40;
                 else
                     y = array[actorNum] + 24;
+#endif
             }
         }
 

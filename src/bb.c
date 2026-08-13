@@ -10,11 +10,21 @@
 
 void PutSubtitleHelpText(struct SubtitleHelpProc * proc, int y)
 {
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x080354D4: use the full VRAM row (16 entries) instead of the
+     * vanilla 13-entry table, matching the OBJ_VRAM0+0x5800 bank moved to
+     * below in InitSubtitleHelpText. */
+    static u16 lut[] = {
+        0x00, 0x04, 0x08, 0x0C, 0x10, 0x14, 0x18, 0x1C,
+        0x40, 0x44, 0x48, 0x4C, 0x50, 0x54, 0x58, 0x5C,
+    };
+#else
     static u16 lut[] = {
         0x00,
         0x04, 0x08, 0x0C, 0x10, 0x14, 0x18,
         0x44, 0x48, 0x4C, 0x50, 0x54, 0x58,
     };
+#endif
 
     int i;
 
@@ -22,7 +32,12 @@ void PutSubtitleHelpText(struct SubtitleHelpProc * proc, int y)
         int x = (i * 32) - 32 + proc->textOffset;
         int index = (proc->textNum + i) % proc->textCount;
 
+#if FE8_EXTEND_DESC_BOX
+        /* FE8U = 0x080354D8: 0x4240 -> 0x42C0. */
+        PutSprite(2, x, y, gObject_32x16, 0x42C0 + lut[index]);
+#else
         PutSprite(2, x, y, gObject_32x16, 0x4240 + lut[index]);
+#endif
     }
 
     return;
@@ -36,12 +51,23 @@ void InitSubtitleHelpText(struct SubtitleHelpProc * proc)
 
     iter = proc->string;
 
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x080354EE: 0x4800 -> 0x5800. */
+    InitSpriteTextFont(&proc->font, OBJ_VRAM0 + 0x5800, 0x14);
+#else
     InitSpriteTextFont(&proc->font, OBJ_VRAM0 + 0x4800, 0x14);
+#endif
     SetTextFontGlyphs(1);
 
     ApplyPalette(Pal_TalkText, 0x14);
 
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x0803552A: this proc only ever displays 1 line of subtitle
+     * text; the 2nd line's handle was otherwise initialized but unused. */
+    for (line = 0; line < 1; line++) {
+#else
     for (line = 0; line < 2; line++) {
+#endif
         InitSpriteText(proc->text + line);
 
         SpriteText_DrawBackgroundExt(proc->text + line, 0);

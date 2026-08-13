@@ -158,6 +158,14 @@ void ClearSprites(void)
 
 void PutSprite(int layer, int x, int y, const u16* object, int oam2)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    // Max 128 sprites
+    if ((u32)gSpriteAllocIt >= (u32)&sSpriteLayers[0])
+    {
+        return;
+    }
+#endif
+
     gSpriteAllocIt->next = sSpriteLayers[layer].next;
     gSpriteAllocIt->oam1 = x & 0x1FF;
     gSpriteAllocIt->oam0 = y & 0xFF;
@@ -169,6 +177,14 @@ void PutSprite(int layer, int x, int y, const u16* object, int oam2)
 
 void PutSpriteExt(int layer, int xOam1, int yOam0, const u16* object, int oam2)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    // Max 128 sprites
+    if ((u32)gSpriteAllocIt >= (u32)&sSpriteLayers[0])
+    {
+        return;
+    }
+#endif
+
     gSpriteAllocIt->next = sSpriteLayers[layer].next;
     gSpriteAllocIt->oam1 = xOam1;
     gSpriteAllocIt->oam0 = yOam0;

@@ -229,7 +229,11 @@ void PrepItemTrade_Init(struct PrepMenuTradeProc * proc)
     BG_SetPosition(1, 0, 0);
     BG_SetPosition(2, 0, 0);
 
+#if FE8_EXTEND_DESC_BOX
+    LoadHelpBoxGfx((void*)0x06012000, -1); /* FE8U = 0x0809B970: 0x6014000 -> 0x6012000. */
+#else
     LoadHelpBoxGfx((void*)0x06014000, -1);
+#endif
     LoadIconPalettes(4);
 
     RestartMuralBackground();

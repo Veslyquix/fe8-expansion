@@ -357,7 +357,11 @@ void PrepItemSupply_ResetBackgrounds(struct PrepItemSupplyProc * proc)
     BG_SetPosition(1, 0, 0);
     BG_SetPosition(2, 0, proc->yOffsetPerPage[proc->currentPage] - 0x28);
 
+#if FE8_EXTEND_DESC_BOX
+    LoadHelpBoxGfx((void*)0x06012000, -1); /* FE8U = 0x0809D9FC: 0x6013000 -> 0x6012000. */
+#else
     LoadHelpBoxGfx((void*)0x06013000, -1);
+#endif
     LoadIconPalettes(4);
     RestartMuralBackground();
     BG_EnableSyncByMask(8);

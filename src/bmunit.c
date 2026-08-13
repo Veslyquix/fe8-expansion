@@ -25,6 +25,10 @@
 #include "bmmind.h"
 #include "eventcall.h"
 
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+void SetupCacheForStealableItems(void);
+#endif
+
 EWRAM_DATA u8 gActiveUnitId = 0;
 EWRAM_DATA struct Vec2 gActiveUnitMoveOrigin = {};
 
@@ -1107,6 +1111,10 @@ void MoveActiveUnit(int x, int y) {
 
 void ClearActiveFactionGrayedStates(void) {
     int i;
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    SetupCacheForStealableItems();
+#endif
 
     if (gPlaySt.faction == FACTION_BLUE) {
         int i;

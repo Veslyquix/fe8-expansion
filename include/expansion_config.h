@@ -293,6 +293,43 @@
 #define FE8_PURCHASE_GENERICS 0
 #endif
 
+/* Modern-build port of ExtendWeaponDescBox (extends the item/weapon help box
+ * from 3 to 5 lines). */
+#ifndef FE8_EXTEND_DESC_BOX
+#define FE8_EXTEND_DESC_BOX 0
+#endif
+
+/* PutSprite/PutSpriteExt (src/ctc.c) sprite-pool overflow bounds check. */
+#ifndef FE8_OVERFLOW_SAFETY_CHECKS
+#define FE8_OVERFLOW_SAFETY_CHECKS 1
+#endif
+
+/* Modern-build port of src/DisplayObtainableItem.c (icon over enemy units
+ * carrying a droppable/stealable item). */
+#ifndef FE8_DISPLAY_OBTAINABLE_ITEM
+#define FE8_DISPLAY_OBTAINABLE_ITEM 0
+#endif
+
+/* Chapter titles drawn as text instead of a pre-rendered graphic banner
+ * (see src/chapter_title.c's PutChapterTitleGfx). */
+#ifndef FE8_TEXT_CHAPTER_NAMES
+#define FE8_TEXT_CHAPTER_NAMES 0
+#endif
+
+/* Hit/Damage/Crit/AS numbers shown alongside the map battle info boxes
+ * when battle animations are off (see ShowBattleStatsNoAnims in
+ * src/mapanim_infobox.c). */
+#ifndef FE8_BATTLE_STATS_NO_ANIMS
+#define FE8_BATTLE_STATS_NO_ANIMS 0
+#endif
+
+/* Per-unit HP bar and effectiveness/crit/talk warning icons on the map
+ * (see src/HpBars.c). Requires FE8_DISPLAY_OBTAINABLE_ITEM=1 -- validated
+ * below and in src/HpBars.c's own #error. */
+#ifndef FE8_HP_BARS
+#define FE8_HP_BARS 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -318,6 +355,34 @@
 
 #if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)
 #error "FE8_PURCHASE_GENERICS must be 0 or 1"
+#endif
+
+#if (FE8_EXTEND_DESC_BOX != 0) && (FE8_EXTEND_DESC_BOX != 1)
+#error "FE8_EXTEND_DESC_BOX must be 0 or 1"
+#endif
+
+#if (FE8_OVERFLOW_SAFETY_CHECKS != 0) && (FE8_OVERFLOW_SAFETY_CHECKS != 1)
+#error "FE8_OVERFLOW_SAFETY_CHECKS must be 0 or 1"
+#endif
+
+#if (FE8_DISPLAY_OBTAINABLE_ITEM != 0) && (FE8_DISPLAY_OBTAINABLE_ITEM != 1)
+#error "FE8_DISPLAY_OBTAINABLE_ITEM must be 0 or 1"
+#endif
+
+#if (FE8_TEXT_CHAPTER_NAMES != 0) && (FE8_TEXT_CHAPTER_NAMES != 1)
+#error "FE8_TEXT_CHAPTER_NAMES must be 0 or 1"
+#endif
+
+#if (FE8_BATTLE_STATS_NO_ANIMS != 0) && (FE8_BATTLE_STATS_NO_ANIMS != 1)
+#error "FE8_BATTLE_STATS_NO_ANIMS must be 0 or 1"
+#endif
+
+#if (FE8_HP_BARS != 0) && (FE8_HP_BARS != 1)
+#error "FE8_HP_BARS must be 0 or 1"
+#endif
+
+#if FE8_HP_BARS && !FE8_DISPLAY_OBTAINABLE_ITEM
+#error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

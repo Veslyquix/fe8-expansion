@@ -387,7 +387,10 @@ def validate_item_id_cap(value) -> int:
 
 def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
                            starter_content=0, vesly_debugger=0, danger_bones=0,
-                           purchase_generics=0,
+                           purchase_generics=0, extend_desc_box=0,
+                           overflow_safety_checks=1, display_obtainable_item=0,
+                           text_chapter_names=0, battle_stats_no_anims=0,
+                           hp_bars=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -403,6 +406,12 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     debugger = validate_feature_flag("VESLY_DEBUGGER", vesly_debugger)
     bones = validate_feature_flag("DANGER_BONES", danger_bones)
     generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
+    desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
+    overflow_checks = validate_feature_flag("OVERFLOW_SAFETY_CHECKS", overflow_safety_checks)
+    obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
+    ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
+    battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
+    bars = validate_feature_flag("HP_BARS", hp_bars)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -425,7 +434,13 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             f"0x{cap:02X}; build with FE8_ITEM_ID_CAP=0x"
             f"{ITEM_ID_EXPANSION_FIRST:02X} (or higher)"
         )
-    return hooks, sample, danger, content, debugger, bones, generics
+    if bars and not obtainable_item:
+        raise ConfigError(
+            "HP_BARS=1 requires DISPLAY_OBTAINABLE_ITEM=1: the HP-bar and "
+            "warning-icon tiles it draws live in the icon sheet that flag "
+            "loads"
+        )
+    return hooks, sample, danger, content, debugger, bones, generics, desc_box, overflow_checks, obtainable_item, ch_names, battle_stats, bars
 
 
 def validate_rom_size(value) -> int:
@@ -634,6 +649,12 @@ class ExpansionIdentity:
     vesly_debugger: int = 0
     danger_bones: int = 0
     purchase_generics: int = 0
+    extend_desc_box: int = 0
+    overflow_safety_checks: int = 1
+    display_obtainable_item: int = 0
+    text_chapter_names: int = 0
+    battle_stats_no_anims: int = 0
+    hp_bars: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -685,6 +706,12 @@ class ExpansionIdentity:
                 "vesly_debugger": self.vesly_debugger,
                 "danger_bones": self.danger_bones,
                 "purchase_generics": self.purchase_generics,
+                "extend_desc_box": self.extend_desc_box,
+                "overflow_safety_checks": self.overflow_safety_checks,
+                "display_obtainable_item": self.display_obtainable_item,
+                "text_chapter_names": self.text_chapter_names,
+                "battle_stats_no_anims": self.battle_stats_no_anims,
+                "hp_bars": self.hp_bars,
             },
         }
 
@@ -724,6 +751,12 @@ def load_identity(
     vesly_debugger=None,
     danger_bones=None,
     purchase_generics=None,
+    extend_desc_box=None,
+    overflow_safety_checks=None,
+    display_obtainable_item=None,
+    text_chapter_names=None,
+    battle_stats_no_anims=None,
+    hp_bars=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -780,7 +813,10 @@ def load_identity(
         pseudo_locale if pseudo_locale not in (None, "") else cfg["EXPANSION_PSEUDO_LOCALE"],
         resolved_enabled_locales,
     )
-    resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger, resolved_bones, resolved_generics = validate_feature_flags(
+    (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
+     resolved_bones, resolved_generics, resolved_desc_box, resolved_overflow_checks,
+     resolved_obtainable_item, resolved_ch_names, resolved_battle_stats,
+     resolved_hp_bars) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -802,6 +838,24 @@ def load_identity(
         purchase_generics
         if purchase_generics not in (None, "")
         else cfg.get("PURCHASE_GENERICS", "0"),
+        extend_desc_box
+        if extend_desc_box not in (None, "")
+        else cfg.get("EXTEND_DESC_BOX", "0"),
+        overflow_safety_checks
+        if overflow_safety_checks not in (None, "")
+        else cfg.get("OVERFLOW_SAFETY_CHECKS", "1"),
+        display_obtainable_item
+        if display_obtainable_item not in (None, "")
+        else cfg.get("DISPLAY_OBTAINABLE_ITEM", "0"),
+        text_chapter_names
+        if text_chapter_names not in (None, "")
+        else cfg.get("TEXT_CHAPTER_NAMES", "0"),
+        battle_stats_no_anims
+        if battle_stats_no_anims not in (None, "")
+        else cfg.get("BATTLE_STATS_NO_ANIMS", "0"),
+        hp_bars
+        if hp_bars not in (None, "")
+        else cfg.get("HP_BARS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -838,6 +892,12 @@ def load_identity(
         vesly_debugger=resolved_debugger,
         danger_bones=resolved_bones,
         purchase_generics=resolved_generics,
+        extend_desc_box=resolved_desc_box,
+        overflow_safety_checks=resolved_overflow_checks,
+        display_obtainable_item=resolved_obtainable_item,
+        text_chapter_names=resolved_ch_names,
+        battle_stats_no_anims=resolved_battle_stats,
+        hp_bars=resolved_hp_bars,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -961,6 +1021,36 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override PURCHASE_GENERICS (0 or 1)",
     )
     parser.add_argument(
+        "--extend-desc-box",
+        default=None,
+        help="override EXTEND_DESC_BOX (0 or 1)",
+    )
+    parser.add_argument(
+        "--overflow-safety-checks",
+        default=None,
+        help="override OVERFLOW_SAFETY_CHECKS (0 or 1)",
+    )
+    parser.add_argument(
+        "--display-obtainable-item",
+        default=None,
+        help="override DISPLAY_OBTAINABLE_ITEM (0 or 1)",
+    )
+    parser.add_argument(
+        "--text-chapter-names",
+        default=None,
+        help="override TEXT_CHAPTER_NAMES (0 or 1)",
+    )
+    parser.add_argument(
+        "--battle-stats-no-anims",
+        default=None,
+        help="override BATTLE_STATS_NO_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
+        "--hp-bars",
+        default=None,
+        help="override HP_BARS (0 or 1)",
+    )
+    parser.add_argument(
         "--item-id-cap",
         default=None,
         help=(
@@ -1033,6 +1123,12 @@ def main(argv=None) -> int:
             vesly_debugger=args.vesly_debugger,
             danger_bones=args.danger_bones,
             purchase_generics=args.purchase_generics,
+            extend_desc_box=args.extend_desc_box,
+            overflow_safety_checks=args.overflow_safety_checks,
+            display_obtainable_item=args.display_obtainable_item,
+            text_chapter_names=args.text_chapter_names,
+            battle_stats_no_anims=args.battle_stats_no_anims,
+            hp_bars=args.hp_bars,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

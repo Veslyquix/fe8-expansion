@@ -78,10 +78,16 @@ struct HelpBox8A01800Proc {
     /* 5C */ int unk_5c;
 };
 
+#if FE8_EXTEND_DESC_BOX
+#define HELP_BOX_TEXT_COUNT 5
+#else
+#define HELP_BOX_TEXT_COUNT 3
+#endif
+
 struct HelpBoxSt {
     /* 00 */ struct Font font;
-    /* 16 */ struct Text text[3];
-    /* 30 */ u16 oam2_base;
+    /* 16 */ struct Text text[HELP_BOX_TEXT_COUNT];
+    u16 oam2_base;
 };
 
 extern struct HelpBoxSt gHelpBoxSt;

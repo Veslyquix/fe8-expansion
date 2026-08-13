@@ -617,10 +617,27 @@ void InitBmBgLayers(void) {
     return;
 }
 
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+extern u8 gGfx_ObtainableItemIcons[];
+#endif
+
 //! FE8U = 0x08015680
 void LoadObjUIGfx(void) {
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    /* FE8U = 0x080156AC: superset sheet adding the stealable/droppable
+     * item icon tiles -- see src/DisplayObtainableItem.c. */
+    Decompress(gGfx_ObtainableItemIcons, gGenericBuffer);
+#else
     Decompress(gGfx_MiscUiGraphics, gGenericBuffer);
+#endif
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    /* gGfx_ObtainableItemIcons is 24 8px tiles wide (192px), not the
+     * vanilla sheet's 18 -- match Copy2dChr's row width to the actual
+     * source layout so later rows don't get skewed. */
+    Copy2dChr(gGenericBuffer, (void*)0x06010000, 0x18, 4);
+#else
     Copy2dChr(gGenericBuffer, (void*)0x06010000, 0x12, 4);
+#endif
 
     ApplyPalettes(gPal_MiscUiGraphics, 0x10, 2);
 

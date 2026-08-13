@@ -166,6 +166,24 @@ endif
 ifeq ($(PURCHASE_GENERICS),1)
 MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
 endif
+ifeq ($(EXTEND_DESC_BOX),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DESC_BOX=1
+endif
+ifeq ($(OVERFLOW_SAFETY_CHECKS),0)
+MODERN_DEFINE_FLAGS += -DFE8_OVERFLOW_SAFETY_CHECKS=0
+endif
+ifeq ($(DISPLAY_OBTAINABLE_ITEM),1)
+MODERN_DEFINE_FLAGS += -DFE8_DISPLAY_OBTAINABLE_ITEM=1
+endif
+ifeq ($(TEXT_CHAPTER_NAMES),1)
+MODERN_DEFINE_FLAGS += -DFE8_TEXT_CHAPTER_NAMES=1
+endif
+ifeq ($(BATTLE_STATS_NO_ANIMS),1)
+MODERN_DEFINE_FLAGS += -DFE8_BATTLE_STATS_NO_ANIMS=1
+endif
+ifeq ($(HP_BARS),1)
+MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1438,6 +1456,12 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--vesly-debugger "$(VESLY_DEBUGGER)" \
 		--danger-bones "$(DANGER_BONES)" \
 		--purchase-generics "$(PURCHASE_GENERICS)" \
+		--extend-desc-box "$(EXTEND_DESC_BOX)" \
+		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
+		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
+		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
+		--hp-bars "$(HP_BARS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1501,6 +1525,12 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--vesly-debugger "$(VESLY_DEBUGGER)" \
 	--danger-bones "$(DANGER_BONES)" \
 	--purchase-generics "$(PURCHASE_GENERICS)" \
+	--extend-desc-box "$(EXTEND_DESC_BOX)" \
+	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
+	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
+	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
+	--hp-bars "$(HP_BARS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1568,7 +1598,13 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT) \
 	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER) \
 	-DFE8_DANGER_BONES=$(DANGER_BONES) \
-	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS)
+	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS) \
+	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
+	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \
+	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
+	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
+	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
+	-DFE8_HP_BARS=$(HP_BARS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1733,6 +1769,12 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'vesly_debugger=$(VESLY_DEBUGGER)'; \
 		printf '%s\n' 'danger_bones=$(DANGER_BONES)'; \
 		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
+		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \
+		printf '%s\n' 'overflow_safety_checks=$(OVERFLOW_SAFETY_CHECKS)'; \
+		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
+		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
+		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
+		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \

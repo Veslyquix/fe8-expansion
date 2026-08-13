@@ -9,13 +9,22 @@
 #include "prepscreen.h"
 #include "mapanim.h"
 #include "bmlib.h"
+#include "bmmind.h"
 #include "constants/songs.h"
 
 void UncompMapBattleBoxNumGfx(int tileNum)
 {
+#if FE8_BATTLE_STATS_NO_ANIMS
+    /* "-" instead of "?" for a blank/undisplayable digit. */
+    extern u16 Img_BattleStatsNoAnimsNum[];
+    Decompress(
+        Img_BattleStatsNoAnimsNum,
+        (u8*)(VRAM) + GetBackgroundTileDataOffset(0) + 0x20*(tileNum & 0x3FF));
+#else
     Decompress(
         Img_MapBattleInfoNum,
         (u8*)(VRAM) + GetBackgroundTileDataOffset(0) + 0x20*(tileNum & 0x3FF));
+#endif
 }
 
 void MapAnim_DrawNumber(u16* tilemap, int num, int tileref, int len, u16 blankref, int arg5)
@@ -111,9 +120,18 @@ void ProcMapInfoBox_OnDraw(struct MAInfoFrameProc* proc)
     BG_SetPosition(0, 0, 0);
     BG_SetPosition(1, 0, 0);
 
+#if FE8_BATTLE_STATS_NO_ANIMS
+    {
+        extern u8 Img_BattleStatsNoAnimsInfoBox[];
+        Decompress(
+            Img_BattleStatsNoAnimsInfoBox,
+            (void*)(VRAM) + GetBackgroundTileDataOffset(1) + BM_BGCHR_BANIM_IFBACK * 0x20);
+    }
+#else
     Decompress(
         Img_MapBattleInfoBox,
         (void*)(VRAM) + GetBackgroundTileDataOffset(1) + BM_BGCHR_BANIM_IFBACK * 0x20); //< TODO: put in macro?
+#endif
 
     PrepareMapBattleBoxNumGfx(Img_MapBattleInfoHpBar);
 
@@ -208,6 +226,93 @@ u16* GetBattleInfoPalByFaction(struct Unit* unit)
     return NULL;
 }
 
+#if FE8_BATTLE_STATS_NO_ANIMS
+/* Modern-build port of a FEBuilder-style ROM patch (by Tequila) that shows
+ * the attack forecast's Hit/Damage/Crit/AS numbers alongside the unit
+ * name/HP boxes when battle animations are off, instead of that
+ * information only being visible during the (skipped) battle animation
+ * itself. Ported using this project's existing PutNumberTilesRightAligned-
+ * based number-tile helper (MapAnim_DrawNumber) rather than the original
+ * patch's own hand-rolled ASCII-to-tile routine, whose handling of the
+ * 0xFF "not applicable" sentinel value looked unreliable on inspection
+ * (branches to its tile-writing call without ever initializing the digit
+ * buffer it reads from) -- this port leaves an N/A stat blank instead.
+ *
+ * The weapon-icon-at-bottom-of-box sub-feature (with weapon-triangle-
+ * advantage arrows) from the original patch is NOT ported: it depends on
+ * an unfamiliar set of function/text APIs not present in this project
+ * (see the original patch's own DrawWeaponAtBottom.c), which would need
+ * separate research to map onto this project's actual primitives rather
+ * than being guessed at here. */
+
+enum
+{
+    BSNA_TILE_HIT = 0x40,
+    BSNA_TILE_DMG = 0x42,
+    BSNA_TILE_CRIT = 0x45,
+    BSNA_TILE_AS = 0x47,
+};
+
+static void PutBattleStatsLabel(struct MapAnimActorState* actor, int gx, int gy, int tile, int width)
+{
+    u16* dst = gBG0TilemapBuffer + TILEMAP_INDEX(actor->hp_info_x + gx, actor->hp_info_y + gy);
+    int i;
+
+    for (i = 0; i < width; i++)
+        dst[i] = TILEREF(tile + i, 3);
+}
+
+static void PutBattleStatsNumber(struct MapAnimActorState* actor, int gx, int gy, int value)
+{
+    u16* dst;
+
+    if (value == 0xFF) /* not applicable */
+        return;
+
+    dst = gBG0TilemapBuffer + TILEMAP_INDEX(actor->hp_info_x + gx, actor->hp_info_y + gy);
+    MapAnim_DrawNumber(dst, value, TILEREF(32, BM_BGPAL_BANIM_UNK5), 3, 0, 0);
+}
+
+static void ShowBattleStatsNoAnims(int index)
+{
+    extern u8 Img_BattleStatsNoAnimsLabels[];
+    extern u16 Pal_BattleStatsNoAnimsLabels[];
+
+    struct MapAnimActorState* actor;
+    struct BattleUnit* bu;
+    struct BattleUnit* otherBu;
+    int damage;
+
+    if (gManimSt.actorCount != 2)
+        return;
+
+    Decompress(Img_BattleStatsNoAnimsLabels, (void*)0x06000800);
+    ApplyPalettes(Pal_BattleStatsNoAnimsLabels, 3, 1);
+
+    actor = &gManimSt.actor[index];
+    bu = actor->bu;
+    otherBu = gManimSt.actor[1 - index].bu;
+
+    PutBattleStatsNumber(actor, 5, 4, bu->battleEffectiveHitRate);
+    PutBattleStatsLabel(actor, 1, 4, BSNA_TILE_HIT, 2);
+
+    damage = bu->battleAttack - otherBu->battleDefense;
+    if (damage < 0)
+        damage = 0;
+    PutBattleStatsNumber(actor, 10, 4, damage);
+    PutBattleStatsLabel(actor, 6, 4, BSNA_TILE_DMG, 3);
+
+    PutBattleStatsNumber(actor, 5, 5, bu->battleEffectiveCritRate);
+    PutBattleStatsLabel(actor, 1, 5, BSNA_TILE_CRIT, 2);
+
+    if (gActionData.unitActionType != UNIT_ACTION_STAFF) /* no AS while using a staff */
+        PutBattleStatsNumber(actor, 10, 5, bu->battleSpeed);
+    PutBattleStatsLabel(actor, 6, 5, BSNA_TILE_AS, 3);
+
+    BG_EnableSyncByMask(BG0_SYNC_BIT);
+}
+#endif
+
 void DisplayBattleInfoBox(struct MAInfoFrameProc* proc, int index, int arg2)
 {
     gManimSt.actor[index].hp_info_x = proc->x + arg2;
@@ -241,6 +346,10 @@ void DisplayBattleInfoBox(struct MAInfoFrameProc* proc, int index, int arg2)
     gManimSt.actor[index].hp_displayed_q4 = gManimSt.actor[index].hp_cur*16;
 
     MapInfoBox_DrawHp(proc, index);
+
+#if FE8_BATTLE_STATS_NO_ANIMS
+    ShowBattleStatsNoAnims(index);
+#endif
 }
 
 void MapInfoBox_PrepareForShake(struct MAInfoFrameProc* proc)
@@ -288,10 +397,19 @@ CONST_DATA int gMapanimInfobox_1[] = {
     0x05, 0x06
 };
 
+#if FE8_BATTLE_STATS_NO_ANIMS
+extern u8 Tsa_BattleStatsNoAnimsBoxRight[];
+extern u8 Tsa_BattleStatsNoAnimsBoxLeft[];
+#endif
+
 CONST_DATA u8* TsaSet_MapBattleBoxGfx[3][2] = {
     {Tsa_MapBattleBoxGfx1, Tsa_MapBattleBoxGfx1},
     {Tsa_MapBattleBoxGfx1, Tsa_MapBattleBoxGfx1},
+#if FE8_BATTLE_STATS_NO_ANIMS
+    {Tsa_BattleStatsNoAnimsBoxRight, Tsa_BattleStatsNoAnimsBoxLeft},
+#else
     {Tsa_MapBattleBoxGfx3, Tsa_MapBattleBoxGfx2},
+#endif
 };
 
 CONST_DATA struct ProcCmd ProcScr_MapBattleInfoBox[] = {

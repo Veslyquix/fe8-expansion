@@ -1900,7 +1900,21 @@ void HbRedirect_SSSupports(struct HelpBoxProc* proc)
 void UpdateHelpBoxDisplay(struct HelpBoxProc* proc, int arg1)
 {
     proc->xBox = Interpolate(arg1, proc->xBoxInit, proc->xBoxFinal, proc->timer, proc->timerMax);
+
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x08088C88 (YPosDescBox): clamp to 0 if negative -- with 5
+     * lines, an interpolated box can otherwise scroll partly off the top
+     * of the screen. */
+    {
+        int yBox = Interpolate(arg1, proc->yBoxInit, proc->yBoxFinal, proc->timer, proc->timerMax);
+        if (yBox < 0)
+            yBox = 0;
+        proc->yBox = yBox;
+    }
+#else
     proc->yBox = Interpolate(arg1, proc->yBoxInit, proc->yBoxFinal, proc->timer, proc->timerMax);
+#endif
+
     proc->wBox = Interpolate(arg1, proc->wBoxInit, proc->wBoxFinal, proc->timer, proc->timerMax);
     proc->hBox = Interpolate(arg1, proc->hBoxInit, proc->hBoxFinal, proc->timer, proc->timerMax);
 

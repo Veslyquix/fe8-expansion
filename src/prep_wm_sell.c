@@ -25,7 +25,12 @@ void WmSell_DrawSupplyDialogueSpriteText(void) {
     int i;
 
     for (i = 0; i < 4; i++) {
+#if FE8_EXTEND_DESC_BOX
+        /* FE8U = 0x0809FDCC: 0xDF80 -> 0xDFC0. */
+        PutSpriteExt(4, 48 + i * 32, 16, gObject_32x16, 0xDFC0 + i * 4);
+#else
         PutSpriteExt(4, 48 + i * 32, 16, gObject_32x16, 0xDF80 + i * 4);
+#endif
     }
 
     return;
@@ -44,7 +49,11 @@ void WmSell_ShowDialoguePrompt(int index, ProcPtr parent) {
     StartParallelWorker(WmSell_DrawSupplyDialogueSpriteText, parent);
 
     NewSysboxText(
+#if FE8_EXTEND_DESC_BOX
+        0x7800, /* FE8U = 0x0809FDF4: 0x7000 -> 0x7800. */
+#else
         0x7000,
+#endif
         13,
         GetStringFromIndexInBufferWithLimit(
             gShopSellTextIndexLookup[index],
@@ -200,6 +209,20 @@ void WmSell_Setup(struct WmSellProc* proc) {
     LoadObjUIGfx();
 
     BG_SetPosition(0, 0, 0);
+
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x080A015C (WMSell_Hook): reserve face slot 0's VRAM/palette
+     * explicitly rather than leaving it at whatever LoadHelpBoxGfx above
+     * (now with the extended description box's larger VRAM footprint)
+     * last configured it to. */
+    {
+        static CONST_DATA struct FaceVramEntry sWmSellFaceVramEntry[FACE_SLOT_COUNT] = {
+            { 0x6800, 6 },
+        };
+        SetupFaceGfxData(sWmSellFaceVramEntry);
+    }
+#endif
+
     BG_SetPosition(1, 0, 0);
     BG_SetPosition(2, 0, 0);
 
