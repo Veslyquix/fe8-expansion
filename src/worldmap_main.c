@@ -23,6 +23,7 @@
 
 #include "worldmap.h"
 
+#include "constants/chapters.h"
 #include "constants/songs.h"
 
 // TODO: In "worldmap_scrollmanage.c", the signature returns a ProcPtr instead of s8/bool

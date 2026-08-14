@@ -117,6 +117,10 @@ CONFIG_MK_FEATURE_KEYS = (
     "VESLY_DEBUGGER",
     "DANGER_BONES",
     "PURCHASE_GENERICS",
+    "DEBUFFS_EXIST",
+    "DEBUFFS_STACK",
+    "CUSTOM_CAMPAIGN",
+    "SKIP_OPENING",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -389,8 +393,10 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            starter_content=0, vesly_debugger=0, danger_bones=0,
                            purchase_generics=0, extend_desc_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
+                           debuffs_exist=0, debuffs_stack=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
                            hp_bars=0, credits=0,
+                           custom_campaign=0, skip_opening=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -409,10 +415,14 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
     overflow_checks = validate_feature_flag("OVERFLOW_SAFETY_CHECKS", overflow_safety_checks)
     obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
+    debuffs = validate_feature_flag("DEBUFFS_EXIST", debuffs_exist)
+    debuffs_stack_flag = validate_feature_flag("DEBUFFS_STACK", debuffs_stack)
     ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
     battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
     bars = validate_feature_flag("HP_BARS", hp_bars)
     credits_flag = validate_feature_flag("CREDITS", credits)
+    campaign = validate_feature_flag("CUSTOM_CAMPAIGN", custom_campaign)
+    skip_opening_flag = validate_feature_flag("SKIP_OPENING", skip_opening)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -435,13 +445,20 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             f"0x{cap:02X}; build with FE8_ITEM_ID_CAP=0x"
             f"{ITEM_ID_EXPANSION_FIRST:02X} (or higher)"
         )
+    if debuffs_stack_flag and not debuffs:
+        raise ConfigError(
+            "DEBUFFS_STACK=1 requires DEBUFFS_EXIST=1: repeated debuff "
+            "applications require the per-unit debuff storage to be linked"
+        )
     if bars and not obtainable_item:
         raise ConfigError(
             "HP_BARS=1 requires DISPLAY_OBTAINABLE_ITEM=1: the HP-bar and "
             "warning-icon tiles it draws live in the icon sheet that flag "
             "loads"
         )
-    return hooks, sample, danger, content, debugger, bones, generics, desc_box, overflow_checks, obtainable_item, ch_names, battle_stats, bars, credits_flag
+    return (hooks, sample, danger, content, debugger, bones, generics, desc_box,
+            overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
+            ch_names, battle_stats, bars, credits_flag, campaign, skip_opening_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -653,10 +670,14 @@ class ExpansionIdentity:
     extend_desc_box: int = 0
     overflow_safety_checks: int = 1
     display_obtainable_item: int = 0
+    debuffs_exist: int = 0
+    debuffs_stack: int = 0
     text_chapter_names: int = 0
     battle_stats_no_anims: int = 0
     hp_bars: int = 0
     credits: int = 0
+    custom_campaign: int = 0
+    skip_opening: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -711,10 +732,14 @@ class ExpansionIdentity:
                 "extend_desc_box": self.extend_desc_box,
                 "overflow_safety_checks": self.overflow_safety_checks,
                 "display_obtainable_item": self.display_obtainable_item,
+                "debuffs_exist": self.debuffs_exist,
+                "debuffs_stack": self.debuffs_stack,
                 "text_chapter_names": self.text_chapter_names,
                 "battle_stats_no_anims": self.battle_stats_no_anims,
                 "hp_bars": self.hp_bars,
                 "credits": self.credits,
+                "custom_campaign": self.custom_campaign,
+                "skip_opening": self.skip_opening,
             },
         }
 
@@ -757,10 +782,14 @@ def load_identity(
     extend_desc_box=None,
     overflow_safety_checks=None,
     display_obtainable_item=None,
+    debuffs_exist=None,
+    debuffs_stack=None,
     text_chapter_names=None,
     battle_stats_no_anims=None,
     hp_bars=None,
     credits=None,
+    custom_campaign=None,
+    skip_opening=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -819,8 +848,10 @@ def load_identity(
     )
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
      resolved_bones, resolved_generics, resolved_desc_box, resolved_overflow_checks,
-     resolved_obtainable_item, resolved_ch_names, resolved_battle_stats,
-     resolved_hp_bars, resolved_credits) = validate_feature_flags(
+     resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
+     resolved_ch_names, resolved_battle_stats,
+     resolved_hp_bars, resolved_credits,
+     resolved_custom_campaign, resolved_skip_opening) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -851,6 +882,12 @@ def load_identity(
         display_obtainable_item
         if display_obtainable_item not in (None, "")
         else cfg.get("DISPLAY_OBTAINABLE_ITEM", "0"),
+        debuffs_exist
+        if debuffs_exist not in (None, "")
+        else cfg.get("DEBUFFS_EXIST", "0"),
+        debuffs_stack
+        if debuffs_stack not in (None, "")
+        else cfg.get("DEBUFFS_STACK", "0"),
         text_chapter_names
         if text_chapter_names not in (None, "")
         else cfg.get("TEXT_CHAPTER_NAMES", "0"),
@@ -863,6 +900,12 @@ def load_identity(
         credits
         if credits not in (None, "")
         else cfg.get("CREDITS", "0"),
+        custom_campaign
+        if custom_campaign not in (None, "")
+        else cfg.get("CUSTOM_CAMPAIGN", "0"),
+        skip_opening
+        if skip_opening not in (None, "")
+        else cfg.get("SKIP_OPENING", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -902,10 +945,14 @@ def load_identity(
         extend_desc_box=resolved_desc_box,
         overflow_safety_checks=resolved_overflow_checks,
         display_obtainable_item=resolved_obtainable_item,
+        debuffs_exist=resolved_debuffs,
+        debuffs_stack=resolved_debuffs_stack,
         text_chapter_names=resolved_ch_names,
         battle_stats_no_anims=resolved_battle_stats,
         hp_bars=resolved_hp_bars,
         credits=resolved_credits,
+        custom_campaign=resolved_custom_campaign,
+        skip_opening=resolved_skip_opening,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1044,6 +1091,16 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override DISPLAY_OBTAINABLE_ITEM (0 or 1)",
     )
     parser.add_argument(
+        "--debuffs-exist",
+        default=None,
+        help="override DEBUFFS_EXIST (0 or 1)",
+    )
+    parser.add_argument(
+        "--debuffs-stack",
+        default=None,
+        help="override DEBUFFS_STACK (0 or 1)",
+    )
+    parser.add_argument(
         "--text-chapter-names",
         default=None,
         help="override TEXT_CHAPTER_NAMES (0 or 1)",
@@ -1062,6 +1119,16 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--credits",
         default=None,
         help="override CREDITS (0 or 1)",
+    )
+    parser.add_argument(
+        "--custom-campaign",
+        default=None,
+        help="override CUSTOM_CAMPAIGN (0 or 1)",
+    )
+    parser.add_argument(
+        "--skip-opening",
+        default=None,
+        help="override SKIP_OPENING (0 or 1)",
     )
     parser.add_argument(
         "--item-id-cap",
@@ -1139,10 +1206,14 @@ def main(argv=None) -> int:
             extend_desc_box=args.extend_desc_box,
             overflow_safety_checks=args.overflow_safety_checks,
             display_obtainable_item=args.display_obtainable_item,
+            debuffs_exist=args.debuffs_exist,
+            debuffs_stack=args.debuffs_stack,
             text_chapter_names=args.text_chapter_names,
             battle_stats_no_anims=args.battle_stats_no_anims,
             hp_bars=args.hp_bars,
             credits=args.credits,
+            custom_campaign=args.custom_campaign,
+            skip_opening=args.skip_opening,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

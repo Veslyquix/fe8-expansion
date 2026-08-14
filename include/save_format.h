@@ -45,7 +45,7 @@ struct GlobalSaveInfo;
  * simply ignored (never misread) by a pre-sprint-2 build. The version
  * is still bumped per this project's stated policy of bumping on any
  * save-layout/serialization change to this struct, however additive. */
-#define SAVE_FORMAT_VERSION_CURRENT 2
+#define SAVE_FORMAT_VERSION_CURRENT 3
 
 /* Diagnostic-only: which ABI produced this save. Never gates
  * compatibility -- see docs/save_format.md. */

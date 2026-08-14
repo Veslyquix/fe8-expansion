@@ -175,6 +175,12 @@ endif
 ifeq ($(DISPLAY_OBTAINABLE_ITEM),1)
 MODERN_DEFINE_FLAGS += -DFE8_DISPLAY_OBTAINABLE_ITEM=1
 endif
+ifeq ($(DEBUFFS_EXIST),1)
+MODERN_DEFINE_FLAGS += -DFE8_DEBUFFS_EXIST=1 -DDEBUFFS_EXIST=1
+endif
+ifeq ($(DEBUFFS_STACK),1)
+MODERN_DEFINE_FLAGS += -DFE8_DEBUFFS_STACK=1 -DDEBUFFS_STACK=1
+endif
 ifeq ($(TEXT_CHAPTER_NAMES),1)
 MODERN_DEFINE_FLAGS += -DFE8_TEXT_CHAPTER_NAMES=1
 endif
@@ -186,6 +192,12 @@ MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
 endif
 ifeq ($(CREDITS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
+endif
+ifeq ($(CUSTOM_CAMPAIGN),1)
+MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_CAMPAIGN=1
+endif
+ifeq ($(SKIP_OPENING),1)
+MODERN_DEFINE_FLAGS += -DFE8_SKIP_OPENING=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
@@ -1466,6 +1478,8 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--hp-bars "$(HP_BARS)" \
 		--credits "$(CREDITS)" \
+		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
+		--skip-opening "$(SKIP_OPENING)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1536,6 +1550,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
 	--credits "$(CREDITS)" \
+	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
+	--skip-opening "$(SKIP_OPENING)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1607,6 +1623,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
 	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \
 	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
+	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
+	-DFE8_DEBUFFS_STACK=$(DEBUFFS_STACK) \
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
 	-DFE8_HP_BARS=$(HP_BARS) \
@@ -1778,10 +1796,14 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \
 		printf '%s\n' 'overflow_safety_checks=$(OVERFLOW_SAFETY_CHECKS)'; \
 		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
+		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \
+		printf '%s\n' 'debuffs_stack=$(DEBUFFS_STACK)'; \
 		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
+		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
+		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \

@@ -151,6 +151,83 @@ u16 CONST_DATA gSprite_Face96x72_Flipped[] =
     OAM0_SHAPE_16x8  + OAM0_Y(64), OAM1_SIZE_16x8  + OAM1_HFLIP + OAM1_X(+32), OAM2_CHR(0x54),
 };
 
+#if FE8_PURCHASE_GENERICS
+// Class card portraits (imgCard) are decompressed as a plain 10x9-tile
+// raster (see PutFace80x72_Core's PutAppliedBitmap call), unlike normal
+// portraits (img) which are packed to match the shouldered/cutout layout
+// gSprite_Face80x72 expects. Reusing gSprite_Face80x72 for a card reads
+// tiles from the wrong offsets and produces garbled graphics, so class
+// cards need their own sprite table addressing the raster layout directly.
+// GBA sprites cap out at 32px wide for an 8px-tall strip, so each 80px-wide
+// row is split into 32+32+16 pieces that stay contiguous with the raster.
+u16 CONST_DATA gSprite_FaceCard80x72[] =
+{
+    27,
+    OAM0_SHAPE_32x8,                OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x00),
+    OAM0_SHAPE_32x8,                OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x04),
+    OAM0_SHAPE_16x8,                OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x08),
+    OAM0_SHAPE_32x8  + OAM0_Y(8),   OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x0A),
+    OAM0_SHAPE_32x8  + OAM0_Y(8),   OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x0E),
+    OAM0_SHAPE_16x8  + OAM0_Y(8),   OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x12),
+    OAM0_SHAPE_32x8  + OAM0_Y(16),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x14),
+    OAM0_SHAPE_32x8  + OAM0_Y(16),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x18),
+    OAM0_SHAPE_16x8  + OAM0_Y(16),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x1C),
+    OAM0_SHAPE_32x8  + OAM0_Y(24),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x1E),
+    OAM0_SHAPE_32x8  + OAM0_Y(24),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x22),
+    OAM0_SHAPE_16x8  + OAM0_Y(24),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x26),
+    OAM0_SHAPE_32x8  + OAM0_Y(32),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x28),
+    OAM0_SHAPE_32x8  + OAM0_Y(32),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x2C),
+    OAM0_SHAPE_16x8  + OAM0_Y(32),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x30),
+    OAM0_SHAPE_32x8  + OAM0_Y(40),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x32),
+    OAM0_SHAPE_32x8  + OAM0_Y(40),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x36),
+    OAM0_SHAPE_16x8  + OAM0_Y(40),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x3A),
+    OAM0_SHAPE_32x8  + OAM0_Y(48),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x3C),
+    OAM0_SHAPE_32x8  + OAM0_Y(48),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x40),
+    OAM0_SHAPE_16x8  + OAM0_Y(48),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x44),
+    OAM0_SHAPE_32x8  + OAM0_Y(56),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x46),
+    OAM0_SHAPE_32x8  + OAM0_Y(56),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x4A),
+    OAM0_SHAPE_16x8  + OAM0_Y(56),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x4E),
+    OAM0_SHAPE_32x8  + OAM0_Y(64),  OAM1_SIZE_32x8 + OAM1_X(-40), OAM2_CHR(0x50),
+    OAM0_SHAPE_32x8  + OAM0_Y(64),  OAM1_SIZE_32x8 + OAM1_X(-8),  OAM2_CHR(0x54),
+    OAM0_SHAPE_16x8  + OAM0_Y(64),  OAM1_SIZE_16x8 + OAM1_X(24),  OAM2_CHR(0x58),
+};
+
+// class card, flipped. Flipping a multi-piece row requires mirroring the
+// piece order and positions (not just setting HFLIP on each piece in place),
+// same as gSprite_Face64x96_Flipped does for its split bottom row.
+u16 CONST_DATA gSprite_FaceCard80x72_Flipped[] =
+{
+    27,
+    OAM0_SHAPE_16x8,                OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x08),
+    OAM0_SHAPE_32x8,                OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x04),
+    OAM0_SHAPE_32x8,                OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x00),
+    OAM0_SHAPE_16x8  + OAM0_Y(8),   OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x12),
+    OAM0_SHAPE_32x8  + OAM0_Y(8),   OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x0E),
+    OAM0_SHAPE_32x8  + OAM0_Y(8),   OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x0A),
+    OAM0_SHAPE_16x8  + OAM0_Y(16),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x1C),
+    OAM0_SHAPE_32x8  + OAM0_Y(16),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x18),
+    OAM0_SHAPE_32x8  + OAM0_Y(16),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x14),
+    OAM0_SHAPE_16x8  + OAM0_Y(24),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x26),
+    OAM0_SHAPE_32x8  + OAM0_Y(24),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x22),
+    OAM0_SHAPE_32x8  + OAM0_Y(24),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x1E),
+    OAM0_SHAPE_16x8  + OAM0_Y(32),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x30),
+    OAM0_SHAPE_32x8  + OAM0_Y(32),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x2C),
+    OAM0_SHAPE_32x8  + OAM0_Y(32),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x28),
+    OAM0_SHAPE_16x8  + OAM0_Y(40),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x3A),
+    OAM0_SHAPE_32x8  + OAM0_Y(40),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x36),
+    OAM0_SHAPE_32x8  + OAM0_Y(40),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x32),
+    OAM0_SHAPE_16x8  + OAM0_Y(48),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x44),
+    OAM0_SHAPE_32x8  + OAM0_Y(48),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x40),
+    OAM0_SHAPE_32x8  + OAM0_Y(48),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x3C),
+    OAM0_SHAPE_16x8  + OAM0_Y(56),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x4E),
+    OAM0_SHAPE_32x8  + OAM0_Y(56),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x4A),
+    OAM0_SHAPE_32x8  + OAM0_Y(56),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x46),
+    OAM0_SHAPE_16x8  + OAM0_Y(64),  OAM1_SIZE_16x8 + OAM1_HFLIP + OAM1_X(-40), OAM2_CHR(0x58),
+    OAM0_SHAPE_32x8  + OAM0_Y(64),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(-24), OAM2_CHR(0x54),
+    OAM0_SHAPE_32x8  + OAM0_Y(64),  OAM1_SIZE_32x8 + OAM1_HFLIP + OAM1_X(8),  OAM2_CHR(0x50),
+};
+#endif
+
 // face proc
 struct ProcCmd CONST_DATA gProcScr_E_FACE[] =
 {
@@ -370,7 +447,7 @@ void Face_OnIdle(struct FaceProc* proc) {
             proc->spriteLayer,
             0x1FF & proc->xPos,
             oam0,
-            (GetFaceDisplayBits(proc) & FACE_DISP_FLIPPED) ? gSprite_Face80x72_Flipped : gSprite_Face80x72,
+            (GetFaceDisplayBits(proc) & FACE_DISP_FLIPPED) ? gSprite_FaceCard80x72_Flipped : gSprite_FaceCard80x72,
             proc->oam2
         );
 

@@ -27,6 +27,12 @@ enum save_chunk_index {
     SAVE_ID_MAX
 };
 
+#ifdef DEBUFFS_EXIST
+#define SUSPEND_SAVE_BLOCK_COUNT 1
+#else
+#define SUSPEND_SAVE_BLOCK_COUNT 2
+#endif
+
 enum {
     SAVEBLOCK_KIND_GAME,
     SAVEBLOCK_KIND_SUSPEND,
@@ -297,6 +303,9 @@ struct SuspendSavePackedUnit {     /* Suspend Data */
     
     /* 31 */ u8 ai_counter;
     /* 32 */ u16 ai_config;
+#ifdef DEBUFFS_EXIST
+    /* 34 */ s8 debuffs[UNIT_DEBUFF_STAT_COUNT];
+#endif
     /* 34 */
 } BITPACKED;
 
@@ -418,7 +427,7 @@ struct SuspendSaveBlock {
 struct SaveBlocks {
     /* 0x0000 */ struct GlobalSaveInfo globalSaveInfo;
     /* 0x0064 */ struct SaveBlockInfo saveBlockInfo[SAVE_ID_MAX];
-    /* 0x00D4 */ struct SuspendSaveBlock suspendSaveBlocks[2];
+    /* 0x00D4 */ struct SuspendSaveBlock suspendSaveBlocks[SUSPEND_SAVE_BLOCK_COUNT];
     /* 0x3FC4 */ struct GameSaveBlock gameSaveBlocks[3];
     /* 0x691C */ struct MultiArenaSaveBlock multiArenaBlock;
     /* 0x7190 */ struct GameRankSaveDataPacks gameRankSave;
@@ -431,7 +440,7 @@ struct SaveBlocks {
         (CART_SRAM_SIZE - sizeof(struct ExpansionSaveMeta))
         - (sizeof(struct GlobalSaveInfo)
             + SAVE_ID_MAX * sizeof(struct SaveBlockInfo)
-            + 2 * sizeof(struct SuspendSaveBlock)
+            + SUSPEND_SAVE_BLOCK_COUNT * sizeof(struct SuspendSaveBlock)
             + 3 * sizeof(struct GameSaveBlock)
             + sizeof(struct MultiArenaSaveBlock)
             + sizeof(struct GameRankSaveDataPacks)

@@ -83,6 +83,9 @@ struct BattleUnit {
     /* 7D */ s8 weaponBroke;
 
     /* 7E */ s8 hasItemEffectTarget;
+#ifdef DEBUFFS_EXIST
+    /* 7F */ s8 pendingDebuffHits;
+#endif
     /* 7F */ /* pad */
 };
 

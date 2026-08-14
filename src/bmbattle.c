@@ -22,6 +22,7 @@
 #include "expansion_mechanics.h"
 #include "mapanim.h"
 #include "worldmap.h"
+#include "debuffs.h"
 
 #include "constants/songs.h"
 #include "constants/items.h"
@@ -339,6 +340,11 @@ void InitBattleUnit(struct BattleUnit* bu, struct Unit* unit) {
 
     gBattleActor.expGain = 0;
     gBattleTarget.expGain = 0;
+
+#ifdef DEBUFFS_EXIST
+    UnitClearStatModifiers(&bu->unit);
+    bu->pendingDebuffHits = 0;
+#endif
 }
 
 void InitBattleUnitWithoutBonuses(struct BattleUnit* bu, struct Unit* unit) {
@@ -1174,6 +1180,10 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
             gBattleHitIterator->attributes |= BATTLE_HIT_ATTR_HPSTEAL;
         }
 
+#ifdef DEBUFFS_EXIST
+        BattleApplyWeaponDebuff(attacker, defender);
+#endif
+
         if (defender->unit.pClassData->number != CLASS_DEMON_KING) {
             if (GetItemWeaponEffect(attacker->weapon) == WPN_EFFECT_PETRIFY) {
                 switch (gPlaySt.faction) {
@@ -1584,6 +1594,13 @@ void BattleApplyUnitUpdates(void) {
         UpdateUnitFromBattle(target, &gBattleTarget);
     else
         UpdateObstacleFromBattle(&gBattleTarget);
+
+#ifdef DEBUFFS_EXIST
+    BattleApplyUnitDebuffs(actor, &gBattleActor);
+
+    if (target)
+        BattleApplyUnitDebuffs(target, &gBattleTarget);
+#endif
 }
 
 // unused?

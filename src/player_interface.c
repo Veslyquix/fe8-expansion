@@ -1091,12 +1091,13 @@ void DrawTerrainDisplayWindow(struct PlayerInterfaceProc * proc)
 
         if (purchaseBaseTrap != NULL)
         {
-            num = (GetPurchaseBaseTrapCaptureProgress(purchaseBaseTrap) * 10) / PURCHASE_BASE_CAPTURE_REQUIRED;
+            num = PURCHASE_BASE_CAPTURE_REQUIRED - (GetPurchaseBaseTrapCaptureProgress(purchaseBaseTrap));
+            if (num < 0) { num = 0; } 
 
             CallARM_FillTileRect(gUiTmScratchA + TILEMAP_INDEX(1, 14), Tsa_TerrainMapUi_ObstacleLabels, TILEREF(0x100, 2));
 
             StoreNumberStringToSmallBuffer(num);
-            PutDigits(gUiTmScratchA + TILEMAP_INDEX(5, 15), gNumberStr + 7, TILEREF(0x128, 2), 2);
+            PutDigits(gUiTmScratchA + TILEMAP_INDEX(4, 15), gNumberStr + 7, TILEREF(0x128, 2), 2);
         }
     }
 #endif

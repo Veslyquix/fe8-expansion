@@ -144,7 +144,7 @@
  * repository's config.mk does, and is bumped to the same value).
  */
 #ifndef FE8_EXPANSION_SAVE_COMPAT_EPOCH
-#define FE8_EXPANSION_SAVE_COMPAT_EPOCH 2
+#define FE8_EXPANSION_SAVE_COMPAT_EPOCH 4
 #endif
 
 
@@ -312,6 +312,24 @@
 
 /* Chapter titles drawn as text instead of a pre-rendered graphic banner
  * (see src/chapter_title.c's PutChapterTitleGfx). */
+/* Per-unit temporary stat buffs/debuffs (see include/debuffs.h). */
+#ifndef FE8_DEBUFFS_EXIST
+#define FE8_DEBUFFS_EXIST 0
+#endif
+
+/* Repeated debuff applications continue worsening stats toward -31. */
+#ifndef FE8_DEBUFFS_STACK
+#define FE8_DEBUFFS_STACK 0
+#endif
+
+#if FE8_DEBUFFS_EXIST && !defined(DEBUFFS_EXIST)
+#define DEBUFFS_EXIST 1
+#endif
+
+#if FE8_DEBUFFS_STACK && !defined(DEBUFFS_STACK)
+#define DEBUFFS_STACK 1
+#endif
+
 #ifndef FE8_TEXT_CHAPTER_NAMES
 #define FE8_TEXT_CHAPTER_NAMES 0
 #endif
@@ -328,6 +346,24 @@
  * below and in src/HpBars.c's own #error. */
 #ifndef FE8_HP_BARS
 #define FE8_HP_BARS 0
+#endif
+
+/* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
+ * map, and replaces the prologue's scripted beginning-of-chapter events with
+ * a version that still loads Eirika and Seth the same way but skips the
+ * Renais-throne-room cutscene and dialogue (see src/data/data_8B363C.c and
+ * src/events/prologue-eventscript.h). */
+#ifndef FE8_CUSTOM_CAMPAIGN
+#define FE8_CUSTOM_CAMPAIGN 0
+#endif
+
+/* Boots directly to the title screen (skips the health & safety screen,
+ * Nintendo/Intelligent Systems logos, and attract-mode opening demo), and
+ * on New Game skips the world-map "continent of Magvel" narration and the
+ * "In an age long past..." opening text crawl (see src/gamecontrol.c and
+ * src/worldmap_main.c). Does not affect continue/load. */
+#ifndef FE8_SKIP_OPENING
+#define FE8_SKIP_OPENING 0
 #endif
 
 /* Scrolling end-credits sequence (see src/Credits.c). */
@@ -374,6 +410,18 @@
 #error "FE8_DISPLAY_OBTAINABLE_ITEM must be 0 or 1"
 #endif
 
+#if (FE8_DEBUFFS_EXIST != 0) && (FE8_DEBUFFS_EXIST != 1)
+#error "FE8_DEBUFFS_EXIST must be 0 or 1"
+#endif
+
+#if (FE8_DEBUFFS_STACK != 0) && (FE8_DEBUFFS_STACK != 1)
+#error "FE8_DEBUFFS_STACK must be 0 or 1"
+#endif
+
+#if FE8_DEBUFFS_STACK && !FE8_DEBUFFS_EXIST
+#error "FE8_DEBUFFS_STACK=1 requires FE8_DEBUFFS_EXIST=1"
+#endif
+
 #if (FE8_TEXT_CHAPTER_NAMES != 0) && (FE8_TEXT_CHAPTER_NAMES != 1)
 #error "FE8_TEXT_CHAPTER_NAMES must be 0 or 1"
 #endif
@@ -388,6 +436,14 @@
 
 #if FE8_HP_BARS && !FE8_DISPLAY_OBTAINABLE_ITEM
 #error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
+#endif
+
+#if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)
+#error "FE8_CUSTOM_CAMPAIGN must be 0 or 1"
+#endif
+
+#if (FE8_SKIP_OPENING != 0) && (FE8_SKIP_OPENING != 1)
+#error "FE8_SKIP_OPENING must be 0 or 1"
 #endif
 
 #if (FE8_CREDITS != 0) && (FE8_CREDITS != 1)

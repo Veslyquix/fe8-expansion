@@ -12,6 +12,7 @@
 #include "rng.h"
 #include "bmsave.h"
 #include "eventinfo.h"
+#include "debuffs.h"
 
 #include "constants/classes.h"
 #include "constants/terrains.h"
@@ -1085,9 +1086,15 @@ void TryAddUnitToRestoreTargetList(struct Unit* unit) {
         return;
     }
 
+#ifdef DEBUFFS_EXIST
+    if (unit->statusIndex == UNIT_STATUS_NONE && !UnitHasDebuff(unit)) {
+        return;
+    }
+#else
     if (unit->statusIndex == UNIT_STATUS_NONE) {
         return;
     }
+#endif
 
     AddTarget(unit->xPos, unit->yPos, unit->index, 0);
 

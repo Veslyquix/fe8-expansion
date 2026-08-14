@@ -172,8 +172,8 @@ static void DrawUnitWarningIcons(struct Unit* unit, int x, int y)
 /* Called once per visible unit from PutUnitSpriteIconsOam. */
 void DisplayHpBarAndWarningIcons(struct Unit* unit)
 {
-    int x = unit->xPos * 16 - gBmSt.camera.x - 8;
-    int y = unit->yPos * 16 - gBmSt.camera.y + 8;
+    int x = unit->xPos * 16 - gBmSt.camera.x - 10;
+    int y = unit->yPos * 16 - gBmSt.camera.y + 12;
 
     if (x < -16 || x > DISPLAY_WIDTH)
         return;

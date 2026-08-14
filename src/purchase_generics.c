@@ -9,6 +9,8 @@
 #include "constants/terrains.h"
 
 #include "bm.h"
+#include "banim_data.h"
+#include "bmlib.h"
 #include "hardware.h"
 #include "bmio.h"
 #include "bmitem.h"
@@ -20,6 +22,7 @@
 #include "bmudisp.h"
 #include "bmtrick.h"
 #include "classchg.h"
+#include "ctc.h"
 #include "efxbattle.h"
 #include "ekrbattle.h"
 #include "face.h"
@@ -32,6 +35,8 @@
 #include "soundwrapper.h"
 #include "uiutils.h"
 #include "opinfo.h"
+#include "helpbox.h"
+#include "statscreen.h"
 
 #define PURCHASE_GENERIC_PAGE_SIZE 7
 // #define PURCHASE_GENERIC_PAGE_SLOT 5
@@ -43,8 +48,8 @@
 #define PURCHASE_GENERIC_PLATFORM_BG_Y 138
 #define PURCHASE_GENERIC_REEL_ENTRY_COUNT 65
 
-// Palette bg IDs 0xB (class card) and 0xF (battle animation spells) won't work with fog 
-// so a BG must be set when working with fog maps, I guess 
+// Palette bg IDs 0xB (class card) and 0xF (battle animation spells) won't work with fog
+// so a BG must be set when working with fog maps, I guess
 
 struct PurchaseGenericDefinition
 {
@@ -61,6 +66,8 @@ static int sPurchaseGenericFactionId = FACTION_ID_BLUE;
 static bool sPurchaseGenericFaceActive = false;
 static bool sPurchaseGenericPlatformActive = false;
 static bool sPurchaseGenericMenuOpen = false;
+static bool sPurchaseGenericPreviewStartedMiniAnim = false;
+static u8 sPurchaseGenericSavedBg0Priority = 0;
 
 struct PurchaseGenericMenuLockProc
 {
@@ -272,7 +279,7 @@ static int GetCaptureAmountForUnit(struct Unit* unit)
     if (maxHp <= 0 || curHp <= 0)
         return 1;
 
-    return (curHp * 100) / maxHp;
+    return (curHp * 10) / maxHp;
 }
 
 static bool TryCapturePurchaseBase(struct Trap* trap, struct Unit* unit)
@@ -460,7 +467,7 @@ static void PutPurchaseGenericTextIndent(int x, int y, int color, int width, con
     struct Text text;
 
     InitText(&text, width);
-    Text_SetCursor(&text, 2); 
+    Text_SetCursor(&text, 2);
     PutDrawText(&text, TILEMAP_LOCATED(gBG0TilemapBuffer, x, y), color, 0, width, str);
 }
 
@@ -505,7 +512,7 @@ static void StartPurchaseGenericClassCard(const struct PurchaseGenericDefinition
     if (portraitId == 0 || gFaces[PURCHASE_GENERIC_FACE_SLOT] != NULL)
         return;
 
-    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x1c0, 0xB);
+    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x180, 0xB);
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
     // if (StartFace(
         // PURCHASE_GENERIC_FACE_SLOT,
@@ -593,6 +600,51 @@ static void EndPurchaseGenericPlatformPreview(void)
     Proc_EndEach(sProc_PurchaseGenericPlatformPreview);
 }
 
+static bool IsPurchaseGenericPlatformBanimSafe(struct ClassReelEnt* entry)
+{
+    struct BattleAnim* anim;
+    int paletteId;
+
+    if (entry == NULL || entry->banimId >= banim_number)
+        return false;
+
+    anim = &banim_data[entry->banimId];
+
+    if (!IsValidLz77DecompressionData(anim->script) ||
+        !IsValidLz77DecompressionData(anim->oam_r) ||
+        !IsValidLz77DecompressionData(anim->oam_l) ||
+        !IsValidLz77DecompressionData(anim->pal))
+        return false;
+
+    paletteId = entry->paletteId;
+
+    if (paletteId != -1)
+    {
+        if (paletteId < 0 || (u32)paletteId >= banim_pal_head.number)
+            return false;
+
+        if (!IsValidLz77DecompressionData(character_battle_animation_palette_table[paletteId].pal))
+            return false;
+    }
+
+    return true;
+}
+
+static void SetPurchaseGenericPlatformAnimLayer(u16 layer)
+{
+    if (gOpInfoData.anim1 != NULL)
+    {
+        gOpInfoData.anim1->oam2Base &= ~OAM2_LAYER(3);
+        gOpInfoData.anim1->oam2Base |= OAM2_LAYER(layer);
+    }
+
+    if (gOpInfoData.anim2 != NULL)
+    {
+        gOpInfoData.anim2->oam2Base &= ~OAM2_LAYER(3);
+        gOpInfoData.anim2->oam2Base |= OAM2_LAYER(layer);
+    }
+}
+
 static void SetupPurchaseGenericPlatformAnim(struct OpInfoClassDisplayProc* proc, struct ClassReelEnt* entry)
 {
     NewEfxAnimeDrvProc();
@@ -617,12 +669,12 @@ static void SetupPurchaseGenericPlatformAnim(struct OpInfoClassDisplayProc* proc
     gUnk_4.yOffsetBg = entry->unk_0A;
     gUnk_4.xOffsetObj = entry->unk_0B;
     gUnk_4.yOffsetObj = entry->unk_0C;
-    gUnk_4.objChr = 0x280;
-    gUnk_4.objPalId = 0xF;
-    gUnk_4.bgChr = 0x180;
-    gUnk_4.bgPalId = 0xF;
+    gUnk_4.objChr = 0x300;
+    gUnk_4.objPalId = 0xD;
+    gUnk_4.bgChr = 0x1E0; 
+    gUnk_4.bgPalId = 0xD;
     gUnk_4.bg = 1;
-    gUnk_4.bgTmBuf = gBG2TilemapBuffer;
+    gUnk_4.bgTmBuf = gBG1TilemapBuffer;
     gUnk_4.bgImgBuf = gSpellAnimBgfx;
     gUnk_4.bgTsaBuf = gEkrTsaBuffer;
     gUnk_4.objImgBuf = gBuf_Banim;
@@ -630,13 +682,15 @@ static void SetupPurchaseGenericPlatformAnim(struct OpInfoClassDisplayProc* proc
 
     ResetClassReelSpell();
     NewEkrUnitMainMini(&gOpInfoData);
+    sPurchaseGenericPreviewStartedMiniAnim = true;
+    SetPurchaseGenericPlatformAnimLayer(0);
 
     gUnk_Opinfo_0.terrain_l = PURCHASE_GENERIC_PLATFORM_TERRAIN;
     gUnk_Opinfo_0.pal_l = 0xE;
-    gUnk_Opinfo_0.chr_l = 0x380;
+    gUnk_Opinfo_0.chr_l = 0x380; // unused here 
     gUnk_Opinfo_0.terrain_r = PURCHASE_GENERIC_PLATFORM_TERRAIN;
     gUnk_Opinfo_0.pal_r = 0xF;
-    gUnk_Opinfo_0.chr_r = 0x3C0;
+    gUnk_Opinfo_0.chr_r = 0x3C0; 
     gUnk_Opinfo_0.distance = 0;
     gUnk_Opinfo_0.unk0E = -1;
     gUnk_Opinfo_0.unk1C = (void*)0x06010000;
@@ -666,7 +720,7 @@ static void StartPurchaseGenericPlatformPreview(const struct PurchaseGenericDefi
 
     entry = GetPurchaseGenericPlatformReelEntry(def);
 
-    if (entry == NULL)
+    if (!IsPurchaseGenericPlatformBanimSafe(entry))
         return;
 
     proc = Proc_Start(sProc_PurchaseGenericPlatformPreview, PROC_TREE_3);
@@ -674,7 +728,7 @@ static void StartPurchaseGenericPlatformPreview(const struct PurchaseGenericDefi
 
     sPurchaseGenericPlatformActive = true;
 }
-#define FUNDS_Y 0 
+#define FUNDS_Y 0
 static void DrawPurchaseGenericUiBoxes(const struct PurchaseGenericDefinition* def)
 {
     int i;
@@ -699,8 +753,8 @@ static void DrawPurchaseGenericUiBoxes(const struct PurchaseGenericDefinition* d
             // 0);
     // }
 }
-#define GENERICS_MENU_X 9 
-#define GENERICS_MENU_Y 4 
+#define GENERICS_MENU_X 9
+#define GENERICS_MENU_Y 4
 static void DrawPurchaseGenericList(void)
 {
     int i;
@@ -772,6 +826,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
 
     // TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
     TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
+    TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
     EndPurchaseGenericPlatformPreview();
     ResetIconGraphics();
     ResetTextFont();
@@ -807,7 +862,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
     StartPurchaseGenericClassCard(def);
     StartPurchaseGenericPlatformPreview(def);
 
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
 }
 
 static void ClearPurchaseGenericDetails(void)
@@ -815,9 +870,11 @@ static void ClearPurchaseGenericDetails(void)
     EndPurchaseGenericPlatformPreview();
     EndPurchaseGenericClassCard();
     ResetIconGraphics();
+    ApplyUnitSpritePalettes();
     TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
+    TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
     TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
 }
 
 static u8 PurchaseGenericMenuItemUsability(const struct MenuItemDef* def, int number)
@@ -957,6 +1014,7 @@ static void PurchaseGenericMenuEnd(struct MenuProc* menu)
 
     sPurchaseGenericMenuOpen = false;
     ClearPurchaseGenericDetails();
+    gLCDControlBuffer.bg0cnt.priority = sPurchaseGenericSavedBg0Priority;
     EndPurchaseGenericMenuLockProc();
 }
 
@@ -1030,10 +1088,10 @@ static void PurchaseGenericMenuLock_OnLoop(struct PurchaseGenericMenuLockProc* p
 
 static void PurchaseGenericMenuLock_OnEnd(struct PurchaseGenericMenuLockProc* proc)
 {
-    
+
     BMapDispResume();
     UnlockGame();
-    RefreshUnitSprites(); 
+    RefreshUnitSprites();
     RefreshEntityBmMaps();
     RenderBmMap();
 }
@@ -1062,15 +1120,33 @@ static void PurchaseGenericPlatformPreview_CheckMenuOpen(struct OpInfoClassDispl
         Proc_Goto(proc, 1);
 }
 
+static void PurchaseGenericPlatformPreview_ExecScript(struct OpInfoClassDisplayProc* proc)
+{
+    ClassInfoDisplay_ExecScript(proc);
+    SetPurchaseGenericPlatformAnimLayer(0);
+}
+
+static void PurchaseGenericPlatformPreview_LoopScript(struct OpInfoClassDisplayProc* proc)
+{
+    ClassInfoDisplay_LoopScript(proc);
+    SetPurchaseGenericPlatformAnimLayer(0);
+}
+
 static void PurchaseGenericPlatformPreview_OnEnd(struct OpInfoClassDisplayProc* proc)
 {
+    (void)proc;
 
     EndActiveClassReelSpell();
     EndActiveClassReelBgColorProc();
-    EndEkrUnitMainMini(&gOpInfoData);
+
+    if (sPurchaseGenericPreviewStartedMiniAnim)
+        EndEkrUnitMainMini(&gOpInfoData);
+
     EndBanimTerrain(&gUnk_Opinfo_0);
     EndEfxAnimeDrvProc();
+    ApplyUnitSpritePalettes();
 
+    sPurchaseGenericPreviewStartedMiniAnim = false;
     sPurchaseGenericPlatformActive = false;
 }
 
@@ -1081,13 +1157,13 @@ static const struct ProcCmd sProc_PurchaseGenericPlatformPreview[] =
 
 PROC_LABEL(0),
     PROC_CALL(PurchaseGenericPlatformPreview_CheckMenuOpen),
-    PROC_CALL(ClassInfoDisplay_ExecScript),
-    PROC_REPEAT(ClassInfoDisplay_LoopScript),
+    PROC_CALL(PurchaseGenericPlatformPreview_ExecScript),
+    PROC_REPEAT(PurchaseGenericPlatformPreview_LoopScript),
     PROC_GOTO(0),
 
 PROC_LABEL(10),
     PROC_CALL(PurchaseGenericPlatformPreview_ResetScript),
-    
+
     PROC_GOTO(0),
 
 PROC_LABEL(1),
@@ -1104,7 +1180,7 @@ static void EndPurchaseGenericMenuLockProc(void)
 {
     Proc_EndEach(PurchaseGenericsProcCmd);
 }
-    
+
 bool PurchaseGenerics_TryStartTileMenu(int x, int y)
 {
     struct Trap* trap;
@@ -1132,9 +1208,11 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y)
     sPurchaseGenericFactionId = FACTION_ID_BLUE;
     TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
     BG_EnableSyncByMask(BG2_SYNC_BIT);
-// StartClassAnimDisplay(proc, proc->classReelEnt);
+    sPurchaseGenericSavedBg0Priority = gLCDControlBuffer.bg0cnt.priority;
+    gLCDControlBuffer.bg0cnt.priority = 1;
+    
     // struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
-    struct MenuProc* menu = StartOrphanMenuExt(&gPurchaseGenericsMenuDef, 2, TILEREF(0, 0), 0, 0); // backBg as 2, frontBg (text) as 0 
+    struct MenuProc* menu = StartOrphanMenuExt(&gPurchaseGenericsMenuDef, 2, TILEREF(0, 0), 0, 0); // backBg as 2, frontBg (text) as 0
 
     return true;
 }
@@ -1291,6 +1369,19 @@ static CONST_DATA struct MenuItemDef sPurchaseGenericsMenuItems[] =
     MenuItemsEnd
 };
 
+u8 PurchaseMenu_HelpBox(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+    LoadHelpBoxGfx((void*)0x06011000, -1);
+    int classId = GetPurchaseGenericForSlot(menu->itemCurrent)->classId;
+    if (classId) {
+    StartHelpBox(menuItem->xTile * 8, menuItem->yTile << 3,
+    GetClassData(classId)->descTextId);
+    }
+
+    return 0;
+}
+
+
+
 CONST_DATA struct MenuDef gPurchaseGenericsMenuDef =
 {
     { GENERICS_MENU_X, GENERICS_MENU_Y, 9, 0 },
@@ -1301,7 +1392,7 @@ CONST_DATA struct MenuDef gPurchaseGenericsMenuDef =
     0,
     PurchaseGenericBack,
     MenuAutoHelpBoxSelect,
-    MenuStdHelpBox
+    PurchaseMenu_HelpBox
 };
 
 #endif

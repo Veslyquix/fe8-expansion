@@ -24,6 +24,7 @@
 #include "muctrl.h"
 #include "bmmind.h"
 #include "eventcall.h"
+#include "debuffs.h"
 
 #if FE8_DISPLAY_OBTAINABLE_ITEM
 void SetupCacheForStealableItems(void);
@@ -284,38 +285,72 @@ inline int GetUnitCurrentHp(struct Unit* unit) {
 }
 
 inline int GetUnitPower(struct Unit* unit) {
-    return unit->pow + GetItemPowBonus((u16) GetUnitEquippedWeapon(unit));
+    int result = unit->pow + GetItemPowBonus((u16) GetUnitEquippedWeapon(unit));
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_POW, result);
+#endif
+    return result;
 }
 
 inline int GetUnitSkill(struct Unit* unit) {
     u16 item = GetUnitEquippedWeapon(unit);
+    int result;
 
     if (unit->state & US_RESCUING)
-        return unit->skl / 2 + GetItemSklBonus(item);
+        result = unit->skl / 2 + GetItemSklBonus(item);
+    else
+        result = unit->skl + GetItemSklBonus(item);
 
-    return unit->skl + GetItemSklBonus(item);
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_SKL, result);
+#endif
+    return result;
 }
 
 inline int GetUnitSpeed(struct Unit* unit) {
     u16 item = GetUnitEquippedWeapon(unit);
+    int result;
 
     if (unit->state & US_RESCUING)
-        return unit->spd / 2 + GetItemSpdBonus(item);
+        result = unit->spd / 2 + GetItemSpdBonus(item);
+    else
+        result = unit->spd + GetItemSpdBonus(item);
 
-    return unit->spd + GetItemSpdBonus(item);
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_SPD, result);
+#endif
+    return result;
 }
 
 inline int GetUnitDefense(struct Unit* unit) {
-    return unit->def + GetItemDefBonus((u16) GetUnitEquippedWeapon(unit));
+    int result = unit->def + GetItemDefBonus((u16) GetUnitEquippedWeapon(unit));
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_DEF, result);
+#endif
+    return result;
 }
 
 inline int GetUnitResistance(struct Unit* unit) {
-    return unit->res + GetItemResBonus((u16) GetUnitEquippedWeapon(unit)) + unit->barrierDuration;
+    int result = unit->res + GetItemResBonus((u16) GetUnitEquippedWeapon(unit)) + unit->barrierDuration;
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_RES, result);
+#endif
+    return result;
 }
 
 inline int GetUnitLuck(struct Unit* unit) {
-    return unit->lck + GetItemLckBonus((u16) GetUnitEquippedWeapon(unit));
+    int result = unit->lck + GetItemLckBonus((u16) GetUnitEquippedWeapon(unit));
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_LCK, result);
+#endif
+    return result;
 }
+
+#ifdef DEBUFFS_EXIST
+int GetUnitMovement(struct Unit* unit) {
+    return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, unit->movBonus + UNIT_MOV_BASE(unit));
+}
+#endif
 
 inline int GetUnitPortraitId(struct Unit* unit) {
     if (unit->pCharacterData->portraitId) {
@@ -1160,6 +1195,10 @@ void TickActiveFactionTurn(void) {
         if (unit->barrierDuration != 0)
             unit->barrierDuration--;
 
+#ifdef DEBUFFS_EXIST
+        UnitRestoreDebuffsTowardsNeutral(unit, UNIT_DEBUFF_DEFAULT_RESTORE_PER_TURN);
+#endif
+
         if (unit->torchDuration != 0) {
             unit->torchDuration--;
             displayMapChange = TRUE;
@@ -1473,6 +1512,10 @@ void ClearTemporaryUnits(void) {
 
         unit->state |= US_HIDDEN;
 
+#ifdef DEBUFFS_EXIST
+        UnitClearStatModifiers(unit);
+#endif
+
         if (UNIT_IS_PHANTOM(unit))
             ClearUnit(unit);
     }
@@ -1627,6 +1670,9 @@ void RefreshAllies(void) {
         unit->rescue = 0;
 
         SetUnitStatus(unit, 0);
+#ifdef DEBUFFS_EXIST
+        UnitClearStatModifiers(unit);
+#endif
     }
 
     RefreshEntityBmMaps();

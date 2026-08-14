@@ -17,6 +17,13 @@ CONST_DATA EventScr EventScrWM_Prologue_Beginning[] = {
     WmEvtNoFade // ENOSUPP in EAstdlib
     WM_SPAWNLORD(WM_MU_0, CHARACTER_EIRIKA, WM_NODE_BorderMulan)
     WM_CENTERCAMONLORD(WM_MU_0)
+#if FE8_SKIP_OPENING
+            /* Skip the "The continent of Magvel..." narration when first
+             * arriving at the prologue on New Game. Other chapters' world-
+             * map beginning events are unaffected. */
+    SKIPWN
+    ENDA
+#endif
     MUSCFAST(SONG_SILENT)
     STAL(32)
     MUSC(SONG_THE_BEGINNING)

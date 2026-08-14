@@ -119,3 +119,4 @@ const u8 __attribute__((aligned(4))) Ch3Map[] = INCBIN_U8("graphics/map/layout/C
 const u8 __attribute__((aligned(4))) Ch2Map[] = INCBIN_U8("graphics/map/layout/Ch2Map.bin.lz");
 const u8 __attribute__((aligned(4))) Ch1Map[] = INCBIN_U8("graphics/map/layout/Ch1Map.bin.lz");
 const u8 __attribute__((aligned(4))) PrologueMap[] = INCBIN_U8("graphics/map/layout/PrologueMap.bin.lz");
+const u8 __attribute__((aligned(4))) NewPrologueMap[] = INCBIN_U8("graphics/map/layout/NewPrologueMap.bin.lz");

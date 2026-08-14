@@ -77,7 +77,7 @@ EXPANSION_BUILD_ID ?=
 # see docs/id_space.md's "class" domain and include/bmsave.h). This changes
 # what the game-save unit bytes mean, so it must invalidate old saves via the
 # existing save-compat gate rather than silently misreading them.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 3
+EXPANSION_SAVE_COMPAT_EPOCH ?= 4
 
 # --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
@@ -168,6 +168,12 @@ EXTEND_DESC_BOX ?= 1
 # graphics themselves are not yet wired up -- see src/DisplayObtainableItem.c.
 DISPLAY_OBTAINABLE_ITEM ?= 1
 
+# --- Optional Debuffs ---------------------------------------------------------
+# Enables per-unit temporary stat modifiers. DEBUFFS_STACK controls whether
+# repeat applications of the same debuff keep worsening a stat toward -31.
+DEBUFFS_EXIST ?= 1
+DEBUFFS_STACK ?= 0
+
 # --- Optional TextChNames -----------------------------------------------------
 # Draws the actual chapter title text instead of a pre-rendered graphic
 # banner, so any chapter name reads correctly without needing a hand-drawn
@@ -194,6 +200,21 @@ BATTLE_STATS_NO_ANIMS ?= 1
 # build-time flag instead, which already serves the same purpose. See
 # src/HpBars.c for two further narrow simplifications.
 HP_BARS ?= 1
+
+# --- Optional CustomCampaign --------------------------------------------------
+# Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
+# map (see gChapterDataAssetTable in src/data/data_8B363C.c), and replaces
+# the prologue's scripted beginning-of-chapter events with a version that
+# still loads Eirika and Seth the same way but skips the Renais-throne-room
+# cutscene and dialogue (see src/events/prologue-eventscript.h).
+CUSTOM_CAMPAIGN ?= 1
+
+# --- Optional SkipOpening -------------------------------------------------------
+# Boots straight to the title screen: no health & safety screen, no
+# Nintendo/Intelligent Systems logos, and no attract-mode opening demo. On
+# New Game, also skips the world-map "continent of Magvel" narration and the
+# "In an age long past..." opening text crawl. Does not affect continue/load.
+SKIP_OPENING ?= 1
 
 # --- Optional Credits ----------------------------------------------------------
 # Scrolling end-credits sequence (big-font headers via the existing class-

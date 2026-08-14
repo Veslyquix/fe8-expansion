@@ -76,6 +76,8 @@ void CopyString(char *, const char *);
 void UnpackRaw(const void *src, void *dst);
 void DecompressViaGenericBuf(const void *src, void *dst);
 void Decompress(const void* src, void* dst);
+bool IsValidDecompressionData(const void *data);
+bool IsValidLz77DecompressionData(const void *data);
 int GetDataSize(const void* data);
 // ??? GfxLoadCursor_Init(???);
 // ??? GfxLoadCursor_Decompress(???);

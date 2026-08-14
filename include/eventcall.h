@@ -201,6 +201,7 @@ extern CONST_DATA EventListScr EventScr_FloorClearInTower[];
 extern CONST_DATA EventListScr EventScr_WholeTowerClear[];
 
 extern CONST_DATA EventListScr EventScr_Prologue_BeginningScene[];
+extern CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[];
 extern CONST_DATA EventListScr EventScr_Prologue_RenaisThroneCutscene[];
 extern CONST_DATA EventListScr EventScr_Prologue_GiveRapier[];
 extern CONST_DATA EventListScr EventScr_Prologue_ONeillSpawn[];

@@ -1186,19 +1186,40 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
         self.assertIn("EXPANSION_MECHANICS_HOOKS=1", message)
 
     def test_sample_with_hooks_is_ok(self):
-        self.assertEqual(ec.validate_feature_flags("1", "1", "0"), (1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0))
+        self.assertEqual(
+            ec.validate_feature_flags("1", "1", "0"), (1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        )
 
     def test_all_off_is_ok(self):
-        self.assertEqual(ec.validate_feature_flags("0", "0", "0"), (0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0))
+        self.assertEqual(
+            ec.validate_feature_flags("0", "0", "0"), (0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        )
 
     def test_hooks_without_sample_is_ok(self):
-        self.assertEqual(ec.validate_feature_flags("1", "0", "1"), (1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0))
+        self.assertEqual(
+            ec.validate_feature_flags("1", "0", "1"), (1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        )
 
     def test_content_defaults_off_for_legacy_three_argument_callers(self):
         """The issue #6 Sprint 2 content flag is an OPTIONAL fourth switch:
         an existing three-argument call keeps its exact previous meaning and
         simply resolves the content flag to 0."""
-        self.assertEqual(ec.validate_feature_flags("1", "1", "1"), (1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0))
+        self.assertEqual(
+            ec.validate_feature_flags("1", "1", "1"), (1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        )
+
+    def test_debuff_stack_requires_debuff_storage(self):
+        with self.assertRaises(ec.ConfigError) as ctx:
+            ec.validate_feature_flags("0", "0", "0", debuffs_exist="0", debuffs_stack="1")
+        message = str(ctx.exception)
+        self.assertIn("DEBUFFS_STACK=1", message)
+        self.assertIn("DEBUFFS_EXIST=1", message)
+
+    def test_debuff_stack_with_debuff_storage_is_ok(self):
+        self.assertEqual(
+            ec.validate_feature_flags("0", "0", "0", debuffs_exist="1", debuffs_stack="1"),
+            (0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0),
+        )
 
 
 class LoadIdentityFeatureFlagTests(unittest.TestCase):
