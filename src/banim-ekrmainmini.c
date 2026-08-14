@@ -6,6 +6,77 @@
 #include "hardware.h"
 #include "banim_data.h"
 #include "ctc.h"
+#include "bmlib.h"
+
+static bool IsValidMainMiniAnimData(struct AnimBuffer * pAnimBuf)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    struct BattleAnim * anim;
+    int charPalId;
+
+    if (pAnimBuf == NULL)
+        return false;
+
+    if (pAnimBuf->animId < 0 || (u32)pAnimBuf->animId >= banim_number)
+        return false;
+
+    if (pAnimBuf->roundType >= ANIM_ROUND_MAX)
+        return false;
+
+    if (pAnimBuf->pImgSheetBuf == NULL || pAnimBuf->unk_20 == NULL ||
+        pAnimBuf->unk_24 == NULL || pAnimBuf->unk_28 == NULL)
+        return false;
+
+    anim = &banim_data[pAnimBuf->animId];
+
+    if (!IsValidLz77DecompressionData(anim->script) ||
+        !IsValidLz77DecompressionData(anim->oam_l) ||
+        !IsValidLz77DecompressionData(anim->oam_r) ||
+        !IsValidLz77DecompressionData(anim->pal))
+        return false;
+
+    charPalId = pAnimBuf->charPalId;
+
+    if (charPalId != -1)
+    {
+        if (charPalId < 0 || (u32)charPalId >= banim_pal_head.number)
+            return false;
+
+        if (!IsValidLz77DecompressionData(character_battle_animation_palette_table[charPalId].pal))
+            return false;
+    }
+#endif
+
+    return true;
+}
+
+static bool IsValidBanimTerrainData(struct BanimUnkStructComm * buf)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (buf == NULL || buf->unk20 == NULL)
+        return false;
+
+    if (buf->terrain_l != -1)
+    {
+        if (buf->terrain_l < 0 || (u32)buf->terrain_l >= banim_terrain_head.number)
+            return false;
+
+        if (!IsValidLz77DecompressionData(battle_terrain_table[buf->terrain_l].tileset))
+            return false;
+    }
+
+    if (buf->terrain_r != -1)
+    {
+        if (buf->terrain_r < 0 || (u32)buf->terrain_r >= banim_terrain_head.number)
+            return false;
+
+        if (!IsValidLz77DecompressionData(battle_terrain_table[buf->terrain_r].tileset))
+            return false;
+    }
+#endif
+
+    return true;
+}
 
 struct BanimUnkStructCommPriv
 {
@@ -246,6 +317,9 @@ void EkrMainMini_AnimUpdateFrameGfx(struct Anim * anim)
 //! FE8U = 0x0805A60C
 void InitMainMiniAnim(struct AnimBuffer * pAnimBuf)
 {
+    if (!IsValidMainMiniAnimData(pAnimBuf))
+        return;
+
     u32 modeA;
     u32 configA;
     u32 modeB;
@@ -361,6 +435,9 @@ void InitMainMiniAnim(struct AnimBuffer * pAnimBuf)
 //! FE8U = 0x0805A7B4
 void RestartMainMiniAnim(struct AnimBuffer * pAnimBuf)
 {
+    if (!IsValidMainMiniAnimData(pAnimBuf))
+        return;
+
     struct BattleAnimCharaPal * cbapt = character_battle_animation_palette_table;
     u32 modeA;
     u32 configA;
@@ -615,7 +692,17 @@ struct ProcCmd CONST_DATA ProcScr_ekrUnitMainMini[] =
 //! FE8U = 0x0805AA00
 void NewEkrUnitMainMini(struct AnimBuffer * pAnimBuf)
 {
-    struct ProcEkrUnitMainMini * proc = Proc_Start(ProcScr_ekrUnitMainMini, PROC_TREE_4);
+    struct ProcEkrUnitMainMini * proc;
+
+    if (!IsValidMainMiniAnimData(pAnimBuf))
+    {
+        if (pAnimBuf != NULL)
+            pAnimBuf->unk_34 = NULL;
+
+        return;
+    }
+
+    proc = Proc_Start(ProcScr_ekrUnitMainMini, PROC_TREE_4);
     InitMainMiniAnim(pAnimBuf);
 
     proc->unk_5C = pAnimBuf;
@@ -629,13 +716,19 @@ void NewEkrUnitMainMini(struct AnimBuffer * pAnimBuf)
 //! FE8U = 0x0805AA28
 void EndEkrUnitMainMini(struct AnimBuffer * pAnimBuf)
 {
+    if (pAnimBuf == NULL)
+        return;
+
     AnimDelete(pAnimBuf->anim1);
     AnimDelete(pAnimBuf->anim2);
 
     pAnimBuf->anim1 = 0;
     pAnimBuf->anim2 = 0;
 
-    Proc_End(pAnimBuf->unk_34);
+    if (pAnimBuf->unk_34 != NULL)
+        Proc_End(pAnimBuf->unk_34);
+
+    pAnimBuf->unk_34 = NULL;
 
     return;
 }
@@ -654,8 +747,8 @@ void EkrUnitMainMiniMain(struct ProcEkrUnitMainMini * proc)
 //! FE8U = 0x0805AA68
 void InitBanimTerrain(struct BanimUnkStructComm * buf)
 {
-    struct BattleAnimTerrain * a;
-    struct BattleAnimTerrain * b;
+    struct BattleAnimTerrain * a = NULL;
+    struct BattleAnimTerrain * b = NULL;
     void * vramA;
     void * vramB;
     void * palA;
@@ -663,16 +756,18 @@ void InitBanimTerrain(struct BanimUnkStructComm * buf)
     s16 oam2Pal;
     u16 oam2;
 
-    a = &battle_terrain_table[buf->terrain_l];
-    b = &battle_terrain_table[buf->terrain_r];
+    if (!IsValidBanimTerrainData(buf))
+        return;
 
     if (buf->terrain_l != -1)
     {
+        a = &battle_terrain_table[buf->terrain_l];
         LZ77UnCompWram(a->tileset, buf->unk20);
     }
 
     if (buf->terrain_r != -1)
     {
+        b = &battle_terrain_table[buf->terrain_r];
         LZ77UnCompWram(b->tileset, buf->unk20 + 0x1000);
     }
 
@@ -692,8 +787,8 @@ void InitBanimTerrain(struct BanimUnkStructComm * buf)
         break;
     }
 
-    palA = a->palette;
-    palB = b->palette;
+    palA = a == NULL ? NULL : a->palette;
+    palB = b == NULL ? NULL : b->palette;
 
     switch (buf->unk0E) {
     case -1:

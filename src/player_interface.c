@@ -1082,22 +1082,23 @@ void DrawTerrainDisplayWindow(struct PlayerInterfaceProc * proc)
         // (no real terrain of their own -- see bmtrick.h) are all
         // TRAP_PURCHASE_BASE traps, so this is keyed on trap presence at
         // the cursor rather than on terrainId, covering every kind through
-        // one path. Capture progress is tracked 0..PURCHASE_BASE_CAPTURE_REQUIRED
-        // (200) internally; displayed on a fixed 0..20 scale, reusing the
-        // same obstacle-HP number readout as walls/snags above, where full
-        // capture (200/200 progress) reads as 10/20 -- i.e. this always
-        // shows "out of 20", and reaching the halfway mark means captured.
+        // one path. Capture progress counts up 0..PURCHASE_BASE_CAPTURE_REQUIRED
+        // and this shows the remainder.
+        // overwrite Def/Avo label 
+        CallARM_FillTileRect(gUiTmScratchA + TILEMAP_INDEX(1, 14), Tsa_TerrainMapUi_ObstacleLabels, TILEREF(0x100, 2));
+        
         struct Trap* purchaseBaseTrap = GetPurchaseBaseTrapAt(gBmSt.playerCursor.x, gBmSt.playerCursor.y);
 
         if (purchaseBaseTrap != NULL)
         {
             num = PURCHASE_BASE_CAPTURE_REQUIRED - (GetPurchaseBaseTrapCaptureProgress(purchaseBaseTrap));
-            if (num < 0) { num = 0; } 
-
-            CallARM_FillTileRect(gUiTmScratchA + TILEMAP_INDEX(1, 14), Tsa_TerrainMapUi_ObstacleLabels, TILEREF(0x100, 2));
+            if (num < 0) { num = 0; }
 
             StoreNumberStringToSmallBuffer(num);
-            PutDigits(gUiTmScratchA + TILEMAP_INDEX(4, 15), gNumberStr + 7, TILEREF(0x128, 2), 2);
+            // Same tile as Avo's own digits above (TILEMAP_INDEX(5, 15)) --
+            // PutDigits writes right-to-left from this tile, so this must be
+            // the ONES digit's column to land correctly over Avo's slot.
+            PutDigits(gUiTmScratchA + TILEMAP_INDEX(5, 15), gNumberStr + 7, TILEREF(0x128, 2), 2);
         }
     }
 #endif

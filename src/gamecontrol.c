@@ -41,6 +41,19 @@ extern struct ProcCmd CONST_DATA ProcScr_GameEarlyStartUI[]; // pre-intro cutsce
 extern struct ProcCmd CONST_DATA ProcScr_OpAnim[]; // intro cutscene
 extern struct ProcCmd CONST_DATA ProcScr_WorldMapWrapper[];
 
+#if FE8_SKIP_OPENING
+static void GameControl_InitDirectTitleScreen(ProcPtr proc)
+{
+    (void)proc;
+
+    SetupBackgrounds(NULL);
+    SetPrimaryHBlankHandler(NULL);
+    SetDispEnable(0, 0, 0, 0, 0);
+    SetKeyStatus_IgnoreMask(0);
+    EnableKeyComboResetEN(NULL);
+}
+#endif
+
 #if FE8_VESLY_DEBUGGER
 int VeslyDebugger_TryApplyBootMode(ProcPtr proc);
 #endif
@@ -115,6 +128,9 @@ PROC_LABEL(3),
     PROC_GOTO(LGAMECTRL_OP_ANIM),
 
 PROC_LABEL(LGAMECTRL_TITLE_DIRECT),
+#if FE8_SKIP_OPENING
+    PROC_CALL(GameControl_InitDirectTitleScreen),
+#endif
     PROC_CALL(GameControl_EnableSoundEffects),
     PROC_CALL(StartTitleScreen_WithMusic),
     PROC_GOTO(LGAMECTRL_POST_TITLE_IDLE),

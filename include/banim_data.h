@@ -35,6 +35,7 @@ struct BattleAnimTerrain {
 };
 
 extern struct BattleAnimTerrain battle_terrain_table[];
+extern DataBlockHead banim_terrain_head;
 
 struct BanimModeData {
     const u32 * unk0;
