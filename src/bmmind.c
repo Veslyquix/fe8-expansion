@@ -13,6 +13,7 @@
 #include "soundwrapper.h"
 #include "bmusemind.h"
 #include "bmtrap.h"
+#include "bmtrick.h"
 #include "bmarch.h"
 #include "bmtarget.h"
 #include "bmudisp.h"
@@ -110,6 +111,11 @@ void LoadRNStateFromActionStruct(void) {
 //! FE8U = 0x0803200C
 u32 ApplyUnitAction(ProcPtr proc) {
     gActiveUnit = GetUnit(gActionData.subjectIndex);
+
+#if FE8_PURCHASE_GENERICS
+    if (gActionData.unitActionType != UNIT_ACTION_PURCHASE_GENERIC)
+        ResetPurchaseBaseTrapCaptureByUnit(gActionData.subjectIndex);
+#endif
 
     if (gActionData.unitActionType == UNIT_ACTION_COMBAT) {
         int itemIdx = GetItemIndex(

@@ -279,6 +279,32 @@ int GetPurchaseBaseTrapCapturer(struct Trap* trap)
     return trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER];
 }
 
+void ResetPurchaseBaseTrapCapture(struct Trap* trap)
+{
+    if (trap == NULL)
+        return;
+
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] = PURCHASE_BASE_CAPTURE_NONE;
+    trap->extra = 0;
+}
+
+void ResetPurchaseBaseTrapCaptureByUnit(int unitIndex)
+{
+    struct Trap* trap;
+
+    for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
+    {
+        if (trap->type != TRAP_PURCHASE_BASE)
+            continue;
+
+        if (GetPurchaseBaseTrapCaptureProgress(trap) <= 0)
+            continue;
+
+        if ((u8)trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] == (u8)unitIndex)
+            ResetPurchaseBaseTrapCapture(trap);
+    }
+}
+
 void SetPurchaseBaseTrapCaptureProgress(struct Trap* trap, int progress)
 {
     if (trap == NULL)

@@ -948,8 +948,13 @@ void InitPlayConfig(int isDifficult, s8 unk) {
     gPlaySt.config.disableTerrainDisplay = 0;
     gPlaySt.config.unitDisplayType = 0;
     gPlaySt.config.autoCursor = 0;
+#if FE8_SKIP_OPENING
+    gPlaySt.config.textSpeed = 2; // Fast
+    gPlaySt.config.gameSpeed = 1; // Fast
+#else
     gPlaySt.config.textSpeed = 1; // TODO: (DEFAULT?) TEXT SPEED DEFINITIONS
     gPlaySt.config.gameSpeed = 0;
+#endif
     gPlaySt.config.disableBgm = 0;
     gPlaySt.config.disableSoundEffects = 0;
     gPlaySt.config.windowColor = 0;

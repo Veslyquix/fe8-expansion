@@ -12,6 +12,7 @@
 #include "cp_utility.h"
 #include "bmbattle.h"
 #include "cp_data.h"
+#include "purchase_generics.h"
 
 #include "constants/items.h"
 
@@ -28,6 +29,11 @@ s8 AiAttemptOffensiveAction(s8 (* isEnemy)(struct Unit * unit))
 
     finalResult.targetId = 0;
     finalResult.score = 0;
+
+#if FE8_PURCHASE_GENERICS
+    if (AiShouldCaptureBaseInsteadOfAttacking())
+        return 0;
+#endif
 
     if (gActiveUnit->state & US_IN_BALLISTA)
     {

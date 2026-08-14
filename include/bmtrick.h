@@ -116,6 +116,8 @@ void SetPurchaseBaseTrapOwner(struct Trap* trap, int owner);
 int GetPurchaseBaseTrapOwner(struct Trap* trap);
 void SetPurchaseBaseTrapCapturer(struct Trap* trap, int capturer);
 int GetPurchaseBaseTrapCapturer(struct Trap* trap);
+void ResetPurchaseBaseTrapCapture(struct Trap* trap);
+void ResetPurchaseBaseTrapCaptureByUnit(int unitIndex);
 void SetPurchaseBaseTrapCaptureProgress(struct Trap* trap, int progress);
 int GetPurchaseBaseTrapCaptureProgress(struct Trap* trap);
 void SetPurchaseBaseTrapGoldPerTurn(struct Trap* trap, int amount);

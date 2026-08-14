@@ -10,6 +10,7 @@
 
 #include "bm.h"
 #include "banim_data.h"
+#include "bmidoten.h"
 #include "bmlib.h"
 #include "hardware.h"
 #include "bmio.h"
@@ -290,9 +291,10 @@ static bool TryCapturePurchaseBase(struct Trap* trap, struct Unit* unit)
     if (GetPurchaseBaseTrapOwner(trap) == factionId)
         return true;
 
-    if (GetPurchaseBaseTrapCapturer(trap) != factionId)
+    if (GetPurchaseBaseTrapCapturer(trap) == PURCHASE_BASE_CAPTURE_NONE ||
+        (u8)GetPurchaseBaseTrapCapturer(trap) != (u8)unit->index)
     {
-        SetPurchaseBaseTrapCapturer(trap, factionId);
+        SetPurchaseBaseTrapCapturer(trap, unit->index);
         SetPurchaseBaseTrapCaptureProgress(trap, 0);
     }
 
@@ -1341,6 +1343,83 @@ static void RunAiCapturesForFaction(int factionId)
 
         TryCapturePurchaseBase(trap, unit);
     }
+}
+
+// Used by AiAttemptOffensiveAction (src/cp_battle.c) to prefer holding a
+// base the active unit is already standing on over going to fight -- the
+// actual capture progress is applied automatically at the start of this
+// unit's next phase by RunAiCapturesForFaction above, so all the AI needs
+// to do here is not wander off the trap tile to attack instead.
+bool AiShouldCaptureBaseInsteadOfAttacking(void)
+{
+    struct Trap* trap;
+
+    if (!CanUnitCapturePurchaseBase(gActiveUnit))
+        return false;
+
+    trap = GetPurchaseBaseTrapAt(gActiveUnit->xPos, gActiveUnit->yPos);
+
+    if (trap == NULL)
+        return false;
+
+    return GetPurchaseBaseTrapOwner(trap) != GetFactionIdForUnit(gActiveUnit);
+}
+
+// Used by AiScriptCmd_12_MoveTowardsEnemy (src/cp_script.c) to path towards
+// an unowned base instead of an enemy when the base is closer. Mirrors
+// AiFindTargetInReachByFunc's own extended-movement-range distance search
+// (src/cp_utility.c), but over purchase-base traps instead of units --
+// InitPurchaseBaseTrapsFromTerrain (src/bmtrick.c) guarantees every
+// real-terrain base already has a Trap by the time any chapter's AI runs,
+// so a plain trap-table scan sees every candidate, not just ones a unit has
+// already visited.
+bool AiFindClosestCapturableBase(struct Vec2* out, u8* distanceOut)
+{
+    int i;
+    int ownFaction;
+    u8 bestDistance = 0xFF;
+    s16 xOut = -1;
+    s16 yOut = 0;
+
+    if (!CanUnitCapturePurchaseBase(gActiveUnit))
+        return false;
+
+    ownFaction = GetFactionIdForUnit(gActiveUnit);
+
+    GenerateExtendedMovementMapOnRange(gActiveUnit->xPos, gActiveUnit->yPos, GetUnitMovementCost(gActiveUnit));
+
+    for (i = 0; i < TRAP_MAX_COUNT; ++i)
+    {
+        struct Trap* trap = GetTrap(i);
+
+        if (trap->type == TRAP_NONE)
+            break;
+
+        if (trap->type != TRAP_PURCHASE_BASE)
+            continue;
+
+        if (GetPurchaseBaseTrapOwner(trap) == ownFaction)
+            continue;
+
+        if (gBmMapRange[trap->yPos][trap->xPos] > MAP_MOVEMENT_MAX)
+            continue;
+
+        if (gBmMapRange[trap->yPos][trap->xPos] > bestDistance)
+            continue;
+
+        bestDistance = gBmMapRange[trap->yPos][trap->xPos];
+        xOut = trap->xPos;
+        yOut = trap->yPos;
+    }
+
+    if (xOut < 0)
+        return false;
+
+    out->x = xOut;
+    out->y = yOut;
+    *distanceOut = bestDistance;
+
+    return true;
 }
 
 void PurchaseGenerics_OnNewPhase(void)

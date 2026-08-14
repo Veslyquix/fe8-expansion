@@ -13,6 +13,9 @@ u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* men
 void PurchaseGenerics_OnNewPhase(void);
 bool PurchaseGenerics_TryStartTileMenu(int x, int y);
 
+bool AiShouldCaptureBaseInsteadOfAttacking(void);
+bool AiFindClosestCapturableBase(struct Vec2* out, u8* distanceOut);
+
 #endif
 
 #endif // GUARD_PURCHASE_GENERICS_H
