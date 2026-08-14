@@ -153,6 +153,11 @@ s8 AiAttemptCombatWithinMovement(s8 (* isEnemy)(struct Unit * unit))
     finalResult.targetId = 0;
     finalResult.score = 0;
 
+#if FE8_PURCHASE_GENERICS
+    if (AiShouldCaptureBaseInsteadOfAttacking())
+        return 0;
+#endif
+
     if (gActiveUnit->state & US_IN_BALLISTA) {
         BmMapFill(gBmMapMovement, -1);
         gBmMapMovement[gActiveUnit->yPos][gActiveUnit->xPos] = 0;
