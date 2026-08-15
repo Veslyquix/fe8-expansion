@@ -166,6 +166,9 @@ endif
 ifeq ($(NEW_ANIMS),1)
 MODERN_DEFINE_FLAGS += -DFE8_NEW_ANIMS=1
 endif
+ifeq ($(NEW_TILESETS),1)
+MODERN_DEFINE_FLAGS += -DFE8_NEW_TILESETS=1
+endif
 ifeq ($(PURCHASE_GENERICS),1)
 MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
 endif
@@ -1477,6 +1480,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--vesly-debugger "$(VESLY_DEBUGGER)" \
 		--danger-bones "$(DANGER_BONES)" \
 		--new-anims "$(NEW_ANIMS)" \
+		--new-tilesets "$(NEW_TILESETS)" \
 		--purchase-generics "$(PURCHASE_GENERICS)" \
 		--mmb "$(MMB)" \
 		--extend-desc-box "$(EXTEND_DESC_BOX)" \
@@ -1551,6 +1555,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--vesly-debugger "$(VESLY_DEBUGGER)" \
 	--danger-bones "$(DANGER_BONES)" \
 	--new-anims "$(NEW_ANIMS)" \
+	--new-tilesets "$(NEW_TILESETS)" \
 	--purchase-generics "$(PURCHASE_GENERICS)" \
 	--mmb "$(MMB)" \
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
@@ -1630,6 +1635,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER) \
 	-DFE8_DANGER_BONES=$(DANGER_BONES) \
 	-DFE8_NEW_ANIMS=$(NEW_ANIMS) \
+	-DFE8_NEW_TILESETS=$(NEW_TILESETS) \
 	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS) \
 	-DFE8_MMB=$(MMB) \
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
@@ -1805,6 +1811,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'vesly_debugger=$(VESLY_DEBUGGER)'; \
 		printf '%s\n' 'danger_bones=$(DANGER_BONES)'; \
 		printf '%s\n' 'new_anims=$(NEW_ANIMS)'; \
+		printf '%s\n' 'new_tilesets=$(NEW_TILESETS)'; \
 		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
 		printf '%s\n' 'mmb=$(MMB)'; \
 		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \

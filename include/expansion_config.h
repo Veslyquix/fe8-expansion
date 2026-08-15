@@ -296,6 +296,13 @@
 #define FE8_NEW_ANIMS 0
 #endif
 
+/* Custom community-sourced map tilesets for select chapters, swapped in for
+ * the vanilla tileset via gChapterDataAssetTable (see src/data/data_8B363C.c).
+ * Purely cosmetic; no gameplay/save-format effect. See CREDITS.md. */
+#ifndef FE8_NEW_TILESETS
+#define FE8_NEW_TILESETS 0
+#endif
+
 /* Purchasable generic-unit bases and temporary chapter gold economy. */
 #ifndef FE8_PURCHASE_GENERICS
 #define FE8_PURCHASE_GENERICS 0
@@ -409,6 +416,10 @@
 
 #if (FE8_NEW_ANIMS != 0) && (FE8_NEW_ANIMS != 1)
 #error "FE8_NEW_ANIMS must be 0 or 1"
+#endif
+
+#if (FE8_NEW_TILESETS != 0) && (FE8_NEW_TILESETS != 1)
+#error "FE8_NEW_TILESETS must be 0 or 1"
 #endif
 
 #if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)

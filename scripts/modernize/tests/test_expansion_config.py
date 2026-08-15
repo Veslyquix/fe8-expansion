@@ -1188,19 +1188,19 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
     def test_sample_with_hooks_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("1", "1", "0"),
-            (1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         )
 
     def test_all_off_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("0", "0", "0"),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         )
 
     def test_hooks_without_sample_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("1", "0", "1"),
-            (1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         )
 
     def test_content_defaults_off_for_legacy_three_argument_callers(self):
@@ -1209,7 +1209,7 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
         simply resolves the content flag to 0."""
         self.assertEqual(
             ec.validate_feature_flags("1", "1", "1"),
-            (1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         )
 
     def test_debuff_stack_requires_debuff_storage(self):
@@ -1222,7 +1222,7 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
     def test_debuff_stack_with_debuff_storage_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("0", "0", "0", debuffs_exist="1", debuffs_stack="1"),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0),
+            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0),
         )
 
 

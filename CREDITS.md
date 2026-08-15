@@ -2,14 +2,14 @@
 
 Third-party art/animation assets used by this expansion, and the artists who
 made them. This document is started with the battle-animation set pulled in
-for `CONFIG_NEW_ANIMS` (see below); add further sections as more external
+for `NEW_ANIMS` and `NEW_TILESETS` (see below); add further sections as more external
 content (portraits, map sprites, tilesets, etc.) is integrated.
 
 All entries below are sourced from the community
 [Klokinator/FE-Repo](https://github.com/Klokinator/FE-Repo) asset repository
 and are tagged **F2U/F2E** ("Free to Use / Free to Edit") by their authors.
 
-## Battle Animations (`CONFIG_NEW_ANIMS`)
+## Battle Animations (`NEW_ANIMS`)
 
 | Class | Pack | Credits |
 | --- | --- | --- |
@@ -21,6 +21,34 @@ and are tagged **F2U/F2E** ("Free to Use / Free to Edit") by their authors.
 | `CLASS_ARCHER` | [Archer-Reskin] FE5-Style [M] by Pushwall | Animation by Pushwall. |
 | `CLASS_CAVALIER` | [Cavalier-Variant] [M] Generic by SALVAGED v2 | Cavalier custom by SALVAGED. Upgraded version of the original SALVAGED cavalier; no female equivalent currently exists. |
 | `CLASS_PEGASUS_KNIGHT` | [Peg T1 Base] [F] Repal v2 + Weapons by Flasuban | Sword/Lance/Axe/Handaxe/Unarmed/Repalette by Flasuban. Unarmed palette fix by UltraFenix. Magic by UltraFenix, using Light Mage by Leo_link and L95 as a base. UltraFenix fixed a pixel mistake in all animations. |
+
+## Map Tilesets (`NEW_TILESETS`)
+
+| Chapter | Tileset | Credits |
+| --- | --- | --- |
+| Prologue | FE8 - Fields - Remaster - Super Fields (Object Palette: FE7 Darker Green) | Made by WAve, RandomWizard and Beast. |
+
+Enable with `NEW_TILESETS=1` (compiles as `FE8_NEW_TILESETS`). The pack ships
+several alternate object palettes; this build uses "FE7 Darker Green". To swap
+palette, re-run the converter against a different `2. ... Object Palette (X).png`
+from the same pack -- the tile graphics and mapchip config are shared, only the
+160-colour palette differs.
+
+Converted by `scripts/tileset_to_source.py`, which turns the FEBuilder export
+(an indexed "Object Palette" PNG plus a `.mapchip_config`) into the three
+sources this repo builds from -- `graphics/map/SuperFields{ObjectType.png,
+MapPalette.pal,TileConfiguration.S}`. Regenerate with:
+
+```bash
+python3 scripts/tileset_to_source.py --name SuperFields \
+    --palette-png "<pack>/2. ... Object Palette (FE7 Darker Green).png" \
+    --mapchip-config "<pack>/1. ....mapchip_config"
+```
+
+Graphics, palette and tile config are swapped together in
+`gChapterDataAssetTable` (`src/data/data_8B363C.c`): a tile config's indices and
+palette rows are only meaningful against its own sheet, so mixing them with the
+vanilla tileset would render garbage.
 
 ## How these are built
 

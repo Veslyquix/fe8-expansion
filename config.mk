@@ -154,6 +154,11 @@ DANGER_BONES ?= 1
 # (see CREDITS.md), in place of the vanilla animation. Purely cosmetic.
 NEW_ANIMS ?= 1
 
+# --- Optional custom map tilesets --------------------------------------------
+# Swaps in community-sourced map tilesets (see CREDITS.md) for the chapters
+# that use them. Purely cosmetic: graphics, palette and tile config only.
+NEW_TILESETS ?= 1
+
 # --- Optional gameplay features ---------------------------------------------
 # Adds chapter-scoped temporary gold and purchasable generic-unit bases on
 # eligible fort / empty-village terrain.

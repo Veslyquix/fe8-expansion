@@ -15,6 +15,14 @@ const u8 __attribute__((aligned(4))) ObjectType4[] = INCBIN_U8("graphics/map/Obj
 const u8 __attribute__((aligned(4))) ObjectType3[] = INCBIN_U8("graphics/map/ObjectType3.4bpp.lz");
 const u8 __attribute__((aligned(4))) ObjectType2[] = INCBIN_U8("graphics/map/ObjectType2.4bpp.lz");
 const u8 __attribute__((aligned(4))) ObjectType1[] = INCBIN_U8("graphics/map/ObjectType1.4bpp.lz");
+
+/* FE8_NEW_TILESETS: "FE8 - Fields - Remaster - Super Fields" (see CREDITS.md),
+ * converted by scripts/tileset_to_source.py. Linked unconditionally; only
+ * gChapterDataAssetTable (src/data/data_8B363C.c) selects between these and
+ * the vanilla assets, so the flag stays a pure data swap. */
+const u8 __attribute__((aligned(4))) SuperFieldsObjectType[] = INCBIN_U8("graphics/map/SuperFieldsObjectType.4bpp.lz");
+const u8 __attribute__((aligned(4))) SuperFieldsTileConfiguration[] = INCBIN_U8("graphics/map/SuperFieldsTileConfiguration.bin.lz");
+const u16 __attribute__((aligned(4))) SuperFieldsMapPalette[] = INCBIN_U16("graphics/map/SuperFieldsMapPalette.gbapal");
 const u8 __attribute__((aligned(4))) TowerOfValniTileConfiguration[] = INCBIN_U8("graphics/map/TowerOfValniTileConfiguration.bin.lz");
 const u8 __attribute__((aligned(4))) TileConfiguration10[] = INCBIN_U8("graphics/map/TileConfiguration10.bin.lz");
 const u8 __attribute__((aligned(4))) TileConfiguration9[] = INCBIN_U8("graphics/map/TileConfiguration9.bin.lz");

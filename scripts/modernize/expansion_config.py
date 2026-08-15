@@ -117,6 +117,7 @@ CONFIG_MK_FEATURE_KEYS = (
     "VESLY_DEBUGGER",
     "DANGER_BONES",
     "NEW_ANIMS",
+    "NEW_TILESETS",
     "PURCHASE_GENERICS",
     "MMB",
     "DEBUFFS_EXIST",
@@ -393,7 +394,7 @@ def validate_item_id_cap(value) -> int:
 
 def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
                            starter_content=0, vesly_debugger=0, danger_bones=0,
-                           new_anims=0,
+                           new_anims=0, new_tilesets=0,
                            purchase_generics=0, mmb=0, extend_desc_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
@@ -415,6 +416,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     debugger = validate_feature_flag("VESLY_DEBUGGER", vesly_debugger)
     bones = validate_feature_flag("DANGER_BONES", danger_bones)
     anims = validate_feature_flag("NEW_ANIMS", new_anims)
+    tilesets = validate_feature_flag("NEW_TILESETS", new_tilesets)
     generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
     mmb_flag = validate_feature_flag("MMB", mmb)
     desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
@@ -461,7 +463,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "warning-icon tiles it draws live in the icon sheet that flag "
             "loads"
         )
-    return (hooks, sample, danger, content, debugger, bones, anims, generics, mmb_flag, desc_box,
+    return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             ch_names, battle_stats, bars, credits_flag, campaign, skip_opening_flag)
 
@@ -672,6 +674,7 @@ class ExpansionIdentity:
     vesly_debugger: int = 0
     danger_bones: int = 0
     new_anims: int = 0
+    new_tilesets: int = 0
     purchase_generics: int = 0
     mmb: int = 0
     extend_desc_box: int = 0
@@ -736,6 +739,7 @@ class ExpansionIdentity:
                 "vesly_debugger": self.vesly_debugger,
                 "danger_bones": self.danger_bones,
                 "new_anims": self.new_anims,
+                "new_tilesets": self.new_tilesets,
                 "purchase_generics": self.purchase_generics,
                 "mmb": self.mmb,
                 "extend_desc_box": self.extend_desc_box,
@@ -788,6 +792,7 @@ def load_identity(
     vesly_debugger=None,
     danger_bones=None,
     new_anims=None,
+    new_tilesets=None,
     purchase_generics=None,
     mmb=None,
     extend_desc_box=None,
@@ -858,7 +863,7 @@ def load_identity(
         resolved_enabled_locales,
     )
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
-     resolved_bones, resolved_anims, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
+     resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
      resolved_ch_names, resolved_battle_stats,
      resolved_hp_bars, resolved_credits,
@@ -884,6 +889,9 @@ def load_identity(
         new_anims
         if new_anims not in (None, "")
         else cfg.get("NEW_ANIMS", "0"),
+        new_tilesets
+        if new_tilesets not in (None, "")
+        else cfg.get("NEW_TILESETS", "0"),
         purchase_generics
         if purchase_generics not in (None, "")
         else cfg.get("PURCHASE_GENERICS", "0"),
@@ -959,6 +967,7 @@ def load_identity(
         vesly_debugger=resolved_debugger,
         danger_bones=resolved_bones,
         new_anims=resolved_anims,
+        new_tilesets=resolved_tilesets,
         purchase_generics=resolved_generics,
         mmb=resolved_mmb,
         extend_desc_box=resolved_desc_box,
@@ -1093,6 +1102,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--new-anims",
         default=None,
         help="override NEW_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
+        "--new-tilesets",
+        default=None,
+        help="override NEW_TILESETS (0 or 1)",
     )
     parser.add_argument(
         "--purchase-generics",
@@ -1232,6 +1246,7 @@ def main(argv=None) -> int:
             vesly_debugger=args.vesly_debugger,
             danger_bones=args.danger_bones,
             new_anims=args.new_anims,
+            new_tilesets=args.new_tilesets,
             purchase_generics=args.purchase_generics,
             mmb=args.mmb,
             extend_desc_box=args.extend_desc_box,
