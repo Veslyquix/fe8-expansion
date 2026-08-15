@@ -22,5 +22,33 @@ and are tagged **F2U/F2E** ("Free to Use / Free to Edit") by their authors.
 | `CLASS_CAVALIER` | [Cavalier-Variant] [M] Generic by SALVAGED v2 | Cavalier custom by SALVAGED. Upgraded version of the original SALVAGED cavalier; no female equivalent currently exists. |
 | `CLASS_PEGASUS_KNIGHT` | [Peg T1 Base] [F] Repal v2 + Weapons by Flasuban | Sword/Lance/Axe/Handaxe/Unarmed/Repalette by Flasuban. Unarmed palette fix by UltraFenix. Magic by UltraFenix, using Light Mage by Leo_link and L95 as a base. UltraFenix fixed a pixel mistake in all animations. |
 
-Status: credits recorded; asset integration into `banim/` and the
-`CONFIG_NEW_ANIMS` build flag is in progress — see project notes.
+## How these are built
+
+Enable with `NEW_ANIMS=1` (see `config.mk`; compiles as `FE8_NEW_ANIMS`).
+Default is off, and with it off the ROM keeps the stock animations exactly.
+
+The packs above are compiled to Event Assembler `.event` installers by
+AA.exe (Klokinator's `FE-Repo` toolchain, run on Windows), then converted to
+this repo's banim sources by `scripts/banim_event_to_source.py`, which emits:
+
+* `banim/banim_new<class>_<weapon>_script.s` — the frame/AnimScr stream,
+  **uncompressed**; `linker_script_banim.txt` applies `>lz` so the engine's
+  single runtime `LZ77UnCompWram` lands on correctly-compressed data.
+* `banim/banim_new<class>_<weapon>_{oam.bin.lz,modes.bin}` and
+  `graphics/banim/banim_new<class>_<weapon>{.agbpal.lz,_sheet_N.4bpp.lz}`.
+
+Wiring lives in `src/banim_data.c` (slots `0xC9`–`0xE7`),
+`src/data_banimconf.c` (the per-class `AnimConf_*` tables) and
+`src/opinfo.c` (`gClassReelData`, read ahead of `pBattleAnimDef` by the
+class-reel/unit-preview surfaces). Regenerate with:
+
+```bash
+python3 scripts/banim_event_to_source.py
+```
+
+Four things are easy to get wrong here and are handled by the converter:
+`.index` in `struct BattleAnimDef` is **one-based** (`GetBattleAnimationId`
+returns `idx - 1`); `_modes.bin` must be padded to the vanilla 96-byte
+footprint; AA.exe's frame data arrives already LZ77-compressed and must not
+be compressed twice; and ranged axes match on **exact item id**
+(`wtype < 0x100`) rather than weapon type.

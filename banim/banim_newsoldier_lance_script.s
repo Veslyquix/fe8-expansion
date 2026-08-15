@@ -1,7 +1,7 @@
 @ vim:ft=armv4
-@ Generated for FE8_NEW_ANIMS (CLASS_SOLDIER, lance) -- source: FE-Repo
-@ "[Soldier-Custom] FE10-Style [M] by Flasuban" (see CREDITS.md), compiled by
-@ AA.exe and converted by scripts/banim_event_to_source.py.
+@ Generated for FE8_NEW_ANIMS (soldier, lance) -- FE-Repo pack
+@ "[SoldierCustom]_FE10Style_[M]_by_Flasuban" (see CREDITS.md), compiled by AA.exe and converted by
+@ scripts/banim_event_to_source.py. Do not edit by hand; re-run the script.
 @
 @ UNCOMPRESSED on purpose: linker_script_banim.txt applies ">lz" to this
 @ section, and the engine LZ77-decompresses it exactly once at runtime.

@@ -2075,14 +2075,59 @@ u8* CONST_DATA gOpinfo_1[] = {
 struct ClassReelEnt CONST_DATA gClassReelData[65] = {
     [0x00] = { 0x6F6, 0xFF, CLASS_EIRIKA_LORD, 0, 0x02, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 },
     [0x01] = { 0x6FA, 0x3B, CLASS_PALADIN, 0, 0x3A, 0, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_2 },
+    /* FE8_NEW_ANIMS: knight lance -> banim_data[0xD3], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x02] = { 0x6FB, 0xFF, CLASS_ARMOR_KNIGHT, 0, 0xD3, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
+#else
     [0x02] = { 0x6FB, 0x02, CLASS_ARMOR_KNIGHT, 0, 0x3F, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
+#endif
+    /* FE8_NEW_ANIMS: cavalier sword -> banim_data[0xDC], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x03] = { 0x6F9, 0xFF, CLASS_CAVALIER, 0, 0xDC, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
+#else
     [0x03] = { 0x6F9, 0xFF, CLASS_CAVALIER, 0, 0x33, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
+#endif
+    /* FE8_NEW_ANIMS: pegasus lance -> banim_data[0xE3], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x04] = { 0x71C, 0xFF, CLASS_PEGASUS_KNIGHT, 0, 0xE3, 0, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_0 },
+#else
     [0x04] = { 0x71C, 0x3F, CLASS_PEGASUS_KNIGHT, 0, 0x65, 0, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_0 },
+#endif
     [0x05] = { 0x71A, 0x44, CLASS_PRIEST, 0, 0x7E, 0x03, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_8 },
     [0x06] = { 0x70E, 0xFF, CLASS_JOURNEYMAN, 0, 0x91, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
+    /* FE8_NEW_ANIMS: fighter axe -> banim_data[0xCF], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x07] = { 0x711, 0xFF, CLASS_FIGHTER, 0, 0xCF, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
+#else
     [0x07] = { 0x711, 0x1D, CLASS_FIGHTER, 0, 0x18, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
+#endif
     [0x08] = { 0x6FD, 0x5D, CLASS_THIEF, 0, 0x88, 0, 0, 0, 0, 0, 0x1C, 0x1C, 0, sClassReelScr_Opinfo_0 },
+    /* FE8_NEW_ANIMS: archer bow -> banim_data[0xDA], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x09] = { 0x703, 0xFF, CLASS_ARCHER, 0, 0xDA, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+#else
     [0x09] = { 0x703, 0, CLASS_ARCHER, 0, 0x27, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+#endif
     [0x0A] = { 0x709, 0x2E, CLASS_MAGE_F, 0, 0x6B, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
     [0x0B] = { 0x719, 0x36, CLASS_MONK, 0, 0x7C, 0x04, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_7 },
     [0x0C] = { 0x725, 0xFF, CLASS_REVENANT, 0x01, 0x9F, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_2 },
@@ -2094,10 +2139,28 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
     [0x12] = { 0x71E, 0x42, CLASS_CLERIC, 0, 0x7F, 0x03, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_8 },
     [0x13] = { 0x6F5, 0xFF, CLASS_EPHRAIM_LORD, 0, 0, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 },
     [0x14] = { 0x723, 0xFF, CLASS_PIRATE, 0x01, 0x99, 0, 0, 0, 0, 0, 0x0C, 0x0C, 0, sClassReelScr_Opinfo_0 },
+    /* FE8_NEW_ANIMS: brigand axe -> banim_data[0xCC], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x15] = { 0x713, 0xFF, CLASS_BRIGAND, 0x01, 0xCC, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_0 },
+#else
     [0x15] = { 0x713, 0xFF, CLASS_BRIGAND, 0x01, 0x1F, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_0 },
+#endif
     [0x16] = { 0x716, 0xFF, CLASS_SHAMAN, 0x01, 0x74, 0x05, 0, 0, 0, 0, 0x15, 0x15, 0, sClassReelScr_Opinfo_11 },
     [0x17] = { 0x704, 0x51, CLASS_SNIPER, 0, 0x29, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_1 },
+    /* FE8_NEW_ANIMS: merc sword -> banim_data[0xD8], and paletteId forced to
+     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
+     * overwrite the animation's own palette with the vanilla per-character
+     * palette, which is indexed for the vanilla sprite and lands on the wrong
+     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+#if FE8_NEW_ANIMS
+    [0x18] = { 0x6FE, 0xFF, CLASS_MERCENARY, 0, 0xD8, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
+#else
     [0x18] = { 0x6FE, 0x30, CLASS_MERCENARY, 0, 0x0A, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
+#endif
     [0x19] = { 0x721, 0x14, CLASS_DANCER, 0, 0x90, 0, 0, 0, 0, 0, 0x0E, 0x0E, 0, sClassReelScr_Opinfo_9 },
     [0x1A] = { 0x70F, 0xFF, CLASS_PUPIL, 0, 0x94, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_6 },
     [0x1B] = { 0x700, 0xFF, CLASS_MYRMIDON_F, 0, 0x12, 0, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_0 },

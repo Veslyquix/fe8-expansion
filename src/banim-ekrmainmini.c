@@ -1,4 +1,5 @@
 #include "global.h"
+#include "banim_new_anims.h"
 #include "proc.h"
 #include "anime.h"
 #include "ekrbattle.h"
@@ -364,7 +365,7 @@ void InitMainMiniAnim(struct AnimBuffer * pAnimBuf)
     {
         u32 * p;
         puVar8 = pAnimBuf->unk_24;
-        LZ77UnCompWram(ba2->oam_l, puVar8);
+        BANIM_UNCOMP_OAM_L(ba2, puVar8);
         p = (puVar8 + 0x15FC);
         *p = 1;
     }
@@ -481,7 +482,7 @@ void RestartMainMiniAnim(struct AnimBuffer * pAnimBuf)
     {
         u32 * p;
         puVar8 = pAnimBuf->unk_24;
-        LZ77UnCompWram(ba2->oam_l, puVar8);
+        BANIM_UNCOMP_OAM_L(ba2, puVar8);
         p = (puVar8 + 0x15FC);
         *p = 1;
     }

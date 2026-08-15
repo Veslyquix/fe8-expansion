@@ -37,17 +37,42 @@ EVENT_DIR = os.environ.get(
     "BANIM_EVENT_DIR",
     "/mnt/c/Users/David/Desktop/SRR_FEGBA/gfx/Anims/event")
 
-WEAPONS = {
-    "sword": ("[SoldierCustom]_FE10Style_[M]_by_Flasuban_Sword Installer.event", "Sword"),
-    "lance": ("[SoldierCustom]_FE10Style_[M]_by_Flasuban_Lance Installer.event", "Lance"),
-    "unarmed": ("[SoldierCustom]_FE10Style_[M]_by_Flasuban_Unarmed Installer.event", "Unarmed"),
+PACK_PREFIX = {
+    "soldier":  "[SoldierCustom]_FE10Style_[M]_by_Flasuban",
+    "brigand":  "[BrigandReskin]_FullyClothed_[M]_by_Flasuban",
+    "fighter":  "[FighterVariant]_FE9_Repal_[M]_by_Glenwing",
+    "knight":   "[KnightVariant]_Generic_[M]_by_SALVAGED",
+    "merc":     "[MercenaryReskin]_Armored_SALVAGED_Style_[M]",
+    "archer":   "[ArcherReskin]_FE5Style_[M]_by_Pushwall",
+    "cavalier": "[CavalierVariant]_[M]_Generic_by_SALVAGED_v2",
+    "pegasus":  "[Peg_T1_Base]_[F]_Repal_v2_+_Weapons_by_Flasuban",
 }
-ABBR = {"sword": "newsldsw1", "lance": "newsldln1", "unarmed": "newsldun1"}
+
+# Order here fixes banim_data[] slot assignment; soldier occupies 0xC9..0xCB.
+PACK_WEAPONS = [
+    ("soldier",  ["Sword", "Lance", "Unarmed"]),
+    ("brigand",  ["Axe", "Handaxe", "Unarmed"]),
+    ("fighter",  ["Axe", "Handaxe", "Unarmed"]),
+    ("knight",   ["Sword", "Lance", "Axe", "Handaxe", "Bow", "Unarmed"]),
+    ("merc",     ["Sword", "Unarmed"]),
+    ("archer",   ["Bow", "Unarmed"]),
+    ("cavalier", ["Sword", "Lance", "Axe", "Handaxe", "Bow", "Unarmed"]),
+    ("pegasus",  ["Sword", "Lance", "Axe", "Handaxe", "Magic", "Unarmed"]),
+]
+
+FIRST_SLOT = 0xC9  # first free banim_data[] slot after the 201 vanilla entries
+
+# struct BattleAnim::abbr is char[12] -> <= 11 chars.
+CLASS_TAG  = {"soldier": "sld", "brigand": "brg", "fighter": "fig", "knight": "knt",
+              "merc": "mrc", "archer": "arc", "cavalier": "cav", "pegasus": "peg"}
+WEAPON_TAG = {"Sword": "sw", "Lance": "ln", "Axe": "ax", "Handaxe": "hx",
+              "Bow": "bw", "Magic": "mg", "Unarmed": "un"}
 
 SENTINEL_BASE = 0xE5000000  # far outside valid cmd (0x80/0x85/0x86) & ptr (0x08xx) space
 
 
-def read_event(fname):
+def read_event(pack, weapon):
+    fname = f"{PACK_PREFIX[pack]}_{weapon} Installer.event"
     return open(os.path.join(EVENT_DIR, fname), errors="ignore").read()
 
 
@@ -142,57 +167,61 @@ def emit_script_asm(decompressed, sentinel_positions, sheet_syms, sym):
 
 
 def main():
-    banim_dir, gfx_dir = os.path.join(REPO, "banim"), os.path.join(REPO, "graphics", "banim")
-    manifest, pointers, structs = [], [], []
+    banim_dir = os.path.join(REPO, "banim")
+    gfx_dir = os.path.join(REPO, "graphics", "banim")
+    manifest, pointers, structs, report = [], [], [], []
+    slot = FIRST_SLOT
 
-    for weapon, (fname, animname) in WEAPONS.items():
-        text = read_event(fname)
-        sym = f"banim_newsoldier_{weapon}"
+    for pack, weapons in PACK_WEAPONS:
+        manifest.append(f"# ---- {pack} (FE8_NEW_ANIMS) ----")
+        for weapon in weapons:
+            text = read_event(pack, weapon)
+            animname = weapon
+            sym = f"banim_new{pack}_{weapon.lower()}"
 
-        modes = extract_raw_bytes(text, f"Anim_{animname}_sectiondata:")
-        assert len(modes) == 48, f"{weapon}: expected 48B mode table, got {len(modes)}"
-        modes = modes + b'\x00' * 48                      # -> vanilla 96B footprint
+            modes = extract_raw_bytes(text, f"Anim_{animname}_sectiondata:")
+            assert len(modes) == 48, f"{sym}: expected 48B mode table, got {len(modes)}"
+            modes = modes + b"\x00" * 48                    # -> vanilla 96B footprint
 
-        oam = extract_raw_bytes(text, f"Anim_{animname}_rtl:")        # already LZ77
-        pal = extract_raw_bytes(text, f"Anim_{animname}_pal:")        # already LZ77
-        sheets = [extract_raw_bytes(text, f"Anim_{animname}_Sheet_{i+1}:")
-                  for i in range(count_sheets(text, animname))]       # already LZ77
+            oam = extract_raw_bytes(text, f"Anim_{animname}_rtl:")     # already LZ77
+            pal = extract_raw_bytes(text, f"Anim_{animname}_pal:")     # already LZ77
+            sheets = [extract_raw_bytes(text, f"Anim_{animname}_Sheet_{i+1}:")
+                      for i in range(count_sheets(text, animname))]    # already LZ77
 
-        compressed, refs = build_compressed_with_sentinels(text, animname)
-        script = lz77_decompress(compressed)
+            compressed, refs = build_compressed_with_sentinels(text, animname)
+            script = lz77_decompress(compressed)
 
-        # Locate every sentinel occurrence in the decompressed stream.
-        sentinel_positions = {}
-        for i, sheet_no in enumerate(refs):
-            needle = (SENTINEL_BASE | i).to_bytes(4, 'little')
-            start, found = 0, 0
-            while True:
-                at = script.find(needle, start)
-                if at == -1:
-                    break
-                assert at % 4 == 0, f"{weapon}: sentinel {i} at unaligned offset {at}"
-                sentinel_positions[at] = sheet_no - 1     # .event Sheet_N is 1-based
-                found += 1
-                start = at + 4
-            assert found >= 1, f"{weapon}: sentinel {i} vanished during decompression"
+            sentinel_positions = {}
+            for i, sheet_no in enumerate(refs):
+                needle = (SENTINEL_BASE | i).to_bytes(4, "little")
+                start, found = 0, 0
+                while True:
+                    at = script.find(needle, start)
+                    if at == -1:
+                        break
+                    assert at % 4 == 0, f"{sym}: sentinel {i} unaligned at {at}"
+                    sentinel_positions[at] = sheet_no - 1
+                    found += 1
+                    start = at + 4
+                assert found >= 1, f"{sym}: sentinel {i} lost during decompression"
 
-        sheet_syms = []
-        for i, blob in enumerate(sheets):
-            sheet_syms.append(f"{sym}_sheet_{i}")
-            open(os.path.join(gfx_dir, f"{sym}_sheet_{i}.4bpp.lz"), "wb").write(blob)
-        for n in set(sentinel_positions.values()):
-            assert 0 <= n < len(sheet_syms), f"{weapon}: sheet index {n} out of range"
+            sheet_syms = []
+            for i, blob in enumerate(sheets):
+                sheet_syms.append(f"{sym}_sheet_{i}")
+                open(os.path.join(gfx_dir, f"{sym}_sheet_{i}.4bpp.lz"), "wb").write(blob)
+            for n in set(sentinel_positions.values()):
+                assert 0 <= n < len(sheet_syms), f"{sym}: sheet index {n} out of range"
 
-        open(os.path.join(banim_dir, f"{sym}_modes.bin"), "wb").write(modes)
-        open(os.path.join(banim_dir, f"{sym}_oam.bin.lz"), "wb").write(oam)
-        open(os.path.join(gfx_dir, f"{sym}.agbpal.lz"), "wb").write(pal)
+            open(os.path.join(banim_dir, f"{sym}_modes.bin"), "wb").write(modes)
+            open(os.path.join(banim_dir, f"{sym}_oam.bin.lz"), "wb").write(oam)
+            open(os.path.join(gfx_dir, f"{sym}.agbpal.lz"), "wb").write(pal)
 
-        body = emit_script_asm(script, sentinel_positions, sheet_syms, sym)
-        with open(os.path.join(banim_dir, f"{sym}_script.s"), "w") as f:
-            f.write(f"""@ vim:ft=armv4
-@ Generated for FE8_NEW_ANIMS (CLASS_SOLDIER, {weapon}) -- source: FE-Repo
-@ "[Soldier-Custom] FE10-Style [M] by Flasuban" (see CREDITS.md), compiled by
-@ AA.exe and converted by scripts/banim_event_to_source.py.
+            body = emit_script_asm(script, sentinel_positions, sheet_syms, sym)
+            with open(os.path.join(banim_dir, f"{sym}_script.s"), "w") as f:
+                f.write(f"""@ vim:ft=armv4
+@ Generated for FE8_NEW_ANIMS ({pack}, {weapon.lower()}) -- FE-Repo pack
+@ "{PACK_PREFIX[pack]}" (see CREDITS.md), compiled by AA.exe and converted by
+@ scripts/banim_event_to_source.py. Do not edit by hand; re-run the script.
 @
 @ UNCOMPRESSED on purpose: linker_script_banim.txt applies ">lz" to this
 @ section, and the engine LZ77-decompresses it exactly once at runtime.
@@ -202,31 +231,38 @@ def main():
 {body}
 """)
 
-        pal_l = f"graphics/banim/{sym}.agbpal.lz"
-        oam_l = f"banim/{sym}_oam.bin.lz"
-        scr_l = f"banim/{sym}_script.o|.data.script>lz"
-        mod_l = f"banim/{sym}_modes.bin"
+            pal_l = f"graphics/banim/{sym}.agbpal.lz"
+            oam_l = f"banim/{sym}_oam.bin.lz"
+            scr_l = f"banim/{sym}_script.o|.data.script>lz"
+            mod_l = f"banim/{sym}_modes.bin"
+            manifest += [f"graphics/banim/{x}.4bpp.lz" for x in sheet_syms]
+            manifest += [pal_l, oam_l, scr_l, mod_l]
 
-        manifest.append(f"# --- {sym} ({weapon}) ---")
-        manifest += [f"graphics/banim/{s}.4bpp.lz" for s in sheet_syms]
-        manifest += [pal_l, oam_l, scr_l, mod_l]
+            def label(path):
+                lbl = os.path.basename(path.split("|")[0].split(">")[0]).split(".")
+                return lbl[0] if lbl[1] == "4bpp" else lbl[0] + "_" + lbl[1]
 
-        def label(p):
-            lbl = os.path.basename(p.split('|')[0].split('>')[0]).split('.')
-            return lbl[0] if lbl[1] == '4bpp' else lbl[0] + '_' + lbl[1]
-
-        m_s, s_s, o_s, p_s = label(mod_l), f"{sym}_script_o", label(oam_l), label(pal_l)
-        pointers += [f"extern int {m_s};", f"extern char {s_s};",
-                     f"extern char {o_s};", f"extern char {p_s};"]
-        structs.append(f'    {{"{ABBR[weapon]}", &{m_s}, &{s_s}, &{o_s}, &{o_s}, &{p_s}}},')
-
-        print(f"{weapon}: {len(sheets)} sheets, script {len(compressed)}B lz -> "
-              f"{len(script)}B raw ({len(script)//4} words), "
-              f"{len(refs)} sheet refs -> {len(sentinel_positions)} sites, modes {len(modes)}B")
+            m_s, s_s = label(mod_l), f"{sym}_script_o"
+            o_s, p_s = label(oam_l), label(pal_l)
+            pointers += [f"extern int {m_s};", f"extern char {s_s};",
+                         f"extern char {o_s};", f"extern char {p_s};"]
+            abbr = f"new{CLASS_TAG[pack]}{WEAPON_TAG[weapon]}1"
+            assert len(abbr) <= 11, abbr
+            structs.append(
+                f'    {{"{abbr}", &{m_s}, &{s_s}, &{o_s}, &{o_s}, &{p_s}}}, '
+                f'// 0x{slot:02X} {pack} {weapon.lower()}')
+            report.append((pack, weapon, slot, len(sheets), len(script)))
+            slot += 1
 
     open(os.path.join(REPO, "_snip_manifest.txt"), "w").write("\n".join(manifest) + "\n")
     open(os.path.join(REPO, "_snip_pointers.h"), "w").write("\n".join(pointers) + "\n")
     open(os.path.join(REPO, "_snip_struct.c"), "w").write("\n".join(structs) + "\n")
+
+    for pack, weapon, sl, ns, ls in report:
+        print(f"  slot 0x{sl:02X} (.index 0x{sl+1:02X})  {pack:9} {weapon:8} "
+              f"{ns} sheets, {ls}B script")
+    print(f"\n{len(report)} animations, slots 0x{FIRST_SLOT:02X}..0x{slot-1:02X}, "
+          f"new banim_number = {slot}")
 
 
 if __name__ == "__main__":

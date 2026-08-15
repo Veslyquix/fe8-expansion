@@ -51,19 +51,65 @@ CONST_DATA struct BattleAnimDef AnimConf_3[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_4[] = {
     {
         .wtype = 0x0100 | ITYPE_SWORD,
+#if FE8_NEW_ANIMS
+        .index = 0x00DD,
+#else
         .index = 0x0034,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_LANCE,
+#if FE8_NEW_ANIMS
+        .index = 0x00DE,
+#else
         .index = 0x0035,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00E2,
+#else
         .index = 0x0036,
+#endif
     },
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x00DF,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00E1,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_HANDAXE,
+        .index = 0x00E0,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_TOMAHAWK,
+        .index = 0x00E0,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_HATCHET,
+        .index = 0x00E0,
+    },
+#endif
     { 0 }
 };
 
@@ -115,15 +161,63 @@ CONST_DATA struct BattleAnimDef AnimConf_7[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_8[] = {
     {
         .wtype = 0x0100 | ITYPE_LANCE,
+#if FE8_NEW_ANIMS
+        .index = 0x00D4,
+#else
         .index = 0x0040,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00D8,
+#else
         .index = 0x0041,
+#endif
     },
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00D3,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x00D5,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00D7,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_HANDAXE,
+        .index = 0x00D6,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_TOMAHAWK,
+        .index = 0x00D6,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_HATCHET,
+        .index = 0x00D6,
+    },
+#endif
     { 0 }
 };
 
@@ -227,14 +321,26 @@ CONST_DATA struct BattleAnimDef AnimConf_13[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_14[] = {
     {
         .wtype = 0x0100 | ITYPE_SWORD,
+#if FE8_NEW_ANIMS
+        .index = 0x00D9,
+#else
         .index = 0x000B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00DA,
+#else
         .index = 0x000C,
+#endif
     },
     { 0 }
 };
@@ -379,14 +485,26 @@ CONST_DATA struct BattleAnimDef AnimConf_23[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_24[] = {
     {
         .wtype = 0x0100 | ITYPE_BOW,
+#if FE8_NEW_ANIMS
+        .index = 0x00DB,
+#else
         .index = 0x0026,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00DC,
+#else
         .index = 0x0027,
+#endif
     },
     {
         .wtype = ITEM_BALLISTA_REGULAR,
@@ -1119,26 +1237,50 @@ CONST_DATA struct BattleAnimDef AnimConf_60[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_61[] = {
     {
         .wtype = 0x0100 | ITYPE_AXE,
+#if FE8_NEW_ANIMS
+        .index = 0x00D0,
+#else
         .index = 0x0019,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00D2,
+#else
         .index = 0x001B,
+#endif
     },
     {
         .wtype = ITEM_AXE_HANDAXE,
+#if FE8_NEW_ANIMS
+        .index = 0x00D1,
+#else
         .index = 0x001A,
+#endif
     },
     {
         .wtype = ITEM_AXE_TOMAHAWK,
+#if FE8_NEW_ANIMS
+        .index = 0x00D1,
+#else
         .index = 0x001A,
+#endif
     },
     {
         .wtype = ITEM_AXE_HATCHET,
+#if FE8_NEW_ANIMS
+        .index = 0x00D1,
+#else
         .index = 0x001A,
+#endif
     },
     { 0 }
 };
@@ -1171,26 +1313,50 @@ CONST_DATA struct BattleAnimDef AnimConf_62[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_63[] = {
     {
         .wtype = 0x0100 | ITYPE_AXE,
+#if FE8_NEW_ANIMS
+        .index = 0x00CD,
+#else
         .index = 0x0020,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00CF,
+#else
         .index = 0x0022,
+#endif
     },
     {
         .wtype = ITEM_AXE_HANDAXE,
+#if FE8_NEW_ANIMS
+        .index = 0x00CE,
+#else
         .index = 0x0021,
+#endif
     },
     {
         .wtype = ITEM_AXE_TOMAHAWK,
+#if FE8_NEW_ANIMS
+        .index = 0x00CE,
+#else
         .index = 0x0021,
+#endif
     },
     {
         .wtype = ITEM_AXE_HATCHET,
+#if FE8_NEW_ANIMS
+        .index = 0x00CE,
+#else
         .index = 0x0021,
+#endif
     },
     { 0 }
 };
@@ -1287,15 +1453,75 @@ CONST_DATA struct BattleAnimDef AnimConf_68[] = {
     { 0 }
 };
 
+/* FE8_NEW_ANIMS: custom animation set from an FE-Repo pack (see CREDITS.md).
+ * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
+ * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
+ * exact item id (wtype < 0x100, first pass) rather than weapon type. */
 CONST_DATA struct BattleAnimDef AnimConf_69[] = {
     {
         .wtype = 0x0100 | ITYPE_LANCE,
+#if FE8_NEW_ANIMS
+        .index = 0x00E4,
+#else
         .index = 0x0066,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00E8,
+#else
         .index = 0x0067,
+#endif
     },
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00E3,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x00E5,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x00E7,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x00E7,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x00E7,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_HANDAXE,
+        .index = 0x00E6,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_TOMAHAWK,
+        .index = 0x00E6,
+    },
+#endif
+#if FE8_NEW_ANIMS
+    {
+        .wtype = ITEM_AXE_HATCHET,
+        .index = 0x00E6,
+    },
+#endif
     { 0 }
 };
 
