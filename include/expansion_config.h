@@ -288,9 +288,22 @@
 #define FE8_DANGER_BONES 0
 #endif
 
+/* Custom community-sourced battle animation sets for select classes,
+ * swapped in for the vanilla animation via each class's pBattleAnimDef
+ * (see src/data_classes.c / src/data_banimconf.c). Purely cosmetic; no
+ * gameplay/save-format effect. See CREDITS.md for the per-class attribution. */
+#ifndef FE8_NEW_ANIMS
+#define FE8_NEW_ANIMS 0
+#endif
+
 /* Purchasable generic-unit bases and temporary chapter gold economy. */
 #ifndef FE8_PURCHASE_GENERICS
 #define FE8_PURCHASE_GENERICS 0
+#endif
+
+/* Mini Mug Box side window plus the C Gorgon Egg hatch phase display. */
+#ifndef FE8_MMB
+#define FE8_MMB 0
 #endif
 
 /* Modern-build port of ExtendWeaponDescBox (extends the item/weapon help box
@@ -394,8 +407,16 @@
 #error "FE8_DANGER_BONES must be 0 or 1"
 #endif
 
+#if (FE8_NEW_ANIMS != 0) && (FE8_NEW_ANIMS != 1)
+#error "FE8_NEW_ANIMS must be 0 or 1"
+#endif
+
 #if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)
 #error "FE8_PURCHASE_GENERICS must be 0 or 1"
+#endif
+
+#if (FE8_MMB != 0) && (FE8_MMB != 1)
+#error "FE8_MMB must be 0 or 1"
 #endif
 
 #if (FE8_EXTEND_DESC_BOX != 0) && (FE8_EXTEND_DESC_BOX != 1)

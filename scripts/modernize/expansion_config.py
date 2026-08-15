@@ -116,7 +116,9 @@ CONFIG_MK_FEATURE_KEYS = (
     "EXPANSION_STARTER_CONTENT",
     "VESLY_DEBUGGER",
     "DANGER_BONES",
+    "NEW_ANIMS",
     "PURCHASE_GENERICS",
+    "MMB",
     "DEBUFFS_EXIST",
     "DEBUFFS_STACK",
     "CUSTOM_CAMPAIGN",
@@ -391,7 +393,8 @@ def validate_item_id_cap(value) -> int:
 
 def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
                            starter_content=0, vesly_debugger=0, danger_bones=0,
-                           purchase_generics=0, extend_desc_box=0,
+                           new_anims=0,
+                           purchase_generics=0, mmb=0, extend_desc_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
@@ -411,7 +414,9 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     content = validate_feature_flag("EXPANSION_STARTER_CONTENT", starter_content)
     debugger = validate_feature_flag("VESLY_DEBUGGER", vesly_debugger)
     bones = validate_feature_flag("DANGER_BONES", danger_bones)
+    anims = validate_feature_flag("NEW_ANIMS", new_anims)
     generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
+    mmb_flag = validate_feature_flag("MMB", mmb)
     desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
     overflow_checks = validate_feature_flag("OVERFLOW_SAFETY_CHECKS", overflow_safety_checks)
     obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
@@ -456,7 +461,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "warning-icon tiles it draws live in the icon sheet that flag "
             "loads"
         )
-    return (hooks, sample, danger, content, debugger, bones, generics, desc_box,
+    return (hooks, sample, danger, content, debugger, bones, anims, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             ch_names, battle_stats, bars, credits_flag, campaign, skip_opening_flag)
 
@@ -666,7 +671,9 @@ class ExpansionIdentity:
     starter_content: int = 0
     vesly_debugger: int = 0
     danger_bones: int = 0
+    new_anims: int = 0
     purchase_generics: int = 0
+    mmb: int = 0
     extend_desc_box: int = 0
     overflow_safety_checks: int = 1
     display_obtainable_item: int = 0
@@ -728,7 +735,9 @@ class ExpansionIdentity:
                 "starter_content": self.starter_content,
                 "vesly_debugger": self.vesly_debugger,
                 "danger_bones": self.danger_bones,
+                "new_anims": self.new_anims,
                 "purchase_generics": self.purchase_generics,
+                "mmb": self.mmb,
                 "extend_desc_box": self.extend_desc_box,
                 "overflow_safety_checks": self.overflow_safety_checks,
                 "display_obtainable_item": self.display_obtainable_item,
@@ -778,7 +787,9 @@ def load_identity(
     starter_content=None,
     vesly_debugger=None,
     danger_bones=None,
+    new_anims=None,
     purchase_generics=None,
+    mmb=None,
     extend_desc_box=None,
     overflow_safety_checks=None,
     display_obtainable_item=None,
@@ -847,7 +858,7 @@ def load_identity(
         resolved_enabled_locales,
     )
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
-     resolved_bones, resolved_generics, resolved_desc_box, resolved_overflow_checks,
+     resolved_bones, resolved_anims, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
      resolved_ch_names, resolved_battle_stats,
      resolved_hp_bars, resolved_credits,
@@ -870,9 +881,15 @@ def load_identity(
         danger_bones
         if danger_bones not in (None, "")
         else cfg.get("DANGER_BONES", "0"),
+        new_anims
+        if new_anims not in (None, "")
+        else cfg.get("NEW_ANIMS", "0"),
         purchase_generics
         if purchase_generics not in (None, "")
         else cfg.get("PURCHASE_GENERICS", "0"),
+        mmb
+        if mmb not in (None, "")
+        else cfg.get("MMB", "0"),
         extend_desc_box
         if extend_desc_box not in (None, "")
         else cfg.get("EXTEND_DESC_BOX", "0"),
@@ -941,7 +958,9 @@ def load_identity(
         starter_content=resolved_content,
         vesly_debugger=resolved_debugger,
         danger_bones=resolved_bones,
+        new_anims=resolved_anims,
         purchase_generics=resolved_generics,
+        mmb=resolved_mmb,
         extend_desc_box=resolved_desc_box,
         overflow_safety_checks=resolved_overflow_checks,
         display_obtainable_item=resolved_obtainable_item,
@@ -1071,9 +1090,19 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override DANGER_BONES (0 or 1)",
     )
     parser.add_argument(
+        "--new-anims",
+        default=None,
+        help="override NEW_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
         "--purchase-generics",
         default=None,
         help="override PURCHASE_GENERICS (0 or 1)",
+    )
+    parser.add_argument(
+        "--mmb",
+        default=None,
+        help="override MMB (0 or 1)",
     )
     parser.add_argument(
         "--extend-desc-box",
@@ -1202,7 +1231,9 @@ def main(argv=None) -> int:
             starter_content=args.starter_content,
             vesly_debugger=args.vesly_debugger,
             danger_bones=args.danger_bones,
+            new_anims=args.new_anims,
             purchase_generics=args.purchase_generics,
+            mmb=args.mmb,
             extend_desc_box=args.extend_desc_box,
             overflow_safety_checks=args.overflow_safety_checks,
             display_obtainable_item=args.display_obtainable_item,

@@ -672,13 +672,13 @@ void PoisonDamageDisplay_Next(struct UnknownBMUSAilmentProc* proc) {
 
     proc->unk_4C++;
 
-    if (GetUnitCurrentHp(GetUnit(gActionData.subjectIndex)) == 0) {
+    if (GetUnitCurrentHp(unit) == 0) {
         if (CheckForWaitEvents() != 0) {
             RunWaitEvents();
         }
     }
 
-    if (GetUnitCurrentHp(GetUnit(gActionData.subjectIndex)) < 1) {
+    if (GetUnitCurrentHp(unit) < 1) {
         RefreshUnitSprites();
     }
 
@@ -754,13 +754,13 @@ void GorgonEggHatchDisplay_Next(struct UnknownBMUSAilmentProc* proc) {
 
     proc->unk_4C++;
 
-    if (GetUnitCurrentHp(GetUnit(gActionData.subjectIndex)) == 0) {
+    if (GetUnitCurrentHp(unit) == 0) {
         if (CheckForWaitEvents() != 0) {
             RunWaitEvents();
         }
     }
 
-    if (GetUnitCurrentHp(GetUnit(gActionData.subjectIndex)) < 1) {
+    if (GetUnitCurrentHp(unit) < 1) {
         RefreshUnitSprites();
     }
 

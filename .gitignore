@@ -76,6 +76,7 @@ tools/agbcc
 *.exe
 .dep
 *.4bpp
+!graphics/player_interface/mmb/*.4bpp
 *.8bpp
 *.gbapal
 !*.pal

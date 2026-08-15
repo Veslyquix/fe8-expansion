@@ -843,6 +843,14 @@ extern u16 CONST_DATA Tsa_GameOverFx[];
 extern u8 gGfx_PlayerInterfaceFontTiles[];
 extern u8 gGfx_PlayerInterfaceNumbers[];
 extern u8 gGfx_StatusText[];
+#if FE8_MMB
+extern u8 gGfx_MMBASLabel[];
+extern u8 gGfx_MMBATKLabel[];
+extern u8 gGfx_MMBDEFLabel[];
+extern u8 gGfx_MMBEXPLabel[];
+extern u8 gGfx_MMBLevelLabel[];
+extern u8 gGfx_MMBRESLabel[];
+#endif
 extern u16 gPal_PlayerInterface_Blue[];
 extern u16 gPal_PlayerInterface_Red[];
 extern u16 gPal_PlayerInterface_Green[];

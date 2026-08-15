@@ -202,6 +202,10 @@ struct BattleAnim banim_data[] = {
 	{"mf_mi1", &banim_mf_mi1_modes_bin, &banim_mf_mi1_motion_o, &banim_mf_mi1_oam_r_bin, &banim_mf_mi1_oam_l_bin, &banim_mf_mi1_agbpal}, // 0xC6
 	{"prif_ro1", &banim_prif_ro1_2_modes_bin, &banim_prif_ro1_2_motion_o, &banim_prif_ro1_2_oam_r_bin, &banim_prif_ro1_2_oam_l_bin, &banim_prif_ro1_2_agbpal}, // 0xC7
 	{"fifd_mg1", &banim_fifd_mg1_2_modes_bin, &banim_fifd_mg1_2_motion_o, &banim_fifd_mg1_2_oam_r_bin, &banim_fifd_mg1_2_oam_l_bin, &banim_fifd_mg1_2_agbpal}, // 0xC8
+	// FE8_NEW_ANIMS pilot: CLASS_SOLDIER custom animation (FE-Repo "[Soldier-Custom] FE10-Style [M] by Flasuban", see CREDITS.md)
+	{"newsldsw1", &banim_newsoldier_sword_modes_bin, &banim_newsoldier_sword_script_o, &banim_newsoldier_sword_oam_bin, &banim_newsoldier_sword_oam_bin, &banim_newsoldier_sword_agbpal}, // 0xC9
+	{"newsldln1", &banim_newsoldier_lance_modes_bin, &banim_newsoldier_lance_script_o, &banim_newsoldier_lance_oam_bin, &banim_newsoldier_lance_oam_bin, &banim_newsoldier_lance_agbpal}, // 0xCA
+	{"newsldun1", &banim_newsoldier_unarmed_modes_bin, &banim_newsoldier_unarmed_script_o, &banim_newsoldier_unarmed_oam_bin, &banim_newsoldier_unarmed_oam_bin, &banim_newsoldier_unarmed_agbpal}, // 0xCB
 };
 __attribute__((section(".data.banim_array_len")))
 long long banim_number = sizeof(banim_data) / sizeof(banim_data[0]);

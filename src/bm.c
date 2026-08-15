@@ -100,7 +100,9 @@ PROC_LABEL(9),
     PROC_START_CHILD_BLOCKING(gProcScr_CampTentHealDisplay),
 #endif
     PROC_START_CHILD_BLOCKING(gProcScr_PoisonDamageDisplay),
+#if FE8_MMB
     PROC_START_CHILD_BLOCKING(gProcScr_GorgonEggHatchDisplay),
+#endif
 
     PROC_START_CHILD_BLOCKING(gProcScr_ResetCursorPosition),
 

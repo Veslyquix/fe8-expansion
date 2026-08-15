@@ -1476,3 +1476,32 @@ banim/banim_fifd_mg1_2_oam_l.bin.lz
 banim/banim_fifd_mg1_2_oam_r.bin.lz
 banim/banim_fifd_mg1_2_motion.o|.data.script>lz
 banim/banim_fifd_mg1_2_modes.bin
+
+# --- banim_newsoldier_sword (sword) ---
+graphics/banim/banim_newsoldier_sword_sheet_0.4bpp.lz
+graphics/banim/banim_newsoldier_sword_sheet_1.4bpp.lz
+graphics/banim/banim_newsoldier_sword_sheet_2.4bpp.lz
+graphics/banim/banim_newsoldier_sword_sheet_3.4bpp.lz
+graphics/banim/banim_newsoldier_sword_sheet_4.4bpp.lz
+graphics/banim/banim_newsoldier_sword.agbpal.lz
+banim/banim_newsoldier_sword_oam.bin.lz
+banim/banim_newsoldier_sword_script.o|.data.script>lz
+banim/banim_newsoldier_sword_modes.bin
+# --- banim_newsoldier_lance (lance) ---
+graphics/banim/banim_newsoldier_lance_sheet_0.4bpp.lz
+graphics/banim/banim_newsoldier_lance_sheet_1.4bpp.lz
+graphics/banim/banim_newsoldier_lance_sheet_2.4bpp.lz
+graphics/banim/banim_newsoldier_lance_sheet_3.4bpp.lz
+graphics/banim/banim_newsoldier_lance_sheet_4.4bpp.lz
+graphics/banim/banim_newsoldier_lance_sheet_5.4bpp.lz
+graphics/banim/banim_newsoldier_lance_sheet_6.4bpp.lz
+graphics/banim/banim_newsoldier_lance.agbpal.lz
+banim/banim_newsoldier_lance_oam.bin.lz
+banim/banim_newsoldier_lance_script.o|.data.script>lz
+banim/banim_newsoldier_lance_modes.bin
+# --- banim_newsoldier_unarmed (unarmed) ---
+graphics/banim/banim_newsoldier_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newsoldier_unarmed.agbpal.lz
+banim/banim_newsoldier_unarmed_oam.bin.lz
+banim/banim_newsoldier_unarmed_script.o|.data.script>lz
+banim/banim_newsoldier_unarmed_modes.bin

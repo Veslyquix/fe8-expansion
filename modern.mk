@@ -163,8 +163,14 @@ endif
 ifeq ($(DANGER_BONES),1)
 MODERN_DEFINE_FLAGS += -DFE8_DANGER_BONES=1
 endif
+ifeq ($(NEW_ANIMS),1)
+MODERN_DEFINE_FLAGS += -DFE8_NEW_ANIMS=1
+endif
 ifeq ($(PURCHASE_GENERICS),1)
 MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
+endif
+ifeq ($(MMB),1)
+MODERN_DEFINE_FLAGS += -DFE8_MMB=1
 endif
 ifeq ($(EXTEND_DESC_BOX),1)
 MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DESC_BOX=1
@@ -1470,7 +1476,9 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 		--vesly-debugger "$(VESLY_DEBUGGER)" \
 		--danger-bones "$(DANGER_BONES)" \
+		--new-anims "$(NEW_ANIMS)" \
 		--purchase-generics "$(PURCHASE_GENERICS)" \
+		--mmb "$(MMB)" \
 		--extend-desc-box "$(EXTEND_DESC_BOX)" \
 		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
@@ -1542,7 +1550,9 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 	--vesly-debugger "$(VESLY_DEBUGGER)" \
 	--danger-bones "$(DANGER_BONES)" \
+	--new-anims "$(NEW_ANIMS)" \
 	--purchase-generics "$(PURCHASE_GENERICS)" \
+	--mmb "$(MMB)" \
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
 	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
@@ -1619,7 +1629,9 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT) \
 	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER) \
 	-DFE8_DANGER_BONES=$(DANGER_BONES) \
+	-DFE8_NEW_ANIMS=$(NEW_ANIMS) \
 	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS) \
+	-DFE8_MMB=$(MMB) \
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
 	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \
 	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
@@ -1792,7 +1804,9 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
 		printf '%s\n' 'vesly_debugger=$(VESLY_DEBUGGER)'; \
 		printf '%s\n' 'danger_bones=$(DANGER_BONES)'; \
+		printf '%s\n' 'new_anims=$(NEW_ANIMS)'; \
 		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
+		printf '%s\n' 'mmb=$(MMB)'; \
 		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \
 		printf '%s\n' 'overflow_safety_checks=$(OVERFLOW_SAFETY_CHECKS)'; \
 		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
@@ -2197,6 +2211,9 @@ MODERN_ROM_HEADER_VERIFIER := scripts/modernize/verify_rom_header.py
 MODERN_ROM_HEADER_FINALIZER := scripts/modernize/finalize_rom_header.py
 MODERN_BOOT_SCENARIO := tools/gba-playtest/scenarios/boot.json
 MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot.json
+ifeq ($(SKIP_OPENING),1)
+MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot-skip-opening.json
+endif
 MODERN_TITLE_SCENARIO := tools/gba-playtest/scenarios/title-progression.json
 MODERN_TITLE_FINGERPRINT := tools/gba-playtest/fingerprints/title-progression-modern-$(MODERN_CONFIG).json
 # Unlike MODERN_TITLE_SCENARIO above, the debugtools scenario path itself

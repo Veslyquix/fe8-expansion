@@ -149,10 +149,21 @@ VESLY_DEBUGGER ?= 1
 # arrow, using the fourth unit palette and map-sprite shake.
 DANGER_BONES ?= 1
 
+# --- Optional custom battle animations ---------------------------------------
+# Swaps in community-sourced custom battle animation sets for select classes
+# (see CREDITS.md), in place of the vanilla animation. Purely cosmetic.
+NEW_ANIMS ?= 1
+
 # --- Optional gameplay features ---------------------------------------------
 # Adds chapter-scoped temporary gold and purchasable generic-unit bases on
 # eligible fort / empty-village terrain.
 PURCHASE_GENERICS ?= 1
+
+# --- Optional MMB / Gorgon Egg -----------------------------------------------
+# Enables the minimug side window and C Gorgon Egg hatch phase display. This
+# mirrors the Catball1-style MMB setup by default; build with MMB=0 to fall
+# back to the burst unit display for unitDisplayType=0.
+MMB ?= 1
 
 # --- Optional ExtendWeaponDescBox --------------------------------------------
 # Modern-build port of ExtendWeaponDescBox: extends the item/weapon

@@ -2137,7 +2137,21 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
     [0x3D] = { 0x70D, 0xFF, CLASS_MANAKETE_MYRRH, 0, 0xC4, 0x06, 0, 0, 0, 0, 0x10, 0x10, 0, sClassReelScr_Opinfo_10 },
     [0x3E] = { 0x731, 0xFF, CLASS_ARCH_MOGALL, 0x01, 0xBA, 0x07, 0, 0, 0, 0, 0x06, 0x06, 0, sClassReelScr_Opinfo_12 },
     [0x3F] = { 0x706, 0x15, CLASS_WYVERN_RIDER, 0, 0x57, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_0 },
-    [0x40] = { 0x722, 0xFF, CLASS_SOLDIER, 0x01, 0x97, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 }
+    /* banimId (5th field) indexes banim_data[] directly and is 0-BASED, unlike
+     * struct BattleAnimDef::index (which GetBattleAnimationId resolves as
+     * index - 1). FE8_NEW_ANIMS swaps CLASS_SOLDIER's vanilla "solm_sp1"
+     * (0x97) for the custom FE10-style lance animation "newsldln1" (0xCA);
+     * see src/banim_data.c and CREDITS.md. This table is consulted ahead of
+     * the class's own pBattleAnimDef by every class-reel consumer (opinfo,
+     * and src/purchase_generics.c's platform preview), so it has to be
+     * swapped here too or those surfaces keep showing the stock animation. */
+    [0x40] = { 0x722, 0xFF, CLASS_SOLDIER, 0x01,
+#if FE8_NEW_ANIMS
+        0xCA,
+#else
+        0x97,
+#endif
+        0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 }
 };
 
 u8 CONST_DATA sClassReelClassSetLut[] = {

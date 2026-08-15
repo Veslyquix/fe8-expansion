@@ -1383,14 +1383,45 @@ CONST_DATA struct BattleAnimDef AnimConf_74[] = {
     { 0 }
 };
 
+/* CLASS_SOLDIER (src/data_classes.c, generated from src/data/classes.json,
+ * references this symbol by name -- not by index -- so it cannot itself be
+ * made conditional; this array's *contents* can be, since this file is
+ * hand-maintained, not generated). Indices 0x0098/0x0099 are vanilla.
+ *
+ * FE8_NEW_ANIMS=1 swaps in a community-sourced custom animation set (FE-Repo
+ * "[Soldier-Custom] FE10-Style [M] by Flasuban", see CREDITS.md) instead --
+ * resolved at compile time, since gClassData/AnimConf_75 link
+ * execute-in-place from ROM (no .data->RAM copy exists in this codebase's
+ * startup path, see src/crt0.s and src/main.c's AgbMain) and so cannot be
+ * runtime-patched.
+ *
+ * NOTE: `.index` is ONE-BASED. GetBattleAnimationId (src/banim-ekrcmd.c)
+ * ends with `return (idx - 1)`, so the banim_data[] (src/banim_data.c) slot
+ * actually loaded is `.index - 1` -- e.g. vanilla `.index = 0x0098` below
+ * resolves to banim_data[0x97] == "solm_sp1". The custom entries live at
+ * banim_data[0xC9..0xCB], hence `.index` 0xCA..0xCC. */
 CONST_DATA struct BattleAnimDef AnimConf_75[] = {
+#if FE8_NEW_ANIMS
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00CA, /* banim_data[0xC9] "newsldsw1" */
+    },
+#endif
     {
         .wtype = 0x0100 | ITYPE_LANCE,
-        .index = 0x0098,
+#if FE8_NEW_ANIMS
+        .index = 0x00CB, /* banim_data[0xCA] "newsldln1" */
+#else
+        .index = 0x0098, /* banim_data[0x97] "solm_sp1" */
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
-        .index = 0x0099,
+#if FE8_NEW_ANIMS
+        .index = 0x00CC, /* banim_data[0xCB] "newsldun1" */
+#else
+        .index = 0x0099, /* banim_data[0x98] "solm_sp1" */
+#endif
     },
     { 0 }
 };

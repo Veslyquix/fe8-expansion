@@ -1457,3 +1457,17 @@ extern short battle_terrain_gyokuza1_pal_9[];
 extern short battle_terrain_yama1_pal_3[];
 extern short battle_terrain_takaiyama1_pal_3[];
 extern short battle_terrain_mizuiumi1_pal_3[];
+
+// FE8_NEW_ANIMS pilot: CLASS_SOLDIER custom animation (FE-Repo "[Soldier-Custom] FE10-Style [M] by Flasuban")
+extern int banim_newsoldier_sword_modes_bin;
+extern char banim_newsoldier_sword_script_o;
+extern char banim_newsoldier_sword_oam_bin;
+extern char banim_newsoldier_sword_agbpal;
+extern int banim_newsoldier_lance_modes_bin;
+extern char banim_newsoldier_lance_script_o;
+extern char banim_newsoldier_lance_oam_bin;
+extern char banim_newsoldier_lance_agbpal;
+extern int banim_newsoldier_unarmed_modes_bin;
+extern char banim_newsoldier_unarmed_script_o;
+extern char banim_newsoldier_unarmed_oam_bin;
+extern char banim_newsoldier_unarmed_agbpal;

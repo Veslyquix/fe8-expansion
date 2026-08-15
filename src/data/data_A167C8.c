@@ -7,6 +7,14 @@
 u8 gGfx_PlayerInterfaceFontTiles[] = INCBIN_U8("graphics/player_interface/player_interface_font_tiles.4bpp.lz");
 u8 gGfx_PlayerInterfaceNumbers[] = INCBIN_U8("graphics/player_interface/player_interface_numbers.4bpp.lz");
 u8 gGfx_StatusText[] = INCBIN_U8("graphics/player_interface/status_text.4bpp");
+#if FE8_MMB
+u8 gGfx_MMBASLabel[] = INCBIN_U8("graphics/player_interface/mmb/ASLabel.4bpp");
+u8 gGfx_MMBATKLabel[] = INCBIN_U8("graphics/player_interface/mmb/ATKLabel.4bpp");
+u8 gGfx_MMBDEFLabel[] = INCBIN_U8("graphics/player_interface/mmb/DEFLabel.4bpp");
+u8 gGfx_MMBEXPLabel[] = INCBIN_U8("graphics/player_interface/mmb/EXPLabel.4bpp");
+u8 gGfx_MMBLevelLabel[] = INCBIN_U8("graphics/player_interface/mmb/LevelLabel.4bpp");
+u8 gGfx_MMBRESLabel[] = INCBIN_U8("graphics/player_interface/mmb/RESLabel.4bpp");
+#endif
 u16 gPal_PlayerInterface_Blue[] = INCBIN_U16("graphics/player_interface/player_interface_blue.gbapal");
 u16 gPal_PlayerInterface_Red[] = INCBIN_U16("graphics/player_interface/player_interface_red.gbapal");
 u16 gPal_PlayerInterface_Green[] = INCBIN_U16("graphics/player_interface/player_interface_green.gbapal");
