@@ -390,6 +390,7 @@ void DebuggerListInit(DebuggerProc * proc);
 void DebuggerListIdle(DebuggerProc * proc);
 void GfxViewerInit(DebuggerProc * proc);
 void GfxViewerLoop(DebuggerProc * proc);
+static void EndDebuggerBanimPreview(void);
 void ClearSomeGfx(DebuggerProc * proc);
 u8 CanActiveUnitPromote(void);
 
@@ -7183,16 +7184,22 @@ void PutNumberHex(u16 * tm, int color, int number)
     }
 }
 
-#define GfxViewerOptions 4
-static const char gfxViewerOpts[GfxViewerOptions][16] = { "Portrait", "Class Sprites", "BG", "CG" };
+#define GfxViewerOptions 5
+static const char gfxViewerOpts[GfxViewerOptions][16] = { "Portrait", "Class Sprites", "BG", "CG", "Class Anim" };
+#define GfxViewerOption_ClassAnim 4
+
+// shifted right & narrowed vs. the generic support-list geometry (NUMBER_X/START_X/SupportWidth)
+// to leave room on the left for the mms row shown by the Class Sprites option
+#define GfxViewerMenuXShift 4
+#define GfxViewerMenuWidthShrink 2
 
 void RedrawGfxViewerMenu(DebuggerProc * proc)
 {
-    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(NUMBER_X - 2, Y_HAND), 9, 2 * GfxViewerOptions, 0);
+    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(NUMBER_X - 2 + GfxViewerMenuXShift, Y_HAND), 9, 2 * GfxViewerOptions, 0);
     BG_EnableSyncByMask(BG0_SYNC_BIT);
     // ResetText();
     struct Text * th = gStatScreen.text;
-    int x = NUMBER_X - SupportWidth + 3;
+    int x = NUMBER_X - SupportWidth + 3 + GfxViewerMenuXShift;
     for (int i = 0; i < GfxViewerOptions; ++i)
     {
         PutText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(x, Y_HAND + (i * 2)));
@@ -7202,7 +7209,8 @@ void RedrawGfxViewerMenu(DebuggerProc * proc)
         // PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(START_X, Y_HAND + (i*2)),
         // TEXT_COLOR_SYSTEM_GOLD, proc->tmp[i]);
         PutNumberHex(
-            gBG0TilemapBuffer + TILEMAP_INDEX(START_X + 7, Y_HAND + (i * 2)), TEXT_COLOR_SYSTEM_GOLD, proc->tmp[i]);
+            gBG0TilemapBuffer + TILEMAP_INDEX(START_X + 7 + GfxViewerMenuXShift - GfxViewerMenuWidthShrink, Y_HAND + (i * 2)),
+            TEXT_COLOR_SYSTEM_GOLD, proc->tmp[i]);
     }
 
     BG_EnableSyncByMask(BG0_SYNC_BIT);
@@ -7211,20 +7219,24 @@ void RedrawGfxViewerMenu(DebuggerProc * proc)
 void GfxViewerInitMenuGfx(DebuggerProc * proc)
 {
 
-    int x = NUMBER_X - SupportWidth + 2;
+    int x = NUMBER_X - SupportWidth + 2 + GfxViewerMenuXShift;
     int y = Y_HAND - 1;
-    int w = SupportWidth + (START_X - NUMBER_X) + 7;
+    int w = SupportWidth + (START_X - NUMBER_X) + 7 - GfxViewerMenuWidthShrink;
     int h = (GfxViewerOptions * 2) + 2;
 
+    // drawn on bg2 rather than bg1 - the Class Sprites battle anim preview owns bg1
+    // for its own background effects, which would otherwise stomp this frame
     DrawUiFrame(
-        BG_GetMapBuffer(1),            // back BG
+        BG_GetMapBuffer(2),            // back BG
         x, y, w, h, TILEREF(0, 0), 0); // style as 0 ?
+    BG_EnableSyncByMask(BG2_SYNC_BIT);
 }
 
 void GfxViewerInit(DebuggerProc * proc)
 {
     SomeMenuInit(proc);
     MU_EndAll();
+    EndDebuggerBanimPreview();
     // struct Unit * unit = proc->unit;
     for (int i = 0; i < GfxViewerOptions; ++i)
     {
@@ -7624,6 +7636,349 @@ void DebuggerStartCG(int id)
     }
 }
 
+// --- Class Sprites battle animation preview ---
+// Template lifted from purchase_generics.c's platform preview: same looping
+// class-reel script + platform terrain, minus the shop menu/base stats parts
+// we don't need here.
+
+// Not declared in any header (see purchase_generics.c for the same forward decls)
+void EndBanimTerrain(struct BanimUnkStructComm * buf);
+void InitBanimTerrain(struct BanimUnkStructComm * buf);
+void SetBanimTerrainPos(struct BanimUnkStructComm * buf, s16 x1, s16 y1, s16 x2, s16 y2);
+
+#define DEBUGGER_BANIM_TERRAIN 0x3F
+// centered horizontally along the bottom of the screen (screen is 240px wide; the platform
+// halves sit 48px either side of the unit, matching the BG_X + 0x60 spacing below)
+#define DEBUGGER_BANIM_X 120
+#define DEBUGGER_BANIM_Y 132
+#define DEBUGGER_BANIM_BG_X 72
+#define DEBUGGER_BANIM_BG_Y 138
+
+static bool sDebuggerBanimPreviewActive = false;
+static bool sDebuggerBanimStartedMiniAnim = false;
+static struct ClassReelEnt sDebuggerBanimFallbackReelEntry;
+
+static const struct ProcCmd sProc_DebuggerBanimPreview[];
+
+static struct ClassReelAnimScr CONST_DATA sDebuggerBanimScript[] =
+{
+    { CLASS_REEL_OP_5, 0x28 },
+    { CLASS_REEL_OP_1, 0 },
+    { CLASS_REEL_OP_8, 0 },
+    { CLASS_REEL_OP_5, 0x28 },
+    { CLASS_REEL_OP_3, 0 },
+    { CLASS_REEL_OP_0, 0 },
+};
+
+// Picks a plausible tome/staff for classes previewed without a matching real
+// weapon equipped, matching vanilla's own per-class defaults: anima->Fire
+// (Elfire once promoted), light->Lightning (Shine), dark->Flux (Luna),
+// staff->Heal (Mend). Whichever the class's actual rank array grants first.
+static int GetDebuggerDefaultSpellItem(const struct ClassData * class)
+{
+    bool promoted = (class->attributes & CA_PROMOTED) != 0;
+
+    if (class->baseRanks[ITYPE_ANIMA])
+        return promoted ? ITEM_ANIMA_ELFIRE : ITEM_ANIMA_FIRE;
+    if (class->baseRanks[ITYPE_LIGHT])
+        return promoted ? ITEM_LIGHT_SHINE : ITEM_LIGHT_LIGHTNING;
+    if (class->baseRanks[ITYPE_DARK])
+        return promoted ? ITEM_DARK_LUNA : ITEM_DARK_FLUX;
+    if (class->baseRanks[ITYPE_STAFF])
+        return promoted ? ITEM_STAFF_MEND : ITEM_STAFF_HEAL;
+
+    return ITEM_NONE;
+}
+
+// gClassReelSpellAnimFuncLut indices (banim-efxop.c): 0 none, 1 fire,
+// 2 thunder, 3 heal, 4 light, 5 flux. Promotion doesn't change which of
+// these plays (Fire and Elfire share the same cast effect), only which item
+// GetDebuggerDefaultSpellItem would hand out.
+static int GetDebuggerDefaultMagicFx(const struct ClassData * class)
+{
+    if (class->baseRanks[ITYPE_ANIMA])
+        return 1;
+    if (class->baseRanks[ITYPE_LIGHT])
+        return 4;
+    if (class->baseRanks[ITYPE_DARK])
+        return 5;
+    if (class->baseRanks[ITYPE_STAFF])
+        return 3;
+
+    return 0;
+}
+
+static int GetDebuggerBanimId(int classId, struct Unit * unit)
+{
+    const struct ClassData * class;
+    const struct BattleAnimDef * animDef;
+    int i;
+    int item;
+    int expectedType;
+
+    class = GetClassData(classId);
+    if (class == NULL || class->pBattleAnimDef == NULL)
+        return 0;
+
+    animDef = class->pBattleAnimDef;
+
+    item = GetUnitEquippedWeapon(unit);
+    expectedType = item != 0 ? (GetItemType(item) + 0x100) : SPECIAL_BANIM_WTYPE;
+
+    for (i = 0; animDef[i].index != 0; ++i)
+    {
+        if (animDef[i].wtype == expectedType)
+            return animDef[i].index - 1;
+    }
+
+    // the active unit's real weapon (if any) doesn't match anything this
+    // class's animDef has - if the class can actually cast, try its default
+    // spell before giving up to the unarmed/special case below
+    item = GetDebuggerDefaultSpellItem(class);
+    if (item != ITEM_NONE)
+    {
+        expectedType = GetItemType(item) + 0x100;
+
+        for (i = 0; animDef[i].index != 0; ++i)
+        {
+            if (animDef[i].wtype == expectedType)
+                return animDef[i].index - 1;
+        }
+    }
+
+    for (i = 0; animDef[i].index != 0; ++i)
+    {
+        if (animDef[i].wtype == SPECIAL_BANIM_WTYPE)
+            return animDef[i].index - 1;
+    }
+
+    return 0;
+}
+
+static struct ClassReelEnt * GetDebuggerBanimReelEntry(int classId, struct Unit * unit)
+{
+    int i;
+    const struct ClassData * class;
+
+    for (i = 0; i < 65; i++)
+    {
+        if (gClassReelData[i].classId == classId)
+            return &gClassReelData[i];
+    }
+
+    class = GetClassData(classId);
+
+    sDebuggerBanimFallbackReelEntry.descTextId = 0;
+    sDebuggerBanimFallbackReelEntry.paletteId = -1;
+    sDebuggerBanimFallbackReelEntry.classId = classId;
+    sDebuggerBanimFallbackReelEntry.unk_06 = 0;
+    sDebuggerBanimFallbackReelEntry.banimId = GetDebuggerBanimId(classId, unit);
+    sDebuggerBanimFallbackReelEntry.magicFx = class != NULL ? GetDebuggerDefaultMagicFx(class) : 0;
+    sDebuggerBanimFallbackReelEntry.unk_09 = 0;
+    sDebuggerBanimFallbackReelEntry.unk_0A = 0;
+    sDebuggerBanimFallbackReelEntry.unk_0B = 0;
+    sDebuggerBanimFallbackReelEntry.unk_0C = 0;
+    sDebuggerBanimFallbackReelEntry.unk_0D = DEBUGGER_BANIM_TERRAIN;
+    sDebuggerBanimFallbackReelEntry.unk_0E = DEBUGGER_BANIM_TERRAIN;
+    sDebuggerBanimFallbackReelEntry.unk_0F = 0;
+    sDebuggerBanimFallbackReelEntry.script = sDebuggerBanimScript;
+
+    return &sDebuggerBanimFallbackReelEntry;
+}
+
+static bool IsDebuggerBanimSafe(struct ClassReelEnt * entry)
+{
+    struct BattleAnim * anim;
+    int paletteId;
+
+    if (entry == NULL || entry->banimId >= banim_number)
+        return false;
+
+    anim = &banim_data[entry->banimId];
+
+    if (!IsValidLz77DecompressionData(anim->script) ||
+        !IsValidLz77DecompressionData(anim->oam_r) ||
+        !IsValidLz77DecompressionData(anim->oam_l) ||
+        !IsValidLz77DecompressionData(anim->pal))
+        return false;
+
+    paletteId = entry->paletteId;
+
+    if (paletteId != -1)
+    {
+        if (paletteId < 0 || (u32)paletteId >= banim_pal_head.number)
+            return false;
+
+        if (!IsValidLz77DecompressionData(character_battle_animation_palette_table[paletteId].pal))
+            return false;
+    }
+
+    return true;
+}
+
+static void SetDebuggerBanimLayer(u16 layer)
+{
+    if (gOpInfoData.anim1 != NULL)
+    {
+        gOpInfoData.anim1->oam2Base &= ~OAM2_LAYER(3);
+        gOpInfoData.anim1->oam2Base |= OAM2_LAYER(layer);
+    }
+
+    if (gOpInfoData.anim2 != NULL)
+    {
+        gOpInfoData.anim2->oam2Base &= ~OAM2_LAYER(3);
+        gOpInfoData.anim2->oam2Base |= OAM2_LAYER(layer);
+    }
+}
+
+static void DebuggerBanimPreview_ResetScript(struct OpInfoClassDisplayProc * proc)
+{
+    proc->script = proc->classReelEnt->script;
+
+    if (proc->script == NULL)
+        proc->script = sDebuggerBanimScript;
+}
+
+static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct ClassReelEnt * entry)
+{
+    NewEfxAnimeDrvProc();
+
+    gOpInfoData.charPalId = entry->paletteId;
+    gOpInfoData.xPos = DEBUGGER_BANIM_X;
+    gOpInfoData.yPos = DEBUGGER_BANIM_Y;
+    gOpInfoData.animId = entry->banimId;
+    gOpInfoData.roundType = ANIM_ROUND_TAKING_HIT_CLOSE;
+    gOpInfoData.genericPalId = entry->unk_06;
+    gOpInfoData.state2 = 1;
+    gOpInfoData.oam2Tile = 0x200;
+    gOpInfoData.oam2Pal = 0xA;
+    gOpInfoData.pImgSheetBuf = gBanimLeftImgSheetBuf;
+    gOpInfoData.unk_24 = gBanimOaml;
+    gOpInfoData.unk_20 = gBanimPaletteLeft;
+    gOpInfoData.unk_28 = gBanimScrLeft;
+    gOpInfoData.unk_30 = &gUnk_4;
+
+    gUnk_4.magicFuncIdx = entry->magicFx;
+    gUnk_4.xOffsetBg = entry->unk_09;
+    gUnk_4.yOffsetBg = entry->unk_0A;
+    gUnk_4.xOffsetObj = entry->unk_0B;
+    gUnk_4.yOffsetObj = entry->unk_0C;
+    gUnk_4.objChr = 0x300;
+    gUnk_4.objPalId = 0xD;
+    gUnk_4.bgChr = 0x1E0;
+    gUnk_4.bgPalId = 0xD;
+    gUnk_4.bg = 1;
+    gUnk_4.bgTmBuf = gBG1TilemapBuffer;
+    gUnk_4.bgImgBuf = gSpellAnimBgfx;
+    gUnk_4.bgTsaBuf = gEkrTsaBuffer;
+    gUnk_4.objImgBuf = gBuf_Banim;
+    gUnk_4.resetCallback = ClassChgSel_SetBlendWindowConfig;
+
+    ResetClassReelSpell();
+    NewEkrUnitMainMini(&gOpInfoData);
+    sDebuggerBanimStartedMiniAnim = true;
+    SetDebuggerBanimLayer(0);
+
+    gUnk_Opinfo_0.terrain_l = DEBUGGER_BANIM_TERRAIN;
+    gUnk_Opinfo_0.pal_l = 0xE;
+    gUnk_Opinfo_0.chr_l = 0x180; // 0x380 is OBCHR_MU_380, the default MMS obj tile base - would overlap the map sprites shown alongside this preview
+    gUnk_Opinfo_0.terrain_r = DEBUGGER_BANIM_TERRAIN;
+    gUnk_Opinfo_0.pal_r = 0xF;
+    gUnk_Opinfo_0.chr_r = 0x1C0;
+    gUnk_Opinfo_0.distance = 0;
+    gUnk_Opinfo_0.unk0E = -1;
+    gUnk_Opinfo_0.unk1C = (void *)0x06010000;
+    gUnk_Opinfo_0.unk20 = gUnk_Banim_Ekrbattle_0;
+
+    InitBanimTerrain(&gUnk_Opinfo_0);
+    SetBanimTerrainPos(
+        &gUnk_Opinfo_0,
+        DEBUGGER_BANIM_BG_X,
+        DEBUGGER_BANIM_BG_Y,
+        DEBUGGER_BANIM_BG_X + 0x60,
+        DEBUGGER_BANIM_BG_Y);
+
+    proc->classReelEnt = entry;
+    DebuggerBanimPreview_ResetScript(proc);
+}
+
+static void EndDebuggerBanimPreview(void)
+{
+    if (!sDebuggerBanimPreviewActive)
+        return;
+
+    Proc_EndEach(sProc_DebuggerBanimPreview);
+}
+
+static void StartDebuggerBanimPreview(int classId, struct Unit * unit)
+{
+    struct OpInfoClassDisplayProc * proc;
+    struct ClassReelEnt * entry;
+
+    EndDebuggerBanimPreview();
+
+    if (classId == 0 || GetClassData(classId) == NULL)
+        return;
+
+    entry = GetDebuggerBanimReelEntry(classId, unit);
+
+    if (!IsDebuggerBanimSafe(entry))
+        return;
+
+    proc = Proc_Start(sProc_DebuggerBanimPreview, PROC_TREE_3);
+    SetupDebuggerBanimAnim(proc, entry);
+
+    sDebuggerBanimPreviewActive = true;
+}
+
+static void DebuggerBanimPreview_ExecScript(struct OpInfoClassDisplayProc * proc)
+{
+    ClassInfoDisplay_ExecScript(proc);
+    SetDebuggerBanimLayer(0);
+}
+
+static void DebuggerBanimPreview_LoopScript(struct OpInfoClassDisplayProc * proc)
+{
+    ClassInfoDisplay_LoopScript(proc);
+    SetDebuggerBanimLayer(0);
+}
+
+static void DebuggerBanimPreview_OnEnd(struct OpInfoClassDisplayProc * proc)
+{
+    (void)proc;
+
+    EndActiveClassReelSpell();
+    EndActiveClassReelBgColorProc();
+
+    if (sDebuggerBanimStartedMiniAnim)
+        EndEkrUnitMainMini(&gOpInfoData);
+
+    EndBanimTerrain(&gUnk_Opinfo_0);
+    EndEfxAnimeDrvProc();
+    ApplyUnitSpritePalettes();
+
+    sDebuggerBanimStartedMiniAnim = false;
+    sDebuggerBanimPreviewActive = false;
+}
+
+static const struct ProcCmd sProc_DebuggerBanimPreview[] =
+{
+    PROC_NAME("DebuggerBanimPreview"),
+    PROC_SET_END_CB(DebuggerBanimPreview_OnEnd),
+
+PROC_LABEL(0),
+    PROC_CALL(DebuggerBanimPreview_ExecScript),
+    PROC_REPEAT(DebuggerBanimPreview_LoopScript),
+    PROC_GOTO(0),
+
+PROC_LABEL(10),
+    PROC_CALL(DebuggerBanimPreview_ResetScript),
+    PROC_GOTO(0),
+
+    PROC_END,
+};
+// --- end Class Sprites battle animation preview ---
+
 void DrawGfxFromIDs(int type, int id, struct Unit * unit, DebuggerProc * proc)
 {
     switch (type)
@@ -7654,6 +8009,15 @@ void DrawGfxFromIDs(int type, int id, struct Unit * unit, DebuggerProc * proc)
             DebuggerStartCG(id);
             break;
         }
+        case 4:
+        {
+            ClearMainMenuGfx(proc);
+            GfxViewerInitMenuGfx(proc);
+            MU_EndAll();
+            BMapDispSuspend(); // matches the BMapDispResume() on the way out in GfxViewerLoop
+            StartDebuggerBanimPreview(id, unit);
+            break;
+        }
     }
 }
 
@@ -7663,13 +8027,14 @@ void GfxViewerLoop(DebuggerProc * proc)
     u16 keys = gKeyStatusPtr->repeatedKeys;
     if ((keys & START_BUTTON) || (keys & A_BUTTON) || keys & B_BUTTON)
     { // press B to not save Supports
+        EndDebuggerBanimPreview();
         BMapDispResume();
         RefreshBMapGraphics();
         Proc_Goto(proc, RestartLabel);
         BackPressSFX();
     };
 
-    DisplayUiHand(CursorLocationTable[0].x - ((SupportWidth - 1) * 8), (Y_HAND + (proc->id * 2)) * 8);
+    DisplayUiHand(CursorLocationTable[0].x - ((SupportWidth - 1) * 8) + (GfxViewerMenuXShift * 8), (Y_HAND + (proc->id * 2)) * 8);
     if (keys & DPAD_RIGHT)
     {
         proc->tmp[proc->id]++;
@@ -7696,6 +8061,10 @@ void GfxViewerLoop(DebuggerProc * proc)
         {
             proc->id = GfxViewerOptions - 1;
         }
+        if (proc->id != GfxViewerOption_ClassAnim)
+        {
+            EndDebuggerBanimPreview(); // battle anim only runs while browsing Class Anim
+        }
         RedrawGfxViewerMenu(proc);
     }
     if (keys & DPAD_DOWN)
@@ -7704,6 +8073,10 @@ void GfxViewerLoop(DebuggerProc * proc)
         if (proc->id >= GfxViewerOptions)
         {
             proc->id = 0;
+        }
+        if (proc->id != GfxViewerOption_ClassAnim)
+        {
+            EndDebuggerBanimPreview(); // battle anim only runs while browsing Class Anim
         }
 
         RedrawGfxViewerMenu(proc);

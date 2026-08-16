@@ -525,6 +525,45 @@ static void StartPurchaseGenericClassCard(const struct PurchaseGenericDefinition
         // sPurchaseGenericFaceActive = true;
 }
 
+// Picks a plausible tome/staff for classes previewed without a matching real
+// weapon defined for the generic, matching vanilla's own per-class defaults:
+// anima->Fire (Elfire once promoted), light->Lightning (Shine), dark->Flux
+// (Luna), staff->Heal (Mend). Whichever the class's actual rank array grants
+// first.
+static int GetPurchaseGenericDefaultSpellItem(const struct ClassData* class)
+{
+    bool promoted = (class->attributes & CA_PROMOTED) != 0;
+
+    if (class->baseRanks[ITYPE_ANIMA])
+        return promoted ? ITEM_ANIMA_ELFIRE : ITEM_ANIMA_FIRE;
+    if (class->baseRanks[ITYPE_LIGHT])
+        return promoted ? ITEM_LIGHT_SHINE : ITEM_LIGHT_LIGHTNING;
+    if (class->baseRanks[ITYPE_DARK])
+        return promoted ? ITEM_DARK_LUNA : ITEM_DARK_FLUX;
+    if (class->baseRanks[ITYPE_STAFF])
+        return promoted ? ITEM_STAFF_MEND : ITEM_STAFF_HEAL;
+
+    return ITEM_NONE;
+}
+
+// gClassReelSpellAnimFuncLut indices (banim-efxop.c): 0 none, 1 fire,
+// 2 thunder, 3 heal, 4 light, 5 flux. Promotion doesn't change which of
+// these plays (Fire and Elfire share the same cast effect), only which item
+// GetPurchaseGenericDefaultSpellItem would hand out.
+static int GetPurchaseGenericDefaultMagicFx(const struct ClassData* class)
+{
+    if (class->baseRanks[ITYPE_ANIMA])
+        return 1;
+    if (class->baseRanks[ITYPE_LIGHT])
+        return 4;
+    if (class->baseRanks[ITYPE_DARK])
+        return 5;
+    if (class->baseRanks[ITYPE_STAFF])
+        return 3;
+
+    return 0;
+}
+
 static int GetPurchaseGenericPlatformAnimId(const struct PurchaseGenericDefinition* def)
 {
     const struct ClassData* class;
@@ -554,6 +593,21 @@ static int GetPurchaseGenericPlatformAnimId(const struct PurchaseGenericDefiniti
             return animDef[i].index - 1;
     }
 
+    // the generic's defined item (if any) doesn't match anything this
+    // class's animDef has - if the class can actually cast, try its default
+    // spell before giving up to the unarmed/special case below
+    item = GetPurchaseGenericDefaultSpellItem(class);
+    if (item != ITEM_NONE)
+    {
+        expectedType = GetItemType(item) + 0x100;
+
+        for (i = 0; animDef[i].index != 0; ++i)
+        {
+            if (animDef[i].wtype == expectedType)
+                return animDef[i].index - 1;
+        }
+    }
+
     for (i = 0; animDef[i].index != 0; ++i)
     {
         if (animDef[i].wtype == SPECIAL_BANIM_WTYPE)
@@ -566,6 +620,7 @@ static int GetPurchaseGenericPlatformAnimId(const struct PurchaseGenericDefiniti
 static struct ClassReelEnt* GetPurchaseGenericPlatformReelEntry(const struct PurchaseGenericDefinition* def)
 {
     int i;
+    const struct ClassData* class;
 
     if (def == NULL)
         return NULL;
@@ -576,12 +631,14 @@ static struct ClassReelEnt* GetPurchaseGenericPlatformReelEntry(const struct Pur
             return &gClassReelData[i];
     }
 
+    class = GetClassData(def->classId);
+
     sPurchaseGenericFallbackReelEntry.descTextId = 0;
     sPurchaseGenericFallbackReelEntry.paletteId = -1;
     sPurchaseGenericFallbackReelEntry.classId = def->classId;
     sPurchaseGenericFallbackReelEntry.unk_06 = 0;
     sPurchaseGenericFallbackReelEntry.banimId = GetPurchaseGenericPlatformAnimId(def);
-    sPurchaseGenericFallbackReelEntry.magicFx = 0;
+    sPurchaseGenericFallbackReelEntry.magicFx = class != NULL ? GetPurchaseGenericDefaultMagicFx(class) : 0;
     sPurchaseGenericFallbackReelEntry.unk_09 = 0;
     sPurchaseGenericFallbackReelEntry.unk_0A = 0;
     sPurchaseGenericFallbackReelEntry.unk_0B = 0;
