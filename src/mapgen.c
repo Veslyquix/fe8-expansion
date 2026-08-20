@@ -7,6 +7,7 @@
 #include "hardware.h"
 #include "mapgen.h"
 #include "mapgen_chunks_data.h"
+#include "mapgen_save_seed.h"
 
 #if FE8_MAPGEN
 
@@ -29,9 +30,9 @@
  *   different map than the one the player suspended on. So the terrain half is
  *   a pure function of (chapterId, MapGen_SessionSeed()), regenerated
  *   identically every load -- including across a power cycle, since
- *   MapGen_SessionSeed persists its roll into gPlaySt.playerName, which
- *   round-trips through SRAM with the rest of the save. See that function's
- *   own comment for the caveats of where it currently stores that.
+ *   MapGen_SessionSeed persists its roll into struct MapGenSaveSeed
+ *   (include/mapgen_save_seed.h), which round-trips through SRAM the same
+ *   way the rest of the save does.
  *
  *   Traps, by contrast, are written to and restored from SRAM (WriteTraps /
  *   ReadTraps, src/bmsave.c). Creating the tents on every map load would stack
@@ -97,27 +98,6 @@ static int MapGen_Value(u32 seed, u32 salt, int max)
     return MapGen_Hash(seed, salt) % max;
 }
 
-// gPlaySt.playerName ("was tactician name in FE7"; include/types.h) is 11
-// bytes and, outside Link Arena, unused -- so it round-trips through every
-// save/suspend/resume write struct PlaySt already gets without needing a new
-// save-format record. byte 0 is a marker distinguishing "a seed was already
-// rolled for this save" from the field's normal empty-string state
-// (WriteNewGameSave sets playerName[0] = '\0'); bytes 1-4 are the seed,
-// little-endian, written raw rather than through GetTacticianName/
-// SetTacticianName since this is binary, not text.
-//
-// This is a stopgap, not the real fix: it borrows a field with a different
-// declared purpose instead of a properly reserved one. Compare struct
-// ExpansionUserPrefs (include/expansion_save_prefs.h) for what a real
-// reserved, versioned, checksummed slot looks like -- ExpansionSaveMeta's
-// `reserved` tail (include/save_format.h) still has room after it. A Link
-// Arena session whose tactician name happens to start with
-// MAPGEN_SEED_MAGIC would misread as a seed record; nothing here checks for
-// that, since Link Arena's own name-entry flow does not go through
-// gPlaySt.playerName until after any chapter map (and so any mapgen call)
-// has already happened.
-#define MAPGEN_SEED_MAGIC 0xFE
-
 // A value that varies between real playthroughs but, once rolled for a given
 // save, survives a save/resume (including a power cycle) as long as the
 // game has written that save at least once since: mixes GetGameClock()
@@ -127,23 +107,27 @@ static int MapGen_Value(u32 seed, u32 salt, int max)
 // runs for the save. Both vary with real human timing, so two playthroughs
 // land on different maps even with identical menu choices.
 //
-// Rolled lazily -- read back if gPlaySt.playerName already has one, rolled
-// and written into gPlaySt.playerName if not -- rather than hooked at a
-// single call site (WriteNewGameSave, "Continue", debug chapter-jump...) so
-// every path that can start play is covered by construction, not by
-// enumeration. Until whatever roll happens is included in an actual SRAM
-// write, it only lives in RAM, same as the rest of gPlaySt.
+// Persisted via struct MapGenSaveSeed (include/mapgen_save_seed.h), a
+// versioned/checksummed record living in struct ExpansionSaveMeta's
+// `reserved` tail right after struct ExpansionUserPrefs -- so it round-trips
+// through SRAM the same way the rest of the save does, with no risk of an
+// unrelated field (e.g. Link Arena's tactician name) colliding with it.
+//
+// Rolled lazily -- read back if SRAM already has a valid record for this
+// save, rolled and stored if not -- rather than hooked at a single call site
+// (WriteNewGameSave, "Continue", debug chapter-jump...) so every path that
+// can start play is covered by construction, not by enumeration. If
+// MapGenSaveSeed_Store() fails (SRAM not confirmed working, or writes not
+// yet allowed this boot -- see gSramBootFlags), the roll is still used for
+// this call but is not latched, so it is retried -- and, once storable,
+// stored -- on the next call.
 static u32 MapGen_SessionSeed(void)
 {
+    struct MapGenSaveSeed rec;
     u32 seed;
 
-    if ((u8)gPlaySt.playerName[0] == MAPGEN_SEED_MAGIC)
-    {
-        return (u8)gPlaySt.playerName[1]
-             | ((u32)(u8)gPlaySt.playerName[2] << 8)
-             | ((u32)(u8)gPlaySt.playerName[3] << 16)
-             | ((u32)(u8)gPlaySt.playerName[4] << 24);
-    }
+    if (MapGenSaveSeed_Load(&rec) == MAPGEN_SAVE_SEED_VALID)
+        return rec.seed;
 
     seed = GetGameClock();
 
@@ -157,11 +141,7 @@ static u32 MapGen_SessionSeed(void)
 
     seed = MapGen_Hash(seed, 0xC0FFEE);
 
-    gPlaySt.playerName[0] = (char)MAPGEN_SEED_MAGIC;
-    gPlaySt.playerName[1] = (char)(seed & 0xFF);
-    gPlaySt.playerName[2] = (char)((seed >> 8) & 0xFF);
-    gPlaySt.playerName[3] = (char)((seed >> 16) & 0xFF);
-    gPlaySt.playerName[4] = (char)((seed >> 24) & 0xFF);
+    MapGenSaveSeed_Store(seed);
 
     return seed;
 }

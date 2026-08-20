@@ -11,6 +11,7 @@
 #include "eventinfo.h"
 #include "bonusclaim.h"
 #include "expansion_save_prefs.h"
+#include "mapgen_save_seed.h"
 
 // TODO: Should be in "bmsave.h", but doing so causes a non-match (implicit declaration?) in "bonusclaim.c"
 bool LoadBonusContentData(void *buf);
@@ -509,6 +510,93 @@ bool8 ExpansionUserPrefs_StoreRaw(ExpansionLocaleId localeId, bool8 explicitSele
 
     errorAddr = WriteAndVerifySramFast(
         &prefs, &gSram->expansionSaveMeta.reserved[EXPANSION_USER_PREFS_META_OFFSET], sizeof(prefs));
+
+    return (bool8)(errorAddr == 0);
+}
+
+/* --- MapGenSaveSeed (FE8_MAPGEN) ---------------------------------------- */
+
+void MapGenSaveSeed_Build(struct MapGenSaveSeed *rec, u32 seed)
+{
+    memset(rec, 0, sizeof(*rec));
+
+    rec->magic = MAPGEN_SAVE_SEED_MAGIC;
+    rec->version = MAPGEN_SAVE_SEED_VERSION_CURRENT;
+    rec->seed = seed;
+
+    /* rec->reserved is already zeroed by the memset() above. */
+
+    rec->checksum = MapGenSaveSeedChecksum(rec);
+}
+
+u16 MapGenSaveSeedChecksum(struct MapGenSaveSeed const *rec)
+{
+    return Checksum16(rec, MAPGEN_SAVE_SEED_SIZE_FOR_CHECKSUM);
+}
+
+enum MapGenSaveSeedState MapGenSaveSeed_ValidateRaw(struct MapGenSaveSeed const *rec, bool8 regionUnset)
+{
+    if (regionUnset)
+        return MAPGEN_SAVE_SEED_UNSET;
+
+    if (rec->magic != MAPGEN_SAVE_SEED_MAGIC)
+        return MAPGEN_SAVE_SEED_CORRUPT;
+
+    if (rec->checksum != MapGenSaveSeedChecksum(rec))
+        return MAPGEN_SAVE_SEED_CORRUPT;
+
+    if (rec->version > MAPGEN_SAVE_SEED_VERSION_CURRENT)
+        return MAPGEN_SAVE_SEED_CORRUPT;
+
+    return MAPGEN_SAVE_SEED_VALID;
+}
+
+enum MapGenSaveSeedState MapGenSaveSeed_Load(struct MapGenSaveSeed *out)
+{
+    struct MapGenSaveSeed local;
+    bool regionUnset;
+
+    if (!IsSramWorking())
+    {
+        if (out != NULL)
+            memset(out, 0, sizeof(*out));
+        return MAPGEN_SAVE_SEED_CORRUPT;
+    }
+
+    ReadSramFast(&gSram->expansionSaveMeta.reserved[MAPGEN_SAVE_SEED_META_OFFSET], &local, sizeof(local));
+
+    regionUnset = IsRegionBlank(&local, sizeof(local)) || IsRegionAllZero(&local, sizeof(local));
+
+    if (out != NULL)
+        *out = local;
+
+    return MapGenSaveSeed_ValidateRaw(&local, regionUnset);
+}
+
+bool8 MapGenSaveSeed_Store(u32 seed)
+{
+    struct MapGenSaveSeed rec;
+    u32 errorAddr;
+
+    if (!IsSramWorking())
+        return FALSE;
+
+#ifdef MODERN
+    if (!(gSramBootFlags & SRAM_BOOT_FLAG_WRITES_ALLOWED))
+        return FALSE;
+#endif
+
+    /* Same write-interruption contract as ExpansionUserPrefs_StoreRaw above:
+     * build the whole record in a local, non-SRAM temporary first, then
+     * perform exactly one bounded WriteAndVerifySramFast() call covering
+     * only this record's own fixed window. If interrupted/failed partway,
+     * at worst this record's own checksum stops matching on the next read
+     * (classified MAPGEN_SAVE_SEED_CORRUPT, which MapGen_SessionSeed()
+     * treats the same as UNSET -- it just rolls and stores again). */
+    MapGenSaveSeed_Build(&rec, seed);
+
+    errorAddr = WriteAndVerifySramFast(
+        &rec, &gSram->expansionSaveMeta.reserved[MAPGEN_SAVE_SEED_META_OFFSET], sizeof(rec));
 
     return (bool8)(errorAddr == 0);
 }
