@@ -1038,6 +1038,9 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
 #if FE8_PURCHASE_GENERICS
     InitPurchaseBaseTrapsFromTerrain();
 #endif
+#if FE8_MAPGEN
+    MapGen_PlaceBases(gPlaySt.chapterIndex);
+#endif
 
     if (gameCtrl)
         StartBMapMain(gameCtrl);
@@ -1074,17 +1077,13 @@ void RestartBattleMap(void) {
     InitMapObstacles();
     LoadChapterTraps();
 
-#if FE8_PURCHASE_GENERICS
-    InitPurchaseBaseTrapsFromTerrain();
-#endif
+// #if FE8_PURCHASE_GENERICS
+    // InitPurchaseBaseTrapsFromTerrain();
+// #endif
 
-#if FE8_MAPGEN
-    // Chapter-start path only. Traps are persisted in SRAM (WriteTraps /
-    // ReadTraps, src/bmsave.c), so the save-load and suspend/resume paths must
-    // NOT run this or they would stack duplicate tents onto restored ones.
-    // Runs after LoadChapterTraps so it can see, and avoid, authored traps.
-    MapGen_PlaceBases(gPlaySt.chapterIndex);
-#endif
+// #if FE8_MAPGEN
+    // MapGen_PlaceBases(gPlaySt.chapterIndex);
+// #endif
 
     BMapVSync_End();
     BMapVSync_Start();

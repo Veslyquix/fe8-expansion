@@ -301,17 +301,7 @@ static int MapGen_ChunkPlaceAttempts(void)
     return 300;
 }
 
-// Raw FE8 tile index used to fill whatever cell no chunk claims. 99 is
-// Fields' established base plains tile (see scripts/mapgen_data/README.md).
-static int MapGen_PlainsFillTile(void)
-{
-    return 99;
-}
 
-/* ---- chunk fitting and placement ------------------------------------------
- * Mirrors scripts/map_gen's own Python reference (fit_chunk_to_limits /
- * chunk_position / can_place_chunk / place_chunk), reimplemented here because
- * this has to run on-console rather than at authoring time. */
 
 struct MapGenFittedChunk
 {
@@ -514,11 +504,92 @@ bool MapGen_IsEnabledForChapter(int chapterId)
     return TRUE;
 }
 
+
+// NOTE: the tmx file GIDs are these values +1, so take those values and subtract 1 for here 
+#define PLAIN_TILE       99
+#define HOUSE_TILE       804
+#define FORT_TILE        933
+#define WOODS_TILE       720
+#define THICKET_TILE     721
+#define HILL_TILE        685
+#define MOUNTAIN_A_TILE  679
+#define MOUNTAIN_B_TILE  711
+
+#define PLAIN_WEIGHT       50
+#define HOUSE_WEIGHT       0
+#define FORT_WEIGHT        0
+#define WOODS_WEIGHT       3
+#define THICKET_WEIGHT     1
+#define HILL_WEIGHT        1
+#define MOUNTAIN_A_WEIGHT  1
+#define MOUNTAIN_B_WEIGHT  1
+
+struct FillTileWeight
+{
+    u16 tile;
+    u16 weight;
+};
+
+static const struct FillTileWeight TileWeights[] =
+{
+    { PLAIN_TILE,      PLAIN_WEIGHT      },
+    { HOUSE_TILE,      HOUSE_WEIGHT      },
+    { FORT_TILE,       FORT_WEIGHT       },
+    { WOODS_TILE,      WOODS_WEIGHT      },
+    { THICKET_TILE,    THICKET_WEIGHT    },
+    { HILL_TILE,       HILL_WEIGHT       },
+    { MOUNTAIN_A_TILE, MOUNTAIN_A_WEIGHT },
+    { MOUNTAIN_B_TILE, MOUNTAIN_B_WEIGHT },
+};
+
+#define NUM_TILE_WEIGHTS (sizeof(TileWeights) / sizeof(TileWeights[0]))
+
+static void MapGen_FillRemainingTiles(u32 seed, int mapWidth, int mapHeight)
+{
+    int totalWeight = 0;
+    int ix, iy;
+    u32 i;
+
+    for (i = 0; i < NUM_TILE_WEIGHTS; ++i)
+        totalWeight += TileWeights[i].weight;
+
+    for (iy = 0; iy < mapHeight; ++iy)
+    {
+        for (ix = 0; ix < mapWidth; ++ix)
+        {
+            int roll;
+            int accumulatedWeight = 0;
+            int tile = PLAIN_TILE;
+
+            if (gBmMapBaseTiles[iy][ix] != MAPGEN_TILE(0))
+                continue;
+
+            roll = MapGen_Value(
+                seed,
+                0x6000 + iy * mapWidth + ix,
+                totalWeight
+            );
+
+            for (i = 0; i < NUM_TILE_WEIGHTS; ++i)
+            {
+                accumulatedWeight += TileWeights[i].weight;
+
+                if (roll < accumulatedWeight)
+                {
+                    tile = TileWeights[i].tile;
+                    break;
+                }
+            }
+
+            MapGen_SetTile(ix, iy, tile);
+        }
+    }
+}
+
 void MapGen_GenerateTerrain(int chapterId)
 {
     u32 seed;
     int mapWidth, mapHeight;
-    int plainsTile;
     int ix, iy;
 
     if (!MapGen_IsEnabledForChapter(chapterId))
@@ -543,17 +614,7 @@ void MapGen_GenerateTerrain(int chapterId)
 
     MapGen_PlaceRandomChunks(seed, mapWidth, mapHeight);
 
-    // Whatever no chunk claimed becomes plains.
-    plainsTile = MapGen_PlainsFillTile();
-
-    for (iy = 0; iy < mapHeight; ++iy)
-    {
-        for (ix = 0; ix < mapWidth; ++ix)
-        {
-            if (gBmMapBaseTiles[iy][ix] == MAPGEN_TILE(0))
-                MapGen_SetTile(ix, iy, plainsTile);
-        }
-    }
+    MapGen_FillRemainingTiles(seed, mapWidth, mapHeight);
 
     // Caller is responsible for RefreshTerrainBmMap(); see the hook in
     // InitChapterMap (src/bmmap.c), which already runs it right after us.
@@ -578,7 +639,11 @@ void MapGen_PlaceBases(int chapterId)
         if (GetTrapAt(point.x, point.y) != NULL)
             continue;
 
-        AddTentTrap(point.x, point.y, sMapGenBaseOwner[i]);
+        // AddTentTrap(point.x, point.y, sMapGenBaseOwner[i]);
+        AddCampTrap(point.x, point.y, sMapGenBaseOwner[i]);
+        // AddTentTrap(0, 0, 1);
+        // AddCampTrap(1, 1, 0x80);
+        
     }
 }
 
