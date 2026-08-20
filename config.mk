@@ -164,6 +164,13 @@ NEW_TILESETS ?= 1
 # eligible fort / empty-village terrain.
 PURCHASE_GENERICS ?= 1
 
+# --- Optional procedural maps ------------------------------------------------
+# Replaces the authored terrain of eligible chapters with a generated field: a
+# base tent per allegiance in opposite quadrants, joined by a road. Off by
+# default because it overwrites hand-authored maps wholesale. Requires
+# PURCHASE_GENERICS (Camp/Tent trap kinds).
+MAPGEN ?= 1
+
 # --- Optional MMB / Gorgon Egg -----------------------------------------------
 # Enables the minimug side window and C Gorgon Egg hatch phase display. This
 # mirrors the Catball1-style MMB setup by default; build with MMB=0 to fall

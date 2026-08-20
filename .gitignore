@@ -1,5 +1,7 @@
 *.sym
 
+scripts/map_gen/chunks/*.png
+
 /.deps/
 
 # Windows image file caches
@@ -971,6 +973,7 @@ sound/songs/midi/*.s
 # Generated source files
 src/msg_data.c
 include/msg_data.h
+src/mapgen_chunks_data.c
 
 # Source files written in ASM
 !src/rom_header.s

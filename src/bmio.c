@@ -19,6 +19,7 @@
 #include "mu.h"
 #include "uimenu.h"
 #include "bmtrap.h"
+#include "mapgen.h"
 #include "gamecontrol.h"
 #include "bmarena.h"
 #include "bmudisp.h"
@@ -1075,6 +1076,14 @@ void RestartBattleMap(void) {
 
 #if FE8_PURCHASE_GENERICS
     InitPurchaseBaseTrapsFromTerrain();
+#endif
+
+#if FE8_MAPGEN
+    // Chapter-start path only. Traps are persisted in SRAM (WriteTraps /
+    // ReadTraps, src/bmsave.c), so the save-load and suspend/resume paths must
+    // NOT run this or they would stack duplicate tents onto restored ones.
+    // Runs after LoadChapterTraps so it can see, and avoid, authored traps.
+    MapGen_PlaceBases(gPlaySt.chapterIndex);
 #endif
 
     BMapVSync_End();

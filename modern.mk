@@ -172,6 +172,9 @@ endif
 ifeq ($(PURCHASE_GENERICS),1)
 MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
 endif
+ifeq ($(MAPGEN),1)
+MODERN_DEFINE_FLAGS += -DFE8_MAPGEN=1
+endif
 ifeq ($(MMB),1)
 MODERN_DEFINE_FLAGS += -DFE8_MMB=1
 endif
@@ -328,6 +331,19 @@ MODERN_ALL_C_SOURCES ?= $(wildcard src/*.c)
 ifeq (,$(findstring src/msg_data.c,$(MODERN_ALL_C_SOURCES)))
 MODERN_ALL_C_SOURCES += src/msg_data.c
 endif
+ifeq (,$(findstring src/mapgen_chunks_data.c,$(MODERN_ALL_C_SOURCES)))
+MODERN_ALL_C_SOURCES += src/mapgen_chunks_data.c
+endif
+
+# FE8_MAPGEN's chunk-placement generator (src/mapgen.c) draws from a table of
+# pre-made tile pieces authored offline and exported as .tmx; this converts
+# every .tmx under scripts/map_gen/chunks/*/tmx/ into the C data src/mapgen.c
+# links against. Not committed -- regenerated on every build, same as
+# src/msg_data.c above, so editing/adding a .tmx chunk just requires a rebuild.
+MAPGEN_CHUNKS_TMX := $(shell find scripts/map_gen/chunks -type f -name "*.tmx" 2>/dev/null)
+
+src/mapgen_chunks_data.c: scripts/mapgen_build_chunks.py $(MAPGEN_CHUNKS_TMX)
+	@$(PYTHON) scripts/mapgen_build_chunks.py $@
 
 # Issue #5 Batch 2c-1: same swap as the legacy Makefile's CFILES filtering
 # (generated_data.mk) -- a hand C table superseded by a linked
@@ -1637,6 +1653,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_NEW_ANIMS=$(NEW_ANIMS) \
 	-DFE8_NEW_TILESETS=$(NEW_TILESETS) \
 	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS) \
+	-DFE8_MAPGEN=$(MAPGEN) \
 	-DFE8_MMB=$(MMB) \
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
 	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \

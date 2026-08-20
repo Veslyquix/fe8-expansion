@@ -12,6 +12,7 @@
 
 #include "constants/terrains.h"
 #include "constants/chapters.h"
+#include "mapgen.h"
 static void BmMapInit(void* buffer, u8*** outHandle, int width, int height);
 
 static void RenderBmMapColumn(u16 xOffset);
@@ -77,9 +78,19 @@ void InitChapterMap(int chapterId) {
     BmMapFill(gBmMapTerrain, 0);
 
     InitBaseTilesBmMap();
+
+#if FE8_MAPGEN
+    // After InitBaseTilesBmMap (which is what populates gBmMapBaseTiles from
+    // the authored map) and before RefreshTerrainBmMap, so the terrain array is
+    // derived from the generated tiles rather than the ones we just replaced.
+    // Deliberately runs on every call, including resumes -- see the determinism
+    // contract in src/mapgen.c.
+    MapGen_GenerateTerrain(chapterId);
+#endif
+
     ApplyEnabledMapChanges();
     RefreshTerrainBmMap();
-    
+
     if (gPlaySt.chapterIndex == CHAPTER_75)
         ApplyWaterShadowsBmMap();
 }

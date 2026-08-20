@@ -7654,10 +7654,6 @@ void SetBanimTerrainPos(struct BanimUnkStructComm * buf, s16 x1, s16 y1, s16 x2,
 #define DEBUGGER_BANIM_BG_X 72
 #define DEBUGGER_BANIM_BG_Y 138
 
-static bool sDebuggerBanimPreviewActive = false;
-static bool sDebuggerBanimStartedMiniAnim = false;
-static struct ClassReelEnt sDebuggerBanimFallbackReelEntry;
-
 static const struct ProcCmd sProc_DebuggerBanimPreview[];
 
 static struct ClassReelAnimScr CONST_DATA sDebuggerBanimScript[] =
@@ -7755,10 +7751,12 @@ static int GetDebuggerBanimId(int classId, struct Unit * unit)
     return 0;
 }
 
-static struct ClassReelEnt * GetDebuggerBanimReelEntry(int classId, struct Unit * unit)
+// Only the vanilla (ROM, so persistent) table - returns NULL for a class
+// that isn't in it, rather than a static scratch entry. See
+// FillDebuggerBanimFallbackEntry for that case.
+static struct ClassReelEnt * GetDebuggerBanimReelEntry(int classId)
 {
     int i;
-    const struct ClassData * class;
 
     for (i = 0; i < 65; i++)
     {
@@ -7766,24 +7764,30 @@ static struct ClassReelEnt * GetDebuggerBanimReelEntry(int classId, struct Unit 
             return &gClassReelData[i];
     }
 
-    class = GetClassData(classId);
+    return NULL;
+}
 
-    sDebuggerBanimFallbackReelEntry.descTextId = 0;
-    sDebuggerBanimFallbackReelEntry.paletteId = -1;
-    sDebuggerBanimFallbackReelEntry.classId = classId;
-    sDebuggerBanimFallbackReelEntry.unk_06 = 0;
-    sDebuggerBanimFallbackReelEntry.banimId = GetDebuggerBanimId(classId, unit);
-    sDebuggerBanimFallbackReelEntry.magicFx = class != NULL ? GetDebuggerDefaultMagicFx(class) : 0;
-    sDebuggerBanimFallbackReelEntry.unk_09 = 0;
-    sDebuggerBanimFallbackReelEntry.unk_0A = 0;
-    sDebuggerBanimFallbackReelEntry.unk_0B = 0;
-    sDebuggerBanimFallbackReelEntry.unk_0C = 0;
-    sDebuggerBanimFallbackReelEntry.unk_0D = DEBUGGER_BANIM_TERRAIN;
-    sDebuggerBanimFallbackReelEntry.unk_0E = DEBUGGER_BANIM_TERRAIN;
-    sDebuggerBanimFallbackReelEntry.unk_0F = 0;
-    sDebuggerBanimFallbackReelEntry.script = sDebuggerBanimScript;
+// Fills a caller-owned (stack) entry for a class that isn't in gClassReelData,
+// instead of keeping a static one around - StartDebuggerBanimPreview only
+// needs it for the single SetupDebuggerBanimAnim call that reads it.
+static void FillDebuggerBanimFallbackEntry(struct ClassReelEnt * out, int classId, struct Unit * unit)
+{
+    const struct ClassData * class = GetClassData(classId);
 
-    return &sDebuggerBanimFallbackReelEntry;
+    out->descTextId = 0;
+    out->paletteId = -1;
+    out->classId = classId;
+    out->unk_06 = 0;
+    out->banimId = GetDebuggerBanimId(classId, unit);
+    out->magicFx = class != NULL ? GetDebuggerDefaultMagicFx(class) : 0;
+    out->unk_09 = 0;
+    out->unk_0A = 0;
+    out->unk_0B = 0;
+    out->unk_0C = 0;
+    out->unk_0D = DEBUGGER_BANIM_TERRAIN;
+    out->unk_0E = DEBUGGER_BANIM_TERRAIN;
+    out->unk_0F = 0;
+    out->script = sDebuggerBanimScript;
 }
 
 static bool IsDebuggerBanimSafe(struct ClassReelEnt * entry)
@@ -7833,13 +7837,18 @@ static void SetDebuggerBanimLayer(u16 layer)
 
 static void DebuggerBanimPreview_ResetScript(struct OpInfoClassDisplayProc * proc)
 {
-    proc->script = proc->classReelEnt->script;
+    // classReelEnt is only ever a gClassReelData (rom) pointer or NULL - a
+    // fallback/custom-class entry is never persisted, see StartDebuggerBanimPreview
+    proc->script = proc->classReelEnt != NULL ? proc->classReelEnt->script : NULL;
 
     if (proc->script == NULL)
         proc->script = sDebuggerBanimScript;
 }
 
-static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct ClassReelEnt * entry)
+// entry is only read here, for this one call - persistentEntry is what
+// proc->classReelEnt keeps for later script resets, and is NULL for a
+// fallback/custom-class entry (whose backing storage is the caller's stack).
+static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct ClassReelEnt * entry, struct ClassReelEnt * persistentEntry)
 {
     NewEfxAnimeDrvProc();
 
@@ -7876,7 +7885,6 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
 
     ResetClassReelSpell();
     NewEkrUnitMainMini(&gOpInfoData);
-    sDebuggerBanimStartedMiniAnim = true;
     SetDebuggerBanimLayer(0);
 
     gUnk_Opinfo_0.terrain_l = DEBUGGER_BANIM_TERRAIN;
@@ -7898,21 +7906,21 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
         DEBUGGER_BANIM_BG_X + 0x60,
         DEBUGGER_BANIM_BG_Y);
 
-    proc->classReelEnt = entry;
+    proc->classReelEnt = persistentEntry;
     DebuggerBanimPreview_ResetScript(proc);
 }
 
 static void EndDebuggerBanimPreview(void)
 {
-    if (!sDebuggerBanimPreviewActive)
-        return;
-
+    // safe even when no such proc exists - Proc_EndEach/Proc_ForEach just find nothing to do
     Proc_EndEach(sProc_DebuggerBanimPreview);
 }
 
 static void StartDebuggerBanimPreview(int classId, struct Unit * unit)
 {
     struct OpInfoClassDisplayProc * proc;
+    struct ClassReelEnt * vanillaEntry;
+    struct ClassReelEnt fallbackEntry;
     struct ClassReelEnt * entry;
 
     EndDebuggerBanimPreview();
@@ -7920,15 +7928,23 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit)
     if (classId == 0 || GetClassData(classId) == NULL)
         return;
 
-    entry = GetDebuggerBanimReelEntry(classId, unit);
+    vanillaEntry = GetDebuggerBanimReelEntry(classId);
+
+    if (vanillaEntry != NULL)
+    {
+        entry = vanillaEntry;
+    }
+    else
+    {
+        FillDebuggerBanimFallbackEntry(&fallbackEntry, classId, unit);
+        entry = &fallbackEntry;
+    }
 
     if (!IsDebuggerBanimSafe(entry))
         return;
 
     proc = Proc_Start(sProc_DebuggerBanimPreview, PROC_TREE_3);
-    SetupDebuggerBanimAnim(proc, entry);
-
-    sDebuggerBanimPreviewActive = true;
+    SetupDebuggerBanimAnim(proc, entry, vanillaEntry);
 }
 
 static void DebuggerBanimPreview_ExecScript(struct OpInfoClassDisplayProc * proc)
@@ -7950,22 +7966,20 @@ static void DebuggerBanimPreview_OnEnd(struct OpInfoClassDisplayProc * proc)
     EndActiveClassReelSpell();
     EndActiveClassReelBgColorProc();
 
-    if (sDebuggerBanimStartedMiniAnim)
-        EndEkrUnitMainMini(&gOpInfoData);
+    // SetupDebuggerBanimAnim (the only way this proc ever starts) always
+    // calls NewEkrUnitMainMini, so this always has a mini anim to end
+    EndEkrUnitMainMini(&gOpInfoData);
 
     EndBanimTerrain(&gUnk_Opinfo_0);
     EndEfxAnimeDrvProc();
     ApplyUnitSpritePalettes();
-
-    sDebuggerBanimStartedMiniAnim = false;
-    sDebuggerBanimPreviewActive = false;
 }
 
 static const struct ProcCmd sProc_DebuggerBanimPreview[] =
 {
     PROC_NAME("DebuggerBanimPreview"),
     PROC_SET_END_CB(DebuggerBanimPreview_OnEnd),
-
+PROC_YIELD, 
 PROC_LABEL(0),
     PROC_CALL(DebuggerBanimPreview_ExecScript),
     PROC_REPEAT(DebuggerBanimPreview_LoopScript),

@@ -308,6 +308,14 @@
 #define FE8_PURCHASE_GENERICS 0
 #endif
 
+/* Procedurally generated chapter maps: a base tent per allegiance in opposite
+ * quadrants, joined by a road. Overwrites the authored map terrain for any
+ * chapter it accepts (see MapGen_IsEnabledForChapter). Requires
+ * FE8_PURCHASE_GENERICS for the Camp/Tent trap kinds. See src/mapgen.c. */
+#ifndef FE8_MAPGEN
+#define FE8_MAPGEN 0
+#endif
+
 /* Mini Mug Box side window plus the C Gorgon Egg hatch phase display. */
 #ifndef FE8_MMB
 #define FE8_MMB 0
@@ -424,6 +432,14 @@
 
 #if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)
 #error "FE8_PURCHASE_GENERICS must be 0 or 1"
+#endif
+
+#if (FE8_MAPGEN != 0) && (FE8_MAPGEN != 1)
+#error "FE8_MAPGEN must be 0 or 1"
+#endif
+
+#if FE8_MAPGEN && !FE8_PURCHASE_GENERICS
+#error "FE8_MAPGEN requires FE8_PURCHASE_GENERICS (Camp/Tent trap kinds)"
 #endif
 
 #if (FE8_MMB != 0) && (FE8_MMB != 1)
