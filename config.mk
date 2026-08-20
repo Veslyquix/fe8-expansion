@@ -77,7 +77,20 @@ EXPANSION_BUILD_ID ?=
 # see docs/id_space.md's "class" domain and include/bmsave.h). This changes
 # what the game-save unit bytes mean, so it must invalidate old saves via the
 # existing save-compat gate rather than silently misreading them.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 4
+#
+# Bumped 3 -> 4 for the debuffs feature: struct SuspendSavePackedUnit gained a
+# conditional `debuffs[UNIT_DEBUFF_STAT_COUNT]` field and
+# SUSPEND_SAVE_BLOCK_COUNT became conditional (1 vs 2) rather than a hardcoded
+# 2, both changing struct SaveBlocks' layout from suspendSaveBlocks onward.
+#
+# Bumped 4 -> 5 for FE8_MAPGEN's per-save generation seed: struct PlaySt
+# (include/types.h) gains a `#if FE8_MAPGEN u32 mapGenSeed;` field appended at
+# its own end. This grows every struct that embeds struct PlaySt
+# (GameSaveBlock, SuspendSaveBlock) and therefore shifts every subsequent
+# offset in struct SaveBlocks, same class of change as the jid-widening bump
+# above -- flag-gated (only FE8_MAPGEN=1 builds are affected), but real saves
+# from a pre-bump build must not be silently misread post-bump.
+EXPANSION_SAVE_COMPAT_EPOCH ?= 5
 
 # --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see

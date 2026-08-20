@@ -131,6 +131,12 @@ void WriteNewGameSave(int index, int isDifficult, int mode, int isTutorial)
     gPlaySt.chapterModeIndex = mode;
     gPlaySt.unk_2B_00 = 1;
     gPlaySt.playerName[0] = '\0';
+#if FE8_MAPGEN
+    // Reroll trigger for MapGen_SessionSeed (src/mapgen.c): 0 means "no seed
+    // rolled yet for this save", so clearing it here is what makes starting
+    // a new game in-game generate a different map than the slot it replaces.
+    gPlaySt.mapGenSeed = 0;
+#endif
     gPlaySt.chapterIndex = 0;
     gPlaySt.playthroughIdentifier = GetNewPlaythroughId();
     gPlaySt.gameSaveSlot = index;

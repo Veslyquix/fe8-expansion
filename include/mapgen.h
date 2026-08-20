@@ -48,6 +48,17 @@ void MapGen_GetLayout(int chapterId, struct MapGenLayout * out);
 
 bool MapGen_IsEnabledForChapter(int chapterId);
 
+/* Call once per VBlank, from as early in boot as possible (OnVBlank, src/bm.c)
+ * -- feeds the free-running frame counter MapGen_SessionSeed() (src/mapgen.c)
+ * uses as entropy. Deliberately separate from GetGameClock()/gGameClock: that
+ * clock gets reset by SetGameTime() on paths that run before
+ * MapGen_SessionSeed ever gets to read it (in particular WriteNewGameSave's
+ * own SetGameTime(0), which fires before chapter 0's map -- and so this
+ * generator -- ever loads), discarding exactly the boot-to-New-Game
+ * menu-navigation entropy this needs. This counter is never reset by
+ * anything. */
+void MapGen_TickBootFrames(void);
+
 #endif // FE8_MAPGEN
 
 #endif // GUARD_MAPGEN_H

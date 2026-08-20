@@ -91,7 +91,6 @@ class SaveFormatLayoutTests(unittest.TestCase):
         #include "bmdifficulty.h"
         #include "sram-layout.h"
         #include "expansion_save_prefs.h"
-        #include "mapgen_save_seed.h"
 
         /* struct ExpansionSaveMeta itself: exactly the 0x5C-byte pad,
          * zero implicit padding, checksum domain fixed at 0x2E bytes. */
@@ -132,6 +131,23 @@ class SaveFormatLayoutTests(unittest.TestCase):
         char probe_sz_Dungeon[sizeof(struct Dungeon) == 0xC ? 1 : -1];
         char probe_sz_GameSaveBlock[sizeof(struct GameSaveBlock) == 0xDC8 ? 1 : -1];
         char probe_sz_SuspendSaveBlock[sizeof(struct SuspendSaveBlock) == 0x1F78 ? 1 : -1];
+
+        /* struct PlaySt (include/types.h): FE8_MAPGEN appends mapGenSeed at
+         * the struct's own end, so every pre-existing named field's offset
+         * (0x00-0x4B) is untouched regardless of the flag; only the total
+         * size and this one new field's presence/offset depend on it. Only
+         * the FE8_MAPGEN=1 shape is asserted here (this file's probe source
+         * does not itself set FE8_MAPGEN, so under its current default this
+         * block is skipped, same known gap as the FE8_PURCHASE_GENERICS
+         * cascade documented at probe_sb_off_xmap above) -- verified
+         * separately against both agbcc and modern gcc, both configs, when
+         * this field was added. */
+#if FE8_MAPGEN
+        char probe_playst_size[sizeof(struct PlaySt) == 0x50 ? 1 : -1];
+        char probe_playst_off_mapGenSeed[offsetof(struct PlaySt, mapGenSeed) == 0x4C ? 1 : -1];
+#else
+        char probe_playst_size[sizeof(struct PlaySt) == 0x4C ? 1 : -1];
+#endif
         char probe_sz_ActionData[sizeof(struct ActionData) == 0x38 ? 1 : -1];
         char probe_sz_Trap[sizeof(struct Trap) == 0x8 ? 1 : -1];
 
@@ -234,32 +250,6 @@ class SaveFormatLayoutTests(unittest.TestCase):
             EXPANSION_SAVE_META_RESERVED_HEADROOM_BYTES
                 == ((int)sizeof(((struct ExpansionSaveMeta *)0)->reserved)
                     - EXPANSION_USER_PREFS_META_OFFSET - (int)sizeof(struct ExpansionUserPrefs)) ? 1 : -1];
-
-        /* struct MapGenSaveSeed (include/mapgen_save_seed.h, FE8_MAPGEN):
-         * same fixed-layout/ALIGN(4) reasoning as struct ExpansionUserPrefs
-         * above, placed immediately after it in the reserved tail rather
-         * than at a separately-chosen offset, and still fitting with
-         * headroom left over. */
-        char probe_mapgen_seed_size[sizeof(struct MapGenSaveSeed) == 0x0C ? 1 : -1];
-        char probe_mapgen_seed_off_magic[offsetof(struct MapGenSaveSeed, magic) == 0x00 ? 1 : -1];
-        char probe_mapgen_seed_off_version[offsetof(struct MapGenSaveSeed, version) == 0x01 ? 1 : -1];
-        char probe_mapgen_seed_off_reserved[offsetof(struct MapGenSaveSeed, reserved) == 0x02 ? 1 : -1];
-        char probe_mapgen_seed_off_seed[offsetof(struct MapGenSaveSeed, seed) == 0x04 ? 1 : -1];
-        char probe_mapgen_seed_off_checksum[offsetof(struct MapGenSaveSeed, checksum) == 0x08 ? 1 : -1];
-        char probe_mapgen_seed_size_for_checksum[MAPGEN_SAVE_SEED_SIZE_FOR_CHECKSUM == 0x08 ? 1 : -1];
-        char probe_mapgen_seed_meta_offset[
-            MAPGEN_SAVE_SEED_META_OFFSET == (EXPANSION_USER_PREFS_META_OFFSET + 0x0C) ? 1 : -1];
-        char probe_mapgen_seed_fits_in_reserved[
-            (MAPGEN_SAVE_SEED_META_OFFSET + (int)sizeof(struct MapGenSaveSeed))
-                <= (int)sizeof(((struct ExpansionSaveMeta *)0)->reserved) ? 1 : -1];
-        char probe_mapgen_seed_no_overlap_with_user_prefs[
-            MAPGEN_SAVE_SEED_META_OFFSET
-                >= (EXPANSION_USER_PREFS_META_OFFSET + (int)sizeof(struct ExpansionUserPrefs)) ? 1 : -1];
-        char probe_mapgen_seed_headroom_bytes[MAPGEN_SAVE_SEED_RESERVED_HEADROOM_BYTES == 0x14 ? 1 : -1];
-        char probe_mapgen_seed_headroom_matches[
-            MAPGEN_SAVE_SEED_RESERVED_HEADROOM_BYTES
-                == ((int)sizeof(((struct ExpansionSaveMeta *)0)->reserved)
-                    - MAPGEN_SAVE_SEED_META_OFFSET - (int)sizeof(struct MapGenSaveSeed)) ? 1 : -1];
     """)
 
     # -- legacy agbcc coverage (always runs; no optional dependency) --------

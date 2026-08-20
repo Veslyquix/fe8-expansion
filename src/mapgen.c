@@ -7,7 +7,6 @@
 #include "hardware.h"
 #include "mapgen.h"
 #include "mapgen_chunks_data.h"
-#include "mapgen_save_seed.h"
 
 #if FE8_MAPGEN
 
@@ -30,9 +29,9 @@
  *   different map than the one the player suspended on. So the terrain half is
  *   a pure function of (chapterId, MapGen_SessionSeed()), regenerated
  *   identically every load -- including across a power cycle, since
- *   MapGen_SessionSeed persists its roll into struct MapGenSaveSeed
- *   (include/mapgen_save_seed.h), which round-trips through SRAM the same
- *   way the rest of the save does.
+ *   MapGen_SessionSeed persists its roll into gPlaySt.mapGenSeed
+ *   (include/types.h, #if FE8_MAPGEN), which is per-save-slot and
+ *   round-trips through SRAM with the rest of the save.
  *
  *   Traps, by contrast, are written to and restored from SRAM (WriteTraps /
  *   ReadTraps, src/bmsave.c). Creating the tents on every map load would stack
@@ -98,38 +97,58 @@ static int MapGen_Value(u32 seed, u32 salt, int max)
     return MapGen_Hash(seed, salt) % max;
 }
 
+// Free-running frame counter fed by MapGen_TickBootFrames() (include/mapgen.h),
+// called from OnVBlank (src/bm.c) as early in boot as the interrupt handler is
+// installed. Deliberately NOT GetGameClock()/gGameClock: that clock gets
+// reset by SetGameTime() on paths that run before MapGen_SessionSeed ever
+// gets to read it -- in particular WriteNewGameSave's own SetGameTime(0),
+// which fires before chapter 0's map (and so this generator) ever loads on a
+// new game, discarding exactly the boot-to-New-Game menu-navigation entropy
+// this needs. Confirmed by observation: GetGameClock() read back as
+// essentially constant here, since every real path zeroes it first. This
+// counter is never reset by anything, so it keeps whatever it accumulated
+// from real elapsed time since boot.
+static EWRAM_DATA u32 sMapGenBootFrames = 0;
+
+void MapGen_TickBootFrames(void)
+{
+    sMapGenBootFrames++;
+}
+
+// gPlaySt.mapGenSeed (include/types.h, #if FE8_MAPGEN) is a dedicated field
+// appended to struct PlaySt for exactly this. It is PER-SAVE-SLOT (struct
+// PlaySt is embedded separately in each of the 3 struct GameSaveBlock/
+// SuspendSaveBlock entries) and round-trips through SRAM with the rest of
+// that slot automatically -- no new save-format record, and no borrowing an
+// unrelated field (an earlier version of this lived in gPlaySt.playerName,
+// which worked but meant a Link Arena tactician name could in principle
+// collide with it; that is no longer a concern). 0 means "no seed rolled
+// yet for this save" -- WriteNewGameSave (src/bmsave.c) resets the field to
+// 0 on every new-game creation, which is what makes starting a new game
+// in-game reroll the seed, the same way it already does for the rest of a
+// fresh save's state.
+//
 // A value that varies between real playthroughs but, once rolled for a given
 // save, survives a save/resume (including a power cycle) as long as the
-// game has written that save at least once since: mixes GetGameClock()
-// (frames elapsed since the last SetGameTime(0) reset, i.e. since New Game --
-// or since boot, for a save loaded without starting a new one first) with
-// whatever the player's controller state happens to be the first time this
-// runs for the save. Both vary with real human timing, so two playthroughs
-// land on different maps even with identical menu choices.
+// game has written that save at least once since: mixes sMapGenBootFrames
+// (see above) with whatever the player's controller state happens to be the
+// first time this runs for the save. Both vary with real human timing, so
+// two playthroughs land on different maps even with identical menu choices.
 //
-// Persisted via struct MapGenSaveSeed (include/mapgen_save_seed.h), a
-// versioned/checksummed record living in struct ExpansionSaveMeta's
-// `reserved` tail right after struct ExpansionUserPrefs -- so it round-trips
-// through SRAM the same way the rest of the save does, with no risk of an
-// unrelated field (e.g. Link Arena's tactician name) colliding with it.
-//
-// Rolled lazily -- read back if SRAM already has a valid record for this
-// save, rolled and stored if not -- rather than hooked at a single call site
-// (WriteNewGameSave, "Continue", debug chapter-jump...) so every path that
-// can start play is covered by construction, not by enumeration. If
-// MapGenSaveSeed_Store() fails (SRAM not confirmed working, or writes not
-// yet allowed this boot -- see gSramBootFlags), the roll is still used for
-// this call but is not latched, so it is retried -- and, once storable,
-// stored -- on the next call.
+// Rolled lazily -- read back if gPlaySt.mapGenSeed is already nonzero, rolled
+// and written into it if not -- rather than hooked at a single call site
+// ("Continue", debug chapter-jump...) so every path that can start play is
+// covered by construction, not by enumeration. Until whatever roll happens is
+// included in an actual SRAM write, it only lives in RAM, same as the rest of
+// gPlaySt.
 static u32 MapGen_SessionSeed(void)
 {
-    struct MapGenSaveSeed rec;
     u32 seed;
 
-    if (MapGenSaveSeed_Load(&rec) == MAPGEN_SAVE_SEED_VALID)
-        return rec.seed;
+    if (gPlaySt.mapGenSeed != 0)
+        return gPlaySt.mapGenSeed;
 
-    seed = GetGameClock();
+    seed = sMapGenBootFrames;
 
     if (gKeyStatusPtr != NULL)
     {
@@ -141,7 +160,13 @@ static u32 MapGen_SessionSeed(void)
 
     seed = MapGen_Hash(seed, 0xC0FFEE);
 
-    MapGenSaveSeed_Store(seed);
+    // 0 means "unrolled" (see gPlaySt.mapGenSeed's own comment above), so a
+    // hash that happens to land on exactly 0 (1 in 2^32) is nudged off it --
+    // still deterministic given the same inputs, just not the sentinel.
+    if (seed == 0)
+        seed = 1;
+
+    gPlaySt.mapGenSeed = seed;
 
     return seed;
 }

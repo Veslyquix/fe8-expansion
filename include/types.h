@@ -223,6 +223,24 @@ struct PlaySt { // Chapter Data Struct
     u8 save_menu_type : 3;
     u8 tutorial_exec_type : 4;
     u8 tutorial_counter;
+
+#if FE8_MAPGEN
+    /* 4C */ u32 mapGenSeed; /* see MapGen_SessionSeed, src/mapgen.c.
+                              * 0 = no seed rolled yet for this save; reset
+                              * to 0 by WriteNewGameSave (src/bmsave.c) on
+                              * every new-game creation. Appended at the
+                              * struct's own end (not inserted among the
+                              * existing fields) so no other member's offset
+                              * moves; BITPACKED's `packed` means this starts
+                              * immediately at the prior byte with no
+                              * alignment gap. Growing struct PlaySt grows
+                              * every struct that embeds it (GameSaveBlock,
+                              * SuspendSaveBlock) and therefore every offset
+                              * in struct SaveBlocks from there on -- see
+                              * EXPANSION_SAVE_COMPAT_EPOCH (config.mk),
+                              * bumped alongside this for exactly that
+                              * reason. */
+#endif
 } BITPACKED;
 
 /* PlaySt::config::animationType */

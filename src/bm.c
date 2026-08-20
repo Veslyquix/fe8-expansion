@@ -14,6 +14,7 @@
 #include "bmtrick.h"
 #include "bmio.h"
 #include "fontgrp.h"
+#include "mapgen.h"
 #include "face.h"
 #include "icon.h"
 #include "uiutils.h"
@@ -323,6 +324,9 @@ void OnVBlank(void)
     INTR_CHECK = INTR_FLAG_VBLANK;
 
     IncrementGameClock();
+#if FE8_MAPGEN
+    MapGen_TickBootFrames();
+#endif
     m4aSoundVSync();
 
     Proc_Run(gProcTreeRootArray[0]);
