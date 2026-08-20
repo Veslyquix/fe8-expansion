@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='utf-8'?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="16" height="6" tilewidth="16" tileheight="16" infinite="0" nextlayerid="2" nextobjectid="1"><tileset firstgid="1" name="Fields" tilewidth="16" tileheight="16" tilecount="1024" columns="32"><image source="../../../../Tilesets/Fields.png" width="512" height="512" /></tileset><layer id="1" name="Main" width="16" height="6"><data>
+  <tile gid="72" />
+  <tile gid="137" />
+  <tile gid="7" />
+  <tile gid="112" />
+  <tile gid="112" />
+  <tile gid="168" />
+  <tile gid="103" />
+  <tile gid="7" />
+  <tile gid="7" />
+  <tile gid="168" />
+  <tile />
+  <tile />
+  <tile gid="15" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="7" />
+  <tile gid="7" />
+  <tile gid="104" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="71" />
+  <tile gid="7" />
+  <tile gid="7" />
+  <tile gid="933" />
+  <tile gid="933" />
+  <tile gid="71" />
+  <tile gid="7" />
+  <tile gid="80" />
+  <tile gid="72" />
+  <tile />
+  <tile gid="7" />
+  <tile gid="7" />
+  <tile gid="72" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="143" />
+  <tile gid="104" />
+  <tile gid="103" />
+  <tile gid="112" />
+  <tile gid="112" />
+  <tile gid="168" />
+  <tile gid="105" />
+  <tile gid="7" />
+  <tile gid="112" />
+  <tile />
+  <tile gid="7" />
+  <tile gid="7" />
+  <tile gid="144" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="48" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="137" />
+  <tile gid="104" />
+  <tile />
+  <tile />
+  <tile gid="115" />
+  <tile gid="112" />
+  <tile gid="104" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="48" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="933" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  </data></layer></map>

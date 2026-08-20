@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='utf-8'?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="10" height="11" tilewidth="16" tileheight="16" infinite="0" nextlayerid="2" nextobjectid="1"><tileset firstgid="1" name="Fields" tilewidth="16" tileheight="16" tilecount="1024" columns="32"><image source="../../../../Tilesets/Fields.png" width="512" height="512" /></tileset><layer id="1" name="Main" width="10" height="11"><data>
+  <tile />
+  <tile />
+  <tile gid="749" />
+  <tile gid="616" />
+  <tile gid="426" />
+  <tile gid="430" />
+  <tile gid="466" />
+  <tile />
+  <tile gid="560" />
+  <tile gid="588" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="560" />
+  <tile gid="492" />
+  <tile gid="461" />
+  <tile gid="465" />
+  <tile gid="594" />
+  <tile />
+  <tile gid="560" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="496" />
+  <tile gid="545" />
+  <tile gid="466" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="496" />
+  <tile gid="617" />
+  <tile gid="529" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="744" />
+  <tile gid="592" />
+  <tile gid="617" />
+  <tile gid="430" />
+  <tile gid="466" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="592" />
+  <tile gid="460" />
+  <tile gid="614" />
+  <tile gid="618" />
+  <tile gid="465" />
+  <tile gid="561" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="496" />
+  <tile gid="492" />
+  <tile gid="583" />
+  <tile gid="546" />
+  <tile gid="466" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="560" />
+  <tile gid="588" />
+  <tile gid="618" />
+  <tile gid="619" />
+  <tile gid="561" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="496" />
+  <tile gid="624" />
+  <tile gid="593" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="432" />
+  <tile gid="590" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="744" />
+  <tile />
+  <tile gid="680" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="592" />
+  <tile gid="460" />
+  <tile gid="562" />
+  <tile gid="592" />
+  </data></layer></map>

@@ -1,0 +1,323 @@
+<?xml version='1.0' encoding='utf-8'?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="20" height="16" tilewidth="16" tileheight="16" infinite="0" nextlayerid="2" nextobjectid="1"><tileset firstgid="1" name="Fields" tilewidth="16" tileheight="16" tilecount="1024" columns="32"><image source="../../../../Tilesets/Fields.png" width="512" height="512" /></tileset><layer id="1" name="Main" width="20" height="16"><data>
+  <tile gid="600" />
+  <tile gid="631" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="629" />
+  <tile gid="598" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="3" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="600" />
+  <tile gid="631" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="601" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="665" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="629" />
+  <tile gid="598" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="632" />
+  <tile gid="636" />
+  <tile gid="631" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="632" />
+  <tile gid="571" />
+  <tile gid="572" />
+  <tile gid="630" />
+  <tile />
+  <tile gid="600" />
+  <tile gid="598" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="630" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="629" />
+  <tile gid="539" />
+  <tile gid="598" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="665" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="600" />
+  <tile gid="540" />
+  <tile gid="571" />
+  <tile gid="631" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="602" />
+  <tile />
+  <tile />
+  <tile gid="632" />
+  <tile gid="572" />
+  <tile gid="631" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="600" />
+  <tile gid="539" />
+  <tile gid="540" />
+  <tile gid="599" />
+  <tile />
+  <tile gid="600" />
+  <tile gid="540" />
+  <tile gid="35" />
+  <tile gid="598" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="600" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  </data></layer></map>

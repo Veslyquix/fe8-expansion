@@ -1,6 +1,6 @@
 *.sym
 
-scripts/map_gen/chunks/*.png
+scripts/map_gen/chunks/**/*.png
 
 /.deps/
 
