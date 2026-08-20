@@ -183,9 +183,13 @@ class ModernRomBootTargetTests(unittest.TestCase):
 
     # -- ROM size configuration (--size wiring) --------------------------------
 
-    def test_rom_rule_passes_default_16m_size_to_verifier(self):
-        """Without MODERN_ROM_SIZE, the recipe must pass --size 16M to the
-        verifier, preserving the pre-32M-support default."""
+    def test_rom_rule_passes_default_32m_size_to_verifier(self):
+        """Without MODERN_ROM_SIZE, the recipe must pass --size 32M to the
+        verifier. The default was 16M until the FE8_MAPGEN chunk table (and
+        the pre-existing near-full 16M budget, see reports/linker-budget)
+        made that no longer enough room to build with; see
+        test_rom_rule_passes_16m_size_to_verifier below for the still-
+        supported explicit-opt-in-to-16M path."""
         with tempfile.TemporaryDirectory() as tmp:
             fake_elf = Path(tmp, "fireemblem8.elf")
             fake_elf.write_bytes(b"\x00" * 16)
@@ -207,6 +211,42 @@ class ModernRomBootTargetTests(unittest.TestCase):
             result = self.make(
                 "-o", str(fake_elf),
                 str(rom_path),
+                f"MODERN_ELF={fake_elf}",
+                f"MODERN_OBJCOPY={fake_objcopy}",
+                f"MODERN_ROM_HEADER_VERIFIER={fake_verifier}",
+                f"MODERN_ROM={rom_path}",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            argv_text = argv_capture.read_text()
+            self.assertIn("--size 32M", argv_text)
+            self.assertTrue(argv_text.strip().endswith(str(rom_path)))
+
+    def test_rom_rule_passes_16m_size_to_verifier(self):
+        """MODERN_ROM_SIZE=16M must still flow through to the verifier's
+        --size when explicitly requested, now that it is opt-in rather than
+        the default (see test_rom_rule_passes_default_32m_size_to_verifier)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_elf = Path(tmp, "fireemblem8.elf")
+            fake_elf.write_bytes(b"\x00" * 16)
+            fake_objcopy = Path(tmp, "fake_objcopy.sh")
+            fake_objcopy.write_text(
+                "#!/bin/sh\n"
+                'for out; do :; done\n'
+                'head -c 1024 /dev/zero > "$out"\n'
+            )
+            fake_objcopy.chmod(0o755)
+            argv_capture = Path(tmp, "verifier_argv.txt")
+            fake_verifier = Path(tmp, "fake_verify.py")
+            fake_verifier.write_text(
+                "import sys\n"
+                f"open(r'{argv_capture}', 'w').write(' '.join(sys.argv[1:]))\n"
+                "sys.exit(0)\n"
+            )
+            rom_path = Path(tmp, "fireemblem8.gba")
+            result = self.make(
+                "-o", str(fake_elf),
+                str(rom_path),
+                "MODERN_ROM_SIZE=16M",
                 f"MODERN_ELF={fake_elf}",
                 f"MODERN_OBJCOPY={fake_objcopy}",
                 f"MODERN_ROM_HEADER_VERIFIER={fake_verifier}",

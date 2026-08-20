@@ -1404,10 +1404,12 @@ MODERN_CLEAN_LDSCRIPT := linker/expansion.ld
 MODERN_CLEAN_IWRAM := linker/iwram.ld
 $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 
-# ROM size configuration: 16M (English/pseudo default) or 32M. Production
-# profiles enabling ja or zh-Hans are validated below as 32M-only; the upper
-# locale bank carries their full-game catalog and localized font data.
-MODERN_ROM_SIZE ?= 16M
+# ROM size configuration: 16M or 32M. Production profiles enabling ja or
+# zh-Hans are validated below as 32M-only; the upper locale bank carries their
+# full-game catalog and localized font data. Default is 32M: the 16M budget
+# is already essentially exhausted (see reports/linker-budget), and FE8_MAPGEN
+# alone adds ~48K of chunk data that no longer fits in the 16M target.
+MODERN_ROM_SIZE ?= 32M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000

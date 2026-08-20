@@ -4,6 +4,7 @@
 #include "bmtrick.h"
 #include "bmunit.h"
 #include "constants/terrains.h"
+#include "hardware.h"
 #include "mapgen.h"
 #include "mapgen_chunks_data.h"
 
@@ -26,8 +27,11 @@
  *   therefore cannot be generated from gRNSeeds -- drawing from the live RN
  *   state would both desync the chapter's RNG and hand a resumed game a
  *   different map than the one the player suspended on. So the terrain half is
- *   a pure function of (chapterId, map size), regenerated identically every
- *   load.
+ *   a pure function of (chapterId, MapGen_SessionSeed()), regenerated
+ *   identically every load -- including across a power cycle, since
+ *   MapGen_SessionSeed persists its roll into gPlaySt.playerName, which
+ *   round-trips through SRAM with the rest of the save. See that function's
+ *   own comment for the caveats of where it currently stores that.
  *
  *   Traps, by contrast, are written to and restored from SRAM (WriteTraps /
  *   ReadTraps, src/bmsave.c). Creating the tents on every map load would stack
@@ -93,16 +97,80 @@ static int MapGen_Value(u32 seed, u32 salt, int max)
     return MapGen_Hash(seed, salt) % max;
 }
 
+// gPlaySt.playerName ("was tactician name in FE7"; include/types.h) is 11
+// bytes and, outside Link Arena, unused -- so it round-trips through every
+// save/suspend/resume write struct PlaySt already gets without needing a new
+// save-format record. byte 0 is a marker distinguishing "a seed was already
+// rolled for this save" from the field's normal empty-string state
+// (WriteNewGameSave sets playerName[0] = '\0'); bytes 1-4 are the seed,
+// little-endian, written raw rather than through GetTacticianName/
+// SetTacticianName since this is binary, not text.
+//
+// This is a stopgap, not the real fix: it borrows a field with a different
+// declared purpose instead of a properly reserved one. Compare struct
+// ExpansionUserPrefs (include/expansion_save_prefs.h) for what a real
+// reserved, versioned, checksummed slot looks like -- ExpansionSaveMeta's
+// `reserved` tail (include/save_format.h) still has room after it. A Link
+// Arena session whose tactician name happens to start with
+// MAPGEN_SEED_MAGIC would misread as a seed record; nothing here checks for
+// that, since Link Arena's own name-entry flow does not go through
+// gPlaySt.playerName until after any chapter map (and so any mapgen call)
+// has already happened.
+#define MAPGEN_SEED_MAGIC 0xFE
+
+// A value that varies between real playthroughs but, once rolled for a given
+// save, survives a save/resume (including a power cycle) as long as the
+// game has written that save at least once since: mixes GetGameClock()
+// (frames elapsed since the last SetGameTime(0) reset, i.e. since New Game --
+// or since boot, for a save loaded without starting a new one first) with
+// whatever the player's controller state happens to be the first time this
+// runs for the save. Both vary with real human timing, so two playthroughs
+// land on different maps even with identical menu choices.
+//
+// Rolled lazily -- read back if gPlaySt.playerName already has one, rolled
+// and written into gPlaySt.playerName if not -- rather than hooked at a
+// single call site (WriteNewGameSave, "Continue", debug chapter-jump...) so
+// every path that can start play is covered by construction, not by
+// enumeration. Until whatever roll happens is included in an actual SRAM
+// write, it only lives in RAM, same as the rest of gPlaySt.
+static u32 MapGen_SessionSeed(void)
+{
+    u32 seed;
+
+    if ((u8)gPlaySt.playerName[0] == MAPGEN_SEED_MAGIC)
+    {
+        return (u8)gPlaySt.playerName[1]
+             | ((u32)(u8)gPlaySt.playerName[2] << 8)
+             | ((u32)(u8)gPlaySt.playerName[3] << 16)
+             | ((u32)(u8)gPlaySt.playerName[4] << 24);
+    }
+
+    seed = GetGameClock();
+
+    if (gKeyStatusPtr != NULL)
+    {
+        seed ^= (u32)gKeyStatusPtr->heldKeys << 16;
+        seed ^= (u32)gKeyStatusPtr->prevKeys;
+        seed ^= (u32)gKeyStatusPtr->LastPressState << 8;
+        seed ^= (u32)gKeyStatusPtr->TimeSinceStartSelect << 3;
+    }
+
+    seed = MapGen_Hash(seed, 0xC0FFEE);
+
+    gPlaySt.playerName[0] = (char)MAPGEN_SEED_MAGIC;
+    gPlaySt.playerName[1] = (char)(seed & 0xFF);
+    gPlaySt.playerName[2] = (char)((seed >> 8) & 0xFF);
+    gPlaySt.playerName[3] = (char)((seed >> 16) & 0xFF);
+    gPlaySt.playerName[4] = (char)((seed >> 24) & 0xFF);
+
+    return seed;
+}
+
 static u32 MapGen_SeedForChapter(int chapterId)
 {
-    // Chapter id alone, mirroring srr_aw2's per-chapter hash. Everything a
-    // resumed save needs to rebuild the terrain is already persisted, so no
-    // save-format change is required to ship this.
-    //
-    // To make maps differ between playthroughs instead of being fixed per
-    // chapter, mix a per-campaign seed in here -- it only has to be a value
-    // that is itself persisted and stable for the run's lifetime.
-    return (u32)chapterId;
+    // Chapter id mixed with the session seed, mirroring srr_aw2's per-chapter
+    // hash but no longer fixed run to run -- see MapGen_SessionSeed.
+    return MapGen_Hash((u32)chapterId, MapGen_SessionSeed());
 }
 
 static void MapGen_SetTile(int x, int y, int tileIndex)
