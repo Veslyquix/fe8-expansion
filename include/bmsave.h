@@ -451,9 +451,20 @@ struct SaveBlocks {
 #endif
     /* 0x73A4, or 0x7FA4 when FE8_PURCHASE_GENERICS disables xmap */
     struct ExpansionSaveMeta expansionSaveMeta; // see include/save_format.h, docs/save_format.md
-#if !FE8_PURCHASE_GENERICS
-    /* 0x7400 */ struct ExtraMapSaveHead xmap; // see bmsave-xmap.c
-#endif
+
+    /* 0x7400 when FE8_PURCHASE_GENERICS is off (sizeof 0x1C); a zero-length
+     * array -- always declared, never conditionally compiled away -- when
+     * it is on, since the xmap feature is fully stubbed out in that config
+     * (see the FE8_PURCHASE_GENERICS branch of src/bmsave-xmap.c: every
+     * xmap function is a no-op and gpSramExtraData points past the end of
+     * physical SRAM) and no code anywhere dereferences this field directly
+     * -- every real access goes through gpSramExtraData, computed
+     * independently. `xmap` therefore always exists as a field name (no
+     * "has no member named xmap" depending on config) and always sits at
+     * the same offset, while costing exactly 0 bytes when unused; verified
+     * identical under both agbcc and modern gcc (zero-length arrays are a
+     * long-standing GNU extension both support, not a C89/C99 feature). */
+    struct ExtraMapSaveHead xmap[FE8_PURCHASE_GENERICS ? 0 : 1]; // see bmsave-xmap.c
 };
 
 // TODO: figure out how these structs work

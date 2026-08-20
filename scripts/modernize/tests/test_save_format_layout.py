@@ -184,8 +184,24 @@ class SaveFormatLayoutTests(unittest.TestCase):
         char probe_sb_off_bonusClaim[offsetof(struct SaveBlocks, bonusClaim) == 0x725C ? 1 : -1];
         char probe_sb_off_reserved[offsetof(struct SaveBlocks, reserved) == 0x73A0 ? 1 : -1];
         char probe_sb_off_expansionSaveMeta[offsetof(struct SaveBlocks, expansionSaveMeta) == 0x73A4 ? 1 : -1];
-        char probe_sb_off_xmap[offsetof(struct SaveBlocks, xmap) == 0x7400 ? 1 : -1];
+
+        /* xmap (include/bmsave.h) is always declared -- never conditionally
+         * compiled away -- as struct ExtraMapSaveHead xmap[FE8_PURCHASE_GENERICS
+         * ? 0 : 1], so it always immediately follows expansionSaveMeta and
+         * always exists as a field name, but costs exactly 0 bytes when the
+         * xmap feature itself is stubbed out (see src/bmsave-xmap.c's
+         * FE8_PURCHASE_GENERICS branch, where every xmap accessor is a
+         * no-op and nothing dereferences this field directly). Verified
+         * with zero-length-array probes under both agbcc and modern gcc
+         * before this was written the way it is now. */
+        char probe_sb_off_xmap[
+            offsetof(struct SaveBlocks, xmap)
+                == offsetof(struct SaveBlocks, expansionSaveMeta) + sizeof(struct ExpansionSaveMeta) ? 1 : -1];
+#if FE8_PURCHASE_GENERICS
+        char probe_sb_size[sizeof(struct SaveBlocks) == CART_SRAM_SIZE ? 1 : -1];
+#else
         char probe_sb_size[sizeof(struct SaveBlocks) == 0x741C ? 1 : -1];
+#endif
 
         /* SRAM_OFFSET_EXPANSION_SAVE_META / SRAM_SIZE_EXPANSION_SAVE_META
          * (include/sram-layout.h) must agree with the struct itself. */
