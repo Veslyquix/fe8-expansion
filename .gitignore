@@ -78,7 +78,6 @@ tools/agbcc
 *.exe
 .dep
 *.4bpp
-!graphics/player_interface/mmb/*.4bpp
 *.8bpp
 *.gbapal
 !*.pal
@@ -91,6 +90,20 @@ banim/*.bin
 graphics/map/layout/*.bin
 graphics/map/*TileConfiguration*.bin
 graphics/statscreen/*.bin
+
+# FE8_NEW_ANIMS custom battle-animation assets (scripts/banim_event_to_source.py,
+# CREDITS.md). Unlike vanilla banim/graphics/banim binaries -- which regenerate
+# from a checked-in .png/.pal/.s source via the normal build rules -- these have
+# no such source in this repo: they are extracted once from an AA.exe .event
+# export that exists only on the original Windows machine, and (verified) the
+# pack's own loose "Sheet N.png" preview images use a different tile packing
+# than the compiled animation, so they cannot substitute as a rebuildable
+# source either. Deleting these is not recoverable by `make`, so they are
+# tracked directly as an explicit exception to the patterns above.
+!banim/banim_new*_modes.bin
+!banim/banim_new*_oam.bin.lz
+!graphics/banim/banim_new*_sheet_*.4bpp.lz
+!graphics/banim/banim_new*.agbpal.lz
 
 *.feimg*.bin
 *.fetsa*.bin

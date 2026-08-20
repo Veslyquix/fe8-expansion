@@ -793,6 +793,10 @@
       "category": "external-interface",
       "reason": null
     },
+    "include/bmtrick.h|function-signature|unit|ResetPurchaseBaseTrapCaptureByUnit": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/bmudisp.h|function-signature|class|PutStandingMuSprite": {
       "category": "ui-buffer",
       "reason": null
@@ -2379,6 +2383,22 @@
     },
     "include/id_space.h|macro|unit|UNIT_ID_TECHNICAL_MAX": {
       "category": "runtime-macro",
+      "reason": null
+    },
+    "include/mapgen.h|function-signature|chapter|MapGen_GenerateTerrain": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mapgen.h|function-signature|chapter|MapGen_GetLayout": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mapgen.h|function-signature|chapter|MapGen_IsEnabledForChapter": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mapgen.h|function-signature|chapter|MapGen_PlaceBases": {
+      "category": "external-interface",
       "reason": null
     },
     "include/menuitempanel.h|struct-field|item|MenuItemPanelProc.ItemSlotIndex": {

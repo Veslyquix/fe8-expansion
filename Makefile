@@ -373,15 +373,27 @@ clean_common:
 
 clean_fast: clean_common
 	$(RM) $(C_OBJECTS) $(ASM_OBJECTS) $(MID_OBJECTS)
-	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -not -path './banim/*' -exec rm {} +
+	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -not -path './banim/*' -not -path './graphics/banim/banim_new*' -exec rm {} +
 
 .PHONY: clean_fast clean_common
 
+# FE8_NEW_ANIMS custom battle-animation assets (see scripts/banim_event_to_source.py
+# and CREDITS.md): banim_new*_{oam,modes,script}* live under banim/, already
+# excluded above, but their sheet/palette siblings (banim_new*_sheet_N.4bpp.lz,
+# banim_new*.agbpal.lz) live under graphics/banim/, which was NOT excluded --
+# clean_fast/clean's generic find swept them by extension like any other build
+# byproduct. Unlike vanilla graphics/banim/*.lz (regenerated from a checked-in
+# .png via graphics_file_rules.mk), these have no Makefile-visible source: they
+# are extracted once from an AA.exe .event export that exists only on the
+# original Windows machine, so deleting them is NOT recoverable by `make` --
+# only by re-running the converter against that export. Protect them in both
+# targets; only `clean_all` (git clean -dfx, already documented as maximally
+# destructive) may remove them.
 clean: clean_common
 	$(RM) $(ALL_OBJECTS)
 	# Remove battle animation binaries
 	$(RM) -f banim/*.bin banim/*.o banim/*.lz banim/*.bak
-	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -exec rm {} +
+	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -not -path './graphics/banim/banim_new*' -exec rm {} +
 
 .PHONY: clean
 

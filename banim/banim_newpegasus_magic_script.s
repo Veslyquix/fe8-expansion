@@ -14,7 +14,7 @@ banim_newpegasus_magic_script:
 	.word banim_newpegasus_magic_sheet_0
 	.word 0xcc, 0x86020004
 	.word banim_newpegasus_magic_sheet_0
-	.word 0x138, 0x85000079, 0x86030001
+	.word 0x138, 0x85000049, 0x86030001
 	.word banim_newpegasus_magic_sheet_0
 	.word 0x1e0, 0x86020001
 	.word banim_newpegasus_magic_sheet_0
@@ -67,7 +67,7 @@ banim_newpegasus_magic_script:
 	.word banim_newpegasus_magic_sheet_0
 	.word 0x12c, 0x86020004
 	.word banim_newpegasus_magic_sheet_0
-	.word 0x1d4, 0x85000079, 0x86030001
+	.word 0x1d4, 0x85000049, 0x86030001
 	.word banim_newpegasus_magic_sheet_0
 	.word 0x270, 0x86020001
 	.word banim_newpegasus_magic_sheet_0
@@ -225,7 +225,7 @@ banim_newpegasus_magic_script:
 	.word banim_newpegasus_magic_sheet_0
 	.word 0xcc, 0x86020004
 	.word banim_newpegasus_magic_sheet_0
-	.word 0x138, 0x85000079, 0x86030001
+	.word 0x138, 0x85000049, 0x86030001
 	.word banim_newpegasus_magic_sheet_0
 	.word 0x1e0, 0x86020001
 	.word banim_newpegasus_magic_sheet_0
@@ -352,7 +352,7 @@ banim_newpegasus_magic_script:
 	.word banim_newpegasus_magic_sheet_0
 	.word 0xcc, 0x86020004
 	.word banim_newpegasus_magic_sheet_0
-	.word 0x138, 0x85000079, 0x86030001
+	.word 0x138, 0x85000049, 0x86030001
 	.word banim_newpegasus_magic_sheet_0
 	.word 0x1e0, 0x86020001
 	.word banim_newpegasus_magic_sheet_0

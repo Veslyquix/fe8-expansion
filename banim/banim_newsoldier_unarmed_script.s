@@ -8,56 +8,64 @@
 	.global banim_newsoldier_unarmed_script
 	.section .data.script
 banim_newsoldier_unarmed_script:
-	.word 0x86000002
+	.word 0x85000003, 0x85000007, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000, 0x86000002
+	.word 0x0, 0x85000022, 0x85000021, 0x85000004, 0x8500001a, 0x85000001, 0x85000022, 0x8500001b
+	.word 0x8500001b, 0x85000006, 0x8500000d, 0x80000000, 0x80000000, 0x85000003, 0x85000007, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x48, 0x85000001, 0x80000000, 0x86000002
+	.word 0x48, 0x85000022, 0x85000021, 0x85000004, 0x8500001a, 0x85000001, 0x85000022, 0x8500001b
+	.word 0x8500001b, 0x85000006, 0x8500000d, 0x80000000, 0x80000000, 0x85000003, 0x85000007, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000, 0x86000002
+	.word 0x0, 0x85000024, 0x85000022, 0x85000004, 0x85000023, 0x85000021, 0x8500000c, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x48, 0x85000001, 0x80000000, 0x86000002
+	.word 0x0, 0x85000001, 0x85000022, 0x8500001b, 0x8500001b, 0x85000006, 0x8500000d, 0x80000000
+	.word 0x80000000, 0x85000003, 0x85000007, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000, 0x86000002
+	.word 0x48, 0x85000024, 0x85000022, 0x85000004, 0x85000023, 0x85000021, 0x8500000c, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x48, 0x85000001, 0x85000022, 0x8500001b, 0x8500001b, 0x85000006, 0x8500000d, 0x80000000
+	.word 0x80000000, 0x85000003, 0x85000007, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x8500001b, 0x85000005, 0x85000001, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x8500000d, 0x80000000, 0x80000000, 0x85000003, 0x85000007, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x85000025, 0x8500001b, 0x85000005, 0x85000001, 0x8500000d, 0x80000000, 0x80000000
+	.word 0x85000002, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x8500000e, 0x86010003
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x54, 0x86020001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x9c, 0x86030001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0xe4, 0x85000001, 0x86020001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x9c, 0x86010003
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x54, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x8500000d, 0x80000000, 0x80000000, 0x85000002, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x8500000e, 0x86010003
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x54, 0x86020001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x9c, 0x86030001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0xe4, 0x85000001, 0x86020001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x9c, 0x86010003
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x54, 0x86000001
+	.word banim_newsoldier_unarmed_sheet_0
+	.word 0x0, 0x8500000d, 0x80000000, 0x80000000, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
 	.word 0x0, 0x85000001, 0x80000000, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000002, 0x86010003
+	.word 0x0, 0x85000001, 0x80000000, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x54, 0x86020003
+	.word 0x0, 0x85000001, 0x80000000, 0x85000003, 0x85000007, 0x86000001
 	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x9c, 0x8500001b, 0x86030003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0xe4, 0x85000001, 0x86040004
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x120, 0x86010003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x54, 0x8500001b, 0x86000004
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x86000003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000006, 0x8500000d, 0x80000000, 0x80000000, 0x86000001
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000002, 0x86010003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x54, 0x86020003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x9c, 0x8500001b, 0x86030003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0xe4, 0x85000001, 0x86040004
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x120, 0x86010003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x54, 0x8500001b, 0x86000004
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x86000003
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000006, 0x8500000d, 0x80000000, 0x80000000, 0x86000002
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000, 0x86000002
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000, 0x86000002
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000, 0x86000002
-	.word banim_newsoldier_unarmed_sheet_0
-	.word 0x0, 0x85000001, 0x80000000
+	.word 0x0, 0x8500001b, 0x85000022, 0x85000004, 0x85000001, 0x85000022, 0x8500001b, 0x8500001b
+	.word 0x85000006, 0x8500000d, 0x80000000, 0x80000000
