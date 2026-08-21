@@ -8,6 +8,7 @@ u8 Tsa_BattleStatsNoAnimsBoxRight[] = INCBIN_U8("graphics/misc/Tsa_BattleStatsNo
 u8 Tsa_BattleStatsNoAnimsBoxLeft[] = INCBIN_U8("graphics/misc/Tsa_BattleStatsNoAnimsBoxLeft.tsa.bin.lz");
 u8 Img_BattleStatsNoAnimsLabels[] = INCBIN_U8("graphics/misc/Img_BattleStatsNoAnimsLabels.4bpp.lz");
 u16 Pal_BattleStatsNoAnimsLabels[] = INCBIN_U16("graphics/misc/Pal_BattleStatsNoAnimsLabels.raw");
+u8 Img_BattleStatsNoAnimsArrowIcons[] = INCBIN_U8("graphics/misc/Img_BattleStatsNoAnimsArrowIcons.4bpp.bin");
 #endif
 
 u8 Img_MapBattleInfoBox[] = INCBIN_U8("graphics/misc/Img_MapBattleInfoBox.4bpp.lz");

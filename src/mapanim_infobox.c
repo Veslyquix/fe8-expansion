@@ -6,6 +6,8 @@
 #include "bmio.h"
 #include "soundwrapper.h"
 #include "bmunit.h"
+#include "bmitem.h"
+#include "icon.h"
 #include "prepscreen.h"
 #include "mapanim.h"
 #include "bmlib.h"
@@ -238,12 +240,8 @@ u16* GetBattleInfoPalByFaction(struct Unit* unit)
  * (branches to its tile-writing call without ever initializing the digit
  * buffer it reads from) -- this port leaves an N/A stat blank instead.
  *
- * The weapon-icon-at-bottom-of-box sub-feature (with weapon-triangle-
- * advantage arrows) from the original patch is NOT ported: it depends on
- * an unfamiliar set of function/text APIs not present in this project
- * (see the original patch's own DrawWeaponAtBottom.c), which would need
- * separate research to map onto this project's actual primitives rather
- * than being guessed at here. */
+ * Also ports the original patch's bottom weapon icon/name and weapon-
+ * triangle arrow display using this project's local text/icon helpers. */
 
 enum
 {
@@ -251,6 +249,8 @@ enum
     BSNA_TILE_DMG = 0x42,
     BSNA_TILE_CRIT = 0x45,
     BSNA_TILE_AS = 0x47,
+    BSNA_TILE_ARROW = 0x4A,
+    BSNA_PAL_ITEM_ICON = 4,
 };
 
 static void PutBattleStatsLabel(struct MapAnimActorState* actor, int gx, int gy, int tile, int width)
@@ -271,6 +271,56 @@ static void PutBattleStatsNumber(struct MapAnimActorState* actor, int gx, int gy
 
     dst = gBG0TilemapBuffer + TILEMAP_INDEX(actor->hp_info_x + gx, actor->hp_info_y + gy);
     MapAnim_DrawNumber(dst, value, TILEREF(32, BM_BGPAL_BANIM_UNK5), 3, 0, 0);
+}
+
+static void PutBattleStatsWeapon(struct MapAnimActorState* actor, struct BattleUnit* bu)
+{
+    struct Text text;
+    char* name;
+    int width;
+    u16* tm;
+
+    if (bu->weaponBefore == 0)
+        return;
+
+    tm = gBG0TilemapBuffer + TILEMAP_INDEX(actor->hp_info_x + 1, actor->hp_info_y + 6);
+    DrawIcon(tm, GetItemIconId(bu->weaponBefore), TILEREF(0, BSNA_PAL_ITEM_ICON));
+    LoadIconPalette(0, BSNA_PAL_ITEM_ICON);
+
+    name = GetItemName(bu->weaponBefore);
+    width = (GetStringTextLen(name) + 7) / 8;
+    if (width > 7)
+        width = 7;
+
+    InitText(&text, width);
+    Text_SetColor(&text, TEXT_COLOR_SYSTEM_WHITE);
+    Text_DrawString(&text, name);
+    PutText(&text, tm + 3);
+}
+
+static void PutBattleStatsTriangleArrow(
+    struct MapAnimActorState* actor, struct BattleUnit* bu, struct BattleUnit* otherBu)
+{
+    extern u8 Img_BattleStatsNoAnimsArrowIcons[];
+
+    u16* tm;
+    int tile;
+
+    if (bu->wTriangleDmgBonus == 0)
+        return;
+
+    CpuFastCopy(
+        Img_BattleStatsNoAnimsArrowIcons,
+        (u8*)(VRAM) + GetBackgroundTileDataOffset(0) + BSNA_TILE_ARROW * CHR_SIZE,
+        0x100);
+
+    tile = (bu->wTriangleDmgBonus > otherBu->wTriangleDmgBonus)
+        ? BSNA_TILE_ARROW + 1
+        : BSNA_TILE_ARROW + 3;
+
+    tm = gBG0TilemapBuffer + TILEMAP_INDEX(actor->hp_info_x + 10, actor->hp_info_y + 6);
+    tm[0] = tile;
+    tm[0x20] = tile + 4;
 }
 
 static void ShowBattleStatsNoAnims(int index)
@@ -308,6 +358,9 @@ static void ShowBattleStatsNoAnims(int index)
     if (gActionData.unitActionType != UNIT_ACTION_STAFF) /* no AS while using a staff */
         PutBattleStatsNumber(actor, 10, 5, bu->battleSpeed);
     PutBattleStatsLabel(actor, 6, 5, BSNA_TILE_AS, 3);
+
+    PutBattleStatsWeapon(actor, bu);
+    PutBattleStatsTriangleArrow(actor, bu, otherBu);
 
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 }
