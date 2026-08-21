@@ -62,6 +62,7 @@
 static CONST_DATA u8 sMapGenBaseOwner[MAPGEN_BASE_COUNT] = {
     [MAPGEN_BASE_PLAYER] = FACTION_ID_BLUE,
     [MAPGEN_BASE_ENEMY]  = FACTION_ID_RED,
+    [MAPGEN_BASE_GREEN]  = FACTION_ID_GREEN, // never auto-placed; see MAPGEN_BASE_GREEN
 };
 
 /* ---- deterministic value source ---------------------------------------- */
@@ -227,8 +228,16 @@ void MapGen_GetLayout(int chapterId, struct MapGenLayout * out)
     int qx = MapGen_Value(seed, 0x10, 2);
     int qy = MapGen_Value(seed, 0x11, 2);
 
+    // Green gets one of the two remaining (non-diagonal) quadrants -- always
+    // computed, same as Player/Enemy, even though MapGen_PlaceBases never
+    // places a trap there; see MAPGEN_BASE_GREEN.
+    int greenOnXAxis = MapGen_Value(seed, 0x12, 2);
+    int gqx = greenOnXAxis ? qx : !qx;
+    int gqy = greenOnXAxis ? !qy : qy;
+
     out->base[MAPGEN_BASE_PLAYER] = MapGen_PointInQuadrant(seed, 0x20, qx, qy);
     out->base[MAPGEN_BASE_ENEMY]  = MapGen_PointInQuadrant(seed, 0x30, !qx, !qy);
+    out->base[MAPGEN_BASE_GREEN]  = MapGen_PointInQuadrant(seed, 0x40, gqx, gqy);
 }
 
 /* ---- chunk-placement tunables ---------------------------------------------
@@ -630,7 +639,10 @@ void MapGen_PlaceBases(int chapterId)
 
     MapGen_GetLayout(chapterId, &layout);
 
-    for (i = 0; i < MAPGEN_BASE_COUNT; ++i)
+    // Player and Enemy always get a base. Green does not -- it's created
+    // lazily by MapGen_OverrideUnitSpawnPosition only if the chapter's start
+    // event actually loads a Green unit; see MAPGEN_BASE_GREEN.
+    for (i = MAPGEN_BASE_PLAYER; i <= MAPGEN_BASE_ENEMY; ++i)
     {
         struct MapGenPoint point = layout.base[i];
 
@@ -643,8 +655,94 @@ void MapGen_PlaceBases(int chapterId)
         AddCampTrap(point.x, point.y, sMapGenBaseOwner[i]);
         // AddTentTrap(0, 0, 1);
         // AddCampTrap(1, 1, 0x80);
-        
+
     }
+}
+
+// Nearest-first search order, matching FindSpawnPositionFrom's convention in
+// src/purchase_generics.c (the other place a unit gets placed next to a
+// base). Kept as its own copy rather than shared -- purchase_generics.c's
+// spawner is FE8_PURCHASE_GENERICS-only and this file must stand alone under
+// FE8_MAPGEN alone.
+static bool MapGen_FindSpawnTileNear(int baseX, int baseY, int classId, s8 * xOut, s8 * yOut)
+{
+    static const s8 offsets[][2] =
+    {
+        { 0, -1 },
+        { 1, 0 },
+        { 0, 1 },
+        { -1, 0 },
+        { 1, -1 },
+        { 1, 1 },
+        { -1, 1 },
+        { -1, -1 },
+    };
+
+    const struct ClassData * class = GetClassData(classId);
+    const s8 * movCost = class->pMovCostTable[0];
+    int i;
+
+    for (i = 0; i < (int)(sizeof(offsets) / sizeof(offsets[0])); ++i)
+    {
+        int x = baseX + offsets[i][0];
+        int y = baseY + offsets[i][1];
+        int terrain;
+
+        if (x < 0 || y < 0 || x >= gBmMapSize.x || y >= gBmMapSize.y)
+            continue;
+
+        if (gBmMapUnit[y][x] != 0)
+            continue;
+
+        terrain = gBmMapTerrain[y][x];
+
+        if (movCost[terrain] < 0)
+            continue;
+
+        *xOut = x;
+        *yOut = y;
+        return true;
+    }
+
+    return false;
+}
+
+bool MapGen_OverrideUnitSpawnPosition(int factionId, int classId, s8 * xPos, s8 * yPos)
+{
+    struct MapGenLayout layout;
+    struct MapGenPoint base;
+
+    if (!MapGen_IsEnabledForChapter(gPlaySt.chapterIndex))
+        return false;
+
+    if (factionId != FACTION_ID_BLUE && factionId != FACTION_ID_RED && factionId != FACTION_ID_GREEN)
+        return false; // Purple has no MapGen base to spawn beside.
+
+    MapGen_GetLayout(gPlaySt.chapterIndex, &layout);
+
+    if (factionId == FACTION_ID_BLUE)
+        base = layout.base[MAPGEN_BASE_PLAYER];
+    else if (factionId == FACTION_ID_RED)
+        base = layout.base[MAPGEN_BASE_ENEMY];
+    else
+    {
+        // Green has no base from MapGen_PlaceBases -- create one here, the
+        // first time a Green unit is actually spawned this chapter, so a
+        // chapter whose start event never loads a Green unit never gets one.
+        // Idempotent: a later Green spawn this chapter finds the trap this
+        // call created and reuses it.
+        struct Trap * trap;
+
+        base = layout.base[MAPGEN_BASE_GREEN];
+        trap = GetTrapAt(base.x, base.y);
+
+        if (trap == NULL)
+            AddCampTrap(base.x, base.y, FACTION_ID_GREEN);
+        else if (!IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
+            return false; // Tile already held by some other authored trap.
+    }
+
+    return MapGen_FindSpawnTileNear(base.x, base.y, classId, xPos, yPos);
 }
 
 #endif // FE8_MAPGEN

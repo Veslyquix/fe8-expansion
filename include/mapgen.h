@@ -19,7 +19,14 @@ enum
     MAPGEN_BASE_PLAYER = 0,
     MAPGEN_BASE_ENEMY  = 1,
 
-    MAPGEN_BASE_COUNT  = 2,
+    // Always computed (MapGen_GetLayout is a pure function of chapterId), but
+    // -- unlike Player/Enemy -- MapGen_PlaceBases never places a trap here.
+    // The Green camp is created lazily, the first time a Green unit is
+    // actually spawned (see MapGen_OverrideUnitSpawnPosition), so a chapter
+    // whose start event has no Green units gets no Green camp at all.
+    MAPGEN_BASE_GREEN  = 2,
+
+    MAPGEN_BASE_COUNT  = 3,
 };
 
 struct MapGenPoint
@@ -38,8 +45,9 @@ struct MapGenLayout
  * suspend/resume. */
 void MapGen_GenerateTerrain(int chapterId);
 
-/* Entity half: creates the tent traps. Must run exactly once per chapter, at
- * chapter start only, because traps are persisted in SRAM. */
+/* Entity half: creates the Player/Enemy camp traps. Must run exactly once per
+ * chapter, at chapter start only, because traps are persisted in SRAM. Does
+ * NOT create the Green camp -- see MAPGEN_BASE_GREEN. */
 void MapGen_PlaceBases(int chapterId);
 
 /* Both halves agree on where the bases go by each calling this, rather than by
@@ -47,6 +55,20 @@ void MapGen_PlaceBases(int chapterId);
 void MapGen_GetLayout(int chapterId, struct MapGenLayout * out);
 
 bool MapGen_IsEnabledForChapter(int chapterId);
+
+/* On a MapGen chapter, chapter-authored spawn coordinates (from event
+ * scripts / chapter unit tables) refer to terrain that no longer exists once
+ * the map is randomized. For a Blue or Red unit this finds an open,
+ * class-passable tile next to that faction's camp and writes it to
+ * *xPos/*yPos, returning true. For a Green unit, it lazily creates the Green
+ * camp trap the first time it's called (MAPGEN_BASE_GREEN) -- so a chapter
+ * whose start event never loads a Green unit never gets one -- then does the
+ * same tile search. Purple has no base at all. Returns false (leaving
+ * *xPos/*yPos untouched) if MapGen isn't enabled for the current chapter, the
+ * faction has no base (Purple, or the Green base's tile is already occupied
+ * by some other authored trap), or no open tile is found next to the base --
+ * callers should fall back to the authored position in that case. */
+bool MapGen_OverrideUnitSpawnPosition(int factionId, int classId, s8 * xPos, s8 * yPos);
 
 /* Call once per VBlank, from as early in boot as possible (OnVBlank, src/bm.c)
  * -- feeds the free-running frame counter MapGen_SessionSeed() (src/mapgen.c)

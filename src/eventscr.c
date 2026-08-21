@@ -28,6 +28,7 @@
 #include "mapanim.h"
 #include "helpbox.h"
 #include "worldmap.h"
+#include "mapgen.h"
 #include "cgtext.h"
 #include "bmmind.h"
 #include "eventinfo.h"
@@ -2325,6 +2326,25 @@ void LoadUnit_0(const struct UnitDefinition * def, u16 b, s8 quiet, s8 d)
     unit->xPos = def->xPosition;
     unit->yPos = def->yPosition;
 
+#if FE8_MAPGEN
+    // Authored spawn coordinates refer to terrain that doesn't exist once
+    // the chapter's map is procedurally generated -- put the unit next to
+    // its faction's camp instead. Falls through to the authored position
+    // (already assigned above) if MapGen isn't active for this chapter, the
+    // faction has no camp (Purple always; Green only if this is the first
+    // Green unit spawned this chapter and its camp tile is blocked), or no
+    // open tile is found.
+    {
+        s8 x = unit->xPos, y = unit->yPos;
+
+        if (MapGen_OverrideUnitSpawnPosition(def->allegiance, def->classIndex, &x, &y))
+        {
+            unit->xPos = x;
+            unit->yPos = y;
+        }
+    }
+#endif
+
     if (def->allegiance == FACTION_ID_RED && unit->pCharacterData->number >= 0x3C)
     {
         if (!gPlaySt.config.controller)
@@ -2358,7 +2378,12 @@ void LoadUnit_MoveToPosition(struct Unit * unit, const struct UnitDefinition * u
 
     if (!unitDefition->redaCount)
     {
-        MoveUnit_(unit, unitDefition->xPosition, unitDefition->yPosition, flags);
+        // unit->xPos/yPos (not unitDefition->xPosition/yPosition) so a
+        // MapGen spawn override (LoadUnit_0, src/eventscr.c) -- which writes
+        // straight to the unit, since unitDefition is const and shared --
+        // actually takes effect instead of being immediately overwritten
+        // back to the authored coordinates.
+        MoveUnit_(unit, unit->xPos, unit->yPos, flags);
         return;
     }
 
