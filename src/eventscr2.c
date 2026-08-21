@@ -188,16 +188,36 @@ bool LoadMultipaletteConvoBg(int bgIndex, int bg)
     else
         return FALSE;
 
-    charBase = (void *)(VRAM + GetBackgroundTileDataOffset(bg));
+    /* Char base 0x0000, image data at absolute VRAM 0x4000 (tilemap
+     * entries offset by 0x100 tiles to point there) -- not char base
+     * 0x4000 with the image at relative tile 0. The dialogue UI (chat
+     * bubble / text box) loads its own graphics at charblock 0, relative
+     * tiles 0-0xFF (absolute 0-0x4000); starting our image at relative
+     * tile 0 there clobbered it. Screen base 0xF800 + 0x800 = 0x10000,
+     * exactly the end of BG VRAM -- still safe with the image's absolute
+     * footprint unchanged (0x4000 + 40960 = 0xE000). */
+    SetBackgroundTileDataOffset(bg, 0x0000);
+    SetBackgroundMapDataOffset(bg, 0xF800);
+
+    charBase = (void *)(VRAM + 0x4000);
     tilemapBuffer = (bg == BG_2) ? gBG2TilemapBuffer : gBG3TilemapBuffer;
 
     BG_GetControlBuffer(bg)->colorMode = 1;
+
+    /* The other BG (whichever of BG2/BG3 we're not using) can be left
+     * showing stale tile data from an earlier screen once ours is on top
+     * of the full palette -- disable it outright rather than leaving that
+     * garbage visible underneath/around our image. */
+    if (bg == BG_2)
+        gLCDControlBuffer.dispcnt.bg3_on = 0;
+    else
+        gLCDControlBuffer.dispcnt.bg2_on = 0;
 
     Decompress(set->gfx, charBase);
 
     for (row = 0; row < 20; row++)
         for (col = 0; col < 32; col++)
-            tilemapBuffer[row * 32 + col] = row * 32 + col;
+            tilemapBuffer[row * 32 + col] = 0x100 + row * 32 + col;
 
     ApplyPalettes(set->pal, 0, 2);
 

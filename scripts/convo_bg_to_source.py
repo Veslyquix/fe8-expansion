@@ -11,6 +11,15 @@ after index 31 -- 32 colours (2 banks) for 224, 64 colours (4 banks) for
 use without touching the background's own colours. A 256-colour image is
 passed through unshifted (no gap; the whole palette belongs to the image).
 
+Palette index 0 is additionally reserved everywhere (Sommie.py does not do
+this): GBA 8bpp BG tiles always treat colour index 0 as transparent, in
+every mode, not just the ones with a text/chatbubble gap -- a real image
+pixel landing on index 0 shows the backdrop through it instead of its
+intended colour. If the source PNG's own index 0 is actually used by any
+pixel, this merges those pixels into whichever other palette entry is
+closest in RGB space (typically imperceptible) and frees index 0, rather
+than reserving a whole extra colour slot for it.
+
 Usage:
     python3 scripts/convo_bg_to_source.py <colCount> <input.png> \\
         <output.8bpp> <output.gbapal>
@@ -50,6 +59,31 @@ def convert(col_count: int, src: Path, out_gfx: Path, out_pal: Path) -> None:
 
     gap = 256 - col_count  # 0, 32, or 64
     width, height = im.size
+
+    pal = im.getpalette() or []
+    pal += [0] * (col_count * 3 - len(pal))
+
+    data = bytearray(im.getdata())
+    if 0 in data:
+        r0, g0, b0 = pal[0], pal[1], pal[2]
+        best_idx, best_dist = None, None
+        for idx in range(1, col_count):
+            r, g, b = pal[idx * 3], pal[idx * 3 + 1], pal[idx * 3 + 2]
+            dist = (r - r0) ** 2 + (g - g0) ** 2 + (b - b0) ** 2
+            if best_dist is None or dist < best_dist:
+                best_dist, best_idx = dist, idx
+        if best_idx is None:
+            raise SystemExit(
+                f"{src}: pixels use palette index 0 (transparent on real "
+                f"hardware) and there is no other colour to merge them "
+                f"into -- reduce the image to fewer than {col_count} colours"
+            )
+        for i, v in enumerate(data):
+            if v == 0:
+                data[i] = best_idx
+        im = im.copy()
+        im.putdata(data)
+
     pixels = im.load()
 
     out = bytearray(width * height)
@@ -78,9 +112,8 @@ def convert(col_count: int, src: Path, out_gfx: Path, out_pal: Path) -> None:
     # inserted here (that only exists in the pixel indices written above).
     # LoadMultipaletteConvoBg splits this back into two ApplyPalettes calls
     # at load time: entries [0:32) to banks 0-1, entries [32:colCount) to
-    # the banks starting right after the reserved gap.
-    pal = im.getpalette() or []
-    pal += [0] * (col_count * 3 - len(pal))
+    # the banks starting right after the reserved gap. Index 0's own entry
+    # is written but never referenced by any pixel once the merge above ran.
     pal = pal[: col_count * 3]
     entries = bytearray()
     for idx in range(col_count):
