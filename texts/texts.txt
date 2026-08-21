@@ -40301,3 +40301,18 @@ Erase All Save Data[X]
 ## MSG_SAVE_COMPAT_ERASE_CONFIRM
 Erase all save data?[.][LF]
 This cannot be undone.[X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_HANNAH
+Hannah[X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS
+Francis[X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
+Frederick[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_FOX
+Fox[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_LIZ
+Liz[.][X]

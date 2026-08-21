@@ -482,6 +482,30 @@ u8 __attribute__((aligned(4))) portrait_Eirika_palette[] = INCBIN_U8("graphics/p
 u8 __attribute__((aligned(4))) portrait_Eirika_mouth[] = INCBIN_U8("graphics/portrait/portrait_Eirika_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Eirika_chibi[] = INCBIN_U8("graphics/portrait/portrait_Eirika_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Eirika_tileset[] = INCBIN_U8("graphics/portrait/portrait_Eirika_tileset.4bpp.fk");
+
+#if FE8_CUSTOM_CAMPAIGN
+u8 __attribute__((aligned(4))) portrait_Hannah_palette[] = INCBIN_U8("graphics/portrait/portrait_Hannah_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Hannah_mouth[] = INCBIN_U8("graphics/portrait/portrait_Hannah_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Hannah_chibi[] = INCBIN_U8("graphics/portrait/portrait_Hannah_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Hannah_tileset[] = INCBIN_U8("graphics/portrait/portrait_Hannah_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Francis_palette[] = INCBIN_U8("graphics/portrait/portrait_Francis_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Francis_mouth[] = INCBIN_U8("graphics/portrait/portrait_Francis_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Francis_chibi[] = INCBIN_U8("graphics/portrait/portrait_Francis_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Francis_tileset[] = INCBIN_U8("graphics/portrait/portrait_Francis_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Frederick_palette[] = INCBIN_U8("graphics/portrait/portrait_Frederick_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Frederick_mouth[] = INCBIN_U8("graphics/portrait/portrait_Frederick_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Frederick_chibi[] = INCBIN_U8("graphics/portrait/portrait_Frederick_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Frederick_tileset[] = INCBIN_U8("graphics/portrait/portrait_Frederick_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Fox_palette[] = INCBIN_U8("graphics/portrait/portrait_Fox_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Fox_mouth[] = INCBIN_U8("graphics/portrait/portrait_Fox_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Fox_chibi[] = INCBIN_U8("graphics/portrait/portrait_Fox_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Fox_tileset[] = INCBIN_U8("graphics/portrait/portrait_Fox_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Liz_palette[] = INCBIN_U8("graphics/portrait/portrait_Liz_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Liz_mouth[] = INCBIN_U8("graphics/portrait/portrait_Liz_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Liz_chibi[] = INCBIN_U8("graphics/portrait/portrait_Liz_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Liz_tileset[] = INCBIN_U8("graphics/portrait/portrait_Liz_tileset.4bpp.fk");
+#endif
+
 u8 __attribute__((aligned(4))) portrait_Mystery_1_palette[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_palette.agbpal");
 u8 __attribute__((aligned(4))) portrait_Mystery_1_mouth[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Mystery_1_chibi[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_chibi.4bpp.lz");

@@ -5,10 +5,15 @@
 #include "constants/characters.h"
 #include "constants/classes.h"
 #include "constants/items.h"
+#include "constants/msg.h"
 
 CONST_DATA struct CharacterData gCharacterData[] = {
     [CHARACTER_EIRIKA - 1] = {
+#if FE8_CUSTOM_CAMPAIGN
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_HANNAH,
+#else
         .nameTextId = 0x212,
+#endif
         .descTextId = 0x26e,
         .number = CHARACTER_EIRIKA,
         .defaultClass = CLASS_EIRIKA_LORD,
@@ -42,7 +47,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x7,
     },
     [CHARACTER_SETH - 1] = {
+#if FE8_CUSTOM_CAMPAIGN
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS,
+#else
         .nameTextId = 0x213,
+#endif
         .descTextId = 0x26f,
         .number = CHARACTER_SETH,
         .defaultClass = CLASS_PALADIN,
@@ -76,7 +85,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x3,
     },
     [CHARACTER_GILLIAM - 1] = {
+#if FE8_CUSTOM_CAMPAIGN
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK,
+#else
         .nameTextId = 0x214,
+#endif
         .descTextId = 0x270,
         .number = CHARACTER_GILLIAM,
         .defaultClass = CLASS_ARMOR_KNIGHT,
@@ -109,7 +122,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x4,
     },
     [CHARACTER_FRANZ - 1] = {
+#if FE8_CUSTOM_CAMPAIGN
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FOX,
+#else
         .nameTextId = 0x215,
+#endif
         .descTextId = 0x271,
         .number = CHARACTER_FRANZ,
         .defaultClass = CLASS_CAVALIER,
@@ -176,7 +193,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x4,
     },
     [CHARACTER_VANESSA - 1] = {
+#if FE8_CUSTOM_CAMPAIGN
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_LIZ,
+#else
         .nameTextId = 0x217,
+#endif
         .descTextId = 0x273,
         .number = CHARACTER_VANESSA,
         .defaultClass = CLASS_PEGASUS_KNIGHT,
