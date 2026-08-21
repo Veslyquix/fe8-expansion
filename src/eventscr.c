@@ -1557,9 +1557,32 @@ void ConvoBackgroundFade_Init(struct ConvoBackgroundFadeProc * proc)
     BackupPalette(0, 6);
 }
 
+#if FE8_MULTIPALETTE_BG
+static bool IsMultipaletteConvoBg(int bgIndex)
+{
+    const struct gfx_set * set = &gConvoBackgroundData[bgIndex];
+
+    return set->tsa == CONVOBG_MULTIPALETTE_256
+        || set->tsa == CONVOBG_MULTIPALETTE_224
+        || set->tsa == CONVOBG_MULTIPALETTE_192;
+}
+#endif
+
 //! FE8U = 0x0800EBB0
 void ConvoBackgroundFade_CopyBg3ToBg2(struct ConvoBackgroundFadeProc * proc)
 {
+#if FE8_MULTIPALETTE_BG
+    if (IsMultipaletteConvoBg(proc->bgIndex)) {
+        SetBackgroundTileDataOffset(BG_2, 0x0000);
+        SetBackgroundMapDataOffset(BG_2, 0xF000);
+        BG_GetControlBuffer(BG_2)->colorMode = 1;
+
+        CopyBgTiles(BG_3, BG_2, 1);
+        SetDispEnable(FALSE, FALSE, TRUE, TRUE, TRUE);
+        return;
+    }
+#endif
+
     CopyBgImage(3, 2, 10);
     CopyBgTiles(BG_3, BG_2, 1);
     CopyBgPalette(8, 0, 6);
@@ -1571,6 +1594,18 @@ void ConvoBackgroundFade_CopyBg3ToBg2(struct ConvoBackgroundFadeProc * proc)
 //! FE8U = 0x0800EC00
 void ConvoBackgroundFade_CopyBg2ToBg3(struct ConvoBackgroundFadeProc * proc)
 {
+#if FE8_MULTIPALETTE_BG
+    if (IsMultipaletteConvoBg(proc->bgIndex)) {
+        SetBackgroundTileDataOffset(BG_3, 0x0000);
+        SetBackgroundMapDataOffset(BG_3, 0xF800);
+        BG_GetControlBuffer(BG_3)->colorMode = 1;
+
+        CopyBgTiles(BG_2, BG_3, 1);
+        SetDispEnable(FALSE, FALSE, TRUE, TRUE, TRUE);
+        return;
+    }
+#endif
+
     CopyBgImage(2, 3, 10);
     CopyBgTiles(BG_2, BG_3, 1);
     CopyBgPalette(0, 8, 6);

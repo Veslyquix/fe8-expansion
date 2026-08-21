@@ -193,25 +193,25 @@ bool LoadMultipaletteConvoBg(int bgIndex, int bg)
      * 0x4000 with the image at relative tile 0. The dialogue UI (chat
      * bubble / text box) loads its own graphics at charblock 0, relative
      * tiles 0-0xFF (absolute 0-0x4000); starting our image at relative
-     * tile 0 there clobbered it. Screen base 0xF800 + 0x800 = 0x10000,
-     * exactly the end of BG VRAM -- still safe with the image's absolute
-     * footprint unchanged (0x4000 + 40960 = 0xE000). */
+     * tile 0 there clobbered it. BG2 uses screen base 0xF000 because the
+     * default 0x7000 map area sits inside the image footprint. */
     SetBackgroundTileDataOffset(bg, 0x0000);
-    SetBackgroundMapDataOffset(bg, 0xF800);
+    
+
+    SetBackgroundMapDataOffset(BG_0, 0xE000);
+    SetBackgroundMapDataOffset(BG_1, 0xE800);
+    SetBackgroundMapDataOffset(BG_2, 0xF000);
+    SetBackgroundMapDataOffset(BG_3, 0xF800);
+    BG_Fill(gBG0TilemapBuffer, 0);
+    BG_Fill(gBG1TilemapBuffer, 0);
+    BG_Fill(gBG2TilemapBuffer, 0);
+    BG_Fill(gBG3TilemapBuffer, 0);
+    BG_EnableSyncByMask(BG0_SYNC_BIT|BG1_SYNC_BIT|BG2_SYNC_BIT|BG3_SYNC_BIT);
 
     charBase = (void *)(VRAM + 0x4000);
     tilemapBuffer = (bg == BG_2) ? gBG2TilemapBuffer : gBG3TilemapBuffer;
 
     BG_GetControlBuffer(bg)->colorMode = 1;
-
-    /* The other BG (whichever of BG2/BG3 we're not using) can be left
-     * showing stale tile data from an earlier screen once ours is on top
-     * of the full palette -- disable it outright rather than leaving that
-     * garbage visible underneath/around our image. */
-    if (bg == BG_2)
-        gLCDControlBuffer.dispcnt.bg3_on = 0;
-    else
-        gLCDControlBuffer.dispcnt.bg2_on = 0;
 
     Decompress(set->gfx, charBase);
 
