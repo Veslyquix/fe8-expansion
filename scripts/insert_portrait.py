@@ -10,8 +10,14 @@ goes a standard portrait sheet -> source assets.
 Tileset/chibi/mouth region mapping cross-validated two ways: against
 SRR_FEGBA's portraits2dmp.py cut_image() coordinates, and independently
 against this repo's own src/face.c (PutFace80x72_ExtraFrames' blink tile
-offsets, FaceMouth_Loop's Register2dChrMove offsets) -- both agree
-exactly.
+offsets, FaceMouth_Loop's Register2dChrMove offsets, PutFace80x72_Standard's
+static mouth-box tile offsets) -- all agree exactly. The tileset's last
+32x16px block (tile cols 28-31, rows 0-1) is that static mouth box --
+PutFace80x72 (status screen, support-viewer character list, world-map
+status UI) draws it directly from the tileset instead of imgMouth/the
+OAM mouth-sprite path everywhere else uses, so leaving it blank (as an
+earlier version of this script did, on the mistaken assumption it was
+unused padding) shows an empty mouth in exactly those three places.
 
 xMouth/yMouth/xEye/yEye auto-detection ported from portraits2dmp.py's
 cv_locate_eye_mouse_pos(): the source template's rows80-96,cols96-128
@@ -79,6 +85,10 @@ def cut(idx):
     tileset[0:32, 176:192] = idx[48:80, 80:96]  # shoulders4
     tileset[0:16, 192:224] = idx[48:64, 96:128]  # half-close blink
     tileset[16:32, 192:224] = idx[64:80, 96:128]  # full-close blink
+    tileset[0:16, 224:256] = idx[80:96, 96:128]  # static/idle mouth (PutFace80x72_Standard's
+                                                  # "mouth box" -- status screen, support-viewer
+                                                  # character list, world-map status UI all draw
+                                                  # this directly from the tileset, not imgMouth)
 
     chibi = idx[16:48, 96:128].copy()
 

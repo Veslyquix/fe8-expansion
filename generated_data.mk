@@ -109,21 +109,33 @@ generated-data-ch2-check:
 # Batch 2c-1 linked `classes`; Batch 2c-2 added `items` (the 206-record
 # global gItemData[] table); Batch 2c-3 added `supports` (the 33-record
 # SupportData_* table -- see below, `supports` is a *multi-symbol* table,
-# unlike `classes`/`items`' single top-level array symbol); Batch 2c-4
-# (this update) adds `characters` (the 256-record global gCharacterData[]
-# table -- back to a single top-level array symbol, like `classes`/
-# `items`). Extending this list to another table also requires defining
-# that table's own GENERATED_DATA_CONFIG_INPUTS_<table> and
+# unlike `classes`/`items`' single top-level array symbol). Batch 2c-4
+# briefly linked `characters` (the 256-record global gCharacterData[]
+# table) too, but it was unlinked again: CUSTOM_CAMPAIGN needs a handful
+# of gCharacterData[] fields (nameTextId) to differ by build flag, which
+# JSON has no way to express, and the link-swap silently made
+# src/data_characters.c's own #if/#else edits inert (the real ROM only
+# ever linked the generated copy). `characters` is still a full
+# schema/generate/round-trip-checked generated-data table -- see
+# src/data/characters.json and `generated-data-check`/`-validate` -- it
+# is simply no longer substituted in place of the hand-written .c at
+# compile time, so src/data_characters.c (not the generated copy) is
+# what actually ships, and the round-trip check that keeps it honest
+# already tolerates a hand-side #if/#else (see
+# scripts/generated_data/cparse.py's strip_hand_conditionals -- the
+# #else branch is what's expected to match JSON). Extending this list to
+# another table also requires defining that table's own
+# GENERATED_DATA_CONFIG_INPUTS_<table> and
 # GENERATED_DATA_LINKED_SYMBOL_<table> (both below), since the
 # generator's non-JSON, non-script "config" inputs (live enum/struct-
 # layout headers, hand data-source tables read for live counts, etc.)
 # and each table's top-level generated symbol name(s) are wildly
 # table-specific and cannot be derived generically.
-GENERATED_DATA_LINKED_HAND_SOURCES := src/data_classes.c src/data_items.c src/data_supports.c src/data_characters.c
+GENERATED_DATA_LINKED_HAND_SOURCES := src/data_classes.c src/data_items.c src/data_supports.c
 
 # Table name for each entry above, same order. Derived from the
 # `src/data_<table>.c` naming convention shared by every currently-linked
-# table (classes/items/characters/supports all follow it); a future linked
+# table (classes/items/supports all follow it); a future linked
 # table whose hand source doesn't follow that convention would need an
 # explicit override here instead of this patsubst. Also used by modern.mk
 # to build each linked table's explicit compile-rule override (see
@@ -404,26 +416,14 @@ GENERATED_DATA_CONFIG_INPUTS_supports := \
 	include/constants/characters.h \
 	include/types.h
 
-# `characters`' own generator "config" inputs: headers/hand C sources
-# scripts/generated_data/characters/schema.py reads live constants from --
-# the CHARACTER_* designator set (include/constants/characters.h, via the
-# shared character_refs.py helper) used for the 256-slot symbolic/raw
-# designator model, the CLASS_*-style default-class reference
-# (include/constants/classes.h), struct CharacterData field capacities/
-# CA_*/affinity constants (include/bmunit.h), item-rank references
-# (include/bmitem.h), live MSG_COUNT (include/constants/msg.h), and the
-# live portrait/mini-portrait counts derived from src/portrait_data.c/
-# src/face.c (see characters/schema.py's own CHARACTERS_HEADER/
-# CLASSES_HEADER/BMUNIT_HEADER/BMITEM_HEADER/MSG_HEADER/
-# PORTRAIT_DATA_SOURCE/FACE_SOURCE constants).
-GENERATED_DATA_CONFIG_INPUTS_characters := \
-	include/constants/characters.h \
-	include/constants/classes.h \
-	include/bmunit.h \
-	include/bmitem.h \
-	include/constants/msg.h \
-	src/portrait_data.c \
-	src/face.c
+# `characters` was unlinked (see the note by GENERATED_DATA_LINKED_HAND_
+# SOURCES above), so it no longer needs a GENERATED_DATA_CONFIG_INPUTS_
+# characters entry here -- that variable only ever fed the link-swap's
+# regeneration-trigger dependency list (GENERATED_DATA_LINK_TABLE_RULES
+# below), which now only loops over GENERATED_DATA_LINKED_TABLES
+# (classes/items/supports). The standalone `generate --table characters`/
+# `generated-data-check`/`-validate` CLI paths manage their own config
+# discovery independent of this file's variables.
 
 # Shared (every table) generator scripts. Test files/fixtures are
 # deliberately excluded -- they never affect generated output.
@@ -496,7 +496,6 @@ generated-data-content-text:
 # generated-data-link-check checks every one of them individually.
 GENERATED_DATA_LINKED_SYMBOL_classes  := gClassData
 GENERATED_DATA_LINKED_SYMBOL_items    := gItemData
-GENERATED_DATA_LINKED_SYMBOL_characters := gCharacterData
 
 # `supports` has no single top-level symbol -- its generated object
 # defines one `SupportData_<Owner>` per record instead. The expected
@@ -575,14 +574,15 @@ endif
 
 .PHONY: generated-data-link-check
 
-# Batch 2c-1 + 2c-2 + 2c-3 + 2c-4 gate: proves every table in
-# GENERATED_DATA_LINKED_TABLES (currently `classes`, `items`, `supports`,
-# `characters`) has its link-swap wired correctly -- exactly one
-# generated object selected in place of each hand source, in both the
-# legacy and modern object lists, no other (unlinked) table affected,
-# each table's ldscript.txt swap is exact, each table's own top-level
-# generated symbol(s) (GENERATED_DATA_LINKED_SYMBOL_<table>:
-# `gClassData`, `gItemData`, `gCharacterData`, or `supports`' 33
+# Batch 2c-1 + 2c-2 + 2c-3 gate (2c-4 briefly linked `characters` too;
+# see the "unlinked again" note by GENERATED_DATA_LINKED_HAND_SOURCES
+# above): proves every table in GENERATED_DATA_LINKED_TABLES (currently
+# `classes`, `items`, `supports`) has its link-swap wired correctly --
+# exactly one generated object selected in place of each hand source, in
+# both the legacy and modern object lists, no other (unlinked) table
+# affected, each table's ldscript.txt swap is exact, each table's own
+# top-level generated symbol(s) (GENERATED_DATA_LINKED_SYMBOL_<table>:
+# `gClassData`, `gItemData`, or `supports`' 33
 # `SupportData_*` per-owner symbols) each link exactly once from its
 # generated object (and, for `supports`, no extra/unexpected
 # `SupportData_*` symbol beyond those 33 -- see
@@ -632,12 +632,12 @@ endif
 # already exercised by CI's existing expansion-modern-linker-check for
 # both MODERN_CONFIG values instead.
 generated-data-link-check: $(GENERATED_DATA_LINKED_OBJECTS)
-	@echo '--- Batch 2c-1 + 2c-2 + 2c-3 + 2c-4 scope: exactly classes, items, supports, and characters ---'
-	@if [ "$(strip $(GENERATED_DATA_LINKED_HAND_SOURCES))" != "src/data_classes.c src/data_items.c src/data_supports.c src/data_characters.c" ]; then \
-		echo "FAIL: GENERATED_DATA_LINKED_HAND_SOURCES changed unexpectedly ('$(GENERATED_DATA_LINKED_HAND_SOURCES)'); Batch 2c-1 + 2c-2 + 2c-3 + 2c-4 scope is classes, items, supports, and characters only" >&2; exit 1; \
+	@echo '--- Batch 2c-1 + 2c-2 + 2c-3 scope: exactly classes, items, and supports ---'
+	@if [ "$(strip $(GENERATED_DATA_LINKED_HAND_SOURCES))" != "src/data_classes.c src/data_items.c src/data_supports.c" ]; then \
+		echo "FAIL: GENERATED_DATA_LINKED_HAND_SOURCES changed unexpectedly ('$(GENERATED_DATA_LINKED_HAND_SOURCES)'); Batch 2c-1 + 2c-2 + 2c-3 scope is classes, items, and supports only (characters was unlinked -- see the note by GENERATED_DATA_LINKED_HAND_SOURCES)" >&2; exit 1; \
 	fi
-	@if [ "$(strip $(GENERATED_DATA_LINKED_TABLES))" != "classes items supports characters" ]; then \
-		echo "FAIL: GENERATED_DATA_LINKED_TABLES changed unexpectedly ('$(GENERATED_DATA_LINKED_TABLES)'); Batch 2c-1 + 2c-2 + 2c-3 + 2c-4 scope is classes, items, supports, and characters only" >&2; exit 1; \
+	@if [ "$(strip $(GENERATED_DATA_LINKED_TABLES))" != "classes items supports" ]; then \
+		echo "FAIL: GENERATED_DATA_LINKED_TABLES changed unexpectedly ('$(GENERATED_DATA_LINKED_TABLES)'); Batch 2c-1 + 2c-2 + 2c-3 scope is classes, items, and supports only (characters was unlinked -- see the note by GENERATED_DATA_LINKED_HAND_SOURCES)" >&2; exit 1; \
 	fi
 	@echo '--- bare `make` default goal is still `all` (the modern release AAPCS boot-check), not generated-data validation or the archival lane ---'
 	@probe=$$($(MAKE) --no-print-directory -rR -p __generated_data_link_check_default_goal_probe__ 2>/dev/null); \

@@ -3,6 +3,7 @@
 #include "hardware.h"
 #include "fontgrp.h"
 #include "bmlib.h"
+#include "bg.h"
 #include "scene.h"
 #include "bmio.h"
 #include "face.h"
@@ -121,7 +122,45 @@ u16 CONST_DATA gSprite_Cgtext_1[] =
     OAM0_SHAPE_32x16 + OAM0_BLEND, OAM1_SIZE_32x16, OAM2_CHR(0),
     OAM0_SHAPE_32x16 + OAM0_BLEND, OAM1_SIZE_32x16 + OAM1_X(32), OAM2_CHR(0x4),
 };
+#if FE8_MULTIPALETTE_BG
+#define CG_TEXT_MULTIPAL_BUBBLE_OBJCHR 0x180
+#define CG_TEXT_MULTIPAL_BUBBLE_OBJPAL 3
 
+static u16 CONST_DATA sSprite_CgTextNameText[] =
+{
+    1,
+    0x4400, 0x8000, 0x0000,
+};
+
+static u16 CONST_DATA sSprite_CgTextNoNameBubble[] =
+{
+    6,
+    0x4420, 0xE008, 0x21B8,
+    0x4420, 0xF078, 0x21B8,
+    0x4410, 0xD078, 0x21B8,
+    0x4410, 0xC040, 0x21B9,
+    0x4420, 0xE040, 0x21B9,
+    0x4410, 0xC008, 0x21B8,
+};
+
+static u16 CONST_DATA sSprite_CgTextNameBubble[] =
+{
+    13,
+    0x4400, 0x4000, 0x0000,
+    0x4400, 0x4020, 0x0004,
+    0x4408, 0x4000, 0x0008,
+    0x4408, 0x4020, 0x000C,
+    0x4410, 0x4000, 0x0010,
+    0x4410, 0x4020, 0x0014,
+    0x4420, 0xE008, 0x21B8,
+    0x4420, 0xF078, 0x21B8,
+    0x4410, 0xD078, 0x21B8,
+    0x4410, 0xC040, 0x21B9,
+    0x4420, 0xE040, 0x21B9,
+    0x4418, 0x4008, 0x21D8,
+    0x4418, 0x4028, 0x21D9,
+};
+#endif
 // clang-format on
 
 //! FE8U = 0x0808E9D8
@@ -261,6 +300,45 @@ void CgText_DrawNameBox(struct CgTextMainProc * proc)
     return;
 }
 
+
+#if FE8_MULTIPALETTE_BG
+static void CgText_LoadMultipaletteBubbleObj(void)
+{
+    Decompress(Img_CgTextBubbleSprite, gGenericBuffer);
+    Copy2dChr(gGenericBuffer, OBJ_CHR_ADDR(CG_TEXT_MULTIPAL_BUBBLE_OBJCHR), 9, 4);
+    ApplyPalette(Pal_TalkBubble, 0x10 + CG_TEXT_MULTIPAL_BUBBLE_OBJPAL);
+    EnablePaletteSync();
+}
+
+static bool CgText_UseMultipaletteObjBubble(void)
+{
+    return IsMultipaletteConvoBgActive() && !(GetCgTextFlags() & CG_TEXT_FLAG_0);
+}
+
+static void CgText_PutMultipaletteObjBubble(int x, int y)
+{
+    if (GetCgTextFlags() & CG_TEXT_FLAG_16)
+    {
+        PutSpriteExt(
+            0, OAM1_X(x - 16), OAM0_Y(y - 24), sSprite_CgTextNameBubble,
+            OAM2_CHR(0x3C8) + OAM2_PAL(1));
+        PutSpriteExt(
+            0, OAM1_X(x - 8), OAM0_Y(y - 20), sSprite_CgTextNameText,
+            OAM2_CHR(0x3C0) + OAM2_PAL(2));
+    }
+    else
+    {
+        PutSpriteExt(
+            0, OAM1_X(x - 16), OAM0_Y(y - 24), sSprite_CgTextNoNameBubble,
+            OAM2_CHR(0x3C8) + OAM2_PAL(1));
+    }
+}
+
+static void CgText_ClearMultipaletteBubbleObj(void)
+{
+    RegisterFillTile(0, OBJ_CHR_ADDR(CG_TEXT_MULTIPAL_BUBBLE_OBJCHR), 0x1000);
+}
+#endif
 //! FE8U = 0x0808EBD4
 void CgText_Init(struct CgTextMainProc * proc)
 {
@@ -303,6 +381,14 @@ void CgText_Init(struct CgTextMainProc * proc)
         proc->boxHeight = height / 8;
     }
 
+#if FE8_MULTIPALETTE_BG
+    if (CgText_UseMultipaletteObjBubble())
+    {
+        CgText_LoadMultipaletteBubbleObj();
+        BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT | BG3_SYNC_BIT);
+    }
+    else
+#endif
     if (!(GetCgTextFlags() & CG_TEXT_FLAG_0))
     {
         y = proc->y + ~proc->boxHeight;
@@ -516,6 +602,10 @@ void CgText_1(struct CgTextMainProc * proc)
     u16 * bg = BG_GetMapBuffer(GetCgTextBg(GetCgTextFlags()));
     TileMap_FillRect(bg + (proc->y - 1) * 32, 31, proc->boxHeight + 1, 0);
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT | BG3_SYNC_BIT);
+#if FE8_MULTIPALETTE_BG
+    if (CgText_UseMultipaletteObjBubble())
+        CgText_ClearMultipaletteBubbleObj();
+#endif
     return;
 }
 
@@ -590,7 +680,6 @@ PROC_LABEL(0),
 PROC_LABEL(5),
     PROC_END,
 };
-
 // clang-format on
 
 //! FE8U = 0x0808F128
@@ -1079,6 +1168,13 @@ void CgText_Display(struct CgTextMainProc * proc)
             break;
     }
 
+#if FE8_MULTIPALETTE_BG
+    if (CgText_UseMultipaletteObjBubble())
+    {
+        CgText_PutMultipaletteObjBubble(x, y);
+    }
+    else
+#endif
     if (GetCgTextFlags() & CG_TEXT_FLAG_16)
     {
         PutSpriteExt(0, OAM1_X(x - 16), OAM0_Y(y - 24), gSprite_Cgtext_0, OAM2_CHR(0x3C8) + OAM2_PAL(1));
@@ -1112,8 +1208,10 @@ void CgText_Display(struct CgTextMainProc * proc)
         }
     }
 
+#if !FE8_MULTIPALETTE_BG
     PutSpriteExt(
         2, OAM1_X(x + ix * 0x20), OAM0_Y(y + iy * 0x10), gObject_32x16, proc->palId + ix * 4 + iy * 64 + oam2Maybe);
+#endif
 
     return;
 }
@@ -1579,7 +1677,6 @@ PROC_LABEL(2),
 PROC_LABEL(99),
     PROC_END,
 };
-
 // clang-format on
 
 //! FE8U = 0x0808FFC4
@@ -1655,7 +1752,6 @@ struct ProcCmd CONST_DATA gProcScr_YesNoChoice[] =
 
     PROC_END,
 };
-
 // clang-format on
 
 //! FE8U = 0x080900EC

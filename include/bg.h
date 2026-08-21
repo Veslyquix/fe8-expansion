@@ -136,6 +136,7 @@ extern unsigned char bg_AltarNight256_tiles[];
 extern unsigned short bg_AltarNight256_palette[];
 extern unsigned char bg_kh_tiles[];
 extern unsigned short bg_kh_palette[];
+extern unsigned char Img_CgTextBubbleSprite[];
 
 /* struct gfx_set.tsa sentinel values -- see LoadMultipaletteConvoBg,
  * src/eventscr2.c. */

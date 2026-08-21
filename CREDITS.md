@@ -110,6 +110,34 @@ The source PNG must be indexed-colour, exactly 256x160 (only the left 240
 columns are ever visible), and must not use a palette index >= the chosen
 colour count.
 
+## Custom Campaign Portraits (`CUSTOM_CAMPAIGN`)
+
+| Character | Portrait | Artist |
+| --- | --- | --- |
+| Eirika &rarr; Hannah | `{Nickt} Hannah.png` | Nickt |
+| Seth &rarr; Francis | `{Nickt} Francis.png` | Nickt |
+| Gilliam &rarr; Frederick | `{Nickt} Frederick.png` | Nickt |
+| Franz &rarr; Fox | `{Nickt} Fox.png` | Nickt |
+| Vanessa &rarr; Liz | `Flyer Girl Liz[F2E].png` | RandomWizard (tagged **F2E**, "Free to Edit") |
+
+Enable with `CUSTOM_CAMPAIGN=1` (compiles as `FE8_CUSTOM_CAMPAIGN`, default
+on; see `config.mk`). Replaces these five characters'
+portraits and in-game names for the custom campaign; disabling the flag
+restores the original vanilla Eirika/Seth/Gilliam/Franz/Vanessa portraits
+and names exactly (`src/portrait_data.c`, `src/data_characters.c`).
+
+Converted from the standard 128x112 FEBuilder portrait-sheet template with
+`scripts/insert_portrait.py`, which also auto-detects each portrait's
+mouth/eye tile-offset placement (`xMouth`/`yMouth`/`xEye`/`yEye` in
+`struct FaceData`) by cross-correlating the template's mouth/eye reference
+crops against the face art, rather than assuming a fixed template position
+-- ported from the community `portraits2dmp.py` tool's
+`cv_locate_eye_mouse_pos`:
+
+```bash
+python3 scripts/insert_portrait.py my_portrait.png Hannah
+```
+
 ## How these are built
 
 Enable with `NEW_ANIMS=1` (see `config.mk`; compiles as `FE8_NEW_ANIMS`).

@@ -938,15 +938,10 @@ void EventText_StartCgTextMsg(struct EventEngineProc * proc, u16 stringIndex, u3
 
     LoadObjUIGfx();
 #if FE8_MULTIPALETTE_BG
-    /* Ported from FE8U_256ColBG (SRR_FEGBA/gfx/BGs): skip the redundant
-     * talk-bubble palette reload while a multipalette convo BG is up --
-     * InitTalk(..., unpackBubble=1) unconditionally reloads Pal_TalkBubble
-     * into BG palette bank 3, which clobbers part of the background's own
-     * palette data (no reserved gap at all for a 256-colour image; the
-     * reserved gap itself for 224/192, meant to be left alone). */
-    if (!IsMultipaletteConvoBgActive())
+    InitTalk(0x80, 0, IsMultipaletteConvoBgActive() ? 0 : 1);
+#else
+    InitTalk(0x80, 0, 1);
 #endif
-        InitTalk(0x80, 0, 1);
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 
     StartCgText(
