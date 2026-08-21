@@ -172,6 +172,12 @@ endif
 ifeq ($(PURCHASE_GENERICS),1)
 MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
 endif
+ifeq ($(TITLE_256_COLORS),1)
+MODERN_DEFINE_FLAGS += -DFE8_TITLE_256_COLORS=1
+endif
+ifeq ($(MULTIPALETTE_BG),1)
+MODERN_DEFINE_FLAGS += -DFE8_MULTIPALETTE_BG=1
+endif
 ifeq ($(MAPGEN),1)
 MODERN_DEFINE_FLAGS += -DFE8_MAPGEN=1
 endif
@@ -1655,6 +1661,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_NEW_ANIMS=$(NEW_ANIMS) \
 	-DFE8_NEW_TILESETS=$(NEW_TILESETS) \
 	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS) \
+	-DFE8_TITLE_256_COLORS=$(TITLE_256_COLORS) \
+	-DFE8_MULTIPALETTE_BG=$(MULTIPALETTE_BG) \
 	-DFE8_MAPGEN=$(MAPGEN) \
 	-DFE8_MMB=$(MMB) \
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
@@ -2239,6 +2247,14 @@ MODERN_BOOT_SCENARIO := tools/gba-playtest/scenarios/boot.json
 MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot.json
 ifeq ($(SKIP_OPENING),1)
 MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot-skip-opening.json
+ifeq ($(TITLE_256_COLORS),1)
+# The 256-color title background (see src/titlescreen.c) is visible by the
+# boot scenario's own checkpoints, so it needs its own captured fingerprint
+# rather than diverging from the vanilla-background one above. Only wired
+# for the common SKIP_OPENING=1 case (the config.mk default); building with
+# SKIP_OPENING=0 and TITLE_256_COLORS=1 together is not fingerprint-covered.
+MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot-skip-opening-title-256-colors.json
+endif
 endif
 MODERN_TITLE_SCENARIO := tools/gba-playtest/scenarios/title-progression.json
 MODERN_TITLE_FINGERPRINT := tools/gba-playtest/fingerprints/title-progression-modern-$(MODERN_CONFIG).json

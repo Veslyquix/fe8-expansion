@@ -172,6 +172,24 @@ NEW_ANIMS ?= 1
 # that use them. Purely cosmetic: graphics, palette and tile config only.
 NEW_TILESETS ?= 1
 
+# --- Optional 256-color title screen -----------------------------------------
+# Replaces the vanilla title screen's tiled 16-color background/dragon overlay
+# with a single static 256-color (8bpp) background image. Purely cosmetic; the
+# vanilla dragon-flash/demon-king/logo-zoom intro sequence is skipped (its BG0/
+# BG2 graphics would overwrite the full-screen 8bpp image's VRAM footprint) and
+# the title goes straight to the idle "press start" state instead. Vanilla OBJ
+# sprites (FE logo, press start text, light/orb effects) are unaffected.
+TITLE_256_COLORS ?= 1
+
+# --- Optional multipalette conversation backgrounds --------------------------
+# Adds 224/256-colour (8bpp) conversation-background images alongside the
+# vanilla 16-colour ones in gConvoBackgroundData. A 224-colour image leaves
+# two palette banks (32 colours) free for text/chatbubble UI; 256-colour
+# claims the whole background palette (text/chatbubble won't render over
+# it). A further 192-colour mode leaves four banks (64 colours) free,
+# giving more headroom for UI that needs it. Purely cosmetic.
+MULTIPALETTE_BG ?= 1
+
 # --- Optional gameplay features ---------------------------------------------
 # Adds chapter-scoped temporary gold and purchasable generic-unit bases on
 # eligible fort / empty-village terrain.

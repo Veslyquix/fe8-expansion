@@ -99,6 +99,10 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
 
     LOAD1(1, UnitDef_PrologueEnemies)
     ENUN
+    
+    MUSI
+    Text_BG(BG_KH_224, 0x90D)
+    MUNO
 
 
     NoFade

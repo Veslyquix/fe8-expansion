@@ -4,6 +4,14 @@
  * before cpp). Migrated in-place from data/data_titlescreen.s into .data.
  */
 
+#if FE8_TITLE_256_COLORS
+/* Single static 256-color (8bpp) title background, replacing the vanilla
+ * two-chunk 4bpp background + separate dragon overlay below. See
+ * Title_SetupMainGraphics, src/titlescreen.c. */
+u8 __attribute__((aligned(4))) gGfx_TitleMainBackground256[] = INCBIN_U8("graphics/titlescreen/title_main_background_256.8bpp.lz");
+u16 __attribute__((aligned(4))) gPal_TitleMainBackground256[] = INCBIN_U16("graphics/titlescreen/title_main_background_256.gbapal");
+#endif
+
 u8 gGfx_TitleMainBackground_1[] = INCBIN_U8("graphics/titlescreen/title_main_background_1.4bpp.lz");
 u8 __attribute__((aligned(4))) gGfx_TitleMainBackground_2[] = INCBIN_U8("graphics/titlescreen/title_main_background_2.4bpp.lz");
 u8 __attribute__((aligned(4))) gTsa_TitleMainBackground[] = INCBIN_U8("graphics/titlescreen/title_main_background.map.bin.lz");

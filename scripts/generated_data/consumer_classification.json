@@ -2401,6 +2401,14 @@
       "category": "external-interface",
       "reason": null
     },
+    "include/mapgen.h|function-signature|class|MapGen_OverrideUnitSpawnPosition": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/mapgen.h|function-signature|unit|MapGen_OverrideUnitSpawnPosition": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/menuitempanel.h|struct-field|item|MenuItemPanelProc.ItemSlotIndex": {
       "category": "runtime-struct",
       "reason": null

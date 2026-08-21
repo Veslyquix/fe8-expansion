@@ -29,6 +29,7 @@
 #include "helpbox.h"
 #include "worldmap.h"
 #include "mapgen.h"
+#include "bg.h"
 #include "cgtext.h"
 #include "bmmind.h"
 #include "eventinfo.h"
@@ -1341,6 +1342,10 @@ u8 EventShowTextBgDirect(u8 mode, u16 bgIndex)
             if (bgIndex == BG_RANDOM)
                 bgIndex = NextRN_N(BG_BLANK);
 
+#if FE8_MULTIPALETTE_BG
+            if (!LoadMultipaletteConvoBg(bgIndex, BG_3))
+#endif
+            {
             // Loading Background Tile Graphics
 
             Decompress(gConvoBackgroundData[bgIndex].gfx, (void *)(VRAM + GetBackgroundTileDataOffset(3)));
@@ -1355,6 +1360,7 @@ u8 EventShowTextBgDirect(u8 mode, u16 bgIndex)
             // Loading Background Palettes
 
             ApplyPalettes(gConvoBackgroundData[bgIndex].pal, 8, 8);
+            }
 
             BG_EnableSyncByMask(BG3_SYNC_BIT);
             EnablePaletteSync();
@@ -1590,6 +1596,10 @@ void ConvoBackgroundFade_LoadBg2(struct ConvoBackgroundFadeProc * proc)
             if (proc->bgIndex == BG_RANDOM)
                 proc->bgIndex = NextRN_N(BG_BLANK);
 
+#if FE8_MULTIPALETTE_BG
+            if (!LoadMultipaletteConvoBg(proc->bgIndex, BG_2))
+#endif
+            {
             // Loading Background Tile Graphics
 
             Decompress(
@@ -1605,6 +1615,7 @@ void ConvoBackgroundFade_LoadBg2(struct ConvoBackgroundFadeProc * proc)
             // Loading Background Palettes
 
             ApplyPalettes(gConvoBackgroundData[proc->bgIndex].pal, 0, 6);
+            }
 
             BG_EnableSyncByMask(BG2_SYNC_BIT);
             EnablePaletteSync();
@@ -1642,6 +1653,10 @@ void ConvoBackgroundFade_LoadBg3(struct ConvoBackgroundFadeProc * proc)
             if (proc->bgIndex == BG_RANDOM)
                 proc->bgIndex = NextRN_N(BG_BLANK);
 
+#if FE8_MULTIPALETTE_BG
+            if (!LoadMultipaletteConvoBg(proc->bgIndex, BG_3))
+#endif
+            {
             // Loading Background Tile Graphics
 
             Decompress(
@@ -1657,6 +1672,7 @@ void ConvoBackgroundFade_LoadBg3(struct ConvoBackgroundFadeProc * proc)
             // Loading Background Palettes
 
             ApplyPalettes(gConvoBackgroundData[proc->bgIndex].pal, 8, 6);
+            }
 
             BG_EnableSyncByMask(BG3_SYNC_BIT);
             EnablePaletteSync();

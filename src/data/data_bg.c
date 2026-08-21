@@ -136,3 +136,15 @@ u16 __attribute__((aligned(4))) bg_Black_Temple_Inside_palette[] = INCBIN_U16("g
 u8 __attribute__((aligned(4))) bg_Blank_tiles[] = INCBIN_U8("graphics/bg/bg_Blank.feimg2.bin.lz");
 u8 __attribute__((aligned(4))) bg_Blank_map[] = INCBIN_U8("graphics/bg/bg_Blank.fetsa2.bin");
 u16 __attribute__((aligned(4))) bg_Blank_palette[] = INCBIN_U16("graphics/bg/bg_Blank.gbapal");
+
+#if FE8_MULTIPALETTE_BG
+/* Multipalette (224/256-colour, 8bpp) conversation backgrounds -- see
+ * LoadMultipaletteConvoBg, src/eventscr2.c. No tilemap asset: an 8bpp
+ * full-screen image only needs a plain sequential tile arrangement, built
+ * in C. "_tiles" here is the whole 256x160 raw 8bpp image, not a 4bpp
+ * tileset. */
+u8 __attribute__((aligned(4))) bg_AltarNight256_tiles[] = INCBIN_U8("graphics/convo_bg/convo_bg_altar_night_256.8bpp.lz");
+u16 __attribute__((aligned(4))) bg_AltarNight256_palette[] = INCBIN_U16("graphics/convo_bg/convo_bg_altar_night_256.gbapal");
+u8 __attribute__((aligned(4))) bg_kh_tiles[] = INCBIN_U8("graphics/convo_bg/kh.8bpp.lz");
+u16 __attribute__((aligned(4))) bg_kh_palette[] = INCBIN_U16("graphics/convo_bg/kh.gbapal");
+#endif

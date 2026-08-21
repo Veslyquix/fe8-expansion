@@ -1198,6 +1198,10 @@ extern u8 CONST_DATA gTsa_OpSubtitle_04[]; // tsa
 extern u8 CONST_DATA gTsa_OpSubtitle_05[]; // tsa
 extern u8 CONST_DATA gTsa_OpSubtitle_06[]; // tsa
 
+#if FE8_TITLE_256_COLORS
+extern u8 gGfx_TitleMainBackground256[];
+extern u16 gPal_TitleMainBackground256[];
+#endif
 extern u8 gGfx_TitleMainBackground_1[];
 extern u8 gGfx_TitleMainBackground_2[];
 extern u8 gTsa_TitleMainBackground[];

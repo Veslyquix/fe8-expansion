@@ -50,6 +50,66 @@ Graphics, palette and tile config are swapped together in
 palette rows are only meaningful against its own sheet, so mixing them with the
 vanilla tileset would render garbage.
 
+## Title Screen (`TITLE_256_COLORS`)
+
+| Element | Credits |
+| --- | --- |
+| Title background art | "Pokemblem" title screen background, from the Pokemblem ROM hack project. |
+
+Enable with `TITLE_256_COLORS=1` (compiles as `FE8_TITLE_256_COLORS`). Replaces
+the vanilla tiled 16-colour title background/dragon overlay with a single
+static 256-colour (8bpp) image -- `graphics/titlescreen/title_main_background_256.png`
+(240x160, indexed, <=256 colours), converted to `.8bpp.lz` + `.gbapal` at
+build time (see `src/data/data_titlescreen.c`). No baked tilemap asset: BG1's
+tilemap is generated in C (`Title_SetupMainGraphics`, `src/titlescreen.c`)
+since an 8bpp full-screen image only needs a plain sequential tile arrangement.
+
+Purely cosmetic; the vanilla dragon-flash/demon-king/logo-zoom intro sequence
+(played once on the very first boot) is skipped instead of ported, since its
+BG0/BG2 graphics would overwrite the 8bpp image's VRAM footprint -- see the
+comments at `TitleScreenTryJumpIntroAnim` and `Title_SetupMainGraphics` case 2.
+Vanilla OBJ sprites (FE logo, "Press START", copyright text, light/orb
+effects) are untouched and still draw on top normally.
+
+## Multipalette Conversation Backgrounds (`MULTIPALETTE_BG`)
+
+| Background | Source |
+| --- | --- |
+| Altar (night), 256-colour | SRR_FEGBA community BG/CG asset library (`Altar_Night.png`). |
+| FEH-style ruins (night), 224-colour | SRR_FEGBA community BG/CG asset library (`Background12_FEH_Norikins.png`). |
+
+Enable with `MULTIPALETTE_BG=1` (compiles as `FE8_MULTIPALETTE_BG`). Adds
+224/256-colour (8bpp) conversation-background images alongside the vanilla
+16-colour ones in `gConvoBackgroundData`, ported from the community
+FE8U_256ColBG patch (SRR_FEGBA/gfx/BGs): a 256-colour image claims the whole
+background palette; a 224-colour image leaves banks 2-3 (32 colours) free
+for text/chatbubble UI. A third, new 192-colour mode leaves banks 2-5 (64
+colours) free instead, for UI that needs more headroom (e.g. several
+portraits' worth of palette) -- not present in the original patch.
+
+`struct gfx_set.tsa` doubles as a mode sentinel (`CONVOBG_MULTIPALETTE_256/
+224/192`, `include/bg.h`) instead of a real tilemap pointer, exactly as the
+original patch's `BG.event` table did -- `LoadMultipaletteConvoBg`
+(`src/eventscr2.c`) checks for it before falling back to the vanilla
+Decompress/CallARM_FillTileRect/ApplyPalettes sequence, so ordinary entries
+are unaffected. No baked tilemap asset either: an 8bpp full-screen image
+only needs a plain sequential 32x20 tile arrangement, built in C.
+
+Convert a new background with `scripts/convo_bg_to_source.py` (a from-scratch
+reimplementation of the original patch's Sommie.py pixel/palette encoding,
+producing a gbagfx-compressible raw 8bpp file instead of Sommie's own
+compression -- see the module docstring):
+
+```bash
+python3 scripts/convo_bg_to_source.py 224 my_bg.png \
+    graphics/convo_bg/my_bg.8bpp graphics/convo_bg/my_bg.gbapal
+tools/gbagfx/gbagfx graphics/convo_bg/my_bg.8bpp graphics/convo_bg/my_bg.8bpp.lz
+```
+
+The source PNG must be indexed-colour, exactly 256x160 (only the left 240
+columns are ever visible), and must not use a palette index >= the chosen
+colour count.
+
 ## How these are built
 
 Enable with `NEW_ANIMS=1` (see `config.mk`; compiles as `FE8_NEW_ANIMS`).

@@ -56,8 +56,20 @@ enum {
     BG_BLACK_TEMPLE_OUTSIDE    = 0x33,
     BG_BLACK_TEMPLE_INSIDE     = 0x34,
     BG_BLANK                   = 0x35,
+    // 0x36 is a second gConvoBackgroundData entry that's just another copy
+    // of BG_BLANK, padding the array out so the entries below start safely
+    // past BG_RANDOM's fixed sentinel value -- see the comment there.
 
-    BG_RANDOM                  = 0x37,
+    BG_RANDOM                  = 0x37, // never a real array index -- see NextRN_N(BG_BLANK) in eventscr.c
+
+#if FE8_MULTIPALETTE_BG
+    /* Multipalette (224/256-colour, 8bpp) test backgrounds -- see
+     * FE8_MULTIPALETTE_BG in gConvoBackgroundData, src/eventscr2.c. Start at
+     * 0x38, one past BG_RANDOM, so a future addition here can never collide
+     * with it by accident (BG_RANDOM itself is deliberately never moved). */
+    BG_ALTAR_NIGHT_256          = 0x38,
+    BG_KH_224            = 0x39,
+#endif
 };
 
 #endif // GUARD_CONSTANTS_BACKGROUNDS_H

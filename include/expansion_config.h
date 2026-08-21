@@ -308,6 +308,20 @@
 #define FE8_PURCHASE_GENERICS 0
 #endif
 
+/* Single static 256-color (8bpp) title screen background, replacing the
+ * vanilla tiled 16-color background/dragon overlay. Skips the vanilla
+ * dragon-flash/demon-king/logo-zoom intro sequence -- see
+ * TitleScreenTryJumpIntroAnim, src/titlescreen.c. Purely cosmetic. */
+#ifndef FE8_TITLE_256_COLORS
+#define FE8_TITLE_256_COLORS 0
+#endif
+
+/* 224/256-colour (8bpp) conversation-background images, alongside the
+ * vanilla 16-colour ones. See LoadMultipaletteConvoBg, src/eventscr2.c. */
+#ifndef FE8_MULTIPALETTE_BG
+#define FE8_MULTIPALETTE_BG 0
+#endif
+
 /* Procedurally generated chapter maps: a base tent per allegiance in opposite
  * quadrants, joined by a road. Overwrites the authored map terrain for any
  * chapter it accepts (see MapGen_IsEnabledForChapter). Requires
@@ -432,6 +446,14 @@
 
 #if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)
 #error "FE8_PURCHASE_GENERICS must be 0 or 1"
+#endif
+
+#if (FE8_TITLE_256_COLORS != 0) && (FE8_TITLE_256_COLORS != 1)
+#error "FE8_TITLE_256_COLORS must be 0 or 1"
+#endif
+
+#if (FE8_MULTIPALETTE_BG != 0) && (FE8_MULTIPALETTE_BG != 1)
+#error "FE8_MULTIPALETTE_BG must be 0 or 1"
 #endif
 
 #if (FE8_MAPGEN != 0) && (FE8_MAPGEN != 1)
