@@ -224,7 +224,7 @@ TEXT_CHAPTER_NAMES ?= 0
 # only being visible during the (skipped) battle animation. The original
 # patch's weapon-icon-at-bottom sub-feature is not ported -- see
 # ShowBattleStatsNoAnims in src/mapanim_infobox.c.
-BATTLE_STATS_NO_ANIMS ?= 0
+BATTLE_STATS_NO_ANIMS ?= 1
 
 # --- Optional HpBars ----------------------------------------------------------
 # Draws a partial-fill HP bar over each visible unit, plus a small icon
