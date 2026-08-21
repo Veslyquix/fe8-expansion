@@ -1,0 +1,85 @@
+Vanilla FE8U reference material and disassembly workflow
+==========================================================
+
+Reference locations (Windows host, accessed from WSL under /mnt/c/...):
+
+  - reference/fe8u_symbols.txt (this directory)
+      Flat "0xADDRESS SymbolName" list of vanilla FE8U ROM addresses.
+      Use this to map a raw ROM address/offset to the function or data
+      symbol it falls inside (grep for the address prefix, then find the
+      nearest preceding entry -- entries are sorted by address).
+
+  - /mnt/c/devkitPro/decomp
+      A byte-matching vanilla FE8U decompilation checkout (unrelated to
+      this repo's own archival lane) -- strictly unmodified vanilla
+      behavior, no expansion features. Has its own baserom.gba and a
+      fully-built, unstripped ELF with debug info:
+      /mnt/c/devkitPro/decomp/fireemblem8.elf
+
+      This ELF is the fastest way to answer "what does vanilla FE8 do at
+      address X / inside function Y" -- since it's unstripped, objdump
+      resolves both the function containing an address and the symbols
+      it calls, with source-level correspondence.
+
+  - /mnt/c/devkitPro/feex
+      The user's working folder for a FEBuilder-based hack derived from
+      this repo's output (ROM header, .sav, .tmx map data, custom
+      portrait sheets, etc.) -- distinct from the reference decomp above.
+
+Disassembling a specific vanilla address or function
+------------------------------------------------------
+
+  arm-none-eabi-objdump -d --start-address=0x0800E290 \
+      --stop-address=0x0800E320 /mnt/c/devkitPro/decomp/fireemblem8.elf
+
+Output includes the enclosing function's symbol name as a label
+(<FunctionName>:) and resolves any `bl` call targets to their own
+symbol names in a comment, e.g. `bl 800680c <InitTalk>` -- no need to
+cross-reference fe8u_symbols.txt separately once you have an address
+range; only use the symbols file to go from a bare address to the
+function name first (objdump needs `--start-address`/`--stop-address`
+bytes, not a symbol name, for a plain vanilla ELF disassembly).
+
+To find which function a raw address falls inside first: grep
+reference/fe8u_symbols.txt for nearby addresses (the file is globally
+address-sorted) and take the nearest entry at or before the address.
+
+Findings this session: EventText_StartCgTextMsg / InitTalk
+--------------------------------------------------------------
+
+Investigated per a reference patch fragment (SRR_FEGBA/gfx/BGs/src/src.event):
+
+    // Don't load text/dialogue palettes into BGPAL.
+    ORG 0xE2DA
+      SHORT 0x46C0 0x46C0
+
+0xE2DA is a ROM file offset -> ROM address 0x0800E2DA. fe8u_symbols.txt
+brackets it between EventText_StartCgTextMsg (0x0800E290) and
+EventText_StartBoxDialogueMsg (0x0800E31C), so it's inside the former.
+Disassembly (see command above, range 0x0800E290-0x0800E320) shows:
+
+    800e2d0: bl 8015680 <LoadObjUIGfx>
+    800e2d4: movs r0, #128        ; chr
+    800e2d6: movs r1, #0          ; lines
+    800e2d8: movs r2, #1          ; unpackBubble
+    800e2da: bl 800680c <InitTalk>   <-- the two patched halfwords
+    800e2de: movs r0, #1
+    800e2e0: bl 8001fac <BG_EnableSyncByMask>
+    ...
+
+0x0800E2DA is exactly the `bl InitTalk` instruction pair (Thumb `bl` is
+two 16-bit halfwords) -- the 0x46C0 0x46C0 patch NOPs out that one call
+site only (other InitTalk call sites elsewhere in the ROM are untouched).
+This matches src/eventscr.c's EventText_StartCgTextMsg, which calls
+InitTalk(0x80, 0, 1) unconditionally. InitTalk's unpackBubble=1 branch
+(src/scene.c) calls ApplyPalette(Pal_TalkBubble, 3) -- an unconditional
+BG palette bank 3 write -- which is exactly what the patch comment
+("Don't load text/dialogue palettes into BGPAL") describes skipping.
+
+Applied in this repo as a narrower, state-gated version of the same
+fix (src/eventscr.c EventText_StartCgTextMsg, src/eventscr2.c
+LoadMultipaletteConvoBg/IsMultipaletteConvoBgActive): skip the InitTalk
+call only while a multipalette (224/256/192-colour) convo BG is
+currently displayed, rather than unconditionally for every CG text
+message as the reference patch does -- narrower blast radius, same
+practical effect for the feature this matters to.

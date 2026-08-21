@@ -144,4 +144,5 @@ extern unsigned short bg_kh_palette[];
 #define CONVOBG_MULTIPALETTE_192 ((void *)2)
 
 bool LoadMultipaletteConvoBg(int bgIndex, int bg);
+bool IsMultipaletteConvoBgActive(void);
 #endif

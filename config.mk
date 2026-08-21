@@ -244,6 +244,11 @@ TEXT_CHAPTER_NAMES ?= 0
 # ShowBattleStatsNoAnims in src/mapanim_infobox.c.
 BATTLE_STATS_NO_ANIMS ?= 1
 
+# --- Optional DrawMapAnims ----------------------------------------------------
+# Draws weapon-type hit animations and floating damage numbers during map
+# battle rounds when full battle animations are disabled. Purely cosmetic.
+DRAW_MAP_ANIMS ?= 1
+
 # --- Optional HpBars ----------------------------------------------------------
 # Draws a partial-fill HP bar over each visible unit, plus a small icon
 # over enemies the selected unit could hit for bonus effectiveness, land a

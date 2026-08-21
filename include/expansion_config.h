@@ -383,6 +383,12 @@
 #define FE8_BATTLE_STATS_NO_ANIMS 0
 #endif
 
+/* Draw weapon-type map battle impact animations and floating damage numbers
+ * during the default no-battle-animation round proc. */
+#ifndef FE8_DRAW_MAP_ANIMS
+#define FE8_DRAW_MAP_ANIMS 0
+#endif
+
 /* Per-unit HP bar and effectiveness/crit/talk warning icons on the map
  * (see src/HpBars.c). Requires FE8_DISPLAY_OBTAINABLE_ITEM=1 -- validated
  * below and in src/HpBars.c's own #error. */
@@ -498,6 +504,10 @@
 
 #if (FE8_BATTLE_STATS_NO_ANIMS != 0) && (FE8_BATTLE_STATS_NO_ANIMS != 1)
 #error "FE8_BATTLE_STATS_NO_ANIMS must be 0 or 1"
+#endif
+
+#if (FE8_DRAW_MAP_ANIMS != 0) && (FE8_DRAW_MAP_ANIMS != 1)
+#error "FE8_DRAW_MAP_ANIMS must be 0 or 1"
 #endif
 
 #if (FE8_HP_BARS != 0) && (FE8_HP_BARS != 1)

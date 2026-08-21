@@ -155,6 +155,19 @@ struct CONST_DATA gfx_set gConvoBackgroundData[] = {
 };
 
 #if FE8_MULTIPALETTE_BG
+static EWRAM_DATA bool sMultipaletteConvoBgActive = FALSE;
+
+/* Whether the currently-displayed conversation background is a
+ * multipalette (224/256/192-colour) one -- see LoadMultipaletteConvoBg.
+ * Used to skip the vanilla engine's redundant talk-bubble palette reload
+ * (see EventText_StartCgTextMsg, src/eventscr.c), which would otherwise
+ * clobber part of the image's own palette data (no reserved gap at all
+ * for the 256-colour case; the reserved gap itself for 224/192). */
+bool IsMultipaletteConvoBgActive(void)
+{
+    return sMultipaletteConvoBgActive;
+}
+
 /* Decompresses and displays a multipalette (224/256-colour, 8bpp)
  * conversation background from gConvoBackgroundData[bgIndex] onto the
  * given BG layer (2 or 3), if that entry is one (see the sentinel comment
@@ -186,7 +199,12 @@ bool LoadMultipaletteConvoBg(int bgIndex, int bg)
     else if (set->tsa == CONVOBG_MULTIPALETTE_192)
         gap = 64;
     else
+    {
+        sMultipaletteConvoBgActive = FALSE;
         return FALSE;
+    }
+
+    sMultipaletteConvoBgActive = TRUE;
 
     /* Char base 0x0000, image data at absolute VRAM 0x4000 (tilemap
      * entries offset by 0x100 tiles to point there) -- not char base

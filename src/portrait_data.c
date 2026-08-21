@@ -7,13 +7,18 @@ struct FaceData CONST_DATA portrait_data[] =
 {
 	{portrait_Mystery_1_tileset, portrait_Mystery_1_chibi, portrait_Mystery_1_palette, portrait_Mystery_1_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 0
 #if FE8_CUSTOM_CAMPAIGN
-	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 1
-	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 2, 6, 3, 4, FACE_BLINK_CLOSED}, // 2
-	{portrait_Francis_tileset, portrait_Francis_chibi, portrait_Francis_palette, portrait_Francis_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
-	{portrait_Frederick_tileset, portrait_Frederick_chibi, portrait_Frederick_palette, portrait_Frederick_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 4
-	{portrait_Fox_tileset, portrait_Fox_chibi, portrait_Fox_palette, portrait_Fox_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 5
+	/* xMouth/yMouth/xEye/yEye auto-detected per portrait by
+	 * scripts/insert_portrait.py (cross-correlation against the source
+	 * template's mouth/eye reference crops) -- these 5 all converged on
+	 * the same tile offsets since all 5 replacement portraits share the
+	 * same standardized template proportions. */
+	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 1
+	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 3, 5, 3, 3, FACE_BLINK_CLOSED}, // 2
+	{portrait_Francis_tileset, portrait_Francis_chibi, portrait_Francis_palette, portrait_Francis_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
+	{portrait_Frederick_tileset, portrait_Frederick_chibi, portrait_Frederick_palette, portrait_Frederick_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 4
+	{portrait_Fox_tileset, portrait_Fox_chibi, portrait_Fox_palette, portrait_Fox_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 5
 	{portrait_Moulder_tileset, portrait_Moulder_chibi, portrait_Moulder_palette, portrait_Moulder_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 6
-	{portrait_Liz_tileset, portrait_Liz_chibi, portrait_Liz_palette, portrait_Liz_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 7
+	{portrait_Liz_tileset, portrait_Liz_chibi, portrait_Liz_palette, portrait_Liz_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 7
 #else
 	{portrait_Eirika_tileset, portrait_Eirika_chibi, portrait_Eirika_palette, portrait_Eirika_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 1
 	{portrait_Eirika_tileset, portrait_Eirika_chibi, portrait_Eirika_palette, portrait_Eirika_mouth, 0, 2, 6, 3, 4, FACE_BLINK_CLOSED}, // 2

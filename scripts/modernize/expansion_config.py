@@ -399,7 +399,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           hp_bars=0, credits=0,
+                           draw_map_anims=0, hp_bars=0, credits=0,
                            custom_campaign=0, skip_opening=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
@@ -426,6 +426,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     debuffs_stack_flag = validate_feature_flag("DEBUFFS_STACK", debuffs_stack)
     ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
     battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
+    draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
     bars = validate_feature_flag("HP_BARS", hp_bars)
     credits_flag = validate_feature_flag("CREDITS", credits)
     campaign = validate_feature_flag("CUSTOM_CAMPAIGN", custom_campaign)
@@ -465,7 +466,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
         )
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
-            ch_names, battle_stats, bars, credits_flag, campaign, skip_opening_flag)
+            ch_names, battle_stats, draw_map, bars, credits_flag, campaign, skip_opening_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -684,6 +685,7 @@ class ExpansionIdentity:
     debuffs_stack: int = 0
     text_chapter_names: int = 0
     battle_stats_no_anims: int = 0
+    draw_map_anims: int = 0
     hp_bars: int = 0
     credits: int = 0
     custom_campaign: int = 0
@@ -749,6 +751,7 @@ class ExpansionIdentity:
                 "debuffs_stack": self.debuffs_stack,
                 "text_chapter_names": self.text_chapter_names,
                 "battle_stats_no_anims": self.battle_stats_no_anims,
+                "draw_map_anims": self.draw_map_anims,
                 "hp_bars": self.hp_bars,
                 "credits": self.credits,
                 "custom_campaign": self.custom_campaign,
@@ -802,6 +805,7 @@ def load_identity(
     debuffs_stack=None,
     text_chapter_names=None,
     battle_stats_no_anims=None,
+    draw_map_anims=None,
     hp_bars=None,
     credits=None,
     custom_campaign=None,
@@ -865,7 +869,7 @@ def load_identity(
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
      resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
-     resolved_ch_names, resolved_battle_stats,
+     resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
      resolved_hp_bars, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening) = validate_feature_flags(
         mechanics_hooks
@@ -919,6 +923,9 @@ def load_identity(
         battle_stats_no_anims
         if battle_stats_no_anims not in (None, "")
         else cfg.get("BATTLE_STATS_NO_ANIMS", "0"),
+        draw_map_anims
+        if draw_map_anims not in (None, "")
+        else cfg.get("DRAW_MAP_ANIMS", "0"),
         hp_bars
         if hp_bars not in (None, "")
         else cfg.get("HP_BARS", "0"),
@@ -977,6 +984,7 @@ def load_identity(
         debuffs_stack=resolved_debuffs_stack,
         text_chapter_names=resolved_ch_names,
         battle_stats_no_anims=resolved_battle_stats,
+        draw_map_anims=resolved_draw_map_anims,
         hp_bars=resolved_hp_bars,
         credits=resolved_credits,
         custom_campaign=resolved_custom_campaign,
@@ -1154,6 +1162,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override BATTLE_STATS_NO_ANIMS (0 or 1)",
     )
     parser.add_argument(
+        "--draw-map-anims",
+        default=None,
+        help="override DRAW_MAP_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
         "--hp-bars",
         default=None,
         help="override HP_BARS (0 or 1)",
@@ -1256,6 +1269,7 @@ def main(argv=None) -> int:
             debuffs_stack=args.debuffs_stack,
             text_chapter_names=args.text_chapter_names,
             battle_stats_no_anims=args.battle_stats_no_anims,
+            draw_map_anims=args.draw_map_anims,
             hp_bars=args.hp_bars,
             credits=args.credits,
             custom_campaign=args.custom_campaign,

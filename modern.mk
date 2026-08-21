@@ -205,6 +205,9 @@ endif
 ifeq ($(BATTLE_STATS_NO_ANIMS),1)
 MODERN_DEFINE_FLAGS += -DFE8_BATTLE_STATS_NO_ANIMS=1
 endif
+ifeq ($(DRAW_MAP_ANIMS),1)
+MODERN_DEFINE_FLAGS += -DFE8_DRAW_MAP_ANIMS=1
+endif
 ifeq ($(HP_BARS),1)
 MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
 endif
@@ -1512,6 +1515,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
+		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 		--hp-bars "$(HP_BARS)" \
 		--credits "$(CREDITS)" \
 		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
@@ -1587,6 +1591,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
+	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
 	--credits "$(CREDITS)" \
 	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
@@ -1672,6 +1677,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DEBUFFS_STACK=$(DEBUFFS_STACK) \
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
+	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
 	-DFE8_HP_BARS=$(HP_BARS) \
 	-DFE8_CREDITS=$(CREDITS)
 
@@ -1848,6 +1854,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'debuffs_stack=$(DEBUFFS_STACK)'; \
 		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
+		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
 		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
