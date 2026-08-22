@@ -316,7 +316,23 @@ TURN_AUTOSAVE ?= 1
 # turn they appear. Gate/House/Throne/Village purchase bases, and Camp/Tent
 # spawn points placed by FE8_MAPGEN, are unaffected -- they keep spawning
 # adjacent with a unit that can act immediately. See src/purchase_generics.c.
-FORT_UNITS_START_GREYED_OUT ?= 0
+FORT_UNITS_START_GREYED_OUT ?= 1
+
+# --- Optional PromoteCommand ------------------------------------------------------
+# Ported from the community "PromoteCommand" patch (East's dlib): adds a
+# "Promote" entry to the unit map action menu, letting an eligible unit
+# promote on the spot -- no promotion item needed. Available once the
+# unit's class actually has a promotion target (gPromoJidLut) and it hasn't
+# acted this turn and is level 20+ (see PROMOTE_COMMAND_MIN_LEVEL in
+# src/promote_command.c). Reuses the same class-change proc vanilla's
+# promotion items already use, so the class-choice popup (for classes with
+# two promotion options) and the usual stat-growth/animation screen are
+# unchanged. Not ported: the reference patch's fully data-driven
+# eligibility table (per-unit/per-class overrides, chapter ranges, and
+# event-flag gating, including a campaign-specific "Eirika can't promote
+# unless Amelia is alive" example rule) -- only the general level-gated
+# mechanism is ported. See src/promote_command.c.
+PROMOTE_COMMAND ?= 0
 
 # --- Optional CustomCampaign --------------------------------------------------
 # Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's

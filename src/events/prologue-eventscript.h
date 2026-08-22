@@ -100,10 +100,23 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     LOAD1(1, UnitDef_PrologueEnemies)
     ENUN
     
+    // MUSI
+    // Text_BG(BG_KH_224, 0x90D)
+    // MUNO
+    
+    /* 
+    // test FE8_MULTIPALETTE_BG - seems to work 
+    // (no$gba has weird sprite blending quirks, so check on mgba) 
     MUSI
-    Text_BG(BG_KH_224, 0x90D)
+    SetBackground(BG_ALTAR_NIGHT_256)   
+    EvtTextStartType2                    
+    TEXTSHOW(0xc22)
+    TEXTEND
     MUNO
-
+    FADI(4)
+    REMA
+    CLEAN
+    */ 
 
     NoFade
     ENDA

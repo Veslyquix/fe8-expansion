@@ -34,6 +34,7 @@ int VeslyDebugger_GetBgmOverride(void);
 #include "constants/terrains.h"
 #include "constants/songs.h"
 #include "group_ai.h"
+#include "promote_command.h"
 
 EWRAM_DATA struct ActionData gActionData = { 0 };
 
@@ -182,6 +183,12 @@ u32 ApplyUnitAction(ProcPtr proc) {
         case UNIT_ACTION_PICK:
             ActionPick(proc);
             return 0;
+
+#if FE8_PROMOTE_COMMAND
+        case UNIT_ACTION_PROMOTE:
+            PromoteCommand_ActionPromote(proc);
+            return 0;
+#endif
 
         default:
             return 1;

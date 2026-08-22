@@ -429,6 +429,13 @@
 #define FE8_FORT_UNITS_START_GREYED_OUT 0
 #endif
 
+/* Adds a "Promote" entry to the unit map action menu for level-20+ units
+ * whose class has a promotion target, letting them promote without a
+ * promotion item (see src/promote_command.c). */
+#ifndef FE8_PROMOTE_COMMAND
+#define FE8_PROMOTE_COMMAND 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -565,6 +572,10 @@
 
 #if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)
 #error "FE8_FORT_UNITS_START_GREYED_OUT must be 0 or 1"
+#endif
+
+#if (FE8_PROMOTE_COMMAND != 0) && (FE8_PROMOTE_COMMAND != 1)
+#error "FE8_PROMOTE_COMMAND must be 0 or 1"
 #endif
 
 #if (FE8_TURN_AUTOSAVE != 0) && (FE8_TURN_AUTOSAVE != 1)

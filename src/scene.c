@@ -325,7 +325,7 @@ void InitTalk(int chr, int lines, s8 unpackBubble) {
     if (unpackBubble != 0) {
         Decompress(Img_TalkBubble, (void*)(GetBackgroundTileDataOffset(BG_1) + 0x06000200));
 #if FE8_MULTIPALETTE_BG
-        if (!IsMultipaletteConvoBgActive())
+        // if (!IsMultipaletteConvoBgActive()) // this might need to happen just for cg text? 
 #endif
             ApplyPalette(Pal_TalkBubble, 3);
     }

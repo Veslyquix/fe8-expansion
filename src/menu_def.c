@@ -10,6 +10,7 @@
 #include "bmitemuse.h"
 #include "bksel.h"
 #include "purchase_generics.h"
+#include "promote_command.h"
 
 #include "menu_def.h"
 
@@ -210,6 +211,9 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　訪問", 0x682, 0x6CB, 0, 0x5C, VisitCommandUsability, 0, VisitCommandEffect, 0, 0, 0}, // Visit
 #if FE8_PURCHASE_GENERICS
     {"Capture", 0, 0, 0, 0, PurchaseGenericsCommandUsability, PurchaseGenericsCommandDraw, PurchaseGenericsCommandEffect, 0, 0, 0},
+#endif
+#if FE8_PROMOTE_COMMAND
+    {"Promote", 0, 0, 0, 0, PromoteCommandUsability, PromoteCommandDraw, PromoteCommandEffect, 0, 0, 0},
 #endif
     {"　宝箱", 0x683, 0x6CE, 0, 0x5D, ChestCommandUsability, 0, ChestCommandEffect, 0, 0, 0}, // Chest
     {"　扉", 0x684, 0x6CD, 0, 0x5E, DoorCommandUsability, 0, DoorCommandEffect, 0, 0, 0}, // Door >
