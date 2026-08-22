@@ -87,11 +87,6 @@ void AlphaSpriteArrow_DrawUnitGhost(void) {
         return;
     }
 
-    /* Only draw while the cursor is actually sitting at the path's tip. */
-    if (gBmSt.playerCursor.x != gpPathArrowProc->pathX[pathLen] ||
-        gBmSt.playerCursor.y != gpPathArrowProc->pathY[pathLen])
-        return;
-
     dx = gpPathArrowProc->pathX[pathLen] - gpPathArrowProc->pathX[pathLen - 1];
     dy = gpPathArrowProc->pathY[pathLen] - gpPathArrowProc->pathY[pathLen - 1];
 
@@ -107,10 +102,10 @@ void AlphaSpriteArrow_DrawUnitGhost(void) {
     if (mu->facing != facing)
         SetMuFacing(mu, facing);
 
-    /* Cursor tile -> screen pixel, matching the map sprite's own draw
+    /* Path tip tile -> screen pixel, matching the map sprite's own draw
      * origin convention (centered horizontally, feet-anchored vertically). */
-    x = gBmSt.playerCursor.x * 16 - gBmSt.camera.x + 8;
-    y = gBmSt.playerCursor.y * 16 - gBmSt.camera.y + 16;
+    x = gpPathArrowProc->pathX[pathLen] * 16 - gBmSt.camera.x + 8;
+    y = gpPathArrowProc->pathY[pathLen] * 16 - gBmSt.camera.y + 16;
 
     if (x < -16 || x > 240 + 16)
         return;
