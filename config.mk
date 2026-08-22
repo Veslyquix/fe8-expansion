@@ -272,7 +272,7 @@ BATTLE_ANIMATION_NUMBERS ?= 1
 HP_BARS ?= 1
 
 # --- Optional GroupAI ----------------------------------------------------------
-# Ported from Pokemblem's GroupAI patch. Bits 0-4 of a unit's "ai4" byte
+# Bits 0-4 of a unit's "ai4" byte
 # (the high byte of struct Unit.ai_config -- see AI_UNIT_CONFIG_GROUPID_MASK,
 # include/cp_common.h) tag it as belonging to a numbered group (1-31; 0 means
 # no group). Whenever a combat's attacker or defender is group-tagged and
@@ -281,10 +281,7 @@ HP_BARS ?= 1
 # AI_B_00 (MoveToEnemy/"charge"), and is queued to act again this enemy
 # phase via gAiState.units[] -- the same mechanism vanilla already uses for
 # reinforcements that should act immediately. Net effect: attack one member
-# of a tagged group and the rest immediately aggro. Does not port the
-# reference patch's separate "AggroGroupAI_IfInDanger" zoning-AI interaction
-# (its own danger-map-driven decision of whether to even approach) -- see
-# src/group_ai.c.
+# of a tagged group and the rest immediately aggro. 
 GROUP_AI ?= 1
 
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
@@ -340,30 +337,18 @@ FORT_UNITS_START_GREYED_OUT ?= 1
 PROMOTE_COMMAND ?= 0
 
 # --- Optional FixBugs -------------------------------------------------------------
-# Clamps a unit's base stats (maxHP/pow/skl/spd/def/res) to a sane minimum
-# right after they're computed as character base + class base, instead of
-# letting the raw sum go negative (or, for HP, to exactly 0 -- an
-# instantly-dead unit). Affects both initial unit loading
-# (UnitLoadStatsFromChracter) and the enemy-scaling-down auto-level penalty
-# (UnitAutolevelPenalty) in src/bmunit.c, since both compute the same sum.
-# This only matters for character/class combinations whose base stats were
-# authored to go negative and don't recover once added together -- normal
-# vanilla-range data is unaffected either way.
+# Prevents negative stats when loading a character with negative bases. 
 FIX_BUGS ?= 1
 
 # --- Optional CustomCampaign --------------------------------------------------
-# Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
-# map (see gChapterDataAssetTable in src/data/data_8B363C.c), and replaces
-# the prologue's scripted beginning-of-chapter events with a version that
-# still loads Eirika and Seth the same way but skips the Renais-throne-room
-# cutscene and dialogue (see src/events/prologue-eventscript.h).
+# Vesly's custom game. 
 CUSTOM_CAMPAIGN ?= 1
 
 # --- Optional SkipOpening -------------------------------------------------------
 # Boots straight to the title screen: no health & safety screen, no
 # Nintendo/Intelligent Systems logos, and no attract-mode opening demo. On
 # New Game, also skips the world-map "continent of Magvel" narration and the
-# "In an age long past..." opening text crawl. Does not affect continue/load.
+# "In an age long past..." opening text crawl. 
 SKIP_OPENING ?= 1
 
 # --- Optional Credits ----------------------------------------------------------

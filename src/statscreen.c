@@ -132,6 +132,65 @@ struct TextInitInfo CONST_DATA sSSMasterTextInitInfo[] =
     { }, // end
 };
 
+static struct TextInitInfo CONST_DATA sSSLeftPanelTextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_CHARANAME, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_CLASSNAME, 8 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSPage0TextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_UNUSUED,    3  },
+    { gStatScreen.text + STATSCREEN_TEXT_POWLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_SKLLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_SPDLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_LCKLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_DEFLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_RESLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_MOVLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_CONLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_AIDLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_RESCUENAME, 9  },
+    { gStatScreen.text + STATSCREEN_TEXT_AFFINLABEL, 7  },
+    { gStatScreen.text + STATSCREEN_TEXT_STATUS,     9  },
+    { gStatScreen.text + STATSCREEN_TEXT_BWL,        16 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSPage1TextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM0,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM1,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM2,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM3,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM4,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSRANGE,    7 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSATKLABEL, 3 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSHITLABEL, 3 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSCRTLABEL, 3 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSAVOLABEL, 4 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSPage2TextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP0,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP1,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP2,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP3,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT0, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT1, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT2, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT3, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT4, 7 },
+
+    { }, // end
+};
+
 s8 CONST_DATA sPageSlideOffsetLut[] = // stat screen page transition draw offset lut
 {
     // transition page out
@@ -375,9 +434,31 @@ void SetStatScreenConfig(int config)
     sStatScreenInfo.config = config;
 }
 
+static void InitPageTexts(int pageid)
+{
+    InitTextInitInfo(sSSLeftPanelTextInitInfo);
+
+    switch (pageid)
+    {
+
+    case STATSCREEN_PAGE_0:
+        InitTextInitInfo(sSSPage0TextInitInfo);
+        break;
+
+    case STATSCREEN_PAGE_1:
+        InitTextInitInfo(sSSPage1TextInitInfo);
+        break;
+
+    case STATSCREEN_PAGE_2:
+        InitTextInitInfo(sSSPage2TextInitInfo);
+        break;
+
+    } // switch (pageid)
+}
+
 void InitTexts(void)
 {
-    InitTextInitInfo(sSSMasterTextInitInfo);
+    InitPageTexts(gStatScreen.page);
 }
 
 void DisplayTexts(const struct SSTextDispInfo* infos)
@@ -556,7 +637,7 @@ static int GetUnitGrowthBonus(struct Unit * unit)
 static void PutGrowthValue(int x, int y, int growth)
 {
     PutNumber(gUiTmScratchA + TILEMAP_INDEX(x, y), TEXT_COLOR_SYSTEM_BLUE, growth);
-    PutSpecialChar(gUiTmScratchA + TILEMAP_INDEX(x + 1, y), TEXT_COLOR_SYSTEM_BLUE, TEXT_SPECIAL_PERCENT);
+    PutDrawText(NULL, gUiTmScratchA + TILEMAP_INDEX(x + 1, y), TEXT_COLOR_SYSTEM_BLUE, 0, 2, "%");
 }
 
 static void DisplayPage0Growths(void)
@@ -564,9 +645,9 @@ static void DisplayPage0Growths(void)
     struct Unit * unit = gStatScreen.unit;
     int growthBonus = GetUnitGrowthBonus(unit);
 
-    TileMap_FillRect(gUiTmScratchA + TILEMAP_INDEX(9, 1), 3, 2, 0);
-    PutTwoSpecialChar(gUiTmScratchA + TILEMAP_INDEX(9, 1),
-        TEXT_COLOR_SYSTEM_GOLD, TEXT_SPECIAL_HP_A, TEXT_SPECIAL_HP_B);
+    ClearText(&gStatScreen.text[STATSCREEN_TEXT_MOVLABEL]);
+    PutDrawText(&gStatScreen.text[STATSCREEN_TEXT_MOVLABEL],
+        gUiTmScratchA + TILEMAP_INDEX(9, 1), TEXT_COLOR_SYSTEM_GOLD, 0, 0, "HP");
 
     PutGrowthValue(6, 1, unit->pCharacterData->growthPow + growthBonus);
     PutGrowthValue(6, 3, unit->pCharacterData->growthSkl + growthBonus);
@@ -1036,6 +1117,10 @@ void PageSlide_OnLoop(struct StatScreenEffectProc* proc)
     {
         // INT8_MAX offset means switch to displaying next page
 
+        ResetText();
+        ResetIconGraphics_();
+        InitPageTexts(proc->newItem);
+        DisplayLeftPanel();
         DisplayPage(proc->newItem);
 
         proc->timer++;
@@ -1696,6 +1781,10 @@ static void StatScreen_ToggleGrowthView(void)
 {
     sStatScreenShowingGrowths = !sStatScreenShowingGrowths;
 
+    ResetText();
+    ResetIconGraphics_();
+    InitPageTexts(gStatScreen.page);
+    DisplayLeftPanel();
     DisplayPage(gStatScreen.page);
 
     TileMap_CopyRect(gUiTmScratchA, gBG0TilemapBuffer + TILEMAP_INDEX(12, 2), 18, 18);

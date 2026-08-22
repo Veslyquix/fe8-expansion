@@ -6,6 +6,7 @@ MODERN_GOALS := \
 	expansion-modern-all \
 	expansion-modern-elf \
 	expansion-modern-rom \
+	expansion-modern-sym \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
@@ -41,7 +42,8 @@ MODERN_GOALS := \
 	expansion-modern-starter-runtime-check \
 	expansion-modern-idspace-active-check \
 	expansion-modern-clean \
-	sync-win
+	sync-win \
+	_sync_win_impl
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
 endif
@@ -753,6 +755,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-all \
 	expansion-modern-elf \
 	expansion-modern-rom \
+	expansion-modern-sym \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
@@ -1367,6 +1370,7 @@ expansion-modern-clean:
 MODERN_LINKED_GOALS := \
 	expansion-modern-elf \
 	expansion-modern-rom \
+	expansion-modern-sym \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
@@ -2359,6 +2363,20 @@ expansion-modern-rom: expansion-modern-elf $(MODERN_ROM)
 	@printf 'Modern ROM ready: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
 
+# no$gba-format symbol file (see scripts/modernize/generate_nocash_sym.py):
+# lets no$gba show function/data names instead of raw addresses while
+# debugging. Generated from $(MODERN_ELF) (before --strip-debug strips
+# $(MODERN_ROM)'s own copy), and must share $(MODERN_ROM)'s basename so
+# no$gba auto-loads it -- see the sync-win copy step below.
+MODERN_SYM := $(MODERN_ROM:.gba=.sym)
+MODERN_SYM_GENERATOR := scripts/modernize/generate_nocash_sym.py
+
+$(MODERN_SYM): $(MODERN_ELF)
+	@"$(PYTHON)" "$(MODERN_SYM_GENERATOR)" --nm "$(MODERN_NM)" --elf "$<" --out "$@"
+
+expansion-modern-sym: expansion-modern-elf $(MODERN_SYM)
+	@printf 'Modern symbol file ready: %s\n' "$(MODERN_SYM)"
+
 # Opt-in convenience target (not part of `all`/boot-check): copy the built
 # modern ROM to a Windows-native path, for WSL setups where a GUI emulator
 # on the Windows side reads over \\wsl.localhost\ -- copying to a native
@@ -2367,13 +2385,18 @@ expansion-modern-rom: expansion-modern-elf $(MODERN_ROM)
 # install layout.
 WIN_SYNC_DIR := /mnt/c/devkitPro/feex
 
-.PHONY: sync-win
+.PHONY: sync-win _sync_win_impl
 sync-win:
+	+scripts/log_build_error.sh "make sync-win" -- $(MAKE) --no-print-directory _sync_win_impl
+
+_sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
-	+$(MAKE) expansion-modern-rom
+	+$(MAKE) expansion-modern-rom expansion-modern-sym
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
+	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
+	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
 
 # Preflight the libmGBA-backed playtest backend before spending time building
 # the ROM, with an actionable error pointing at the same backend-check

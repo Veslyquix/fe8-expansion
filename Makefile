@@ -226,20 +226,33 @@ src/menu_def.o: CC1FLAGS += -Wno-error
 # archival lane except this target's name.
 ifeq ($(OS),Windows_NT)
 all:
+	+scripts/log_build_error.sh "make all" -- $(MAKE) --no-print-directory _all_impl MODERN_CONFIG=release MODERN_ABI=aapcs
+
+_all_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-rom MODERN_CONFIG=release MODERN_ABI=aapcs
 else
 all:
+	+scripts/log_build_error.sh "make all" -- $(MAKE) --no-print-directory _all_impl MODERN_CONFIG=release MODERN_ABI=aapcs
+
+_all_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs
 endif
 
+.PHONY: _all_impl
+
 # Explicit, clearly-named archival alias (issue #15): builds the exact same
 # agbcc-based $(ROM) as `make fireemblem8.gba`. Kept as its own target so
 # scripts/docs can name the archival lane directly.
-legacy: $(ROM)
+legacy:
+	+scripts/log_build_error.sh "make legacy" -- $(MAKE) --no-print-directory _legacy_impl
+
+_legacy_impl: $(ROM)
 	@echo "Archival legacy build complete (agbcc, unsupported release lane): $(ROM)" >&2
 	@echo "See CONTRIBUTING.md for the decomp-matching workflow this lane exists for." >&2
+
+.PHONY: _legacy_impl
 
 # Prevent the catch-all %.s rule from turning the removed comparison command
 # into an unrelated native executable through make's built-in implicit rules.
@@ -321,7 +334,7 @@ shiftcheck: shiftcheck-build shiftcheck-static shiftcheck-offsets shiftcheck-dif
 # Anything not listed still trips the graph backstop. Both gates share the
 # same actionable diagnostic ($(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG), defined
 # once in generated_data.mk) so they can never drift.
-ARCHIVAL_KNOWN_GOALS := legacy $(ROM) $(ELF) $(MAP) $(RELOCS_ELF) $(OBJECTS_LST) \
+ARCHIVAL_KNOWN_GOALS := legacy _legacy_impl $(ROM) $(ELF) $(MAP) $(RELOCS_ELF) $(OBJECTS_LST) \
     shiftcheck shiftcheck-static shiftcheck-offsets shiftcheck-diff shiftcheck-run
 ifneq (,$(GENERATED_DATA_ITEM_CAP_EXPANDED))
 ifneq (,$(filter $(ARCHIVAL_KNOWN_GOALS),$(MAKECMDGOALS)))

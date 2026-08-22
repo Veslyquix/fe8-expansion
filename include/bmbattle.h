@@ -85,6 +85,7 @@ struct BattleUnit {
     /* 7E */ s8 hasItemEffectTarget;
 #ifdef DEBUFFS_EXIST
     /* 7F */ s8 pendingDebuffHits;
+    /* .. */ u16 pendingDebuffItem; // item index that triggered pendingDebuffHits, looked up in gWeaponDebuffTable
 #endif
     /* 7F */ /* pad */
 };

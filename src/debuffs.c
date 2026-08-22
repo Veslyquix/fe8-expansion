@@ -3,6 +3,7 @@
 #ifdef DEBUFFS_EXIST
 
 #include "constants/items.h"
+#include "id_space.h"
 
 #include "bmbattle.h"
 #include "bmitem.h"
@@ -10,6 +11,47 @@
 #include "debuffs.h"
 
 #define UNIT_DEBUFF_PACKED_BYTE_COUNT 6
+
+/* Per-stat debuff for one weapon: `percent` is applied to the unit's raw
+ * (undebuffed) stat first (e.g. -20 = reduce by 20% of that stat, rounded
+ * down but never to a no-op if the stat is positive -- matches
+ * UnitAddPercentDebuff's existing "round up to at least 1" rule), then
+ * `flat` is subtracted from that result (e.g. -5 = 5 more off). Both are
+ * plain signed deltas, same sign convention as UnitAddDebuff/UnitSetDebuff
+ * (negative = debuff). A stat left at {0, 0} isn't touched at all.
+ *
+ * Example: 10 Str, percent=-20, flat=-5 -> 10 - (10*20/100) - 5 = 3. */
+struct WeaponDebuffStat {
+    s8 percent;
+    s8 flat;
+};
+
+/* One entry per debuffable stat (see enum udef_debuff_stat, bmunit.h). */
+struct WeaponDebuffEntry {
+    struct WeaponDebuffStat pow;
+    struct WeaponDebuffStat skl;
+    struct WeaponDebuffStat spd;
+    struct WeaponDebuffStat def;
+    struct WeaponDebuffStat res;
+    struct WeaponDebuffStat lck;
+    struct WeaponDebuffStat mov;
+};
+
+/* Indexed directly by item id (not scanned) -- gWeaponDebuffTable[item] is
+ * the weapon's debuff entry, or an all-zero (no-op) entry for any item that
+ * doesn't debuff on hit. Sized to the build's configured item id cap
+ * (id_space.h) so every valid item id is always a safe, in-bounds index. */
+CONST_DATA struct WeaponDebuffEntry gWeaponDebuffTable[ITEM_ID_CONFIGURED_CAP] = {
+    [ITEM_LANCE_IRON] = {
+        .pow = { .percent = -20 },
+        .skl = { .percent = -20 },
+        .spd = { .percent = -20 },
+        .def = { .percent = -20 },
+        .res = { .percent = -20 },
+        .lck = { .percent = -20 },
+        .mov = { .percent = -20 },
+    },
+};
 
 static int ClampDebuff(int value)
 {
@@ -254,37 +296,102 @@ void UnitRestoreDebuffsTowardsNeutral(struct Unit *unit, int amount)
     }
 }
 
+static const struct WeaponDebuffEntry * GetWeaponDebuffEntry(int item)
+{
+    int itemIndex = GetItemIndex(item);
+
+    if (itemIndex <= 0 || itemIndex >= (int)ARRAY_COUNT(gWeaponDebuffTable))
+        return NULL;
+
+    return &gWeaponDebuffTable[itemIndex];
+}
+
+static const struct WeaponDebuffStat * GetWeaponDebuffStatEntry(const struct WeaponDebuffEntry *entry, int stat)
+{
+    switch (stat) {
+    case UNIT_DEBUFF_STAT_POW: return &entry->pow;
+    case UNIT_DEBUFF_STAT_SKL: return &entry->skl;
+    case UNIT_DEBUFF_STAT_SPD: return &entry->spd;
+    case UNIT_DEBUFF_STAT_DEF: return &entry->def;
+    case UNIT_DEBUFF_STAT_RES: return &entry->res;
+    case UNIT_DEBUFF_STAT_LCK: return &entry->lck;
+    case UNIT_DEBUFF_STAT_MOV: return &entry->mov;
+    }
+
+    return NULL;
+}
+
+/* Percent first, then flat -- see struct WeaponDebuffStat's comment. */
+static void ApplyWeaponDebuffStat(struct Unit *unit, int stat, const struct WeaponDebuffStat *statEntry)
+{
+    int raw;
+    int percentAmount;
+
+    if (!statEntry || (statEntry->percent == 0 && statEntry->flat == 0))
+        return;
+
+    percentAmount = 0;
+
+    if (statEntry->percent != 0) {
+        raw = GetRawStatForDebuff(unit, stat);
+        percentAmount = (raw * AbsInt(statEntry->percent)) / 100;
+
+        if (raw > 0 && percentAmount == 0)
+            percentAmount = 1;
+
+        if (statEntry->percent < 0)
+            percentAmount = -percentAmount;
+    }
+
+    UnitAddDebuff(unit, stat, percentAmount + statEntry->flat);
+}
+
 void BattleApplyWeaponDebuff(struct BattleUnit *attacker, struct BattleUnit *defender)
 {
+    int item;
+
     if (!(gBattleStats.config & BATTLE_CONFIG_REAL))
         return;
 
     if (!attacker || !defender)
         return;
 
-    if (GetItemIndex(attacker->weaponBefore) != ITEM_LANCE_IRON)
+    item = GetItemIndex(attacker->weaponBefore);
+
+    if (!GetWeaponDebuffEntry(item))
         return;
 
     if (!UNIT_IS_VALID(&defender->unit))
         return;
 
+    defender->pendingDebuffItem = item;
     defender->pendingDebuffHits++;
 }
 
 void BattleApplyUnitDebuffs(struct Unit *unit, struct BattleUnit *bu)
 {
     int i;
+    const struct WeaponDebuffEntry *entry;
 
     if (!unit || !bu || !UNIT_IS_VALID(unit) || unit->curHP == 0)
         return;
 
+    if (bu->pendingDebuffHits <= 0)
+        return;
+
+    entry = GetWeaponDebuffEntry(bu->pendingDebuffItem);
+
+    if (!entry)
+        return;
+
     for (i = 0; i < bu->pendingDebuffHits; ++i) {
-        UnitAddPercentDebuff(unit, UNIT_DEBUFF_STAT_POW, -20);
-        UnitAddPercentDebuff(unit, UNIT_DEBUFF_STAT_SKL, -20);
-        UnitAddPercentDebuff(unit, UNIT_DEBUFF_STAT_SPD, -20);
-        UnitAddPercentDebuff(unit, UNIT_DEBUFF_STAT_DEF, -20);
-        UnitAddPercentDebuff(unit, UNIT_DEBUFF_STAT_RES, -20);
-        UnitAddPercentDebuff(unit, UNIT_DEBUFF_STAT_LCK, -20);
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_POW, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_POW));
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_SKL, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_SKL));
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_SPD, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_SPD));
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_DEF, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_DEF));
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_RES, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_RES));
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_LCK, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_LCK));
+        ApplyWeaponDebuffStat(unit, UNIT_DEBUFF_STAT_MOV, GetWeaponDebuffStatEntry(entry, UNIT_DEBUFF_STAT_MOV));
     }
 }
 

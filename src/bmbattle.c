@@ -344,6 +344,7 @@ void InitBattleUnit(struct BattleUnit* bu, struct Unit* unit) {
 #ifdef DEBUFFS_EXIST
     UnitClearStatModifiers(&bu->unit);
     bu->pendingDebuffHits = 0;
+    bu->pendingDebuffItem = 0;
 #endif
 }
 
