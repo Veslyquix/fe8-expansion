@@ -40306,7 +40306,7 @@ This cannot be undone.[X]
 Hannah[X]
 
 ## MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS
-Francis[X]
+Francis[.][X]
 
 ## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
 Frederick[.][X]
