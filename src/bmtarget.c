@@ -155,6 +155,13 @@ void TryAddTrapsToTargetList(void) {
     for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap) {
 #if FE8_PURCHASE_GENERICS
         if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP)) {
+            // Can't attack your own Camp, nor an allied faction's (same
+            // AreUnitsAllied grouping units already use: Blue+Green vs.
+            // Red+Purple) -- only an enemy-owned Camp is a valid target.
+            if (AreUnitsAllied(gSubjectUnit->index, GetPurchaseBaseTrapOwner(trap) << 6)) {
+                continue;
+            }
+
             if (gMapRangeSigned[trap->yPos][trap->xPos] != 0) {
                 AddTarget(trap->xPos, trap->yPos, 0, GetCampTrapHp(trap));
             }

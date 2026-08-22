@@ -129,6 +129,7 @@ struct Trap* AddTentTrap(int x, int y, int owner);
 bool IsCampOrTentTrap(struct Trap* trap, int kind);
 void SetCampTrapHp(struct Trap* trap, int hp);
 int GetCampTrapHp(struct Trap* trap);
+void RefreshAllCampTraps(void);
 #endif
 void InitMapObstacles(void);
 void ApplyEnabledMapChanges(void);

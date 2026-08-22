@@ -1296,8 +1296,20 @@ void ClassInfoDisplay_ExecScript(struct OpInfoClassDisplayProc* proc) {
 
             break;
 
+#if FE8_VESLY_DEBUGGER
+        case CLASS_REEL_CRIT_FAR:
+            gOpInfoData.roundType = ANIM_ROUND_CRIT_FAR;
+            RestartMainMiniAnim(&gOpInfoData);
+
+            break;
+#endif
+
         case CLASS_REEL_OP_5:
         case CLASS_REEL_OP_8:
+#if FE8_VESLY_DEBUGGER
+        case CLASS_REEL_WAIT_SPELL:
+        case CLASS_REEL_WAIT_RETURN:
+#endif
             break;
     }
 
@@ -1315,6 +1327,9 @@ void ClassInfoDisplay_LoopScript(struct OpInfoClassDisplayProc* proc) {
         case CLASS_REEL_OP_4:
         case CLASS_REEL_OP_6:
         case CLASS_REEL_OP_7:
+#if FE8_VESLY_DEBUGGER
+        case CLASS_REEL_CRIT_FAR:
+#endif
             proc->script++;
             Proc_Break(proc);
 
@@ -1337,6 +1352,26 @@ void ClassInfoDisplay_LoopScript(struct OpInfoClassDisplayProc* proc) {
                 proc->script++;
                 Proc_Break(proc);
             }
+
+            break;
+
+#if FE8_VESLY_DEBUGGER
+        case CLASS_REEL_WAIT_SPELL:
+            if (!gEfxSpellAnimExists) {
+                proc->script++;
+                Proc_Break(proc);
+            }
+
+            break;
+
+        case CLASS_REEL_WAIT_RETURN:
+            if (IsMainMiniAnimEnd(&gOpInfoData) != 0) {
+                proc->script++;
+                Proc_Break(proc);
+            }
+
+            break;
+#endif
     }
 
     return;

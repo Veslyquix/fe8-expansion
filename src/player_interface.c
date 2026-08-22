@@ -1226,8 +1226,20 @@ void DrawTerrainDisplayWindow(struct PlayerInterfaceProc * proc)
         if (purchaseBaseTrap != NULL)
         {
             CallARM_FillTileRect(gUiTmScratchA + TILEMAP_INDEX(1, 14), Tsa_TerrainMapUi_ObstacleLabels, TILEREF(0x100, 2));
-            num = PURCHASE_BASE_CAPTURE_REQUIRED - (GetPurchaseBaseTrapCaptureProgress(purchaseBaseTrap));
-            if (num < 0) { num = 0; }
+
+            // Camp is a destructible obstacle, not a capturable base -- it's
+            // impassable (see AddCampTrap, src/bmtrick.c), so it can never
+            // actually be stood on and captured. Show its remaining HP
+            // instead of a capture-progress countdown that could never move.
+            if (IsCampOrTentTrap(purchaseBaseTrap, PURCHASE_BASE_KIND_CAMP))
+            {
+                num = GetCampTrapHp(purchaseBaseTrap);
+            }
+            else
+            {
+                num = PURCHASE_BASE_CAPTURE_REQUIRED - (GetPurchaseBaseTrapCaptureProgress(purchaseBaseTrap));
+                if (num < 0) { num = 0; }
+            }
 
             StoreNumberStringToSmallBuffer(num);
             // Same tile as Avo's own digits above (TILEMAP_INDEX(5, 15)) --

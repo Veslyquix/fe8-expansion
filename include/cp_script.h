@@ -86,7 +86,7 @@ s8 AiIsUnitEnemy(struct Unit* unit);
 // ??? AiScriptCmd_16_RandomMovement(???);
 // ??? AiScriptCmd_17_DoEscape(???);
 // ??? AiGetAttackPositionScore(???);
-// ??? AiFindBestAttackPositionAgainstTarget(???);
+s8 AiFindBestAttackPositionAgainstTarget(int x, int y, struct Vec2* out, u8* itemSlotOut);
 // ??? AiFindClosestReachableTerrainPosition(???);
 // ??? AiScriptCmd_18_TryAttackSnagWall(???);
 // ??? AiScriptCmd_19_MoveTowardsTerrain(???);

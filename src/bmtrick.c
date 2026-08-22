@@ -213,7 +213,32 @@ struct Trap* AddCampTrap(int x, int y, int owner)
     // call site reads it for a CAMP-kind trap.
     SetCampTrapHp(trap, CAMP_STARTING_HP);
 
+    // Camp is a standalone destructible obstacle occupying its tile (like a
+    // wall or Light Rune), not a base you stand on -- block movement onto
+    // it immediately, matching AddLightRune. RefreshAllCampTraps re-applies
+    // this on every full terrain rebuild (RefreshTerrainBmMap), and
+    // UpdateObstacleFromBattle already calls RefreshTerrainBmMap right
+    // after RemoveTrap when a Camp is destroyed, so passability is restored
+    // there for free.
+    gBmMapTerrain[y][x] = TERRAIN_NONE;
+
     return trap;
+}
+
+// Re-applies every live Camp trap's movement-blocking terrain override.
+// Mirrors RefreshAllLightRunes -- called from the same place
+// (RefreshTerrainBmMap, src/bmmap.c) right after it, so a full terrain
+// rebuild (map load, or after a Camp is destroyed and removed) doesn't
+// silently make remaining Camps traversable again.
+void RefreshAllCampTraps(void)
+{
+    struct Trap* trap;
+
+    for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
+    {
+        if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
+            gBmMapTerrain[trap->yPos][trap->xPos] = TERRAIN_NONE;
+    }
 }
 
 struct Trap* AddTentTrap(int x, int y, int owner)

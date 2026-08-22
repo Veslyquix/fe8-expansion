@@ -331,6 +331,9 @@ void RefreshTerrainBmMap(void) {
             gBmMapTerrain[iy][ix] = gTilesetTerrainLookup[gBmMapBaseTiles[iy][ix] >> 2];
 
     RefreshAllLightRunes();
+#if FE8_PURCHASE_GENERICS
+    RefreshAllCampTraps();
+#endif
 }
 
 int GetTrueTerrainAt(int x, int y) {
