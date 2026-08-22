@@ -139,7 +139,14 @@ static void DrawMapAnim_PutDigit(int x, int y, int digit)
 
     if (digit > 5)
     {
-        chr += 0x20;
+        // Row 2 of the uploaded glyph sheet starts 6 tiles after row 1, not
+        // 0x20 -- the source dump (NumbersFromSaveScreen.dmp) is exactly
+        // 384 bytes = 12 tiles = 6*2*CHR_SIZE, uploaded contiguously
+        // (DrawMapAnim_LoadNumbers), so tile index 6 is the first tile of
+        // row 2. The old +0x20 pointed 20 tiles past the end of the
+        // upload, into unrelated/uninitialized OBJ VRAM -- which is why
+        // digits 6-9 rendered as garbage instead of the actual glyph.
+        chr += 6;
         digit -= 6;
     }
 

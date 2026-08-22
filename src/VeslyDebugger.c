@@ -8037,6 +8037,9 @@ static int GetDebuggerSpellAnimId(int classId, int weapon)
     if (result < 0)
         result = 0;
 
+    if (result > 0x47 || gEkrSpellAnimLut[result] == NULL)
+        result = 0;
+
     return result;
 }
 
@@ -8258,6 +8261,7 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
     (void)persistentEntry;
 
     NewEfxAnimeDrvProc();
+    gEkrDistanceType = EKR_DISTANCE_CLOSE;
 
     gOpInfoData.charPalId = (palOverride >= 0) ? palOverride : entry->paletteId;
     gOpInfoData.xPos = DEBUGGER_BANIM_X;
