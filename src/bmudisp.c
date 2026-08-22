@@ -1250,12 +1250,12 @@ void PutUnitSpriteIconsOam(void)
             break;
         }
 
+        if (!displayRescueIcon)
+            continue;
+        
 #if FE8_DISPLAY_OBTAINABLE_ITEM
         DrawObtainableItemIcon(unit);
 #endif
-
-        if (!displayRescueIcon)
-            continue;
 
         if (unit->state & US_RESCUING)
         {

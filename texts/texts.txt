@@ -40264,24 +40264,24 @@ cannot be opened here.[X]
 
 ## MSG_SAVE_COMPAT_HEADER_CORRUPT
 The save data appears to be[.][LF]
-corrupted and cannot be read.[X]
+corrupted and cannot be read.[.][X]
 
 ## MSG_SAVE_COMPAT_METADATA_CORRUPT
 The save data's expansion[.][LF]
 info is corrupted and[.][LF]
-cannot be read.[X]
+cannot be read.[.][X]
 
 ## MSG_SAVE_COMPAT_OLDER
 This save data is from an[.][LF]
 older version of this[.][LF]
 expansion. It can be migrated[.][LF]
-using an external tool.[X]
+using an external tool.[.][X]
 
 ## MSG_SAVE_COMPAT_NEWER
 This save data is from a[.][LF]
 newer version of this[.][LF]
 expansion and is not[.][LF]
-supported here.[X]
+supported here.[.][X]
 
 ## MSG_SAVE_COMPAT_CONFIG_INCOMPATIBLE
 This save data was made with[.][LF]
@@ -40296,7 +40296,7 @@ used here.[X]
 Back[X]
 
 ## MSG_SAVE_COMPAT_ERASE_ALL
-Erase All Save Data[X]
+Erase All Save Data[.][X]
 
 ## MSG_SAVE_COMPAT_ERASE_CONFIRM
 Erase all save data?[.][LF]

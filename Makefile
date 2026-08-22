@@ -428,6 +428,7 @@ TEXT_TOOLS := scripts/texttools
 TEXT_DECODER := $(PYTHON)  $(TEXT_TOOLS)/textdecoder.py
 TEXT_DPARSER := $(PYTHON) $(TEXT_TOOLS)/textdeparser.py
 TEXT_PROCESS := $(PYTHON) $(TEXT_TOOLS)/textprocess.py
+TEXT_ALIGNMENT_CHECK := $(PYTHON) $(TEXT_TOOLS)/check_text_alignment.py
 
 TEXT_MAIN := $(TEXT_DIR)/texts.txt
 TEXT_DEFS := $(TEXT_DIR)/textdefs.txt
@@ -437,6 +438,7 @@ TEXT_HEADER := include/constants/msg.h
 MSG_LIST    := src/msg_data.c
 
 src/msg_data.c: $(TEXT_SRC) $(TEXT_DEFS)
+	@$(TEXT_ALIGNMENT_CHECK) --main $(TEXT_MAIN) --defs $(TEXT_DEFS) --fix
 	@$(TEXT_PROCESS) $(TEXT_MAIN) $(TEXT_DEFS) $@ $(TEXT_HEADER) utf8
 
 # Graphics Recipes
