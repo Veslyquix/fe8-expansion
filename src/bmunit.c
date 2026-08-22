@@ -25,6 +25,7 @@
 #include "bmmind.h"
 #include "eventcall.h"
 #include "debuffs.h"
+#include "turn_autosave.h"
 
 #if FE8_DISPLAY_OBTAINABLE_ITEM
 void SetupCacheForStealableItems(void);
@@ -1027,6 +1028,9 @@ void UnitKill(struct Unit* unit) {
         if (UNIT_IS_PHANTOM(unit))
             unit->pCharacterData = NULL;
         else {
+#if FE8_TURN_AUTOSAVE
+            TurnAutosave_OnBlueUnitKilled();
+#endif
             unit->state |= US_DEAD | US_HIDDEN;
             InitUnitsupports(unit);
         }

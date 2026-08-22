@@ -313,14 +313,6 @@ GROUP_AI ?= 1
 # can promote. 
 PROMOTE_COMMAND ?= 1
 
-
-
-
-
-
-
-# to do: test these 
-
 # --- Optional Autosave ----------------------------------------------------------
 # BmMain_SuspendBeforePhase only writes while
 # transitioning into Player Phase, and only if the number of alive,
@@ -330,6 +322,9 @@ TURN_AUTOSAVE ?= 1
 
 
 
+
+
+# to do: needs testing 
 # --- Optional TextChNames -----------------------------------------------------
 # Draws the actual chapter title text instead of a pre-rendered graphic
 # banner, so any chapter name reads correctly without needing a hand-drawn
