@@ -229,6 +229,9 @@ endif
 ifeq ($(PROMOTE_COMMAND),1)
 MODERN_DEFINE_FLAGS += -DFE8_PROMOTE_COMMAND=1
 endif
+ifeq ($(FIX_BUGS),1)
+MODERN_DEFINE_FLAGS += -DFE8_FIX_BUGS=1
+endif
 ifeq ($(CREDITS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
 endif
@@ -1540,6 +1543,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--turn-autosave "$(TURN_AUTOSAVE)" \
 		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 		--promote-command "$(PROMOTE_COMMAND)" \
+		--fix-bugs "$(FIX_BUGS)" \
 		--credits "$(CREDITS)" \
 		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 		--skip-opening "$(SKIP_OPENING)" \
@@ -1621,6 +1625,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--turn-autosave "$(TURN_AUTOSAVE)" \
 	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 	--promote-command "$(PROMOTE_COMMAND)" \
+	--fix-bugs "$(FIX_BUGS)" \
 	--credits "$(CREDITS)" \
 	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 	--skip-opening "$(SKIP_OPENING)" \
@@ -1713,6 +1718,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
+	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
@@ -1895,6 +1901,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
 		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
 		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \
+		printf '%s\n' 'fix_bugs=$(FIX_BUGS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
 		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \

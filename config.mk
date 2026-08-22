@@ -334,6 +334,18 @@ FORT_UNITS_START_GREYED_OUT ?= 1
 # mechanism is ported. See src/promote_command.c.
 PROMOTE_COMMAND ?= 0
 
+# --- Optional FixBugs -------------------------------------------------------------
+# Clamps a unit's base stats (maxHP/pow/skl/spd/def/res) to a sane minimum
+# right after they're computed as character base + class base, instead of
+# letting the raw sum go negative (or, for HP, to exactly 0 -- an
+# instantly-dead unit). Affects both initial unit loading
+# (UnitLoadStatsFromChracter) and the enemy-scaling-down auto-level penalty
+# (UnitAutolevelPenalty) in src/bmunit.c, since both compute the same sum.
+# This only matters for character/class combinations whose base stats were
+# authored to go negative and don't recover once added together -- normal
+# vanilla-range data is unaffected either way.
+FIX_BUGS ?= 1
+
 # --- Optional CustomCampaign --------------------------------------------------
 # Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
 # map (see gChapterDataAssetTable in src/data/data_8B363C.c), and replaces

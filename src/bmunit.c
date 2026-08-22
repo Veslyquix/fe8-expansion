@@ -741,6 +741,16 @@ void UnitLoadItemsFromDefinition(struct Unit* unit, const struct UnitDefinition*
         UnitAddItem(unit, MakeNewItem(uDef->items[i]));
 }
 
+#if FE8_FIX_BUGS
+/* character base + class base can go negative (or, for HP, to exactly 0 --
+ * an instantly-dead unit) for character/class combinations whose base
+ * stats were authored to go negative and don't recover once summed. Clamp
+ * to a sane minimum instead of loading a broken unit. */
+static s8 ClampUnitBaseStat(int value, int min) {
+    return value < min ? min : value;
+}
+#endif
+
 void UnitLoadStatsFromChracter(struct Unit* unit, const struct CharacterData* character) {
     int i;
 
@@ -751,6 +761,15 @@ void UnitLoadStatsFromChracter(struct Unit* unit, const struct CharacterData* ch
     unit->def   = character->baseDef + unit->pClassData->baseDef;
     unit->res   = character->baseRes + unit->pClassData->baseRes;
     unit->lck   = character->baseLck;
+
+#if FE8_FIX_BUGS
+    unit->maxHP = ClampUnitBaseStat(unit->maxHP, 1);
+    unit->pow   = ClampUnitBaseStat(unit->pow, 0);
+    unit->skl   = ClampUnitBaseStat(unit->skl, 0);
+    unit->spd   = ClampUnitBaseStat(unit->spd, 0);
+    unit->def   = ClampUnitBaseStat(unit->def, 0);
+    unit->res   = ClampUnitBaseStat(unit->res, 0);
+#endif
 
     unit->conBonus = 0;
 
@@ -837,6 +856,15 @@ void UnitAutolevelPenalty(struct Unit* unit, u8 classId, int levelCount) {
         unit->def   = unit->pCharacterData->baseDef + unit->pClassData->baseDef;
         unit->res   = unit->pCharacterData->baseRes + unit->pClassData->baseRes;
         unit->lck   = unit->pCharacterData->baseLck;
+
+#if FE8_FIX_BUGS
+        unit->maxHP = ClampUnitBaseStat(unit->maxHP, 1);
+        unit->pow   = ClampUnitBaseStat(unit->pow, 0);
+        unit->skl   = ClampUnitBaseStat(unit->skl, 0);
+        unit->spd   = ClampUnitBaseStat(unit->spd, 0);
+        unit->def   = ClampUnitBaseStat(unit->def, 0);
+        unit->res   = ClampUnitBaseStat(unit->res, 0);
+#endif
 
         if (levelCount > unit->pCharacterData->baseLevel) {
             unit->level = levelCount;

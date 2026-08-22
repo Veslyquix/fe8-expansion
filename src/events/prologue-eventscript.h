@@ -67,7 +67,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         .xPosition = 18,
         .yPosition = 11,
         .items = {
-            ITEM_LANCE_IRON,
+            ITEM_LANCE_SLIM,
         },
         .ai = {0x0, 0xa, 0x0, 0x0},
     },

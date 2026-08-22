@@ -400,7 +400,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            debuffs_exist=0, debuffs_stack=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
                            draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
-                           fort_units_start_greyed_out=0, promote_command=0, credits=0,
+                           fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
@@ -434,6 +434,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
     fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
+    fix_bugs_flag = validate_feature_flag("FIX_BUGS", fix_bugs)
     credits_flag = validate_feature_flag("CREDITS", credits)
     campaign = validate_feature_flag("CUSTOM_CAMPAIGN", custom_campaign)
     skip_opening_flag = validate_feature_flag("SKIP_OPENING", skip_opening)
@@ -473,7 +474,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
-            autosave_flag, fort_greyed_flag, promote_command_flag, credits_flag, campaign, skip_opening_flag)
+            autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -699,6 +700,7 @@ class ExpansionIdentity:
     turn_autosave: int = 0
     fort_units_start_greyed_out: int = 0
     promote_command: int = 0
+    fix_bugs: int = 0
     credits: int = 0
     custom_campaign: int = 0
     skip_opening: int = 0
@@ -770,6 +772,7 @@ class ExpansionIdentity:
                 "turn_autosave": self.turn_autosave,
                 "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "promote_command": self.promote_command,
+                "fix_bugs": self.fix_bugs,
                 "credits": self.credits,
                 "custom_campaign": self.custom_campaign,
                 "skip_opening": self.skip_opening,
@@ -829,6 +832,7 @@ def load_identity(
     turn_autosave=None,
     fort_units_start_greyed_out=None,
     promote_command=None,
+    fix_bugs=None,
     credits=None,
     custom_campaign=None,
     skip_opening=None,
@@ -893,7 +897,7 @@ def load_identity(
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
      resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
      resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
-     resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_credits,
+     resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
@@ -967,6 +971,9 @@ def load_identity(
         promote_command
         if promote_command not in (None, "")
         else cfg.get("PROMOTE_COMMAND", "0"),
+        fix_bugs
+        if fix_bugs not in (None, "")
+        else cfg.get("FIX_BUGS", "0"),
         credits
         if credits not in (None, "")
         else cfg.get("CREDITS", "0"),
@@ -1029,6 +1036,7 @@ def load_identity(
         turn_autosave=resolved_autosave,
         fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         promote_command=resolved_promote_command,
+        fix_bugs=resolved_fix_bugs,
         credits=resolved_credits,
         custom_campaign=resolved_custom_campaign,
         skip_opening=resolved_skip_opening,
@@ -1240,6 +1248,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override PROMOTE_COMMAND (0 or 1)",
     )
     parser.add_argument(
+        "--fix-bugs",
+        default=None,
+        help="override FIX_BUGS (0 or 1)",
+    )
+    parser.add_argument(
         "--credits",
         default=None,
         help="override CREDITS (0 or 1)",
@@ -1344,6 +1357,7 @@ def main(argv=None) -> int:
             turn_autosave=args.turn_autosave,
             fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             promote_command=args.promote_command,
+            fix_bugs=args.fix_bugs,
             credits=args.credits,
             custom_campaign=args.custom_campaign,
             skip_opening=args.skip_opening,

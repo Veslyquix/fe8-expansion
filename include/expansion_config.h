@@ -436,6 +436,14 @@
 #define FE8_PROMOTE_COMMAND 0
 #endif
 
+/* Clamps a unit's base stats to a sane minimum (HP >= 1, others >= 0)
+ * right after character base + class base is summed, instead of leaving a
+ * negative (or, for HP, exactly-0) result when that sum doesn't recover
+ * (see src/bmunit.c). */
+#ifndef FE8_FIX_BUGS
+#define FE8_FIX_BUGS 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -576,6 +584,10 @@
 
 #if (FE8_PROMOTE_COMMAND != 0) && (FE8_PROMOTE_COMMAND != 1)
 #error "FE8_PROMOTE_COMMAND must be 0 or 1"
+#endif
+
+#if (FE8_FIX_BUGS != 0) && (FE8_FIX_BUGS != 1)
+#error "FE8_FIX_BUGS must be 0 or 1"
 #endif
 
 #if (FE8_TURN_AUTOSAVE != 0) && (FE8_TURN_AUTOSAVE != 1)
