@@ -40316,3 +40316,6 @@ Fox[.][X]
 
 ## MSG_CUSTOM_CAMPAIGN_NAME_LIZ
 Liz[.][X]
+
+## MSG_TERRAIN_CAMP
+Camp[X]

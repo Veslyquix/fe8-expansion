@@ -215,12 +215,16 @@ struct Trap* AddCampTrap(int x, int y, int owner)
 
     // Camp is a standalone destructible obstacle occupying its tile (like a
     // wall or Light Rune), not a base you stand on -- block movement onto
-    // it immediately, matching AddLightRune. RefreshAllCampTraps re-applies
-    // this on every full terrain rebuild (RefreshTerrainBmMap), and
-    // UpdateObstacleFromBattle already calls RefreshTerrainBmMap right
-    // after RemoveTrap when a Camp is destroyed, so passability is restored
-    // there for free.
-    gBmMapTerrain[y][x] = TERRAIN_NONE;
+    // it immediately, matching AddLightRune. Uses its own terrain id
+    // (TERRAIN_FLOOR_MAGIC, unused in vanilla FE8 -- see
+    // include/constants/terrains.h) rather than sharing TERRAIN_NONE with
+    // Light Rune, so the terrain window can show "Camp" (gTerrains_0,
+    // src/data_terrains.c) without also relabeling every Light Rune tile.
+    // RefreshAllCampTraps re-applies this on every full terrain rebuild
+    // (RefreshTerrainBmMap), and UpdateObstacleFromBattle already calls
+    // RefreshTerrainBmMap right after RemoveTrap when a Camp is destroyed,
+    // so passability is restored there for free.
+    gBmMapTerrain[y][x] = TERRAIN_FLOOR_MAGIC;
 
     return trap;
 }
@@ -237,7 +241,7 @@ void RefreshAllCampTraps(void)
     for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
     {
         if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
-            gBmMapTerrain[trap->yPos][trap->xPos] = TERRAIN_NONE;
+            gBmMapTerrain[trap->yPos][trap->xPos] = TERRAIN_FLOOR_MAGIC;
     }
 }
 

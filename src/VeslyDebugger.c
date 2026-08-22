@@ -7746,6 +7746,7 @@ void SetBanimTerrainPos(struct BanimUnkStructComm * buf, s16 x1, s16 y1, s16 x2,
 #define DEBUGGER_BANIM_BG_Y 104
 
 static const struct ProcCmd sProc_DebuggerBanimPreview[];
+static struct Anim * sDebuggerBanimSlotDummies[4];
 
 static struct ClassReelAnimScr CONST_DATA sCRScr_MeleeHit[] = {
     CR_WAIT(0),
@@ -8113,6 +8114,75 @@ static void SetDebuggerBanimLayer(u16 layer)
     }
 }
 
+static void ClearDebuggerBanimAnimSlots(void)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        if (sDebuggerBanimSlotDummies[i] != NULL)
+        {
+            AnimDelete(sDebuggerBanimSlotDummies[i]);
+            sDebuggerBanimSlotDummies[i] = NULL;
+        }
+
+        gAnims[i] = NULL;
+    }
+}
+
+static struct Anim * CreateDebuggerBanimDummyAnim(int slot)
+{
+    struct Anim * anim = AnimCreate(BanimScr_DefaultAnim, (slot & 1) ? 0x14 : 0x78);
+
+    if (anim == NULL)
+        return NULL;
+
+    anim->state |= ANIM_BIT_HIDDEN;
+    anim->state2 |= ANIM_BIT2_0400;
+
+    if (slot & 1)
+        anim->state2 |= ANIM_BIT2_FRONT_FRAME;
+
+    if (slot >= 2)
+        anim->state2 |= ANIM_BIT2_POS_RIGHT;
+
+    anim->nextRoundId = 0;
+    anim->currentRoundType = ANIM_ROUND_TAKING_HIT_CLOSE;
+    anim->xPosition = (slot >= 2) ? DEBUGGER_BANIM_X + 0x30 : DEBUGGER_BANIM_X;
+    anim->yPosition = DEBUGGER_BANIM_Y;
+    anim->pSpriteData = NULL;
+    sDebuggerBanimSlotDummies[slot] = anim;
+
+    return anim;
+}
+
+static void SetDebuggerBanimBattlePositions(void)
+{
+    gEkrXPosBase[EKR_POS_L] = 0;
+    gEkrYPosBase[EKR_POS_L] = 0;
+    gEkrXPosReal[EKR_POS_L] = DEBUGGER_BANIM_X;
+    gEkrYPosReal[EKR_POS_L] = DEBUGGER_BANIM_Y;
+
+    gEkrXPosBase[EKR_POS_R] = 0;
+    gEkrYPosBase[EKR_POS_R] = 0;
+    gEkrXPosReal[EKR_POS_R] = DEBUGGER_BANIM_X + 0x30;
+    gEkrYPosReal[EKR_POS_R] = DEBUGGER_BANIM_Y;
+    gEkrBgPosition = 0;
+}
+
+static void RegisterDebuggerBanimAnimSlots(struct AnimBuffer * animBuf)
+{
+    ClearDebuggerBanimAnimSlots();
+
+    if (animBuf == NULL)
+        return;
+
+    gAnims[0] = animBuf->anim1 != NULL ? animBuf->anim1 : CreateDebuggerBanimDummyAnim(0);
+    gAnims[1] = animBuf->anim2 != NULL ? animBuf->anim2 : CreateDebuggerBanimDummyAnim(1);
+    gAnims[2] = CreateDebuggerBanimDummyAnim(2);
+    gAnims[3] = CreateDebuggerBanimDummyAnim(3);
+
+    SetDebuggerBanimBattlePositions();
+}
+
 static void StartDebuggerBanimSpellAnimation(struct Anim * anim)
 {
     if (anim == NULL)
@@ -8245,6 +8315,8 @@ static bool IsDebuggerPreviewWeaponMelee(int weapon)
 static void DebuggerBanimPreview_ResetScript(struct OpInfoClassDisplayProc * proc)
 {
     proc->script = proc->useRanged ? sCRScr_RangedHit : sCRScr_MeleeHit;
+    gEkrDistanceType = proc->useRanged ? EKR_DISTANCE_FAR : EKR_DISTANCE_CLOSE;
+    SetDebuggerBanimBattlePositions();
 
     if (proc->useRanged && IsDebuggerPreviewWeaponMelee(proc->weapon))
         gEkrSpellAnimIndex[EKR_POS_L] = 0x1E;
@@ -8261,7 +8333,6 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
     (void)persistentEntry;
 
     NewEfxAnimeDrvProc();
-    gEkrDistanceType = EKR_DISTANCE_CLOSE;
 
     gOpInfoData.charPalId = (palOverride >= 0) ? palOverride : entry->paletteId;
     gOpInfoData.xPos = DEBUGGER_BANIM_X;
@@ -8299,6 +8370,7 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
 
     ResetClassReelSpell();
     NewDebuggerEkrUnitMainMini(&gOpInfoData);
+    RegisterDebuggerBanimAnimSlots(&gOpInfoData);
     SetDebuggerBanimLayer(0);
 
     gUnk_Opinfo_0.terrain_l = DEBUGGER_BANIM_TERRAIN;
@@ -8376,6 +8448,7 @@ static void DebuggerBanimPreview_OnEnd(struct OpInfoClassDisplayProc * proc)
     EndActiveClassReelSpell();
     EndActiveClassReelBgColorProc();
     EndEkrUnitMainMini(&gOpInfoData);
+    ClearDebuggerBanimAnimSlots();
     EndBanimTerrain(&gUnk_Opinfo_0);
     EndEfxAnimeDrvProc();
     ApplyUnitSpritePalettes();
