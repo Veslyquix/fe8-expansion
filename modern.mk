@@ -199,6 +199,9 @@ endif
 ifeq ($(DEBUFFS_STACK),1)
 MODERN_DEFINE_FLAGS += -DFE8_DEBUFFS_STACK=1 -DDEBUFFS_STACK=1
 endif
+ifeq ($(SELECT_VIEW_GROWTHS),1)
+MODERN_DEFINE_FLAGS += -DFE8_SELECT_VIEW_GROWTHS=1 -DSELECT_VIEW_GROWTHS=1
+endif
 ifeq ($(TEXT_CHAPTER_NAMES),1)
 MODERN_DEFINE_FLAGS += -DFE8_TEXT_CHAPTER_NAMES=1
 endif
@@ -1534,6 +1537,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--extend-desc-box "$(EXTEND_DESC_BOX)" \
 		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
 		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
@@ -1616,6 +1620,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
 	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+	--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
 	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
@@ -1708,6 +1713,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
 	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
 	-DFE8_DEBUFFS_STACK=$(DEBUFFS_STACK) \
+	-DFE8_SELECT_VIEW_GROWTHS=$(SELECT_VIEW_GROWTHS) \
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
 	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
@@ -1892,6 +1898,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
 		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \
 		printf '%s\n' 'debuffs_stack=$(DEBUFFS_STACK)'; \
+		printf '%s\n' 'select_view_growths=$(SELECT_VIEW_GROWTHS)'; \
 		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \

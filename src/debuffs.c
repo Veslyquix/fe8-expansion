@@ -202,6 +202,9 @@ void UnitAddDebuff(struct Unit *unit, int stat, int amount)
 #endif
 
     UnitSetDebuff(unit, stat, current);
+    // brk; 
+    // UnitSetDebuff(unit, stat, -1);
+    // brk; 
 }
 
 void UnitAddPercentDebuff(struct Unit *unit, int stat, int percent)

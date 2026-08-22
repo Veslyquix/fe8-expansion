@@ -1,6 +1,7 @@
 *.sym
 
 scripts/map_gen/chunks/**/*.png
+errorlog.txt
 
 /.deps/
 

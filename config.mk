@@ -228,6 +228,11 @@ DISPLAY_OBTAINABLE_ITEM ?= 1
 DEBUFFS_EXIST ?= 1
 DEBUFFS_STACK ?= 0
 
+# --- Optional SelectViewGrowths ---------------------------------------------
+# Press Select on the first stat-screen page to alternate between current
+# stats and character growth rates.
+SELECT_VIEW_GROWTHS ?= 1
+
 # --- Optional TextChNames -----------------------------------------------------
 # Draws the actual chapter title text instead of a pre-rendered graphic
 # banner, so any chapter name reads correctly without needing a hand-drawn

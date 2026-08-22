@@ -128,7 +128,45 @@ static int AnimNumbers_GetHpChangeFromLut(int round, int position)
     if (before < 0 || after < 0)
         return 0;
 
-    return before - after;
+    return after - before;
+}
+
+static int AnimNumbers_GetCappedDisplayValue(int position)
+{
+    return AnimNumbers_GetHpChangeFromLut(gEfxHpLutOff[position], position);
+}
+
+static int AnimNumbers_GetUncappedDisplayValue(const struct BattleHit * hit, int position)
+{
+    int attacker;
+    int target;
+    int value = hit->hpChange;
+
+    if (value == 0)
+        return 0;
+
+    attacker = AnimNumbers_GetAttackerPosition(hit);
+
+    if (hit->attributes & BATTLE_HIT_ATTR_DEVIL)
+        target = attacker;
+    else
+        target = attacker ^ 1;
+
+    if (hit->attributes & BATTLE_HIT_ATTR_HPSTEAL)
+    {
+        if (position == attacker)
+            return value;
+
+        if (position == target)
+            return -value;
+
+        return 0;
+    }
+
+    if (position != target)
+        return 0;
+
+    return -value;
 }
 
 static int AnimNumbers_GetDisplayValue(struct Anim * anim, bool useCappedValue)
@@ -136,19 +174,20 @@ static int AnimNumbers_GetDisplayValue(struct Anim * anim, bool useCappedValue)
     int position = GetAnimPosition(anim);
     int round = AnimNumbers_GetRoundIndex(anim);
     const struct BattleHit * hit = gBattleHitArray + round;
-    int value = AnimNumbers_GetHpChangeFromLut(round, position);
+    int value;
 
     if (hit->info & BATTLE_HIT_INFO_END)
         return 0;
 
-    if (!useCappedValue && hit->hpChange > 0)
-    {
-        int attacker = AnimNumbers_GetAttackerPosition(hit);
-        int target = (hit->attributes & BATTLE_HIT_ATTR_DEVIL) ? attacker : (attacker ^ 1);
+    if (hit->attributes & BATTLE_HIT_ATTR_MISS)
+        return 0;
 
-        if (position == target)
-            value = hit->hpChange;
-    }
+    value = AnimNumbers_GetUncappedDisplayValue(hit, position);
+    if (value == 0)
+        return 0;
+
+    if (useCappedValue)
+        return AnimNumbers_GetCappedDisplayValue(position);
 
     return value;
 }
@@ -277,6 +316,8 @@ int AnimNumbers_DisplayDamage(struct Anim * anim, bool useCappedValue, int previ
     int oam2;
     int yOffset;
     struct ProcAnimNumbersDelayDigits * proc;
+    struct ProcEkrSubAnimeEmulator * subProc;
+    struct ProcEfxDamageMojiEffectOBJ * objProc;
 
     if (CheckFlag(BATTLE_ANIMATION_NUMBERS_FLAG))
         return 0;
@@ -296,7 +337,7 @@ int AnimNumbers_DisplayDamage(struct Anim * anim, bool useCappedValue, int previ
     proc->value = value;
     proc->animPosition = position;
 
-    NewEkrsubAnimeEmulator(
+    subProc = NewEkrsubAnimeEmulator(
         anim->xPosition,
         anim->yPosition - yOffset,
         gAnimNumbersDigitsAnimScrs[digitCount - 1],
@@ -304,6 +345,12 @@ int AnimNumbers_DisplayDamage(struct Anim * anim, bool useCappedValue, int previ
         oam2,
         0,
         PROC_TREE_3);
+
+    objProc = Proc_Start(ProcScr_efxDamageMojiEffectOBJ, PROC_TREE_3);
+    objProc->anim = anim;
+    objProc->timer = 0;
+    objProc->terminator = 0x32;
+    objProc->sub_proc = subProc;
 
     return digitCount;
 }

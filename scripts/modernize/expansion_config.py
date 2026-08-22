@@ -122,6 +122,7 @@ CONFIG_MK_FEATURE_KEYS = (
     "MMB",
     "DEBUFFS_EXIST",
     "DEBUFFS_STACK",
+    "SELECT_VIEW_GROWTHS",
     "CUSTOM_CAMPAIGN",
     "SKIP_OPENING",
 )
@@ -398,6 +399,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            purchase_generics=0, mmb=0, extend_desc_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
+                           select_view_growths=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
                            draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
@@ -425,6 +427,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
     debuffs = validate_feature_flag("DEBUFFS_EXIST", debuffs_exist)
     debuffs_stack_flag = validate_feature_flag("DEBUFFS_STACK", debuffs_stack)
+    select_growths = validate_feature_flag("SELECT_VIEW_GROWTHS", select_view_growths)
     ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
     battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
     draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
@@ -473,7 +476,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
         )
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
-            ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
+            select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag)
 
 
@@ -691,6 +694,7 @@ class ExpansionIdentity:
     display_obtainable_item: int = 0
     debuffs_exist: int = 0
     debuffs_stack: int = 0
+    select_view_growths: int = 0
     text_chapter_names: int = 0
     battle_stats_no_anims: int = 0
     draw_map_anims: int = 0
@@ -763,6 +767,7 @@ class ExpansionIdentity:
                 "display_obtainable_item": self.display_obtainable_item,
                 "debuffs_exist": self.debuffs_exist,
                 "debuffs_stack": self.debuffs_stack,
+                "select_view_growths": self.select_view_growths,
                 "text_chapter_names": self.text_chapter_names,
                 "battle_stats_no_anims": self.battle_stats_no_anims,
                 "draw_map_anims": self.draw_map_anims,
@@ -823,6 +828,7 @@ def load_identity(
     display_obtainable_item=None,
     debuffs_exist=None,
     debuffs_stack=None,
+    select_view_growths=None,
     text_chapter_names=None,
     battle_stats_no_anims=None,
     draw_map_anims=None,
@@ -895,7 +901,7 @@ def load_identity(
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
      resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
-     resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
+     resolved_select_growths, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
      resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening) = validate_feature_flags(
@@ -944,6 +950,9 @@ def load_identity(
         debuffs_stack
         if debuffs_stack not in (None, "")
         else cfg.get("DEBUFFS_STACK", "0"),
+        select_view_growths
+        if select_view_growths not in (None, "")
+        else cfg.get("SELECT_VIEW_GROWTHS", "0"),
         text_chapter_names
         if text_chapter_names not in (None, "")
         else cfg.get("TEXT_CHAPTER_NAMES", "0"),
@@ -1027,6 +1036,7 @@ def load_identity(
         display_obtainable_item=resolved_obtainable_item,
         debuffs_exist=resolved_debuffs,
         debuffs_stack=resolved_debuffs_stack,
+        select_view_growths=resolved_select_growths,
         text_chapter_names=resolved_ch_names,
         battle_stats_no_anims=resolved_battle_stats,
         draw_map_anims=resolved_draw_map_anims,
@@ -1203,6 +1213,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override DEBUFFS_STACK (0 or 1)",
     )
     parser.add_argument(
+        "--select-view-growths",
+        default=None,
+        help="override SELECT_VIEW_GROWTHS (0 or 1)",
+    )
+    parser.add_argument(
         "--text-chapter-names",
         default=None,
         help="override TEXT_CHAPTER_NAMES (0 or 1)",
@@ -1348,6 +1363,7 @@ def main(argv=None) -> int:
             display_obtainable_item=args.display_obtainable_item,
             debuffs_exist=args.debuffs_exist,
             debuffs_stack=args.debuffs_stack,
+            select_view_growths=args.select_view_growths,
             text_chapter_names=args.text_chapter_names,
             battle_stats_no_anims=args.battle_stats_no_anims,
             draw_map_anims=args.draw_map_anims,

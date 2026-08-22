@@ -372,6 +372,15 @@
 #define DEBUFFS_STACK 1
 #endif
 
+/* Select toggles the first stat-screen page between stats and growths. */
+#ifndef FE8_SELECT_VIEW_GROWTHS
+#define FE8_SELECT_VIEW_GROWTHS 0
+#endif
+
+#if FE8_SELECT_VIEW_GROWTHS && !defined(SELECT_VIEW_GROWTHS)
+#define SELECT_VIEW_GROWTHS 1
+#endif
+
 #ifndef FE8_TEXT_CHAPTER_NAMES
 #define FE8_TEXT_CHAPTER_NAMES 0
 #endif
@@ -544,6 +553,10 @@
 
 #if FE8_DEBUFFS_STACK && !FE8_DEBUFFS_EXIST
 #error "FE8_DEBUFFS_STACK=1 requires FE8_DEBUFFS_EXIST=1"
+#endif
+
+#if (FE8_SELECT_VIEW_GROWTHS != 0) && (FE8_SELECT_VIEW_GROWTHS != 1)
+#error "FE8_SELECT_VIEW_GROWTHS must be 0 or 1"
 #endif
 
 #if (FE8_TEXT_CHAPTER_NAMES != 0) && (FE8_TEXT_CHAPTER_NAMES != 1)
