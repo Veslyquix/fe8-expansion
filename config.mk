@@ -153,14 +153,26 @@ EXPANSION_MECHANICS_SAMPLE    ?= 0
 EXPANSION_DANGER_OVERLAY_MENU ?= 0
 EXPANSION_STARTER_CONTENT     ?= 0
 
-# --- Optional Vesly debugger -------------------------------------------------
-# Press B on a unit to edit them. 
-VESLY_DEBUGGER ?= 1
 
-# --- Optional DangerBones ----------------------------------------------------
-# Highlight enemies that can attack the tile currently selected by the path
-# arrow, using the fourth unit palette and map-sprite shake.
-DANGER_BONES ?= 1
+
+    ## Campaign specific things 
+# --- Optional CustomCampaign --------------------------------------------------
+# Vesly's custom game. 
+CUSTOM_CAMPAIGN ?= 1
+
+# --- Optional gameplay features ---------------------------------------------
+# Buy generic units on forts/camps. 
+PURCHASE_GENERICS ?= 1
+
+# --- Optional FortUnitsStartGreyedOut --------------------------------------------
+# Units spawned from forts cannot immediately act. 
+FORT_UNITS_START_GREYED_OUT ?= 1
+
+
+# --- Optional procedural maps ------------------------------------------------
+# Randomizes maps with premade map chunks. Requires
+# PURCHASE_GENERICS (Camp/Tent trap kinds).
+MAPGEN ?= 1
 
 # --- Optional custom battle animations ---------------------------------------
 # Swaps in community-sourced custom battle animation sets for select classes
@@ -174,72 +186,58 @@ NEW_TILESETS ?= 1
 
 # --- Optional 256-color title screen -----------------------------------------
 # Replaces the vanilla title screen's tiled 16-color background/dragon overlay
-# with a single static 256-color (8bpp) background image. Purely cosmetic; the
-# vanilla dragon-flash/demon-king/logo-zoom intro sequence is skipped (its BG0/
-# BG2 graphics would overwrite the full-screen 8bpp image's VRAM footprint) and
-# the title goes straight to the idle "press start" state instead. Vanilla OBJ
-# sprites (FE logo, press start text, light/orb effects) are unaffected.
+# with a single static 256-color (8bpp) background image. 
 TITLE_256_COLORS ?= 1
 
-# --- Optional multipalette conversation backgrounds --------------------------
-# Adds 224/256-colour (8bpp) conversation-background images alongside the
-# vanilla 16-colour ones in gConvoBackgroundData. A 224-colour image leaves
-# two palette banks (32 colours) free for text/chatbubble UI; 256-colour
-# claims the whole background palette (text/chatbubble won't render over
-# it). A further 192-colour mode leaves four banks (64 colours) free,
-# giving more headroom for UI that needs it. Purely cosmetic.
-MULTIPALETTE_BG ?= 1
+# --- Optional Credits ----------------------------------------------------------
+# Scrolling end-credits sequence using text instead of images. 
+CREDITS ?= 0
 
-# --- Optional gameplay features ---------------------------------------------
-# Adds chapter-scoped temporary gold and purchasable generic-unit bases on
-# eligible fort / empty-village terrain.
-PURCHASE_GENERICS ?= 1
 
-# --- Optional procedural maps ------------------------------------------------
-# Replaces the authored terrain of eligible chapters with a generated field: a
-# base tent per allegiance in opposite quadrants, joined by a road. Off by
-# default because it overwrites hand-authored maps wholesale. Requires
-# PURCHASE_GENERICS (Camp/Tent trap kinds).
-MAPGEN ?= 1
 
-# --- Optional MMB / Gorgon Egg -----------------------------------------------
-# Enables the minimug side window and C Gorgon Egg hatch phase display. This
-# mirrors the Catball1-style MMB setup by default; build with MMB=0 to fall
-# back to the burst unit display for unitDisplayType=0.
-MMB ?= 1
 
-# --- Optional ExtendWeaponDescBox --------------------------------------------
-# Modern-build port of ExtendWeaponDescBox: extends the item/weapon
-# description help box from 3 to 5 lines (extra VRAM text-tile rows/handles),
-# and the associated shop/prep/supply/trade VRAM-bank and layout fixes it
-# depends on.
-EXTEND_DESC_BOX ?= 1
 
-# --- Optional DisplayObtainableItem ------------------------------------------
-# Draws a small icon over enemy units carrying a droppable or stealable
-# item, so the player can tell at a glance which enemies are worth
-# attacking/stealing without opening each unit's inventory. The icon
-# graphics themselves are not yet wired up -- see src/DisplayObtainableItem.c.
-DISPLAY_OBTAINABLE_ITEM ?= 1
+    ## Bug fixes 
+# --- Optional FixBugs -------------------------------------------------------------
+# Prevents negative stats when loading a character with negative bases. 
+FIX_BUGS ?= 1
 
-# --- Optional Debuffs ---------------------------------------------------------
-# Enables per-unit temporary stat modifiers. DEBUFFS_STACK controls whether
-# repeat applications of the same debuff keep worsening a stat toward -31.
-DEBUFFS_EXIST ?= 1
-DEBUFFS_STACK ?= 0
+# --- Optional bugfixes --------------------------------------------------------
+# PutSprite/PutSpriteExt (src/ctc.c) bounds-check the secondary sprite-object
+# pool before writing to it, instead of silently overflowing sSpritePool into
+# sSpriteLayers when more than 0x80 sprites are queued in one frame. On by
+# default: this is a pure bugfix with no behavioural change short of avoiding
+# the overflow.
+OVERFLOW_SAFETY_CHECKS ?= 1
+
+
+
+
+    # For testing purposes 
+# --- Optional Vesly debugger -------------------------------------------------
+# Press B on a unit to edit them. 
+VESLY_DEBUGGER ?= 1
+
+# --- Optional SkipOpening -------------------------------------------------------
+# Boots straight to the title screen: no health & safety screen, no
+# Nintendo/Intelligent Systems logos, and no attract-mode opening demo. On
+# New Game, also skips the world-map "continent of Magvel" narration and the
+# "In an age long past..." opening text crawl. 
+SKIP_OPENING ?= 1
+
+
+
+
+    # Quality of Life 
+# --- Optional DangerBones ----------------------------------------------------
+# Highlight enemies that can attack the tile currently selected by the path
+# arrow, using the fourth unit palette and map-sprite shake.
+DANGER_BONES ?= 1
 
 # --- Optional SelectViewGrowths ---------------------------------------------
 # Press Select on the first stat-screen page to alternate between current
 # stats and character growth rates.
 SELECT_VIEW_GROWTHS ?= 1
-
-# --- Optional TextChNames -----------------------------------------------------
-# Draws the actual chapter title text instead of a pre-rendered graphic
-# banner, so any chapter name reads correctly without needing a hand-drawn
-# banner per chapter. The original patch's save-select-screen per-slot
-# chapter name preview (reads chapter id out of raw SRAM save data) is not
-# ported -- see src/chapter_title.c.
-TEXT_CHAPTER_NAMES ?= 0
 
 # --- Optional BattleStatsNoAnims ---------------------------------------------
 # Shows the attack forecast's Hit/Damage/Crit/AS numbers alongside the unit
@@ -260,112 +258,84 @@ DRAW_MAP_ANIMS ?= 1
 # disables the numbers at runtime, matching the original SkillSystem hack.
 BATTLE_ANIMATION_NUMBERS ?= 1
 
+# --- Optional multipalette conversation backgrounds --------------------------
+# Adds 224/256-colour (8bpp) conversation-background images alongside the
+# vanilla 16-colour ones in gConvoBackgroundData. A 224-colour image leaves
+# two palette banks (32 colours) free for text/chatbubble UI.
+MULTIPALETTE_BG ?= 1
+
+# --- Optional MMB / Gorgon Egg -----------------------------------------------
+# Enables the minimug side window and C Gorgon Egg hatch phase display. This
+# mirrors the Catball1-style MMB setup by default.
+MMB ?= 1
+
+# --- Optional ExtendWeaponDescBox --------------------------------------------
+# Modern-build port of ExtendWeaponDescBox: extends the item/weapon
+# description help box from 3 to 5 lines (extra VRAM text-tile rows/handles),
+# and the associated shop/prep/supply/trade VRAM-bank and layout fixes it
+# depends on.
+EXTEND_DESC_BOX ?= 1
+
+# --- Optional DisplayObtainableItem ------------------------------------------
+# Draws a small icon over enemy units carrying a droppable or stealable.
+DISPLAY_OBTAINABLE_ITEM ?= 1
+
 # --- Optional HpBars ----------------------------------------------------------
 # Draws a partial-fill HP bar over each visible unit, plus a small icon
 # over enemies the selected unit could hit for bonus effectiveness, land a
 # high crit on, or start a support/talk event with. Requires
-# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet (validated: HP_BARS=1
-# with DISPLAY_OBTAINABLE_ITEM=0 is a hard compile error). The in-game
-# options-menu toggle from the original patch is not ported: this is a
-# build-time flag instead, which already serves the same purpose. See
-# src/HpBars.c for two further narrow simplifications.
+# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet 
 HP_BARS ?= 1
 
-# --- Optional GroupAI ----------------------------------------------------------
-# Bits 0-4 of a unit's "ai4" byte
-# (the high byte of struct Unit.ai_config -- see AI_UNIT_CONFIG_GROUPID_MASK,
-# include/cp_common.h) tag it as belonging to a numbered group (1-31; 0 means
-# no group). Whenever a combat's attacker or defender is group-tagged and
-# neither combatant is an NPC (FACTION_GREEN), every other enemy unit sharing
-# that same group id has its group tag cleared and its AI2 forced to
-# AI_B_00 (MoveToEnemy/"charge"), and is queued to act again this enemy
-# phase via gAiState.units[] -- the same mechanism vanilla already uses for
-# reinforcements that should act immediately. Net effect: attack one member
-# of a tagged group and the rest immediately aggro. 
-GROUP_AI ?= 1
-
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
-# Ported from the community "AlphaSpriteArrow" patch. When enabled, the
-# player-phase cursor no longer draws the vanilla dotted movement-path
-# arrow: the selected unit's move animation is computed directly toward
-# the cursor (the same pathfinder AI already uses to choose a move) instead
-# of retracing the cursor's own path, and a translucent "ghost" of the unit
-# is blended in at the cursor tip while it sits at the end of a viable path,
-# in place of the arrow. See src/alpha_sprite_arrow.c.
+# Displays a ghost of the unit at the tip of the blue arrow when selecting 
+# where to move the unit to. 
 ALPHA_SPRITE_ARROW ?= 1
 
-# --- Optional Autosave ----------------------------------------------------------
-# Ported from Pokemblem's Autosave patch. Vanilla writes a suspend save
-# after almost every single action (see BmMain_SuspendBeforePhase,
-# PlayerPhase_Suspend, PlayerPhase_PrepareAction, BattleGenerateArena,
-# ArenaContinueBattle, HandlePostActionTraps, CpDecide_Suspend -- all in
-# src/). With this flag on, every one of those per-action writes is
-# skipped, and BmMain_SuspendBeforePhase instead only writes while
-# transitioning into Player Phase, and only if the number of alive,
-# deployed player units hasn't dropped since the last write -- a death
-# withholds the write for a couple of further Player Phase starts rather
-# than silently autosaving over it. See src/turn_autosave.c. Not ported: the
-# reference patch's separate manual "quicksave" ASMC hooks meant to be
-# wired into hand-authored event scripts (SaveGame_ASMC,
-# QuicksaveDuringStartEvent) -- out of scope for this automatic seam.
-TURN_AUTOSAVE ?= 1
 
-# --- Optional FortUnitsStartGreyedOut --------------------------------------------
-# Generic units purchased from a Fort-terrain purchase base (see
-# GetPurchaseBaseKindAt in src/purchase_generics.c) spawn directly on the
-# fort tile itself instead of an adjacent free tile, and start already
-# marked as having acted (US_HAS_MOVED) so they can't move or attack the
-# turn they appear. Gate/House/Throne/Village purchase bases, and Camp/Tent
-# spawn points placed by FE8_MAPGEN, are unaffected -- they keep spawning
-# adjacent with a unit that can act immediately. See src/purchase_generics.c.
-FORT_UNITS_START_GREYED_OUT ?= 1
+
+
+    ## Gameplay related 
+# --- Optional Debuffs ---------------------------------------------------------
+# Enables per-unit temporary stat modifiers. DEBUFFS_STACK controls whether
+# repeat applications of the same debuff keep worsening a stat toward -31.
+DEBUFFS_EXIST ?= 1
+DEBUFFS_STACK ?= 0
+
+
+# --- Optional GroupAI ----------------------------------------------------------
+# Attack one member of a tagged group and the rest immediately aggro. 
+GROUP_AI ?= 1
+
 
 # --- Optional PromoteCommand ------------------------------------------------------
-# Ported from the community "PromoteCommand" patch (East's dlib): adds a
-# "Promote" entry to the unit map action menu, letting an eligible unit
-# promote on the spot -- no promotion item needed. Available once the
-# unit's class actually has a promotion target (gPromoJidLut) and it hasn't
-# acted this turn and is level 20+ (see PROMOTE_COMMAND_MIN_LEVEL in
-# src/promote_command.c). Reuses the same class-change proc vanilla's
-# promotion items already use, so the class-choice popup (for classes with
-# two promotion options) and the usual stat-growth/animation screen are
-# unchanged. Not ported: the reference patch's fully data-driven
-# eligibility table (per-unit/per-class overrides, chapter ranges, and
-# event-flag gating, including a campaign-specific "Eirika can't promote
-# unless Amelia is alive" example rule) -- only the general level-gated
-# mechanism is ported. See src/promote_command.c.
-PROMOTE_COMMAND ?= 0
+# Adds a "Promote" command to the unit menu for units at level 20+ who
+# can promote. 
+PROMOTE_COMMAND ?= 1
 
-# --- Optional FixBugs -------------------------------------------------------------
-# Prevents negative stats when loading a character with negative bases. 
-FIX_BUGS ?= 1
 
-# --- Optional CustomCampaign --------------------------------------------------
-# Vesly's custom game. 
-CUSTOM_CAMPAIGN ?= 1
 
-# --- Optional SkipOpening -------------------------------------------------------
-# Boots straight to the title screen: no health & safety screen, no
-# Nintendo/Intelligent Systems logos, and no attract-mode opening demo. On
-# New Game, also skips the world-map "continent of Magvel" narration and the
-# "In an age long past..." opening text crawl. 
-SKIP_OPENING ?= 1
 
-# --- Optional Credits ----------------------------------------------------------
-# Scrolling end-credits sequence (big-font headers via the existing class-
-# name-intro-letter font, sprite-text body lines, per-screen background/CG
-# crossfades). Exposes StartCreditsProc(ProcPtr parent) for an event script
-# or other game-flow point to call -- not wired to any specific trigger,
-# since the original patch didn't have a real one either (only a build-
-# time-disabled test hook). See src/Credits.c for two further narrow
-# simplifications.
-CREDITS ?= 0
 
-# --- Optional bugfixes --------------------------------------------------------
-# PutSprite/PutSpriteExt (src/ctc.c) bounds-check the secondary sprite-object
-# pool before writing to it, instead of silently overflowing sSpritePool into
-# sSpriteLayers when more than 0x80 sprites are queued in one frame. On by
-# default: this is a pure bugfix with no behavioural change short of avoiding
-# the overflow.
-OVERFLOW_SAFETY_CHECKS ?= 1
+
+
+# to do: test these 
+
+# --- Optional Autosave ----------------------------------------------------------
+# BmMain_SuspendBeforePhase only writes while
+# transitioning into Player Phase, and only if the number of alive,
+# deployed player units hasn't dropped since the last write 
+TURN_AUTOSAVE ?= 1
+
+
+
+
+# --- Optional TextChNames -----------------------------------------------------
+# Draws the actual chapter title text instead of a pre-rendered graphic
+# banner, so any chapter name reads correctly without needing a hand-drawn
+# banner per chapter. The original patch's save-select-screen per-slot
+# chapter name preview (reads chapter id out of raw SRAM save data) is not
+# ported -- see src/chapter_title.c.
+TEXT_CHAPTER_NAMES ?= 1
+
 

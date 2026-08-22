@@ -213,7 +213,7 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"Capture", 0, 0, 0, 0, PurchaseGenericsCommandUsability, PurchaseGenericsCommandDraw, PurchaseGenericsCommandEffect, 0, 0, 0},
 #endif
 #if FE8_PROMOTE_COMMAND
-    {"Promote", 0, 0, 0, 0, PromoteCommandUsability, PromoteCommandDraw, PromoteCommandEffect, 0, 0, 0},
+    {"Promote", 0, 0, 0, 0x7A, PromoteCommandUsability, PromoteCommandDraw, PromoteCommandEffect, 0, 0, 0},
 #endif
     {"　宝箱", 0x683, 0x6CE, 0, 0x5D, ChestCommandUsability, 0, ChestCommandEffect, 0, 0, 0}, // Chest
     {"　扉", 0x684, 0x6CD, 0, 0x5E, DoorCommandUsability, 0, DoorCommandEffect, 0, 0, 0}, // Door >

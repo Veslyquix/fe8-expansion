@@ -23,6 +23,7 @@
 #include "popup.h"
 #include "eventinfo.h"
 #include "mapanim.h"
+#include "promote_command.h"
 
 #include "bmmind.h"
 

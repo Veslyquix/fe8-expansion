@@ -130,6 +130,7 @@ enum text_special_char
 
 
     TEXT_SPECIAL_35         = 0x35,
+    TEXT_SPECIAL_BONUS_MINUS = 0x39,
 
     // TODO: rest
 

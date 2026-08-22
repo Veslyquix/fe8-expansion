@@ -892,6 +892,13 @@ s8 PlayerPhase_PrepareAction(ProcPtr proc)
             return 1;
     }
 
+#if FE8_PROMOTE_COMMAND
+    if (gActionData.unitActionType == UNIT_ACTION_PROMOTE) {
+        gBattleActor.hasItemEffectTarget = 0;
+        return cameraReturn;
+    }
+#endif
+
     item = GetItemIndex(GetUnit(gActionData.subjectIndex)->items[gActionData.itemSlotIndex]);
 
     gBattleActor.hasItemEffectTarget = 0;

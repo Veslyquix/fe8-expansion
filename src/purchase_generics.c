@@ -434,7 +434,7 @@ static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition
 
 #if FE8_FORT_UNITS_START_GREYED_OUT
     if (spawnedOnFort)
-        unit->state |= US_HAS_MOVED;
+        unit->state |= US_UNSELECTABLE | US_HAS_MOVED | US_HAS_MOVED_AI;
 #endif
 
     SubFactionChapterGoldAmount(factionId, def->cost);

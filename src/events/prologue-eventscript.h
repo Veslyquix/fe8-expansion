@@ -57,7 +57,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         .items = {
             ITEM_AXE_IRON,
         },
-        .ai = {0x6, 0x3, 0x0, 0x0},
+        .ai = {0x6, 0x3, 0x0, 0x1},
     },
     {
         .charIndex = 0x82,
@@ -69,7 +69,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         .items = {
             ITEM_LANCE_SLIM,
         },
-        .ai = {0x0, 0xa, 0x0, 0x0},
+        .ai = {0x0, 0x3, 0x0, 0x1},
     },
     {
         .charIndex = 0x80,
@@ -81,7 +81,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         .items = {
             ITEM_AXE_IRON,
         },
-        .ai = {0x0, 0x12, 0x2, 0x0},
+        .ai = {0x0, 3, 0x2, 0x1},
     },
     { 0 },
 };

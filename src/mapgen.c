@@ -525,8 +525,8 @@ bool MapGen_IsEnabledForChapter(int chapterId)
 #define MOUNTAIN_B_TILE  711
 
 #define PLAIN_WEIGHT       50
-#define HOUSE_WEIGHT       0
-#define FORT_WEIGHT        0
+#define HOUSE_WEIGHT       6
+#define FORT_WEIGHT        3
 #define WOODS_WEIGHT       3
 #define THICKET_WEIGHT     1
 #define HILL_WEIGHT        1

@@ -1597,7 +1597,7 @@ void PutNumberBonus(int number, u16 *tm)
     {
         number = -number;
 
-        PutDrawText(NULL, tm, TEXT_COLOR_SYSTEM_GOLD, 0, 1, "-");
+        PutSpecialChar(tm, TEXT_COLOR_SYSTEM_GOLD, TEXT_SPECIAL_BONUS_MINUS);
         PutNumberSmall(tm + ((number >= 100) ? 3 : (number >= 10) ? 2 : 1), TEXT_COLOR_SYSTEM_GOLD, number);
 
         return;

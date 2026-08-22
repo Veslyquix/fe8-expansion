@@ -10,7 +10,7 @@
 /* How many further Player Phase starts to wait, after the alive/deployed
  * headcount drops, before accepting the new (lower) count as the baseline
  * and resuming writes. */
-#define TURN_AUTOSAVE_DEBOUNCE_TURNS 2
+#define TURN_AUTOSAVE_DEBOUNCE_TURNS 1 // every turn 
 
 /* Player army unit-index span (see GetUnit/gUnitLookup, src/bmunit.c) --
  * generous on purpose so a future roster expansion can't silently
