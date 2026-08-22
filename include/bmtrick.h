@@ -124,6 +124,7 @@ void SetPurchaseBaseTrapGoldPerTurn(struct Trap* trap, int amount);
 int GetPurchaseBaseTrapGoldPerTurn(struct Trap* trap);
 bool IsPurchaseBaseTerrain(int terrain);
 void InitPurchaseBaseTrapsFromTerrain(void);
+void InitCampTrapsFromTilesetMarkers(void);
 struct Trap* AddCampTrap(int x, int y, int owner);
 struct Trap* AddTentTrap(int x, int y, int owner);
 bool IsCampOrTentTrap(struct Trap* trap, int kind);

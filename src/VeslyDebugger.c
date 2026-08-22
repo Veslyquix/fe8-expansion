@@ -8158,14 +8158,25 @@ static void SetDebuggerBanimBattlePositions(void)
 {
     gEkrXPosBase[EKR_POS_L] = 0;
     gEkrYPosBase[EKR_POS_L] = 0;
-    gEkrXPosReal[EKR_POS_L] = DEBUGGER_BANIM_X;
+    gEkrXPosReal[EKR_POS_L] = DEBUGGER_BANIM_X - 0x30;
     gEkrYPosReal[EKR_POS_L] = DEBUGGER_BANIM_Y;
 
     gEkrXPosBase[EKR_POS_R] = 0;
     gEkrYPosBase[EKR_POS_R] = 0;
-    gEkrXPosReal[EKR_POS_R] = DEBUGGER_BANIM_X + 0x30;
+    gEkrXPosReal[EKR_POS_R] = DEBUGGER_BANIM_X;
     gEkrYPosReal[EKR_POS_R] = DEBUGGER_BANIM_Y;
     gEkrBgPosition = 0;
+}
+
+static void SetDebuggerBanimRoundData(void)
+{
+    for (int i = 0; i < 20; ++i)
+        gAnimRoundData[i] = 0xFFFF;
+
+    gAnimRoundData[0] = ANIM_ROUND_TAKING_HIT_CLOSE;
+    gAnimRoundData[1] = ANIM_ROUND_HIT_CLOSE;
+    gAnimRoundData[2] = ANIM_ROUND_TAKING_HIT_CLOSE;
+    gAnimRoundData[3] = ANIM_ROUND_CRIT_FAR;
 }
 
 static void RegisterDebuggerBanimAnimSlots(struct AnimBuffer * animBuf)
@@ -8175,20 +8186,29 @@ static void RegisterDebuggerBanimAnimSlots(struct AnimBuffer * animBuf)
     if (animBuf == NULL)
         return;
 
-    gAnims[0] = animBuf->anim1 != NULL ? animBuf->anim1 : CreateDebuggerBanimDummyAnim(0);
-    gAnims[1] = animBuf->anim2 != NULL ? animBuf->anim2 : CreateDebuggerBanimDummyAnim(1);
-    gAnims[2] = CreateDebuggerBanimDummyAnim(2);
-    gAnims[3] = CreateDebuggerBanimDummyAnim(3);
+    gAnims[0] = CreateDebuggerBanimDummyAnim(0);
+    gAnims[1] = CreateDebuggerBanimDummyAnim(1);
+    gAnims[2] = animBuf->anim1 != NULL ? animBuf->anim1 : CreateDebuggerBanimDummyAnim(2);
+    gAnims[3] = animBuf->anim2 != NULL ? animBuf->anim2 : CreateDebuggerBanimDummyAnim(3);
 
     SetDebuggerBanimBattlePositions();
+    SetDebuggerBanimRoundData();
 }
 
 static void StartDebuggerBanimSpellAnimation(struct Anim * anim)
 {
+    u16 nextRoundId;
+
     if (anim == NULL)
         return;
 
+    nextRoundId = anim->nextRoundId;
+    if (nextRoundId == 0 || nextRoundId >= (u16)-2)
+        anim->nextRoundId = 1;
+
     StartSpellAnimation(anim);
+
+    anim->nextRoundId = nextRoundId;
 
     if (Get0201FAC8())
         Set0201FAC8(2);
@@ -8317,6 +8337,7 @@ static void DebuggerBanimPreview_ResetScript(struct OpInfoClassDisplayProc * pro
     proc->script = proc->useRanged ? sCRScr_RangedHit : sCRScr_MeleeHit;
     gEkrDistanceType = proc->useRanged ? EKR_DISTANCE_FAR : EKR_DISTANCE_CLOSE;
     SetDebuggerBanimBattlePositions();
+    SetDebuggerBanimRoundData();
 
     if (proc->useRanged && IsDebuggerPreviewWeaponMelee(proc->weapon))
         gEkrSpellAnimIndex[EKR_POS_L] = 0x1E;

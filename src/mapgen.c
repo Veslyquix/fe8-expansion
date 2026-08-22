@@ -502,7 +502,6 @@ static void MapGen_PlaceRandomChunks(u32 seed, int mapWidth, int mapHeight)
 
 bool MapGen_IsEnabledForChapter(int chapterId)
 {
-    (void)chapterId;
 
     // Deliberately not per-chapter yet: gate real chapters in here (or behind a
     // flag) once there is content to protect. A map too small for two separated
@@ -510,7 +509,9 @@ bool MapGen_IsEnabledForChapter(int chapterId)
     if (gBmMapSize.x < MAPGEN_MIN_SIZE || gBmMapSize.y < MAPGEN_MIN_SIZE)
         return FALSE;
 
-    return TRUE;
+    if (chapterId == 1) { return true; } 
+
+    return FALSE;
 }
 
 

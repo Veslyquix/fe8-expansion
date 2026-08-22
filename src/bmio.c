@@ -1037,6 +1037,7 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
 
 #if FE8_PURCHASE_GENERICS
     InitPurchaseBaseTrapsFromTerrain();
+    InitCampTrapsFromTilesetMarkers();
 #endif
 #if FE8_MAPGEN
     MapGen_PlaceBases(gPlaySt.chapterIndex);

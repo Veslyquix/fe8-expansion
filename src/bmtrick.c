@@ -437,6 +437,46 @@ void InitPurchaseBaseTrapsFromTerrain(void)
         }
     }
 }
+
+// gTilesetTerrainLookup (src/bmmap.c) addresses 1024 tile-config slots
+// (gBmMapBaseTiles[y][x] >> 2, range 0..1023). A tileset can reserve its
+// final 4 slots as Camp-placement markers instead of real terrain
+// graphics: a mapper paints one of these 4 tiles anywhere on the map, and
+// a Camp owned by the matching faction is created there at chapter load
+// (LoadChapterTraps/InitPurchaseBaseTrapsFromTerrain's own call site,
+// src/bmio.c) -- no hand-authored TrapData entry needed. Order requested:
+// Purple, Green, Red, Blue, with Blue on the very last slot (1023).
+#define CAMP_TILESET_MARKER_SLOT_COUNT 1024
+#define CAMP_TILESET_MARKER_FIRST_SLOT (CAMP_TILESET_MARKER_SLOT_COUNT - 4)
+
+static u8 CONST_DATA sCampTilesetMarkerFaction[4] = {
+    FACTION_ID_PURPLE, // slot 1020
+    FACTION_ID_GREEN,  // slot 1021
+    FACTION_ID_RED,    // slot 1022
+    FACTION_ID_BLUE,   // slot 1023 (the tileset's very last tile)
+};
+
+void InitCampTrapsFromTilesetMarkers(void)
+{
+    int ix, iy;
+
+    for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
+    {
+        for (ix = gBmMapSize.x - 1; ix >= 0; --ix)
+        {
+            int configIndex = gBmMapBaseTiles[iy][ix] >> 2;
+            int markerSlot = configIndex - CAMP_TILESET_MARKER_FIRST_SLOT;
+
+            if (markerSlot < 0 || markerSlot >= 4)
+                continue;
+
+            if (GetTrapAt(ix, iy) != NULL)
+                continue;
+
+            AddCampTrap(ix, iy, sCampTilesetMarkerFaction[markerSlot]);
+        }
+    }
+}
 #endif
 
 void InitMapObstacles(void)
