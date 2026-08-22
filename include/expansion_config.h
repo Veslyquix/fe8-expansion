@@ -389,11 +389,44 @@
 #define FE8_DRAW_MAP_ANIMS 0
 #endif
 
+/* Floating battle-animation damage/heal numbers. */
+#ifndef FE8_BATTLE_ANIMATION_NUMBERS
+#define FE8_BATTLE_ANIMATION_NUMBERS 0
+#endif
+
 /* Per-unit HP bar and effectiveness/crit/talk warning icons on the map
  * (see src/HpBars.c). Requires FE8_DISPLAY_OBTAINABLE_ITEM=1 -- validated
  * below and in src/HpBars.c's own #error. */
 #ifndef FE8_HP_BARS
 #define FE8_HP_BARS 0
+#endif
+
+/* Group AI (ported from Pokemblem's GroupAI patch): attacking (or being
+ * attacked by) a group-tagged enemy wakes the rest of its group to Charge
+ * and queues them to act again this enemy phase (see src/group_ai.c). */
+#ifndef FE8_GROUP_AI
+#define FE8_GROUP_AI 0
+#endif
+
+/* Replaces the player-phase movement-path arrow with a pathfound move
+ * straight to the cursor plus a translucent unit "ghost" at the cursor tip
+ * (see src/alpha_sprite_arrow.c). */
+#ifndef FE8_ALPHA_SPRITE_ARROW
+#define FE8_ALPHA_SPRITE_ARROW 0
+#endif
+
+/* Consolidates every vanilla per-action suspend-save write down to one,
+ * conditional write at the start of Player Phase (see src/turn_autosave.c). */
+#ifndef FE8_TURN_AUTOSAVE
+#define FE8_TURN_AUTOSAVE 0
+#endif
+
+/* Generic units purchased from a Fort-terrain base spawn directly on the
+ * fort tile itself (instead of an adjacent free tile) and start the turn
+ * already marked as having acted. Gate/House/Throne/Village/Camp/Tent
+ * purchase bases are unaffected (see src/purchase_generics.c). */
+#ifndef FE8_FORT_UNITS_START_GREYED_OUT
+#define FE8_FORT_UNITS_START_GREYED_OUT 0
 #endif
 
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
@@ -510,12 +543,32 @@
 #error "FE8_DRAW_MAP_ANIMS must be 0 or 1"
 #endif
 
+#if (FE8_BATTLE_ANIMATION_NUMBERS != 0) && (FE8_BATTLE_ANIMATION_NUMBERS != 1)
+#error "FE8_BATTLE_ANIMATION_NUMBERS must be 0 or 1"
+#endif
+
 #if (FE8_HP_BARS != 0) && (FE8_HP_BARS != 1)
 #error "FE8_HP_BARS must be 0 or 1"
 #endif
 
 #if FE8_HP_BARS && !FE8_DISPLAY_OBTAINABLE_ITEM
 #error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
+#endif
+
+#if (FE8_GROUP_AI != 0) && (FE8_GROUP_AI != 1)
+#error "FE8_GROUP_AI must be 0 or 1"
+#endif
+
+#if (FE8_ALPHA_SPRITE_ARROW != 0) && (FE8_ALPHA_SPRITE_ARROW != 1)
+#error "FE8_ALPHA_SPRITE_ARROW must be 0 or 1"
+#endif
+
+#if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)
+#error "FE8_FORT_UNITS_START_GREYED_OUT must be 0 or 1"
+#endif
+
+#if (FE8_TURN_AUTOSAVE != 0) && (FE8_TURN_AUTOSAVE != 1)
+#error "FE8_TURN_AUTOSAVE must be 0 or 1"
 #endif
 
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)

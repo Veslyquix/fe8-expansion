@@ -399,7 +399,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           draw_map_anims=0, hp_bars=0, credits=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
+                           fort_units_start_greyed_out=0, credits=0,
                            custom_campaign=0, skip_opening=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
@@ -428,6 +429,10 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
     draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
     bars = validate_feature_flag("HP_BARS", hp_bars)
+    group_ai_flag = validate_feature_flag("GROUP_AI", group_ai)
+    alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
+    autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
+    fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     credits_flag = validate_feature_flag("CREDITS", credits)
     campaign = validate_feature_flag("CUSTOM_CAMPAIGN", custom_campaign)
     skip_opening_flag = validate_feature_flag("SKIP_OPENING", skip_opening)
@@ -466,7 +471,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
         )
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
-            ch_names, battle_stats, draw_map, bars, credits_flag, campaign, skip_opening_flag)
+            ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
+            autosave_flag, fort_greyed_flag, credits_flag, campaign, skip_opening_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -687,6 +693,10 @@ class ExpansionIdentity:
     battle_stats_no_anims: int = 0
     draw_map_anims: int = 0
     hp_bars: int = 0
+    group_ai: int = 0
+    alpha_sprite_arrow: int = 0
+    turn_autosave: int = 0
+    fort_units_start_greyed_out: int = 0
     credits: int = 0
     custom_campaign: int = 0
     skip_opening: int = 0
@@ -753,6 +763,10 @@ class ExpansionIdentity:
                 "battle_stats_no_anims": self.battle_stats_no_anims,
                 "draw_map_anims": self.draw_map_anims,
                 "hp_bars": self.hp_bars,
+                "group_ai": self.group_ai,
+                "alpha_sprite_arrow": self.alpha_sprite_arrow,
+                "turn_autosave": self.turn_autosave,
+                "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "credits": self.credits,
                 "custom_campaign": self.custom_campaign,
                 "skip_opening": self.skip_opening,
@@ -807,6 +821,10 @@ def load_identity(
     battle_stats_no_anims=None,
     draw_map_anims=None,
     hp_bars=None,
+    group_ai=None,
+    alpha_sprite_arrow=None,
+    turn_autosave=None,
+    fort_units_start_greyed_out=None,
     credits=None,
     custom_campaign=None,
     skip_opening=None,
@@ -870,7 +888,8 @@ def load_identity(
      resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
      resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
-     resolved_hp_bars, resolved_credits,
+     resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
+     resolved_fort_units_start_greyed_out, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
@@ -929,6 +948,18 @@ def load_identity(
         hp_bars
         if hp_bars not in (None, "")
         else cfg.get("HP_BARS", "0"),
+        group_ai
+        if group_ai not in (None, "")
+        else cfg.get("GROUP_AI", "0"),
+        alpha_sprite_arrow
+        if alpha_sprite_arrow not in (None, "")
+        else cfg.get("ALPHA_SPRITE_ARROW", "0"),
+        turn_autosave
+        if turn_autosave not in (None, "")
+        else cfg.get("TURN_AUTOSAVE", "0"),
+        fort_units_start_greyed_out
+        if fort_units_start_greyed_out not in (None, "")
+        else cfg.get("FORT_UNITS_START_GREYED_OUT", "0"),
         credits
         if credits not in (None, "")
         else cfg.get("CREDITS", "0"),
@@ -986,6 +1017,10 @@ def load_identity(
         battle_stats_no_anims=resolved_battle_stats,
         draw_map_anims=resolved_draw_map_anims,
         hp_bars=resolved_hp_bars,
+        group_ai=resolved_group_ai,
+        alpha_sprite_arrow=resolved_alpha_sprite_arrow,
+        turn_autosave=resolved_autosave,
+        fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         credits=resolved_credits,
         custom_campaign=resolved_custom_campaign,
         skip_opening=resolved_skip_opening,
@@ -1172,6 +1207,26 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override HP_BARS (0 or 1)",
     )
     parser.add_argument(
+        "--group-ai",
+        default=None,
+        help="override GROUP_AI (0 or 1)",
+    )
+    parser.add_argument(
+        "--alpha-sprite-arrow",
+        default=None,
+        help="override ALPHA_SPRITE_ARROW (0 or 1)",
+    )
+    parser.add_argument(
+        "--turn-autosave",
+        default=None,
+        help="override TURN_AUTOSAVE (0 or 1)",
+    )
+    parser.add_argument(
+        "--fort-units-start-greyed-out",
+        default=None,
+        help="override FORT_UNITS_START_GREYED_OUT (0 or 1)",
+    )
+    parser.add_argument(
         "--credits",
         default=None,
         help="override CREDITS (0 or 1)",
@@ -1271,6 +1326,10 @@ def main(argv=None) -> int:
             battle_stats_no_anims=args.battle_stats_no_anims,
             draw_map_anims=args.draw_map_anims,
             hp_bars=args.hp_bars,
+            group_ai=args.group_ai,
+            alpha_sprite_arrow=args.alpha_sprite_arrow,
+            turn_autosave=args.turn_autosave,
+            fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             credits=args.credits,
             custom_campaign=args.custom_campaign,
             skip_opening=args.skip_opening,

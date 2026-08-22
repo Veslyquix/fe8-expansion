@@ -226,9 +226,11 @@ src/menu_def.o: CC1FLAGS += -Wno-error
 # archival lane except this target's name.
 ifeq ($(OS),Windows_NT)
 all:
+	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-rom MODERN_CONFIG=release MODERN_ABI=aapcs
 else
 all:
+	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs
 endif
 
@@ -468,6 +470,12 @@ include release.mk
 %.gbapal: %.pal ; $(PAL2GBAPAL) $< $@
 %.gbapal: %.png ; $(GBAGFX) $< $@
 %.lz: % ; $(GBAGFX) $< $@ $(LZ_FLAGS)
+
+# 224-colour convo BGs need their pixel indices shifted so BG palettes 2-3
+# stay free for dialogue/textbox palettes. The generic gbagfx rule would use
+# contiguous indices 0-13 and clobber that reserved gap.
+graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal &: graphics/convo_bg/kh.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 224 $< graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal
 # These DemonLight sprite images were compressed in the original ROM with a
 # minimum LZ match distance of 3 (gbagfx defaults to 2). Reproduce byte-identically.
 graphics/banim/dragonfx/Img_DemonLightSprites_087A5BA4.4bpp.lz: LZ_FLAGS := -mindist 3

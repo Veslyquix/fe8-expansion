@@ -10,6 +10,7 @@
 #include "bmlib.h"
 #include "bmmind.h"
 #include "variables.h"
+#include "alpha_sprite_arrow.h"
 
 #if FE8_DANGER_BONES
 void UpdateVisualsForEnemiesWhoCanAttackTile(void);
@@ -319,6 +320,11 @@ void DrawPathArrow(void) {
 }
 
 void DrawUpdatedPathArrow(void) {
+#if FE8_ALPHA_SPRITE_ARROW
+    UpdatePathArrowWithCursor();
+    AlphaSpriteArrow_DrawUnitGhost();
+#else
     UpdatePathArrowWithCursor();
     DrawPathArrow();
+#endif
 }

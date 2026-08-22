@@ -17,7 +17,8 @@
 #define DRAW_MAP_ANIM_OBJCHR_NUMBERS 0x1C0
 #define DRAW_MAP_ANIM_OBJPAL 26
 #define DRAW_MAP_ANIM_OBJPAL_NUMBERS 27
-#define DRAW_MAP_ANIM_VRAM_SIZE 0x800
+#define DRAW_MAP_ANIM_TILE_WIDTH 8
+#define DRAW_MAP_ANIM_TILE_HEIGHT 8
 #define DRAW_MAP_ANIM_MIN_FRAMES 28
 #define DRAW_MAP_ANIM_NUMBERS_FLAG 0xEE
 
@@ -121,7 +122,7 @@ static const struct DrawMapAnimFrame * DrawMapAnim_GetFrameForTime(
 
 static void DrawMapAnim_LoadNumbers(void)
 {
-    RegisterDataMove(
+    CpuFastCopy(
         gDrawMapAnimNumbersImg,
         OBJ_CHR_ADDR(DRAW_MAP_ANIM_OBJCHR_NUMBERS),
         6 * 2 * CHR_SIZE);
@@ -210,7 +211,11 @@ static void DrawMapAnim_LoadFrameGfx(const struct DrawMapAnimFrame * frame)
     EnablePaletteSync();
 
     Decompress(frame->img, gGenericBuffer);
-    RegisterDataMove(gGenericBuffer, OBJ_CHR_ADDR(DRAW_MAP_ANIM_OBJCHR), DRAW_MAP_ANIM_VRAM_SIZE);
+    Copy2dChr(
+        gGenericBuffer,
+        OBJ_CHR_ADDR(DRAW_MAP_ANIM_OBJCHR),
+        DRAW_MAP_ANIM_TILE_WIDTH,
+        DRAW_MAP_ANIM_TILE_HEIGHT);
 }
 
 static void DrawMapAnim_PutFrameSprite(struct DrawMapAnimProc * proc)
@@ -278,8 +283,15 @@ static void DrawMapAnim_Loop(struct DrawMapAnimProc * proc)
 
 static void DrawMapAnim_Cleanup(struct DrawMapAnimProc * proc)
 {
-    RegisterFillTile(0, OBJ_CHR_ADDR(DRAW_MAP_ANIM_OBJCHR), DRAW_MAP_ANIM_VRAM_SIZE);
-    ClearTileRigistry();
+    int i;
+
+    for (i = 0; i < DRAW_MAP_ANIM_TILE_HEIGHT; i++)
+    {
+        CpuFastFill(
+            0,
+            OBJ_CHR_ADDR(DRAW_MAP_ANIM_OBJCHR + i * 0x20),
+            DRAW_MAP_ANIM_TILE_WIDTH * CHR_SIZE);
+    }
 }
 
 CONST_DATA struct ProcCmd ProcScr_DrawMapAnimSprite[] = {

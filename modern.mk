@@ -208,8 +208,23 @@ endif
 ifeq ($(DRAW_MAP_ANIMS),1)
 MODERN_DEFINE_FLAGS += -DFE8_DRAW_MAP_ANIMS=1
 endif
+ifeq ($(BATTLE_ANIMATION_NUMBERS),1)
+MODERN_DEFINE_FLAGS += -DFE8_BATTLE_ANIMATION_NUMBERS=1
+endif
 ifeq ($(HP_BARS),1)
 MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
+endif
+ifeq ($(GROUP_AI),1)
+MODERN_DEFINE_FLAGS += -DFE8_GROUP_AI=1
+endif
+ifeq ($(ALPHA_SPRITE_ARROW),1)
+MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
+endif
+ifeq ($(TURN_AUTOSAVE),1)
+MODERN_DEFINE_FLAGS += -DFE8_TURN_AUTOSAVE=1
+endif
+ifeq ($(FORT_UNITS_START_GREYED_OUT),1)
+MODERN_DEFINE_FLAGS += -DFE8_FORT_UNITS_START_GREYED_OUT=1
 endif
 ifeq ($(CREDITS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
@@ -1517,6 +1532,10 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 		--hp-bars "$(HP_BARS)" \
+		--group-ai "$(GROUP_AI)" \
+		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+		--turn-autosave "$(TURN_AUTOSAVE)" \
+		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 		--credits "$(CREDITS)" \
 		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 		--skip-opening "$(SKIP_OPENING)" \
@@ -1593,6 +1612,10 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
+	--group-ai "$(GROUP_AI)" \
+	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+	--turn-autosave "$(TURN_AUTOSAVE)" \
+	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 	--credits "$(CREDITS)" \
 	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 	--skip-opening "$(SKIP_OPENING)" \
@@ -1678,7 +1701,12 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
 	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
+	-DFE8_BATTLE_ANIMATION_NUMBERS=$(BATTLE_ANIMATION_NUMBERS) \
 	-DFE8_HP_BARS=$(HP_BARS) \
+	-DFE8_GROUP_AI=$(GROUP_AI) \
+	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
+	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
+	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
 	-DFE8_CREDITS=$(CREDITS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
@@ -1856,6 +1884,10 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
+		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
+		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
+		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
+		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
 		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
@@ -2315,7 +2347,9 @@ expansion-modern-rom: expansion-modern-elf $(MODERN_ROM)
 WIN_SYNC_DIR := /mnt/c/devkitPro/feex
 
 .PHONY: sync-win
-sync-win: expansion-modern-rom
+sync-win:
+	@$(PYTHON) scripts/ensure_derived_assets.py
+	+$(MAKE) expansion-modern-rom
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"

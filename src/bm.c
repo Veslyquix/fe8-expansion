@@ -35,6 +35,7 @@
 
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
+#include "turn_autosave.h"
 
 #if FE8_VESLY_DEBUGGER
 int StartKeyListenerProc(void);
@@ -536,8 +537,12 @@ void BmMain_SuspendBeforePhase(void)
         return;
 #endif
 
+#if FE8_TURN_AUTOSAVE
+    TurnAutosave_TryWriteSuspend();
+#else
     gActionData.suspendPointType = SUSPEND_POINT_PHASECHANGE;
     WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
 }
 
 //! FE8U = 0x0801550C

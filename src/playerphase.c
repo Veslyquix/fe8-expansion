@@ -19,6 +19,7 @@
 #include "hardware.h"
 #include "bmphase.h"
 #include "expansion_danger_overlay.h"
+#include "alpha_sprite_arrow.h"
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "minimap.h"
@@ -249,7 +250,9 @@ void PlayerPhase_Suspend(void)
 #endif
 
     gActionData.suspendPointType = SUSPEND_POINT_PLAYERIDLE;
+#if !FE8_TURN_AUTOSAVE
     WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
     return;
 }
 
@@ -912,7 +915,9 @@ s8 PlayerPhase_PrepareAction(ProcPtr proc)
     if ((gActionData.unitActionType != UNIT_ACTION_WAIT) && !gBmSt.just_resumed)
     {
         gActionData.suspendPointType = SUSPEND_POINT_DURINGACTION;
+#if !FE8_TURN_AUTOSAVE
         WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
     }
 
     return cameraReturn;
@@ -1195,7 +1200,11 @@ bool CanMoveActiveUnitTo(int x, int y)
 //! FE8U = 0x0801D624
 void PlayerPhase_DisplayUnitMovement(void)
 {
+#if FE8_ALPHA_SPRITE_ARROW
+    GenerateBestMovementScript(gBmSt.playerCursor.x, gBmSt.playerCursor.y, gWorkingMovementScript);
+#else
     GetMovementScriptFromPath();
+#endif
     UnitApplyWorkingMovementScript(gActiveUnit, gActiveUnit->xPos, gActiveUnit->yPos);
     SetAutoMuMoveScript(gWorkingMovementScript);
 

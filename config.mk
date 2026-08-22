@@ -249,6 +249,12 @@ BATTLE_STATS_NO_ANIMS ?= 1
 # battle rounds when full battle animations are disabled. Purely cosmetic.
 DRAW_MAP_ANIMS ?= 1
 
+# --- Optional BattleAnimationNumbers ----------------------------------------
+# Shows floating damage/heal numbers over battle-animation sprites. This is
+# the full battle-animation counterpart to DRAW_MAP_ANIMS. Event flag 0xEE
+# disables the numbers at runtime, matching the original SkillSystem hack.
+BATTLE_ANIMATION_NUMBERS ?= 1
+
 # --- Optional HpBars ----------------------------------------------------------
 # Draws a partial-fill HP bar over each visible unit, plus a small icon
 # over enemies the selected unit could hit for bonus effectiveness, land a
@@ -259,6 +265,58 @@ DRAW_MAP_ANIMS ?= 1
 # build-time flag instead, which already serves the same purpose. See
 # src/HpBars.c for two further narrow simplifications.
 HP_BARS ?= 1
+
+# --- Optional GroupAI ----------------------------------------------------------
+# Ported from Pokemblem's GroupAI patch. Bits 0-4 of a unit's "ai4" byte
+# (the high byte of struct Unit.ai_config -- see AI_UNIT_CONFIG_GROUPID_MASK,
+# include/cp_common.h) tag it as belonging to a numbered group (1-31; 0 means
+# no group). Whenever a combat's attacker or defender is group-tagged and
+# neither combatant is an NPC (FACTION_GREEN), every other enemy unit sharing
+# that same group id has its group tag cleared and its AI2 forced to
+# AI_B_00 (MoveToEnemy/"charge"), and is queued to act again this enemy
+# phase via gAiState.units[] -- the same mechanism vanilla already uses for
+# reinforcements that should act immediately. Net effect: attack one member
+# of a tagged group and the rest immediately aggro. Does not port the
+# reference patch's separate "AggroGroupAI_IfInDanger" zoning-AI interaction
+# (its own danger-map-driven decision of whether to even approach) -- see
+# src/group_ai.c.
+GROUP_AI ?= 1
+
+# --- Optional AlphaSpriteArrow ---------------------------------------------------
+# Ported from the community "AlphaSpriteArrow" patch. When enabled, the
+# player-phase cursor no longer draws the vanilla dotted movement-path
+# arrow: the selected unit's move animation is computed directly toward
+# the cursor (the same pathfinder AI already uses to choose a move) instead
+# of retracing the cursor's own path, and a translucent "ghost" of the unit
+# is blended in at the cursor tip while it sits at the end of a viable path,
+# in place of the arrow. See src/alpha_sprite_arrow.c.
+ALPHA_SPRITE_ARROW ?= 1
+
+# --- Optional Autosave ----------------------------------------------------------
+# Ported from Pokemblem's Autosave patch. Vanilla writes a suspend save
+# after almost every single action (see BmMain_SuspendBeforePhase,
+# PlayerPhase_Suspend, PlayerPhase_PrepareAction, BattleGenerateArena,
+# ArenaContinueBattle, HandlePostActionTraps, CpDecide_Suspend -- all in
+# src/). With this flag on, every one of those per-action writes is
+# skipped, and BmMain_SuspendBeforePhase instead only writes while
+# transitioning into Player Phase, and only if the number of alive,
+# deployed player units hasn't dropped since the last write -- a death
+# withholds the write for a couple of further Player Phase starts rather
+# than silently autosaving over it. See src/turn_autosave.c. Not ported: the
+# reference patch's separate manual "quicksave" ASMC hooks meant to be
+# wired into hand-authored event scripts (SaveGame_ASMC,
+# QuicksaveDuringStartEvent) -- out of scope for this automatic seam.
+TURN_AUTOSAVE ?= 1
+
+# --- Optional FortUnitsStartGreyedOut --------------------------------------------
+# Generic units purchased from a Fort-terrain purchase base (see
+# GetPurchaseBaseKindAt in src/purchase_generics.c) spawn directly on the
+# fort tile itself instead of an adjacent free tile, and start already
+# marked as having acted (US_HAS_MOVED) so they can't move or attack the
+# turn they appear. Gate/House/Throne/Village purchase bases, and Camp/Tent
+# spawn points placed by FE8_MAPGEN, are unaffected -- they keep spawning
+# adjacent with a unit that can act immediately. See src/purchase_generics.c.
+FORT_UNITS_START_GREYED_OUT ?= 0
 
 # --- Optional CustomCampaign --------------------------------------------------
 # Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's

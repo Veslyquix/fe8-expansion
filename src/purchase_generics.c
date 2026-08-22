@@ -390,16 +390,39 @@ static void BuildGenericUnitDefinition(
         out->items[i] = def->items[i];
 }
 
+#if FE8_FORT_UNITS_START_GREYED_OUT
+static bool TryFortSpawnPosition(int baseX, int baseY, int* xOut, int* yOut)
+{
+    if (GetPurchaseBaseKindAt(baseX, baseY) != PURCHASE_BASE_KIND_FORT)
+        return false;
+
+    if (gBmMapUnit[baseY][baseX] != 0)
+        return false;
+
+    if (gBmMapHidden[baseY][baseX] & HIDDEN_BIT_UNIT)
+        return false;
+
+    *xOut = baseX;
+    *yOut = baseY;
+    return true;
+}
+#endif
+
 static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition* def, int factionId, int baseX, int baseY)
 {
     struct UnitDefinition uDef;
     struct Unit* unit;
     int x, y;
+    bool spawnedOnFort = false;
 
     if (GetFactionChapterGoldAmount(factionId) < def->cost)
         return false;
 
-    if (!FindSpawnPositionFrom(baseX, baseY, def->classId, &x, &y))
+#if FE8_FORT_UNITS_START_GREYED_OUT
+    spawnedOnFort = TryFortSpawnPosition(baseX, baseY, &x, &y);
+#endif
+
+    if (!spawnedOnFort && !FindSpawnPositionFrom(baseX, baseY, def->classId, &x, &y))
         return false;
 
     BuildGenericUnitDefinition(def, factionId, x, y, &uDef);
@@ -408,6 +431,11 @@ static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition
 
     if (unit == NULL)
         return false;
+
+#if FE8_FORT_UNITS_START_GREYED_OUT
+    if (spawnedOnFort)
+        unit->state |= US_HAS_MOVED;
+#endif
 
     SubFactionChapterGoldAmount(factionId, def->cost);
 

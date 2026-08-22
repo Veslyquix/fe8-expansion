@@ -238,7 +238,9 @@ bool HandlePostActionTraps(ProcPtr proc) {
     gActionData.suspendPointType = 1;
     gActionData.unitActionType = 1;
 
+#if !FE8_TURN_AUTOSAVE
     WriteSuspendSave(3);
+#endif
 
     if (GetBattleAnimPreconfType() == PLAY_ANIMCONF_OFF) {
         RefreshUnitSprites();

@@ -33,6 +33,7 @@ int VeslyDebugger_GetBgmOverride(void);
 #include "constants/items.h"
 #include "constants/terrains.h"
 #include "constants/songs.h"
+#include "group_ai.h"
 
 EWRAM_DATA struct ActionData gActionData = { 0 };
 
@@ -302,6 +303,10 @@ s8 ActionCombat(ProcPtr proc) {
     }
 
     Proc_StartBlocking(sProcScr_CombatAction, proc);
+
+#if FE8_GROUP_AI
+    GroupAI_OnAttack(GetUnit(gActionData.subjectIndex), target);
+#endif
 
     return 0;
 }
