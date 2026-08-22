@@ -189,6 +189,13 @@ NEW_TILESETS ?= 1
 # with a single static 256-color (8bpp) background image. 
 TITLE_256_COLORS ?= 1
 
+# --- Optional TextChNames -----------------------------------------------------
+# Draws the actual chapter title text instead of a pre-rendered graphic
+# banner, so any chapter name reads correctly without needing a hand-drawn
+# banner per chapter. 
+# Note: vanilla text names for chapters are like this: TXT00 L00
+TEXT_CHAPTER_NAMES ?= 1
+
 # --- Optional Credits ----------------------------------------------------------
 # Scrolling end-credits sequence using text instead of images. 
 CREDITS ?= 0
@@ -324,13 +331,5 @@ TURN_AUTOSAVE ?= 1
 
 
 
-# to do: needs testing 
-# --- Optional TextChNames -----------------------------------------------------
-# Draws the actual chapter title text instead of a pre-rendered graphic
-# banner, so any chapter name reads correctly without needing a hand-drawn
-# banner per chapter. The original patch's save-select-screen per-slot
-# chapter name preview (reads chapter id out of raw SRAM save data) is not
-# ported -- see src/chapter_title.c.
-TEXT_CHAPTER_NAMES ?= 1
 
 

@@ -218,21 +218,23 @@ static u8 GetChapterTitleFontPixel(const u8 *tiles, int x, int y)
 static void PutChapterTitleFontPixel(u8 *tiles, int x, int y, u8 pixel)
 {
     int offset;
-    u8 *dst;
+    int shift;
+    volatile u32 *dst;
+    u32 value;
 
     if (x < 0 || x >= 0x100 || y < 0 || y >= CHAPTER_TITLE_TILE_HEIGHT * 8)
         return;
 
     offset = ((y >> 3) * CHAPTER_TITLE_FONT_ROW_BYTES)
         + ((x >> 3) * CHR_SIZE)
-        + ((y & 7) * 4)
-        + ((x & 7) >> 1);
-    dst = tiles + offset;
+        + ((y & 7) * 4);
+    shift = (x & 7) * 4;
+    dst = (volatile u32 *)(tiles + offset);
 
-    if (x & 1)
-        *dst |= pixel << 4;
-    else
-        *dst |= pixel;
+    value = *dst;
+    value &= ~(0xFu << shift);
+    value |= ((u32)pixel & 0xF) << shift;
+    *dst = value;
 }
 
 static void AdvanceChapterTitleSpace(int *left, int *right)
@@ -318,7 +320,7 @@ static void DrawChapterTitleText(int chr, u32 titleId)
     const char* str = GetStringFromIndex(GetChapterTitleTextMsgId(titleId));
     
 
-    str = GetStringFromIndex(0x505);
+    // str = GetStringFromIndex(0x505);
     
     u8 *dest = (u8 *)(VRAM + chr * CHR_SIZE);
     u8 *font = gGenericBuffer;
