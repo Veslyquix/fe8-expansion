@@ -9,6 +9,7 @@
 #include "bm.h"
 #include "bmio.h"
 #include "bmlib.h"
+#include "bmudisp.h"
 #include "bmdifficulty.h"
 #include "sysutil.h"
 #include "savemenu.h"
@@ -21,13 +22,14 @@
 #include "constants/songs.h"
 #include "power.h"
 #include "mapanim.h"
-
+#include "statscreen.h"
 #include "ctc.h"
 #include "ap.h"
 #include "eventinfo.h"
 #include "efxbattle.h"
 #include "constants/items.h"
 #include "constants/video-global.h"
+#include "icon.h"
 
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
@@ -47,7 +49,7 @@ struct ProcCmd CONST_DATA ProcScr_MapAnimBarrierfx2[];
 
 CONST_DATA struct ProcCmd gProcScr_CoPowers[] = {
     PROC_NAME("COPOWERS"),
-    PROC_CALL(LockGame),
+    // PROC_CALL(LockGame),
     PROC_CALL(CoPowers_Init),
 
 PROC_LABEL(0),
@@ -60,7 +62,7 @@ PROC_LABEL(0),
 PROC_LABEL(99),
     PROC_CALL(CoPowers_ReturnCamera),
     PROC_WHILE_EXISTS(ProcScr_CamMove),
-    PROC_CALL(UnlockGame),
+    // PROC_CALL(UnlockGame),
     PROC_END,
 };
 
@@ -166,6 +168,7 @@ u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
  * ---------------------------------------------------------------------- */
 
 #define CO_AFFINITY_BAR_MAX 5 // hearts drawn for a "great" matchup
+#define CO_AFFINITY_ROW_MAX 8 // max class-affinity rows this screen draws text handles for
 
 enum {
     CO_SCREEN_PAGE_INFO,
@@ -314,6 +317,32 @@ void CoGauge_OnPowerUsed(int faction)
     CoGauge_Set(faction, 0);
 }
 
+/* gStatScreen.text[] slots this screen borrows (see the EWRAM_OVERLAY(0)
+ * comment on gCoScreen above -- safe since this screen and the unit stat
+ * screen never run at the same time). Each slot needs its own struct Text
+ * handle, InitText'd to the string's actual width, before PutDrawText can
+ * draw into it -- passing NULL/an uninitialized handle is what left the
+ * screen black. */
+enum {
+    CO_TEXT_HEADER,
+    CO_TEXT_LABEL,
+    CO_TEXT_SUBTITLE,
+    CO_TEXT_LINE0,
+    CO_TEXT_LINE1,
+    CO_TEXT_AFFINITY0,
+    CO_TEXT_AFFINITY_LAST = CO_TEXT_AFFINITY0 + CO_AFFINITY_ROW_MAX - 1,
+    CO_TEXT_HINT,
+    CO_TEXT_COUNT,
+};
+
+static void CoScreen_PutText(int slot, u16* tm, int color, const char* str)
+{
+    struct Text* text = &gStatScreen.text[slot];
+
+    InitText(text, (GetStringTextLen(str) + 7) / 8);
+    PutDrawText(text, tm, color, 0, 0, str);
+}
+
 static void CoScreen_DrawHeader(void)
 {
     const struct CoDefinition* co = GetCoDefinition(gCoScreen.coId);
@@ -325,32 +354,34 @@ static void CoScreen_DrawHeader(void)
         ApplyPalette(Pal_FaceDisplayPortrait, 2);
     else
         ApplyPalette(Pal_FaceDisplayGenericCard, 2);
+    
 
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 2), TEXT_COLOR_SYSTEM_WHITE, co->name);
+
+    CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(12, 2), TEXT_COLOR_SYSTEM_WHITE, co->name);
 }
 
 static void CoScreen_DrawPageInfo(const struct CoDefinition* co)
 {
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "Info");
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 7), TEXT_COLOR_SYSTEM_BLUE, co->title);
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 9), TEXT_COLOR_SYSTEM_WHITE, co->infoLine1);
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 10), TEXT_COLOR_SYSTEM_WHITE, co->infoLine2);
+    CoScreen_PutText(CO_TEXT_LABEL, gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "Info");
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gBG0TilemapBuffer + TILEMAP_INDEX(12, 7), TEXT_COLOR_SYSTEM_BLUE, co->title);
+    CoScreen_PutText(CO_TEXT_LINE0, gBG0TilemapBuffer + TILEMAP_INDEX(12, 9), TEXT_COLOR_SYSTEM_WHITE, co->infoLine1);
+    CoScreen_PutText(CO_TEXT_LINE1, gBG0TilemapBuffer + TILEMAP_INDEX(12, 11), TEXT_COLOR_SYSTEM_WHITE, co->infoLine2);
 }
 
 static void CoScreen_DrawPagePower(const struct CoDefinition* co)
 {
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "CO Power");
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 7), TEXT_COLOR_SYSTEM_BLUE, co->powerName);
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 9), TEXT_COLOR_SYSTEM_WHITE, co->powerDesc1);
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 10), TEXT_COLOR_SYSTEM_WHITE, co->powerDesc2);
+    CoScreen_PutText(CO_TEXT_LABEL, gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "CO Power");
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gBG0TilemapBuffer + TILEMAP_INDEX(12, 7), TEXT_COLOR_SYSTEM_BLUE, co->powerName);
+    CoScreen_PutText(CO_TEXT_LINE0, gBG0TilemapBuffer + TILEMAP_INDEX(12, 9), TEXT_COLOR_SYSTEM_WHITE, co->powerDesc1);
+    CoScreen_PutText(CO_TEXT_LINE1, gBG0TilemapBuffer + TILEMAP_INDEX(12, 11), TEXT_COLOR_SYSTEM_WHITE, co->powerDesc2);
 }
 
 static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
 {
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "Super CO Power");
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 7), TEXT_COLOR_SYSTEM_BLUE, co->superPowerName);
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 9), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDesc1);
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 10), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDesc2);
+    CoScreen_PutText(CO_TEXT_LABEL, gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "Super CO Power");
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gBG0TilemapBuffer + TILEMAP_INDEX(12, 7), TEXT_COLOR_SYSTEM_BLUE, co->superPowerName);
+    CoScreen_PutText(CO_TEXT_LINE0, gBG0TilemapBuffer + TILEMAP_INDEX(12, 9), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDesc1);
+    CoScreen_PutText(CO_TEXT_LINE1, gBG0TilemapBuffer + TILEMAP_INDEX(12, 11), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDesc2);
 }
 
 static void CoScreen_DrawAffinityBar(int x, int y, int rating)
@@ -368,14 +399,14 @@ static void CoScreen_DrawAffinityBar(int x, int y, int rating)
 static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 {
     int i;
-    int y = 6;
+    int y = 7;
 
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "Class Affinity");
+    CoScreen_PutText(CO_TEXT_LABEL, gBG0TilemapBuffer + TILEMAP_INDEX(12, 5), TEXT_COLOR_SYSTEM_GOLD, "Class Affinity");
 
-    for (i = 0; i < co->affinityCount; ++i) {
+    for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         const struct CoClassAffinity* affinity = &co->affinities[i];
 
-        PutString(gBG0TilemapBuffer + TILEMAP_INDEX(12, y), TEXT_COLOR_SYSTEM_WHITE, affinity->className);
+        CoScreen_PutText(CO_TEXT_AFFINITY0 + i, gBG0TilemapBuffer + TILEMAP_INDEX(12, y), TEXT_COLOR_SYSTEM_WHITE, affinity->className);
         CoScreen_DrawAffinityBar(21, y, affinity->rating);
 
         y += 2;
@@ -385,9 +416,9 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 static void CoScreen_DrawPage(void)
 {
     const struct CoDefinition* co = GetCoDefinition(gCoScreen.coId);
-
-    BG_Fill(gBG0TilemapBuffer + TILEMAP_INDEX(12, 4), 0); // clear everything right of the portrait panel
-
+    ResetText();
+    CoScreen_DrawHeader();
+    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(12, 4), 30-12, 20-4, 0);
     switch (gCoScreen.page) {
     case CO_SCREEN_PAGE_INFO:
         CoScreen_DrawPageInfo(co);
@@ -406,7 +437,7 @@ static void CoScreen_DrawPage(void)
         break;
     }
 
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(24, 18), TEXT_COLOR_SYSTEM_WHITE, "L/R Page");
+    CoScreen_PutText(CO_TEXT_HINT, gBG0TilemapBuffer + TILEMAP_INDEX(24, 18), TEXT_COLOR_SYSTEM_WHITE, "L/R Page");
 
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
 }
@@ -416,14 +447,13 @@ static void CoScreen_Setup(ProcPtr proc)
     gCoScreen.coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
     gCoScreen.page = CO_SCREEN_PAGE_INFO;
 
-    SetupBackgrounds(gBgConfig_SaveMenu);
+    SetupBackgrounds(0);
 
     BG_Fill(gBG0TilemapBuffer, 0);
     BG_Fill(gBG1TilemapBuffer, 0);
     BG_Fill(gBG2TilemapBuffer, 0);
     BG_Fill(gBG3TilemapBuffer, 0);
 
-    LoadUiFrameGraphics();
 
     gLCDControlBuffer.dispcnt.bg0_on = 1;
     gLCDControlBuffer.dispcnt.bg1_on = 1;
@@ -435,8 +465,12 @@ static void CoScreen_Setup(ProcPtr proc)
     BG_SetPosition(1, 0, 0);
     BG_SetPosition(2, 0, 0);
     BG_SetPosition(3, 0, 0);
-
-    CoScreen_DrawHeader();
+    LoadLegacyUiFrameGraphics(); 
+    ApplyUnitSpritePalettes();
+    ApplySystemObjectsPalettes();
+    LoadUiFrameGraphics();
+    EnablePaletteSync(); 
+    
     CoScreen_DrawPage();
 }
 
@@ -449,17 +483,17 @@ static void CoScreen_Teardown(ProcPtr proc)
 
     BG_EnableSyncByMask(0xF);
 
-    // gLCDControlBuffer.dispcnt.bg0_on = 0;
-    // gLCDControlBuffer.dispcnt.bg1_on = 0;
-    // gLCDControlBuffer.dispcnt.bg2_on = 0;
-    // gLCDControlBuffer.dispcnt.bg3_on = 0;
-    // gLCDControlBuffer.dispcnt.obj_on = 0;
+    gLCDControlBuffer.dispcnt.bg0_on = 0;
+    gLCDControlBuffer.dispcnt.bg1_on = 0;
+    gLCDControlBuffer.dispcnt.bg2_on = 0;
+    gLCDControlBuffer.dispcnt.bg3_on = 0;
+    gLCDControlBuffer.dispcnt.obj_on = 0;
 
     ResetText();
 
-    // CpuFastFill(0, gPaletteBuffer, 0x400);
+    CpuFastFill(0, gPaletteBuffer, 0x400);
 
-    // EnablePaletteSync();
+    EnablePaletteSync();
 }
 
 static void CoScreen_KeyListener(ProcPtr proc)
@@ -479,21 +513,49 @@ static void CoScreen_KeyListener(ProcPtr proc)
         PlaySoundEffect(SONG_SE_SYS_WINDOW_SELECT1);
     }
 }
+void CoInfo_BlackenScreen(void)
+{
+    gLCDControlBuffer.dispcnt.bg0_on = FALSE;
+    gLCDControlBuffer.dispcnt.bg1_on = FALSE;
+    gLCDControlBuffer.dispcnt.bg2_on = FALSE;
+    gLCDControlBuffer.dispcnt.bg3_on = FALSE;
+    gLCDControlBuffer.dispcnt.obj_on = FALSE;
+
+    SetBlendConfig(3, 0, 0, 0x10);
+
+    SetBlendTargetA(0, 0, 0, 0, 0);
+    SetBlendBackdropA(1);
+    SetBlendBackdropB(0);
+
+    // TODO: ResetBackdropColor macro?
+    gPaletteBuffer[PAL_BACKDROP_OFFSET] = 0;
+    EnablePaletteSync();
+}
+
 
 CONST_DATA struct ProcCmd gProcScr_CoScreen[] = {
     PROC_NAME("COSCREEN"),
+    PROC_CALL(CoInfo_BlackenScreen),
+    PROC_CALL(BMapDispSuspend),
     PROC_CALL(LockGame),
+
+    PROC_SLEEP(2),
+    PROC_CALL(CoScreen_Setup),
+    
     // PROC_CALL(StartFastFadeToBlack),
     // PROC_REPEAT(WaitForFade),
-    PROC_CALL(BMapDispSuspend),
+    // PROC_CALL_ARG(NewFadeOut, 16),
+    // PROC_WHILE(FadeOutExists),
+    // PROC_CALL(BMapDispSuspend),
     PROC_SLEEP(0),
-    PROC_CALL(CoScreen_Setup),
-
+    
     // PROC_CALL_ARG(NewFadeIn, 16),
     // PROC_WHILE(FadeInExists),
+    
 
     PROC_REPEAT(CoScreen_KeyListener),
 
+    
     PROC_CALL_ARG(NewFadeOut, 16),
     PROC_WHILE(FadeOutExists),
 
