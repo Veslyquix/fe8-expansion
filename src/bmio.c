@@ -29,6 +29,7 @@
 #include "worldmap.h"
 #include "bmio.h"
 #include "bmmind.h"
+#include "gamerank.h"
 
 // General Battle Map System Stuff, mostly low level hardware stuff but also more
 
@@ -959,7 +960,7 @@ void InitPlayConfig(int isDifficult, s8 unk) {
     gPlaySt.config.disableBgm = 0;
     gPlaySt.config.disableSoundEffects = 0;
     gPlaySt.config.windowColor = 0;
-    gPlaySt.config.disableAutoEndTurns = 0;
+    gPlaySt.config.disableAutoEndTurns = 1;
     gPlaySt.config.noSubtitleHelp = 0;
     gPlaySt.config.battleForecastType = 0;
     gPlaySt.config.debugControlRed = 0;
@@ -997,6 +998,10 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
 
     gPlaySt.faction = FACTION_GREEN; // TODO: PHASE/ALLEGIANCE DEFINITIONS
     gPlaySt.chapterTurnNumber = 0;
+
+#if FE8_GAME_RANK
+    GameRank_OnChapterInit();
+#endif
 
     if (GetBattleMapKind() == BATTLEMAP_KIND_SKIRMISH) {
         if (!(gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN))
@@ -1036,6 +1041,7 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
     LoadChapterTraps();
 
 #if FE8_PURCHASE_GENERICS
+    InitSuperFieldsPreOwnedBaseMarkers();
     InitPurchaseBaseTrapsFromTerrain();
     InitCampTrapsFromTilesetMarkers();
 #endif

@@ -403,7 +403,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            text_chapter_names=0, battle_stats_no_anims=0,
                            draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
-                           custom_campaign=0, skip_opening=0,
+                           custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -441,6 +441,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     credits_flag = validate_feature_flag("CREDITS", credits)
     campaign = validate_feature_flag("CUSTOM_CAMPAIGN", custom_campaign)
     skip_opening_flag = validate_feature_flag("SKIP_OPENING", skip_opening)
+    game_rank_flag = validate_feature_flag("GAME_RANK", game_rank)
+    co_powers_flag = validate_feature_flag("CO_POWERS", co_powers)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -477,7 +479,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
-            autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag)
+            autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
+            game_rank_flag, co_powers_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -708,6 +711,8 @@ class ExpansionIdentity:
     credits: int = 0
     custom_campaign: int = 0
     skip_opening: int = 0
+    game_rank: int = 0
+    co_powers: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -781,6 +786,8 @@ class ExpansionIdentity:
                 "credits": self.credits,
                 "custom_campaign": self.custom_campaign,
                 "skip_opening": self.skip_opening,
+                "game_rank": self.game_rank,
+                "co_powers": self.co_powers,
             },
         }
 
@@ -842,6 +849,8 @@ def load_identity(
     credits=None,
     custom_campaign=None,
     skip_opening=None,
+    game_rank=None,
+    co_powers=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -904,7 +913,7 @@ def load_identity(
      resolved_select_growths, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
      resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
-     resolved_custom_campaign, resolved_skip_opening) = validate_feature_flags(
+     resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -992,6 +1001,12 @@ def load_identity(
         skip_opening
         if skip_opening not in (None, "")
         else cfg.get("SKIP_OPENING", "0"),
+        game_rank
+        if game_rank not in (None, "")
+        else cfg.get("GAME_RANK", "0"),
+        co_powers
+        if co_powers not in (None, "")
+        else cfg.get("CO_POWERS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1050,6 +1065,8 @@ def load_identity(
         credits=resolved_credits,
         custom_campaign=resolved_custom_campaign,
         skip_opening=resolved_skip_opening,
+        game_rank=resolved_game_rank,
+        co_powers=resolved_co_powers,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1253,6 +1270,16 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override TURN_AUTOSAVE (0 or 1)",
     )
     parser.add_argument(
+        "--game-rank",
+        default=None,
+        help="override GAME_RANK (0 or 1)",
+    )
+    parser.add_argument(
+        "--co-powers",
+        default=None,
+        help="override CO_POWERS (0 or 1)",
+    )
+    parser.add_argument(
         "--fort-units-start-greyed-out",
         default=None,
         help="override FORT_UNITS_START_GREYED_OUT (0 or 1)",
@@ -1377,6 +1404,8 @@ def main(argv=None) -> int:
             credits=args.credits,
             custom_campaign=args.custom_campaign,
             skip_opening=args.skip_opening,
+            game_rank=args.game_rank,
+            co_powers=args.co_powers,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

@@ -26,6 +26,7 @@
 #include "eventcall.h"
 #include "debuffs.h"
 #include "turn_autosave.h"
+#include "gamerank.h"
 
 #if FE8_DISPLAY_OBTAINABLE_ITEM
 void SetupCacheForStealableItems(void);
@@ -1034,8 +1035,13 @@ void UnitKill(struct Unit* unit) {
             unit->state |= US_DEAD | US_HIDDEN;
             InitUnitsupports(unit);
         }
-    } else
+    } else {
+#if FE8_GAME_RANK
+        if (UNIT_FACTION(unit) == FACTION_RED)
+            GameRank_OnEnemyUnitKilled();
+#endif
         unit->pCharacterData = NULL;
+    }
 }
 
 void UnitChangeFaction(struct Unit* unit, int faction) {

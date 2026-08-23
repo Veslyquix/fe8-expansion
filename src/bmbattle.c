@@ -8,6 +8,7 @@
 #include "bmreliance.h"
 #include "chapterdata.h"
 #include "bmtrick.h"
+#include "power.h"
 #include "m4a.h"
 #include "soundwrapper.h"
 #include "hardware.h"
@@ -19,6 +20,7 @@
 #include "ekrbattle.h"
 #include "bmbattle.h"
 #include "eventinfo.h"
+#include "constants/event-flags.h"
 #include "expansion_mechanics.h"
 #include "mapanim.h"
 #include "worldmap.h"
@@ -1162,6 +1164,10 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
 
             if (attacker->unit.curHP < 0)
                 attacker->unit.curHP = 0;
+
+#if FE8_CO_POWERS
+            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+#endif
         } else {
             if (gBattleStats.damage > defender->unit.curHP)
                 gBattleStats.damage = defender->unit.curHP;
@@ -1170,6 +1176,11 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
 
             if (defender->unit.curHP < 0)
                 defender->unit.curHP = 0;
+
+#if FE8_CO_POWERS
+            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+            CoGauge_OnDamage(UNIT_FACTION(&defender->unit), gBattleStats.damage);
+#endif
         }
 
         if (GetItemWeaponEffect(attacker->weapon) == WPN_EFFECT_HPDRAIN) {
@@ -2085,8 +2096,14 @@ void UpdateObstacleFromBattle(struct BattleUnit* bu) {
             UpdateRoofedUnits();
             RenderBmMap();
 
-            if (owner == FACTION_ID_BLUE)
+            if (owner == FACTION_ID_BLUE) {
                 ForceGameOver();
+            } else if (owner == FACTION_ID_RED) {
+                if (GetBattleMapKind() == BATTLEMAP_KIND_STORY)
+                    SetFlag(EVFLAG_WIN);
+
+                CallEndEvent();
+            }
         }
 
         return;

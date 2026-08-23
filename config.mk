@@ -90,7 +90,22 @@ EXPANSION_BUILD_ID ?=
 # offset in struct SaveBlocks, same class of change as the jid-widening bump
 # above -- flag-gated (only FE8_MAPGEN=1 builds are affected), but real saves
 # from a pre-bump build must not be silently misread post-bump.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 5
+# Bumped 5 -> 6 for the GameRank feature: struct PlaySt (include/types.h)
+# gains a `#if FE8_GAME_RANK` block of five u16 kill-tracking fields appended
+# at its own end (same class of change as FE8_MAPGEN's mapGenSeed bump
+# above) -- flag-gated, but grows GameSaveBlock/SuspendSaveBlock and shifts
+# every subsequent struct SaveBlocks offset when FE8_GAME_RANK=1.
+#
+# Bumped 6 -> 7 for the CO screen feature: struct PlaySt gains a
+# `#if FE8_CO_POWERS` u8 commanderId[4] field appended at its own end (same
+# class of change again) -- flag-gated, but grows GameSaveBlock/
+# SuspendSaveBlock and shifts every subsequent struct SaveBlocks offset when
+# FE8_CO_POWERS=1.
+#
+# Bumped 7 -> 8 for the CO gauge feature: struct PlaySt gains a
+# `#if FE8_CO_POWERS` s16 coGauge[4] field appended right after
+# commanderId (same class of change again).
+EXPANSION_SAVE_COMPAT_EPOCH ?= 8
 
 # --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
@@ -326,7 +341,18 @@ PROMOTE_COMMAND ?= 1
 # deployed player units hasn't dropped since the last write 
 TURN_AUTOSAVE ?= 1
 
+# --- Optional GameRank ----------------------------------------------------------
+# Tracks per-chapter and per-save-slot player-unit deaths, plus enemies
+# defeated (both a per-turn "power score" high-water mark and a per-chapter
+# total), so later chapters/events can reference them as a running game
+# rank. See include/gamerank.h.
+GAME_RANK ?= 1
 
+# --- Optional CoPowers ----------------------------------------------------------
+# Advance Wars reference: adds a "CO Powers" entry to the chapter (map) menu
+# that pans the camera onto every one of the player's units in turn, parking
+# the cursor on each for 5 frames. See src/power.c.
+CO_POWERS ?= 1
 
 
 

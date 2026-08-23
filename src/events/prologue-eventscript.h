@@ -17,19 +17,19 @@
 #if FE8_CUSTOM_CAMPAIGN
 
 CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
-    {
-        .charIndex = CHARACTER_SETH,
-        .classIndex = CLASS_PALADIN,
-        .allegiance = FACTION_ID_BLUE,
-        .level = 1,
-        .xPosition = 3,
-        .yPosition = 5,
-        .items = {
-            ITEM_SWORD_STEEL,
-            ITEM_LANCE_SILVER,
-            ITEM_VULNERARY,
-        },
-    },
+    // {
+        // .charIndex = CHARACTER_SETH,
+        // .classIndex = CLASS_PALADIN,
+        // .allegiance = FACTION_ID_BLUE,
+        // .level = 1,
+        // .xPosition = 3,
+        // .yPosition = 5,
+        // .items = {
+            // ITEM_SWORD_STEEL,
+            // ITEM_LANCE_SILVER,
+            // ITEM_VULNERARY,
+        // },
+    // },
     {
         .charIndex = CHARACTER_EIRIKA,
         .classIndex = CLASS_SOLDIER,
@@ -47,18 +47,18 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
 
 // 0x88B3C50
 CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
-    {
-        .charIndex = CHARACTER_ONEILL,
-        .classIndex = CLASS_FIGHTER,
-        .allegiance = FACTION_ID_RED,
-        .level = 4,
-        .xPosition = 17,
-        .yPosition = 12,
-        .items = {
-            ITEM_AXE_IRON,
-        },
-        .ai = {0x6, 0x3, 0x0, 0x1},
-    },
+    // {
+        // .charIndex = CHARACTER_ONEILL,
+        // .classIndex = CLASS_FIGHTER,
+        // .allegiance = FACTION_ID_RED,
+        // .level = 4,
+        // .xPosition = 17,
+        // .yPosition = 12,
+        // .items = {
+            // ITEM_AXE_IRON,
+        // },
+        // .ai = {0x6, 0x3, 0x0, 0x1},
+    // },
     {
         .charIndex = 0x82,
         .classIndex = CLASS_SOLDIER,
@@ -67,19 +67,19 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         .xPosition = 18,
         .yPosition = 11,
         .items = {
-            ITEM_LANCE_SLIM,
+            ITEM_LANCE_IRON,
         },
         .ai = {0x0, 0x3, 0x0, 0x1},
     },
     {
         .charIndex = 0x80,
-        .classIndex = CLASS_FIGHTER,
+        .classIndex = CLASS_SOLDIER,
         .allegiance = FACTION_ID_RED,
         .level = 2,
         .xPosition = 17,
         .yPosition = 14,
         .items = {
-            ITEM_AXE_IRON,
+            ITEM_LANCE_IRON,
         },
         .ai = {0x0, 3, 0x2, 0x1},
     },

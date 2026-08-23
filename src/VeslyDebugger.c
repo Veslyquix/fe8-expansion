@@ -1,6 +1,7 @@
 
 
 #include "gbafe.h"
+#include "power.h"
 #define FE8
 #define PUREFUNC __attribute__((pure))
 #define brk asm("mov r11, r11");
@@ -382,6 +383,10 @@ void StateIdle(DebuggerProc * proc);
 void RedrawStateMenu(DebuggerProc * proc);
 void ChStateInit(DebuggerProc * proc);
 void ChStateIdle(DebuggerProc * proc);
+#if FE8_CO_POWERS
+void EditCoInit(DebuggerProc * proc);
+void EditCoIdle(DebuggerProc * proc);
+#endif
 void EditWExpInit(DebuggerProc * proc);
 void EditWExpIdle(DebuggerProc * proc);
 void EditSupportsInit(DebuggerProc * proc);
@@ -420,6 +425,7 @@ u8 CanActiveUnitPromote(void);
 #define LoopLabel 21
 #define EditAiLabel 22
 #define EditBgmLabel 23
+#define EditCoLabel 24
 #define EndLabel 99
 
 #define ActionID_Promo 1
@@ -539,6 +545,13 @@ const struct ProcCmd DebuggerProcCmd[] = {
     PROC_CALL(EditBgmInit),
     PROC_REPEAT(EditBgmIdle),
     PROC_GOTO(EndLabel),
+
+#if FE8_CO_POWERS
+    PROC_LABEL(EditCoLabel),
+    PROC_CALL(EditCoInit),
+    PROC_REPEAT(EditCoIdle),
+    PROC_GOTO(EndLabel),
+#endif
 
     PROC_LABEL(LoadUnitsLabel), // Units
     PROC_CALL(LoadUnitsInit),
@@ -4030,6 +4043,190 @@ void RedrawBgmMenu(DebuggerProc * proc)
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 }
 
+#if FE8_CO_POWERS
+#define CoRowCount 4
+#define CoColCount 3 // CO id, gauge, gold
+#define CoNameWidth 8
+// Debug-editable range only -- gPlaySt.coGauge is s16 (max ~9999 in
+// practice, see power.c's CO_GAUGE_MAX) and chapter gold is normally u32,
+// but proc->tmp[] here is s16 (see DebuggerProc), so editable gold is
+// capped well below its real u32 range. Fine for a debug tool.
+#define CoGoldEditMax 32000
+
+static const char * const sCoFactionNames[CoRowCount] = { "Blue", "Green", "Red", "Purple" };
+static const int sCoFactionIds[CoRowCount] = { FACTION_ID_BLUE, FACTION_ID_GREEN, FACTION_ID_RED, FACTION_ID_PURPLE };
+
+void RedrawCoMenu(DebuggerProc * proc)
+{
+    int i;
+    int selectedRow = proc->id / CoColCount;
+    int selectedCol = proc->id % CoColCount;
+
+    BG_Fill(gBG0TilemapBuffer, 0);
+    BG_EnableSyncByMask(BG0_SYNC_BIT);
+    ResetIconGraphics();
+
+    struct Text * th = gStatScreen.text;
+
+    for (i = 0; i < CoRowCount; ++i)
+    {
+        ClearText(&th[i]);
+        Text_DrawString(&th[i], sCoFactionNames[i]);
+        PutText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(3, Y_HAND + (i * 2)));
+    }
+
+    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(11, Y_HAND - 1), TEXT_COLOR_SYSTEM_GOLD, "CO");
+    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(20, Y_HAND - 1), TEXT_COLOR_SYSTEM_GOLD, "Gauge");
+    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(26, Y_HAND - 1), TEXT_COLOR_SYSTEM_GOLD, "Gold");
+
+    for (i = 0; i < CoRowCount; ++i)
+    {
+        int coCol = TEXT_COLOR_SYSTEM_WHITE;
+        int gaugeCol = TEXT_COLOR_SYSTEM_WHITE;
+        int goldCol = TEXT_COLOR_SYSTEM_WHITE;
+        int y = Y_HAND + (i * 2);
+
+        if (i == selectedRow)
+        {
+            if (selectedCol == 0)
+                coCol = TEXT_COLOR_SYSTEM_GREEN;
+            else if (selectedCol == 1)
+                gaugeCol = TEXT_COLOR_SYSTEM_GREEN;
+            else
+                goldCol = TEXT_COLOR_SYSTEM_GREEN;
+        }
+
+        PutString(gBG0TilemapBuffer + TILEMAP_INDEX(11, y), coCol, CoScreen_GetCoName(proc->tmp[i * CoColCount + 0]));
+        PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(20, y), gaugeCol, proc->tmp[i * CoColCount + 1]);
+        PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(26, y), goldCol, proc->tmp[i * CoColCount + 2]);
+    }
+
+    BG_EnableSyncByMask(BG0_SYNC_BIT);
+}
+
+static void AdjustCoField(DebuggerProc * proc, int row, int col, int delta)
+{
+    int idx = row * CoColCount + col;
+
+    switch (col)
+    {
+    case 0: // CO id
+        proc->tmp[idx] += delta;
+        if (proc->tmp[idx] < 0)
+            proc->tmp[idx] = 0;
+        if (proc->tmp[idx] >= CoScreen_GetCoCount())
+            proc->tmp[idx] = CoScreen_GetCoCount() - 1;
+        break;
+
+    case 1: // Gauge
+        proc->tmp[idx] += delta * 100;
+        if (proc->tmp[idx] < 0)
+            proc->tmp[idx] = 0;
+        if (proc->tmp[idx] > 9999)
+            proc->tmp[idx] = 9999;
+        break;
+
+    case 2: // Gold
+        proc->tmp[idx] += delta * 100;
+        if (proc->tmp[idx] < 0)
+            proc->tmp[idx] = 0;
+        if (proc->tmp[idx] > CoGoldEditMax)
+            proc->tmp[idx] = CoGoldEditMax;
+        break;
+    }
+}
+
+void EditCoInit(DebuggerProc * proc)
+{
+    int i;
+    int x, y, w, h;
+
+    SomeMenuInit(proc);
+
+    for (i = 0; i < CoRowCount; ++i)
+    {
+        proc->tmp[i * CoColCount + 0] = gPlaySt.commanderId[sCoFactionIds[i]];
+        proc->tmp[i * CoColCount + 1] = gPlaySt.coGauge[sCoFactionIds[i]];
+        proc->tmp[i * CoColCount + 2] = GetFactionChapterGoldAmount(sCoFactionIds[i]);
+    }
+
+    proc->id = 0;
+
+    x = 2;
+    y = Y_HAND - 2;
+    w = 27;
+    h = (CoRowCount * 2) + 3;
+
+    DrawUiFrame(BG_GetMapBuffer(1), x, y, w, h, TILEREF(0, 0), 0);
+
+    struct Text * th = gStatScreen.text;
+    for (i = 0; i < CoRowCount; ++i)
+        InitText(&th[i], CoNameWidth);
+
+    RedrawCoMenu(proc);
+}
+
+void EditCoIdle(DebuggerProc * proc)
+{
+    u16 keys = gKeyStatusPtr->repeatedKeys;
+    u16 newKeys = gKeyStatusPtr->newKeys;
+    int row = proc->id / CoColCount;
+    int col = proc->id % CoColCount;
+
+    if (newKeys & B_BUTTON)
+    {
+        int i;
+
+        for (i = 0; i < CoRowCount; ++i)
+        {
+            gPlaySt.commanderId[sCoFactionIds[i]] = proc->tmp[i * CoColCount + 0];
+            gPlaySt.coGauge[sCoFactionIds[i]] = proc->tmp[i * CoColCount + 1];
+            SetFactionChapterGoldAmount(sCoFactionIds[i], proc->tmp[i * CoColCount + 2]);
+        }
+
+        Proc_Goto(proc, RestartLabel);
+        BackPressSFX();
+        return;
+    }
+
+    if (newKeys & DPAD_DOWN)
+    {
+        row = (row + 1) % CoRowCount;
+        proc->id = row * CoColCount + col;
+        RedrawCoMenu(proc);
+    }
+    else if (newKeys & DPAD_UP)
+    {
+        row = (row + CoRowCount - 1) % CoRowCount;
+        proc->id = row * CoColCount + col;
+        RedrawCoMenu(proc);
+    }
+    else if (newKeys & DPAD_RIGHT)
+    {
+        col = (col + 1) % CoColCount;
+        proc->id = row * CoColCount + col;
+        RedrawCoMenu(proc);
+    }
+    else if (newKeys & DPAD_LEFT)
+    {
+        col = (col + CoColCount - 1) % CoColCount;
+        proc->id = row * CoColCount + col;
+        RedrawCoMenu(proc);
+    }
+
+    if (keys & R_BUTTON)
+    {
+        AdjustCoField(proc, row, col, 1);
+        RedrawCoMenu(proc);
+    }
+    else if (keys & L_BUTTON)
+    {
+        AdjustCoField(proc, row, col, -1);
+        RedrawCoMenu(proc);
+    }
+}
+#endif // FE8_CO_POWERS
+
 void EditBgmInit(DebuggerProc * proc)
 {
     SomeMenuInit(proc);
@@ -5995,6 +6192,17 @@ u8 EditBgmNow(struct MenuProc * menu, struct MenuItemProc * menuItem)
     Proc_Goto(proc, EditBgmLabel);
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
+
+#if FE8_CO_POWERS
+u8 EditCoNow(struct MenuProc * menu, struct MenuItemProc * menuItem)
+{
+    DebuggerProc * proc;
+    proc = Proc_Find(DebuggerProcCmd);
+    ClearMainMenuGfx(proc);
+    Proc_Goto(proc, EditCoLabel);
+    return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+}
+#endif
 
 u8 LoadUnitsNow(struct MenuProc * menu, struct MenuItemProc * menuItem)
 {

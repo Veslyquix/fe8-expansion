@@ -453,6 +453,21 @@
 #define FE8_FIX_BUGS 0
 #endif
 
+/* Tracks per-chapter and per-save-slot player-unit deaths, plus enemies
+ * defeated (a per-turn "power score" high-water mark and a per-chapter
+ * total), so later chapters/events can reference them as a running game
+ * rank (see src/gamerank.c). */
+#ifndef FE8_GAME_RANK
+#define FE8_GAME_RANK 0
+#endif
+
+/* Advance Wars reference: adds a "CO Powers" entry to the chapter (map)
+ * menu that pans the camera onto every one of the player's units in turn,
+ * parking the cursor on each for 5 frames (see src/power.c). */
+#ifndef FE8_CO_POWERS
+#define FE8_CO_POWERS 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -605,6 +620,14 @@
 
 #if (FE8_TURN_AUTOSAVE != 0) && (FE8_TURN_AUTOSAVE != 1)
 #error "FE8_TURN_AUTOSAVE must be 0 or 1"
+#endif
+
+#if (FE8_GAME_RANK != 0) && (FE8_GAME_RANK != 1)
+#error "FE8_GAME_RANK must be 0 or 1"
+#endif
+
+#if (FE8_CO_POWERS != 0) && (FE8_CO_POWERS != 1)
+#error "FE8_CO_POWERS must be 0 or 1"
 #endif
 
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)

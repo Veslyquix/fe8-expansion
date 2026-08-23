@@ -42,7 +42,7 @@ struct WeaponDebuffEntry {
  * doesn't debuff on hit. Sized to the build's configured item id cap
  * (id_space.h) so every valid item id is always a safe, in-bounds index. */
 CONST_DATA struct WeaponDebuffEntry gWeaponDebuffTable[ITEM_ID_CONFIGURED_CAP] = {
-    [ITEM_LANCE_IRON] = {
+    [ITEM_LANCE_SLIM] = {
         .pow = { .percent = -20 },
         .skl = { .percent = -20 },
         .spd = { .percent = -20 },

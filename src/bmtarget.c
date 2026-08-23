@@ -602,6 +602,18 @@ void MakeTargetListForPick(struct Unit* unit) {
     return;
 }
 
+#if FE8_PURCHASE_GENERICS
+static bool CanUnitReceivePropertyTerrainHeal(struct Unit* unit)
+{
+    struct Trap* trap = GetPurchaseBaseTrapAt(unit->xPos, unit->yPos);
+
+    if (trap == NULL)
+        return TRUE;
+
+    return GetPurchaseBaseTrapOwner(trap) == (UNIT_FACTION(unit) >> 6);
+}
+#endif
+
 void MakeTerrainHealTargetList(int faction) {
     int i;
 
@@ -621,6 +633,12 @@ void MakeTerrainHealTargetList(int faction) {
         }
 
         terrainId = gBmMapTerrain[unit->yPos][unit->xPos];
+
+#if FE8_PURCHASE_GENERICS
+        if (!CanUnitReceivePropertyTerrainHeal(unit)) {
+            continue;
+        }
+#endif
 
         if (GetTerrainHealAmount(terrainId) != 0 && (GetUnitCurrentHp(unit) != GetUnitMaxHp(unit))) {
             amount = (GetTerrainHealAmount(terrainId) * GetUnitMaxHp(unit)) / 100;
@@ -689,6 +707,7 @@ static void TryHealAdjacentToCampTent(int x, int y) {
 // already-added targets).
 void MakeCampTentHealTargetList(int faction) {
     int i;
+    int factionId = faction >> 6;
     bool any = FALSE;
 
     InitTargets(0, 0);
@@ -708,7 +727,7 @@ void MakeCampTentHealTargetList(int faction) {
             continue;
         }
 
-        if (GetPurchaseBaseTrapOwner(trap) != faction) {
+        if (GetPurchaseBaseTrapOwner(trap) != factionId) {
             continue;
         }
 
@@ -718,7 +737,7 @@ void MakeCampTentHealTargetList(int faction) {
     }
 
     if (any) {
-        sCampTentHealFactionId = faction;
+        sCampTentHealFactionId = factionId;
         ForEachPosInRange(TryHealAdjacentToCampTent);
     }
 

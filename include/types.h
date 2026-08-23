@@ -241,6 +241,36 @@ struct PlaySt { // Chapter Data Struct
                               * bumped alongside this for exactly that
                               * reason. */
 #endif
+
+#if FE8_GAME_RANK
+    /* Appended at the struct's own end, same reasoning/pattern as
+     * mapGenSeed above (EXPANSION_SAVE_COMPAT_EPOCH bumped alongside this).
+     * Player-unit deaths aren't tracked here -- they're already available
+     * for free via vanilla's GetGameDeathCount()/GetChapterDeathCount()
+     * (permadeath keeps a dead unit's US_DEAD state and bwl->deathLoc set
+     * for the rest of the playthrough; see src/gamerankings.c). Only
+     * enemy-kill tracking is new (see src/gamerank.c). */
+    u16 rankTotalKills;        // cumulative enemies defeated, this save slot
+    u16 rankChapterKills;      // enemies defeated so far this chapter
+    u16 rankTurnKills;         // enemies defeated so far on the current turn
+    u16 rankChapterPowerScore; // best rankTurnKills reached this chapter
+    u16 rankBestPowerScore;    // best rankTurnKills ever reached, this save slot
+
+    /* One commander (CO) id per allegiance, indexed by faction >> 6 (see
+     * FACTION_BLUE/GREEN/RED/PURPLE, bmunit.h): commanderId[0] = blue,
+     * [1] = green, [2] = red, [3] = purple. Zero-initialized, so every new
+     * save defaults every allegiance to commander id 0 (CO_FRANCIS, the
+     * only commander defined so far -- see src/power.c). */
+    u8 commanderId[4];
+
+    /* One CO gauge per allegiance, same faction>>6 indexing as
+     * commanderId above. Gains a point per point of battle damage dealt
+     * or received by that faction's units (src/bmbattle.c's
+     * BattleGenerateHitEffects, via CoGauge_OnDamage, src/power.c); using
+     * that faction's CO power depletes it back to 0
+     * (CoGauge_OnPowerUsed). */
+    s16 coGauge[4];
+#endif
 } BITPACKED;
 
 /* PlaySt::config::animationType */

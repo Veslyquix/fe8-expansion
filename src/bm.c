@@ -27,6 +27,7 @@
 #include "worldmap.h"
 #include "eventcall.h"
 #include "purchase_generics.h"
+#include "gamerank.h"
 
 #include "bm.h"
 
@@ -417,6 +418,10 @@ void SwitchPhases(void)
 
         if (gPlaySt.chapterTurnNumber < 999)
             gPlaySt.chapterTurnNumber++;
+
+#if FE8_GAME_RANK
+        GameRank_OnTurnStart();
+#endif
 
         ProcessTurnSupportExp();
     }

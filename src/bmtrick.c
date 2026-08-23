@@ -2,6 +2,7 @@
 
 #include "constants/terrains.h"
 #include "constants/event-flags.h"
+#include "constants/chapters.h"
 
 #include "bmunit.h"
 #include "bmmap.h"
@@ -201,6 +202,35 @@ struct Trap* GetPurchaseBaseTrapAt(int x, int y)
 // PURCHASE_BASE_KIND_CAMP/_TENT); chapter authoring uses the TRAP_CAMP/
 // TRAP_TENT TrapData.type tags (LoadTrapData, src/bmtrap.c), which call
 // these constructors directly instead of going through the terrain-scan
+// Finds any tile-config slot in the CURRENT tileset whose terrain is
+// TERRAIN_PLAINS and returns its raw gBmMapBaseTiles value (config index
+// << 2 -- see DisplayBmTile/RefreshTerrainBmMap, src/bmmap.c, for why: the
+// map array stores one raw value per logical tile, always the metatile's
+// own TL-corner offset, with the other 3 corners fetched from
+// sTilesetConfig[index*4 + 1/2/3] at draw time). Used to give a Camp tile
+// a real, ordinary-looking graphic instead of whatever raw base-tile
+// happened to be painted there -- notably the tileset's reserved "final 4
+// slots" markers (InitCampTrapsFromTilesetMarkers below), which were never
+// assigned real tile graphics and render as garbage/black. Works with any
+// tileset, since it looks the answer up at runtime rather than hardcoding
+// a specific tileset's own Plains tile index.
+static u16 GetPlainsBaseTileValue(void)
+{
+    int i;
+
+    // gTilesetTerrainLookup addresses 1024 tile-config slots (see
+    // InitCampTrapsFromTilesetMarkers below, which names this same 1024
+    // as CAMP_TILESET_MARKER_SLOT_COUNT -- not reused directly here since
+    // that macro isn't defined until later in this file).
+    for (i = 0; i < 1024; ++i)
+    {
+        if (gTilesetTerrainLookup[i] == TERRAIN_PLAINS)
+            return i << 2;
+    }
+
+    return 0;
+}
+
 // InitPurchaseBaseTrapsFromTerrain path villages/forts/houses use.
 struct Trap* AddCampTrap(int x, int y, int owner)
 {
@@ -226,22 +256,34 @@ struct Trap* AddCampTrap(int x, int y, int owner)
     // so passability is restored there for free.
     gBmMapTerrain[y][x] = TERRAIN_FLOOR_MAGIC;
 
+    // Also force the drawn tile graphic to a real Plains tile -- Camp is
+    // usually placed on whatever the map author already painted there
+    // (fine as-is), but a Camp placed via one of the tileset's reserved
+    // marker slots would otherwise draw whatever garbage graphic that
+    // never-assigned slot happens to contain.
+    gBmMapBaseTiles[y][x] = GetPlainsBaseTileValue();
+
     return trap;
 }
 
-// Re-applies every live Camp trap's movement-blocking terrain override.
-// Mirrors RefreshAllLightRunes -- called from the same place
+// Re-applies every live Camp trap's movement-blocking terrain override
+// (and its Plains graphic override, see AddCampTrap/GetPlainsBaseTileValue
+// above). Mirrors RefreshAllLightRunes -- called from the same place
 // (RefreshTerrainBmMap, src/bmmap.c) right after it, so a full terrain
 // rebuild (map load, or after a Camp is destroyed and removed) doesn't
 // silently make remaining Camps traversable again.
 void RefreshAllCampTraps(void)
 {
     struct Trap* trap;
+    u16 plainsTile = GetPlainsBaseTileValue();
 
     for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
     {
         if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
+        {
             gBmMapTerrain[trap->yPos][trap->xPos] = TERRAIN_FLOOR_MAGIC;
+            gBmMapBaseTiles[trap->yPos][trap->xPos] = plainsTile;
+        }
     }
 }
 
@@ -416,6 +458,85 @@ static int GetPurchaseBaseKindFromTerrain(int terrain)
 
     default:
         return PURCHASE_BASE_KIND_VILLAGE;
+    }
+}
+
+// Fields/SuperFields tileset (see CREDITS.md's "Map Tilesets" section)
+// only, for now: 4 of the tileset's previously-unused slots -- Tiled GIDs
+// 993-996 (this tileset's firstgid is 1, so raw tile-config index =
+// GID - 1) -- were repurposed in graphics/map/SuperFieldsTileConfiguration.S
+// to look and behave like House (Tiled GID 805 / raw index 804) and Fort
+// (Tiled GID 933 / raw index 932), but pre-owned by a real faction instead
+// of neutral: painting one of these 4 tiles anywhere on the map creates an
+// already-owned House/Fort purchase base there (with its faction flag --
+// see src/bmudisp.c) at chapter load, instead of the neutral one
+// InitPurchaseBaseTrapsFromTerrain below would otherwise create from their
+// (now real) TERRAIN_HOUSE/TERRAIN_FORT terrain -- which is exactly why
+// this must run BEFORE InitPurchaseBaseTrapsFromTerrain (see the call site,
+// src/bmio.c): both check GetTrapAt() first, so whichever runs first claims
+// the tile. SuperFieldsTileConfiguration is only ever loaded for the
+// Prologue (gChapterDataAssetTable, src/data/data_8B363C.c), so this is a
+// no-op everywhere else.
+#define SUPERFIELDS_MARKER_HOUSE_PLAYER 992
+#define SUPERFIELDS_MARKER_HOUSE_ENEMY  993
+#define SUPERFIELDS_MARKER_FORT_PLAYER  994
+#define SUPERFIELDS_MARKER_FORT_ENEMY   995
+
+void InitSuperFieldsPreOwnedBaseMarkers(void)
+{
+    int ix, iy;
+
+#if !FE8_NEW_TILESETS
+    // Without FE8_NEW_TILESETS the Prologue loads the vanilla Fields
+    // tileset (TileConfiguration1) instead -- a completely different tile
+    // layout that was never touched for this feature, so slots 992-995
+    // there mean something else entirely (or nothing). Bail out rather
+    // than risk creating a base on an unrelated tile.
+    return;
+#endif
+
+    if (gPlaySt.chapterIndex != CHAPTER_L_PROLOGUE)
+        return;
+
+    for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
+    {
+        for (ix = gBmMapSize.x - 1; ix >= 0; --ix)
+        {
+            int configIndex = gBmMapBaseTiles[iy][ix] >> 2;
+            int kind;
+            int owner;
+
+            switch (configIndex)
+            {
+            case SUPERFIELDS_MARKER_HOUSE_PLAYER:
+                kind = PURCHASE_BASE_KIND_HOUSE;
+                owner = FACTION_ID_BLUE;
+                break;
+
+            case SUPERFIELDS_MARKER_HOUSE_ENEMY:
+                kind = PURCHASE_BASE_KIND_HOUSE;
+                owner = FACTION_ID_RED;
+                break;
+
+            case SUPERFIELDS_MARKER_FORT_PLAYER:
+                kind = PURCHASE_BASE_KIND_FORT;
+                owner = FACTION_ID_BLUE;
+                break;
+
+            case SUPERFIELDS_MARKER_FORT_ENEMY:
+                kind = PURCHASE_BASE_KIND_FORT;
+                owner = FACTION_ID_RED;
+                break;
+
+            default:
+                continue;
+            }
+
+            if (GetTrapAt(ix, iy) != NULL)
+                continue;
+
+            AddPurchaseBaseTrap(ix, iy, owner, kind);
+        }
     }
 }
 

@@ -246,6 +246,12 @@ endif
 ifeq ($(SKIP_OPENING),1)
 MODERN_DEFINE_FLAGS += -DFE8_SKIP_OPENING=1
 endif
+ifeq ($(GAME_RANK),1)
+MODERN_DEFINE_FLAGS += -DFE8_GAME_RANK=1
+endif
+ifeq ($(CO_POWERS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CO_POWERS=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1555,6 +1561,11 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--credits "$(CREDITS)" \
 		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 		--skip-opening "$(SKIP_OPENING)" \
+	--game-rank "$(GAME_RANK)" \
+	--co-powers "$(CO_POWERS)" \
+		--game-rank "$(GAME_RANK)" \
+	--co-powers "$(CO_POWERS)" \
+		--co-powers "$(CO_POWERS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1638,6 +1649,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--credits "$(CREDITS)" \
 	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 	--skip-opening "$(SKIP_OPENING)" \
+	--game-rank "$(GAME_RANK)" \
+	--co-powers "$(CO_POWERS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1729,7 +1742,9 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
-	-DFE8_CREDITS=$(CREDITS)
+	-DFE8_CREDITS=$(CREDITS) \
+	-DFE8_GAME_RANK=$(GAME_RANK) \
+	-DFE8_CO_POWERS=$(CO_POWERS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1916,6 +1931,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'credits=$(CREDITS)'; \
 		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
+		printf '%s\n' 'game_rank=$(GAME_RANK)'; \
+		printf '%s\n' 'co_powers=$(CO_POWERS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
