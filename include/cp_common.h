@@ -77,7 +77,12 @@ enum
 
     // "ai4"
 
-    // 8+
+    // 8~12 group id (FE8_GROUP_AI, ported from Pokemblem's GroupAI patch):
+    // 0 means no group; 1-31 tags this unit as belonging to a numbered
+    // group. See src/group_ai.c.
+    AI_UNIT_CONFIG_GROUPID_SHIFT = 8,
+    AI_UNIT_CONFIG_GROUPID_BITS = 5,
+    AI_UNIT_CONFIG_GROUPID_MASK = ((1 << AI_UNIT_CONFIG_GROUPID_BITS) - 1) << AI_UNIT_CONFIG_GROUPID_SHIFT,
 
     // 13
     AI_UNIT_CONFIG_FLAG_STAY = 1 << 13,

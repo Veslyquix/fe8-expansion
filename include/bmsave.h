@@ -8,6 +8,7 @@
 #include "bmdifficulty.h"
 #include "bonusclaim.h"
 #include "bmmind.h"
+#include "agb_sram.h"
 
 enum {
     UNIT_SAVE_AMOUNT_BLUE = 51,
@@ -25,6 +26,12 @@ enum save_chunk_index {
     SAVE_ID_XMAP,
     SAVE_ID_MAX
 };
+
+#ifdef DEBUFFS_EXIST
+#define SUSPEND_SAVE_BLOCK_COUNT 1
+#else
+#define SUSPEND_SAVE_BLOCK_COUNT 2
+#endif
 
 enum {
     SAVEBLOCK_KIND_GAME,
@@ -198,11 +205,24 @@ struct ChapterStats {
 #define WIN_ARRAY_NUM 0x30
 
 struct GameSavePackedUnit {       /* Save Data */
+#if FE8_PURCHASE_GENERICS
+    /* Class ID space is widened to a full byte here (see docs/id_space.md,
+     * "class" domain) so jid no longer shares a bitfield word with the
+     * fields below -- this keeps their relative bit-packing unchanged and
+     * confines the layout change (and the +1-byte struct growth) to this
+     * flag, matching EXPANSION_SAVE_COMPAT_EPOCH's bump for this change. */
+    /* 00 */ u8  jid;
+             u32 level      : 5;
+             u32 exp        : 7;
+             u32 xPos       : 6;
+             u32 yPos       : 6;
+#else
     /* 00 */ u32 jid      : 7;
              u32 level      : 5;
              u32 exp        : 7;
              u32 xPos       : 6;
              u32 yPos       : 6;
+#endif
 
              u32 flag       : 13;
 
@@ -283,6 +303,9 @@ struct SuspendSavePackedUnit {     /* Suspend Data */
     
     /* 31 */ u8 ai_counter;
     /* 32 */ u16 ai_config;
+#ifdef DEBUFFS_EXIST
+    /* 34 */ s8 debuffs[UNIT_DEBUFF_STAT_COUNT];
+#endif
     /* 34 */
 } BITPACKED;
 
@@ -382,6 +405,9 @@ struct GameSaveBlock {
 struct SuspendSaveBlock {
     struct PlaySt playSt;
     struct ActionData action;
+#if FE8_PURCHASE_GENERICS
+    u32 chapterGold[3];
+#endif
     struct SuspendSavePackedUnit blueUnits[UNIT_SAVE_AMOUNT_BLUE];
     struct SuspendSavePackedUnit wmMonsterUnit; // TODO: update this to `struct Dungeon dungeons[2]; u8 filler[0x1C];`?
     struct SuspendSavePackedUnit redUnits[UNIT_SAVE_AMOUNT_RED];
@@ -401,7 +427,7 @@ struct SuspendSaveBlock {
 struct SaveBlocks {
     /* 0x0000 */ struct GlobalSaveInfo globalSaveInfo;
     /* 0x0064 */ struct SaveBlockInfo saveBlockInfo[SAVE_ID_MAX];
-    /* 0x00D4 */ struct SuspendSaveBlock suspendSaveBlocks[2];
+    /* 0x00D4 */ struct SuspendSaveBlock suspendSaveBlocks[SUSPEND_SAVE_BLOCK_COUNT];
     /* 0x3FC4 */ struct GameSaveBlock gameSaveBlocks[3];
     /* 0x691C */ struct MultiArenaSaveBlock multiArenaBlock;
     /* 0x7190 */ struct GameRankSaveDataPacks gameRankSave;
@@ -409,8 +435,36 @@ struct SaveBlocks {
     /* 0x7248 */ struct bmsave_unkstruct2 unkstruct2;
     /* 0x725C */ struct BonusClaimSaveData bonusClaim;
     /* 0x73A0 */ u8 reserved[4];
-    /* 0x73A4 */ struct ExpansionSaveMeta expansionSaveMeta; // see include/save_format.h, docs/save_format.md
-    /* 0x7400 */ struct ExtraMapSaveHead xmap; // see bmsave-xmap.c
+#if FE8_PURCHASE_GENERICS
+    u8 expansionSaveMetaPad[
+        (CART_SRAM_SIZE - sizeof(struct ExpansionSaveMeta))
+        - (sizeof(struct GlobalSaveInfo)
+            + SAVE_ID_MAX * sizeof(struct SaveBlockInfo)
+            + SUSPEND_SAVE_BLOCK_COUNT * sizeof(struct SuspendSaveBlock)
+            + 3 * sizeof(struct GameSaveBlock)
+            + sizeof(struct MultiArenaSaveBlock)
+            + sizeof(struct GameRankSaveDataPacks)
+            + sizeof(struct SoundRoomSaveData)
+            + sizeof(struct bmsave_unkstruct2)
+            + sizeof(struct BonusClaimSaveData)
+            + 4)];
+#endif
+    /* 0x73A4, or 0x7FA4 when FE8_PURCHASE_GENERICS disables xmap */
+    struct ExpansionSaveMeta expansionSaveMeta; // see include/save_format.h, docs/save_format.md
+
+    /* 0x7400 when FE8_PURCHASE_GENERICS is off (sizeof 0x1C); a zero-length
+     * array -- always declared, never conditionally compiled away -- when
+     * it is on, since the xmap feature is fully stubbed out in that config
+     * (see the FE8_PURCHASE_GENERICS branch of src/bmsave-xmap.c: every
+     * xmap function is a no-op and gpSramExtraData points past the end of
+     * physical SRAM) and no code anywhere dereferences this field directly
+     * -- every real access goes through gpSramExtraData, computed
+     * independently. `xmap` therefore always exists as a field name (no
+     * "has no member named xmap" depending on config) and always sits at
+     * the same offset, while costing exactly 0 bytes when unused; verified
+     * identical under both agbcc and modern gcc (zero-length arrays are a
+     * long-standing GNU extension both support, not a C89/C99 feature). */
+    struct ExtraMapSaveHead xmap[FE8_PURCHASE_GENERICS ? 0 : 1]; // see bmsave-xmap.c
 };
 
 // TODO: figure out how these structs work

@@ -162,6 +162,28 @@ void Title_Init(struct TitleScreenProc* proc) {
     SetBackgroundMapDataOffset(2, 0xb000);
     SetBackgroundMapDataOffset(3, 0x7800);
 
+#if FE8_TITLE_256_COLORS
+    /* BG0/BG1/BG3's vanilla screen (tilemap) bases above all fall inside
+     * [0, 0x9600) -- the 8bpp title image's own VRAM footprint (see
+     * Title_SetupMainGraphics case 0). BG_EnableSyncByMask(0xf) below
+     * flushes all four BG tilemap RAM buffers to VRAM every frame
+     * regardless of which BGs are actually enabled, so without this, that
+     * sync stomps tile graphics 416-511 with tilemap data (zeros for the
+     * unused BG0/BG3, our own tile-index numbers for BG1) instead of
+     * leaving the image's pixels alone.
+     *
+     * Relocated past 0xC400, not just past 0x9600: case 0's second
+     * decompress (to VRAM+0x2E00, replicating the original patch's own
+     * duplicate-tile trick) extends the image's real footprint out to
+     * 0x2E00+0x9600=0xC400, not just 0x9600. 0xC800/0xD000/0xD800 are
+     * 0x800-aligned, past that whole range, and clear of BG2's own screen
+     * base (0xb000, itself already past 0x9600 so left alone) and of OBJ
+     * char VRAM (0x10000). */
+    SetBackgroundMapDataOffset(0, 0xc800);
+    SetBackgroundMapDataOffset(1, 0xd000);
+    SetBackgroundMapDataOffset(3, 0xd800);
+#endif
+
     SetBackgroundScreenSize(0, 0);
     SetBackgroundScreenSize(1, 0);
     SetBackgroundScreenSize(2, 0);
@@ -202,17 +224,69 @@ void Title_SetupMainGraphics(struct TitleScreenProc * proc)
 
     switch (proc->timer) {
     case 0:
+#if FE8_TITLE_256_COLORS
+        /* BG1 switched to 256-color mode; the whole 38400-byte image is
+         * decompressed twice, exactly like the original 256-colour title
+         * patch's own ASM (same source, two destinations, in this exact
+         * order): first to VRAM+0x2E00 (tile 184), then to VRAM+0 (tile 0).
+         * The two writes overlap in [0x2E00, 0x9600) -- the second
+         * (unshifted) write wins there, since it runs last -- leaving the
+         * first write's un-overwritten tail, [0x9600, 0xC400) (tiles
+         * 600-783), holding a second copy of source tiles 416-599 shifted
+         * up by 184. The tilemap in case 1 below references that
+         * duplicate range for one stretch instead of the direct tiles it
+         * duplicates (600-695 instead of 416-511) -- functionally
+         * identical pixels either way, but this matches the original
+         * tilemap's own layout (decoded from its titlebackgroundtsa.bin)
+         * exactly rather than just being visually equivalent to it. */
+        gLCDControlBuffer.bg1cnt.colorMode = 1;
+        Decompress(gGfx_TitleMainBackground256, (void*)(VRAM + 0x2E00));
+        Decompress(gGfx_TitleMainBackground256, (void*)VRAM);
+#else
         Decompress(gGfx_TitleMainBackground_1, (void*)VRAM);
+#endif
 
         break;
 
     case 1:
+#if FE8_TITLE_256_COLORS
+        /* No TSA asset: an 8bpp full-screen image needs a plain sequential
+         * tilemap (tile N at screen position (N/30, N%30), no per-tile
+         * palette nibble -- 256-color mode has only one palette), so build
+         * it directly instead of shipping a baked binary with no image
+         * source. The map buffer's screen stride is 32 tiles wide
+         * (SetBackgroundScreenSize(1, 0) in Title_Init), but the 240x160
+         * image is only 30 tiles wide, so this has to walk row-by-row
+         * rather than fill 0..599 sequentially.
+         *
+         * tile 416-511 reference the duplicate copy at 600-695 instead of
+         * the direct tiles they duplicate (both hold the same pixels --
+         * see the comment on the case 0 decompresses above), matching the
+         * original title patch's own tilemap exactly. */
+        {
+            int row, col, n;
+
+            for (row = 0; row < 20; row++) {
+                for (col = 0; col < 30; col++) {
+                    n = row * 30 + col;
+
+                    if (n >= 416 && n < 512)
+                        n = 600 + (n - 416);
+
+                    gBG1TilemapBuffer[row * 32 + col] = n;
+                }
+            }
+        }
+
+        ApplyPalettes(gPal_TitleMainBackground256, 0, 16);
+#else
         Decompress(gGfx_TitleMainBackground_2, (void*)0x06003000);
         Decompress(gTsa_TitleMainBackground, gBG1TilemapBuffer);
         ApplyPalette(gPal_TitleMainBackground, 0xE);
 
         for (i = 0; i < 0x280; i++)
             gBG1TilemapBuffer[i] += 0xE000;
+#endif
 
         if (proc->mode != 0)
             gPaletteBuffer[PAL_BACKDROP_OFFSET] = 0x7FFF; // White
@@ -222,6 +296,13 @@ void Title_SetupMainGraphics(struct TitleScreenProc * proc)
         break;
 
     case 2:
+#if !FE8_TITLE_256_COLORS
+        /* The dragon foreground shares BG1's char base (0x06005000 falls
+         * inside the 256-color image's 0-0x9600 VRAM footprint above) --
+         * the single custom background replaces it outright rather than
+         * compositing under it. See also TitleScreenTryJumpIntroAnim and
+         * Title_EnableMainScreenDisplay, which keep BG0 off for the same
+         * reason. */
         Decompress(gGfx_TitleDragonForeground, (void*)0x06005000);
         Decompress(gTsa_TitleDragonForeground, gBG0TilemapBuffer);
         ApplyPalette(gPal_TitleDragonForeground, 0xF);
@@ -230,6 +311,7 @@ void Title_SetupMainGraphics(struct TitleScreenProc * proc)
             gBG0TilemapBuffer[i] += 0xF280;
 
         BG_EnableSyncByMask(1);
+#endif
         break;
 
     case 3:
@@ -250,17 +332,29 @@ void Title_SetupMainGraphics(struct TitleScreenProc * proc)
 //! FE8U = 0x080C5848
 void TitleScreenTryJumpIntroAnim(struct TitleScreenProc * proc)
 {
+#if FE8_TITLE_256_COLORS
+    /* The dragon-flash/demon-king/logo-zoom intro sequence draws to BG0/BG2
+     * char bases that the 256-color background's VRAM footprint now
+     * overlaps (see Title_SetupMainGraphics case 2) -- always take the
+     * skip-straight-to-idle path, regardless of proc->mode. */
+    Proc_Start(gProcScr_DrawTitleSprites, proc);
+#else
     if (proc->mode != 0)
         Proc_Goto(proc, 0);
     else
         Proc_Start(gProcScr_DrawTitleSprites, proc);
+#endif
 }
 
 //! FE8U = 0x080C5870
 void Title_EnableMainScreenDisplay(void) {
     BG_EnableSyncByMask(0xf);
 
+#if FE8_TITLE_256_COLORS
+    gLCDControlBuffer.dispcnt.bg0_on = 0; // dragon foreground not loaded; see Title_SetupMainGraphics case 2
+#else
     gLCDControlBuffer.dispcnt.bg0_on = 1;
+#endif
     gLCDControlBuffer.dispcnt.bg1_on = 1;
     gLCDControlBuffer.dispcnt.bg2_on = 0;
     gLCDControlBuffer.dispcnt.bg3_on = 0;

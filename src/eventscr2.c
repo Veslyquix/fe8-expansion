@@ -135,4 +135,114 @@ struct CONST_DATA gfx_set gConvoBackgroundData[] = {
 	{bg_Black_Temple_Outside_tiles, bg_Black_Temple_Outside_map, bg_Black_Temple_Outside_palette},
 	{bg_Black_Temple_Inside_tiles, bg_Black_Temple_Inside_map, bg_Black_Temple_Inside_palette},
 	{bg_Blank_tiles, bg_Blank_map, bg_Blank_palette},
+#if FE8_MULTIPALETTE_BG
+	/* Two more copies of BG_BLANK, padding the array out so the real
+	 * entries below start at BG_ALTAR_NIGHT_256 (0x38) -- one past
+	 * BG_RANDOM (0x37, include/constants/backgrounds.h), which is never
+	 * moved and never a real array index (see NextRN_N(BG_BLANK) in
+	 * eventscr.c), so a future addition here can't collide with it. */
+	{bg_Blank_tiles, bg_Blank_map, bg_Blank_palette}, // 0x36
+	{bg_Blank_tiles, bg_Blank_map, bg_Blank_palette}, // 0x37 (BG_RANDOM)
+
+	/* .tsa doubles as a mode sentinel here (ported from the FE8U_256ColBG
+	 * community patch): CONVOBG_MULTIPALETTE_256/224/192 instead of a real
+	 * tilemap pointer tells LoadMultipaletteConvoBg (below) that .gfx is a
+	 * whole 256x160 8bpp image, not a 4bpp tileset+tilemap pair. A real
+	 * tsa pointer is always a ROM/RAM address far larger than these. */
+	{bg_AltarNight256_tiles, CONVOBG_MULTIPALETTE_256, bg_AltarNight256_palette}, // 0x38
+	{bg_kh_tiles, CONVOBG_MULTIPALETTE_224, bg_kh_palette}, // 0x39
+#endif
 };
+
+#if FE8_MULTIPALETTE_BG
+static EWRAM_DATA bool sMultipaletteConvoBgActive = FALSE;
+
+/* Whether the currently-displayed conversation background is a
+ * multipalette (224/256/192-colour) one -- see LoadMultipaletteConvoBg.
+ * Used to skip the vanilla engine's redundant talk-bubble palette reload
+ * (see EventText_StartCgTextMsg, src/eventscr.c), which would otherwise
+ * clobber part of the image's own palette data (no reserved gap at all
+ * for the 256-colour case; the reserved gap itself for 224/192). */
+bool IsMultipaletteConvoBgActive(void)
+{
+    return sMultipaletteConvoBgActive;
+}
+
+/* Decompresses and displays a multipalette (224/256-colour, 8bpp)
+ * conversation background from gConvoBackgroundData[bgIndex] onto the
+ * given BG layer (2 or 3), if that entry is one (see the sentinel comment
+ * above). Returns FALSE (does nothing) for an ordinary vanilla entry, so
+ * callers fall through to their existing Decompress/CallARM_FillTileRect/
+ * ApplyPalettes sequence unchanged.
+ *
+ * Ported from FE8U_256ColBG (SRR_FEGBA/gfx/BGs): a 256-colour image claims
+ * the whole BG palette; a 224-colour image leaves banks 2-3 (32 colours)
+ * untouched for text/chatbubble UI; the new 192-colour mode leaves banks
+ * 2-5 (64 colours) untouched for UI that needs more room (e.g. several
+ * portraits' worth of palette). Banks 0-1 always hold the image's first 32
+ * colours; the rest resume right after the reserved gap. See
+ * scripts/convo_bg_to_source.py for the matching pixel/palette encoding. */
+bool LoadMultipaletteConvoBg(int bgIndex, int bg)
+{
+    const struct gfx_set * set = &gConvoBackgroundData[bgIndex];
+    int gap;
+    int bankStart;
+    int bankCount;
+    void * charBase;
+    u16 * tilemapBuffer;
+    int row, col;
+
+    if (set->tsa == CONVOBG_MULTIPALETTE_256)
+        gap = 0;
+    else if (set->tsa == CONVOBG_MULTIPALETTE_224)
+        gap = 32;
+    else if (set->tsa == CONVOBG_MULTIPALETTE_192)
+        gap = 64;
+    else
+    {
+        sMultipaletteConvoBgActive = FALSE;
+        return FALSE;
+    }
+
+    sMultipaletteConvoBgActive = TRUE;
+
+    /* Char base 0x0000, image data at absolute VRAM 0x4000 (tilemap
+     * entries offset by 0x100 tiles to point there) -- not char base
+     * 0x4000 with the image at relative tile 0. The dialogue UI (chat
+     * bubble / text box) loads its own graphics at charblock 0, relative
+     * tiles 0-0xFF (absolute 0-0x4000); starting our image at relative
+     * tile 0 there clobbered it. BG2 uses screen base 0xF000 because the
+     * default 0x7000 map area sits inside the image footprint. */
+    SetBackgroundTileDataOffset(bg, 0x0000);
+    
+
+    SetBackgroundMapDataOffset(BG_0, 0xE000);
+    SetBackgroundMapDataOffset(BG_1, 0xE800);
+    SetBackgroundMapDataOffset(BG_2, 0xF000);
+    SetBackgroundMapDataOffset(BG_3, 0xF800);
+    BG_Fill(gBG0TilemapBuffer, 0);
+    BG_Fill(gBG1TilemapBuffer, 0);
+    BG_Fill(gBG2TilemapBuffer, 0);
+    BG_Fill(gBG3TilemapBuffer, 0);
+    BG_EnableSyncByMask(BG0_SYNC_BIT|BG1_SYNC_BIT|BG2_SYNC_BIT|BG3_SYNC_BIT);
+
+    charBase = (void *)(VRAM + 0x4000);
+    tilemapBuffer = (bg == BG_2) ? gBG2TilemapBuffer : gBG3TilemapBuffer;
+
+    BG_GetControlBuffer(bg)->colorMode = 1;
+
+    Decompress(set->gfx, charBase);
+
+    for (row = 0; row < 20; row++)
+        for (col = 0; col < 32; col++)
+            tilemapBuffer[row * 32 + col] = 0x100 + row * 32 + col;
+
+    ApplyPalettes(set->pal, 0, 2);
+
+    bankStart = 2 + gap / 16;
+    bankCount = (224 - gap) / 16;
+    ApplyPalettes((u16 *)set->pal + 32, bankStart, bankCount);
+
+    return TRUE;
+}
+#endif

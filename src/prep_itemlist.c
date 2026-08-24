@@ -130,7 +130,11 @@ void PrepItemList_InitGfx(struct PrepItemListProc * proc)
     BG_SetPosition(1, 0, 0);
     BG_SetPosition(2, 0, proc->yOffsetPerPage[proc->currentPage] - 40);
 
+#if FE8_EXTEND_DESC_BOX
+    LoadHelpBoxGfx((void*)0x06013000, -1); /* FE8U = 0x0809F0C4: 0x6012000 -> 0x6013000. */
+#else
     LoadHelpBoxGfx((void*)0x06012000, -1);
+#endif
     LoadIconPalettes(4);
 
     RestartMuralBackground();

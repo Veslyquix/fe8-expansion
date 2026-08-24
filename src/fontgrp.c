@@ -1592,6 +1592,18 @@ void PutNumberBonus(int number, u16 *tm)
     if (number == 0)
         return;
 
+#if FE8_DEBUFFS_EXIST
+    if (number < 0)
+    {
+        number = -number;
+
+        PutSpecialChar(tm, TEXT_COLOR_SYSTEM_GOLD, TEXT_SPECIAL_BONUS_MINUS);
+        PutNumberSmall(tm + ((number >= 100) ? 3 : (number >= 10) ? 2 : 1), TEXT_COLOR_SYSTEM_GOLD, number);
+
+        return;
+    }
+#endif
+
     PutSpecialChar(tm, TEXT_COLOR_SYSTEM_GREEN, TEXT_SPECIAL_PLUS);
     PutNumberSmall(tm + ((number >= 10) ? 2 : 1), TEXT_COLOR_SYSTEM_GREEN, number);
 }

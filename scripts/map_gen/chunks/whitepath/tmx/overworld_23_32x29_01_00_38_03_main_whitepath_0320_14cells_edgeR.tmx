@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='utf-8'?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="5" height="8" tilewidth="16" tileheight="16" infinite="0" nextlayerid="2" nextobjectid="1"><tileset firstgid="1" name="Fields" tilewidth="16" tileheight="16" tilecount="1024" columns="32"><image source="../../../../Tilesets/Fields.png" width="512" height="512" /></tileset><layer id="1" name="Main" width="5" height="8"><data>
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="15" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="175" />
+  <tile gid="144" />
+  <tile />
+  <tile />
+  <tile gid="75" />
+  <tile gid="142" />
+  <tile gid="114" />
+  <tile gid="72" />
+  <tile />
+  <tile gid="107" />
+  <tile gid="167" />
+  <tile gid="39" />
+  <tile gid="144" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="143" />
+  <tile gid="104" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="47" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  </data></layer></map>

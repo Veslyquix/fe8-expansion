@@ -113,6 +113,9 @@ u8 AiControlRemainingUnitsNow(struct MenuProc * menu, struct MenuItemProc * menu
 u8 EditAiNow(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 GfxViewerNow(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 EditBgmNow(struct MenuProc * menu, struct MenuItemProc * menuItem);
+#if FE8_CO_POWERS
+u8 EditCoNow(struct MenuProc * menu, struct MenuItemProc * menuItem);
+#endif
 
 #define DEBUGGER_MENU_ITEM(draw, effect) \
     { \
@@ -166,6 +169,9 @@ const struct MenuItemDef gDebuggerMenuItemsPage3[] = {
 
 const struct MenuItemDef gDebuggerMenuItemsPage4[] = {
     DEBUGGER_MENU_ITEM(DebuggerMenuItemDraw, EditBgmNow),
+#if FE8_CO_POWERS
+    DEBUGGER_MENU_ITEM(DebuggerMenuItemDraw, EditCoNow),
+#endif
     DEBUGGER_MENU_ITEM(PageMenuItemDraw, PageIdler),
     MenuItemsEnd,
 };
@@ -212,6 +218,9 @@ char * gDebuggerMenuText[] = {
     NULL, NULL,
 
     " BGM", "Change the current\nmusic track.",
+#if FE8_CO_POWERS
+    " Co", "Edit each faction's\ncommander, CO gauge,\nand chapter gold.",
+#endif
     " Page", "Swap pages in\nthis debugger.",
 };
 

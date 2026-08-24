@@ -767,7 +767,11 @@ void *GetSaveWriteAddr(int index)
             break;
 
         case SAVE_ID_SUSPEND_ALT:
+#ifdef DEBUFFS_EXIST
+            return &gSram->suspendSaveBlocks[0];
+#else
             return &gSram->suspendSaveBlocks[1];
+#endif
             break;
 
         case SAVE_ID_ARENA:

@@ -28,6 +28,8 @@
 #include "mapanim.h"
 #include "helpbox.h"
 #include "worldmap.h"
+#include "mapgen.h"
+#include "bg.h"
 #include "cgtext.h"
 #include "bmmind.h"
 #include "eventinfo.h"
@@ -935,7 +937,11 @@ void EventText_StartCgTextMsg(struct EventEngineProc * proc, u16 stringIndex, u3
     SetWinEnable(FALSE, FALSE, FALSE);
 
     LoadObjUIGfx();
+#if FE8_MULTIPALETTE_BG
+    InitTalk(0x80, 0, IsMultipaletteConvoBgActive() ? 0 : 1);
+#else
     InitTalk(0x80, 0, 1);
+#endif
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 
     StartCgText(
@@ -1340,6 +1346,10 @@ u8 EventShowTextBgDirect(u8 mode, u16 bgIndex)
             if (bgIndex == BG_RANDOM)
                 bgIndex = NextRN_N(BG_BLANK);
 
+#if FE8_MULTIPALETTE_BG
+            if (!LoadMultipaletteConvoBg(bgIndex, BG_3))
+#endif
+            {
             // Loading Background Tile Graphics
 
             Decompress(gConvoBackgroundData[bgIndex].gfx, (void *)(VRAM + GetBackgroundTileDataOffset(3)));
@@ -1354,6 +1364,7 @@ u8 EventShowTextBgDirect(u8 mode, u16 bgIndex)
             // Loading Background Palettes
 
             ApplyPalettes(gConvoBackgroundData[bgIndex].pal, 8, 8);
+            }
 
             BG_EnableSyncByMask(BG3_SYNC_BIT);
             EnablePaletteSync();
@@ -1550,9 +1561,32 @@ void ConvoBackgroundFade_Init(struct ConvoBackgroundFadeProc * proc)
     BackupPalette(0, 6);
 }
 
+#if FE8_MULTIPALETTE_BG
+static bool IsMultipaletteConvoBg(int bgIndex)
+{
+    const struct gfx_set * set = &gConvoBackgroundData[bgIndex];
+
+    return set->tsa == CONVOBG_MULTIPALETTE_256
+        || set->tsa == CONVOBG_MULTIPALETTE_224
+        || set->tsa == CONVOBG_MULTIPALETTE_192;
+}
+#endif
+
 //! FE8U = 0x0800EBB0
 void ConvoBackgroundFade_CopyBg3ToBg2(struct ConvoBackgroundFadeProc * proc)
 {
+#if FE8_MULTIPALETTE_BG
+    if (IsMultipaletteConvoBg(proc->bgIndex)) {
+        SetBackgroundTileDataOffset(BG_2, 0x0000);
+        SetBackgroundMapDataOffset(BG_2, 0xF000);
+        BG_GetControlBuffer(BG_2)->colorMode = 1;
+
+        CopyBgTiles(BG_3, BG_2, 1);
+        SetDispEnable(FALSE, FALSE, TRUE, TRUE, TRUE);
+        return;
+    }
+#endif
+
     CopyBgImage(3, 2, 10);
     CopyBgTiles(BG_3, BG_2, 1);
     CopyBgPalette(8, 0, 6);
@@ -1564,6 +1598,18 @@ void ConvoBackgroundFade_CopyBg3ToBg2(struct ConvoBackgroundFadeProc * proc)
 //! FE8U = 0x0800EC00
 void ConvoBackgroundFade_CopyBg2ToBg3(struct ConvoBackgroundFadeProc * proc)
 {
+#if FE8_MULTIPALETTE_BG
+    if (IsMultipaletteConvoBg(proc->bgIndex)) {
+        SetBackgroundTileDataOffset(BG_3, 0x0000);
+        SetBackgroundMapDataOffset(BG_3, 0xF800);
+        BG_GetControlBuffer(BG_3)->colorMode = 1;
+
+        CopyBgTiles(BG_2, BG_3, 1);
+        SetDispEnable(FALSE, FALSE, TRUE, TRUE, TRUE);
+        return;
+    }
+#endif
+
     CopyBgImage(2, 3, 10);
     CopyBgTiles(BG_2, BG_3, 1);
     CopyBgPalette(0, 8, 6);
@@ -1589,6 +1635,10 @@ void ConvoBackgroundFade_LoadBg2(struct ConvoBackgroundFadeProc * proc)
             if (proc->bgIndex == BG_RANDOM)
                 proc->bgIndex = NextRN_N(BG_BLANK);
 
+#if FE8_MULTIPALETTE_BG
+            if (!LoadMultipaletteConvoBg(proc->bgIndex, BG_2))
+#endif
+            {
             // Loading Background Tile Graphics
 
             Decompress(
@@ -1604,6 +1654,7 @@ void ConvoBackgroundFade_LoadBg2(struct ConvoBackgroundFadeProc * proc)
             // Loading Background Palettes
 
             ApplyPalettes(gConvoBackgroundData[proc->bgIndex].pal, 0, 6);
+            }
 
             BG_EnableSyncByMask(BG2_SYNC_BIT);
             EnablePaletteSync();
@@ -1641,6 +1692,10 @@ void ConvoBackgroundFade_LoadBg3(struct ConvoBackgroundFadeProc * proc)
             if (proc->bgIndex == BG_RANDOM)
                 proc->bgIndex = NextRN_N(BG_BLANK);
 
+#if FE8_MULTIPALETTE_BG
+            if (!LoadMultipaletteConvoBg(proc->bgIndex, BG_3))
+#endif
+            {
             // Loading Background Tile Graphics
 
             Decompress(
@@ -1656,6 +1711,7 @@ void ConvoBackgroundFade_LoadBg3(struct ConvoBackgroundFadeProc * proc)
             // Loading Background Palettes
 
             ApplyPalettes(gConvoBackgroundData[proc->bgIndex].pal, 8, 6);
+            }
 
             BG_EnableSyncByMask(BG3_SYNC_BIT);
             EnablePaletteSync();
@@ -2325,6 +2381,25 @@ void LoadUnit_0(const struct UnitDefinition * def, u16 b, s8 quiet, s8 d)
     unit->xPos = def->xPosition;
     unit->yPos = def->yPosition;
 
+#if FE8_MAPGEN
+    // Authored spawn coordinates refer to terrain that doesn't exist once
+    // the chapter's map is procedurally generated -- put the unit next to
+    // its faction's camp instead. Falls through to the authored position
+    // (already assigned above) if MapGen isn't active for this chapter, the
+    // faction has no camp (Purple always; Green only if this is the first
+    // Green unit spawned this chapter and its camp tile is blocked), or no
+    // open tile is found.
+    {
+        s8 x = unit->xPos, y = unit->yPos;
+
+        if (MapGen_OverrideUnitSpawnPosition(def->allegiance, def->classIndex, &x, &y))
+        {
+            unit->xPos = x;
+            unit->yPos = y;
+        }
+    }
+#endif
+
     if (def->allegiance == FACTION_ID_RED && unit->pCharacterData->number >= 0x3C)
     {
         if (!gPlaySt.config.controller)
@@ -2358,7 +2433,12 @@ void LoadUnit_MoveToPosition(struct Unit * unit, const struct UnitDefinition * u
 
     if (!unitDefition->redaCount)
     {
-        MoveUnit_(unit, unitDefition->xPosition, unitDefition->yPosition, flags);
+        // unit->xPos/yPos (not unitDefition->xPosition/yPosition) so a
+        // MapGen spawn override (LoadUnit_0, src/eventscr.c) -- which writes
+        // straight to the unit, since unitDefition is const and shared --
+        // actually takes effect instead of being immediately overwritten
+        // back to the authored coordinates.
+        MoveUnit_(unit, unit->xPos, unit->yPos, flags);
         return;
     }
 

@@ -132,6 +132,14 @@ enum {
     CLASS_JOURNEYMAN_T1       = 0x7E,
     CLASS_PUPIL_T1            = 0x7F,
 
+    // Camp/Tent structures (id_space "class" domain, widened past 0x7F --
+    // see docs/id_space.md and include/bmsave.h). Like CLASS_OBSTACLE below,
+    // these are only ever assigned to a transient, non-persisted fake battle
+    // unit (see src/bmbattle.c), never to a real deployed roster Unit, in
+    // any build configuration.
+    CLASS_CAMP                = 0x80,
+    CLASS_TENT_STRUCTURE      = 0x81,
+
     // Hiding the game's misery
     CLASS_OBSTACLE = CLASS_EPHRAIM_LORD,
 };

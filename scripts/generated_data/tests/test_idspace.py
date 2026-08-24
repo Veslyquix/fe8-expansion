@@ -57,13 +57,21 @@ class CapValidationTests(unittest.TestCase):
     def test_configured_caps_all_valid(self):
         idspace.validate_all_configured_caps()  # must not raise
 
-    def test_class_0x80_rejected_actionably(self):
+    def test_class_0x80_valid_now_a_full_byte(self):
+        # Widened by the Camp/Tent structures feature: GameSavePackedUnit.jid
+        # is a full byte when FE8_PURCHASE_GENERICS is enabled (bmsave.h), so
+        # the class domain's technical max is now 0xFF, not 0x7F.
+        cls = idspace.domain_by_key("class")
+        idspace.validate_domain_cap(cls, 0x80)  # must not raise
+        idspace.validate_domain_cap(cls, 0xFF)  # storage ceiling, must not raise
+
+    def test_class_0x100_rejected_actionably(self):
         cls = idspace.domain_by_key("class")
         with self.assertRaises(idspace.CapError) as ctx:
-            idspace.validate_domain_cap(cls, 0x80)
+            idspace.validate_domain_cap(cls, 0x100)
         message = str(ctx.exception)
-        self.assertIn("0x80", message)
-        self.assertIn("0x7F", message)
+        self.assertIn("0x100", message)
+        self.assertIn("0xFF", message)
         self.assertIn("truncate", message)
 
     def test_unit_0x40_collides_with_faction_stride(self):
@@ -137,7 +145,7 @@ class OutputDriftTests(unittest.TestCase):
         self.assertIn("#define FE8_ITEM_ID_CAP 0xCD", text)
         self.assertIn("#define ITEM_ID_CONFIGURED_CAP FE8_ITEM_ID_CAP", text)
         # Frozen domains stay literal.
-        self.assertIn("CLASS_ID_CONFIGURED_CAP 0x7F", text)
+        self.assertIn("CLASS_ID_CONFIGURED_CAP 0xFF", text)
 
     def test_audit_json_carries_digest(self):
         import json

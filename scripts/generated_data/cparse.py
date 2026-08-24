@@ -111,6 +111,57 @@ def extract_designated_fields(struct_body):
     return fields
 
 
+_IF_RE = re.compile(r"^[ \t]*#if\b")
+_ELSE_RE = re.compile(r"^[ \t]*#else\b")
+_ENDIF_RE = re.compile(r"^[ \t]*#endif\b")
+
+
+def strip_hand_conditionals(text):
+    """Reduce every top-level ``#if X ... #else ... #endif`` block (as
+    used e.g. by ``#if FE8_CUSTOM_CAMPAIGN`` overrides in the generated-data
+    linked hand sources) down to just its ``#else`` branch, blanking
+    everything else -- the ``#if`` line, the ``#if`` branch's own lines,
+    and the ``#else``/``#endif`` directive lines themselves -- to blank
+    lines. A block with no ``#else`` is blanked out entirely.
+
+    This is deliberately narrow, not a general preprocessor: round-trip
+    parsing exists to catch drift between the JSON source of truth and a
+    hand file that is meant to mirror it exactly, and JSON has no notion
+    of a build flag. A conditional branch is, by definition, a build-time
+    -only override with nothing in JSON to compare against, so the
+    ``#else`` fallback -- conventionally the unmodified/vanilla value --
+    is what round-trip parsing should see. Blanking (rather than
+    deleting) every non-``#else`` line keeps line numbers stable for
+    diagnostics. Only one level of nesting is handled -- none of this
+    project's hand-linked tables currently nest ``#if`` blocks.
+    """
+    lines = text.split("\n")
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        if _IF_RE.match(line):
+            out.append("")
+            i += 1
+            while i < n and not _ELSE_RE.match(lines[i]) and not _ENDIF_RE.match(lines[i]):
+                out.append("")
+                i += 1
+            if i < n and _ELSE_RE.match(lines[i]):
+                out.append("")
+                i += 1
+                while i < n and not _ENDIF_RE.match(lines[i]):
+                    out.append(lines[i])
+                    i += 1
+            if i < n and _ENDIF_RE.match(lines[i]):
+                out.append("")
+                i += 1
+            continue
+        out.append(line)
+        i += 1
+    return "\n".join(out)
+
+
 def line_of(text, index):
     return text.count("\n", 0, index) + 1
 

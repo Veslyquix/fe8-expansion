@@ -19,6 +19,7 @@
 #include "hardware.h"
 #include "bmphase.h"
 #include "expansion_danger_overlay.h"
+#include "alpha_sprite_arrow.h"
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "minimap.h"
@@ -29,6 +30,7 @@
 #include "eventinfo.h"
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
+#include "purchase_generics.h"
 
 #include "playerphase.h"
 
@@ -248,7 +250,9 @@ void PlayerPhase_Suspend(void)
 #endif
 
     gActionData.suspendPointType = SUSPEND_POINT_PLAYERIDLE;
+#if !FE8_TURN_AUTOSAVE
     WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
     return;
 }
 
@@ -366,6 +370,17 @@ void PlayerPhase_MainIdle(ProcPtr proc)
 
                     gPlaySt.xCursor = gBmSt.playerCursor.x;
                     gPlaySt.yCursor = gBmSt.playerCursor.y;
+
+#if FE8_PURCHASE_GENERICS
+                    if (PurchaseGenerics_TryStartTileMenu(gBmSt.playerCursor.x, gBmSt.playerCursor.y))
+                    {
+                        Eventinfo_CondFalse_2();
+
+                        Proc_Goto(proc, 9);
+
+                        return;
+                    }
+#endif
 
                     if (unit)
                     {
@@ -877,6 +892,13 @@ s8 PlayerPhase_PrepareAction(ProcPtr proc)
             return 1;
     }
 
+#if FE8_PROMOTE_COMMAND
+    if (gActionData.unitActionType == UNIT_ACTION_PROMOTE) {
+        gBattleActor.hasItemEffectTarget = 0;
+        return cameraReturn;
+    }
+#endif
+
     item = GetItemIndex(GetUnit(gActionData.subjectIndex)->items[gActionData.itemSlotIndex]);
 
     gBattleActor.hasItemEffectTarget = 0;
@@ -900,7 +922,9 @@ s8 PlayerPhase_PrepareAction(ProcPtr proc)
     if ((gActionData.unitActionType != UNIT_ACTION_WAIT) && !gBmSt.just_resumed)
     {
         gActionData.suspendPointType = SUSPEND_POINT_DURINGACTION;
+#if !FE8_TURN_AUTOSAVE
         WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
     }
 
     return cameraReturn;
@@ -1183,7 +1207,11 @@ bool CanMoveActiveUnitTo(int x, int y)
 //! FE8U = 0x0801D624
 void PlayerPhase_DisplayUnitMovement(void)
 {
+#if FE8_ALPHA_SPRITE_ARROW
+    GenerateBestMovementScript(gBmSt.playerCursor.x, gBmSt.playerCursor.y, gWorkingMovementScript);
+#else
     GetMovementScriptFromPath();
+#endif
     UnitApplyWorkingMovementScript(gActiveUnit, gActiveUnit->xPos, gActiveUnit->yPos);
     SetAutoMuMoveScript(gWorkingMovementScript);
 

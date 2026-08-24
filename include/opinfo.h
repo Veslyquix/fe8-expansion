@@ -11,6 +11,11 @@ enum ClassReelScrOpCode {
     CLASS_REEL_OP_6,
     CLASS_REEL_OP_7,
     CLASS_REEL_OP_8,
+#if FE8_VESLY_DEBUGGER
+    CLASS_REEL_WAIT_SPELL,
+    CLASS_REEL_CRIT_FAR,
+    CLASS_REEL_WAIT_RETURN,
+#endif
 };
 
 struct ClassReelAnimScr {
@@ -134,6 +139,13 @@ struct OpInfoClassDisplayProc {
     /* 3C */ ProcPtr unk_3c;
     /* 40 */ u8 unk_40[6];
     /* 46 */ u8 unk_46;
+
+#if FE8_VESLY_DEBUGGER
+    /* Debugger-only state for the GfxViewer battle animation preview. */
+    bool useRanged;
+    s16 weapon;
+    s16 naturalSpellId;
+#endif
 };
 
 struct OpInfoGaugeDrawProc {
@@ -189,14 +201,16 @@ void StartClassReel(u8 classSet, ProcPtr parent);
 // ??? ClassInfoDisplay_Init(???);
 // ??? ClassInfoDisplay_AutoAdvanceWorker(???);
 // ??? ClassInfoDisplay_LoopWindowIn(???);
-// ??? ClassInfoDisplay_ExecScript(???);
-// ??? ClassInfoDisplay_LoopScript(???);
+void ClassInfoDisplay_ExecScript(struct OpInfoClassDisplayProc* proc);
+void ClassInfoDisplay_LoopScript(struct OpInfoClassDisplayProc* proc);
 // ??? ClassInfoDisplay_OnEnd(???);
 // ??? StartClassAnimDisplay(???);
 // ??? ClassStatsDisplay_Init(???);
 // ??? ClassStatsDisplay_Loop(???);
 // ??? StartClassStatsDisplay(???);
 // ??? SetClassStatsDisplayNameX(???);
-// ??? GetClassReelEntry(???);
+struct ClassReelEnt* GetClassReelEntry(int classSet, int index);
+
+extern struct ClassReelEnt gClassReelData[65];
 
 #endif // GUARD_OP_INFO_H

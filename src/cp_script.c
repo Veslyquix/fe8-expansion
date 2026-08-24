@@ -10,6 +10,7 @@
 #include "bmidoten.h"
 #include "bmitem.h"
 #include "bmtrick.h"
+#include "purchase_generics.h"
 
 #include "cp_script.h"
 
@@ -568,15 +569,32 @@ void AiScriptCmd_11_MoveTowardsSafety(u8* pc) {
 //! FE8U = 0x0803CE18
 void AiScriptCmd_12_MoveTowardsEnemy(u8* pc) {
     struct Vec2 pos;
+    s8 foundTarget;
 
     if (gpAiScriptCurrent->unk_08 == 0) {
-        if (AiFindTargetInReachByFunc(AiIsUnitEnemy, &pos) == 1) {
-            AiTryMoveTowards(pos.x, pos.y, 0, gpAiScriptCurrent->unk_02, 1);
-        }
+        foundTarget = AiFindTargetInReachByFunc(AiIsUnitEnemy, &pos);
     } else {
-        if (AiFindTargetInReachByFunc(AiIsUnitEnemyAndNotInScrList, &pos) == 1) {
-            AiTryMoveTowards(pos.x, pos.y, 0, gpAiScriptCurrent->unk_02, 1);
+        foundTarget = AiFindTargetInReachByFunc(AiIsUnitEnemyAndNotInScrList, &pos);
+    }
+
+#if FE8_PURCHASE_GENERICS
+    {
+        // Enemy distance must be read before AiFindClosestCapturableBase
+        // runs, since it -- like AiFindTargetInReachByFunc above --
+        // overwrites gBmMapRange with its own extended-movement-range scan.
+        u8 enemyDistance = foundTarget ? gBmMapRange[pos.y][pos.x] : 0xFF;
+        struct Vec2 basePos;
+        u8 baseDistance;
+
+        if (AiFindClosestCapturableBase(&basePos, &baseDistance) && baseDistance <= enemyDistance) {
+            pos = basePos;
+            foundTarget = 1;
         }
+    }
+#endif
+
+    if (foundTarget == 1) {
+        AiTryMoveTowards(pos.x, pos.y, 0, gpAiScriptCurrent->unk_02, 1);
     }
 
     (*pc)++;

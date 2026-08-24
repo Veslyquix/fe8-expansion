@@ -130,4 +130,10 @@ UnitIconMove unit_icon_move_table[] = {
 	{unit_icon_move_Elder_Bael_sheet, unit_icon_move_Elder_Bael_motion}, // 124
 	{unit_icon_move_Journeyman_T2_sheet, unit_icon_move_Journeyman_T2_motion}, // 125
 	{unit_icon_move_Pupil_T2_sheet, unit_icon_move_Pupil_T2_motion}, // 126
+	// CLASS_CAMP / CLASS_TENT_STRUCTURE (mov=0, CA_UNSELECTABLE) never reach
+	// the walking-sprite path -- these rows only exist to keep this table
+	// correctly sized for classId-1 indexing; they reuse Tent's move data as
+	// an inert placeholder rather than authoring unused walk-cycle frames.
+	{unit_icon_move_Tent_sheet, unit_icon_move_Tent_motion}, // 127 (CLASS_CAMP)
+	{unit_icon_move_Tent_sheet, unit_icon_move_Tent_motion}, // 128 (CLASS_TENT_STRUCTURE)
 };

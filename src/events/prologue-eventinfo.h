@@ -87,6 +87,10 @@ CONST_DATA struct ChapterEventGroup PrologueEvents = {
     .enemyUnitsChoice2InEncounter = NULL,
     .enemyUnitsChoice3InEncounter = NULL,
 
+#if FE8_CUSTOM_CAMPAIGN
+    .beginningSceneEvents = EventScr_Prologue_BeginningScene_Custom,
+#else
     .beginningSceneEvents = EventScr_Prologue_BeginningScene,
+#endif
     .endingSceneEvents    = EventScr_Prologue_EndingScene,
 };

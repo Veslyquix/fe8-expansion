@@ -8,10 +8,120 @@
 #include "eventcall.h"
 #include "EAstdlib.h"
 #include "constants/characters.h"
+#include "constants/classes.h"
 #include "constants/backgrounds.h"
 #include "constants/items.h"
 #include "constants/songs.h"
 #include "constants/chapters.h"
+
+#if FE8_CUSTOM_CAMPAIGN
+
+CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
+    // {
+        // .charIndex = CHARACTER_SETH,
+        // .classIndex = CLASS_PALADIN,
+        // .allegiance = FACTION_ID_BLUE,
+        // .level = 1,
+        // .xPosition = 3,
+        // .yPosition = 5,
+        // .items = {
+            // ITEM_SWORD_STEEL,
+            // ITEM_LANCE_SILVER,
+            // ITEM_VULNERARY,
+        // },
+    // },
+    {
+        .charIndex = CHARACTER_EIRIKA,
+        .classIndex = CLASS_SOLDIER,
+        .allegiance = FACTION_ID_BLUE,
+        .level = 1,
+        .xPosition = 2,
+        .yPosition = 2,
+        .items = {
+            ITEM_LANCE_IRON,
+            ITEM_VULNERARY,
+        },
+    },
+    { 0 },
+};
+
+// 0x88B3C50
+CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
+    // {
+        // .charIndex = CHARACTER_ONEILL,
+        // .classIndex = CLASS_FIGHTER,
+        // .allegiance = FACTION_ID_RED,
+        // .level = 4,
+        // .xPosition = 17,
+        // .yPosition = 12,
+        // .items = {
+            // ITEM_AXE_IRON,
+        // },
+        // .ai = {0x6, 0x3, 0x0, 0x1},
+    // },
+    {
+        .charIndex = 0x82,
+        .classIndex = CLASS_SOLDIER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 18,
+        .yPosition = 11,
+        .items = {
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 0x3, 0x0, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_SOLDIER,
+        .allegiance = FACTION_ID_RED,
+        .level = 2,
+        .xPosition = 17,
+        .yPosition = 14,
+        .items = {
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    { 0 },
+};
+
+/* Custom-campaign prologue intro: Eirika and Seth are placed with the exact
+ * same UnitDefinition (position/level/items/starting HP) as the stock
+ * beginning scene, and Eirika still receives the Rapier and O'Neill's
+ * squad still spawns (both needed for the chapter to actually be playable
+ * and winnable via DefeatBoss), but the Renais-throne-room cutscene and
+ * every dialogue box are skipped -- the player gets control immediately. */
+CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
+    ENUT(0x8)
+    LOAD1(1, UnitDef_PrologueAllies)
+    ENUN
+
+    LOAD1(1, UnitDef_PrologueEnemies)
+    ENUN
+    
+    // MUSI
+    // Text_BG(BG_KH_224, 0x90D)
+    // MUNO
+    
+    /* 
+    // test FE8_MULTIPALETTE_BG - seems to work 
+    // (no$gba has weird sprite blending quirks, so check on mgba) 
+    MUSI
+    SetBackground(BG_ALTAR_NIGHT_256)   
+    EvtTextStartType2                    
+    TEXTSHOW(0xc22)
+    TEXTEND
+    MUNO
+    FADI(4)
+    REMA
+    CLEAN
+    */ 
+
+    NoFade
+    ENDA
+};
+#endif
 
 CONST_DATA EventListScr EventScr_Prologue_BeginningScene[] = {
     CALL(EventScr_Prologue_RenaisThroneCutscene)

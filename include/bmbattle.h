@@ -83,6 +83,10 @@ struct BattleUnit {
     /* 7D */ s8 weaponBroke;
 
     /* 7E */ s8 hasItemEffectTarget;
+#ifdef DEBUFFS_EXIST
+    /* 7F */ s8 pendingDebuffHits;
+    /* .. */ u16 pendingDebuffItem; // item index that triggered pendingDebuffHits, looked up in gWeaponDebuffTable
+#endif
     /* 7F */ /* pad */
 };
 
@@ -298,6 +302,11 @@ void BattlePrintDebugHitInfo(void);
 void BattleGenerateHitScriptedDamage(struct BattleUnit* bu);
 void BattleUnwindScripted(void);
 
+#if FE8_PURCHASE_GENERICS
+bool BattleUnitIsCamp(struct BattleUnit* bu);
+#define BUNIT_IS_OBSTACLE(aBu) (((aBu)->terrainId == TERRAIN_WALL_DAMAGED) || ((aBu)->terrainId == TERRAIN_SNAG) || BattleUnitIsCamp(aBu))
+#else
 #define BUNIT_IS_OBSTACLE(aBu) (((aBu)->terrainId == TERRAIN_WALL_DAMAGED) || ((aBu)->terrainId == TERRAIN_SNAG))
+#endif
 
 #endif // GUARD_BMBATTLE_H

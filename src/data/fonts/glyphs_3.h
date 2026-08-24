@@ -1506,6 +1506,33 @@ struct Glyph gFontgrp_380 =
     },
 };
 
+// "-" (for PutNumBonus)
+struct Glyph gFontgrp_381 =
+{
+    .sjisNext = NULL,
+    .sjisByte1 = 0,
+    .width = 8,
+    .bitmap =
+    {
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x0000FFFC,
+        0x0000EAAC,
+        0x0000FFFC,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+        0x00000000,
+    },
+};
+
 struct Glyph *TextGlyphs_Special[] =
 {
     &gFontgrp_323,
@@ -1565,7 +1592,7 @@ struct Glyph *TextGlyphs_Special[] =
     &gFontgrp_377,
     &gFontgrp_378,
     &gFontgrp_379,
-    NULL,
+    &gFontgrp_381,
     NULL,
     NULL,
     NULL,

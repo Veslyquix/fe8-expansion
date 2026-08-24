@@ -53,8 +53,17 @@ CONST_DATA struct ProcCmd ProcScr_TradeMenu_HighlightUpdater[] = {
     PROC_END
 };
 
+#if FE8_EXTEND_DESC_BOX
+void TradeMenu_LockGameOverride(void);
+void TradeMenu_ClearDisplayOverride(struct TradeMenuProc* proc);
+#endif
+
 CONST_DATA struct ProcCmd ProcScr_TradeMenu[] = {
+#if FE8_EXTEND_DESC_BOX
+    PROC_CALL(TradeMenu_LockGameOverride),
+#else
     PROC_CALL(LockGame),
+#endif
     PROC_YIELD,
 
     PROC_WHILE_EXISTS(ProcScr_CamMove),
@@ -82,7 +91,11 @@ PROC_LABEL(L_TRADEMENU_SELECTED),
     PROC_GOTO(L_TRADEMENU_UNSELECTED),
 
 PROC_LABEL(L_TRADEMENU_END),
+#if FE8_EXTEND_DESC_BOX
+    PROC_CALL(TradeMenu_ClearDisplayOverride),
+#else
     PROC_CALL(TradeMenu_ClearDisplay),
+#endif
     PROC_CALL(ClearBg0Bg1),
 
     PROC_CALL(UnlockGame),
@@ -136,7 +149,12 @@ void TradeMenu_InitUnitNameDisplay(struct TradeMenuProc * proc)
     int xStart;
 
     // TODO: constants
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x0802D2EA (tradefix): 0x4800 -> 0x5800. */
+    StartSysBrownBox(6, 0x5800, 0x08, 0x800, 0x400, (struct Proc *) (proc));
+#else
     StartSysBrownBox(6, 0x4800, 0x08, 0x800, 0x400, (struct Proc *) (proc));
+#endif
 
     EnableSysBrownBox(0, -40, -1, 1);
     EnableSysBrownBox(1, 184, -1, 0);

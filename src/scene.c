@@ -15,6 +15,7 @@
 #include "uiutils.h"
 #include "ekrbattle.h"
 #include "bmlib.h"
+#include "bg.h"
 #include "bmshop.h"
 #include "scene.h"
 #include "text_utf8.h"
@@ -323,7 +324,10 @@ void InitTalk(int chr, int lines, s8 unpackBubble) {
 
     if (unpackBubble != 0) {
         Decompress(Img_TalkBubble, (void*)(GetBackgroundTileDataOffset(BG_1) + 0x06000200));
-        ApplyPalette(Pal_TalkBubble, 3);
+#if FE8_MULTIPALETTE_BG
+        // if (!IsMultipaletteConvoBgActive()) // this might need to happen just for cg text? 
+#endif
+            ApplyPalette(Pal_TalkBubble, 3);
     }
 
     ClearTalkFaceRefs();
@@ -361,6 +365,11 @@ void InitSpriteTalk(int chr, int lines, int palId) {
 
 //! FE8U = 0x08006964
 void ApplyTalkTextPalette(void) {
+#if FE8_MULTIPALETTE_BG
+    if (IsMultipaletteConvoBgActive())
+        return;
+#endif
+
     ApplyPalette(Pal_Text, 2);
     return;
 }
@@ -721,6 +730,11 @@ void ToggleTalkTextRed(void) {
 
 //! FE8U = 0x08006F8C
 void TalkToggleInvertedPalette(int flag) {
+#if FE8_MULTIPALETTE_BG
+    if (IsMultipaletteConvoBgActive())
+        return;
+#endif
+
     if (flag != 0)
     {
         ApplyPalette(Pal_TalkBubble_Inverted, 3);

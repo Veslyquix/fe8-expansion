@@ -41,6 +41,19 @@ extern struct ProcCmd CONST_DATA ProcScr_GameEarlyStartUI[]; // pre-intro cutsce
 extern struct ProcCmd CONST_DATA ProcScr_OpAnim[]; // intro cutscene
 extern struct ProcCmd CONST_DATA ProcScr_WorldMapWrapper[];
 
+#if FE8_SKIP_OPENING
+static void GameControl_InitDirectTitleScreen(ProcPtr proc)
+{
+    (void)proc;
+
+    SetupBackgrounds(NULL);
+    SetPrimaryHBlankHandler(NULL);
+    SetDispEnable(0, 0, 0, 0, 0);
+    SetKeyStatus_IgnoreMask(0);
+    EnableKeyComboResetEN(NULL);
+}
+#endif
+
 #if FE8_VESLY_DEBUGGER
 int VeslyDebugger_TryApplyBootMode(ProcPtr proc);
 #endif
@@ -64,6 +77,13 @@ struct ProcCmd CONST_DATA gProcScr_GameControl[] =
     PROC_REPEAT(GameControl_Null_0),
 
     // fallthrough
+#if FE8_SKIP_OPENING
+    /* Boots straight to the title screen: no health & safety screen, no
+     * Nintendo/Intelligent Systems logos, and no attract-mode opening demo
+     * (ProcScr_GameEarlyStartUI / ProcScr_OpAnim below are never reached). */
+    PROC_GOTO(LGAMECTRL_TITLE_DIRECT),
+#endif
+
 
 PROC_LABEL(LGAMECTRL_GAME_INTRO_UI),
     PROC_START_CHILD_BLOCKING(ProcScr_GameEarlyStartUI),
@@ -84,7 +104,6 @@ PROC_LABEL(LGAMECTRL_GAME_INTRO_UI),
 #if FE8_EXPANSION_ENABLED_LOCALE_COUNT > 1 || FE8_EXPANSION_DEBUG
     PROC_START_CHILD_BLOCKING(ProcScr_ExpansionLanguageSelector),
 #endif
-
     // fallthrough
 
 #endif /* MODERN */
@@ -109,6 +128,9 @@ PROC_LABEL(3),
     PROC_GOTO(LGAMECTRL_OP_ANIM),
 
 PROC_LABEL(LGAMECTRL_TITLE_DIRECT),
+#if FE8_SKIP_OPENING
+    PROC_CALL(GameControl_InitDirectTitleScreen),
+#endif
     PROC_CALL(GameControl_EnableSoundEffects),
     PROC_CALL(StartTitleScreen_WithMusic),
     PROC_GOTO(LGAMECTRL_POST_TITLE_IDLE),
@@ -792,6 +814,11 @@ void GameCtrlStartIntroMonologue(struct GameCtrlProc * proc)
 
     if (gPlaySt.chapterIndex != 0)
         return;
+
+#if FE8_SKIP_OPENING
+    /* Skip the "In an age long past..." opening text crawl on New Game. */
+    return;
+#endif
 
     StartIntroMonologue(proc);
 }

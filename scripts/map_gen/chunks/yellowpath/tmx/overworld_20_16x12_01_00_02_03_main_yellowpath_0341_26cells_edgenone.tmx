@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='utf-8'?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="9" height="9" tilewidth="16" tileheight="16" infinite="0" nextlayerid="2" nextobjectid="1"><tileset firstgid="1" name="Fields" tilewidth="16" tileheight="16" tilecount="1024" columns="32"><image source="../../../../Tilesets/Fields.png" width="512" height="512" /></tileset><layer id="1" name="Main" width="9" height="9"><data>
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="207" />
+  <tile />
+  <tile gid="396" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="209" />
+  <tile gid="402" />
+  <tile gid="274" />
+  <tile gid="177" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="297" />
+  <tile gid="934" />
+  <tile gid="402" />
+  <tile gid="200" />
+  <tile />
+  <tile gid="396" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="237" />
+  <tile gid="402" />
+  <tile gid="234" />
+  <tile gid="307" />
+  <tile gid="338" />
+  <tile gid="177" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="199" />
+  <tile gid="317" />
+  <tile gid="238" />
+  <tile />
+  <tile gid="203" />
+  <tile gid="331" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="317" />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="237" />
+  <tile gid="266" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile gid="363" />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  <tile />
+  </data></layer></map>

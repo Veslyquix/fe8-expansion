@@ -6,6 +6,7 @@ MODERN_GOALS := \
 	expansion-modern-all \
 	expansion-modern-elf \
 	expansion-modern-rom \
+	expansion-modern-sym \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
@@ -40,7 +41,9 @@ MODERN_GOALS := \
 	expansion-modern-starter-qol-check \
 	expansion-modern-starter-runtime-check \
 	expansion-modern-idspace-active-check \
-	expansion-modern-clean
+	expansion-modern-clean \
+	sync-win \
+	_sync_win_impl
 ifneq (,$(filter $(MODERN_GOALS),$(MAKECMDGOALS)))
   NODEP := 1
 endif
@@ -55,11 +58,11 @@ MODERN_ABIS := aapcs apcs-gnu
 # Link settings are tracked below so changing this value invalidates the
 # ELF/ROM without requiring a clean rebuild.
 MODERN_TEXT_SHIFT ?= 0
-MODERN_TEXT_SHIFT_IS_NUM := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | python3 -c "import re, sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if re.fullmatch(r'(0x[0-9a-fA-F]+|[0-9]+)', v) else '')")
+MODERN_TEXT_SHIFT_IS_NUM := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | $(PYTHON) -c "import re, sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if re.fullmatch(r'(0x[0-9a-fA-F]+|[0-9]+)', v) else '')")
 ifeq ($(MODERN_TEXT_SHIFT_IS_NUM),)
   $(error MODERN_TEXT_SHIFT '$(MODERN_TEXT_SHIFT)' is not a valid number)
 endif
-MODERN_TEXT_SHIFT_IS_ALIGNED := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | python3 -c "import sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if int(v, 0) % 4 == 0 else '')")
+MODERN_TEXT_SHIFT_IS_ALIGNED := $(shell printf '%s\n' '$(MODERN_TEXT_SHIFT)' | $(PYTHON) -c "import sys; v = sys.stdin.read().strip(); sys.stdout.write('ok' if int(v, 0) % 4 == 0 else '')")
 ifeq ($(MODERN_TEXT_SHIFT_IS_ALIGNED),)
   $(error MODERN_TEXT_SHIFT '$(MODERN_TEXT_SHIFT)' must be 4-byte aligned)
 endif
@@ -161,6 +164,93 @@ MODERN_DEFINE_FLAGS += -DFE8_VESLY_DEBUGGER=1
 endif
 ifeq ($(DANGER_BONES),1)
 MODERN_DEFINE_FLAGS += -DFE8_DANGER_BONES=1
+endif
+ifeq ($(NEW_ANIMS),1)
+MODERN_DEFINE_FLAGS += -DFE8_NEW_ANIMS=1
+endif
+ifeq ($(NEW_TILESETS),1)
+MODERN_DEFINE_FLAGS += -DFE8_NEW_TILESETS=1
+endif
+ifeq ($(PURCHASE_GENERICS),1)
+MODERN_DEFINE_FLAGS += -DFE8_PURCHASE_GENERICS=1
+endif
+ifeq ($(TITLE_256_COLORS),1)
+MODERN_DEFINE_FLAGS += -DFE8_TITLE_256_COLORS=1
+endif
+ifeq ($(MULTIPALETTE_BG),1)
+MODERN_DEFINE_FLAGS += -DFE8_MULTIPALETTE_BG=1
+endif
+ifeq ($(MAPGEN),1)
+MODERN_DEFINE_FLAGS += -DFE8_MAPGEN=1
+endif
+ifeq ($(MMB),1)
+MODERN_DEFINE_FLAGS += -DFE8_MMB=1
+endif
+ifeq ($(EXTEND_DESC_BOX),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DESC_BOX=1
+endif
+ifeq ($(OVERFLOW_SAFETY_CHECKS),0)
+MODERN_DEFINE_FLAGS += -DFE8_OVERFLOW_SAFETY_CHECKS=0
+endif
+ifeq ($(DISPLAY_OBTAINABLE_ITEM),1)
+MODERN_DEFINE_FLAGS += -DFE8_DISPLAY_OBTAINABLE_ITEM=1
+endif
+ifeq ($(DEBUFFS_EXIST),1)
+MODERN_DEFINE_FLAGS += -DFE8_DEBUFFS_EXIST=1 -DDEBUFFS_EXIST=1
+endif
+ifeq ($(DEBUFFS_STACK),1)
+MODERN_DEFINE_FLAGS += -DFE8_DEBUFFS_STACK=1 -DDEBUFFS_STACK=1
+endif
+ifeq ($(SELECT_VIEW_GROWTHS),1)
+MODERN_DEFINE_FLAGS += -DFE8_SELECT_VIEW_GROWTHS=1 -DSELECT_VIEW_GROWTHS=1
+endif
+ifeq ($(TEXT_CHAPTER_NAMES),1)
+MODERN_DEFINE_FLAGS += -DFE8_TEXT_CHAPTER_NAMES=1
+endif
+ifeq ($(BATTLE_STATS_NO_ANIMS),1)
+MODERN_DEFINE_FLAGS += -DFE8_BATTLE_STATS_NO_ANIMS=1
+endif
+ifeq ($(DRAW_MAP_ANIMS),1)
+MODERN_DEFINE_FLAGS += -DFE8_DRAW_MAP_ANIMS=1
+endif
+ifeq ($(BATTLE_ANIMATION_NUMBERS),1)
+MODERN_DEFINE_FLAGS += -DFE8_BATTLE_ANIMATION_NUMBERS=1
+endif
+ifeq ($(HP_BARS),1)
+MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
+endif
+ifeq ($(GROUP_AI),1)
+MODERN_DEFINE_FLAGS += -DFE8_GROUP_AI=1
+endif
+ifeq ($(ALPHA_SPRITE_ARROW),1)
+MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
+endif
+ifeq ($(TURN_AUTOSAVE),1)
+MODERN_DEFINE_FLAGS += -DFE8_TURN_AUTOSAVE=1
+endif
+ifeq ($(FORT_UNITS_START_GREYED_OUT),1)
+MODERN_DEFINE_FLAGS += -DFE8_FORT_UNITS_START_GREYED_OUT=1
+endif
+ifeq ($(PROMOTE_COMMAND),1)
+MODERN_DEFINE_FLAGS += -DFE8_PROMOTE_COMMAND=1
+endif
+ifeq ($(FIX_BUGS),1)
+MODERN_DEFINE_FLAGS += -DFE8_FIX_BUGS=1
+endif
+ifeq ($(CREDITS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
+endif
+ifeq ($(CUSTOM_CAMPAIGN),1)
+MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_CAMPAIGN=1
+endif
+ifeq ($(SKIP_OPENING),1)
+MODERN_DEFINE_FLAGS += -DFE8_SKIP_OPENING=1
+endif
+ifeq ($(GAME_RANK),1)
+MODERN_DEFINE_FLAGS += -DFE8_GAME_RANK=1
+endif
+ifeq ($(CO_POWERS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CO_POWERS=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
@@ -282,6 +372,19 @@ MODERN_ALL_C_SOURCES ?= $(wildcard src/*.c)
 ifeq (,$(findstring src/msg_data.c,$(MODERN_ALL_C_SOURCES)))
 MODERN_ALL_C_SOURCES += src/msg_data.c
 endif
+ifeq (,$(findstring src/mapgen_chunks_data.c,$(MODERN_ALL_C_SOURCES)))
+MODERN_ALL_C_SOURCES += src/mapgen_chunks_data.c
+endif
+
+# FE8_MAPGEN's chunk-placement generator (src/mapgen.c) draws from a table of
+# pre-made tile pieces authored offline and exported as .tmx; this converts
+# every .tmx under scripts/map_gen/chunks/*/tmx/ into the C data src/mapgen.c
+# links against. Not committed -- regenerated on every build, same as
+# src/msg_data.c above, so editing/adding a .tmx chunk just requires a rebuild.
+MAPGEN_CHUNKS_TMX := $(shell find scripts/map_gen/chunks -type f -name "*.tmx" 2>/dev/null)
+
+src/mapgen_chunks_data.c: scripts/mapgen_build_chunks.py $(MAPGEN_CHUNKS_TMX)
+	@$(PYTHON) scripts/mapgen_build_chunks.py $@
 
 # Issue #5 Batch 2c-1: same swap as the legacy Makefile's CFILES filtering
 # (generated_data.mk) -- a hand C table superseded by a linked
@@ -658,6 +761,7 @@ MODERN_ALL_SOURCE_GOALS := \
 	expansion-modern-all \
 	expansion-modern-elf \
 	expansion-modern-rom \
+	expansion-modern-sym \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
@@ -1272,6 +1376,7 @@ expansion-modern-clean:
 MODERN_LINKED_GOALS := \
 	expansion-modern-elf \
 	expansion-modern-rom \
+	expansion-modern-sym \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
@@ -1342,10 +1447,12 @@ MODERN_CLEAN_LDSCRIPT := linker/expansion.ld
 MODERN_CLEAN_IWRAM := linker/iwram.ld
 $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 
-# ROM size configuration: 16M (English/pseudo default) or 32M. Production
-# profiles enabling ja or zh-Hans are validated below as 32M-only; the upper
-# locale bank carries their full-game catalog and localized font data.
-MODERN_ROM_SIZE ?= 16M
+# ROM size configuration: 16M or 32M. Production profiles enabling ja or
+# zh-Hans are validated below as 32M-only; the upper locale bank carries their
+# full-game catalog and localized font data. Default is 32M: the 16M budget
+# is already essentially exhausted (see reports/linker-budget), and FE8_MAPGEN
+# alone adds ~48K of chunk data that no longer fits in the 16M target.
+MODERN_ROM_SIZE ?= 32M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000
@@ -1365,7 +1472,7 @@ endif
 # ExpansionMetadata record (include/expansion_metadata.h,
 # src/expansion_metadata.c).
 MODERN_EXPANSION_CONFIG_TOOL := scripts/modernize/expansion_config.py
-MODERN_EXPANSION_CONFIG_RUNNER := python3 "$(MODERN_EXPANSION_CONFIG_TOOL)"
+MODERN_EXPANSION_CONFIG_RUNNER := $(PYTHON) "$(MODERN_EXPANSION_CONFIG_TOOL)"
 
 # Whether this checkout actually has the issue #8 framework files (config.mk
 # plus the tool itself). True for the real repository always (both are
@@ -1433,6 +1540,32 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 		--vesly-debugger "$(VESLY_DEBUGGER)" \
 		--danger-bones "$(DANGER_BONES)" \
+		--new-anims "$(NEW_ANIMS)" \
+		--new-tilesets "$(NEW_TILESETS)" \
+		--purchase-generics "$(PURCHASE_GENERICS)" \
+		--mmb "$(MMB)" \
+		--extend-desc-box "$(EXTEND_DESC_BOX)" \
+		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
+		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
+		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
+		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
+		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
+		--hp-bars "$(HP_BARS)" \
+		--group-ai "$(GROUP_AI)" \
+		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+		--turn-autosave "$(TURN_AUTOSAVE)" \
+		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
+		--promote-command "$(PROMOTE_COMMAND)" \
+		--fix-bugs "$(FIX_BUGS)" \
+		--credits "$(CREDITS)" \
+		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
+		--skip-opening "$(SKIP_OPENING)" \
+	--game-rank "$(GAME_RANK)" \
+	--co-powers "$(CO_POWERS)" \
+		--game-rank "$(GAME_RANK)" \
+	--co-powers "$(CO_POWERS)" \
+		--co-powers "$(CO_POWERS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1495,6 +1628,29 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--starter-content "$(EXPANSION_STARTER_CONTENT)" \
 	--vesly-debugger "$(VESLY_DEBUGGER)" \
 	--danger-bones "$(DANGER_BONES)" \
+	--new-anims "$(NEW_ANIMS)" \
+	--new-tilesets "$(NEW_TILESETS)" \
+	--purchase-generics "$(PURCHASE_GENERICS)" \
+	--mmb "$(MMB)" \
+	--extend-desc-box "$(EXTEND_DESC_BOX)" \
+	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
+	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+	--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
+	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
+	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
+	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
+	--hp-bars "$(HP_BARS)" \
+	--group-ai "$(GROUP_AI)" \
+	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+	--turn-autosave "$(TURN_AUTOSAVE)" \
+	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
+	--promote-command "$(PROMOTE_COMMAND)" \
+	--fix-bugs "$(FIX_BUGS)" \
+	--credits "$(CREDITS)" \
+	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
+	--skip-opening "$(SKIP_OPENING)" \
+	--game-rank "$(GAME_RANK)" \
+	--co-powers "$(CO_POWERS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1561,7 +1717,34 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_EXPANSION_DANGER_OVERLAY_MENU=$(EXPANSION_DANGER_OVERLAY_MENU) \
 	-DFE8_EXPANSION_STARTER_CONTENT=$(EXPANSION_STARTER_CONTENT) \
 	-DFE8_VESLY_DEBUGGER=$(VESLY_DEBUGGER) \
-	-DFE8_DANGER_BONES=$(DANGER_BONES)
+	-DFE8_DANGER_BONES=$(DANGER_BONES) \
+	-DFE8_NEW_ANIMS=$(NEW_ANIMS) \
+	-DFE8_NEW_TILESETS=$(NEW_TILESETS) \
+	-DFE8_PURCHASE_GENERICS=$(PURCHASE_GENERICS) \
+	-DFE8_TITLE_256_COLORS=$(TITLE_256_COLORS) \
+	-DFE8_MULTIPALETTE_BG=$(MULTIPALETTE_BG) \
+	-DFE8_MAPGEN=$(MAPGEN) \
+	-DFE8_MMB=$(MMB) \
+	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
+	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \
+	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
+	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
+	-DFE8_DEBUFFS_STACK=$(DEBUFFS_STACK) \
+	-DFE8_SELECT_VIEW_GROWTHS=$(SELECT_VIEW_GROWTHS) \
+	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
+	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
+	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
+	-DFE8_BATTLE_ANIMATION_NUMBERS=$(BATTLE_ANIMATION_NUMBERS) \
+	-DFE8_HP_BARS=$(HP_BARS) \
+	-DFE8_GROUP_AI=$(GROUP_AI) \
+	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
+	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
+	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
+	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
+	-DFE8_FIX_BUGS=$(FIX_BUGS) \
+	-DFE8_CREDITS=$(CREDITS) \
+	-DFE8_GAME_RANK=$(GAME_RANK) \
+	-DFE8_CO_POWERS=$(CO_POWERS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1575,7 +1758,7 @@ endif
 
 .PHONY: expansion-modern-game-localization-config-check
 expansion-modern-game-localization-config-check: $(MODERN_BUILD_METADATA_JSON)
-	@python3 -c 'import json, pathlib, sys; from scripts.localization import schema; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")); requested = set(sys.argv[4].split(",")); expected_locales = [name for name in schema.LOCALE_IDS if name in requested]; assert data["config_fingerprint"] == sys.argv[2], (data["config_fingerprint"], sys.argv[2]); assert data["enabled_locale_mask"] == int(sys.argv[3], 0), (data["enabled_locale_mask"], sys.argv[3]); assert data["enabled_locales"] == expected_locales, (data["enabled_locales"], expected_locales); print("game-localization identity: fingerprint={} mask={} locales={}".format(sys.argv[2], sys.argv[3], ",".join(expected_locales)))' \
+	@$(PYTHON) -c 'import json, pathlib, sys; from scripts.localization import schema; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")); requested = set(sys.argv[4].split(",")); expected_locales = [name for name in schema.LOCALE_IDS if name in requested]; assert data["config_fingerprint"] == sys.argv[2], (data["config_fingerprint"], sys.argv[2]); assert data["enabled_locale_mask"] == int(sys.argv[3], 0), (data["enabled_locale_mask"], sys.argv[3]); assert data["enabled_locales"] == expected_locales, (data["enabled_locales"], expected_locales); print("game-localization identity: fingerprint={} mask={} locales={}".format(sys.argv[2], sys.argv[3], ",".join(expected_locales)))' \
 		"$(MODERN_BUILD_METADATA_JSON)" "$(MODERN_CONFIG_FINGERPRINT)" \
 		"$(MODERN_COMPILED_ENABLED_LOCALE_MASK)" "$(EXPANSION_ENABLED_LOCALES)"
 
@@ -1725,6 +1908,31 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'starter_content=$(EXPANSION_STARTER_CONTENT)'; \
 		printf '%s\n' 'vesly_debugger=$(VESLY_DEBUGGER)'; \
 		printf '%s\n' 'danger_bones=$(DANGER_BONES)'; \
+		printf '%s\n' 'new_anims=$(NEW_ANIMS)'; \
+		printf '%s\n' 'new_tilesets=$(NEW_TILESETS)'; \
+		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
+		printf '%s\n' 'mmb=$(MMB)'; \
+		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \
+		printf '%s\n' 'overflow_safety_checks=$(OVERFLOW_SAFETY_CHECKS)'; \
+		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
+		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \
+		printf '%s\n' 'debuffs_stack=$(DEBUFFS_STACK)'; \
+		printf '%s\n' 'select_view_growths=$(SELECT_VIEW_GROWTHS)'; \
+		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
+		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
+		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \
+		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
+		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
+		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
+		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
+		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
+		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \
+		printf '%s\n' 'fix_bugs=$(FIX_BUGS)'; \
+		printf '%s\n' 'credits=$(CREDITS)'; \
+		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
+		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
+		printf '%s\n' 'game_rank=$(GAME_RANK)'; \
+		printf '%s\n' 'co_powers=$(CO_POWERS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -1808,7 +2016,7 @@ FORCE_MODERN_LOCALIZATION:
 
 $(MODERN_LOCALIZATION_CATALOG_C) $(MODERN_LOCALIZATION_MSG_IDS_H) $(MODERN_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_LOCALIZATION
 	@mkdir -p "$(MODERN_LOCALIZATION_GENERATED_DIR)"
-	@python3 -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
+	@$(PYTHON) -m scripts.localization.cli generate --out-dir "$(MODERN_LOCALIZATION_GENERATED_DIR)"
 
 # Issue #18 sprint 3: ordinary compiles are not otherwise made to wait for
 # expansion_msg_ids.h -- only the synthetic expansion_locale-catalog.o
@@ -1852,7 +2060,7 @@ $(MODERN_GAME_LOCALIZATION_CONFIG_H) $(MODERN_GAME_LOCALIZATION_HEADER) \
 $(MODERN_GAME_LOCALIZATION_C) $(MODERN_GAME_LOCALIZATION_REPORT_JSON) \
 $(MODERN_GAME_LOCALIZATION_BUDGET_JSON) &: FORCE_MODERN_GAME_LOCALIZATION
 	@mkdir -p "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)"
-	@python3 -m scripts.localization.game_catalog generate \
+	@$(PYTHON) -m scripts.localization.game_catalog generate \
 		--out-dir "$(MODERN_GAME_LOCALIZATION_GENERATED_DIR)" \
 		--enabled-locales "$(MODERN_GAME_LOCALIZATION_CATALOG_LOCALES)"
 
@@ -2118,6 +2326,17 @@ MODERN_ROM_HEADER_VERIFIER := scripts/modernize/verify_rom_header.py
 MODERN_ROM_HEADER_FINALIZER := scripts/modernize/finalize_rom_header.py
 MODERN_BOOT_SCENARIO := tools/gba-playtest/scenarios/boot.json
 MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot.json
+ifeq ($(SKIP_OPENING),1)
+MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot-skip-opening.json
+ifeq ($(TITLE_256_COLORS),1)
+# The 256-color title background (see src/titlescreen.c) is visible by the
+# boot scenario's own checkpoints, so it needs its own captured fingerprint
+# rather than diverging from the vanilla-background one above. Only wired
+# for the common SKIP_OPENING=1 case (the config.mk default); building with
+# SKIP_OPENING=0 and TITLE_256_COLORS=1 together is not fingerprint-covered.
+MODERN_BOOT_FINGERPRINT := tools/gba-playtest/fingerprints/boot-skip-opening-title-256-colors.json
+endif
+endif
 MODERN_TITLE_SCENARIO := tools/gba-playtest/scenarios/title-progression.json
 MODERN_TITLE_FINGERPRINT := tools/gba-playtest/fingerprints/title-progression-modern-$(MODERN_CONFIG).json
 # Unlike MODERN_TITLE_SCENARIO above, the debugtools scenario path itself
@@ -2160,6 +2379,41 @@ $(MODERN_ROM): $(MODERN_ELF) $(MODERN_BUILD_METADATA_JSON)
 expansion-modern-rom: expansion-modern-elf $(MODERN_ROM)
 	@printf 'Modern ROM ready: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+
+# no$gba-format symbol file (see scripts/modernize/generate_nocash_sym.py):
+# lets no$gba show function/data names instead of raw addresses while
+# debugging. Generated from $(MODERN_ELF) (before --strip-debug strips
+# $(MODERN_ROM)'s own copy), and must share $(MODERN_ROM)'s basename so
+# no$gba auto-loads it -- see the sync-win copy step below.
+MODERN_SYM := $(MODERN_ROM:.gba=.sym)
+MODERN_SYM_GENERATOR := scripts/modernize/generate_nocash_sym.py
+
+$(MODERN_SYM): $(MODERN_ELF)
+	@"$(PYTHON)" "$(MODERN_SYM_GENERATOR)" --nm "$(MODERN_NM)" --elf "$<" --out "$@"
+
+expansion-modern-sym: expansion-modern-elf $(MODERN_SYM)
+	@printf 'Modern symbol file ready: %s\n' "$(MODERN_SYM)"
+
+# Opt-in convenience target (not part of `all`/boot-check): copy the built
+# modern ROM to a Windows-native path, for WSL setups where a GUI emulator
+# on the Windows side reads over \\wsl.localhost\ -- copying to a native
+# path avoids that bridge's file-locking/latency issues. Override
+# WIN_SYNC_DIR to point elsewhere; default targets this machine's devkitPro
+# install layout.
+WIN_SYNC_DIR := /mnt/c/devkitPro/feex
+
+.PHONY: sync-win _sync_win_impl
+sync-win:
+	+scripts/log_build_error.sh "make sync-win" -- $(MAKE) --no-print-directory _sync_win_impl
+
+_sync_win_impl:
+	@$(PYTHON) scripts/ensure_derived_assets.py
+	+$(MAKE) expansion-modern-rom expansion-modern-sym
+	@mkdir -p "$(WIN_SYNC_DIR)"
+	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
+	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
+	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
+	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
 
 # Preflight the libmGBA-backed playtest backend before spending time building
 # the ROM, with an actionable error pointing at the same backend-check

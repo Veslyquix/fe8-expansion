@@ -1,4 +1,5 @@
 #include "global.h"
+#include "banim_animnumbers.h"
 #include "proc.h"
 #include "hardware.h"
 #include "anime.h"
@@ -70,6 +71,10 @@ void StartBattleAnimHitEffects(struct Anim *anim, int type, int a, int b)
     int val1, val2;
     s16 roundt1, roundt2;
 
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_KillDigits();
+#endif
+
     if (GetAnimPosition(anim) == EKR_POS_L) {
         animr7 = gAnims[2];
         animr9 = gAnims[3];
@@ -137,6 +142,10 @@ void StartBattleAnimResireHitEffects(struct Anim * anim, int type)
 {
     int val1, val2, off;
     struct Anim * animR7, * animR5, * animR8;
+
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_KillDigits();
+#endif
 
     if (GetAnimPosition(anim) == EKR_POS_L) {
         animR7 = gAnims[2];

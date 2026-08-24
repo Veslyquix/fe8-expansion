@@ -12,10 +12,51 @@
 #include "cp_utility.h"
 #include "bmbattle.h"
 #include "cp_data.h"
+#include "purchase_generics.h"
+#include "bmtrick.h"
+#include "cp_script.h"
 
 #include "constants/items.h"
 
 static const struct AiCombatScoreCoefficients * sCombatScoreCoefficients;
+
+#if FE8_PURCHASE_GENERICS
+// Enemies with no explicit "attack walls" AI script step (AiScriptCmd_18_
+// TryAttackSnagWall, AI_CMD_ATTACK_WALLS) would otherwise never consider a
+// Camp a valid target at all -- AiAttemptOffensiveAction's main loop only
+// ever looks at real struct Unit targets. Camp is a real objective (it can
+// end the game if the player's own Camp falls, see UpdateObstacleFromBattle
+// in src/bmbattle.c), so any unit that reaches this general offensive-action
+// path should still attack a reachable enemy-owned Camp as a fallback when
+// it found no unit to attack. Mirrors AiScriptCmd_18_TryAttackSnagWall's
+// approach (AiFindBestAttackPositionAgainstTarget + AiSetDecision), but
+// looks up the Camp's position directly from its trap instead of searching
+// the map by terrain type, since the Camp's terrain is just TERRAIN_NONE
+// (see AddCampTrap, src/bmtrick.c) rather than a distinctive terrain id.
+static s8 AiTryAttackCamp(void)
+{
+    struct Trap* trap;
+    struct Vec2 pos;
+    u8 slot;
+
+    for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
+    {
+        if (!IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
+            continue;
+
+        if (AreUnitsAllied(gActiveUnit->index, GetPurchaseBaseTrapOwner(trap) << 6))
+            continue;
+
+        if (AiFindBestAttackPositionAgainstTarget(trap->xPos, trap->yPos, &pos, &slot) == 1)
+        {
+            AiSetDecision(pos.x, pos.y, AI_ACTION_COMBAT, 0, slot, trap->xPos, trap->yPos);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+#endif
 
 //! FE8U = 0x0803D450
 s8 AiAttemptOffensiveAction(s8 (* isEnemy)(struct Unit * unit))
@@ -28,6 +69,11 @@ s8 AiAttemptOffensiveAction(s8 (* isEnemy)(struct Unit * unit))
 
     finalResult.targetId = 0;
     finalResult.score = 0;
+
+#if FE8_PURCHASE_GENERICS
+    if (AiShouldCaptureBaseInsteadOfAttacking())
+        return 0;
+#endif
 
     if (gActiveUnit->state & US_IN_BALLISTA)
     {
@@ -123,6 +169,14 @@ try_ballist_combat:
                 finalResult = tmpResult;
     }
 
+#if FE8_PURCHASE_GENERICS
+    if (finalResult.score == 0 && finalResult.targetId == 0)
+    {
+        if (AiTryAttackCamp())
+            return 1;
+    }
+#endif
+
     if ((finalResult.score != 0) || (finalResult.targetId != 0))
     {
         AiSetDecision(finalResult.xMove, finalResult.yMove, AI_ACTION_COMBAT, finalResult.targetId, finalResult.itemSlot, 0, 0);
@@ -146,6 +200,11 @@ s8 AiAttemptCombatWithinMovement(s8 (* isEnemy)(struct Unit * unit))
 
     finalResult.targetId = 0;
     finalResult.score = 0;
+
+#if FE8_PURCHASE_GENERICS
+    if (AiShouldCaptureBaseInsteadOfAttacking())
+        return 0;
+#endif
 
     if (gActiveUnit->state & US_IN_BALLISTA) {
         BmMapFill(gBmMapMovement, -1);
@@ -224,6 +283,13 @@ else_stmt:
         }
     }
 
+#if FE8_PURCHASE_GENERICS
+    if (finalResult.score == 0 && finalResult.targetId == 0) {
+        if (AiTryAttackCamp())
+            return 1;
+    }
+#endif
+
     if ((finalResult.score != 0) || (finalResult.targetId != 0)) {
         AiSetDecision(finalResult.xMove, finalResult.yMove, AI_ACTION_COMBAT, finalResult.targetId, finalResult.itemSlot, 0, 0);
 
@@ -231,6 +297,8 @@ else_stmt:
             TryRemoveUnitFromBallista(gActiveUnit);
         }
     }
+
+    return 0;
 }
 
 //! FE8U = 0x0803D880

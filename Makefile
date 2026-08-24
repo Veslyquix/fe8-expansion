@@ -34,10 +34,14 @@ MID2AGB    := tools/mid2agb/mid2agb$(EXE)
 TEXTENCODE := tools/textencode/textencode$(EXE)
 JSONPROC   := tools/jsonproc/jsonproc$(EXE)
 PREPROC    := tools/preproc/preproc$(EXE)
+ifeq ($(OS),Windows_NT)
+PYTHON    ?= C:/Python312/python.exe
+else
+PYTHON    ?= python3
+endif
 FETSATOOL  := $(PYTHON) scripts/gfxtools/tsa_generator.py
 TMAP2TSA   := $(PYTHON) scripts/tmap2tsa.py
 MARTOMAP   := $(PYTHON) scripts/mar_to_map.py
-PYTHON    ?= python3
 PAL2GBAPAL := $(GBAGFX)
 
 ifeq ($(UNAME),Darwin)
@@ -220,15 +224,35 @@ src/menu_def.o: CC1FLAGS += -Wno-error
 # (never a bare `make`/`make all` plus a lane-selection variable), so
 # there is nothing for quickstart -- or anyone else -- to set to reach the
 # archival lane except this target's name.
+ifeq ($(OS),Windows_NT)
 all:
+	+scripts/log_build_error.sh "make all" -- $(MAKE) --no-print-directory _all_impl MODERN_CONFIG=release MODERN_ABI=aapcs
+
+_all_impl:
+	@$(PYTHON) scripts/ensure_derived_assets.py
+	+$(MAKE) expansion-modern-rom MODERN_CONFIG=release MODERN_ABI=aapcs
+else
+all:
+	+scripts/log_build_error.sh "make all" -- $(MAKE) --no-print-directory _all_impl MODERN_CONFIG=release MODERN_ABI=aapcs
+
+_all_impl:
+	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs
+endif
+
+.PHONY: _all_impl
 
 # Explicit, clearly-named archival alias (issue #15): builds the exact same
 # agbcc-based $(ROM) as `make fireemblem8.gba`. Kept as its own target so
 # scripts/docs can name the archival lane directly.
-legacy: $(ROM)
+legacy:
+	+scripts/log_build_error.sh "make legacy" -- $(MAKE) --no-print-directory _legacy_impl
+
+_legacy_impl: $(ROM)
 	@echo "Archival legacy build complete (agbcc, unsupported release lane): $(ROM)" >&2
 	@echo "See CONTRIBUTING.md for the decomp-matching workflow this lane exists for." >&2
+
+.PHONY: _legacy_impl
 
 # Prevent the catch-all %.s rule from turning the removed comparison command
 # into an unrelated native executable through make's built-in implicit rules.
@@ -310,7 +334,7 @@ shiftcheck: shiftcheck-build shiftcheck-static shiftcheck-offsets shiftcheck-dif
 # Anything not listed still trips the graph backstop. Both gates share the
 # same actionable diagnostic ($(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG), defined
 # once in generated_data.mk) so they can never drift.
-ARCHIVAL_KNOWN_GOALS := legacy $(ROM) $(ELF) $(MAP) $(RELOCS_ELF) $(OBJECTS_LST) \
+ARCHIVAL_KNOWN_GOALS := legacy _legacy_impl $(ROM) $(ELF) $(MAP) $(RELOCS_ELF) $(OBJECTS_LST) \
     shiftcheck shiftcheck-static shiftcheck-offsets shiftcheck-diff shiftcheck-run
 ifneq (,$(GENERATED_DATA_ITEM_CAP_EXPANDED))
 ifneq (,$(filter $(ARCHIVAL_KNOWN_GOALS),$(MAKECMDGOALS)))
@@ -364,15 +388,27 @@ clean_common:
 
 clean_fast: clean_common
 	$(RM) $(C_OBJECTS) $(ASM_OBJECTS) $(MID_OBJECTS)
-	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -not -path './banim/*' -exec rm {} +
+	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -not -path './banim/*' -not -path './graphics/banim/banim_new*' -exec rm {} +
 
 .PHONY: clean_fast clean_common
 
+# FE8_NEW_ANIMS custom battle-animation assets (see scripts/banim_event_to_source.py
+# and CREDITS.md): banim_new*_{oam,modes,script}* live under banim/, already
+# excluded above, but their sheet/palette siblings (banim_new*_sheet_N.4bpp.lz,
+# banim_new*.agbpal.lz) live under graphics/banim/, which was NOT excluded --
+# clean_fast/clean's generic find swept them by extension like any other build
+# byproduct. Unlike vanilla graphics/banim/*.lz (regenerated from a checked-in
+# .png via graphics_file_rules.mk), these have no Makefile-visible source: they
+# are extracted once from an AA.exe .event export that exists only on the
+# original Windows machine, so deleting them is NOT recoverable by `make` --
+# only by re-running the converter against that export. Protect them in both
+# targets; only `clean_all` (git clean -dfx, already documented as maximally
+# destructive) may remove them.
 clean: clean_common
 	$(RM) $(ALL_OBJECTS)
 	# Remove battle animation binaries
 	$(RM) -f banim/*.bin banim/*.o banim/*.lz banim/*.bak
-	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -exec rm {} +
+	@find . \( -iname '*.o' -o -iname '*.obj' -o -iname '*.feimg*.bin'  -o -iname '*.fetsa*.bin' -o -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.fk' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -not -path './graphics/banim/banim_new*' -exec rm {} +
 
 .PHONY: clean
 
@@ -405,6 +441,7 @@ TEXT_TOOLS := scripts/texttools
 TEXT_DECODER := $(PYTHON)  $(TEXT_TOOLS)/textdecoder.py
 TEXT_DPARSER := $(PYTHON) $(TEXT_TOOLS)/textdeparser.py
 TEXT_PROCESS := $(PYTHON) $(TEXT_TOOLS)/textprocess.py
+TEXT_ALIGNMENT_CHECK := $(PYTHON) $(TEXT_TOOLS)/check_text_alignment.py
 
 TEXT_MAIN := $(TEXT_DIR)/texts.txt
 TEXT_DEFS := $(TEXT_DIR)/textdefs.txt
@@ -414,6 +451,7 @@ TEXT_HEADER := include/constants/msg.h
 MSG_LIST    := src/msg_data.c
 
 src/msg_data.c: $(TEXT_SRC) $(TEXT_DEFS)
+	@$(TEXT_ALIGNMENT_CHECK) --main $(TEXT_MAIN) --defs $(TEXT_DEFS) --fix
 	@$(TEXT_PROCESS) $(TEXT_MAIN) $(TEXT_DEFS) $@ $(TEXT_HEADER) utf8
 
 # Graphics Recipes
@@ -447,6 +485,12 @@ include release.mk
 %.gbapal: %.pal ; $(PAL2GBAPAL) $< $@
 %.gbapal: %.png ; $(GBAGFX) $< $@
 %.lz: % ; $(GBAGFX) $< $@ $(LZ_FLAGS)
+
+# 224-colour convo BGs need their pixel indices shifted so BG palettes 2-3
+# stay free for dialogue/textbox palettes. The generic gbagfx rule would use
+# contiguous indices 0-13 and clobber that reserved gap.
+graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal &: graphics/convo_bg/kh.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 224 $< graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal
 # These DemonLight sprite images were compressed in the original ROM with a
 # minimum LZ match distance of 3 (gbagfx defaults to 2). Reproduce byte-identically.
 graphics/banim/dragonfx/Img_DemonLightSprites_087A5BA4.4bpp.lz: LZ_FLAGS := -mindist 3

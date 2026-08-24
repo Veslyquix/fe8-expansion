@@ -14,10 +14,12 @@
 #include "bmunit.h"
 #include "bmmap.h"
 #include "bmbattle.h"
+#include "bmitem.h"
 #include "bmtrick.h"
 #include "mu.h"
 #include "uimenu.h"
 #include "bmtrap.h"
+#include "mapgen.h"
 #include "gamecontrol.h"
 #include "bmarena.h"
 #include "bmudisp.h"
@@ -27,6 +29,7 @@
 #include "worldmap.h"
 #include "bmio.h"
 #include "bmmind.h"
+#include "gamerank.h"
 
 // General Battle Map System Stuff, mostly low level hardware stuff but also more
 
@@ -947,12 +950,17 @@ void InitPlayConfig(int isDifficult, s8 unk) {
     gPlaySt.config.disableTerrainDisplay = 0;
     gPlaySt.config.unitDisplayType = 0;
     gPlaySt.config.autoCursor = 0;
+#if FE8_SKIP_OPENING
+    gPlaySt.config.textSpeed = 2; // Fast
+    gPlaySt.config.gameSpeed = 1; // Fast
+#else
     gPlaySt.config.textSpeed = 1; // TODO: (DEFAULT?) TEXT SPEED DEFINITIONS
     gPlaySt.config.gameSpeed = 0;
+#endif
     gPlaySt.config.disableBgm = 0;
     gPlaySt.config.disableSoundEffects = 0;
     gPlaySt.config.windowColor = 0;
-    gPlaySt.config.disableAutoEndTurns = 0;
+    gPlaySt.config.disableAutoEndTurns = 1;
     gPlaySt.config.noSubtitleHelp = 0;
     gPlaySt.config.battleForecastType = 0;
     gPlaySt.config.debugControlRed = 0;
@@ -983,9 +991,17 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
     ResetUnitSprites();
     ResetMenuOverrides();
     ClearTraps();
+#if FE8_PURCHASE_GENERICS
+    ResetChapterGoldAmount();
+    SetChapterGoldAmount(5000);
+#endif
 
     gPlaySt.faction = FACTION_GREEN; // TODO: PHASE/ALLEGIANCE DEFINITIONS
     gPlaySt.chapterTurnNumber = 0;
+
+#if FE8_GAME_RANK
+    GameRank_OnChapterInit();
+#endif
 
     if (GetBattleMapKind() == BATTLEMAP_KIND_SKIRMISH) {
         if (!(gPlaySt.chapterStateBits & PLAY_FLAG_PREPSCREEN))
@@ -1024,6 +1040,15 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
     ClearTemporaryUnits();
     LoadChapterTraps();
 
+#if FE8_PURCHASE_GENERICS
+    InitSuperFieldsPreOwnedBaseMarkers();
+    InitPurchaseBaseTrapsFromTerrain();
+    InitCampTrapsFromTilesetMarkers();
+#endif
+#if FE8_MAPGEN
+    MapGen_PlaceBases(gPlaySt.chapterIndex);
+#endif
+
     if (gameCtrl)
         StartBMapMain(gameCtrl);
 
@@ -1058,6 +1083,15 @@ void RestartBattleMap(void) {
 
     InitMapObstacles();
     LoadChapterTraps();
+
+// #if FE8_PURCHASE_GENERICS
+    // InitPurchaseBaseTrapsFromTerrain();
+// #endif
+
+// #if FE8_MAPGEN
+    // MapGen_PlaceBases(gPlaySt.chapterIndex);
+// #endif
+
     BMapVSync_End();
     BMapVSync_Start();
 

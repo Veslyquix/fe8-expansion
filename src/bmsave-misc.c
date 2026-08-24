@@ -58,7 +58,13 @@ void CopyGMapSaveInfo(const u32* src, u32* dst)
 //! FE8U = 0x080A72B0
 void CopySuspendSaveBlock(struct SuspendSaveBlockEwram * src, struct SuspendSaveBlock * dst)
 {
+#if FE8_PURCHASE_GENERICS
+    memcpy(&dst->action, src->buffer_58, sizeof(dst->action));
+    CpuFill16(0, dst->chapterGold, sizeof(dst->chapterGold));
+    memcpy(dst->blueUnits, src->buffer_58 + sizeof(dst->action), sizeof(src->buffer_58) - sizeof(dst->action));
+#else
     memcpy(&dst->action, src->buffer_58, sizeof(src->buffer_58));
+#endif
     SetPlayStPtrWithChIndexModify(&src->playSt, &dst->playSt);
     CopyGMapSaveInfo(src->buffer_1F1C, (void*)&dst->wmStuff);
 

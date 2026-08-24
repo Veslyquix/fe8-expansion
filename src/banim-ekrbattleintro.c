@@ -1421,6 +1421,11 @@ bool PrepareBattleGraphicsMaybe(void)
 
         if (gBanimTerrain[POS_L] == TERRAIN_SNAG)
             return false;
+
+#if FE8_PURCHASE_GENERICS
+        if (unit_bu1->pClassData->number == CLASS_CAMP)
+            return false;
+#endif
     }
 
     if (gBanimValid[POS_R] == true)
@@ -1442,6 +1447,11 @@ bool PrepareBattleGraphicsMaybe(void)
 
         if (gBanimTerrain[POS_R] == TERRAIN_SNAG)
             return false;
+
+#if FE8_PURCHASE_GENERICS
+        if (unit_bu2->pClassData->number == CLASS_CAMP)
+            return false;
+#endif
     }
 
     return true;

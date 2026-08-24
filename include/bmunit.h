@@ -123,6 +123,20 @@ enum {
     UNIT_WALKSPEED_SLOW,
 };
 
+#ifdef DEBUFFS_EXIST
+enum UnitDebuffStat {
+    UNIT_DEBUFF_STAT_POW,
+    UNIT_DEBUFF_STAT_SKL,
+    UNIT_DEBUFF_STAT_SPD,
+    UNIT_DEBUFF_STAT_DEF,
+    UNIT_DEBUFF_STAT_RES,
+    UNIT_DEBUFF_STAT_LCK,
+    UNIT_DEBUFF_STAT_MOV,
+
+    UNIT_DEBUFF_STAT_COUNT,
+};
+#endif
+
 struct Unit
 {
     /* 00 */ const struct CharacterData* pCharacterData;
@@ -181,6 +195,10 @@ struct Unit
 
     /* pad */
     /* 47 */ u8 _u47;
+
+#ifdef DEBUFFS_EXIST
+    /* 48 */ u8 debuffs[4];
+#endif
 };
 
 enum udef_ai_index {
@@ -457,6 +475,9 @@ int GetUnitSpeed(struct Unit* unit);
 int GetUnitDefense(struct Unit* unit);
 int GetUnitResistance(struct Unit* unit);
 int GetUnitLuck(struct Unit* unit);
+#ifdef DEBUFFS_EXIST
+int GetUnitMovement(struct Unit* unit);
+#endif
 int GetUnitPortraitId(struct Unit* unit);
 int GetUnitMiniPortraitId(struct Unit* unit);
 int GetUnitLeaderCharId(struct Unit* unit);
@@ -493,7 +514,11 @@ void UnitRemoveItem(struct Unit* unit, int slot);
 #define UNIT_MOV_BASE(aUnit) ((aUnit)->pClassData->baseMov)
 
 #define UNIT_CON(aUnit) (UNIT_CON_BASE(aUnit) + (aUnit)->conBonus)
+#ifdef DEBUFFS_EXIST
+#define UNIT_MOV(aUnit) GetUnitMovement(aUnit)
+#else
 #define UNIT_MOV(aUnit) ((aUnit)->movBonus + UNIT_MOV_BASE(aUnit))
+#endif
 
 #define UNIT_IS_GORGON_EGG(aUnit) (((aUnit)->pClassData->number == CLASS_GORGONEGG) || ((aUnit)->pClassData->number == CLASS_GORGONEGG2))
 #define UNIT_IS_PHANTOM(aUnit) ((aUnit)->pClassData->number == CLASS_PHANTOM)

@@ -98,8 +98,15 @@ class CoreABILayoutTests(unittest.TestCase):
                        "Proc alignment");
 
         /* ---- Unit system ---- */
+#ifdef DEBUFFS_EXIST
+        _Static_assert(sizeof(struct Unit) == 0x4C,
+                       "Unit size");
+        _Static_assert(offsetof(struct Unit, debuffs) == 0x48,
+                       "Unit.debuffs offset");
+#else
         _Static_assert(sizeof(struct Unit) == 0x48,
                        "Unit size");
+#endif
         _Static_assert(offsetof(struct Unit, level) == 0x08,
                        "Unit.level offset");
         _Static_assert(offsetof(struct Unit, state) == 0x0C,

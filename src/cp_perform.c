@@ -211,7 +211,22 @@ void AiStartCombatAction(struct CpPerformProc* proc) {
         struct Trap* trap = GetTrapAt(gAiDecision.xTarget, gAiDecision.yTarget);
         gActionData.xOther = gAiDecision.xTarget;
         gActionData.yOther = gAiDecision.yTarget;
-        gActionData.trapType = trap->extra;
+
+#if FE8_PURCHASE_GENERICS
+        // Camp doesn't keep its HP in trap->extra like a normal obstacle
+        // (Wall/Snag) does -- it's in data[TRAP_EXTDATA_PURCHASE_BASE_
+        // GOLD_PER_TURN] (see SetCampTrapHp/GetCampTrapHp, src/bmtrick.c),
+        // repurposed since Camp always grants a flat gold-per-turn income
+        // instead. Reading trap->extra directly here always got 0 (a
+        // Camp's extra field is never set), so gActionData.trapType (and
+        // therefore InitObstacleBattleUnit's gBattleTarget.unit.curHP) was
+        // always 0 for an AI-initiated Camp attack -- the Camp died to any
+        // hit, immediately triggering ForceGameOver if it was the player's.
+        if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
+            gActionData.trapType = GetCampTrapHp(trap);
+        else
+#endif
+            gActionData.trapType = trap->extra;
     }
 
     if ((s8)gAiDecision.itemSlot != BU_ISLOT_AUTO) {

@@ -5,6 +5,9 @@
 #include "bm.h"
 #include "bmbattle.h"
 #include "mapanim.h"
+#if FE8_DRAW_MAP_ANIMS
+#include "draw_mapanim.h"
+#endif
 #include "bmmap.h"
 #include "bmio.h"
 #include "bmudisp.h"
@@ -20,7 +23,11 @@ const struct ProcCmd * MapAnim_GetRoundProcScript(void)
     if (gManimSt.specialProcScr)
         return gManimSt.specialProcScr;
 
+#if FE8_DRAW_MAP_ANIMS
+    return ProcScr_DrawMapAnimDefaultItemEffect;
+#else
     return ProcScr_MapAnimDefaultItemEffect;
+#endif
 }
 
 void MapAnim_AnimateSubjectIdle(ProcPtr proc)

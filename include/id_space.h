@@ -23,11 +23,11 @@ typedef u16 CharacterCount;
 /* Class (job) ID */
 typedef u8 ClassId;
 typedef u8 ClassCount;
-#define CLASS_ID_STORAGE_BITS 7
+#define CLASS_ID_STORAGE_BITS 8
 #define CLASS_ID_SIGNED 0
 #define CLASS_ID_SENTINEL 0
-#define CLASS_ID_TECHNICAL_MAX 0x7F
-#define CLASS_ID_CONFIGURED_CAP 0x7F
+#define CLASS_ID_TECHNICAL_MAX 0xFF
+#define CLASS_ID_CONFIGURED_CAP 0xFF
 
 /* Item ID */
 typedef u8 ItemId;
@@ -71,7 +71,7 @@ typedef u16 EventCount;
 /* Cap-fits-storage guarantees checked at compile time. */
 ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP <= ITEM_ID_TECHNICAL_MAX, item_cap_fits);
 ID_SPACE_STATIC_ASSERT(ITEM_ID_TECHNICAL_MAX <= 0x3FFF, item_fits_save14);
-ID_SPACE_STATIC_ASSERT(CLASS_ID_CONFIGURED_CAP <= 0x7F, class_cap_fits_jid7);
+ID_SPACE_STATIC_ASSERT(CLASS_ID_CONFIGURED_CAP <= 0xFF, class_cap_fits_jid8);
 ID_SPACE_STATIC_ASSERT(CHARACTER_ID_CONFIGURED_CAP <= 0xFF, character_cap_fits_u8);
 ID_SPACE_STATIC_ASSERT(CHAPTER_ID_CONFIGURED_CAP <= 0x7F, chapter_cap_fits_s8);
 ID_SPACE_STATIC_ASSERT(UNIT_ID_CONFIGURED_CAP < 0x40, unit_cap_fits_faction);

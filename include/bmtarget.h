@@ -33,6 +33,9 @@ void MakeTargetListForDoorAndBridges(struct Unit* unit, int terrainId);
 // ??? TryAddDoorOrBridgeToTargetList(???);
 void MakeTargetListForPick(struct Unit* unit);
 void MakeTerrainHealTargetList(int faction);
+#if FE8_PURCHASE_GENERICS
+void MakeCampTentHealTargetList(int faction);
+#endif
 void MakePoisonDamageTargetList(int faction);
 void MakeGorgonEggHatchTargetList(int faction);
 // ??? TryAddUnitToRefreshTargetList(???);

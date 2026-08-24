@@ -69,7 +69,43 @@ EXPANSION_BUILD_ID ?=
 # Bumped 1 -> 2 for issue #18 sprint 2: struct ExpansionUserPrefs
 # (include/expansion_save_prefs.h) now occupies part of ExpansionSaveMeta's
 # `reserved` tail.
-EXPANSION_SAVE_COMPAT_EPOCH ?= 2
+#
+# Bumped 2 -> 3 for the Camp/Tent structures feature: when
+# FE8_PURCHASE_GENERICS is enabled, struct GameSavePackedUnit's `jid` field
+# moves out of its packed bitfield into a standalone byte (widening the class
+# ID save field from 7 to 8 bits so classes up to 0xFF survive a normal save;
+# see docs/id_space.md's "class" domain and include/bmsave.h). This changes
+# what the game-save unit bytes mean, so it must invalidate old saves via the
+# existing save-compat gate rather than silently misreading them.
+#
+# Bumped 3 -> 4 for the debuffs feature: struct SuspendSavePackedUnit gained a
+# conditional `debuffs[UNIT_DEBUFF_STAT_COUNT]` field and
+# SUSPEND_SAVE_BLOCK_COUNT became conditional (1 vs 2) rather than a hardcoded
+# 2, both changing struct SaveBlocks' layout from suspendSaveBlocks onward.
+#
+# Bumped 4 -> 5 for FE8_MAPGEN's per-save generation seed: struct PlaySt
+# (include/types.h) gains a `#if FE8_MAPGEN u32 mapGenSeed;` field appended at
+# its own end. This grows every struct that embeds struct PlaySt
+# (GameSaveBlock, SuspendSaveBlock) and therefore shifts every subsequent
+# offset in struct SaveBlocks, same class of change as the jid-widening bump
+# above -- flag-gated (only FE8_MAPGEN=1 builds are affected), but real saves
+# from a pre-bump build must not be silently misread post-bump.
+# Bumped 5 -> 6 for the GameRank feature: struct PlaySt (include/types.h)
+# gains a `#if FE8_GAME_RANK` block of five u16 kill-tracking fields appended
+# at its own end (same class of change as FE8_MAPGEN's mapGenSeed bump
+# above) -- flag-gated, but grows GameSaveBlock/SuspendSaveBlock and shifts
+# every subsequent struct SaveBlocks offset when FE8_GAME_RANK=1.
+#
+# Bumped 6 -> 7 for the CO screen feature: struct PlaySt gains a
+# `#if FE8_CO_POWERS` u8 commanderId[4] field appended at its own end (same
+# class of change again) -- flag-gated, but grows GameSaveBlock/
+# SuspendSaveBlock and shifts every subsequent struct SaveBlocks offset when
+# FE8_CO_POWERS=1.
+#
+# Bumped 7 -> 8 for the CO gauge feature: struct PlaySt gains a
+# `#if FE8_CO_POWERS` s16 coGauge[4] field appended right after
+# commanderId (same class of change again).
+EXPANSION_SAVE_COMPAT_EPOCH ?= 8
 
 # --- Localization (issue #18) -----------------------------------------------
 # EXPANSION_ENABLED_LOCALES -- comma-separated stable locale ids (see
@@ -132,11 +168,194 @@ EXPANSION_MECHANICS_SAMPLE    ?= 0
 EXPANSION_DANGER_OVERLAY_MENU ?= 0
 EXPANSION_STARTER_CONTENT     ?= 0
 
+
+
+    ## Campaign specific things 
+# --- Optional CustomCampaign --------------------------------------------------
+# Vesly's custom game. 
+CUSTOM_CAMPAIGN ?= 1
+
+# --- Optional gameplay features ---------------------------------------------
+# Buy generic units on forts/camps. 
+PURCHASE_GENERICS ?= 1
+
+# --- Optional FortUnitsStartGreyedOut --------------------------------------------
+# Units spawned from forts cannot immediately act. 
+FORT_UNITS_START_GREYED_OUT ?= 1
+
+
+# --- Optional procedural maps ------------------------------------------------
+# Randomizes maps with premade map chunks. Requires
+# PURCHASE_GENERICS (Camp/Tent trap kinds).
+MAPGEN ?= 1
+
+# --- Optional custom battle animations ---------------------------------------
+# Swaps in community-sourced custom battle animation sets for select classes
+# (see CREDITS.md), in place of the vanilla animation. Purely cosmetic.
+NEW_ANIMS ?= 1
+
+# --- Optional custom map tilesets --------------------------------------------
+# Swaps in community-sourced map tilesets (see CREDITS.md) for the chapters
+# that use them. Purely cosmetic: graphics, palette and tile config only.
+NEW_TILESETS ?= 1
+
+# --- Optional 256-color title screen -----------------------------------------
+# Replaces the vanilla title screen's tiled 16-color background/dragon overlay
+# with a single static 256-color (8bpp) background image. 
+TITLE_256_COLORS ?= 1
+
+# --- Optional TextChNames -----------------------------------------------------
+# Draws the actual chapter title text instead of a pre-rendered graphic
+# banner, so any chapter name reads correctly without needing a hand-drawn
+# banner per chapter. 
+# Note: vanilla text names for chapters are like this: TXT00 L00
+TEXT_CHAPTER_NAMES ?= 1
+
+# --- Optional Credits ----------------------------------------------------------
+# Scrolling end-credits sequence using text instead of images. 
+CREDITS ?= 0
+
+
+
+
+
+    ## Bug fixes 
+# --- Optional FixBugs -------------------------------------------------------------
+# Prevents negative stats when loading a character with negative bases. 
+FIX_BUGS ?= 1
+
+# --- Optional bugfixes --------------------------------------------------------
+# PutSprite/PutSpriteExt (src/ctc.c) bounds-check the secondary sprite-object
+# pool before writing to it, instead of silently overflowing sSpritePool into
+# sSpriteLayers when more than 0x80 sprites are queued in one frame. On by
+# default: this is a pure bugfix with no behavioural change short of avoiding
+# the overflow.
+OVERFLOW_SAFETY_CHECKS ?= 1
+
+
+
+
+    # For testing purposes 
 # --- Optional Vesly debugger -------------------------------------------------
 # Press B on a unit to edit them. 
 VESLY_DEBUGGER ?= 1
 
+# --- Optional SkipOpening -------------------------------------------------------
+# Boots straight to the title screen: no health & safety screen, no
+# Nintendo/Intelligent Systems logos, and no attract-mode opening demo. On
+# New Game, also skips the world-map "continent of Magvel" narration and the
+# "In an age long past..." opening text crawl. 
+SKIP_OPENING ?= 1
+
+
+
+
+    # Quality of Life 
 # --- Optional DangerBones ----------------------------------------------------
 # Highlight enemies that can attack the tile currently selected by the path
 # arrow, using the fourth unit palette and map-sprite shake.
 DANGER_BONES ?= 1
+
+# --- Optional SelectViewGrowths ---------------------------------------------
+# Press Select on the first stat-screen page to alternate between current
+# stats and character growth rates.
+SELECT_VIEW_GROWTHS ?= 1
+
+# --- Optional BattleStatsNoAnims ---------------------------------------------
+# Shows the attack forecast's Hit/Damage/Crit/AS numbers alongside the unit
+# name/HP boxes when battle animations are off, instead of that information
+# only being visible during the (skipped) battle animation. The original
+# patch's weapon-icon-at-bottom sub-feature is not ported -- see
+# ShowBattleStatsNoAnims in src/mapanim_infobox.c.
+BATTLE_STATS_NO_ANIMS ?= 1
+
+# --- Optional DrawMapAnims ----------------------------------------------------
+# Draws weapon-type hit animations and floating damage numbers during map
+# battle rounds when full battle animations are disabled. Purely cosmetic.
+DRAW_MAP_ANIMS ?= 1
+
+# --- Optional BattleAnimationNumbers ----------------------------------------
+# Shows floating damage/heal numbers over battle-animation sprites. This is
+# the full battle-animation counterpart to DRAW_MAP_ANIMS. Event flag 0xEE
+# disables the numbers at runtime, matching the original SkillSystem hack.
+BATTLE_ANIMATION_NUMBERS ?= 1
+
+# --- Optional multipalette conversation backgrounds --------------------------
+# Adds 224/256-colour (8bpp) conversation-background images alongside the
+# vanilla 16-colour ones in gConvoBackgroundData. A 224-colour image leaves
+# two palette banks (32 colours) free for text/chatbubble UI.
+MULTIPALETTE_BG ?= 1
+
+# --- Optional MMB / Gorgon Egg -----------------------------------------------
+# Enables the minimug side window and C Gorgon Egg hatch phase display. This
+# mirrors the Catball1-style MMB setup by default.
+MMB ?= 1
+
+# --- Optional ExtendWeaponDescBox --------------------------------------------
+# Modern-build port of ExtendWeaponDescBox: extends the item/weapon
+# description help box from 3 to 5 lines (extra VRAM text-tile rows/handles),
+# and the associated shop/prep/supply/trade VRAM-bank and layout fixes it
+# depends on.
+EXTEND_DESC_BOX ?= 1
+
+# --- Optional DisplayObtainableItem ------------------------------------------
+# Draws a small icon over enemy units carrying a droppable or stealable.
+DISPLAY_OBTAINABLE_ITEM ?= 1
+
+# --- Optional HpBars ----------------------------------------------------------
+# Draws a partial-fill HP bar over each visible unit, plus a small icon
+# over enemies the selected unit could hit for bonus effectiveness, land a
+# high crit on, or start a support/talk event with. Requires
+# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet 
+HP_BARS ?= 1
+
+# --- Optional AlphaSpriteArrow ---------------------------------------------------
+# Displays a ghost of the unit at the tip of the blue arrow when selecting 
+# where to move the unit to. 
+ALPHA_SPRITE_ARROW ?= 1
+
+
+
+
+    ## Gameplay related 
+# --- Optional Debuffs ---------------------------------------------------------
+# Enables per-unit temporary stat modifiers. DEBUFFS_STACK controls whether
+# repeat applications of the same debuff keep worsening a stat toward -31.
+DEBUFFS_EXIST ?= 1
+DEBUFFS_STACK ?= 0
+
+
+# --- Optional GroupAI ----------------------------------------------------------
+# Attack one member of a tagged group and the rest immediately aggro. 
+GROUP_AI ?= 1
+
+
+# --- Optional PromoteCommand ------------------------------------------------------
+# Adds a "Promote" command to the unit menu for units at level 20+ who
+# can promote. 
+PROMOTE_COMMAND ?= 1
+
+# --- Optional Autosave ----------------------------------------------------------
+# BmMain_SuspendBeforePhase only writes while
+# transitioning into Player Phase, and only if the number of alive,
+# deployed player units hasn't dropped since the last write 
+TURN_AUTOSAVE ?= 1
+
+# --- Optional GameRank ----------------------------------------------------------
+# Tracks per-chapter and per-save-slot player-unit deaths, plus enemies
+# defeated (both a per-turn "power score" high-water mark and a per-chapter
+# total), so later chapters/events can reference them as a running game
+# rank. See include/gamerank.h.
+GAME_RANK ?= 1
+
+# --- Optional CoPowers ----------------------------------------------------------
+# Advance Wars reference: adds a "CO Powers" entry to the chapter (map) menu
+# that pans the camera onto every one of the player's units in turn, parking
+# the cursor on each for 5 frames. See src/power.c.
+CO_POWERS ?= 1
+
+
+
+
+
+

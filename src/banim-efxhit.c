@@ -1,5 +1,6 @@
 #include "global.h"
 #include "anime.h"
+#include "banim_animnumbers.h"
 #include "ekrbattle.h"
 #include "efxbattle.h"
 #include "hardware.h"
@@ -23,7 +24,12 @@ void NewEfxDamageMojiEffect(struct Anim * anim, int hitted)
     proc->anim = anim;
     proc->timer = 0;
     proc->hitted = hitted;
+
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_StartDelayedMissNoDamageGfx();
+#else
     LZ77UnCompVram(Img_NODAMGEMIS, OBJ_VRAM0 + 0x2000);
+#endif
 }
 
 void efxDamageMojiEffectMain(struct ProcEfx * proc)
@@ -63,6 +69,10 @@ void NewEfxDamageMojiEffectOBJ(struct Anim * anim, int hitted)
         anim_scr = AnimScr_Miss;
     }
 
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_ReloadMissNoDamagePalette(anim);
+#endif
+
     val1 = GetAnimPosition(anim) == EKR_POS_L ? 0x6100 : 0x5100;
     proc->sub_proc = NewEkrsubAnimeEmulator(
         anim->xPosition,
@@ -77,7 +87,11 @@ void efxDamageMojiEffectOBJMain(struct ProcEfxDamageMojiEffectOBJ * proc)
     proc->sub_proc->x1 = proc->anim->xPosition;
 
     if (++proc->timer > proc->terminator) {
+#if FE8_BATTLE_ANIMATION_NUMBERS
+        AnimNumbers_EndDamageMojiSubProc(proc);
+#else
         Proc_End(proc->sub_proc);
+#endif
         Proc_Break(proc);
     }
 }

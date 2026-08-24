@@ -106,6 +106,9 @@ extern char unit_icon_wait_Fallen_Prince_sheet[];
 extern char unit_icon_wait_Tent_sheet[];
 extern char unit_icon_wait_Pontifex_sheet[];
 extern char unit_icon_wait_Fallen_Peer_sheet[];
+extern char unit_icon_wait_Camp_sheet[];
+extern char unit_icon_wait_TentStructure_sheet[];
+extern char unit_icon_wait_Flag_sheet[];
 // moving map sprite
 extern char unit_icon_move_Ephraim_Lord_sheet[];
 extern char unit_icon_move_Ephraim_Lord_motion[];

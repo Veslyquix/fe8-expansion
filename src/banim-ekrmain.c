@@ -1,4 +1,5 @@
 #include "global.h"
+#include "banim_new_anims.h"
 #include "proc.h"
 #include "hardware.h"
 #include "anime.h"
@@ -240,7 +241,7 @@ void UpdateBanimFrame(void)
             EfxPalModifyPetrifyEffect(gPaletteBuffer, (int)PAL_OBJ(0x8), 0x1);
 
         EnablePaletteSync();
-        LZ77UnCompWram(banim[bid].oam_l, gBanimOaml);
+        BANIM_UNCOMP_OAM_L(&banim[bid], gBanimOaml);
         gBanimOaml[0x57F0 / 4] = 1;
     }
 

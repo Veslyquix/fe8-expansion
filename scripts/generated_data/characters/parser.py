@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import re
 
-from ..cparse import extract_designated_fields, find_matching_brace, line_of, strip_outer_braces
+from ..cparse import (
+    extract_designated_fields, find_matching_brace, line_of, strip_hand_conditionals, strip_outer_braces,
+)
 from ..diagnostics import GeneratedDataError, SourceLocation
 from ..validators import extract_enum_constants
 from .schema import (
@@ -149,6 +151,7 @@ def parse_hand_written(path, characters_enum, wanted_designators):
     """
     with open(path, "r", encoding="utf-8") as handle:
         text = handle.read()
+    text = strip_hand_conditionals(text)
 
     decl_match = _DECL_RE.search(text)
     if not decl_match:

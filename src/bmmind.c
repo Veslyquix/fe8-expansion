@@ -13,6 +13,7 @@
 #include "soundwrapper.h"
 #include "bmusemind.h"
 #include "bmtrap.h"
+#include "bmtrick.h"
 #include "bmarch.h"
 #include "bmtarget.h"
 #include "bmudisp.h"
@@ -22,6 +23,7 @@
 #include "popup.h"
 #include "eventinfo.h"
 #include "mapanim.h"
+#include "promote_command.h"
 
 #include "bmmind.h"
 
@@ -32,6 +34,8 @@ int VeslyDebugger_GetBgmOverride(void);
 #include "constants/items.h"
 #include "constants/terrains.h"
 #include "constants/songs.h"
+#include "group_ai.h"
+#include "promote_command.h"
 
 EWRAM_DATA struct ActionData gActionData = { 0 };
 
@@ -111,6 +115,11 @@ void LoadRNStateFromActionStruct(void) {
 u32 ApplyUnitAction(ProcPtr proc) {
     gActiveUnit = GetUnit(gActionData.subjectIndex);
 
+#if FE8_PURCHASE_GENERICS
+    if (gActionData.unitActionType != UNIT_ACTION_PURCHASE_GENERIC)
+        ResetPurchaseBaseTrapCaptureByUnit(gActionData.subjectIndex);
+#endif
+
     if (gActionData.unitActionType == UNIT_ACTION_COMBAT) {
         int itemIdx = GetItemIndex(
             GetUnit(gActionData.subjectIndex)->items[gActionData.itemSlotIndex]
@@ -124,6 +133,9 @@ u32 ApplyUnitAction(ProcPtr proc) {
 
     switch (gActionData.unitActionType) {
         case UNIT_ACTION_WAIT:
+#if FE8_PURCHASE_GENERICS
+        case UNIT_ACTION_PURCHASE_GENERIC:
+#endif
         case UNIT_ACTION_TRAPPED:
             gActiveUnit->state |= US_HAS_MOVED;
             return 1;
@@ -172,6 +184,12 @@ u32 ApplyUnitAction(ProcPtr proc) {
         case UNIT_ACTION_PICK:
             ActionPick(proc);
             return 0;
+
+#if FE8_PROMOTE_COMMAND
+        case UNIT_ACTION_PROMOTE:
+            PromoteCommand_ActionPromote(proc);
+            return 0;
+#endif
 
         default:
             return 1;
@@ -293,6 +311,10 @@ s8 ActionCombat(ProcPtr proc) {
     }
 
     Proc_StartBlocking(sProcScr_CombatAction, proc);
+
+#if FE8_GROUP_AI
+    GroupAI_OnAttack(GetUnit(gActionData.subjectIndex), target);
+#endif
 
     return 0;
 }

@@ -49,11 +49,15 @@ void GetHpBarLeftTile(u16 * buffer, s16 hp, int tileBase);
 void GetHpBarMidTiles(u16 * buffer, s16 hp, int tileBase);
 void GetHpBarRightTile(u16 * buffer, s16 hp, int tileBase);
 void DrawHpBar(u16 * buffer, struct Unit * unit, int tileBase);
+#if FE8_MMB
 void MMB_Loop_SlideIn(struct PlayerInterfaceProc * proc);
 void MMB_Loop_SlideOut(struct PlayerInterfaceProc * proc);
+#endif
 void TerrainDisplay_Loop_SlideIn(struct PlayerInterfaceProc * proc);
 void TerrainDisplay_Loop_SlideOut(struct PlayerInterfaceProc * proc);
+#if FE8_MMB
 void PutUnitMapUiWindow(struct PlayerInterfaceProc * proc);
+#endif
 void PutTerrainDisplayWindow(struct PlayerInterfaceProc * proc);
 void ApplyUnitMapUiFramePal(int faction, int palId);
 int GetCursorScreenSideX(void);
@@ -61,7 +65,9 @@ int GetCursorScreenSideXAlt(void);
 void ClearUnitMapUiStatus(struct PlayerInterfaceProc * proc, u16 * buffer, struct Unit * unit);
 void PutUnitMapUiStatus(u16 * buffer, struct Unit * unit);
 void UnitMapUiUpdate(struct PlayerInterfaceProc * proc, struct Unit * unit);
+#if FE8_MMB
 void DrawUnitMapUi(struct PlayerInterfaceProc * proc, struct Unit * unit);
+#endif
 int GetUnitBurstMapUiOrientationAt(int x, int y);
 void DrawUnitBurstMapUi(struct PlayerInterfaceProc * proc, struct Unit * unit);
 void ClearUnitBurstMapUi(struct PlayerInterfaceProc * proc);
@@ -69,10 +75,12 @@ void DrawTerrainDisplayWindow(struct PlayerInterfaceProc * proc);
 void TerrainDisplay_Init(struct PlayerInterfaceProc * proc);
 void TerrainDisplay_Loop_OnSideChange(struct PlayerInterfaceProc * proc);
 void TerrainDisplay_Loop_Display(struct PlayerInterfaceProc * proc);
+#if FE8_MMB
 void MMB_Init(struct PlayerInterfaceProc * proc);
 void MMB_Loop_OnSideChange(struct PlayerInterfaceProc * proc);
 void MMB_Loop_Display(struct PlayerInterfaceProc * proc);
 void MMB_CheckForUnit(struct PlayerInterfaceProc * proc);
+#endif
 void BurstDisplay_Init(struct PlayerInterfaceProc * proc);
 void BurstDisplay_Loop_Display(struct PlayerInterfaceProc * proc);
 void InitPlayerPhaseInterface(void);
@@ -110,14 +118,18 @@ extern s8 gUnitBurstMapUiYOffsetTable[6];
 extern u16 * gPlayerInterface_0[6];
 extern u16 * gPlayerInterface_1[6];
 
+#if FE8_MMB
 extern s8 sMMBSlideInWidthLut[4];
 extern s8 sMMBSlideOutWidthLut[3];
+#endif
 
 extern s8 sTerrainSlideInWidthLut[3];
 extern s8 sTerrainSlideOutWidthLut[6];
 
 extern struct ProcCmd gProcScr_TerrainDisplay[];
+#if FE8_MMB
 extern struct ProcCmd gProcScr_UnitDisplay_MinimugBox[];
+#endif
 extern struct ProcCmd gProcScr_UnitDisplay_Burst[];
 extern struct ProcCmd gProcScr_SideWindowMaker[];
 

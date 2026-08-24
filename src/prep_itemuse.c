@@ -414,7 +414,13 @@ void PrepItemUse_InitDisplay(struct ProcPrepItemUse *proc)
     DrawPrepScreenItemUseStatValues(proc->unit);
     DrawPrepScreenItemUseStatBars(proc->unit, 0);
 
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x0809C63C: face slot 0 -> 1, avoiding the description box's
+     * larger object-VRAM footprint. */
+    StartFace2(1, GetUnitPortraitId(proc->unit), 0x40, -4, 0x203);
+#else
     StartFace2(0, GetUnitPortraitId(proc->unit), 0x40, -4, 0x203);
+#endif
     PutImg_PrepItemUseUnk(0x6000, 0x5);
     PutImg_PrepPopupWindow(0x800, 0xA);
 

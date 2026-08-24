@@ -144,7 +144,7 @@
  * repository's config.mk does, and is bumped to the same value).
  */
 #ifndef FE8_EXPANSION_SAVE_COMPAT_EPOCH
-#define FE8_EXPANSION_SAVE_COMPAT_EPOCH 2
+#define FE8_EXPANSION_SAVE_COMPAT_EPOCH 4
 #endif
 
 
@@ -288,6 +288,209 @@
 #define FE8_DANGER_BONES 0
 #endif
 
+/* Custom community-sourced battle animation sets for select classes,
+ * swapped in for the vanilla animation via each class's pBattleAnimDef
+ * (see src/data_classes.c / src/data_banimconf.c). Purely cosmetic; no
+ * gameplay/save-format effect. See CREDITS.md for the per-class attribution. */
+#ifndef FE8_NEW_ANIMS
+#define FE8_NEW_ANIMS 0
+#endif
+
+/* Custom community-sourced map tilesets for select chapters, swapped in for
+ * the vanilla tileset via gChapterDataAssetTable (see src/data/data_8B363C.c).
+ * Purely cosmetic; no gameplay/save-format effect. See CREDITS.md. */
+#ifndef FE8_NEW_TILESETS
+#define FE8_NEW_TILESETS 0
+#endif
+
+/* Purchasable generic-unit bases and temporary chapter gold economy. */
+#ifndef FE8_PURCHASE_GENERICS
+#define FE8_PURCHASE_GENERICS 0
+#endif
+
+/* Single static 256-color (8bpp) title screen background, replacing the
+ * vanilla tiled 16-color background/dragon overlay. Skips the vanilla
+ * dragon-flash/demon-king/logo-zoom intro sequence -- see
+ * TitleScreenTryJumpIntroAnim, src/titlescreen.c. Purely cosmetic. */
+#ifndef FE8_TITLE_256_COLORS
+#define FE8_TITLE_256_COLORS 0
+#endif
+
+/* 224/256-colour (8bpp) conversation-background images, alongside the
+ * vanilla 16-colour ones. See LoadMultipaletteConvoBg, src/eventscr2.c. */
+#ifndef FE8_MULTIPALETTE_BG
+#define FE8_MULTIPALETTE_BG 0
+#endif
+
+/* Procedurally generated chapter maps: a base tent per allegiance in opposite
+ * quadrants, joined by a road. Overwrites the authored map terrain for any
+ * chapter it accepts (see MapGen_IsEnabledForChapter). Requires
+ * FE8_PURCHASE_GENERICS for the Camp/Tent trap kinds. See src/mapgen.c. */
+#ifndef FE8_MAPGEN
+#define FE8_MAPGEN 0
+#endif
+
+/* Mini Mug Box side window plus the C Gorgon Egg hatch phase display. */
+#ifndef FE8_MMB
+#define FE8_MMB 0
+#endif
+
+/* Modern-build port of ExtendWeaponDescBox (extends the item/weapon help box
+ * from 3 to 5 lines). */
+#ifndef FE8_EXTEND_DESC_BOX
+#define FE8_EXTEND_DESC_BOX 0
+#endif
+
+/* PutSprite/PutSpriteExt (src/ctc.c) sprite-pool overflow bounds check. */
+#ifndef FE8_OVERFLOW_SAFETY_CHECKS
+#define FE8_OVERFLOW_SAFETY_CHECKS 1
+#endif
+
+/* Modern-build port of src/DisplayObtainableItem.c (icon over enemy units
+ * carrying a droppable/stealable item). */
+#ifndef FE8_DISPLAY_OBTAINABLE_ITEM
+#define FE8_DISPLAY_OBTAINABLE_ITEM 0
+#endif
+
+/* Chapter titles drawn as text instead of a pre-rendered graphic banner
+ * (see src/chapter_title.c's PutChapterTitleGfx). */
+/* Per-unit temporary stat buffs/debuffs (see include/debuffs.h). */
+#ifndef FE8_DEBUFFS_EXIST
+#define FE8_DEBUFFS_EXIST 0
+#endif
+
+/* Repeated debuff applications continue worsening stats toward -31. */
+#ifndef FE8_DEBUFFS_STACK
+#define FE8_DEBUFFS_STACK 0
+#endif
+
+#if FE8_DEBUFFS_EXIST && !defined(DEBUFFS_EXIST)
+#define DEBUFFS_EXIST 1
+#endif
+
+#if FE8_DEBUFFS_STACK && !defined(DEBUFFS_STACK)
+#define DEBUFFS_STACK 1
+#endif
+
+/* Select toggles the first stat-screen page between stats and growths. */
+#ifndef FE8_SELECT_VIEW_GROWTHS
+#define FE8_SELECT_VIEW_GROWTHS 0
+#endif
+
+#if FE8_SELECT_VIEW_GROWTHS && !defined(SELECT_VIEW_GROWTHS)
+#define SELECT_VIEW_GROWTHS 1
+#endif
+
+#ifndef FE8_TEXT_CHAPTER_NAMES
+#define FE8_TEXT_CHAPTER_NAMES 0
+#endif
+
+/* Hit/Damage/Crit/AS numbers shown alongside the map battle info boxes
+ * when battle animations are off (see ShowBattleStatsNoAnims in
+ * src/mapanim_infobox.c). */
+#ifndef FE8_BATTLE_STATS_NO_ANIMS
+#define FE8_BATTLE_STATS_NO_ANIMS 0
+#endif
+
+/* Draw weapon-type map battle impact animations and floating damage numbers
+ * during the default no-battle-animation round proc. */
+#ifndef FE8_DRAW_MAP_ANIMS
+#define FE8_DRAW_MAP_ANIMS 0
+#endif
+
+/* Floating battle-animation damage/heal numbers. */
+#ifndef FE8_BATTLE_ANIMATION_NUMBERS
+#define FE8_BATTLE_ANIMATION_NUMBERS 0
+#endif
+
+/* Per-unit HP bar and effectiveness/crit/talk warning icons on the map
+ * (see src/HpBars.c). Requires FE8_DISPLAY_OBTAINABLE_ITEM=1 -- validated
+ * below and in src/HpBars.c's own #error. */
+#ifndef FE8_HP_BARS
+#define FE8_HP_BARS 0
+#endif
+
+/* Group AI (ported from Pokemblem's GroupAI patch): attacking (or being
+ * attacked by) a group-tagged enemy wakes the rest of its group to Charge
+ * and queues them to act again this enemy phase (see src/group_ai.c). */
+#ifndef FE8_GROUP_AI
+#define FE8_GROUP_AI 0
+#endif
+
+/* Replaces the player-phase movement-path arrow with a pathfound move
+ * straight to the cursor plus a translucent unit "ghost" at the cursor tip
+ * (see src/alpha_sprite_arrow.c). */
+#ifndef FE8_ALPHA_SPRITE_ARROW
+#define FE8_ALPHA_SPRITE_ARROW 0
+#endif
+
+/* Consolidates every vanilla per-action suspend-save write down to one,
+ * conditional write at the start of Player Phase (see src/turn_autosave.c). */
+#ifndef FE8_TURN_AUTOSAVE
+#define FE8_TURN_AUTOSAVE 0
+#endif
+
+/* Generic units purchased from a Fort-terrain base spawn directly on the
+ * fort tile itself (instead of an adjacent free tile) and start the turn
+ * already marked as having acted. Gate/House/Throne/Village/Camp/Tent
+ * purchase bases are unaffected (see src/purchase_generics.c). */
+#ifndef FE8_FORT_UNITS_START_GREYED_OUT
+#define FE8_FORT_UNITS_START_GREYED_OUT 0
+#endif
+
+/* Adds a "Promote" entry to the unit map action menu for level-20+ units
+ * whose class has a promotion target, letting them promote without a
+ * promotion item (see src/promote_command.c). */
+#ifndef FE8_PROMOTE_COMMAND
+#define FE8_PROMOTE_COMMAND 0
+#endif
+
+/* Clamps a unit's base stats to a sane minimum (HP >= 1, others >= 0)
+ * right after character base + class base is summed, instead of leaving a
+ * negative (or, for HP, exactly-0) result when that sum doesn't recover
+ * (see src/bmunit.c). */
+#ifndef FE8_FIX_BUGS
+#define FE8_FIX_BUGS 0
+#endif
+
+/* Tracks per-chapter and per-save-slot player-unit deaths, plus enemies
+ * defeated (a per-turn "power score" high-water mark and a per-chapter
+ * total), so later chapters/events can reference them as a running game
+ * rank (see src/gamerank.c). */
+#ifndef FE8_GAME_RANK
+#define FE8_GAME_RANK 0
+#endif
+
+/* Advance Wars reference: adds a "CO Powers" entry to the chapter (map)
+ * menu that pans the camera onto every one of the player's units in turn,
+ * parking the cursor on each for 5 frames (see src/power.c). */
+#ifndef FE8_CO_POWERS
+#define FE8_CO_POWERS 0
+#endif
+
+/* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
+ * map, and replaces the prologue's scripted beginning-of-chapter events with
+ * a version that still loads Eirika and Seth the same way but skips the
+ * Renais-throne-room cutscene and dialogue (see src/data/data_8B363C.c and
+ * src/events/prologue-eventscript.h). */
+#ifndef FE8_CUSTOM_CAMPAIGN
+#define FE8_CUSTOM_CAMPAIGN 0
+#endif
+
+/* Boots directly to the title screen (skips the health & safety screen,
+ * Nintendo/Intelligent Systems logos, and attract-mode opening demo), and
+ * on New Game skips the world-map "continent of Magvel" narration and the
+ * "In an age long past..." opening text crawl (see src/gamecontrol.c and
+ * src/worldmap_main.c). Does not affect continue/load. */
+#ifndef FE8_SKIP_OPENING
+#define FE8_SKIP_OPENING 0
+#endif
+
+/* Scrolling end-credits sequence (see src/Credits.c). */
+#ifndef FE8_CREDITS
+#define FE8_CREDITS 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -309,6 +512,134 @@
 
 #if (FE8_DANGER_BONES != 0) && (FE8_DANGER_BONES != 1)
 #error "FE8_DANGER_BONES must be 0 or 1"
+#endif
+
+#if (FE8_NEW_ANIMS != 0) && (FE8_NEW_ANIMS != 1)
+#error "FE8_NEW_ANIMS must be 0 or 1"
+#endif
+
+#if (FE8_NEW_TILESETS != 0) && (FE8_NEW_TILESETS != 1)
+#error "FE8_NEW_TILESETS must be 0 or 1"
+#endif
+
+#if (FE8_PURCHASE_GENERICS != 0) && (FE8_PURCHASE_GENERICS != 1)
+#error "FE8_PURCHASE_GENERICS must be 0 or 1"
+#endif
+
+#if (FE8_TITLE_256_COLORS != 0) && (FE8_TITLE_256_COLORS != 1)
+#error "FE8_TITLE_256_COLORS must be 0 or 1"
+#endif
+
+#if (FE8_MULTIPALETTE_BG != 0) && (FE8_MULTIPALETTE_BG != 1)
+#error "FE8_MULTIPALETTE_BG must be 0 or 1"
+#endif
+
+#if (FE8_MAPGEN != 0) && (FE8_MAPGEN != 1)
+#error "FE8_MAPGEN must be 0 or 1"
+#endif
+
+#if FE8_MAPGEN && !FE8_PURCHASE_GENERICS
+#error "FE8_MAPGEN requires FE8_PURCHASE_GENERICS (Camp/Tent trap kinds)"
+#endif
+
+#if (FE8_MMB != 0) && (FE8_MMB != 1)
+#error "FE8_MMB must be 0 or 1"
+#endif
+
+#if (FE8_EXTEND_DESC_BOX != 0) && (FE8_EXTEND_DESC_BOX != 1)
+#error "FE8_EXTEND_DESC_BOX must be 0 or 1"
+#endif
+
+#if (FE8_OVERFLOW_SAFETY_CHECKS != 0) && (FE8_OVERFLOW_SAFETY_CHECKS != 1)
+#error "FE8_OVERFLOW_SAFETY_CHECKS must be 0 or 1"
+#endif
+
+#if (FE8_DISPLAY_OBTAINABLE_ITEM != 0) && (FE8_DISPLAY_OBTAINABLE_ITEM != 1)
+#error "FE8_DISPLAY_OBTAINABLE_ITEM must be 0 or 1"
+#endif
+
+#if (FE8_DEBUFFS_EXIST != 0) && (FE8_DEBUFFS_EXIST != 1)
+#error "FE8_DEBUFFS_EXIST must be 0 or 1"
+#endif
+
+#if (FE8_DEBUFFS_STACK != 0) && (FE8_DEBUFFS_STACK != 1)
+#error "FE8_DEBUFFS_STACK must be 0 or 1"
+#endif
+
+#if FE8_DEBUFFS_STACK && !FE8_DEBUFFS_EXIST
+#error "FE8_DEBUFFS_STACK=1 requires FE8_DEBUFFS_EXIST=1"
+#endif
+
+#if (FE8_SELECT_VIEW_GROWTHS != 0) && (FE8_SELECT_VIEW_GROWTHS != 1)
+#error "FE8_SELECT_VIEW_GROWTHS must be 0 or 1"
+#endif
+
+#if (FE8_TEXT_CHAPTER_NAMES != 0) && (FE8_TEXT_CHAPTER_NAMES != 1)
+#error "FE8_TEXT_CHAPTER_NAMES must be 0 or 1"
+#endif
+
+#if (FE8_BATTLE_STATS_NO_ANIMS != 0) && (FE8_BATTLE_STATS_NO_ANIMS != 1)
+#error "FE8_BATTLE_STATS_NO_ANIMS must be 0 or 1"
+#endif
+
+#if (FE8_DRAW_MAP_ANIMS != 0) && (FE8_DRAW_MAP_ANIMS != 1)
+#error "FE8_DRAW_MAP_ANIMS must be 0 or 1"
+#endif
+
+#if (FE8_BATTLE_ANIMATION_NUMBERS != 0) && (FE8_BATTLE_ANIMATION_NUMBERS != 1)
+#error "FE8_BATTLE_ANIMATION_NUMBERS must be 0 or 1"
+#endif
+
+#if (FE8_HP_BARS != 0) && (FE8_HP_BARS != 1)
+#error "FE8_HP_BARS must be 0 or 1"
+#endif
+
+#if FE8_HP_BARS && !FE8_DISPLAY_OBTAINABLE_ITEM
+#error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
+#endif
+
+#if (FE8_GROUP_AI != 0) && (FE8_GROUP_AI != 1)
+#error "FE8_GROUP_AI must be 0 or 1"
+#endif
+
+#if (FE8_ALPHA_SPRITE_ARROW != 0) && (FE8_ALPHA_SPRITE_ARROW != 1)
+#error "FE8_ALPHA_SPRITE_ARROW must be 0 or 1"
+#endif
+
+#if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)
+#error "FE8_FORT_UNITS_START_GREYED_OUT must be 0 or 1"
+#endif
+
+#if (FE8_PROMOTE_COMMAND != 0) && (FE8_PROMOTE_COMMAND != 1)
+#error "FE8_PROMOTE_COMMAND must be 0 or 1"
+#endif
+
+#if (FE8_FIX_BUGS != 0) && (FE8_FIX_BUGS != 1)
+#error "FE8_FIX_BUGS must be 0 or 1"
+#endif
+
+#if (FE8_TURN_AUTOSAVE != 0) && (FE8_TURN_AUTOSAVE != 1)
+#error "FE8_TURN_AUTOSAVE must be 0 or 1"
+#endif
+
+#if (FE8_GAME_RANK != 0) && (FE8_GAME_RANK != 1)
+#error "FE8_GAME_RANK must be 0 or 1"
+#endif
+
+#if (FE8_CO_POWERS != 0) && (FE8_CO_POWERS != 1)
+#error "FE8_CO_POWERS must be 0 or 1"
+#endif
+
+#if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)
+#error "FE8_CUSTOM_CAMPAIGN must be 0 or 1"
+#endif
+
+#if (FE8_SKIP_OPENING != 0) && (FE8_SKIP_OPENING != 1)
+#error "FE8_SKIP_OPENING must be 0 or 1"
+#endif
+
+#if (FE8_CREDITS != 0) && (FE8_CREDITS != 1)
+#error "FE8_CREDITS must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

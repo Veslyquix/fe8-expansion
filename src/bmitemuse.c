@@ -30,6 +30,7 @@
 #include "constants/characters.h"
 #include "constants/items.h"
 #include "constants/terrains.h"
+#include "debuffs.h"
 
 #include "bmitemuse.h"
 #include "constants/songs.h"
@@ -396,6 +397,11 @@ s8 CanUnitUseUnusedItem(struct Unit* unit)
 
 s8 CanUnitUsePureWaterItem(struct Unit* unit)
 {
+#ifdef DEBUFFS_EXIST
+    if (UnitGetDebuff(unit, UNIT_DEBUFF_STAT_RES) >= 7)
+        return FALSE;
+#endif
+
     if (unit->barrierDuration == 7)
         return FALSE;
 

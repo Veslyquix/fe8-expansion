@@ -96,6 +96,10 @@ $(MAPDIR)/ObjectType9.4bpp: %.4bpp: %.png
 $(MAPDIR)/ObjectType10.4bpp: %.4bpp: %.png
 	$(GBAGFX) $< $@ -num_tiles 768
 
+# FE8_NEW_TILESETS: community tileset converted by scripts/tileset_to_source.py
+$(MAPDIR)/SuperFieldsObjectType.4bpp: %.4bpp: %.png
+	$(GBAGFX) $< $@ -num_tiles 1024
+
 $(MAPDIR)/TowerOfValniObjectType.4bpp: %.4bpp: %.png
 	$(GBAGFX) $< $@ -num_tiles 976
 

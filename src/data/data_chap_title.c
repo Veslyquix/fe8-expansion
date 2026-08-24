@@ -69,3 +69,7 @@ u8 __attribute__((aligned(4))) chap_title_86[] = INCBIN_U8("graphics/chap_title/
 u8 __attribute__((aligned(4))) chap_title_57[] = INCBIN_U8("graphics/chap_title/chap_title_57.4bpp.lz");
 u8 __attribute__((aligned(4))) chap_title_56[] = INCBIN_U8("graphics/chap_title/chap_title_56.4bpp.lz");
 u8 __attribute__((aligned(4))) chap_title_87[] = INCBIN_U8("graphics/chap_title/chap_title_87.4bpp.lz");
+
+
+u8 ALIGNED(4) Img_ChapterTitleTextFont[] = INCBIN_U8("graphics/chap_title/text_chapter_names/font-extended.dmp");
+u8 ALIGNED(4) gChapterTitleTextFontDimensions[] = INCBIN_U8("graphics/chap_title/text_chapter_names/chartable-extended.dmp");

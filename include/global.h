@@ -14,6 +14,8 @@
 #include "variables.h"
 #include "functions.h"
 
+#define brk asm("mov r11, r11");
+
 // helper macros
 
 #define EWRAM_ENTRY ((void *)__ewram_start)

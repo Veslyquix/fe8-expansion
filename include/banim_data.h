@@ -17,6 +17,7 @@ struct BattleAnim {
 };
 
 extern struct BattleAnim banim_data[];
+extern long long banim_number;
 
 struct BattleAnimCharaPal {
     char abbr[12];
@@ -24,6 +25,7 @@ struct BattleAnimCharaPal {
 };
 
 extern struct BattleAnimCharaPal character_battle_animation_palette_table[];
+extern DataBlockHead banim_pal_head;
 
 struct BattleAnimTerrain {
     char abbr[12];
@@ -33,6 +35,7 @@ struct BattleAnimTerrain {
 };
 
 extern struct BattleAnimTerrain battle_terrain_table[];
+extern DataBlockHead banim_terrain_head;
 
 struct BanimModeData {
     const u32 * unk0;

@@ -180,17 +180,34 @@ DOMAINS = [
     ),
     Domain(
         key="class", title="Class (job) ID",
-        id_ctype="u8", storage_bits=7, signed=0, sentinel=0,
-        sentinel_name="CLASS_NONE", technical_max=0x7F, configured_cap=0x7F,
-        status="frozen",
-        default_behavior="0x00..0x7F; class 0x80 truncates on save.",
+        id_ctype="u8", storage_bits=8, signed=0, sentinel=0,
+        sentinel_name="CLASS_NONE", technical_max=0xFF, configured_cap=0xFF,
+        status="expandable",
+        default_behavior=("0x00..0xFF. GameSavePackedUnit.jid is a full "
+                          "8-bit byte when FE8_PURCHASE_GENERICS is enabled "
+                          "(the modern default); classes 0x80+ round-trip "
+                          "through a real save exactly like 0x00..0x7F. "
+                          "When FE8_PURCHASE_GENERICS is disabled, or in the "
+                          "archival agbcc lane (which never defines it), jid "
+                          "stays the original 7-bit bitfield -- classes "
+                          "0x80+ must never be assigned to a real, "
+                          "save-persisted roster Unit in that configuration. "
+                          "The two classes currently using this range, "
+                          "CLASS_CAMP and CLASS_TENT_STRUCTURE, satisfy this "
+                          "by construction: like the pre-existing "
+                          "CLASS_OBSTACLE, they are only ever assigned to a "
+                          "transient, non-persisted fake battle unit "
+                          "(built for trap combat), never to a deployed "
+                          "roster Unit, in any configuration."),
         count_ctype="u8", count_bits=8,
-        freeze_reason=("GameSavePackedUnit.jid is a 7-bit save bitfield; "
-                       "0x80 silently truncates to 0x00 on save. Widening "
-                       "needs a save layout/epoch change, out of pilot scope."),
-        budget="0 runtime bytes; capped at the 7-bit jid save field.",
+        budget=("0 runtime bytes for GameSavePackedUnit when "
+                "FE8_PURCHASE_GENERICS is disabled or in the archival lane "
+                "(struct unchanged); +1 byte per packed unit record when "
+                "enabled (jid moves out of the bitfield into its own byte) "
+                "-- see include/bmsave.h and EXPANSION_SAVE_COMPAT_EPOCH."),
         evidence=[
-            Evidence("save-field", "include/bmsave.h", "GameSavePackedUnit.jid (7-bit)"),
+            Evidence("save-field", "include/bmsave.h",
+                     "GameSavePackedUnit.jid (8-bit when FE8_PURCHASE_GENERICS, else 7-bit)"),
             Evidence("lookup-table", "src/data/classes.json", "gClassData[]"),
         ],
     ),
@@ -850,7 +867,7 @@ def render_c_header():
     out.append("/* Cap-fits-storage guarantees checked at compile time. */\n")
     out.append("ID_SPACE_STATIC_ASSERT(ITEM_ID_CONFIGURED_CAP <= ITEM_ID_TECHNICAL_MAX, item_cap_fits);\n")
     out.append("ID_SPACE_STATIC_ASSERT(ITEM_ID_TECHNICAL_MAX <= 0x3FFF, item_fits_save14);\n")
-    out.append("ID_SPACE_STATIC_ASSERT(CLASS_ID_CONFIGURED_CAP <= 0x7F, class_cap_fits_jid7);\n")
+    out.append("ID_SPACE_STATIC_ASSERT(CLASS_ID_CONFIGURED_CAP <= 0xFF, class_cap_fits_jid8);\n")
     out.append("ID_SPACE_STATIC_ASSERT(CHARACTER_ID_CONFIGURED_CAP <= 0xFF, character_cap_fits_u8);\n")
     out.append("ID_SPACE_STATIC_ASSERT(CHAPTER_ID_CONFIGURED_CAP <= 0x7F, chapter_cap_fits_s8);\n")
     out.append("ID_SPACE_STATIC_ASSERT(UNIT_ID_CONFIGURED_CAP < 0x40, unit_cap_fits_faction);\n\n")

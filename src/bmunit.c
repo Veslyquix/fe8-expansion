@@ -24,6 +24,13 @@
 #include "muctrl.h"
 #include "bmmind.h"
 #include "eventcall.h"
+#include "debuffs.h"
+#include "turn_autosave.h"
+#include "gamerank.h"
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+void SetupCacheForStealableItems(void);
+#endif
 
 EWRAM_DATA u8 gActiveUnitId = 0;
 EWRAM_DATA struct Vec2 gActiveUnitMoveOrigin = {};
@@ -280,38 +287,72 @@ inline int GetUnitCurrentHp(struct Unit* unit) {
 }
 
 inline int GetUnitPower(struct Unit* unit) {
-    return unit->pow + GetItemPowBonus((u16) GetUnitEquippedWeapon(unit));
+    int result = unit->pow + GetItemPowBonus((u16) GetUnitEquippedWeapon(unit));
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_POW, result);
+#endif
+    return result;
 }
 
 inline int GetUnitSkill(struct Unit* unit) {
     u16 item = GetUnitEquippedWeapon(unit);
+    int result;
 
     if (unit->state & US_RESCUING)
-        return unit->skl / 2 + GetItemSklBonus(item);
+        result = unit->skl / 2 + GetItemSklBonus(item);
+    else
+        result = unit->skl + GetItemSklBonus(item);
 
-    return unit->skl + GetItemSklBonus(item);
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_SKL, result);
+#endif
+    return result;
 }
 
 inline int GetUnitSpeed(struct Unit* unit) {
     u16 item = GetUnitEquippedWeapon(unit);
+    int result;
 
     if (unit->state & US_RESCUING)
-        return unit->spd / 2 + GetItemSpdBonus(item);
+        result = unit->spd / 2 + GetItemSpdBonus(item);
+    else
+        result = unit->spd + GetItemSpdBonus(item);
 
-    return unit->spd + GetItemSpdBonus(item);
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_SPD, result);
+#endif
+    return result;
 }
 
 inline int GetUnitDefense(struct Unit* unit) {
-    return unit->def + GetItemDefBonus((u16) GetUnitEquippedWeapon(unit));
+    int result = unit->def + GetItemDefBonus((u16) GetUnitEquippedWeapon(unit));
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_DEF, result);
+#endif
+    return result;
 }
 
 inline int GetUnitResistance(struct Unit* unit) {
-    return unit->res + GetItemResBonus((u16) GetUnitEquippedWeapon(unit)) + unit->barrierDuration;
+    int result = unit->res + GetItemResBonus((u16) GetUnitEquippedWeapon(unit)) + unit->barrierDuration;
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_RES, result);
+#endif
+    return result;
 }
 
 inline int GetUnitLuck(struct Unit* unit) {
-    return unit->lck + GetItemLckBonus((u16) GetUnitEquippedWeapon(unit));
+    int result = unit->lck + GetItemLckBonus((u16) GetUnitEquippedWeapon(unit));
+#ifdef DEBUFFS_EXIST
+    result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_LCK, result);
+#endif
+    return result;
 }
+
+#ifdef DEBUFFS_EXIST
+int GetUnitMovement(struct Unit* unit) {
+    return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, unit->movBonus + UNIT_MOV_BASE(unit));
+}
+#endif
 
 inline int GetUnitPortraitId(struct Unit* unit) {
     if (unit->pCharacterData->portraitId) {
@@ -702,6 +743,16 @@ void UnitLoadItemsFromDefinition(struct Unit* unit, const struct UnitDefinition*
         UnitAddItem(unit, MakeNewItem(uDef->items[i]));
 }
 
+#if FE8_FIX_BUGS
+/* character base + class base can go negative (or, for HP, to exactly 0 --
+ * an instantly-dead unit) for character/class combinations whose base
+ * stats were authored to go negative and don't recover once summed. Clamp
+ * to a sane minimum instead of loading a broken unit. */
+static s8 ClampUnitBaseStat(int value, int min) {
+    return value < min ? min : value;
+}
+#endif
+
 void UnitLoadStatsFromChracter(struct Unit* unit, const struct CharacterData* character) {
     int i;
 
@@ -712,6 +763,15 @@ void UnitLoadStatsFromChracter(struct Unit* unit, const struct CharacterData* ch
     unit->def   = character->baseDef + unit->pClassData->baseDef;
     unit->res   = character->baseRes + unit->pClassData->baseRes;
     unit->lck   = character->baseLck;
+
+#if FE8_FIX_BUGS
+    unit->maxHP = ClampUnitBaseStat(unit->maxHP, 1);
+    unit->pow   = ClampUnitBaseStat(unit->pow, 0);
+    unit->skl   = ClampUnitBaseStat(unit->skl, 0);
+    unit->spd   = ClampUnitBaseStat(unit->spd, 0);
+    unit->def   = ClampUnitBaseStat(unit->def, 0);
+    unit->res   = ClampUnitBaseStat(unit->res, 0);
+#endif
 
     unit->conBonus = 0;
 
@@ -798,6 +858,15 @@ void UnitAutolevelPenalty(struct Unit* unit, u8 classId, int levelCount) {
         unit->def   = unit->pCharacterData->baseDef + unit->pClassData->baseDef;
         unit->res   = unit->pCharacterData->baseRes + unit->pClassData->baseRes;
         unit->lck   = unit->pCharacterData->baseLck;
+
+#if FE8_FIX_BUGS
+        unit->maxHP = ClampUnitBaseStat(unit->maxHP, 1);
+        unit->pow   = ClampUnitBaseStat(unit->pow, 0);
+        unit->skl   = ClampUnitBaseStat(unit->skl, 0);
+        unit->spd   = ClampUnitBaseStat(unit->spd, 0);
+        unit->def   = ClampUnitBaseStat(unit->def, 0);
+        unit->res   = ClampUnitBaseStat(unit->res, 0);
+#endif
 
         if (levelCount > unit->pCharacterData->baseLevel) {
             unit->level = levelCount;
@@ -960,11 +1029,19 @@ void UnitKill(struct Unit* unit) {
         if (UNIT_IS_PHANTOM(unit))
             unit->pCharacterData = NULL;
         else {
+#if FE8_TURN_AUTOSAVE
+            TurnAutosave_OnBlueUnitKilled();
+#endif
             unit->state |= US_DEAD | US_HIDDEN;
             InitUnitsupports(unit);
         }
-    } else
+    } else {
+#if FE8_GAME_RANK
+        if (UNIT_FACTION(unit) == FACTION_RED)
+            GameRank_OnEnemyUnitKilled();
+#endif
         unit->pCharacterData = NULL;
+    }
 }
 
 void UnitChangeFaction(struct Unit* unit, int faction) {
@@ -1108,6 +1185,10 @@ void MoveActiveUnit(int x, int y) {
 void ClearActiveFactionGrayedStates(void) {
     int i;
 
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    SetupCacheForStealableItems();
+#endif
+
     if (gPlaySt.faction == FACTION_BLUE) {
         int i;
 
@@ -1151,6 +1232,10 @@ void TickActiveFactionTurn(void) {
 
         if (unit->barrierDuration != 0)
             unit->barrierDuration--;
+
+#ifdef DEBUFFS_EXIST
+        UnitRestoreDebuffsTowardsNeutral(unit, UNIT_DEBUFF_DEFAULT_RESTORE_PER_TURN);
+#endif
 
         if (unit->torchDuration != 0) {
             unit->torchDuration--;
@@ -1465,6 +1550,10 @@ void ClearTemporaryUnits(void) {
 
         unit->state |= US_HIDDEN;
 
+#ifdef DEBUFFS_EXIST
+        UnitClearStatModifiers(unit);
+#endif
+
         if (UNIT_IS_PHANTOM(unit))
             ClearUnit(unit);
     }
@@ -1619,6 +1708,9 @@ void RefreshAllies(void) {
         unit->rescue = 0;
 
         SetUnitStatus(unit, 0);
+#ifdef DEBUFFS_EXIST
+        UnitClearStatModifiers(unit);
+#endif
     }
 
     RefreshEntityBmMaps();

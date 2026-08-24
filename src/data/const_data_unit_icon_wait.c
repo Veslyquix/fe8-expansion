@@ -111,3 +111,6 @@ const u8 __attribute__((aligned(4))) unit_icon_wait_Fallen_Prince_sheet[] = INCB
 const u8 __attribute__((aligned(4))) unit_icon_wait_Tent_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_Tent_sheet.4bpp.lz");
 const u8 __attribute__((aligned(4))) unit_icon_wait_Pontifex_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_Pontifex_sheet.4bpp.lz");
 const u8 __attribute__((aligned(4))) unit_icon_wait_Fallen_Peer_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_Fallen_Peer_sheet.4bpp.lz");
+const u8 __attribute__((aligned(4))) unit_icon_wait_Camp_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_Camp_sheet.4bpp.lz");
+const u8 __attribute__((aligned(4))) unit_icon_wait_TentStructure_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_TentStructure_sheet.4bpp.lz");
+const u8 __attribute__((aligned(4))) unit_icon_wait_Flag_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_Flag_sheet.4bpp.lz");

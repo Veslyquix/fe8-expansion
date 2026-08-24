@@ -1,9 +1,15 @@
 #include "global.h"
 
 extern const u8 ObjectType1[];
+extern const u8 SuperFieldsObjectType[];
+extern const u8 SuperFieldsTileConfiguration[];
+extern const u16 SuperFieldsMapPalette[];
 extern const u8 MapPalette1[];
 extern const u8 TileConfiguration1[];
 extern const u8 PrologueMap[];
+#if FE8_CUSTOM_CAMPAIGN
+extern const u8 NewPrologueMap[];
+#endif
 extern const u8 TileAnimations1[];
 extern const u8 PrologueMapChanges[];
 extern const u8 PrologueEvents[];
@@ -355,10 +361,24 @@ extern const u8 EventScrWM_MessedEventscr_58[];
 const void* gChapterDataAssetTable[] =
 {
     0,
+    /* Prologue tileset. FE8_NEW_TILESETS swaps the vanilla Fields tileset for
+     * the "Super Fields" remaster (see CREDITS.md); graphics, palette and tile
+     * config must be swapped together, since the config's tile indices and
+     * palette rows only make sense against its own sheet. */
+#if FE8_NEW_TILESETS
+    SuperFieldsObjectType,
+    SuperFieldsMapPalette,
+    SuperFieldsTileConfiguration,
+#else
     ObjectType1,
     MapPalette1,
     TileConfiguration1,
+#endif
+#if FE8_CUSTOM_CAMPAIGN
+    NewPrologueMap,
+#else
     PrologueMap,
+#endif
     TileAnimations1,
     PrologueMapChanges,
     PrologueEvents,

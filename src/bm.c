@@ -14,6 +14,7 @@
 #include "bmtrick.h"
 #include "bmio.h"
 #include "fontgrp.h"
+#include "mapgen.h"
 #include "face.h"
 #include "icon.h"
 #include "uiutils.h"
@@ -25,6 +26,8 @@
 #include "bmsave.h"
 #include "worldmap.h"
 #include "eventcall.h"
+#include "purchase_generics.h"
+#include "gamerank.h"
 
 #include "bm.h"
 
@@ -33,6 +36,7 @@
 
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
+#include "turn_autosave.h"
 
 #if FE8_VESLY_DEBUGGER
 int StartKeyListenerProc(void);
@@ -95,8 +99,13 @@ PROC_LABEL(9),
 
     PROC_START_CHILD_BLOCKING(gProcScr_StatusDecayDisplay),
     PROC_START_CHILD_BLOCKING(gProcScr_TerrainHealDisplay),
+#if FE8_PURCHASE_GENERICS
+    PROC_START_CHILD_BLOCKING(gProcScr_CampTentHealDisplay),
+#endif
     PROC_START_CHILD_BLOCKING(gProcScr_PoisonDamageDisplay),
+#if FE8_MMB
     PROC_START_CHILD_BLOCKING(gProcScr_GorgonEggHatchDisplay),
+#endif
 
     PROC_START_CHILD_BLOCKING(gProcScr_ResetCursorPosition),
 
@@ -317,6 +326,9 @@ void OnVBlank(void)
     INTR_CHECK = INTR_FLAG_VBLANK;
 
     IncrementGameClock();
+#if FE8_MAPGEN
+    MapGen_TickBootFrames();
+#endif
     m4aSoundVSync();
 
     Proc_Run(gProcTreeRootArray[0]);
@@ -407,6 +419,10 @@ void SwitchPhases(void)
         if (gPlaySt.chapterTurnNumber < 999)
             gPlaySt.chapterTurnNumber++;
 
+#if FE8_GAME_RANK
+        GameRank_OnTurnStart();
+#endif
+
         ProcessTurnSupportExp();
     }
 }
@@ -463,6 +479,10 @@ void BmMain_StartPhase(ProcPtr proc)
         phaseControl = FACTION_BLUE;
 #else
     int phaseControl = gPlaySt.faction;
+#endif
+
+#if FE8_PURCHASE_GENERICS
+    PurchaseGenerics_OnNewPhase();
 #endif
 
     switch (phaseControl) {
@@ -522,8 +542,12 @@ void BmMain_SuspendBeforePhase(void)
         return;
 #endif
 
+#if FE8_TURN_AUTOSAVE
+    TurnAutosave_TryWriteSuspend();
+#else
     gActionData.suspendPointType = SUSPEND_POINT_PHASECHANGE;
     WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
 }
 
 //! FE8U = 0x0801550C
@@ -612,10 +636,27 @@ void InitBmBgLayers(void) {
     return;
 }
 
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+extern u8 gGfx_ObtainableItemIcons[];
+#endif
+
 //! FE8U = 0x08015680
 void LoadObjUIGfx(void) {
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    /* FE8U = 0x080156AC: superset sheet adding the stealable/droppable
+     * item icon tiles -- see src/DisplayObtainableItem.c. */
+    Decompress(gGfx_ObtainableItemIcons, gGenericBuffer);
+#else
     Decompress(gGfx_MiscUiGraphics, gGenericBuffer);
+#endif
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    /* gGfx_ObtainableItemIcons is 24 8px tiles wide (192px), not the
+     * vanilla sheet's 18 -- match Copy2dChr's row width to the actual
+     * source layout so later rows don't get skewed. */
+    Copy2dChr(gGenericBuffer, (void*)0x06010000, 0x18, 4);
+#else
     Copy2dChr(gGenericBuffer, (void*)0x06010000, 0x12, 4);
+#endif
 
     ApplyPalettes(gPal_MiscUiGraphics, 0x10, 2);
 

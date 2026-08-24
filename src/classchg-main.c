@@ -68,7 +68,7 @@ void MakePromotionScreen(struct ProcPromoHandler *proc, u8 pid, u8 terrain)
 
 struct ProcPromoMain *Make6C_PromotionMain(ProcPtr proc)
 {
-    Proc_StartBlocking(ProcScr_PromoMain, proc);
+    return Proc_StartBlocking(ProcScr_PromoMain, proc);
 }
 
 void PromoMain_InitScreen(struct ProcPromoMain *proc)

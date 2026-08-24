@@ -107,8 +107,114 @@ void UnpackRaw(const void *src, void *dst)
  * This is unused since generic buffer holds only 0x1000 size,
  * which may cause overflow
  */
+static bool IsDecompressionPointerInRange(const void *ptr, u32 start, u32 size)
+{
+    u32 addr = (u32)ptr;
+
+    return addr >= start && addr < start + size;
+}
+
+static bool IsKnownDecompressionSource(const void *src)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (src == NULL)
+        return false;
+
+    if (IsDecompressionPointerInRange(src, 0x08000000, FE8_EXPANSION_ROM_SIZE_BYTES))
+        return true;
+
+    if (IsDecompressionPointerInRange(src, EWRAM_START, 0x40000))
+        return true;
+
+    if (IsDecompressionPointerInRange(src, IWRAM_START, 0x8000))
+        return true;
+
+    return false;
+#else
+    return true;
+#endif
+}
+
+static bool IsValidDecompressionType(int type)
+{
+    switch (type & 0xF0) {
+    case 0x00:
+    case 0x10:
+    case 0x20:
+    case 0x30:
+        return true;
+    }
+
+    return false;
+}
+
+bool IsValidDecompressionData(const void *data)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    const struct TileMapArr *tsa = data;
+
+    if (!IsKnownDecompressionSource(data))
+        return false;
+
+    if (!IsValidDecompressionType(tsa->type))
+        return false;
+
+    if (tsa->size == 0 || tsa->size > 0x40000)
+        return false;
+#endif
+
+    return true;
+}
+
+bool IsValidLz77DecompressionData(const void *data)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    const struct TileMapArr *tsa = data;
+
+    if (!IsValidDecompressionData(data))
+        return false;
+
+    return (tsa->type & 0xF0) == 0x10;
+#else
+    return true;
+#endif
+}
+
+static bool IsSafeDecompressionWrite(const void *dst, int size)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    u32 addr;
+
+    if (dst == NULL || size <= 0)
+        return false;
+
+    addr = (u32)dst;
+
+    if (addr >= VRAM && addr < VRAM + VRAM_SIZE)
+        return (u32)size <= VRAM + VRAM_SIZE - addr;
+
+    if (addr >= PLTT && addr < PLTT + PLTT_SIZE)
+        return (u32)size <= PLTT + PLTT_SIZE - addr;
+
+    if (addr >= EWRAM_START && addr < EWRAM_START + 0x40000)
+        return (u32)size <= EWRAM_START + 0x40000 - addr;
+
+    if (addr >= IWRAM_START && addr < IWRAM_START + 0x8000)
+        return (u32)size <= IWRAM_START + 0x8000 - addr;
+
+    return false;
+#else
+    return true;
+#endif
+}
+
 void DecompressViaGenericBuf(const void *src, void *dst)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidLz77DecompressionData(src) || (u32)GetDataSize(src) > sizeof(gGenericBuffer))
+        return;
+#endif
+
     LZ77UnCompWram(src, gGenericBuffer);
     CpuFastCopy(gGenericBuffer, dst, GetDataSize(src));
 }
@@ -130,6 +236,11 @@ void Decompress(const void* src, void* dst)
 
     int is_wram;
     const struct TileMapArr *tsa = src;
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidDecompressionData(src) || !IsSafeDecompressionWrite(dst, tsa->size))
+        return;
+#endif
 
     if ((((u32) dst) - VRAM) < VRAM_SIZE)
         is_wram = FALSE; // is vram

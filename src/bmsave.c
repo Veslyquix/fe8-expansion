@@ -16,6 +16,7 @@
 #include "bmsave.h"
 #include "sram-layout.h"
 #include "eventinfo.h"
+#include "debuffs.h"
 
 /* variables */
 EWRAM_DATA u32 gBonusContentClaimFlags = 0;
@@ -130,6 +131,12 @@ void WriteNewGameSave(int index, int isDifficult, int mode, int isTutorial)
     gPlaySt.chapterModeIndex = mode;
     gPlaySt.unk_2B_00 = 1;
     gPlaySt.playerName[0] = '\0';
+#if FE8_MAPGEN
+    // Reroll trigger for MapGen_SessionSeed (src/mapgen.c): 0 means "no seed
+    // rolled yet for this save", so clearing it here is what makes starting
+    // a new game in-game generate a different map than the slot it replaces.
+    gPlaySt.mapGenSeed = 0;
+#endif
     gPlaySt.chapterIndex = 0;
     gPlaySt.playthroughIdentifier = GetNewPlaythroughId();
     gPlaySt.gameSaveSlot = index;
@@ -473,6 +480,11 @@ void InvalidateSuspendSave(int slot)
     struct SaveBlockInfo chunk;
     chunk.kind = SAVEBLOCK_KIND_INVALID;
 
+#ifdef DEBUFFS_EXIST
+    if (slot == SAVE_ID_SUSPEND_ALT)
+        slot = SAVE_ID_SUSPEND;
+#endif
+
     WriteSaveBlockInfo(&chunk, slot);
 
     if (SAVE_ID_SUSPEND == slot)
@@ -494,12 +506,27 @@ void WriteSuspendSave(int slot)
     if (!IsSramWorking())
         return;
 
+#ifdef DEBUFFS_EXIST
+    slot = SAVE_ID_SUSPEND;
+#else
     slot += GetNextSuspendSaveId();
+#endif
     dest = GetSaveWriteAddr(slot);
     gPlaySt.time_saved = GetGameClock();
     WriteAndVerifySramFast(&gPlaySt, &dest->playSt, sizeof(gPlaySt));
     StoreRNStateToActionStruct();
     WriteAndVerifySramFast(&gActionData, &dest->action, sizeof(struct ActionData));
+
+#if FE8_PURCHASE_GENERICS
+    {
+        u32 chapterGold[3];
+
+        for (i = 0; i < (int)(sizeof(chapterGold) / sizeof(chapterGold[0])); ++i)
+            chapterGold[i] = GetFactionChapterGoldAmount(i);
+
+        WriteAndVerifySramFast(chapterGold, dest->chapterGold, sizeof(chapterGold));
+    }
+#endif
 
     buf = (struct SuspendSavePackedUnit *)gGenericBuffer;
     for (i = 0; i < UNIT_SAVE_AMOUNT_BLUE; i++)
@@ -553,13 +580,29 @@ void ReadSuspendSave(int slot)
     int i, val;
     u8 list[MENU_OVERRIDE_MAX];
     struct Dungeon dungeon[2];
+#ifdef DEBUFFS_EXIST
+    struct SuspendSaveBlock *src = GetSaveReadAddr(SAVE_ID_SUSPEND);
+#else
     struct SuspendSaveBlock *src = GetSaveReadAddr(slot + gSuspendSaveIdOffset);
+#endif
 
     ReadSramFast(&src->playSt, &gPlaySt, sizeof(gPlaySt));
     SetGameTime(gPlaySt.time_saved);
 
     ReadSramFast(&src->action, &gActionData, sizeof(struct ActionData));
     LoadRNStateFromActionStruct();
+
+#if FE8_PURCHASE_GENERICS
+    {
+        u32 chapterGold[3];
+
+        ReadSramFast(src->chapterGold, chapterGold, sizeof(chapterGold));
+
+        for (i = 0; i < (int)(sizeof(chapterGold) / sizeof(chapterGold[0])); ++i)
+            SetFactionChapterGoldAmount(i, chapterGold[i]);
+    }
+#endif
+
     InitUnits();
 
     for (i = 0; i < UNIT_SAVE_AMOUNT_BLUE; i++)
@@ -600,6 +643,13 @@ u8 IsValidSuspendSave(int slot)
     if (!IsSramWorking())
         return false;
 
+#ifdef DEBUFFS_EXIST
+    if (SAVE_ID_SUSPEND != slot && SAVE_ID_SUSPEND_ALT != slot)
+        return false;
+
+    gSuspendSaveIdOffset = 0;
+    return ReadSaveBlockInfo(NULL, SAVE_ID_SUSPEND);
+#else
     if (SAVE_ID_SUSPEND != slot)
         return false;
 
@@ -613,11 +663,16 @@ u8 IsValidSuspendSave(int slot)
     
     gSuspendSaveIdOffset = 0x7F;
     return false;
+#endif
 }
 
 void ReadSuspendSavePlaySt(int slot, struct PlaySt *buf)
 {
+#ifdef DEBUFFS_EXIST
+    ReadGameSavePlaySt(SAVE_ID_SUSPEND, buf);
+#else
     ReadGameSavePlaySt(slot + gSuspendSaveIdOffset, buf);
+#endif
 }
 
 void EncodeSuspendSavePackedUnit(struct Unit *unit, void *buf)
@@ -681,6 +736,10 @@ void EncodeSuspendSavePackedUnit(struct Unit *unit, void *buf)
     unit_su->ai_config = unit->ai_config;
     unit_su->ai_counter = unit->ai_counter;
     unit_su->aiFlags = unit->aiFlags; 
+#ifdef DEBUFFS_EXIST
+    for (i = 0; i < UNIT_DEBUFF_STAT_COUNT; ++i)
+        unit_su->debuffs[i] = UnitGetDebuff(unit, i);
+#endif
 }
 
 void ReadSuspendSavePackedUnit(const void *sram_src, struct Unit *unit)
@@ -743,6 +802,11 @@ void ReadSuspendSavePackedUnit(const void *sram_src, struct Unit *unit)
     unit->ai_config = unit_su.ai_config;
     unit->ai_counter = unit_su.ai_counter;
     unit->aiFlags = unit_su.aiFlags;
+#ifdef DEBUFFS_EXIST
+    UnitClearStatModifiers(unit);
+    for (i = 0; i < UNIT_DEBUFF_STAT_COUNT; ++i)
+        UnitSetDebuff(unit, i, unit_su.debuffs[i]);
+#endif
 
     if (0x7F == unit->exp)
         unit->exp = -1;
@@ -766,6 +830,9 @@ void ReadTraps(void *sram_dest)
 
 int GetLastSuspendSaveId(void)
 {
+#ifdef DEBUFFS_EXIST
+    return 0;
+#else
     struct GlobalSaveInfo header;
     ReadGlobalSaveInfo(&header);
 
@@ -773,18 +840,27 @@ int GetLastSuspendSaveId(void)
         return 1;
     else
         return 0;
+#endif
 }
 
 int GetNextSuspendSaveId(void)
 {
+#ifdef DEBUFFS_EXIST
+    return 0;
+#else
     return 1 - GetLastSuspendSaveId();
+#endif
 }
 
 void WriteSwappedSuspendSaveId(void)
 {
     struct GlobalSaveInfo header;   
     ReadGlobalSaveInfo(&header);
+#ifdef DEBUFFS_EXIST
+    header.last_suspend_slot = 0;
+#else
     header.last_suspend_slot = 0 == header.last_suspend_slot;
+#endif
     WriteGlobalSaveInfoNoChecksum(&header);
 }
 

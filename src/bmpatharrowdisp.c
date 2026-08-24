@@ -10,6 +10,7 @@
 #include "bmlib.h"
 #include "bmmind.h"
 #include "variables.h"
+#include "alpha_sprite_arrow.h"
 
 #if FE8_DANGER_BONES
 void UpdateVisualsForEnemiesWhoCanAttackTile(void);
@@ -297,15 +298,22 @@ u8 PointInCameraBounds(s16 x, s16 y, u8 xBound, u8 yBound) {
 
 #define PATH_ARROW_OAM_AT(a, b) gPathArrowOAMTable[a][b];
 
-void DrawPathArrow(void) {
+static void DrawPathArrowExt(bool8 drawTip) {
     s8 i;
     if (gpPathArrowProc->pathLen == 0)
         return;
     for (i = gpPathArrowProc->pathLen; i >= 0; i--) {
-        s16 xp = 16 * gpPathArrowProc->pathX[i];
-        s16 yp = 16 * gpPathArrowProc->pathY[i];
+        s16 xp;
+        s16 yp;
+        u16 oam2;
+
+        if (!drawTip && i == gpPathArrowProc->pathLen)
+            continue;
+
+        xp = 16 * gpPathArrowProc->pathX[i];
+        yp = 16 * gpPathArrowProc->pathY[i];
         if (PointInCameraBounds(xp, yp, 16, 16)) {
-            u16 oam2 = PATH_ARROW_OAM_AT(
+            oam2 = PATH_ARROW_OAM_AT(
                 GetDirectionOfPathAfterIndex(i),
                 GetDirectionOfPathBeforeIndex(i));
             PutSprite(
@@ -318,7 +326,17 @@ void DrawPathArrow(void) {
     }
 }
 
+void DrawPathArrow(void) {
+    DrawPathArrowExt(TRUE);
+}
+
 void DrawUpdatedPathArrow(void) {
+#if FE8_ALPHA_SPRITE_ARROW
+    UpdatePathArrowWithCursor();
+    DrawPathArrowExt(FALSE);
+    AlphaSpriteArrow_DrawUnitGhost();
+#else
     UpdatePathArrowWithCursor();
     DrawPathArrow();
+#endif
 }

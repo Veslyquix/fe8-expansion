@@ -1,6 +1,7 @@
 #include "global.h"
 
 #include "constants/items.h"
+#include "constants/classes.h"
 
 #include "proc.h"
 #include "mu.h"
@@ -21,6 +22,10 @@
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "popup.h"
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+void SetupCacheForStealableItems(void);
+#endif
 #include "constants/songs.h"
 
 struct ProcCmd CONST_DATA sProcScr_ExecTrap8[] = {
@@ -128,6 +133,15 @@ int GetPickTrapType(struct Unit * unit)
     case TRAP_BALLISTA:
         return TRAP_NONE;
 
+#if FE8_PURCHASE_GENERICS
+    case TRAP_PURCHASE_BASE:
+        if (unit->pClassData->number == CLASS_BRIGAND
+            && GetPurchaseBaseTrapOwner(trap) != (UNIT_FACTION(unit) >> 6))
+            return TRAP_PURCHASE_BASE;
+
+        return TRAP_NONE;
+#endif
+
     case TRAP_FIRETILE:
         if ((UNIT_CATTRIBUTES(unit) & CA_THIEF))
             return TRAP_FIRE_THIEF;
@@ -180,6 +194,14 @@ int ExecTrap(ProcPtr proc, struct Unit * unit, int exec_type)
             NewPopup2_PlanA(proc, -1, GetStringFromIndex(0x21));    /* Recovered mine. */
             UnitAddItem(unit, MakeNewItem(ITEM_MINE));
             break;
+
+#if FE8_PURCHASE_GENERICS
+        case TRAP_PURCHASE_BASE:
+            RemoveTrap(GetTrapAt(unit->xPos, unit->yPos));
+            PlaySoundEffect(SONG_B1);
+            NewPopup2_PlanA(proc, -1, GetStringFromIndex(0x20));    /* Disabled trap. */
+            break;
+#endif
     }
 
     return 0;
@@ -190,6 +212,12 @@ bool HandlePostActionTraps(ProcPtr proc) {
     if (GetUnitCurrentHp(gActiveUnit) <= 0) {
         return 1;
     }
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    if (gActionData.unitActionType == UNIT_ACTION_STEAL) {
+        SetupCacheForStealableItems();
+    }
+#endif
 
     if ((UNIT_CATTRIBUTES(gActiveUnit) & CA_CANTO) && !(gActiveUnit->state & US_CANTOING)) {
         switch (gActionData.unitActionType) {
@@ -210,7 +238,9 @@ bool HandlePostActionTraps(ProcPtr proc) {
     gActionData.suspendPointType = 1;
     gActionData.unitActionType = 1;
 
+#if !FE8_TURN_AUTOSAVE
     WriteSuspendSave(3);
+#endif
 
     if (GetBattleAnimPreconfType() == PLAY_ANIMCONF_OFF) {
         RefreshUnitSprites();
@@ -283,6 +313,16 @@ void LoadTrapData(const struct TrapData * data)
         case TRAP_GORGON_EGG:
             AddGorgonEggTrap(data->xPos, data->yPos, data->subtype, data->turn_counter, data->turn);
             break;
+
+#if FE8_PURCHASE_GENERICS
+        case TRAP_CAMP:
+            AddCampTrap(data->xPos, data->yPos, data->subtype);
+            break;
+
+        case TRAP_TENT:
+            AddTentTrap(data->xPos, data->yPos, data->subtype);
+            break;
+#endif
         }
         data++;
     }

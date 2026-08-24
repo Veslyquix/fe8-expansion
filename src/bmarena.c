@@ -652,7 +652,9 @@ void ArenaContinueBattle(void) {
     gActionData.trapType = gBattleTarget.unit.curHP;
 
     gActionData.suspendPointType = SUSPEND_POINT_DURINGARENA;
+#if !FE8_TURN_AUTOSAVE
     WriteSuspendSave(3);
+#endif
 
     BattleUnwind();
 

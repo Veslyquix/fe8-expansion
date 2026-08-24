@@ -153,6 +153,7 @@ from __future__ import annotations
 import os
 import re
 
+from ..cparse import strip_hand_conditionals
 from ..diagnostics import GeneratedDataError
 from ..escape_hatch import CSymbolRefField
 from ..json_loader import load_json_file
@@ -275,6 +276,7 @@ def read_msg_count(header=MSG_HEADER):
 def _count_numbered_array_entries(source):
     with open(source, "r", encoding="utf-8") as handle:
         text = handle.read()
+    text = strip_hand_conditionals(text)
     return len(_NUMBERED_ARRAY_ENTRY_RE.findall(text))
 
 

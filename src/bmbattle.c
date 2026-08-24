@@ -8,6 +8,7 @@
 #include "bmreliance.h"
 #include "chapterdata.h"
 #include "bmtrick.h"
+#include "power.h"
 #include "m4a.h"
 #include "soundwrapper.h"
 #include "hardware.h"
@@ -18,9 +19,12 @@
 #include "bmsave.h"
 #include "ekrbattle.h"
 #include "bmbattle.h"
+#include "eventinfo.h"
+#include "constants/event-flags.h"
 #include "expansion_mechanics.h"
 #include "mapanim.h"
 #include "worldmap.h"
+#include "debuffs.h"
 
 #include "constants/songs.h"
 #include "constants/items.h"
@@ -338,6 +342,12 @@ void InitBattleUnit(struct BattleUnit* bu, struct Unit* unit) {
 
     gBattleActor.expGain = 0;
     gBattleTarget.expGain = 0;
+
+#ifdef DEBUFFS_EXIST
+    UnitClearStatModifiers(&bu->unit);
+    bu->pendingDebuffHits = 0;
+    bu->pendingDebuffItem = 0;
+#endif
 }
 
 void InitBattleUnitWithoutBonuses(struct BattleUnit* bu, struct Unit* unit) {
@@ -1154,6 +1164,10 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
 
             if (attacker->unit.curHP < 0)
                 attacker->unit.curHP = 0;
+
+#if FE8_CO_POWERS
+            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+#endif
         } else {
             if (gBattleStats.damage > defender->unit.curHP)
                 gBattleStats.damage = defender->unit.curHP;
@@ -1162,6 +1176,11 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
 
             if (defender->unit.curHP < 0)
                 defender->unit.curHP = 0;
+
+#if FE8_CO_POWERS
+            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+            CoGauge_OnDamage(UNIT_FACTION(&defender->unit), gBattleStats.damage);
+#endif
         }
 
         if (GetItemWeaponEffect(attacker->weapon) == WPN_EFFECT_HPDRAIN) {
@@ -1172,6 +1191,10 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
 
             gBattleHitIterator->attributes |= BATTLE_HIT_ATTR_HPSTEAL;
         }
+
+#ifdef DEBUFFS_EXIST
+        BattleApplyWeaponDebuff(attacker, defender);
+#endif
 
         if (defender->unit.pClassData->number != CLASS_DEMON_KING) {
             if (GetItemWeaponEffect(attacker->weapon) == WPN_EFFECT_PETRIFY) {
@@ -1583,6 +1606,13 @@ void BattleApplyUnitUpdates(void) {
         UpdateUnitFromBattle(target, &gBattleTarget);
     else
         UpdateObstacleFromBattle(&gBattleTarget);
+
+#ifdef DEBUFFS_EXIST
+    BattleApplyUnitDebuffs(actor, &gBattleActor);
+
+    if (target)
+        BattleApplyUnitDebuffs(target, &gBattleTarget);
+#endif
 }
 
 // unused?
@@ -1996,6 +2026,12 @@ void BattleInitTargetCanCounter(void) {
     }
 }
 
+#if FE8_PURCHASE_GENERICS
+bool BattleUnitIsCamp(struct BattleUnit* bu) {
+    return IsCampOrTentTrap(GetTrapAt(bu->unit.xPos, bu->unit.yPos), PURCHASE_BASE_KIND_CAMP);
+}
+#endif
+
 void InitObstacleBattleUnit(void) {
     ClearUnit(&gBattleTarget.unit);
 
@@ -2008,6 +2044,15 @@ void InitObstacleBattleUnit(void) {
 
     gBattleTarget.unit.xPos  = gActionData.xOther;
     gBattleTarget.unit.yPos  = gActionData.yOther;
+
+#if FE8_PURCHASE_GENERICS
+    if (IsCampOrTentTrap(GetTrapAt(gBattleTarget.unit.xPos, gBattleTarget.unit.yPos), PURCHASE_BASE_KIND_CAMP)) {
+        gBattleTarget.unit.pClassData = GetClassData(CLASS_CAMP);
+        gBattleTarget.unit.pCharacterData = GetCharacterData(CHARACTER_WALL);
+        gBattleTarget.unit.maxHP = CAMP_MAX_HP;
+        return;
+    }
+#endif
 
     switch (gBmMapTerrain[gBattleTarget.unit.yPos][gBattleTarget.unit.xPos]) {
 
@@ -2038,6 +2083,32 @@ void ComputeBattleObstacleStats(void) {
 
 void UpdateObstacleFromBattle(struct BattleUnit* bu) {
     struct Trap* trap = GetTrapAt(bu->unit.xPos, bu->unit.yPos);
+
+#if FE8_PURCHASE_GENERICS
+    if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP)) {
+        SetCampTrapHp(trap, bu->unit.curHP);
+
+        if (GetCampTrapHp(trap) == 0) {
+            int owner = GetPurchaseBaseTrapOwner(trap);
+
+            RemoveTrap(trap);
+            RefreshTerrainBmMap();
+            UpdateRoofedUnits();
+            RenderBmMap();
+
+            if (owner == FACTION_ID_BLUE) {
+                ForceGameOver();
+            } else if (owner == FACTION_ID_RED) {
+                if (GetBattleMapKind() == BATTLEMAP_KIND_STORY)
+                    SetFlag(EVFLAG_WIN);
+
+                CallEndEvent();
+            }
+        }
+
+        return;
+    }
+#endif
 
     trap->extra = bu->unit.curHP;
 
@@ -2262,7 +2333,9 @@ void BattleGenerateArena(struct Unit* actor) {
     BattleApplyWeaponTriangleEffect(&gBattleActor, &gBattleTarget);
 
     gActionData.suspendPointType = SUSPEND_POINT_DURINGARENA;
+#if !FE8_TURN_AUTOSAVE
     WriteSuspendSave(SAVE_ID_SUSPEND);
+#endif
 
     SetBattleUnitTerrainBonusesAuto(&gBattleActor);
     SetBattleUnitTerrainBonuses(&gBattleTarget, 8); // TODO: terrain id constants

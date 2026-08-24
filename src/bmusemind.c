@@ -24,6 +24,7 @@
 #include "eventinfo.h"
 #include "bmmind.h"
 #include "bmusemind.h"
+#include "debuffs.h"
 #include "constants/songs.h"
 
 s8 CanUnitCrossTerrain(struct Unit* unit, int terrain);
@@ -94,6 +95,9 @@ void ExecRestore(ProcPtr proc) {
     }
 
     SetUnitStatus(GetUnit(gActionData.targetIndex), UNIT_STATUS_NONE);
+#ifdef DEBUFFS_EXIST
+    UnitClearDebuffs(GetUnit(gActionData.targetIndex));
+#endif
 
     BattleApplyItemEffect(proc);
     BeginBattleAnimations();
@@ -505,7 +509,11 @@ void ExecPureWaterItem(ProcPtr proc) {
     BattleInitItemEffect(GetUnit(gActionData.subjectIndex),
         gActionData.itemSlotIndex);
 
+#ifdef DEBUFFS_EXIST
+    UnitSetDebuff(GetUnit(gActionData.subjectIndex), UNIT_DEBUFF_STAT_RES, 7);
+#else
     GetUnit(gActionData.subjectIndex)->barrierDuration = 7;
+#endif
 
     BattleApplyItemEffect(proc);
     BeginBattleAnimations();

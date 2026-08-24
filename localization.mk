@@ -24,13 +24,13 @@ LOCALIZATION_OUT_DIR := build/expansion-localization/generated
 # silent on success, fails with an actionable message otherwise. Never
 # writes any file.
 localization-validate:
-	python3 -m scripts.localization.cli validate
+	$(PYTHON) -m scripts.localization.cli validate
 
 # generate -- validate, then write the generated header/C/budget report
 # under $(LOCALIZATION_OUT_DIR) (write-if-unchanged).
 localization-generate:
 	@mkdir -p $(LOCALIZATION_OUT_DIR)
-	python3 -m scripts.localization.cli generate --out-dir $(LOCALIZATION_OUT_DIR)
+	$(PYTHON) -m scripts.localization.cli generate --out-dir $(LOCALIZATION_OUT_DIR)
 
 # check -- the CI-suitable gate: validate + generate, self-healing the
 # generated files under $(LOCALIZATION_OUT_DIR) -- never touches anything
@@ -43,11 +43,11 @@ localization-check: localization-generate
 # resolver-behavior and vanilla-isolation source-audit tests (skipped
 # automatically if no host `cc` is available).
 localization-test:
-	python3 -m unittest discover -s scripts/localization/tests -p "test_*.py"
+	$(PYTHON) -m unittest discover -s scripts/localization/tests -p "test_*.py"
 
 # budget -- validate + generate, then print the budget report JSON
 # (catalog/index/string/scratch byte usage, ASCII codepoint/glyph counts,
 # and their configured limits) to stdout.
 localization-budget:
 	@mkdir -p $(LOCALIZATION_OUT_DIR)
-	python3 -m scripts.localization.cli budget --out-dir $(LOCALIZATION_OUT_DIR)
+	$(PYTHON) -m scripts.localization.cli budget --out-dir $(LOCALIZATION_OUT_DIR)

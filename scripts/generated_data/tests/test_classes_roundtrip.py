@@ -43,13 +43,14 @@ class HandWrittenParserTests(unittest.TestCase):
 
 
 class FullRoundTripTests(unittest.TestCase):
-    """Every one of the 127 vanilla gClassData[] records must round-trip
-    semantically against src/data_classes.c -- not just examples (Issue #5
-    Batch 1 DONE)."""
+    """Every one of the 129 gClassData[] records (127 vanilla + CLASS_CAMP /
+    CLASS_TENT_STRUCTURE from the Camp/Tent structures feature) must
+    round-trip semantically against src/data_classes.c -- not just examples
+    (Issue #5 Batch 1 DONE)."""
 
     def test_generated_model_matches_every_hand_written_class(self):
         generated_records = load_records(REAL_SOURCE)
-        self.assertEqual(len(generated_records), 127)
+        self.assertEqual(len(generated_records), 129)
 
         class_names = [r.class_name for r in generated_records]
         hand_records = classes_parser.parse_hand_written(REAL_HAND_FILE, class_names)

@@ -476,6 +476,31 @@ extern unsigned short portrait_Eirika_palette[];
 extern unsigned char portrait_Eirika_mouth[];
 extern unsigned char portrait_Eirika_chibi[];
 extern unsigned char portrait_Eirika_tileset[];
+
+#if FE8_CUSTOM_CAMPAIGN
+/* CUSTOM_CAMPAIGN portrait replacements -- see src/portrait_data.c. */
+extern unsigned short portrait_Hannah_palette[];
+extern unsigned char portrait_Hannah_mouth[];
+extern unsigned char portrait_Hannah_chibi[];
+extern unsigned char portrait_Hannah_tileset[];
+extern unsigned short portrait_Francis_palette[];
+extern unsigned char portrait_Francis_mouth[];
+extern unsigned char portrait_Francis_chibi[];
+extern unsigned char portrait_Francis_tileset[];
+extern unsigned short portrait_Frederick_palette[];
+extern unsigned char portrait_Frederick_mouth[];
+extern unsigned char portrait_Frederick_chibi[];
+extern unsigned char portrait_Frederick_tileset[];
+extern unsigned short portrait_Fox_palette[];
+extern unsigned char portrait_Fox_mouth[];
+extern unsigned char portrait_Fox_chibi[];
+extern unsigned char portrait_Fox_tileset[];
+extern unsigned short portrait_Liz_palette[];
+extern unsigned char portrait_Liz_mouth[];
+extern unsigned char portrait_Liz_chibi[];
+extern unsigned char portrait_Liz_tileset[];
+#endif
+
 extern unsigned short portrait_Mystery_1_palette[];
 extern unsigned char portrait_Mystery_1_mouth[];
 extern unsigned char portrait_Mystery_1_chibi[];

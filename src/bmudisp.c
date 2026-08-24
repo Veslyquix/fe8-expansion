@@ -16,6 +16,14 @@
 #include "constants/event-flags.h"
 #include "constants/video-global.h"
 
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+void DrawObtainableItemIcon(struct Unit* unit);
+#endif
+
+#if FE8_HP_BARS
+void DisplayHpBarAndWarningIcons(struct Unit* unit);
+#endif
+
 /**
 * Display standing map sprites and various tile/unit markers
 */
@@ -821,6 +829,33 @@ int GetUnitSpritePalette(const struct Unit * unit)
     }
 }
 
+#if FE8_PURCHASE_GENERICS
+// House/Fort traps aren't struct Unit instances, so this mirrors
+// GetUnitSpritePalette's FACTION_BLUE/RED/GREEN/PURPLE cases directly from
+// a bare FACTION_ID_* owner value (as returned by GetPurchaseBaseTrapOwner)
+// instead of UNIT_FACTION(unit) -- same palette banks, so recapturing a
+// house/fort recolors it exactly like an ordinary unit changing allegiance.
+// PURCHASE_BASE_OWNER_NEUTRAL shares FACTION_ID_PURPLE's value/bank.
+int GetFactionSpritePalette(int factionId)
+{
+    switch (factionId) {
+    case FACTION_ID_BLUE:
+        return 0xC;
+
+    case FACTION_ID_RED:
+        return 0xD;
+
+    case FACTION_ID_GREEN:
+        return 0xE;
+
+    case FACTION_ID_PURPLE:
+        return 0xB;
+    }
+
+    return 0xB;
+}
+#endif
+
 void RefreshUnitSprites(void)
 {
     struct SMSHandle * smsHandle;
@@ -913,6 +948,57 @@ void RefreshUnitSprites(void)
 
             smsHandle->config = GetInfo(0x66).size;
         }
+
+#if FE8_PURCHASE_GENERICS
+        if (trap->type == TRAP_PURCHASE_BASE &&
+            (trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_CAMP ||
+             trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_TENT))
+        {
+            // Camp/Tent's sheet PNGs only carry a generic preview palette
+            // (same 16 reference colors every unit_icon_wait sheet uses for
+            // editing) -- the real in-game colors always come from whichever
+            // OBJ bank is selected at render time. Camp/Tent are owned
+            // (GetPurchaseBaseTrapOwner) just like House/Fort below, so this
+            // now looks up the same faction palette bank instead of leaving
+            // the bank unset (which left it on whatever bank 0 happened to
+            // hold -- wrong colors in-game). GetInfo(id).size (not a
+            // hardcoded 16x16) is what lets Camp (32x32) and Tent (16x32)
+            // render at their own registered sheet size instead of
+            // ballista/rune's shared 16x16.
+            int smsId = trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_CAMP ? 107 : 108;
+            int palette = GetFactionSpritePalette(GetPurchaseBaseTrapOwner(trap));
+
+            smsHandle = AddUnitSprite(trap->yPos * 16);
+            smsHandle->yDisplay = trap->yPos * 16;
+            smsHandle->xDisplay = trap->xPos * 16;
+
+            smsHandle->oam2Base = UseUnitSprite(smsId) + 0x80 + (palette & 0xf) * 0x1000;
+
+            smsHandle->config = GetInfo(smsId).size;
+        }
+
+        if (trap->type == TRAP_PURCHASE_BASE &&
+            (trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_HOUSE ||
+             trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == PURCHASE_BASE_KIND_FORT) &&
+            GetPurchaseBaseTrapOwner(trap) != PURCHASE_BASE_OWNER_NEUTRAL)
+        {
+            // House/Fort keep the map's own native house/fort tile as-is
+            // (drawn by the BG terrain layer, not this loop) -- this only
+            // adds a small owner-colored flag on top of it, using the same
+            // per-owner palette bank ordinary units use, so a recapture
+            // recolors just the flag rather than the whole building. No
+            // flag at all while unclaimed (owner == NEUTRAL).
+            int palette = GetFactionSpritePalette(GetPurchaseBaseTrapOwner(trap));
+
+            smsHandle = AddUnitSprite(trap->yPos * 16);
+            smsHandle->yDisplay = trap->yPos * 16;
+            smsHandle->xDisplay = trap->xPos * 16;
+
+            smsHandle->oam2Base = UseUnitSprite(109) + 0x80 + (palette & 0xf) * 0x1000;
+
+            smsHandle->config = GetInfo(109).size;
+        }
+#endif
     }
 
     if (gSMSSyncFlag != 0)
@@ -1083,6 +1169,10 @@ void PutUnitSpriteIconsOam(void)
         if (GetUnitSpriteHideFlag(unit) != 0)
             continue;
 
+#if FE8_HP_BARS
+        DisplayHpBarAndWarningIcons(unit);
+#endif
+
         switch (unit->statusIndex) {
         case UNIT_STATUS_POISON:
             x = unit->xPos * 16 - gBmSt.camera.x;
@@ -1162,6 +1252,10 @@ void PutUnitSpriteIconsOam(void)
 
         if (!displayRescueIcon)
             continue;
+        
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+        DrawObtainableItemIcon(unit);
+#endif
 
         if (unit->state & US_RESCUING)
         {

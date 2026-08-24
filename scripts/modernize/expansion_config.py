@@ -116,6 +116,15 @@ CONFIG_MK_FEATURE_KEYS = (
     "EXPANSION_STARTER_CONTENT",
     "VESLY_DEBUGGER",
     "DANGER_BONES",
+    "NEW_ANIMS",
+    "NEW_TILESETS",
+    "PURCHASE_GENERICS",
+    "MMB",
+    "DEBUFFS_EXIST",
+    "DEBUFFS_STACK",
+    "SELECT_VIEW_GROWTHS",
+    "CUSTOM_CAMPAIGN",
+    "SKIP_OPENING",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -386,6 +395,15 @@ def validate_item_id_cap(value) -> int:
 
 def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_menu,
                            starter_content=0, vesly_debugger=0, danger_bones=0,
+                           new_anims=0, new_tilesets=0,
+                           purchase_generics=0, mmb=0, extend_desc_box=0,
+                           overflow_safety_checks=1, display_obtainable_item=0,
+                           debuffs_exist=0, debuffs_stack=0,
+                           select_view_growths=0,
+                           text_chapter_names=0, battle_stats_no_anims=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
+                           fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
+                           custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -400,6 +418,31 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     content = validate_feature_flag("EXPANSION_STARTER_CONTENT", starter_content)
     debugger = validate_feature_flag("VESLY_DEBUGGER", vesly_debugger)
     bones = validate_feature_flag("DANGER_BONES", danger_bones)
+    anims = validate_feature_flag("NEW_ANIMS", new_anims)
+    tilesets = validate_feature_flag("NEW_TILESETS", new_tilesets)
+    generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
+    mmb_flag = validate_feature_flag("MMB", mmb)
+    desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
+    overflow_checks = validate_feature_flag("OVERFLOW_SAFETY_CHECKS", overflow_safety_checks)
+    obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
+    debuffs = validate_feature_flag("DEBUFFS_EXIST", debuffs_exist)
+    debuffs_stack_flag = validate_feature_flag("DEBUFFS_STACK", debuffs_stack)
+    select_growths = validate_feature_flag("SELECT_VIEW_GROWTHS", select_view_growths)
+    ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
+    battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
+    draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
+    bars = validate_feature_flag("HP_BARS", hp_bars)
+    group_ai_flag = validate_feature_flag("GROUP_AI", group_ai)
+    alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
+    autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
+    fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
+    promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
+    fix_bugs_flag = validate_feature_flag("FIX_BUGS", fix_bugs)
+    credits_flag = validate_feature_flag("CREDITS", credits)
+    campaign = validate_feature_flag("CUSTOM_CAMPAIGN", custom_campaign)
+    skip_opening_flag = validate_feature_flag("SKIP_OPENING", skip_opening)
+    game_rank_flag = validate_feature_flag("GAME_RANK", game_rank)
+    co_powers_flag = validate_feature_flag("CO_POWERS", co_powers)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -422,7 +465,22 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             f"0x{cap:02X}; build with FE8_ITEM_ID_CAP=0x"
             f"{ITEM_ID_EXPANSION_FIRST:02X} (or higher)"
         )
-    return hooks, sample, danger, content, debugger, bones
+    if debuffs_stack_flag and not debuffs:
+        raise ConfigError(
+            "DEBUFFS_STACK=1 requires DEBUFFS_EXIST=1: repeated debuff "
+            "applications require the per-unit debuff storage to be linked"
+        )
+    if bars and not obtainable_item:
+        raise ConfigError(
+            "HP_BARS=1 requires DISPLAY_OBTAINABLE_ITEM=1: the HP-bar and "
+            "warning-icon tiles it draws live in the icon sheet that flag "
+            "loads"
+        )
+    return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
+            overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
+            select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
+            autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
+            game_rank_flag, co_powers_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -630,6 +688,31 @@ class ExpansionIdentity:
     starter_content: int = 0
     vesly_debugger: int = 0
     danger_bones: int = 0
+    new_anims: int = 0
+    new_tilesets: int = 0
+    purchase_generics: int = 0
+    mmb: int = 0
+    extend_desc_box: int = 0
+    overflow_safety_checks: int = 1
+    display_obtainable_item: int = 0
+    debuffs_exist: int = 0
+    debuffs_stack: int = 0
+    select_view_growths: int = 0
+    text_chapter_names: int = 0
+    battle_stats_no_anims: int = 0
+    draw_map_anims: int = 0
+    hp_bars: int = 0
+    group_ai: int = 0
+    alpha_sprite_arrow: int = 0
+    turn_autosave: int = 0
+    fort_units_start_greyed_out: int = 0
+    promote_command: int = 0
+    fix_bugs: int = 0
+    credits: int = 0
+    custom_campaign: int = 0
+    skip_opening: int = 0
+    game_rank: int = 0
+    co_powers: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -680,6 +763,31 @@ class ExpansionIdentity:
                 "starter_content": self.starter_content,
                 "vesly_debugger": self.vesly_debugger,
                 "danger_bones": self.danger_bones,
+                "new_anims": self.new_anims,
+                "new_tilesets": self.new_tilesets,
+                "purchase_generics": self.purchase_generics,
+                "mmb": self.mmb,
+                "extend_desc_box": self.extend_desc_box,
+                "overflow_safety_checks": self.overflow_safety_checks,
+                "display_obtainable_item": self.display_obtainable_item,
+                "debuffs_exist": self.debuffs_exist,
+                "debuffs_stack": self.debuffs_stack,
+                "select_view_growths": self.select_view_growths,
+                "text_chapter_names": self.text_chapter_names,
+                "battle_stats_no_anims": self.battle_stats_no_anims,
+                "draw_map_anims": self.draw_map_anims,
+                "hp_bars": self.hp_bars,
+                "group_ai": self.group_ai,
+                "alpha_sprite_arrow": self.alpha_sprite_arrow,
+                "turn_autosave": self.turn_autosave,
+                "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
+                "promote_command": self.promote_command,
+                "fix_bugs": self.fix_bugs,
+                "credits": self.credits,
+                "custom_campaign": self.custom_campaign,
+                "skip_opening": self.skip_opening,
+                "game_rank": self.game_rank,
+                "co_powers": self.co_powers,
             },
         }
 
@@ -718,6 +826,31 @@ def load_identity(
     starter_content=None,
     vesly_debugger=None,
     danger_bones=None,
+    new_anims=None,
+    new_tilesets=None,
+    purchase_generics=None,
+    mmb=None,
+    extend_desc_box=None,
+    overflow_safety_checks=None,
+    display_obtainable_item=None,
+    debuffs_exist=None,
+    debuffs_stack=None,
+    select_view_growths=None,
+    text_chapter_names=None,
+    battle_stats_no_anims=None,
+    draw_map_anims=None,
+    hp_bars=None,
+    group_ai=None,
+    alpha_sprite_arrow=None,
+    turn_autosave=None,
+    fort_units_start_greyed_out=None,
+    promote_command=None,
+    fix_bugs=None,
+    credits=None,
+    custom_campaign=None,
+    skip_opening=None,
+    game_rank=None,
+    co_powers=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -774,7 +907,13 @@ def load_identity(
         pseudo_locale if pseudo_locale not in (None, "") else cfg["EXPANSION_PSEUDO_LOCALE"],
         resolved_enabled_locales,
     )
-    resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger, resolved_bones = validate_feature_flags(
+    (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
+     resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
+     resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
+     resolved_select_growths, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
+     resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
+     resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
+     resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -793,6 +932,81 @@ def load_identity(
         danger_bones
         if danger_bones not in (None, "")
         else cfg.get("DANGER_BONES", "0"),
+        new_anims
+        if new_anims not in (None, "")
+        else cfg.get("NEW_ANIMS", "0"),
+        new_tilesets
+        if new_tilesets not in (None, "")
+        else cfg.get("NEW_TILESETS", "0"),
+        purchase_generics
+        if purchase_generics not in (None, "")
+        else cfg.get("PURCHASE_GENERICS", "0"),
+        mmb
+        if mmb not in (None, "")
+        else cfg.get("MMB", "0"),
+        extend_desc_box
+        if extend_desc_box not in (None, "")
+        else cfg.get("EXTEND_DESC_BOX", "0"),
+        overflow_safety_checks
+        if overflow_safety_checks not in (None, "")
+        else cfg.get("OVERFLOW_SAFETY_CHECKS", "1"),
+        display_obtainable_item
+        if display_obtainable_item not in (None, "")
+        else cfg.get("DISPLAY_OBTAINABLE_ITEM", "0"),
+        debuffs_exist
+        if debuffs_exist not in (None, "")
+        else cfg.get("DEBUFFS_EXIST", "0"),
+        debuffs_stack
+        if debuffs_stack not in (None, "")
+        else cfg.get("DEBUFFS_STACK", "0"),
+        select_view_growths
+        if select_view_growths not in (None, "")
+        else cfg.get("SELECT_VIEW_GROWTHS", "0"),
+        text_chapter_names
+        if text_chapter_names not in (None, "")
+        else cfg.get("TEXT_CHAPTER_NAMES", "0"),
+        battle_stats_no_anims
+        if battle_stats_no_anims not in (None, "")
+        else cfg.get("BATTLE_STATS_NO_ANIMS", "0"),
+        draw_map_anims
+        if draw_map_anims not in (None, "")
+        else cfg.get("DRAW_MAP_ANIMS", "0"),
+        hp_bars
+        if hp_bars not in (None, "")
+        else cfg.get("HP_BARS", "0"),
+        group_ai
+        if group_ai not in (None, "")
+        else cfg.get("GROUP_AI", "0"),
+        alpha_sprite_arrow
+        if alpha_sprite_arrow not in (None, "")
+        else cfg.get("ALPHA_SPRITE_ARROW", "0"),
+        turn_autosave
+        if turn_autosave not in (None, "")
+        else cfg.get("TURN_AUTOSAVE", "0"),
+        fort_units_start_greyed_out
+        if fort_units_start_greyed_out not in (None, "")
+        else cfg.get("FORT_UNITS_START_GREYED_OUT", "0"),
+        promote_command
+        if promote_command not in (None, "")
+        else cfg.get("PROMOTE_COMMAND", "0"),
+        fix_bugs
+        if fix_bugs not in (None, "")
+        else cfg.get("FIX_BUGS", "0"),
+        credits
+        if credits not in (None, "")
+        else cfg.get("CREDITS", "0"),
+        custom_campaign
+        if custom_campaign not in (None, "")
+        else cfg.get("CUSTOM_CAMPAIGN", "0"),
+        skip_opening
+        if skip_opening not in (None, "")
+        else cfg.get("SKIP_OPENING", "0"),
+        game_rank
+        if game_rank not in (None, "")
+        else cfg.get("GAME_RANK", "0"),
+        co_powers
+        if co_powers not in (None, "")
+        else cfg.get("CO_POWERS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -828,6 +1042,31 @@ def load_identity(
         starter_content=resolved_content,
         vesly_debugger=resolved_debugger,
         danger_bones=resolved_bones,
+        new_anims=resolved_anims,
+        new_tilesets=resolved_tilesets,
+        purchase_generics=resolved_generics,
+        mmb=resolved_mmb,
+        extend_desc_box=resolved_desc_box,
+        overflow_safety_checks=resolved_overflow_checks,
+        display_obtainable_item=resolved_obtainable_item,
+        debuffs_exist=resolved_debuffs,
+        debuffs_stack=resolved_debuffs_stack,
+        select_view_growths=resolved_select_growths,
+        text_chapter_names=resolved_ch_names,
+        battle_stats_no_anims=resolved_battle_stats,
+        draw_map_anims=resolved_draw_map_anims,
+        hp_bars=resolved_hp_bars,
+        group_ai=resolved_group_ai,
+        alpha_sprite_arrow=resolved_alpha_sprite_arrow,
+        turn_autosave=resolved_autosave,
+        fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
+        promote_command=resolved_promote_command,
+        fix_bugs=resolved_fix_bugs,
+        credits=resolved_credits,
+        custom_campaign=resolved_custom_campaign,
+        skip_opening=resolved_skip_opening,
+        game_rank=resolved_game_rank,
+        co_powers=resolved_co_powers,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -946,6 +1185,131 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override DANGER_BONES (0 or 1)",
     )
     parser.add_argument(
+        "--new-anims",
+        default=None,
+        help="override NEW_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
+        "--new-tilesets",
+        default=None,
+        help="override NEW_TILESETS (0 or 1)",
+    )
+    parser.add_argument(
+        "--purchase-generics",
+        default=None,
+        help="override PURCHASE_GENERICS (0 or 1)",
+    )
+    parser.add_argument(
+        "--mmb",
+        default=None,
+        help="override MMB (0 or 1)",
+    )
+    parser.add_argument(
+        "--extend-desc-box",
+        default=None,
+        help="override EXTEND_DESC_BOX (0 or 1)",
+    )
+    parser.add_argument(
+        "--overflow-safety-checks",
+        default=None,
+        help="override OVERFLOW_SAFETY_CHECKS (0 or 1)",
+    )
+    parser.add_argument(
+        "--display-obtainable-item",
+        default=None,
+        help="override DISPLAY_OBTAINABLE_ITEM (0 or 1)",
+    )
+    parser.add_argument(
+        "--debuffs-exist",
+        default=None,
+        help="override DEBUFFS_EXIST (0 or 1)",
+    )
+    parser.add_argument(
+        "--debuffs-stack",
+        default=None,
+        help="override DEBUFFS_STACK (0 or 1)",
+    )
+    parser.add_argument(
+        "--select-view-growths",
+        default=None,
+        help="override SELECT_VIEW_GROWTHS (0 or 1)",
+    )
+    parser.add_argument(
+        "--text-chapter-names",
+        default=None,
+        help="override TEXT_CHAPTER_NAMES (0 or 1)",
+    )
+    parser.add_argument(
+        "--battle-stats-no-anims",
+        default=None,
+        help="override BATTLE_STATS_NO_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
+        "--draw-map-anims",
+        default=None,
+        help="override DRAW_MAP_ANIMS (0 or 1)",
+    )
+    parser.add_argument(
+        "--hp-bars",
+        default=None,
+        help="override HP_BARS (0 or 1)",
+    )
+    parser.add_argument(
+        "--group-ai",
+        default=None,
+        help="override GROUP_AI (0 or 1)",
+    )
+    parser.add_argument(
+        "--alpha-sprite-arrow",
+        default=None,
+        help="override ALPHA_SPRITE_ARROW (0 or 1)",
+    )
+    parser.add_argument(
+        "--turn-autosave",
+        default=None,
+        help="override TURN_AUTOSAVE (0 or 1)",
+    )
+    parser.add_argument(
+        "--game-rank",
+        default=None,
+        help="override GAME_RANK (0 or 1)",
+    )
+    parser.add_argument(
+        "--co-powers",
+        default=None,
+        help="override CO_POWERS (0 or 1)",
+    )
+    parser.add_argument(
+        "--fort-units-start-greyed-out",
+        default=None,
+        help="override FORT_UNITS_START_GREYED_OUT (0 or 1)",
+    )
+    parser.add_argument(
+        "--promote-command",
+        default=None,
+        help="override PROMOTE_COMMAND (0 or 1)",
+    )
+    parser.add_argument(
+        "--fix-bugs",
+        default=None,
+        help="override FIX_BUGS (0 or 1)",
+    )
+    parser.add_argument(
+        "--credits",
+        default=None,
+        help="override CREDITS (0 or 1)",
+    )
+    parser.add_argument(
+        "--custom-campaign",
+        default=None,
+        help="override CUSTOM_CAMPAIGN (0 or 1)",
+    )
+    parser.add_argument(
+        "--skip-opening",
+        default=None,
+        help="override SKIP_OPENING (0 or 1)",
+    )
+    parser.add_argument(
         "--item-id-cap",
         default=None,
         help=(
@@ -1017,6 +1381,31 @@ def main(argv=None) -> int:
             starter_content=args.starter_content,
             vesly_debugger=args.vesly_debugger,
             danger_bones=args.danger_bones,
+            new_anims=args.new_anims,
+            new_tilesets=args.new_tilesets,
+            purchase_generics=args.purchase_generics,
+            mmb=args.mmb,
+            extend_desc_box=args.extend_desc_box,
+            overflow_safety_checks=args.overflow_safety_checks,
+            display_obtainable_item=args.display_obtainable_item,
+            debuffs_exist=args.debuffs_exist,
+            debuffs_stack=args.debuffs_stack,
+            select_view_growths=args.select_view_growths,
+            text_chapter_names=args.text_chapter_names,
+            battle_stats_no_anims=args.battle_stats_no_anims,
+            draw_map_anims=args.draw_map_anims,
+            hp_bars=args.hp_bars,
+            group_ai=args.group_ai,
+            alpha_sprite_arrow=args.alpha_sprite_arrow,
+            turn_autosave=args.turn_autosave,
+            fort_units_start_greyed_out=args.fort_units_start_greyed_out,
+            promote_command=args.promote_command,
+            fix_bugs=args.fix_bugs,
+            credits=args.credits,
+            custom_campaign=args.custom_campaign,
+            skip_opening=args.skip_opening,
+            game_rank=args.game_rank,
+            co_powers=args.co_powers,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

@@ -7,6 +7,7 @@
 #include "bmitem.h"
 #include "proc.h"
 #include "banim_data.h"
+#include "banim_animnumbers.h"
 #include "ekrdragon.h"
 #include "eventinfo.h"
 #include "constants/items.h"
@@ -35,6 +36,10 @@ void NewEfxHpBar(struct Anim * anim)
 
     if (ANIM_ROUND_GREAT_SHIELD & GetRoundFlagByAnim(anim) || gEkrHpBarCount != 0)
         return;
+
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_DisplayAttack(anim);
+#endif
 
     gEkrHpBarCount = 1;
 
@@ -173,6 +178,10 @@ void NewEfxHpBarResire(struct Anim * anim)
     if (gEkrHpBarCount != 0)
         return;
 
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_DisplayDamage(anim, false, 0, 0);
+#endif
+
     gEkrHpBarCount = 1;
 
     proc = Proc_Start(ProcScr_EfxHpBarResire, PROC_TREE_3);
@@ -275,6 +284,10 @@ void EfxHpBarResire_SetAnotherSide(struct ProcEfxHpBar * proc)
 
     Proc_Break(proc);
     gEkrHitNow[GetAnimPosition(proc->anim_main_other)] = 2;
+
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_DisplayNosferatuHeal(proc->anim_main_other);
+#endif
 }
 
 void EfxHpBarResire_DeclineToDeath(struct ProcEfxHpBar * proc)
@@ -376,6 +389,10 @@ void NewEfxHpBarLive(struct Anim * anim)
 
     if (gEkrHpBarCount != 0)
         return;
+
+#if FE8_BATTLE_ANIMATION_NUMBERS
+    AnimNumbers_DisplayHeal(anim);
+#endif
 
     gEkrHpBarCount = 1;
 

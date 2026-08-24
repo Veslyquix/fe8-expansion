@@ -1067,136 +1067,136 @@ Turns[.][X]
 Total Turns[.][X]
 
 ## MSG_160
-The Fall of Renais[X]
+TXT00 L00[.][X]
 
 ## MSG_161
-Escape![.][X]
+TXT01 L01[.][X]
 
 ## MSG_162
-The Protected[.][X]
+TXT02 L02[.][X]
 
 ## MSG_163
-The Bandits of Borgo[X]
+TXT03 L03[.][X]
 
 ## MSG_164
-Ancient Horrors[.][X]
+TXT04 L04[.][X]
 
 ## MSG_165
-Unbroken Heart[X]
+TXT05 I05[.][X]
 
 ## MSG_166
-The Empire's Reach[X]
+TXT06 L05[.][X]
 
 ## MSG_167
-Victims of War[X]
+TXT07 L06[.][X]
 
 ## MSG_168
-Waterside Renvall[.][X]
+TXT08 L07[.][X]
 
 ## MSG_169
-It's a Trap![X]
+TXT09 L08[.][X]
 
 ## MSG_16A
-Distant Blade[.][X]
+TXT10 E09[.][X]
 
 ## MSG_16B
-Revolt at Carcino[.][X]
+TXT11 E10[.][X]
 
 ## MSG_16C
-Village of Silence[X]
+TXT12 E11[.][X]
 
 ## MSG_16D
-Hamill Canyon[.][X]
+TXT13 E12[.][X]
 
 ## MSG_16E
-Queen of White Dunes[X]
+TXT14 E13[.][X]
 
 ## MSG_16F
-Scorched Sand[.][X]
+TXT15 E14[.][X]
 
 ## MSG_170
-Ruled by Madness[X]
+TXT16 E15[.][X]
 
 ## MSG_171
-River of Regrets[X]
+TXT17 E16[.][X]
 
 ## MSG_172
-Two Faces of Evil[.][X]
+TXT18 E17[.][X]
 
 ## MSG_173
-Last Hope[.][X]
+TXT19 E18[.][X]
 
 ## MSG_174
-Darkling Woods[X]
+TXT20 E19[.][X]
 
 ## MSG_175
-Sacred Stone[X]
+TXT21 E20[.][X]
 
 ## MSG_176
-Sacred Stone[X]
+TXT22 E20B[X]
 
 ## MSG_177
-Fort Rigwald[X]
+TXT23 I09[.][X]
 
 ## MSG_178
-Turning Traitor[.][X]
+TXT24 I10[.][X]
 
 ## MSG_179
-Landing at Taizel[.][X]
+TXT25 I11[.][X]
 
 ## MSG_17A
-Fluorspar's Oath[X]
+TXT26 I12[.][X]
 
 ## MSG_17B
-Father and Son[X]
+TXT27 I13[.][X]
 
 ## MSG_17C
-Scorched Sand[.][X]
+TXT28 I14[.][X]
 
 ## MSG_17D
-Ruled by Madness[X]
+TXT29 I15[.][X]
 
 ## MSG_17E
-River of Regrets[X]
+TXT30 I16[.][X]
 
 ## MSG_17F
-Two Faces of Evil[.][X]
+TXT31 I17[.][X]
 
 ## MSG_180
-Last Hope[.][X]
+TXT32 I18[.][X]
 
 ## MSG_181
-Darkling Woods[X]
+TXT33 I19[.][X]
 
 ## MSG_182
-Sacred Stone[X]
+TXT34 I20[.][X]
 
 ## MSG_183
-Sacred Stone[X]
+TXT35 I20B[X]
 
 ## MSG_184
-Tower of Valni 1[X]
+TXT36 T01[.][X]
 
 ## MSG_185
-Tower of Valni 2[X]
+TXT37 T02[.][X]
 
 ## MSG_186
-Tower of Valni 3[X]
+TXT38 T03[.][X]
 
 ## MSG_187
-Tower of Valni 4[X]
+TXT39 T04[.][X]
 
 ## MSG_188
-Tower of Valni 5[X]
+TXT40 T05[.][X]
 
 ## MSG_189
-Tower of Valni 6[X]
+TXT41 T06[.][X]
 
 ## MSG_18A
-Tower of Valni 7[X]
+TXT42 T07[.][X]
 
 ## MSG_18B
-Tower of Valni 8[X]
+TXT43 T08[.][X]
 
 ## MSG_18C
 Tower of Valni 9[X]
@@ -1205,46 +1205,46 @@ Tower of Valni 9[X]
 Tower of Valni 10[.][X]
 
 ## MSG_18E
-Lagdou Ruins 1[X]
+TXT46 R01[.][X]
 
 ## MSG_18F
-Lagdou Ruins 2[X]
+TXT47 R02[.][X]
 
 ## MSG_190
-Lagdou Ruins 3[X]
+TXT48 R03[.][X]
 
 ## MSG_191
-Lagdou Ruins 4[X]
+TXT49 R04[.][X]
 
 ## MSG_192
-Lagdou Ruins 5[X]
+TXT50 R05[.][X]
 
 ## MSG_193
-Lagdou Ruins 6[X]
+TXT51 R06[.][X]
 
 ## MSG_194
-Lagdou Ruins 7[X]
+TXT52 R07[.][X]
 
 ## MSG_195
-Lagdou Ruins 8[X]
+TXT53 R08[.][X]
 
 ## MSG_196
-Lagdou Ruins 9[X]
+TXT54 R09[.][X]
 
 ## MSG_197
-Lagdou Ruins 10[.][X]
+TXT55 R10[.][X]
 
 ## MSG_198
-Castle Frelia[.][X]
+TXT56 C00[.][X]
 
 ## MSG_199
-Melkaen Coast[.][X]
+TXT57 H00[.][X]
 
 ## MSG_19A
-Creeping Darkness[.][X]
+TXT61 E10x[X]
 
 ## MSG_19B
-Phantom Ship[X]
+TXT62 I10x[X]
 
 ## MSG_19C
 Survive[.][X]
@@ -40264,24 +40264,24 @@ cannot be opened here.[X]
 
 ## MSG_SAVE_COMPAT_HEADER_CORRUPT
 The save data appears to be[.][LF]
-corrupted and cannot be read.[X]
+corrupted and cannot be read.[.][X]
 
 ## MSG_SAVE_COMPAT_METADATA_CORRUPT
 The save data's expansion[.][LF]
 info is corrupted and[.][LF]
-cannot be read.[X]
+cannot be read.[.][X]
 
 ## MSG_SAVE_COMPAT_OLDER
 This save data is from an[.][LF]
 older version of this[.][LF]
 expansion. It can be migrated[.][LF]
-using an external tool.[X]
+using an external tool.[.][X]
 
 ## MSG_SAVE_COMPAT_NEWER
 This save data is from a[.][LF]
 newer version of this[.][LF]
 expansion and is not[.][LF]
-supported here.[X]
+supported here.[.][X]
 
 ## MSG_SAVE_COMPAT_CONFIG_INCOMPATIBLE
 This save data was made with[.][LF]
@@ -40296,8 +40296,26 @@ used here.[X]
 Back[X]
 
 ## MSG_SAVE_COMPAT_ERASE_ALL
-Erase All Save Data[X]
+Erase All Save Data[.][X]
 
 ## MSG_SAVE_COMPAT_ERASE_CONFIRM
 Erase all save data?[.][LF]
 This cannot be undone.[X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_HANNAH
+Hannah[X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS
+Francis[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
+Frederick[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_FOX
+Fox[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_LIZ
+Liz[.][X]
+
+## MSG_TERRAIN_CAMP
+Camp[X]

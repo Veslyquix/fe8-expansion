@@ -34,6 +34,10 @@ struct HelpBoxInfo EWRAM_DATA sMutableHbi = {};
 const struct HelpBoxInfo * EWRAM_DATA sLastHbi = NULL;
 struct Vec2 EWRAM_DATA sHbOrigin = {};
 
+#if FE8_SELECT_VIEW_GROWTHS
+static bool8 sStatScreenShowingGrowths = FALSE;
+#endif
+
 EWRAM_OVERLAY(0) struct StatScreenSt gStatScreen = {0};
 EWRAM_OVERLAY(0) u16 gUiTmScratchA[0x280] = {0};
 EWRAM_OVERLAY(0) u16 gUiTmScratchB[0x280] = {0};
@@ -124,6 +128,65 @@ struct TextInitInfo CONST_DATA sSSMasterTextInitInfo[] =
     { gStatScreen.text + STATSCREEN_TEXT_SUPPORT3,   7  },
     { gStatScreen.text + STATSCREEN_TEXT_SUPPORT4,   7  },
     { gStatScreen.text + STATSCREEN_TEXT_BWL,        16 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSLeftPanelTextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_CHARANAME, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_CLASSNAME, 8 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSPage0TextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_UNUSUED,    3  },
+    { gStatScreen.text + STATSCREEN_TEXT_POWLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_SKLLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_SPDLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_LCKLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_DEFLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_RESLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_MOVLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_CONLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_AIDLABEL,   3  },
+    { gStatScreen.text + STATSCREEN_TEXT_RESCUENAME, 9  },
+    { gStatScreen.text + STATSCREEN_TEXT_AFFINLABEL, 7  },
+    { gStatScreen.text + STATSCREEN_TEXT_STATUS,     9  },
+    { gStatScreen.text + STATSCREEN_TEXT_BWL,        16 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSPage1TextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM0,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM1,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM2,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM3,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_ITEM4,      7 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSRANGE,    7 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSATKLABEL, 3 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSHITLABEL, 3 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSCRTLABEL, 3 },
+    { gStatScreen.text + STATSCREEN_TEXT_BSAVOLABEL, 4 },
+
+    { }, // end
+};
+
+static struct TextInitInfo CONST_DATA sSSPage2TextInitInfo[] =
+{
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP0,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP1,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP2,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_WEXP3,    2 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT0, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT1, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT2, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT3, 7 },
+    { gStatScreen.text + STATSCREEN_TEXT_SUPPORT4, 7 },
 
     { }, // end
 };
@@ -371,9 +434,31 @@ void SetStatScreenConfig(int config)
     sStatScreenInfo.config = config;
 }
 
+static void InitPageTexts(int pageid)
+{
+    InitTextInitInfo(sSSLeftPanelTextInitInfo);
+
+    switch (pageid)
+    {
+
+    case STATSCREEN_PAGE_0:
+        InitTextInitInfo(sSSPage0TextInitInfo);
+        break;
+
+    case STATSCREEN_PAGE_1:
+        InitTextInitInfo(sSSPage1TextInitInfo);
+        break;
+
+    case STATSCREEN_PAGE_2:
+        InitTextInitInfo(sSSPage2TextInitInfo);
+        break;
+
+    } // switch (pageid)
+}
+
 void InitTexts(void)
 {
-    InitTextInitInfo(sSSMasterTextInitInfo);
+    InitPageTexts(gStatScreen.page);
 }
 
 void DisplayTexts(const struct SSTextDispInfo* infos)
@@ -543,6 +628,42 @@ void DrawStatWithBar(int num, int x, int y, int base, int total, int max)
         TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, base * 41 / 30, diff * 41 / 30);
 }
 
+#if FE8_SELECT_VIEW_GROWTHS
+static int GetUnitGrowthBonus(struct Unit * unit)
+{
+    return (unit->state & US_GROWTH_BOOST) ? 5 : 0;
+}
+
+static void PutGrowthValue(int x, int y, int growth)
+{
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(x, y), TEXT_COLOR_SYSTEM_BLUE, growth);
+    PutDrawText(NULL, gUiTmScratchA + TILEMAP_INDEX(x + 1, y), TEXT_COLOR_SYSTEM_BLUE, 0, 2, "%");
+}
+
+static void DisplayPage0Growths(void)
+{
+    struct Unit * unit = gStatScreen.unit;
+    int growthBonus = GetUnitGrowthBonus(unit);
+
+    ClearText(&gStatScreen.text[STATSCREEN_TEXT_MOVLABEL]);
+    PutDrawText(&gStatScreen.text[STATSCREEN_TEXT_MOVLABEL],
+        gUiTmScratchA + TILEMAP_INDEX(9, 1), TEXT_COLOR_SYSTEM_GOLD, 0, 0, "HP");
+
+    PutGrowthValue(6, 1, unit->pCharacterData->growthPow + growthBonus);
+    PutGrowthValue(6, 3, unit->pCharacterData->growthSkl + growthBonus);
+    PutGrowthValue(6, 5, unit->pCharacterData->growthSpd + growthBonus);
+    PutGrowthValue(6, 7, unit->pCharacterData->growthLck + growthBonus);
+    PutGrowthValue(6, 9, unit->pCharacterData->growthDef + growthBonus);
+    PutGrowthValue(6, 11, unit->pCharacterData->growthRes + growthBonus);
+    PutGrowthValue(14, 1, unit->pCharacterData->growthHP + growthBonus);
+
+    DrawStatWithBar(7, 13, 3,
+        UNIT_CON_BASE(unit),
+        UNIT_CON(unit),
+        UNIT_CON_MAX(unit));
+}
+#endif
+
 void DisplayPage0(void)
 {
     DisplayTexts(sPage0TextInfo);
@@ -567,61 +688,70 @@ void DisplayPage0(void)
             GetStringFromIndex(0x4FE)); // Str
     }
 
-    // displaying str/mag stat value
-    DrawStatWithBar(0, 5, 1,
-        gStatScreen.unit->pow,
-        GetUnitPower(gStatScreen.unit),
-        UNIT_POW_MAX(gStatScreen.unit));
+#if FE8_SELECT_VIEW_GROWTHS
+    if (sStatScreenShowingGrowths)
+    {
+        DisplayPage0Growths();
+    }
+    else
+#endif
+    {
+        // displaying str/mag stat value
+        DrawStatWithBar(0, 5, 1,
+            gStatScreen.unit->pow,
+            GetUnitPower(gStatScreen.unit),
+            UNIT_POW_MAX(gStatScreen.unit));
 
-    // displaying skl stat value
-    DrawStatWithBar(1, 5, 3,
-        gStatScreen.unit->state & US_RESCUING
-            ? gStatScreen.unit->skl/2
-            : gStatScreen.unit->skl,
-        GetUnitSkill(gStatScreen.unit),
-        gStatScreen.unit->state & US_RESCUING
-            ? UNIT_SKL_MAX(gStatScreen.unit)/2
-            : UNIT_SKL_MAX(gStatScreen.unit));
+        // displaying skl stat value
+        DrawStatWithBar(1, 5, 3,
+            gStatScreen.unit->state & US_RESCUING
+                ? gStatScreen.unit->skl/2
+                : gStatScreen.unit->skl,
+            GetUnitSkill(gStatScreen.unit),
+            gStatScreen.unit->state & US_RESCUING
+                ? UNIT_SKL_MAX(gStatScreen.unit)/2
+                : UNIT_SKL_MAX(gStatScreen.unit));
 
-    // displaying spd stat value
-    DrawStatWithBar(2, 5, 5,
-        gStatScreen.unit->state & US_RESCUING
-            ? gStatScreen.unit->spd/2
-            : gStatScreen.unit->spd,
-        GetUnitSpeed(gStatScreen.unit),
-        gStatScreen.unit->state & US_RESCUING
-            ? UNIT_SPD_MAX(gStatScreen.unit)/2
-            : UNIT_SPD_MAX(gStatScreen.unit));
+        // displaying spd stat value
+        DrawStatWithBar(2, 5, 5,
+            gStatScreen.unit->state & US_RESCUING
+                ? gStatScreen.unit->spd/2
+                : gStatScreen.unit->spd,
+            GetUnitSpeed(gStatScreen.unit),
+            gStatScreen.unit->state & US_RESCUING
+                ? UNIT_SPD_MAX(gStatScreen.unit)/2
+                : UNIT_SPD_MAX(gStatScreen.unit));
 
-    // displaying lck stat value
-    DrawStatWithBar(3, 5, 7,
-        gStatScreen.unit->lck,
-        GetUnitLuck(gStatScreen.unit),
-        UNIT_LCK_MAX(gStatScreen.unit));
+        // displaying lck stat value
+        DrawStatWithBar(3, 5, 7,
+            gStatScreen.unit->lck,
+            GetUnitLuck(gStatScreen.unit),
+            UNIT_LCK_MAX(gStatScreen.unit));
 
-    // displaying def stat value
-    DrawStatWithBar(4, 5, 9,
-        gStatScreen.unit->def,
-        GetUnitDefense(gStatScreen.unit),
-        UNIT_DEF_MAX(gStatScreen.unit));
+        // displaying def stat value
+        DrawStatWithBar(4, 5, 9,
+            gStatScreen.unit->def,
+            GetUnitDefense(gStatScreen.unit),
+            UNIT_DEF_MAX(gStatScreen.unit));
 
-    // displaying res stat value
-    DrawStatWithBar(5, 5, 11,
-        gStatScreen.unit->res,
-        GetUnitResistance(gStatScreen.unit),
-        UNIT_RES_MAX(gStatScreen.unit));
+        // displaying res stat value
+        DrawStatWithBar(5, 5, 11,
+            gStatScreen.unit->res,
+            GetUnitResistance(gStatScreen.unit),
+            UNIT_RES_MAX(gStatScreen.unit));
 
-    // displaying mov stat value
-    DrawStatWithBar(6, 13, 1,
-        UNIT_MOV_BASE(gStatScreen.unit),
-        UNIT_MOV(gStatScreen.unit),
-        UNIT_MOV_MAX(gStatScreen.unit));
+        // displaying mov stat value
+        DrawStatWithBar(6, 13, 1,
+            UNIT_MOV_BASE(gStatScreen.unit),
+            UNIT_MOV(gStatScreen.unit),
+            UNIT_MOV_MAX(gStatScreen.unit));
 
-    // displaying con stat value
-    DrawStatWithBar(7, 13, 3,
-        UNIT_CON_BASE(gStatScreen.unit),
-        UNIT_CON(gStatScreen.unit),
-        UNIT_CON_MAX(gStatScreen.unit));
+        // displaying con stat value
+        DrawStatWithBar(7, 13, 3,
+            UNIT_CON_BASE(gStatScreen.unit),
+            UNIT_CON(gStatScreen.unit),
+            UNIT_CON_MAX(gStatScreen.unit));
+    }
 
     // displaying unit aid
     PutNumberOrBlank(gUiTmScratchA + TILEMAP_INDEX(13, 5), TEXT_COLOR_SYSTEM_BLUE,
@@ -987,6 +1117,10 @@ void PageSlide_OnLoop(struct StatScreenEffectProc* proc)
     {
         // INT8_MAX offset means switch to displaying next page
 
+        ResetText();
+        ResetIconGraphics_();
+        InitPageTexts(proc->newItem);
+        DisplayLeftPanel();
         DisplayPage(proc->newItem);
 
         proc->timer++;
@@ -1642,6 +1776,25 @@ void StatScreen_Display(struct Proc* proc)
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
 }
 
+#if FE8_SELECT_VIEW_GROWTHS
+static void StatScreen_ToggleGrowthView(void)
+{
+    sStatScreenShowingGrowths = !sStatScreenShowingGrowths;
+
+    ResetText();
+    ResetIconGraphics_();
+    InitPageTexts(gStatScreen.page);
+    DisplayLeftPanel();
+    DisplayPage(gStatScreen.page);
+
+    TileMap_CopyRect(gUiTmScratchA, gBG0TilemapBuffer + TILEMAP_INDEX(12, 2), 18, 18);
+    TileMap_CopyRect(gUiTmScratchC, gBG2TilemapBuffer + TILEMAP_INDEX(12, 2), 18, 18);
+
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
+    PlaySoundEffect(SONG_SE_SYS_WINDOW_SELECT1);
+}
+#endif
+
 void StatScreen_OnIdle(struct Proc* proc)
 {
     struct Unit* unit;
@@ -1667,6 +1820,14 @@ void StatScreen_OnIdle(struct Proc* proc)
 
         PlaySoundEffect(SONG_SE_SYS_WINDOW_CANSEL1); // TODO: song ids
     }
+
+#if FE8_SELECT_VIEW_GROWTHS
+    else if ((gKeyStatusPtr->newKeys & SELECT_BUTTON) && (gStatScreen.page == STATSCREEN_PAGE_0))
+    {
+        StatScreen_ToggleGrowthView();
+    }
+
+#endif
 
     else if (gKeyStatusPtr->repeatedKeys & DPAD_LEFT)
     {
@@ -1742,6 +1903,10 @@ void StartStatScreen(struct Unit* unit, ProcPtr parent)
     gStatScreen.help = NULL;
     gStatScreen.pageSlideKey = 0;
     gStatScreen.inTransition = FALSE;
+
+#if FE8_SELECT_VIEW_GROWTHS
+    sStatScreenShowingGrowths = FALSE;
+#endif
 
     PidStatsAddStatViewAmt(unit->pCharacterData->number);
 
@@ -1900,7 +2065,21 @@ void HbRedirect_SSSupports(struct HelpBoxProc* proc)
 void UpdateHelpBoxDisplay(struct HelpBoxProc* proc, int arg1)
 {
     proc->xBox = Interpolate(arg1, proc->xBoxInit, proc->xBoxFinal, proc->timer, proc->timerMax);
+
+#if FE8_EXTEND_DESC_BOX
+    /* FE8U = 0x08088C88 (YPosDescBox): clamp to 0 if negative -- with 5
+     * lines, an interpolated box can otherwise scroll partly off the top
+     * of the screen. */
+    {
+        int yBox = Interpolate(arg1, proc->yBoxInit, proc->yBoxFinal, proc->timer, proc->timerMax);
+        if (yBox < 0)
+            yBox = 0;
+        proc->yBox = yBox;
+    }
+#else
     proc->yBox = Interpolate(arg1, proc->yBoxInit, proc->yBoxFinal, proc->timer, proc->timerMax);
+#endif
+
     proc->wBox = Interpolate(arg1, proc->wBoxInit, proc->wBoxFinal, proc->timer, proc->timerMax);
     proc->hBox = Interpolate(arg1, proc->hBoxInit, proc->hBoxFinal, proc->timer, proc->timerMax);
 

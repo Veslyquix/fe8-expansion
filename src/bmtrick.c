@@ -2,10 +2,12 @@
 
 #include "constants/terrains.h"
 #include "constants/event-flags.h"
+#include "constants/chapters.h"
 
 #include "bmunit.h"
 #include "bmmap.h"
 #include "chapterdata.h"
+#include "eventinfo.h"
 #include "proc.h"
 #include "event.h"
 #include "uiselecttarget.h"
@@ -176,6 +178,427 @@ void AddTrap9(int x, int y, int meta)
 {
     AddTrap(x, y, TRAP_9, meta);
 }
+
+#if FE8_PURCHASE_GENERICS
+struct Trap* AddPurchaseBaseTrap(int x, int y, int owner, int kind)
+{
+    struct Trap* trap = AddTrap(x, y, TRAP_PURCHASE_BASE, 0);
+
+    trap->extra = 0;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER] = owner;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] = kind;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] = PURCHASE_BASE_CAPTURE_NONE;
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] = PURCHASE_BASE_DEFAULT_GOLD_PER_TURN;
+
+    return trap;
+}
+
+struct Trap* GetPurchaseBaseTrapAt(int x, int y)
+{
+    return GetTypedTrapAt(x, y, TRAP_PURCHASE_BASE);
+}
+
+// Camp/Tent are runtime TRAP_PURCHASE_BASE traps with kind CAMP/TENT (see
+// PURCHASE_BASE_KIND_CAMP/_TENT); chapter authoring uses the TRAP_CAMP/
+// TRAP_TENT TrapData.type tags (LoadTrapData, src/bmtrap.c), which call
+// these constructors directly instead of going through the terrain-scan
+// Finds any tile-config slot in the CURRENT tileset whose terrain is
+// TERRAIN_PLAINS and returns its raw gBmMapBaseTiles value (config index
+// << 2 -- see DisplayBmTile/RefreshTerrainBmMap, src/bmmap.c, for why: the
+// map array stores one raw value per logical tile, always the metatile's
+// own TL-corner offset, with the other 3 corners fetched from
+// sTilesetConfig[index*4 + 1/2/3] at draw time). Used to give a Camp tile
+// a real, ordinary-looking graphic instead of whatever raw base-tile
+// happened to be painted there -- notably the tileset's reserved "final 4
+// slots" markers (InitCampTrapsFromTilesetMarkers below), which were never
+// assigned real tile graphics and render as garbage/black. Works with any
+// tileset, since it looks the answer up at runtime rather than hardcoding
+// a specific tileset's own Plains tile index.
+static u16 GetPlainsBaseTileValue(void)
+{
+    int i;
+
+    // gTilesetTerrainLookup addresses 1024 tile-config slots (see
+    // InitCampTrapsFromTilesetMarkers below, which names this same 1024
+    // as CAMP_TILESET_MARKER_SLOT_COUNT -- not reused directly here since
+    // that macro isn't defined until later in this file).
+    for (i = 0; i < 1024; ++i)
+    {
+        if (gTilesetTerrainLookup[i] == TERRAIN_PLAINS)
+            return i << 2;
+    }
+
+    return 0;
+}
+
+// InitPurchaseBaseTrapsFromTerrain path villages/forts/houses use.
+struct Trap* AddCampTrap(int x, int y, int owner)
+{
+    struct Trap* trap = AddPurchaseBaseTrap(x, y, owner, PURCHASE_BASE_KIND_CAMP);
+
+    // data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] is repurposed to store
+    // Camp's current battle HP -- Camp/Tent always grant a flat
+    // CAMP_TENT_GOLD_PER_TURN (see GrantIncomeForFaction), so the
+    // gold-per-turn slot is otherwise unused for this kind, and no other
+    // call site reads it for a CAMP-kind trap.
+    SetCampTrapHp(trap, CAMP_STARTING_HP);
+
+    // Camp is a standalone destructible obstacle occupying its tile (like a
+    // wall or Light Rune), not a base you stand on -- block movement onto
+    // it immediately, matching AddLightRune. Uses its own terrain id
+    // (TERRAIN_FLOOR_MAGIC, unused in vanilla FE8 -- see
+    // include/constants/terrains.h) rather than sharing TERRAIN_NONE with
+    // Light Rune, so the terrain window can show "Camp" (gTerrains_0,
+    // src/data_terrains.c) without also relabeling every Light Rune tile.
+    // RefreshAllCampTraps re-applies this on every full terrain rebuild
+    // (RefreshTerrainBmMap), and UpdateObstacleFromBattle already calls
+    // RefreshTerrainBmMap right after RemoveTrap when a Camp is destroyed,
+    // so passability is restored there for free.
+    gBmMapTerrain[y][x] = TERRAIN_FLOOR_MAGIC;
+
+    // Also force the drawn tile graphic to a real Plains tile -- Camp is
+    // usually placed on whatever the map author already painted there
+    // (fine as-is), but a Camp placed via one of the tileset's reserved
+    // marker slots would otherwise draw whatever garbage graphic that
+    // never-assigned slot happens to contain.
+    gBmMapBaseTiles[y][x] = GetPlainsBaseTileValue();
+
+    return trap;
+}
+
+// Re-applies every live Camp trap's movement-blocking terrain override
+// (and its Plains graphic override, see AddCampTrap/GetPlainsBaseTileValue
+// above). Mirrors RefreshAllLightRunes -- called from the same place
+// (RefreshTerrainBmMap, src/bmmap.c) right after it, so a full terrain
+// rebuild (map load, or after a Camp is destroyed and removed) doesn't
+// silently make remaining Camps traversable again.
+void RefreshAllCampTraps(void)
+{
+    struct Trap* trap;
+    u16 plainsTile = GetPlainsBaseTileValue();
+
+    for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
+    {
+        if (IsCampOrTentTrap(trap, PURCHASE_BASE_KIND_CAMP))
+        {
+            gBmMapTerrain[trap->yPos][trap->xPos] = TERRAIN_FLOOR_MAGIC;
+            gBmMapBaseTiles[trap->yPos][trap->xPos] = plainsTile;
+        }
+    }
+}
+
+struct Trap* AddTentTrap(int x, int y, int owner)
+{
+    return AddPurchaseBaseTrap(x, y, owner, PURCHASE_BASE_KIND_TENT);
+}
+
+bool IsCampOrTentTrap(struct Trap* trap, int kind)
+{
+    if (trap == NULL || trap->type != TRAP_PURCHASE_BASE)
+        return FALSE;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND] == kind;
+}
+
+void SetCampTrapHp(struct Trap* trap, int hp)
+{
+    if (trap == NULL)
+        return;
+
+    if (hp < 0)
+        hp = 0;
+
+    if (hp > CAMP_MAX_HP)
+        hp = CAMP_MAX_HP;
+
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] = hp;
+}
+
+int GetCampTrapHp(struct Trap* trap)
+{
+    if (trap == NULL)
+        return 0;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN];
+}
+
+void SetPurchaseBaseTrapOwner(struct Trap* trap, int owner)
+{
+    if (trap != NULL)
+        trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER] = owner;
+}
+
+int GetPurchaseBaseTrapOwner(struct Trap* trap)
+{
+    if (trap == NULL)
+        return PURCHASE_BASE_OWNER_NEUTRAL;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER];
+}
+
+void SetPurchaseBaseTrapCapturer(struct Trap* trap, int capturer)
+{
+    if (trap != NULL)
+        trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] = capturer;
+}
+
+int GetPurchaseBaseTrapCapturer(struct Trap* trap)
+{
+    if (trap == NULL)
+        return PURCHASE_BASE_CAPTURE_NONE;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER];
+}
+
+void ResetPurchaseBaseTrapCapture(struct Trap* trap)
+{
+    if (trap == NULL)
+        return;
+
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] = PURCHASE_BASE_CAPTURE_NONE;
+    trap->extra = 0;
+}
+
+void ResetPurchaseBaseTrapCaptureByUnit(int unitIndex)
+{
+    struct Trap* trap;
+
+    for (trap = GetTrap(0); trap->type != TRAP_NONE; ++trap)
+    {
+        if (trap->type != TRAP_PURCHASE_BASE)
+            continue;
+
+        if (GetPurchaseBaseTrapCaptureProgress(trap) <= 0)
+            continue;
+
+        if ((u8)trap->data[TRAP_EXTDATA_PURCHASE_BASE_CAPTURER] == (u8)unitIndex)
+            ResetPurchaseBaseTrapCapture(trap);
+    }
+}
+
+void SetPurchaseBaseTrapCaptureProgress(struct Trap* trap, int progress)
+{
+    if (trap == NULL)
+        return;
+
+    if (progress < 0)
+        progress = 0;
+
+    if (progress > PURCHASE_BASE_CAPTURE_REQUIRED)
+        progress = PURCHASE_BASE_CAPTURE_REQUIRED;
+
+    trap->extra = progress;
+}
+
+int GetPurchaseBaseTrapCaptureProgress(struct Trap* trap)
+{
+    if (trap == NULL)
+        return 0;
+
+    return trap->extra;
+}
+
+void SetPurchaseBaseTrapGoldPerTurn(struct Trap* trap, int amount)
+{
+    if (trap == NULL)
+        return;
+
+    if (amount <= 0)
+        amount = PURCHASE_BASE_DEFAULT_GOLD_PER_TURN;
+
+    trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN] = amount;
+}
+
+int GetPurchaseBaseTrapGoldPerTurn(struct Trap* trap)
+{
+    int amount;
+
+    if (trap == NULL)
+        return PURCHASE_BASE_DEFAULT_GOLD_PER_TURN;
+
+    amount = trap->data[TRAP_EXTDATA_PURCHASE_BASE_GOLD_PER_TURN];
+
+    return amount <= 0 ? PURCHASE_BASE_DEFAULT_GOLD_PER_TURN : amount;
+}
+
+bool IsPurchaseBaseTerrain(int terrain)
+{
+    switch (terrain)
+    {
+    case TERRAIN_FORT:
+    case TERRAIN_VILLAGE_REGULAR:
+    case TERRAIN_VILLAGE_CLOSED:
+    case TERRAIN_HOUSE:
+    case TERRAIN_GATE_CASTLE:
+    case TERRAIN_GATE_REGULAR:
+    case TERRAIN_THRONE:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+static int GetPurchaseBaseKindFromTerrain(int terrain)
+{
+    switch (terrain)
+    {
+    case TERRAIN_FORT:
+        return PURCHASE_BASE_KIND_FORT;
+
+    case TERRAIN_HOUSE:
+        return PURCHASE_BASE_KIND_HOUSE;
+
+    case TERRAIN_GATE_CASTLE:
+    case TERRAIN_GATE_REGULAR:
+        return PURCHASE_BASE_KIND_GATE;
+
+    case TERRAIN_THRONE:
+        return PURCHASE_BASE_KIND_THRONE;
+
+    default:
+        return PURCHASE_BASE_KIND_VILLAGE;
+    }
+}
+
+// Fields/SuperFields tileset (see CREDITS.md's "Map Tilesets" section)
+// only, for now: 4 of the tileset's previously-unused slots -- Tiled GIDs
+// 993-996 (this tileset's firstgid is 1, so raw tile-config index =
+// GID - 1) -- were repurposed in graphics/map/SuperFieldsTileConfiguration.S
+// to look and behave like House (Tiled GID 805 / raw index 804) and Fort
+// (Tiled GID 933 / raw index 932), but pre-owned by a real faction instead
+// of neutral: painting one of these 4 tiles anywhere on the map creates an
+// already-owned House/Fort purchase base there (with its faction flag --
+// see src/bmudisp.c) at chapter load, instead of the neutral one
+// InitPurchaseBaseTrapsFromTerrain below would otherwise create from their
+// (now real) TERRAIN_HOUSE/TERRAIN_FORT terrain -- which is exactly why
+// this must run BEFORE InitPurchaseBaseTrapsFromTerrain (see the call site,
+// src/bmio.c): both check GetTrapAt() first, so whichever runs first claims
+// the tile. SuperFieldsTileConfiguration is only ever loaded for the
+// Prologue (gChapterDataAssetTable, src/data/data_8B363C.c), so this is a
+// no-op everywhere else.
+#define SUPERFIELDS_MARKER_HOUSE_PLAYER 992
+#define SUPERFIELDS_MARKER_HOUSE_ENEMY  993
+#define SUPERFIELDS_MARKER_FORT_PLAYER  994
+#define SUPERFIELDS_MARKER_FORT_ENEMY   995
+
+void InitSuperFieldsPreOwnedBaseMarkers(void)
+{
+    int ix, iy;
+
+#if !FE8_NEW_TILESETS
+    // Without FE8_NEW_TILESETS the Prologue loads the vanilla Fields
+    // tileset (TileConfiguration1) instead -- a completely different tile
+    // layout that was never touched for this feature, so slots 992-995
+    // there mean something else entirely (or nothing). Bail out rather
+    // than risk creating a base on an unrelated tile.
+    return;
+#endif
+
+    if (gPlaySt.chapterIndex != CHAPTER_L_PROLOGUE)
+        return;
+
+    for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
+    {
+        for (ix = gBmMapSize.x - 1; ix >= 0; --ix)
+        {
+            int configIndex = gBmMapBaseTiles[iy][ix] >> 2;
+            int kind;
+            int owner;
+
+            switch (configIndex)
+            {
+            case SUPERFIELDS_MARKER_HOUSE_PLAYER:
+                kind = PURCHASE_BASE_KIND_HOUSE;
+                owner = FACTION_ID_BLUE;
+                break;
+
+            case SUPERFIELDS_MARKER_HOUSE_ENEMY:
+                kind = PURCHASE_BASE_KIND_HOUSE;
+                owner = FACTION_ID_RED;
+                break;
+
+            case SUPERFIELDS_MARKER_FORT_PLAYER:
+                kind = PURCHASE_BASE_KIND_FORT;
+                owner = FACTION_ID_BLUE;
+                break;
+
+            case SUPERFIELDS_MARKER_FORT_ENEMY:
+                kind = PURCHASE_BASE_KIND_FORT;
+                owner = FACTION_ID_RED;
+                break;
+
+            default:
+                continue;
+            }
+
+            if (GetTrapAt(ix, iy) != NULL)
+                continue;
+
+            AddPurchaseBaseTrap(ix, iy, owner, kind);
+        }
+    }
+}
+
+void InitPurchaseBaseTrapsFromTerrain(void)
+{
+    int ix, iy;
+
+    for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
+    {
+        for (ix = gBmMapSize.x - 1; ix >= 0; --ix)
+        {
+            int terrain = gBmMapTerrain[iy][ix];
+
+            if (GetTrapAt(ix, iy) != NULL)
+                continue;
+
+            if (IsPurchaseBaseTerrain(terrain))
+                AddPurchaseBaseTrap(ix, iy, PURCHASE_BASE_OWNER_NEUTRAL, GetPurchaseBaseKindFromTerrain(terrain));
+        }
+    }
+}
+
+// gTilesetTerrainLookup (src/bmmap.c) addresses 1024 tile-config slots
+// (gBmMapBaseTiles[y][x] >> 2, range 0..1023). A tileset can reserve its
+// final 4 slots as Camp-placement markers instead of real terrain
+// graphics: a mapper paints one of these 4 tiles anywhere on the map, and
+// a Camp owned by the matching faction is created there at chapter load
+// (LoadChapterTraps/InitPurchaseBaseTrapsFromTerrain's own call site,
+// src/bmio.c) -- no hand-authored TrapData entry needed. Order requested:
+// Purple, Green, Red, Blue, with Blue on the very last slot (1023).
+#define CAMP_TILESET_MARKER_SLOT_COUNT 1024
+#define CAMP_TILESET_MARKER_FIRST_SLOT (CAMP_TILESET_MARKER_SLOT_COUNT - 4)
+
+static u8 CONST_DATA sCampTilesetMarkerFaction[4] = {
+    FACTION_ID_PURPLE, // slot 1020
+    FACTION_ID_GREEN,  // slot 1021
+    FACTION_ID_RED,    // slot 1022
+    FACTION_ID_BLUE,   // slot 1023 (the tileset's very last tile)
+};
+
+void InitCampTrapsFromTilesetMarkers(void)
+{
+    int ix, iy;
+
+    for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
+    {
+        for (ix = gBmMapSize.x - 1; ix >= 0; --ix)
+        {
+            int configIndex = gBmMapBaseTiles[iy][ix] >> 2;
+            int markerSlot = configIndex - CAMP_TILESET_MARKER_FIRST_SLOT;
+
+            if (markerSlot < 0 || markerSlot >= 4)
+                continue;
+
+            if (GetTrapAt(ix, iy) != NULL)
+                continue;
+
+            AddCampTrap(ix, iy, sCampTilesetMarkerFaction[markerSlot]);
+        }
+    }
+}
+#endif
 
 void InitMapObstacles(void)
 {

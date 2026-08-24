@@ -223,6 +223,54 @@ struct PlaySt { // Chapter Data Struct
     u8 save_menu_type : 3;
     u8 tutorial_exec_type : 4;
     u8 tutorial_counter;
+
+#if FE8_MAPGEN
+    /* 4C */ u32 mapGenSeed; /* see MapGen_SessionSeed, src/mapgen.c.
+                              * 0 = no seed rolled yet for this save; reset
+                              * to 0 by WriteNewGameSave (src/bmsave.c) on
+                              * every new-game creation. Appended at the
+                              * struct's own end (not inserted among the
+                              * existing fields) so no other member's offset
+                              * moves; BITPACKED's `packed` means this starts
+                              * immediately at the prior byte with no
+                              * alignment gap. Growing struct PlaySt grows
+                              * every struct that embeds it (GameSaveBlock,
+                              * SuspendSaveBlock) and therefore every offset
+                              * in struct SaveBlocks from there on -- see
+                              * EXPANSION_SAVE_COMPAT_EPOCH (config.mk),
+                              * bumped alongside this for exactly that
+                              * reason. */
+#endif
+
+#if FE8_GAME_RANK
+    /* Appended at the struct's own end, same reasoning/pattern as
+     * mapGenSeed above (EXPANSION_SAVE_COMPAT_EPOCH bumped alongside this).
+     * Player-unit deaths aren't tracked here -- they're already available
+     * for free via vanilla's GetGameDeathCount()/GetChapterDeathCount()
+     * (permadeath keeps a dead unit's US_DEAD state and bwl->deathLoc set
+     * for the rest of the playthrough; see src/gamerankings.c). Only
+     * enemy-kill tracking is new (see src/gamerank.c). */
+    u16 rankTotalKills;        // cumulative enemies defeated, this save slot
+    u16 rankChapterKills;      // enemies defeated so far this chapter
+    u16 rankTurnKills;         // enemies defeated so far on the current turn
+    u16 rankChapterPowerScore; // best rankTurnKills reached this chapter
+    u16 rankBestPowerScore;    // best rankTurnKills ever reached, this save slot
+
+    /* One commander (CO) id per allegiance, indexed by faction >> 6 (see
+     * FACTION_BLUE/GREEN/RED/PURPLE, bmunit.h): commanderId[0] = blue,
+     * [1] = green, [2] = red, [3] = purple. Zero-initialized, so every new
+     * save defaults every allegiance to commander id 0 (CO_FRANCIS, the
+     * only commander defined so far -- see src/power.c). */
+    u8 commanderId[4];
+
+    /* One CO gauge per allegiance, same faction>>6 indexing as
+     * commanderId above. Gains a point per point of battle damage dealt
+     * or received by that faction's units (src/bmbattle.c's
+     * BattleGenerateHitEffects, via CoGauge_OnDamage, src/power.c); using
+     * that faction's CO power depletes it back to 0
+     * (CoGauge_OnPowerUsed). */
+    s16 coGauge[4];
+#endif
 } BITPACKED;
 
 /* PlaySt::config::animationType */
@@ -331,7 +379,13 @@ enum
     UNIT_ACTION_FORCE_WAIT = 0x1F,
     // 0x20?
     UNIT_ACTION_RIDE_BALLISTA = 0x21,
-    UNIT_ACTION_EXIT_BALLISTA = 0x22
+    UNIT_ACTION_EXIT_BALLISTA = 0x22,
+#if FE8_PURCHASE_GENERICS
+    UNIT_ACTION_PURCHASE_GENERIC = 0x23,
+#endif
+#if FE8_PROMOTE_COMMAND
+    UNIT_ACTION_PROMOTE = 0x24,
+#endif
 };
 
 enum
