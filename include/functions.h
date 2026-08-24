@@ -398,10 +398,10 @@ void DrawStatBarGfx(
 #if FE8_CO_POWERS
 void DrawStatBarMinusCol(u8 *buf, int bufWidth, int col);
 void DrawStatBarCo(
-    int tile, int padding, int bufWidth, int barWidth, int progressLength, int cappedLength, int minusLength);
+    int tile, int padding, int bufWidth, int barWidth, int progressLength, int base);
 void DrawStatBarGfxCo(
     int tile, int bufWidth, u16* buf, int tileBase,
-    int barWidth, int progressLength, int cappedLength, int minusLength);
+    int barWidth, int progressLength, int base);
 #endif
 // ??? BackgroundSlide_Init(???);
 // ??? BackgroundSlide_Loop(???);

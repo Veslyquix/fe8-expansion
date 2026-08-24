@@ -21,6 +21,7 @@
 #include "constants/classes.h"
 #include "constants/songs.h"
 #include "constants/msg.h"
+#include "bg.h"
 #include "scene.h"
 #include "power.h"
 #include "mapanim.h"
@@ -257,23 +258,23 @@ enum {
 
 /* Mirrors the classes actually sellable in sPurchaseGenericDefinitions
  * (src/purchase_generics.c) -- keep the class list in sync if that table
- * changes. Ratings are placeholder flavor, not balance-tuned. */
+ * changes. */
 static const struct CoClassAffinity sFrancisAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       16 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  10 },
-    { "Brigand",    CLASS_BRIGAND,       14 },
-    { "Archer",     CLASS_ARCHER,        12 },
-    { "Fighter",    CLASS_FIGHTER,       8 },
-    { "Mercenary",  CLASS_MERCENARY,     8 },
-    { "Cavalier",   CLASS_CAVALIER,      12 },
-    { "Monk",       CLASS_MONK,          3 },
-    { "Mage",       CLASS_MAGE,          4 },
-    { "Cleric",     CLASS_CLERIC,        5 },
-    { "Shaman",     CLASS_SHAMAN,        6 },
+    { "Soldier",    CLASS_SOLDIER,       64 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  60 },
+    { "Brigand",    CLASS_BRIGAND,       56 },
+    { "Archer",     CLASS_ARCHER,        52 },
+    { "Fighter",    CLASS_FIGHTER,       48 },
+    { "Mercenary",  CLASS_MERCENARY,     44 },
+    { "Cavalier",   CLASS_CAVALIER,      40 },
+    { "Monk",       CLASS_MONK,          36 },
+    { "Mage",       CLASS_MAGE,          32 },
+    { "Cleric",     CLASS_CLERIC,        28 },
+    { "Shaman",     CLASS_SHAMAN,        24 },
     // { "Dancer",     CLASS_DANCER,        8 },
-    { "Thief",      CLASS_THIEF,         7 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      8 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      8 },
+    { "Thief",      CLASS_THIEF,         20 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      0 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      4 },
 };
 
 /* O'Neill leans hard into offense, like Flak; weak with anything magical. */
@@ -325,6 +326,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
 
 struct CoScreenSt {
     u8 coId;
+    u16 bgScrollTimer; // BG3 frlgUiFrame diagonal scroll, see CoScreen_UpdateBgScroll
 };
 
 /* Group 0 -- shared/aliased with gStatScreen, gUiTmScratchA/B/C
@@ -554,43 +556,24 @@ static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
     CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
 }
-#define BAR_VRAM_WIDTH 4
+#define BAR_VRAM_WIDTH 5
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
 {
-    int diff = total - base;
-    int progressLength, cappedLength, minusLength;
-
     // PutNumberOrBlank(gUiTmScratchA + TILEMAP_INDEX(x, y),
         // (base == max) ? TEXT_COLOR_SYSTEM_GREEN : TEXT_COLOR_SYSTEM_BLUE, base);
 
-    // PutNumberBonus(diff, gUiTmScratchA + TILEMAP_INDEX(x + 1, y));
+    // PutNumberBonus(total - base, gUiTmScratchA + TILEMAP_INDEX(x + 1, y));
 
-    if (total > 30)
-    {
-        total = 30;
-        diff = total - base;
-    }
+    // if (total > 30)
+        // total = 30;
 
-    /* total >= base: fill up to base (yellow), extend past it in green for
-     * the bonus (diff). total < base: fill only up to total (yellow), and
-     * draw the base-total shortfall in red (DrawStatBarMinusCol via
-     * DrawStatBarGfxCo, src/statbar.c) instead of leaving it blank. */
-    if (diff >= 0)
-    {
-        progressLength = base * 41 / 30;
-        cappedLength = diff * 41 / 30;
-        minusLength = 0;
-    }
-    else
-    {
-        progressLength = total * 41 / 30;
-        cappedLength = 0;
-        minusLength = -diff * 41 / 30;
-    }
-
-    DrawStatBarGfxCo(0x480 + num*BAR_VRAM_WIDTH, BAR_VRAM_WIDTH,
-        gUiTmScratchC + TILEMAP_INDEX(x - 2, y + 1),
-        TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, progressLength, cappedLength, minusLength);
+    /* The whole bar is filled yellow, then DrawStatBarGfxCo (src/statbar.c)
+     * overlays green from the left (total above base) or red from the
+     * right (total below base) to show how far off base total is. */
+    DrawStatBarGfxCo(0x1C0 + num*BAR_VRAM_WIDTH, BAR_VRAM_WIDTH,
+        gUiTmScratchB + TILEMAP_INDEX(x - 2, y + 1),
+        TILEREF(0, STATSCREEN_BGPAL_6), max, total, base);
+        // TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, total * 41 / 30, base * 41 / 30);
 }
 static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 {
@@ -601,13 +584,13 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
      
     // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green. 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 8, co->affinities[i].rating, 16);
+        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 32, co->affinities[i].rating, 32);
         y += CO_AFFINITY_ROW_STEP;
     }
     int offset = i; 
     y = CO_AFFINITY_ROW_Y0; 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 8, co->affinities[i+offset].rating, 16);
+        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 32, co->affinities[i+offset].rating, 32);
         y += CO_AFFINITY_ROW_STEP;
     }
     
@@ -652,7 +635,7 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,
-            (CO_AFFINITY_ICON_TILE_X+8) * 8,
+            (CO_AFFINITY_ICON_TILE_X+10) * 8,
             (CO_PAGE_Y + y) * 8,
             0xC800,
             co->affinities[i+offset].classId);
@@ -672,7 +655,17 @@ static void CoScreen_DrawPage(void)
     CoScreen_DrawHeader();
 
     CpuFastFill(0, gUiTmScratchA, sizeof(u16) * 0x280);
+    CpuFastFill(0, gUiTmScratchB, sizeof(u16) * 0x240);
     CpuFastFill(0, gUiTmScratchC, sizeof(u16) * 0x240);
+
+    /* Page-content border. Drawn into gUiTmScratchC (scratch-local coords,
+     * i.e. offset by -CO_PAGE_X/-CO_PAGE_Y from the on-screen position) so
+     * it survives the page-slide's fill+copy cycle and CoScreen_DrawPage's
+     * own scratch clear above -- drawing straight into gBG2TilemapBuffer
+     * here would get wiped out the next time either of those run. */
+    DrawUiFrame(
+        gUiTmScratchC,                  // back BG
+        0, 1, 19, 17, TILEREF(0, 0), 0); // style
 
     switch (gStatScreen.page) {
     case CO_SCREEN_PAGE_INFO:
@@ -749,6 +742,11 @@ static void CoPageSlide_OnLoop(struct StatScreenEffectProc* proc)
     TileMap_CopyRect(
         gUiTmScratchA + srcOff,
         gBG0TilemapBuffer + dstOff + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y),
+        len, CO_PAGE_H);
+        
+    TileMap_CopyRect(
+        gUiTmScratchB + srcOff,
+        gBG1TilemapBuffer + dstOff + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y),
         len, CO_PAGE_H);
 
     TileMap_CopyRect(
@@ -837,9 +835,10 @@ static void CoCommanderFade_SetNewCo(struct StatScreenEffectProc* proc)
     CoScreen_DrawPage();
 
     TileMap_CopyRect(gUiTmScratchA, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
+    TileMap_CopyRect(gUiTmScratchB, gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
     TileMap_CopyRect(gUiTmScratchC, gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
 
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
 }
 
 static void CoCommanderFade_InitIn(struct StatScreenEffectProc* proc)
@@ -995,6 +994,8 @@ void CoInfoCtrl_UpdatePageNum(struct StatScreenPageNameProc* proc)
         gObject_8x8, TILEREF(chr, STATSCREEN_OBJPAL_4) + OAM2_LAYER(3) + gStatScreen.page + 1);
 }
 
+static void CoScreen_UpdateBgScroll(ProcPtr proc);
+
 CONST_DATA struct ProcCmd gProcScr_CoPageNumCtrl[] = {
     PROC_CALL(CoInfoCtrl_OnInit),
 
@@ -1006,6 +1007,7 @@ PROC_LABEL(0),
     PROC_CALL(CoInfoCtrl_UpdatePageNum),
     // PROC_CALL(PageNumCtrl_DisplayMuPlatform),
     PROC_CALL(CoScreen_DrawAffinitySprites),
+    PROC_CALL(CoScreen_UpdateBgScroll),
 
     PROC_GOTO(0),
 
@@ -1050,6 +1052,54 @@ void UnpackNewUiBarPalette(int palId)
     ApplyPalette(NewUiBarPal, palId);
 }
 
+
+/* BG3 diagonally-scrolling background (ported from Pokemblem's
+ * ChallengeRunMenu frlgUiFrame, see graphics/bg/frlgUiFrame.png and its
+ * Makefile rule). frlgUiFrame_map is a flat, uncompressed 32x32 array of
+ * bare tile indices (0-7, no palette/flip bits) -- built by hand here
+ * rather than via CallARM_FillTileRect, since that decodes the engine's
+ * compressed native TSA format (see memory: feedback_bgfill_offset_overflow),
+ * which this plain array isn't. Sits behind everything else on screen
+ * (lowest BG priority) and always fills the full 32x32-tile screen, so
+ * BG_SetPosition's hardware wraparound scrolls it seamlessly. */
+#define CO_BG_FRAME_PAL_SLOT 3
+#define CO_BG_FRAME_TILE_WIDTH 32
+#define CO_BG_FRAME_TILE_HEIGHT 32
+#define CO_BG_FRAME_TILE_BYTE_OFFSET 0x2000
+#define CO_BG_FRAME_TILE_INDEX_OFFSET (CO_BG_FRAME_TILE_BYTE_OFFSET / 0x20)
+static void CoScreen_LoadBgFrame(void)
+{
+    int x, y;
+
+    gLCDControlBuffer.bg3cnt.priority = 3;
+    BG_SetColorBpp(3, 4);
+
+    Decompress(frlgUiFrame_tiles, (void*)(VRAM + GetBackgroundTileDataOffset(3) + 0x2000));
+    ApplyPalette(frlgUiFrame_palette, CO_BG_FRAME_PAL_SLOT);
+
+    for (y = 0; y < CO_BG_FRAME_TILE_HEIGHT; ++y) {
+        for (x = 0; x < CO_BG_FRAME_TILE_WIDTH; ++x) {
+            gBG3TilemapBuffer[TILEMAP_INDEX(x, y)] =
+                (frlgUiFrame_map[y * CO_BG_FRAME_TILE_WIDTH + x] + CO_BG_FRAME_TILE_INDEX_OFFSET) | (CO_BG_FRAME_PAL_SLOT << 12);
+        }
+    }
+
+    gCoScreen.bgScrollTimer = 0;
+    BG_SetPosition(3, 0, 0);
+
+    BG_EnableSyncByMask(BG3_SYNC_BIT);
+}
+
+/* Called every frame (see gProcScr_CoPageNumCtrl) -- advances the diagonal
+ * scroll by half a pixel per frame on both axes (matching Pokemblem's own
+ * `0 - (timer >> 1)`), wrapping seamlessly since the BG3 tilemap already
+ * fills its full 32x32-tile (256x256px) screen. */
+static void CoScreen_UpdateBgScroll(ProcPtr proc)
+{
+    gCoScreen.bgScrollTimer++;
+
+    BG_SetPosition(3, -(gCoScreen.bgScrollTimer >> 1), -(gCoScreen.bgScrollTimer >> 1));
+}
 
 static void CoScreen_Setup(ProcPtr proc)
 {
@@ -1097,13 +1147,13 @@ static void CoScreen_Setup(ProcPtr proc)
     UnpackNewUiBarPalette(STATSCREEN_BGPAL_6);
     // UnpackUiBarPalette(STATSCREEN_BGPAL_6);
 
-    
+    CoScreen_LoadBgFrame();
 
-    
     CoScreen_DrawPage();
     EnablePaletteSync();
 
     TileMap_CopyRect(gUiTmScratchA, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
+    TileMap_CopyRect(gUiTmScratchB, gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
     TileMap_CopyRect(gUiTmScratchC, gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
 
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
