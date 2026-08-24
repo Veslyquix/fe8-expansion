@@ -40347,15 +40347,16 @@ leaves a unit behind.[.][X]
 Barrage[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
-All of Francis's units are healed.[X]
+All of Francis's units heal[LF]
+10 HP.[X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
 War Council[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_DESC
 All of Francis's units are[LF]
-fully repaired, rearmed, and[LF]
-deal more damage.[.][X]
+fully healed and deal[LF]
+more damage.[.][X]
 
 ## MSG_CO_ONEILL_NAME
 O'Neill[.][X]
@@ -40364,8 +40365,9 @@ O'Neill[.][X]
 The Reckless Brawler[X]
 
 ## MSG_CO_ONEILL_INFO
-A brash commander who trusts raw[LF]
-firepower over careful planning.[X]
+A brash commander who trusts[LF]
+raw power over careful[LF]
+planning.[.][X]
 
 ## MSG_CO_ONEILL_POWER_NAME
 Barrage[.][X]

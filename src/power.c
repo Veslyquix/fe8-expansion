@@ -260,40 +260,40 @@ enum {
  * (src/purchase_generics.c) -- keep the class list in sync if that table
  * changes. */
 static const struct CoClassAffinity sFrancisAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       64 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  60 },
-    { "Brigand",    CLASS_BRIGAND,       56 },
-    { "Archer",     CLASS_ARCHER,        52 },
-    { "Fighter",    CLASS_FIGHTER,       48 },
-    { "Mercenary",  CLASS_MERCENARY,     44 },
-    { "Cavalier",   CLASS_CAVALIER,      40 },
-    { "Monk",       CLASS_MONK,          36 },
-    { "Mage",       CLASS_MAGE,          32 },
-    { "Cleric",     CLASS_CLERIC,        28 },
+    { "Soldier",    CLASS_SOLDIER,       36 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  36 },
+    { "Brigand",    CLASS_BRIGAND,       30 },
+    { "Archer",     CLASS_ARCHER,        30 },
+    { "Fighter",    CLASS_FIGHTER,       30 },
+    { "Mercenary",  CLASS_MERCENARY,     30 },
+    { "Cavalier",   CLASS_CAVALIER,      39 },
+    { "Monk",       CLASS_MONK,          24 },
+    { "Mage",       CLASS_MAGE,          24 },
+    { "Cleric",     CLASS_CLERIC,        24 },
     { "Shaman",     CLASS_SHAMAN,        24 },
-    // { "Dancer",     CLASS_DANCER,        8 },
-    { "Thief",      CLASS_THIEF,         20 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      0 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      4 },
+    // { "Dancer",     CLASS_DANCER,        30 },
+    { "Thief",      CLASS_THIEF,         30 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      33 },
 };
 
 /* O'Neill leans hard into offense, like Flak; weak with anything magical. */
 static const struct CoClassAffinity sOneillAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       16 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  8 },
-    { "Brigand",    CLASS_BRIGAND,       8 },
-    { "Archer",     CLASS_ARCHER,        8 },
-    { "Fighter",    CLASS_FIGHTER,       8 },
-    { "Mercenary",  CLASS_MERCENARY,     8 },
-    { "Cavalier",   CLASS_CAVALIER,      8 },
-    { "Monk",       CLASS_MONK,          8 },
-    { "Mage",       CLASS_MAGE,          8 },
-    { "Cleric",     CLASS_CLERIC,        8 },
-    { "Shaman",     CLASS_SHAMAN,        8 },
-    // { "Dancer",     CLASS_DANCER,        8 },
-    { "Thief",      CLASS_THIEF,         8 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      8 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      8 },
+    { "Soldier",    CLASS_SOLDIER,       30 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
+    { "Brigand",    CLASS_BRIGAND,       42 },
+    { "Archer",     CLASS_ARCHER,        24 },
+    { "Fighter",    CLASS_FIGHTER,       45 },
+    { "Mercenary",  CLASS_MERCENARY,     24 },
+    { "Cavalier",   CLASS_CAVALIER,      30 },
+    { "Monk",       CLASS_MONK,          27 },
+    { "Mage",       CLASS_MAGE,          27 },
+    { "Cleric",     CLASS_CLERIC,        27 },
+    { "Shaman",     CLASS_SHAMAN,        27 },
+    // { "Dancer",     CLASS_DANCER,        30 },
+    { "Thief",      CLASS_THIEF,         24 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      24 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
 };
 
 
@@ -451,13 +451,13 @@ enum {
  * below), outside this rect entirely, which is why the header survives
  * page/commander slides untouched, exactly like statscreen.c's own left
  * panel survives its (mirror-image, portrait-on-the-left) page slides. */
-#define CO_PAGE_X 1
-#define CO_PAGE_Y 2
-#define CO_PAGE_W 18
-#define CO_PAGE_H 18
+#define CO_PAGE_X 0
+#define CO_PAGE_Y 0
+#define CO_PAGE_W 19
+#define CO_PAGE_H 20
 
 /* Portrait + name, right of the page-content area (see CO_PAGE_X/_W). */
-#define CO_PORTRAIT_X (CO_PAGE_X + CO_PAGE_W)
+#define CO_PORTRAIT_X (CO_PAGE_X + CO_PAGE_W+1)
 
 
 
@@ -526,7 +526,7 @@ static void CoScreen_DrawHeader(void)
         ApplyPalette(Pal_FaceDisplayGenericCard, 2);
 
     EnablePaletteSync();
-    CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X + 1, 10),
+    CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X + 2, 10),
         CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_WHITE, co->nameMsg); // CoScreen_GetCoName
 }
 
@@ -538,23 +538,23 @@ static void CoScreen_DrawHeader(void)
 
 static void CoScreen_DrawPageInfo(const struct CoDefinition* co)
 {
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_INFO);
-    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->titleMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_INFO);
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->titleMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, 4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg);
 }
 
 static void CoScreen_DrawPagePower(const struct CoDefinition* co)
 {
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_POWER);
-    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->powerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_POWER);
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->powerNameMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, 4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg);
 }
 
 static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
 {
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_SUPER);
-    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_SUPER);
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, 4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
 }
 #define BAR_VRAM_WIDTH 5
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
@@ -580,17 +580,17 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
     int i;
     int y = CO_AFFINITY_ROW_Y0;
 
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_AFFINITY);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(2, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_AFFINITY);
      
     // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green. 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 32, co->affinities[i].rating, 32);
+        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 30, co->affinities[i].rating, 30);
         y += CO_AFFINITY_ROW_STEP;
     }
     int offset = i; 
     y = CO_AFFINITY_ROW_Y0; 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 32, co->affinities[i+offset].rating, 32);
+        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30, co->affinities[i+offset].rating, 30);
         y += CO_AFFINITY_ROW_STEP;
     }
     
@@ -624,7 +624,7 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,
             CO_AFFINITY_ICON_TILE_X * 8,
-            (CO_PAGE_Y + y) * 8,
+            (CO_PAGE_Y + y) * 8 + gStatScreen.yDispOff,
             0xC800,
             co->affinities[i].classId);
 
@@ -635,8 +635,8 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,
-            (CO_AFFINITY_ICON_TILE_X+10) * 8,
-            (CO_PAGE_Y + y) * 8,
+            (CO_AFFINITY_ICON_TILE_X+10) * 8 + gStatScreen.xDispOff,
+            (CO_PAGE_Y + y) * 8 + gStatScreen.yDispOff,
             0xC800,
             co->affinities[i+offset].classId);
 
@@ -655,7 +655,7 @@ static void CoScreen_DrawPage(void)
     CoScreen_DrawHeader();
 
     CpuFastFill(0, gUiTmScratchA, sizeof(u16) * 0x280);
-    CpuFastFill(0, gUiTmScratchB, sizeof(u16) * 0x240);
+    CpuFastFill(0, gUiTmScratchB, sizeof(u16) * 0x280);
     CpuFastFill(0, gUiTmScratchC, sizeof(u16) * 0x240);
 
     /* Page-content border. Drawn into gUiTmScratchC (scratch-local coords,
@@ -714,8 +714,9 @@ static void CoPageSlide_OnLoop(struct StatScreenEffectProc* proc)
     int off;
     int len, dstOff, srcOff;
 
-    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H, 0);
-    TileMap_FillRect(gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H, 0);
+    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W-1, CO_PAGE_H, 0);
+    TileMap_FillRect(gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W-1, CO_PAGE_H, 0);
+    TileMap_FillRect(gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W-1, CO_PAGE_H, 0);
 
     off = sCoPageSlideOffsetLut[proc->timer];
 
@@ -814,18 +815,32 @@ static void CoCommanderFade_InitOut(struct StatScreenEffectProc* proc)
 
     proc->timer = 0;
 
-    SetBlendTargetA(1, 1, 1, 1, 1);
+    // SetBlendTargetA(1, 1, 1, 1, 1);
+
+    /* Same vertical bounce as vanilla's UnitSlide_InitFadeOut: the panel
+     * drifts off toward the direction the new commander is "coming from"
+     * while it blends to black. proc->direction is set by
+     * CoStartCommanderFade from whichever of DPAD_UP/DOWN triggered this. */
+    if (proc->direction > 0) {
+        proc->yDispInit  = 0;
+        proc->yDispFinal = -60;
+    } else {
+        proc->yDispInit  = 0;
+        proc->yDispFinal = +60;
+    }
 }
 
 static void CoCommanderFade_OutLoop(struct StatScreenEffectProc* proc)
 {
-    SetBlendConfig(3, 0, 0, proc->timer);
+    // SetBlendConfig(3, 0, 0, proc->timer);
+
+    gStatScreen.yDispOff = Interpolate(2, proc->yDispInit, proc->yDispFinal, proc->timer, 0x10);
 
     proc->timer += 2;
 
     if (proc->timer > 0x10) {
         proc->timer = 0x10;
-        SetBlendConfig(3, 0, 0, proc->timer);
+        // SetBlendConfig(3, 0, 0, proc->timer);
         Proc_Break(proc);
     }
 }
@@ -844,26 +859,45 @@ static void CoCommanderFade_SetNewCo(struct StatScreenEffectProc* proc)
 static void CoCommanderFade_InitIn(struct StatScreenEffectProc* proc)
 {
     proc->timer = 0x10;
+
+    /* New content bounces in from the opposite side it faded out toward. */
+    if (proc->direction > 0) {
+        proc->yDispInit  = +60;
+        proc->yDispFinal = 0;
+    } else {
+        proc->yDispInit  = -60;
+        proc->yDispFinal = 0;
+    }
 }
 
 static void CoCommanderFade_InLoop(struct StatScreenEffectProc* proc)
 {
+    gStatScreen.yDispOff = Interpolate(5, proc->yDispInit, proc->yDispFinal, 0x10 - proc->timer, 0x10);
+
     proc->timer -= 2;
 
     if (proc->timer <= 0) {
         proc->timer = 0;
-        SetBlendConfig(3, 0, 0, 0);
-        SetDefaultColorEffects();
+        gStatScreen.yDispOff = 0;
+        // SetBlendConfig(3, 0, 0, 0);
+        // SetDefaultColorEffects();
         gStatScreen.inTransition = FALSE;
         sCoCommanderFading = FALSE;
         Proc_Break(proc);
         return;
     }
 
-    SetBlendConfig(3, 0, 0, proc->timer);
+    // SetBlendConfig(3, 0, 0, proc->timer);
 }
 
 CONST_DATA struct ProcCmd gProcScr_CoCommanderFade[] = {
+    /* Proc_Start runs the script synchronously up to its first blocking
+     * command before returning, so without this sleep,
+     * CoCommanderFade_InitOut would read proc->direction before
+     * CoStartCommanderFade (below) gets a chance to set it -- same
+     * leading PROC_SLEEP(0) vanilla's gProcScr_SSUnitSlide uses ahead of
+     * UnitSlide_InitFadeOut for the same reason. */
+    PROC_SLEEP(0),
     PROC_CALL(CoCommanderFade_InitOut),
     PROC_REPEAT(CoCommanderFade_OutLoop),
     PROC_CALL(CoCommanderFade_SetNewCo),
@@ -873,14 +907,17 @@ CONST_DATA struct ProcCmd gProcScr_CoCommanderFade[] = {
     PROC_END,
 };
 
-static void CoStartCommanderFade(struct Proc* parent)
+static void CoStartCommanderFade(int direction, struct Proc* parent)
 {
+    struct StatScreenEffectProc* proc;
+
     if (Proc_Find(gProcScr_CoCommanderFade))
         return;
 
     PlaySoundEffect(SONG_C8);
 
-    Proc_StartBlocking(gProcScr_CoCommanderFade, parent);
+    proc = (void*) Proc_StartBlocking(gProcScr_CoCommanderFade, parent);
+    proc->direction = direction;
 }
 
 enum
@@ -1101,6 +1138,33 @@ static void CoScreen_UpdateBgScroll(ProcPtr proc)
     BG_SetPosition(3, -(gCoScreen.bgScrollTimer >> 1), -(gCoScreen.bgScrollTimer >> 1));
 }
 
+/* Vertical panel offset applied every frame from gStatScreen.yDispOff --
+ * same mechanism as statscreen.c's BgOffCtrl_OnLoop/gProcScr_SSBgOffsetCtrl,
+ * driven by the commander-fade's Interpolate calls above. BG0/BG1/BG2 carry
+ * the page content and portrait, so they scroll together; BG3 is the
+ * diagonal-scrolling frame background and has its own independent
+ * BG_SetPosition calls (CoScreen_UpdateBgScroll), so it's left alone. */
+static void CoBgOffCtrl_OnLoop(ProcPtr proc)
+{
+    /* No masking here -- BG_SetPosition's y is a u16 and the GBA's BG
+     * scroll register only latches the low 9 bits, so a negative
+     * yDispOff already wraps correctly via plain two's complement. An
+     * 8-bit mask (0xFF, as used elsewhere for values that stay small and
+     * positive) would drop the sign bit this needs and corrupt the
+     * direction/magnitude for one side of the +/-60 swing this proc
+     * actually reaches. */
+    int yBg = -gStatScreen.yDispOff;
+
+    BG_SetPosition(0, 0, yBg);
+    BG_SetPosition(1, 0, yBg);
+    BG_SetPosition(2, 0, yBg);
+}
+
+CONST_DATA struct ProcCmd gProcScr_CoBgOffsetCtrl[] = {
+    PROC_REPEAT(CoBgOffCtrl_OnLoop),
+    PROC_END,
+};
+
 static void CoScreen_Setup(ProcPtr proc)
 {
     gCoScreen.coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
@@ -1135,6 +1199,7 @@ static void CoScreen_Setup(ProcPtr proc)
     LoadIconPalette(1, 0x13);
     LoadIconPalette(1, 0x14);
 
+
     /* Arrow/page-number OBJ graphics, same VRAM char offset
      * StatScreen_InitDisplay (src/statscreen.c) decompresses them to --
      * OBJPAL_4 itself is already populated by LoadGameCoreGfxLegacyFrame's
@@ -1156,9 +1221,12 @@ static void CoScreen_Setup(ProcPtr proc)
     TileMap_CopyRect(gUiTmScratchB, gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
     TileMap_CopyRect(gUiTmScratchC, gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
 
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
-
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
+    SetBlendTargetA(0, 0, 1, 0, 0); // transparent ui
+    SetBlendBackdropA(1);
+    SetBlendAlpha(11, 5);
     Proc_Start(gProcScr_CoPageNumCtrl, proc);
+    Proc_Start(gProcScr_CoBgOffsetCtrl, proc);
 }
 
 static void CoScreen_Teardown(ProcPtr proc)
@@ -1187,26 +1255,32 @@ static void CoScreen_Teardown(ProcPtr proc)
 
 static void CoScreen_KeyListener(ProcPtr proc)
 {
+    u16 keys = gKeyStatusPtr->newKeys; 
+    if (!keys) 
+    { 
+        keys = gKeyStatusPtr->repeatedKeys; 
+    } 
     if (gKeyStatusPtr->newKeys & B_BUTTON) {
         Proc_Break(proc);
         return;
     }
 
+
     if (gStatScreen.inTransition)
         return;
 
-    if (gKeyStatusPtr->repeatedKeys & DPAD_LEFT) {
+    if (keys & DPAD_LEFT) {
         gStatScreen.page = (gStatScreen.page + CO_SCREEN_PAGE_COUNT - 1) % CO_SCREEN_PAGE_COUNT;
         CoStartSlide(DPAD_LEFT, proc);
-    } else if (gKeyStatusPtr->repeatedKeys & DPAD_RIGHT) {
+    } else if (keys & DPAD_RIGHT) {
         gStatScreen.page = (gStatScreen.page + 1) % CO_SCREEN_PAGE_COUNT;
         CoStartSlide(DPAD_RIGHT, proc);
-    } else if (gKeyStatusPtr->repeatedKeys & DPAD_UP) {
+    } else if (keys & DPAD_UP) {
         gCoScreen.coId = (gCoScreen.coId + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
-        CoStartCommanderFade(proc);
-    } else if (gKeyStatusPtr->repeatedKeys & DPAD_DOWN) {
+        CoStartCommanderFade(-1, proc);
+    } else if (keys & DPAD_DOWN) {
         gCoScreen.coId = (gCoScreen.coId + 1) % CoScreen_GetCoCount();
-        CoStartCommanderFade(proc);
+        CoStartCommanderFade(+1, proc);
     }
 }
 void CoInfo_BlackenScreen(void)
