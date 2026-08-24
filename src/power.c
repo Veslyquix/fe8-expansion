@@ -261,17 +261,17 @@ enum {
 static const struct CoClassAffinity sFrancisAffinities[] = {
     { "Soldier",    CLASS_SOLDIER,       16 },
     { "Knight",     CLASS_ARMOR_KNIGHT,  10 },
-    { "Brigand",    CLASS_BRIGAND,       8 },
-    { "Archer",     CLASS_ARCHER,        8 },
+    { "Brigand",    CLASS_BRIGAND,       14 },
+    { "Archer",     CLASS_ARCHER,        12 },
     { "Fighter",    CLASS_FIGHTER,       8 },
     { "Mercenary",  CLASS_MERCENARY,     8 },
     { "Cavalier",   CLASS_CAVALIER,      12 },
-    { "Monk",       CLASS_MONK,          7 },
-    { "Mage",       CLASS_MAGE,          7 },
-    { "Cleric",     CLASS_CLERIC,        7 },
-    { "Shaman",     CLASS_SHAMAN,        7 },
+    { "Monk",       CLASS_MONK,          3 },
+    { "Mage",       CLASS_MAGE,          4 },
+    { "Cleric",     CLASS_CLERIC,        5 },
+    { "Shaman",     CLASS_SHAMAN,        6 },
     // { "Dancer",     CLASS_DANCER,        8 },
-    { "Thief",      CLASS_THIEF,         8 },
+    { "Thief",      CLASS_THIEF,         7 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      8 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      8 },
 };
@@ -554,10 +554,11 @@ static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
     CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
 }
-#define BAR_VRAM_WIDTH 4 
+#define BAR_VRAM_WIDTH 4
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
 {
     int diff = total - base;
+    int progressLength, cappedLength, minusLength;
 
     // PutNumberOrBlank(gUiTmScratchA + TILEMAP_INDEX(x, y),
         // (base == max) ? TEXT_COLOR_SYSTEM_GREEN : TEXT_COLOR_SYSTEM_BLUE, base);
@@ -570,9 +571,26 @@ void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
         diff = total - base;
     }
 
-    DrawStatBarGfx(0x480 + num*BAR_VRAM_WIDTH, BAR_VRAM_WIDTH,
+    /* total >= base: fill up to base (yellow), extend past it in green for
+     * the bonus (diff). total < base: fill only up to total (yellow), and
+     * draw the base-total shortfall in red (DrawStatBarMinusCol via
+     * DrawStatBarGfxCo, src/statbar.c) instead of leaving it blank. */
+    if (diff >= 0)
+    {
+        progressLength = base * 41 / 30;
+        cappedLength = diff * 41 / 30;
+        minusLength = 0;
+    }
+    else
+    {
+        progressLength = total * 41 / 30;
+        cappedLength = 0;
+        minusLength = -diff * 41 / 30;
+    }
+
+    DrawStatBarGfxCo(0x480 + num*BAR_VRAM_WIDTH, BAR_VRAM_WIDTH,
         gUiTmScratchC + TILEMAP_INDEX(x - 2, y + 1),
-        TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, base * 41 / 30, diff * 41 / 30);
+        TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, progressLength, cappedLength, minusLength);
 }
 static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 {
@@ -583,13 +601,13 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
      
     // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green. 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 4, co->affinities[i].rating, 16);
+        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 8, co->affinities[i].rating, 16);
         y += CO_AFFINITY_ROW_STEP;
     }
     int offset = i; 
     y = CO_AFFINITY_ROW_Y0; 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 4, co->affinities[i+offset].rating, 16);
+        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 8, co->affinities[i+offset].rating, 16);
         y += CO_AFFINITY_ROW_STEP;
     }
     
@@ -994,6 +1012,45 @@ PROC_LABEL(0),
     PROC_END,
 };
 
+/* Full 16-color bank for the CO stat bars (src/statbar.c's
+ * DrawStatBarCo/DrawStatBarGfxCo). Was a single unreadable, comma-less
+ * (and therefore non-compiling) line of raw bytes -- rewritten as one
+ * RGB(r, g, b) entry per color (see include/gba/defines.h), decoded
+ * little-endian pair by pair from the original bytes, with the original
+ * raw u16 value kept as a comment for cross-reference. This bank's index
+ * values are the raw 4bpp pixel values src/statbar.c's DrawStatBar*Col
+ * helpers write into the bar bitmap: 3/4/14 border/shadow/unfilled
+ * (DrawStatBarUnfilledCol/LeftBorder/RightBorder/Shadow), 1/5 yellow fill
+ * (DrawStatBarFilledCol), 12/13 green "capped" fill (DrawStatBarCappedCol),
+ * 10/11 red "minus" fill (DrawStatBarMinusCol). */
+static const u16 NewUiBarPal[] = {
+    RGB(19, 26, 25), // 0x6753
+    RGB(29, 30, 31), // 0x7FDD
+    RGB(23, 25, 27), // 0x6F37
+    RGB(16, 17, 19), // 0x4E30
+    RGB(10,  9,  8), // 0x212A
+    RGB(30, 29, 14), // 0x3BBE
+    RGB(23, 19,  6), // 0x1A77
+    RGB(17, 13,  6), // 0x19B1
+    RGB(31, 15,  4), // 0x11FF
+    RGB( 2, 15, 31), // 0x7DE2
+    RGB(31, 0, 31), // 0x76F5
+    RGB(31, 0, 0), // 0x6238
+    RGB( 3, 23,  2), // 0x0AE3
+    RGB(15, 31, 18), // 0x4BEF
+    RGB(10, 10, 22), // 0x594A
+    RGB( 0,  0,  0), // 0x0000
+};
+
+void UnpackNewUiBarPalette(int palId)
+{
+    if (palId < 0)
+        palId = STATSCREEN_BGPAL_6;
+
+    ApplyPalette(NewUiBarPal, palId);
+}
+
+
 static void CoScreen_Setup(ProcPtr proc)
 {
     gCoScreen.coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
@@ -1037,7 +1094,8 @@ static void CoScreen_Setup(ProcPtr proc)
     /* Stat-bar graphics palette -- DrawStatWithBar/DrawStatBarGfx
      * (src/statscreen.c) draw into STATSCREEN_BGPAL_6, same as
      * StatScreen_InitDisplay's own UnpackUiBarPalette call. */
-    UnpackUiBarPalette(STATSCREEN_BGPAL_6);
+    UnpackNewUiBarPalette(STATSCREEN_BGPAL_6);
+    // UnpackUiBarPalette(STATSCREEN_BGPAL_6);
 
     
 
