@@ -1448,11 +1448,13 @@ MODERN_CLEAN_IWRAM := linker/iwram.ld
 $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 
 # ROM size configuration: 16M or 32M. Production profiles enabling ja or
-# zh-Hans are validated below as 32M-only; the upper locale bank carries their
-# full-game catalog and localized font data. Default is 32M: the 16M budget
-# is already essentially exhausted (see reports/linker-budget), and FE8_MAPGEN
-# alone adds ~48K of chunk data that no longer fits in the 16M target.
-MODERN_ROM_SIZE ?= 32M
+# zh-Hans are validated (scripts/modernize/expansion_config.py) as 32M-only;
+# the upper locale bank carries their full-game catalog and localized font
+# data. Default is 16M: the current config.mk default flag set (including
+# FE8_MAPGEN) fits comfortably under the 16M ceiling with room to spare;
+# opt into MODERN_ROM_SIZE=32M for CJK locales or once real headroom is
+# needed.
+MODERN_ROM_SIZE ?= 16M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000
@@ -2394,6 +2396,44 @@ $(MODERN_SYM): $(MODERN_ELF)
 expansion-modern-sym: expansion-modern-elf $(MODERN_SYM)
 	@printf 'Modern symbol file ready: %s\n' "$(MODERN_SYM)"
 
+# UPS patch (baserom.gba -> the built modern ROM), for distributing the
+# expansion without redistributing the vanilla ROM directly. The modern ROM
+# isn't byte-matched to vanilla (see docs/framework-support.md), so this is
+# a full-rewrite-sized patch, not a small diff -- but UPS still applies
+# correctly regardless of how much differs. scripts/gen_ups.py implements
+# the plain UPS1 format (no external patcher tool required).
+BASEROM := baserom.gba
+MODERN_UPS := $(MODERN_ROM:.gba=.ups)
+MODERN_UPS_GENERATOR := scripts/gen_ups.py
+
+$(MODERN_UPS): $(MODERN_ROM) $(BASEROM) $(MODERN_UPS_GENERATOR)
+	@if [ ! -f "$(BASEROM)" ]; then \
+		echo "error: $(BASEROM) not found (required to build a UPS patch)" >&2; \
+		exit 1; \
+	fi
+	@"$(PYTHON)" "$(MODERN_UPS_GENERATOR)" "$(BASEROM)" "$(MODERN_ROM)" "$@"
+
+expansion-modern-ups: expansion-modern-rom $(MODERN_UPS)
+	@printf 'Modern UPS patch ready: %s\n' "$(MODERN_UPS)"
+
+# IPS patch (baserom.gba -> the built modern ROM): simpler/more widely
+# supported than UPS, but its 3-byte address field caps both files at 16MB
+# -- only valid while MODERN_ROM_SIZE=16M (the default). Errors out (via
+# scripts/gen_ips.py's own size check) rather than silently truncating if
+# built against a 32M ROM.
+MODERN_IPS := $(MODERN_ROM:.gba=.ips)
+MODERN_IPS_GENERATOR := scripts/gen_ips.py
+
+$(MODERN_IPS): $(MODERN_ROM) $(BASEROM) $(MODERN_IPS_GENERATOR)
+	@if [ ! -f "$(BASEROM)" ]; then \
+		echo "error: $(BASEROM) not found (required to build an IPS patch)" >&2; \
+		exit 1; \
+	fi
+	@"$(PYTHON)" "$(MODERN_IPS_GENERATOR)" "$(BASEROM)" "$(MODERN_ROM)" "$@"
+
+expansion-modern-ips: expansion-modern-rom $(MODERN_IPS)
+	@printf 'Modern IPS patch ready: %s\n' "$(MODERN_IPS)"
+
 # Opt-in convenience target (not part of `all`/boot-check): copy the built
 # modern ROM to a Windows-native path, for WSL setups where a GUI emulator
 # on the Windows side reads over \\wsl.localhost\ -- copying to a native
@@ -2408,12 +2448,26 @@ sync-win:
 
 _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
-	+$(MAKE) expansion-modern-rom expansion-modern-sym
+	+$(MAKE) expansion-modern-rom expansion-modern-sym \
+		$(if $(wildcard $(BASEROM)),expansion-modern-ups) \
+		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips)
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
+	@if [ -f "$(BASEROM)" ]; then \
+		cp "$(MODERN_UPS)" "$(WIN_SYNC_DIR)/"; \
+		printf 'Copied %s -> %s/\n' "$(MODERN_UPS)" "$(WIN_SYNC_DIR)"; \
+		if [ "$(MODERN_ROM_SIZE)" = "16M" ]; then \
+			cp "$(MODERN_IPS)" "$(WIN_SYNC_DIR)/"; \
+			printf 'Copied %s -> %s/\n' "$(MODERN_IPS)" "$(WIN_SYNC_DIR)"; \
+		else \
+			echo "note: MODERN_ROM_SIZE=$(MODERN_ROM_SIZE) (not 16M), skipping IPS patch"; \
+		fi; \
+	else \
+		echo "note: $(BASEROM) not found, skipping UPS/IPS patches"; \
+	fi
 
 # Preflight the libmGBA-backed playtest backend before spending time building
 # the ROM, with an actionable error pointing at the same backend-check
