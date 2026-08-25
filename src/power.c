@@ -20,6 +20,9 @@
 #include "constants/characters.h"
 #include "constants/classes.h"
 #include "constants/songs.h"
+#include "constants/msg.h"
+#include "bg.h"
+#include "scene.h"
 #include "power.h"
 #include "mapanim.h"
 #include "statscreen.h"
@@ -30,6 +33,56 @@
 #include "constants/items.h"
 #include "constants/video-global.h"
 #include "icon.h"
+
+
+/* 
+PutDrawText generally causes graphical glitches when text before does not have a fixed width in vram. 
+Using `GetStringTextLen(str) + 8) / 8` to get the width of text is problematic, because 
+the text in vram will shift around when being redrawn. This doesn't matter if the screen is faded to black. 
+
+When adding text, follow this schema: 
+1. In root\texts\texts.txt, add a new text entry at the end and write the text with a definition. 
+
+2. Refer to this text only through `char *GetStringFromIndex(int index);`, never raw strings. 
+    GetStringFromIndexInBuffer can be used to join multiple strings together when necessary (e.g. with Text_DrawNumber).
+
+3. Init 
+    void InitSystemTextFont(void); (for everything that isn't a dialogue event) 
+    void ResetText(void); // resets to the default font and initializes text vram location
+        void ResetTextFont(void); // resets text vram location for the active font. Use this if you
+    // aren't using gDefaultFont but need to update all text. (E.g. after InitTextFont)
+    // Skip this step 3 if text is being drawn after menu text was just drawn. 
+
+4. Width
+    void InitText(struct Text *a, int tileWidth); // Set the width for all text handles that will be used. Also does TextClear
+    // void InitTextDb(struct Text * text, int tileWidth);  /  void InitTextInitInfo(const struct TextInitInfo* a);
+    // flips it between the two halves of that reserved space so the new string renders into the other VRAM half while the previously-drawn one is still on screen. 
+    // That avoids the flicker/tearing you'd get from redrawing glyphs into the same tiles currently being scanned out
+    Use InitTextDb instead of InitText when this text redraws every frame (live counters). 
+    tileWidth should default to 10 for things that are 1-3 words, or 20 for lines of text. 
+
+5. Clear vram 
+    void ClearText(struct Text *text); 
+    // If you are redrawing text and skipping steps 3-4, start here. This is unnecessary if steps 1-2 were done. 
+            
+6. Optional parameters 
+    void Text_SetParams(struct Text* th, int x, int colorId); // offset the x position and/or set a colour. 
+    // default to 0x and TEXT_COLOR_SYSTEM_WHITE, except for titles as TEXT_COLOR_SYSTEM_GOLD or TEXT_COLOR_SYSTEM_BLUE
+
+7. Draw into vram 
+    void Text_DrawString(struct Text * text, const char* str);
+    Draw the text to vram. 
+    Only use Text_DrawNumber if a variable number is needed in the middle of a text str. 
+
+8. Erase the gBG dest buffer space where the text will be placed. 
+    void TileMap_FillRect(u16 *dest, int width, int height, int fillValue);
+    Each line of text is always height 2. fillValue is generally 0, except for sprite text with 
+    the box, which is 0x4444 (using SpriteText_DrawBackground). 
+    
+9. Place it on the screen 
+    void PutText(struct Text* th, u16* dest);
+    
+*/
 
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
@@ -167,7 +220,7 @@ u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
  * page (like the unit stat screen's left panel, src/statscreen.c). 
  * ---------------------------------------------------------------------- */
 
-#define CO_AFFINITY_ROW_MAX 8 // max class-affinity rows this screen draws (DrawStatWithBar's `num` must stay small and unique)
+#define CO_AFFINITY_ROW_MAX 7
 
 enum {
     CO_SCREEN_PAGE_INFO,
@@ -183,18 +236,16 @@ struct CoClassAffinity {
     u8 rating; // 1-5; not wired up to the bar yet, see CoScreen_DrawPageAffinity
 };
 
+
 struct CoDefinition {
-    const char* name;
+    u16 nameMsg;
     int faceId;
-    const char* title; // shown on the info page (e.g. their epithet)
-    const char* infoLine1;
-    const char* infoLine2;
-    const char* powerName;
-    const char* powerDesc1;
-    const char* powerDesc2;
-    const char* superPowerName;
-    const char* superPowerDesc1;
-    const char* superPowerDesc2;
+    u16 titleMsg; // shown on the info page (e.g. their epithet)
+    u16 infoMsg; // single texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
+    u16 powerNameMsg;
+    u16 powerDescMsg; // single texts.txt entry, [LF]-separated
+    u16 superPowerNameMsg;
+    u16 superPowerDescMsg; // single texts.txt entry, [LF]-separated
     const struct CoClassAffinity* affinities;
     u8 affinityCount;
 };
@@ -207,64 +258,67 @@ enum {
 
 /* Mirrors the classes actually sellable in sPurchaseGenericDefinitions
  * (src/purchase_generics.c) -- keep the class list in sync if that table
- * changes. Ratings are placeholder flavor, not balance-tuned. */
+ * changes. */
 static const struct CoClassAffinity sFrancisAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       4 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  5 },
-    { "Mage",       CLASS_MAGE,          2 },
-    { "Archer",     CLASS_ARCHER,        3 },
-    { "Fighter",    CLASS_FIGHTER,       4 },
-    { "Mercenary",  CLASS_MERCENARY,     3 },
-    { "Cavalier",   CLASS_CAVALIER,      5 },
+    { "Soldier",    CLASS_SOLDIER,       36 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  36 },
+    { "Brigand",    CLASS_BRIGAND,       30 },
+    { "Archer",     CLASS_ARCHER,        30 },
+    { "Fighter",    CLASS_FIGHTER,       30 },
+    { "Mercenary",  CLASS_MERCENARY,     30 },
+    { "Cavalier",   CLASS_CAVALIER,      39 },
+    { "Monk",       CLASS_MONK,          24 },
+    { "Mage",       CLASS_MAGE,          24 },
+    { "Cleric",     CLASS_CLERIC,        24 },
+    { "Shaman",     CLASS_SHAMAN,        24 },
+    // { "Dancer",     CLASS_DANCER,        30 },
+    { "Thief",      CLASS_THIEF,         30 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      33 },
 };
 
 /* O'Neill leans hard into offense, like Flak; weak with anything magical. */
 static const struct CoClassAffinity sOneillAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       3 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  2 },
-    { "Mage",       CLASS_MAGE,          1 },
-    { "Archer",     CLASS_ARCHER,        3 },
-    { "Fighter",    CLASS_FIGHTER,       5 },
-    { "Mercenary",  CLASS_MERCENARY,     4 },
-    { "Cavalier",   CLASS_CAVALIER,      4 },
+    { "Soldier",    CLASS_SOLDIER,       30 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
+    { "Brigand",    CLASS_BRIGAND,       42 },
+    { "Archer",     CLASS_ARCHER,        24 },
+    { "Fighter",    CLASS_FIGHTER,       45 },
+    { "Mercenary",  CLASS_MERCENARY,     24 },
+    { "Cavalier",   CLASS_CAVALIER,      30 },
+    { "Monk",       CLASS_MONK,          27 },
+    { "Mage",       CLASS_MAGE,          27 },
+    { "Cleric",     CLASS_CLERIC,        27 },
+    { "Shaman",     CLASS_SHAMAN,        27 },
+    // { "Dancer",     CLASS_DANCER,        30 },
+    { "Thief",      CLASS_THIEF,         24 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      24 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
 };
 
-/* Temporary placeholder text/portraits -- faceId reuses existing vanilla
- * character portraits as stand-ins pending real CO art.
- *
- * Francis: Power/Super Power descriptions are adapted from Advance Wars
- * 1's Andy (Hyper Repair / Hyper Upgrade) as placeholder copy.
- *
- * O'Neill: Power/Super Power descriptions are adapted from Advance Wars
- * 1's Flak (Barrage / Brutal Barrage) as placeholder copy. */
+
 static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     [CO_FRANCIS] = {
-        .name = "Francis",
-        .faceId = CHARACTER_SETH,
-        .title = "The Steadfast Commander",
-        .infoLine1 = "A stalwart tactician who leads from",
-        .infoLine2 = "the front and never leaves a unit behind.",
-        .powerName = "Barrage",
-        .powerDesc1 = "All of Francis's units are healed.",
-        .powerDesc2 = " ",
-        .superPowerName = "War Council",
-        .superPowerDesc1 = "All of Francis's units are fully repaired,",
-        .superPowerDesc2 = "rearmed, and gain a firepower boost.",
+        .nameMsg = MSG_CO_FRANCIS_NAME,
+        .faceId = 4,
+        .titleMsg = MSG_CO_FRANCIS_TITLE,
+        .infoMsg = MSG_CO_FRANCIS_INFO,
+        .powerNameMsg = MSG_CO_FRANCIS_POWER_NAME,
+        .powerDescMsg = MSG_CO_FRANCIS_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_FRANCIS_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_FRANCIS_SUPER_DESC,
         .affinities = sFrancisAffinities,
         .affinityCount = ARRAY_COUNT(sFrancisAffinities),
     },
     [CO_ONEILL] = {
-        .name = "O'Neill",
-        .faceId = CHARACTER_EIRIKA,
-        .title = "The Reckless Brawler",
-        .infoLine1 = "A brash commander who trusts raw",
-        .infoLine2 = "firepower over careful planning.",
-        .powerName = "Barrage",
-        .powerDesc1 = "All of O'Neill's units gain +10%",
-        .powerDesc2 = "firepower for the turn.",
-        .superPowerName = "Brutal Barrage",
-        .superPowerDesc1 = "All of O'Neill's units gain +20%",
-        .superPowerDesc2 = "firepower and +10% defense for the turn.",
+        .nameMsg = MSG_CO_ONEILL_NAME,
+        .faceId = 0x30,
+        .titleMsg = MSG_CO_ONEILL_TITLE,
+        .infoMsg = MSG_CO_ONEILL_INFO,
+        .powerNameMsg = MSG_CO_ONEILL_POWER_NAME,
+        .powerDescMsg = MSG_CO_ONEILL_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ONEILL_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ONEILL_SUPER_DESC,
         .affinities = sOneillAffinities,
         .affinityCount = ARRAY_COUNT(sOneillAffinities),
     },
@@ -272,6 +326,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
 
 struct CoScreenSt {
     u8 coId;
+    u16 bgScrollTimer; // BG3 frlgUiFrame diagonal scroll, see CoScreen_UpdateBgScroll
 };
 
 /* Group 0 -- shared/aliased with gStatScreen, gUiTmScratchA/B/C
@@ -299,7 +354,7 @@ int CoScreen_GetCoCount(void)
 
 const char* CoScreen_GetCoName(int coId)
 {
-    return GetCoDefinition(coId)->name;
+    return GetStringFromIndex(GetCoDefinition(coId)->nameMsg);
 }
 
 #define CO_GAUGE_MAX 9999
@@ -352,18 +407,30 @@ void CoGauge_OnPowerUsed(int faction)
 
 /* gStatScreen.text[] slots this screen borrows (see the EWRAM_OVERLAY(0)
  * comment on gCoScreen above -- safe since this screen and the unit stat
- * screen never run at the same time). Each slot needs its own struct Text
- * handle, InitText'd to the string's actual width, before PutDrawText can
- * draw into it -- passing NULL/an uninitialized handle is what left the
- * screen black. */
+ * screen never run at the same time). Every simultaneously-visible string
+ * needs its OWN slot/handle: LINE0-3 used to share one CO_TEXT_LINE1
+ * handle across up to 3 lines at once, which meant they all pointed at the
+ * same VRAM glyph range -- whichever line drew last would visually bleed
+ * into the others. See memory: feedback_text_add_workflow. */
 enum {
     CO_TEXT_HEADER,
     CO_TEXT_LABEL,
     CO_TEXT_SUBTITLE,
     CO_TEXT_LINE0,
     CO_TEXT_LINE1,
+    CO_TEXT_LINE2,
+    CO_TEXT_LINE3,
     CO_TEXT_COUNT,
 };
+
+/* Fixed tileWidth per the text-adding schema (memory:
+ * feedback_text_add_workflow): short labels/names get 10 tiles, full
+ * description lines get 20. Never size a Text handle from
+ * GetStringTextLen(str) -- that recomputes a *different* width every
+ * redraw depending on what string happens to be current, which shifts
+ * where neighboring handles' VRAM ranges start and corrupts them. */
+#define CO_TEXT_WIDTH_SHORT 10
+#define CO_TEXT_WIDTH_LINE 20
 
 /* Class-affinity row layout (page 4): local tile y of the first row and
  * the spacing between rows, in the gUiTmScratchA/C page-region coordinate
@@ -384,20 +451,63 @@ enum {
  * below), outside this rect entirely, which is why the header survives
  * page/commander slides untouched, exactly like statscreen.c's own left
  * panel survives its (mirror-image, portrait-on-the-left) page slides. */
-#define CO_PAGE_X 1
-#define CO_PAGE_Y 2
-#define CO_PAGE_W 18
-#define CO_PAGE_H 18
+#define CO_PAGE_X 0
+#define CO_PAGE_Y 0
+#define CO_PAGE_W 19
+#define CO_PAGE_H 20
 
 /* Portrait + name, right of the page-content area (see CO_PAGE_X/_W). */
-#define CO_PORTRAIT_X (CO_PAGE_X + CO_PAGE_W)
+#define CO_PORTRAIT_X (CO_PAGE_X + CO_PAGE_W+1)
 
-static void CoScreen_PutText(int slot, u16* tm, int color, const char* str)
+
+
+/* Text-adding schema (memory: feedback_text_add_workflow), steps 4-9 per
+ * string: (4) InitText with a fixed tileWidth (also clears the handle);
+ * (6) Text_SetParams for x-offset/color; (7) Text_DrawString the string,
+ * fetched only via GetStringFromIndex, never a raw literal; (8)
+ * TileMap_FillRect to erase the destination tiles the string will land
+ * on; (9) PutText to place it. Steps 1-2 (texts.txt entry +
+ * GetStringFromIndex) are satisfied by every caller passing a MSG_ id.
+ * Step 3 (InitSystemTextFont/ResetText) happens once in CoScreen_Setup,
+ * not per string. */
+static void CoScreen_PutText(int slot, u16* tm, int tileWidth, int color, int msgId)
 {
     struct Text* text = &gStatScreen.text[slot];
 
-    InitText(text, (GetStringTextLen(str) + 8) / 8);
-    PutDrawText(text, tm, color, 0, 0, str);
+    InitText(text, tileWidth);
+    Text_SetParams(text, 0, color);
+    Text_DrawString(text, GetStringFromIndex(msgId));
+    TileMap_FillRect(tm, tileWidth, 2, 0);
+    PutText(text, tm);
+}
+
+/* Vanilla's own answer to "how do you draw a multi-line string": ONE
+ * texts.txt entry holds the whole block with [LF] separating lines (not
+ * one entry per line) -- Text_DrawString/Text_DrawStringASCII
+ * (src/fontgrp.c) stop at the first [LF] they hit, and PutText only ever
+ * places a single row, so a multi-line source string still needs one
+ * struct Text handle per line. PrintStringToTexts (src/scene.c, used by
+ * the dialogue box) is the vanilla helper that reconciles the two: it
+ * walks the single source string, and on each [LF] PutTexts whatever
+ * accumulated in the current line's handle before moving to the next
+ * handle in the array. tm here is line 0's destination; PrintStringToTexts
+ * advances by a tilemap row pair (0x40) per line internally. */
+static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
+{
+    struct Text* texts[4];
+    int i;
+
+    for (i = 0; i < 4; ++i) {
+        struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + i];
+
+        InitText(text, CO_TEXT_WIDTH_LINE);
+        Text_SetParams(text, 0, color);
+        texts[i] = text;
+    }
+
+    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, 4 * 2, 0);
+
+    PrintStringToTexts(texts, GetStringFromIndex(msgId), tm, 4);
 }
 
 static void CoScreen_DrawHeader(void)
@@ -405,10 +515,10 @@ static void CoScreen_DrawHeader(void)
     const struct CoDefinition* co = GetCoDefinition(gCoScreen.coId);
     int fid = co->faceId;
 
-    PutFace80x72(NULL, gBG2TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X, 1), fid, 0x4E0, 11);
+    PutFace80x72(NULL, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X+1, 1), fid, 0x280, 11);
     DrawUiFrame(
-        BG_GetMapBuffer(3),            // back BG
-        0x13, 0, 11, 11, TILEREF(0, 0), 2); // style 
+        BG_GetMapBuffer(2),            // back BG
+        0x13, 0, 12, 11, TILEREF(0, 0), 2); // style
 
     if (GetPortraitData(fid)->img)
         ApplyPalette(Pal_FaceDisplayPortrait, 2);
@@ -416,7 +526,8 @@ static void CoScreen_DrawHeader(void)
         ApplyPalette(Pal_FaceDisplayGenericCard, 2);
 
     EnablePaletteSync();
-    CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X+1, 10), TEXT_COLOR_SYSTEM_WHITE, co->name);
+    CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X + 2, 10),
+        CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_WHITE, co->nameMsg); // CoScreen_GetCoName
 }
 
 /* Everything below draws into the gUiTmScratchA/C page-region scratch
@@ -427,76 +538,67 @@ static void CoScreen_DrawHeader(void)
 
 static void CoScreen_DrawPageInfo(const struct CoDefinition* co)
 {
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), TEXT_COLOR_SYSTEM_GOLD, "Info");
-    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), TEXT_COLOR_SYSTEM_BLUE, co->title);
-    CoScreen_PutText(CO_TEXT_LINE0, gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->infoLine1);
-    CoScreen_PutText(CO_TEXT_LINE1, gUiTmScratchA + TILEMAP_INDEX(0, 6), TEXT_COLOR_SYSTEM_WHITE, co->infoLine2);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_INFO);
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->titleMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, 4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg);
 }
 
 static void CoScreen_DrawPagePower(const struct CoDefinition* co)
 {
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), TEXT_COLOR_SYSTEM_GOLD, "CO Power");
-    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), TEXT_COLOR_SYSTEM_BLUE, co->powerName);
-    CoScreen_PutText(CO_TEXT_LINE0, gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->powerDesc1);
-    CoScreen_PutText(CO_TEXT_LINE1, gUiTmScratchA + TILEMAP_INDEX(0, 6), TEXT_COLOR_SYSTEM_WHITE, co->powerDesc2);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_POWER);
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->powerNameMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, 4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg);
 }
 
 static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
 {
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), TEXT_COLOR_SYSTEM_GOLD, "Super CO Power");
-    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(0, 2), TEXT_COLOR_SYSTEM_BLUE, co->superPowerName);
-    CoScreen_PutText(CO_TEXT_LINE0, gUiTmScratchA + TILEMAP_INDEX(0, 4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDesc1);
-    CoScreen_PutText(CO_TEXT_LINE1, gUiTmScratchA + TILEMAP_INDEX(0, 6), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDesc2);
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_SUPER);
+    CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, 2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, 4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
 }
+#define BAR_VRAM_WIDTH 5
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
 {
-    int diff = total - base;
-
     // PutNumberOrBlank(gUiTmScratchA + TILEMAP_INDEX(x, y),
         // (base == max) ? TEXT_COLOR_SYSTEM_GREEN : TEXT_COLOR_SYSTEM_BLUE, base);
 
-    // PutNumberBonus(diff, gUiTmScratchA + TILEMAP_INDEX(x + 1, y));
+    // PutNumberBonus(total - base, gUiTmScratchA + TILEMAP_INDEX(x + 1, y));
 
-    if (total > 30)
-    {
-        total = 30;
-        diff = total - base;
-    }
+    // if (total > 30)
+        // total = 30;
 
-    DrawStatBarGfx(0x480 + num*6, 6,
-        gUiTmScratchC + TILEMAP_INDEX(x - 2, y + 1),
-        TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, base * 41 / 30, diff * 41 / 30);
+    /* The whole bar is filled yellow, then DrawStatBarGfxCo (src/statbar.c)
+     * overlays green from the left (total above base) or red from the
+     * right (total below base) to show how far off base total is. */
+    DrawStatBarGfxCo(0x1C0 + num*BAR_VRAM_WIDTH, BAR_VRAM_WIDTH,
+        gUiTmScratchB + TILEMAP_INDEX(x - 2, y + 1),
+        TILEREF(0, STATSCREEN_BGPAL_6), max, total, base);
+        // TILEREF(0, STATSCREEN_BGPAL_6), max * 41 / 30, total * 41 / 30, base * 41 / 30);
 }
 static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 {
     int i;
     int y = CO_AFFINITY_ROW_Y0;
 
-    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(0, 0), TEXT_COLOR_SYSTEM_GOLD, "Class Affinity");
-
-    /* Bars are all half-filled for now (base == total, half of max) --
-     * real per-class affinity values aren't wired up yet. DrawStatWithBar
-     * (src/statscreen.c) needs a small unique `num` per simultaneously
-     * visible bar (it owns num*6 VRAM tiles for its bar graphic), which
-     * the row index i provides. */
+    CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(2, 0), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_AFFINITY);
      
     // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green. 
-    u8 val[CO_AFFINITY_ROW_MAX] = { 12, 8, 14, 6, 16, 4, 22, 0 } ;
-    // u8 val1[CO_AFFINITY_ROW_MAX] = { 12, 8, 14, 6, 16, 4, 22, 0 } ;
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 5, val[i], 20);
-
+        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 30, co->affinities[i].rating, 30);
         y += CO_AFFINITY_ROW_STEP;
     }
+    int offset = i; 
+    y = CO_AFFINITY_ROW_Y0; 
+    for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
+        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30, co->affinities[i+offset].rating, 30);
+        y += CO_AFFINITY_ROW_STEP;
+    }
+    
 }
 
 /* Class SMS icons for the affinity page -- OBJ sprites, so they need
  * redrawing every frame (see gProcScr_CoPageNumCtrl below), not just once
- * like the tile-based bars above. PutUnitSpriteForClassId (src/bmudisp.c)
- * is used instead of PutUiUnitSprite because there's no real struct Unit
- * for a purchasable class definition -- PutUnitSpriteForClassId is the
- * same SMS icon draw, just keyed by class id directly (see its other
- * callers: src/uisupport.c, src/prep_itemscreen.c, src/bonusclaim.c). */
+ * like the tile-based bars above. */
 static void CoScreen_DrawAffinitySprites(ProcPtr proc)
 {
     const struct CoDefinition* co;
@@ -522,12 +624,26 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,
             CO_AFFINITY_ICON_TILE_X * 8,
-            (CO_PAGE_Y + y) * 8,
+            (CO_PAGE_Y + y) * 8 + gStatScreen.yDispOff,
             0xC800,
             co->affinities[i].classId);
 
         y += CO_AFFINITY_ROW_STEP;
     }
+    int offset = i; 
+    y = CO_AFFINITY_ROW_Y0;
+
+    for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
+        PutUnitSpriteForClassId(0,
+            (CO_AFFINITY_ICON_TILE_X+10) * 8 + gStatScreen.xDispOff,
+            (CO_PAGE_Y + y) * 8 + gStatScreen.yDispOff,
+            0xC800,
+            co->affinities[i+offset].classId);
+
+        y += CO_AFFINITY_ROW_STEP;
+    }
+    
+    
     ForceSyncUnitSpriteSheet();
 }
 
@@ -536,9 +652,20 @@ static void CoScreen_DrawPage(void)
     const struct CoDefinition* co = GetCoDefinition(gCoScreen.coId);
 
     ResetText();
+    CoScreen_DrawHeader();
 
     CpuFastFill(0, gUiTmScratchA, sizeof(u16) * 0x280);
+    CpuFastFill(0, gUiTmScratchB, sizeof(u16) * 0x280);
     CpuFastFill(0, gUiTmScratchC, sizeof(u16) * 0x240);
+
+    /* Page-content border. Drawn into gUiTmScratchC (scratch-local coords,
+     * i.e. offset by -CO_PAGE_X/-CO_PAGE_Y from the on-screen position) so
+     * it survives the page-slide's fill+copy cycle and CoScreen_DrawPage's
+     * own scratch clear above -- drawing straight into gBG2TilemapBuffer
+     * here would get wiped out the next time either of those run. */
+    DrawUiFrame(
+        gUiTmScratchC,                  // back BG
+        0, 1, 19, 17, TILEREF(0, 0), 0); // style
 
     switch (gStatScreen.page) {
     case CO_SCREEN_PAGE_INFO:
@@ -587,13 +714,13 @@ static void CoPageSlide_OnLoop(struct StatScreenEffectProc* proc)
     int off;
     int len, dstOff, srcOff;
 
-    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H, 0);
-    TileMap_FillRect(gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H, 0);
+    TileMap_FillRect(gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W-1, CO_PAGE_H, 0);
+    TileMap_FillRect(gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W-1, CO_PAGE_H, 0);
+    TileMap_FillRect(gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W-1, CO_PAGE_H, 0);
 
     off = sCoPageSlideOffsetLut[proc->timer];
 
     if (off == INT8_MAX) {
-        CoScreen_DrawHeader();
         CoScreen_DrawPage();
 
         proc->timer++;
@@ -616,6 +743,11 @@ static void CoPageSlide_OnLoop(struct StatScreenEffectProc* proc)
     TileMap_CopyRect(
         gUiTmScratchA + srcOff,
         gBG0TilemapBuffer + dstOff + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y),
+        len, CO_PAGE_H);
+        
+    TileMap_CopyRect(
+        gUiTmScratchB + srcOff,
+        gBG1TilemapBuffer + dstOff + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y),
         len, CO_PAGE_H);
 
     TileMap_CopyRect(
@@ -683,56 +815,89 @@ static void CoCommanderFade_InitOut(struct StatScreenEffectProc* proc)
 
     proc->timer = 0;
 
-    SetBlendTargetA(1, 1, 1, 1, 1);
+    // SetBlendTargetA(1, 1, 1, 1, 1);
+
+    /* Same vertical bounce as vanilla's UnitSlide_InitFadeOut: the panel
+     * drifts off toward the direction the new commander is "coming from"
+     * while it blends to black. proc->direction is set by
+     * CoStartCommanderFade from whichever of DPAD_UP/DOWN triggered this. */
+    if (proc->direction > 0) {
+        proc->yDispInit  = 0;
+        proc->yDispFinal = -60;
+    } else {
+        proc->yDispInit  = 0;
+        proc->yDispFinal = +60;
+    }
 }
 
 static void CoCommanderFade_OutLoop(struct StatScreenEffectProc* proc)
 {
-    SetBlendConfig(3, 0, 0, proc->timer);
+    // SetBlendConfig(3, 0, 0, proc->timer);
+
+    gStatScreen.yDispOff = Interpolate(2, proc->yDispInit, proc->yDispFinal, proc->timer, 0x10);
 
     proc->timer += 2;
 
     if (proc->timer > 0x10) {
         proc->timer = 0x10;
-        SetBlendConfig(3, 0, 0, proc->timer);
+        // SetBlendConfig(3, 0, 0, proc->timer);
         Proc_Break(proc);
     }
 }
 
 static void CoCommanderFade_SetNewCo(struct StatScreenEffectProc* proc)
 {
-    CoScreen_DrawHeader();
     CoScreen_DrawPage();
 
     TileMap_CopyRect(gUiTmScratchA, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
+    TileMap_CopyRect(gUiTmScratchB, gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
     TileMap_CopyRect(gUiTmScratchC, gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
 
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
 }
 
 static void CoCommanderFade_InitIn(struct StatScreenEffectProc* proc)
 {
     proc->timer = 0x10;
+
+    /* New content bounces in from the opposite side it faded out toward. */
+    if (proc->direction > 0) {
+        proc->yDispInit  = +60;
+        proc->yDispFinal = 0;
+    } else {
+        proc->yDispInit  = -60;
+        proc->yDispFinal = 0;
+    }
 }
 
 static void CoCommanderFade_InLoop(struct StatScreenEffectProc* proc)
 {
+    gStatScreen.yDispOff = Interpolate(5, proc->yDispInit, proc->yDispFinal, 0x10 - proc->timer, 0x10);
+
     proc->timer -= 2;
 
     if (proc->timer <= 0) {
         proc->timer = 0;
-        SetBlendConfig(3, 0, 0, 0);
-        SetDefaultColorEffects();
+        gStatScreen.yDispOff = 0;
+        // SetBlendConfig(3, 0, 0, 0);
+        // SetDefaultColorEffects();
         gStatScreen.inTransition = FALSE;
         sCoCommanderFading = FALSE;
         Proc_Break(proc);
         return;
     }
 
-    SetBlendConfig(3, 0, 0, proc->timer);
+    // SetBlendConfig(3, 0, 0, proc->timer);
 }
 
 CONST_DATA struct ProcCmd gProcScr_CoCommanderFade[] = {
+    /* Proc_Start runs the script synchronously up to its first blocking
+     * command before returning, so without this sleep,
+     * CoCommanderFade_InitOut would read proc->direction before
+     * CoStartCommanderFade (below) gets a chance to set it -- same
+     * leading PROC_SLEEP(0) vanilla's gProcScr_SSUnitSlide uses ahead of
+     * UnitSlide_InitFadeOut for the same reason. */
+    PROC_SLEEP(0),
     PROC_CALL(CoCommanderFade_InitOut),
     PROC_REPEAT(CoCommanderFade_OutLoop),
     PROC_CALL(CoCommanderFade_SetNewCo),
@@ -742,14 +907,17 @@ CONST_DATA struct ProcCmd gProcScr_CoCommanderFade[] = {
     PROC_END,
 };
 
-static void CoStartCommanderFade(struct Proc* parent)
+static void CoStartCommanderFade(int direction, struct Proc* parent)
 {
+    struct StatScreenEffectProc* proc;
+
     if (Proc_Find(gProcScr_CoCommanderFade))
         return;
 
     PlaySoundEffect(SONG_C8);
 
-    Proc_StartBlocking(gProcScr_CoCommanderFade, parent);
+    proc = (void*) Proc_StartBlocking(gProcScr_CoCommanderFade, parent);
+    proc->direction = direction;
 }
 
 enum
@@ -863,6 +1031,8 @@ void CoInfoCtrl_UpdatePageNum(struct StatScreenPageNameProc* proc)
         gObject_8x8, TILEREF(chr, STATSCREEN_OBJPAL_4) + OAM2_LAYER(3) + gStatScreen.page + 1);
 }
 
+static void CoScreen_UpdateBgScroll(ProcPtr proc);
+
 CONST_DATA struct ProcCmd gProcScr_CoPageNumCtrl[] = {
     PROC_CALL(CoInfoCtrl_OnInit),
 
@@ -874,9 +1044,124 @@ PROC_LABEL(0),
     PROC_CALL(CoInfoCtrl_UpdatePageNum),
     // PROC_CALL(PageNumCtrl_DisplayMuPlatform),
     PROC_CALL(CoScreen_DrawAffinitySprites),
+    PROC_CALL(CoScreen_UpdateBgScroll),
 
     PROC_GOTO(0),
 
+    PROC_END,
+};
+
+/* Full 16-color bank for the CO stat bars (src/statbar.c's
+ * DrawStatBarCo/DrawStatBarGfxCo). Was a single unreadable, comma-less
+ * (and therefore non-compiling) line of raw bytes -- rewritten as one
+ * RGB(r, g, b) entry per color (see include/gba/defines.h), decoded
+ * little-endian pair by pair from the original bytes, with the original
+ * raw u16 value kept as a comment for cross-reference. This bank's index
+ * values are the raw 4bpp pixel values src/statbar.c's DrawStatBar*Col
+ * helpers write into the bar bitmap: 3/4/14 border/shadow/unfilled
+ * (DrawStatBarUnfilledCol/LeftBorder/RightBorder/Shadow), 1/5 yellow fill
+ * (DrawStatBarFilledCol), 12/13 green "capped" fill (DrawStatBarCappedCol),
+ * 10/11 red "minus" fill (DrawStatBarMinusCol). */
+static const u16 NewUiBarPal[] = {
+    RGB(19, 26, 25), // 0x6753
+    RGB(29, 30, 31), // 0x7FDD
+    RGB(23, 25, 27), // 0x6F37
+    RGB(16, 17, 19), // 0x4E30
+    RGB(10,  9,  8), // 0x212A
+    RGB(30, 29, 14), // 0x3BBE
+    RGB(23, 19,  6), // 0x1A77
+    RGB(17, 13,  6), // 0x19B1
+    RGB(31, 15,  4), // 0x11FF
+    RGB( 2, 15, 31), // 0x7DE2
+    RGB(31, 0, 31), // 0x76F5
+    RGB(31, 0, 0), // 0x6238
+    RGB( 3, 23,  2), // 0x0AE3
+    RGB(15, 31, 18), // 0x4BEF
+    RGB(10, 10, 22), // 0x594A
+    RGB( 0,  0,  0), // 0x0000
+};
+
+void UnpackNewUiBarPalette(int palId)
+{
+    if (palId < 0)
+        palId = STATSCREEN_BGPAL_6;
+
+    ApplyPalette(NewUiBarPal, palId);
+}
+
+
+/* BG3 diagonally-scrolling background (ported from Pokemblem's
+ * ChallengeRunMenu frlgUiFrame, see graphics/bg/frlgUiFrame.png and its
+ * Makefile rule). frlgUiFrame_map is a flat, uncompressed 32x32 array of
+ * bare tile indices (0-7, no palette/flip bits) -- built by hand here
+ * rather than via CallARM_FillTileRect, since that decodes the engine's
+ * compressed native TSA format (see memory: feedback_bgfill_offset_overflow),
+ * which this plain array isn't. Sits behind everything else on screen
+ * (lowest BG priority) and always fills the full 32x32-tile screen, so
+ * BG_SetPosition's hardware wraparound scrolls it seamlessly. */
+#define CO_BG_FRAME_PAL_SLOT 3
+#define CO_BG_FRAME_TILE_WIDTH 32
+#define CO_BG_FRAME_TILE_HEIGHT 32
+#define CO_BG_FRAME_TILE_BYTE_OFFSET 0x2000
+#define CO_BG_FRAME_TILE_INDEX_OFFSET (CO_BG_FRAME_TILE_BYTE_OFFSET / 0x20)
+static void CoScreen_LoadBgFrame(void)
+{
+    int x, y;
+
+    gLCDControlBuffer.bg3cnt.priority = 3;
+    BG_SetColorBpp(3, 4);
+
+    Decompress(frlgUiFrame_tiles, (void*)(VRAM + GetBackgroundTileDataOffset(3) + 0x2000));
+    ApplyPalette(frlgUiFrame_palette, CO_BG_FRAME_PAL_SLOT);
+
+    for (y = 0; y < CO_BG_FRAME_TILE_HEIGHT; ++y) {
+        for (x = 0; x < CO_BG_FRAME_TILE_WIDTH; ++x) {
+            gBG3TilemapBuffer[TILEMAP_INDEX(x, y)] =
+                (frlgUiFrame_map[y * CO_BG_FRAME_TILE_WIDTH + x] + CO_BG_FRAME_TILE_INDEX_OFFSET) | (CO_BG_FRAME_PAL_SLOT << 12);
+        }
+    }
+
+    gCoScreen.bgScrollTimer = 0;
+    BG_SetPosition(3, 0, 0);
+
+    BG_EnableSyncByMask(BG3_SYNC_BIT);
+}
+
+/* Called every frame (see gProcScr_CoPageNumCtrl) -- advances the diagonal
+ * scroll by half a pixel per frame on both axes (matching Pokemblem's own
+ * `0 - (timer >> 1)`), wrapping seamlessly since the BG3 tilemap already
+ * fills its full 32x32-tile (256x256px) screen. */
+static void CoScreen_UpdateBgScroll(ProcPtr proc)
+{
+    gCoScreen.bgScrollTimer++;
+
+    BG_SetPosition(3, -(gCoScreen.bgScrollTimer >> 1), -(gCoScreen.bgScrollTimer >> 1));
+}
+
+/* Vertical panel offset applied every frame from gStatScreen.yDispOff --
+ * same mechanism as statscreen.c's BgOffCtrl_OnLoop/gProcScr_SSBgOffsetCtrl,
+ * driven by the commander-fade's Interpolate calls above. BG0/BG1/BG2 carry
+ * the page content and portrait, so they scroll together; BG3 is the
+ * diagonal-scrolling frame background and has its own independent
+ * BG_SetPosition calls (CoScreen_UpdateBgScroll), so it's left alone. */
+static void CoBgOffCtrl_OnLoop(ProcPtr proc)
+{
+    /* No masking here -- BG_SetPosition's y is a u16 and the GBA's BG
+     * scroll register only latches the low 9 bits, so a negative
+     * yDispOff already wraps correctly via plain two's complement. An
+     * 8-bit mask (0xFF, as used elsewhere for values that stay small and
+     * positive) would drop the sign bit this needs and corrupt the
+     * direction/magnitude for one side of the +/-60 swing this proc
+     * actually reaches. */
+    int yBg = -gStatScreen.yDispOff;
+
+    BG_SetPosition(0, 0, yBg);
+    BG_SetPosition(1, 0, yBg);
+    BG_SetPosition(2, 0, yBg);
+}
+
+CONST_DATA struct ProcCmd gProcScr_CoBgOffsetCtrl[] = {
+    PROC_REPEAT(CoBgOffCtrl_OnLoop),
     PROC_END,
 };
 
@@ -914,6 +1199,7 @@ static void CoScreen_Setup(ProcPtr proc)
     LoadIconPalette(1, 0x13);
     LoadIconPalette(1, 0x14);
 
+
     /* Arrow/page-number OBJ graphics, same VRAM char offset
      * StatScreen_InitDisplay (src/statscreen.c) decompresses them to --
      * OBJPAL_4 itself is already populated by LoadGameCoreGfxLegacyFrame's
@@ -923,20 +1209,24 @@ static void CoScreen_Setup(ProcPtr proc)
     /* Stat-bar graphics palette -- DrawStatWithBar/DrawStatBarGfx
      * (src/statscreen.c) draw into STATSCREEN_BGPAL_6, same as
      * StatScreen_InitDisplay's own UnpackUiBarPalette call. */
-    UnpackUiBarPalette(STATSCREEN_BGPAL_6);
+    UnpackNewUiBarPalette(STATSCREEN_BGPAL_6);
+    // UnpackUiBarPalette(STATSCREEN_BGPAL_6);
 
-    
+    CoScreen_LoadBgFrame();
 
-    CoScreen_DrawHeader();
     CoScreen_DrawPage();
     EnablePaletteSync();
 
     TileMap_CopyRect(gUiTmScratchA, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
+    TileMap_CopyRect(gUiTmScratchB, gBG1TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
     TileMap_CopyRect(gUiTmScratchC, gBG2TilemapBuffer + TILEMAP_INDEX(CO_PAGE_X, CO_PAGE_Y), CO_PAGE_W, CO_PAGE_H);
 
-    BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
-
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
+    SetBlendTargetA(0, 0, 1, 0, 0); // transparent ui
+    SetBlendBackdropA(1);
+    SetBlendAlpha(11, 5);
     Proc_Start(gProcScr_CoPageNumCtrl, proc);
+    Proc_Start(gProcScr_CoBgOffsetCtrl, proc);
 }
 
 static void CoScreen_Teardown(ProcPtr proc)
@@ -965,26 +1255,32 @@ static void CoScreen_Teardown(ProcPtr proc)
 
 static void CoScreen_KeyListener(ProcPtr proc)
 {
+    u16 keys = gKeyStatusPtr->newKeys; 
+    if (!keys) 
+    { 
+        keys = gKeyStatusPtr->repeatedKeys; 
+    } 
     if (gKeyStatusPtr->newKeys & B_BUTTON) {
         Proc_Break(proc);
         return;
     }
 
+
     if (gStatScreen.inTransition)
         return;
 
-    if (gKeyStatusPtr->repeatedKeys & DPAD_LEFT) {
+    if (keys & DPAD_LEFT) {
         gStatScreen.page = (gStatScreen.page + CO_SCREEN_PAGE_COUNT - 1) % CO_SCREEN_PAGE_COUNT;
         CoStartSlide(DPAD_LEFT, proc);
-    } else if (gKeyStatusPtr->repeatedKeys & DPAD_RIGHT) {
+    } else if (keys & DPAD_RIGHT) {
         gStatScreen.page = (gStatScreen.page + 1) % CO_SCREEN_PAGE_COUNT;
         CoStartSlide(DPAD_RIGHT, proc);
-    } else if (gKeyStatusPtr->repeatedKeys & DPAD_UP) {
+    } else if (keys & DPAD_UP) {
         gCoScreen.coId = (gCoScreen.coId + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
-        CoStartCommanderFade(proc);
-    } else if (gKeyStatusPtr->repeatedKeys & DPAD_DOWN) {
+        CoStartCommanderFade(-1, proc);
+    } else if (keys & DPAD_DOWN) {
         gCoScreen.coId = (gCoScreen.coId + 1) % CoScreen_GetCoCount();
-        CoStartCommanderFade(proc);
+        CoStartCommanderFade(+1, proc);
     }
 }
 void CoInfo_BlackenScreen(void)

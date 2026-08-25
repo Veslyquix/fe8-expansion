@@ -4,6 +4,16 @@
  * before cpp). Migrated in-place from data/data_bg.s into .data.
  */
 
+#if FE8_CO_POWERS
+/* CO screen (src/power.c) BG3 diagonal-scrolling background, ported from
+ * Pokemblem's ChallengeRunMenu patch (frlgUiFrame) -- see
+ * graphics/bg/frlgUiFrame.png and the Makefile rule that regenerates its
+ * .4bpp/.fetsa.bin from it via scripts/gfxtools/repeating_bg_tsa.py. */
+u8 __attribute__((aligned(4))) frlgUiFrame_tiles[] = INCBIN_U8("graphics/bg/frlgUiFrame.4bpp.lz");
+u16 __attribute__((aligned(4))) frlgUiFrame_map[] = INCBIN_U16("graphics/bg/frlgUiFrame.fetsa.bin");
+u16 __attribute__((aligned(4))) frlgUiFrame_palette[] = INCBIN_U16("graphics/bg/frlgUiFrame.gbapal");
+#endif
+
 u8 __attribute__((aligned(4))) bg_House_tiles[] = INCBIN_U8("graphics/bg/bg_House.feimg2.bin.lz");
 u8 __attribute__((aligned(4))) bg_House_map[] = INCBIN_U8("graphics/bg/bg_House.fetsa2.bin");
 u16 __attribute__((aligned(4))) bg_House_palette[] = INCBIN_U16("graphics/bg/bg_House.gbapal");

@@ -1544,6 +1544,57 @@ void PutSpecialChar(u16 * tm, int color, int id)
     tm[0x20] = chr + 1;
 }
 
+#if FE8_PURCHASE_GENERICS
+/* PutNumber/PutSpecialChar allocate each (color, id) special-char glyph
+ * into VRAM lazily, the first time that exact combination is drawn
+ * (GetSpecialCharChr/AddSpecialChar above) -- sSpecialCharStList is an
+ * append-only cache, so which glyphs are already resident (and therefore
+ * where the *next* one lands) depends on the history of what's been drawn
+ * this font generation. If one redraw happens to need fewer distinct
+ * digits than a previous one (e.g. "100" then "9"), whatever text gets
+ * InitText'd afterward ends up at a different VRAM offset than last time,
+ * and visibly jumps/glitches.
+ *
+ * PreallocateNumberGlyphs front-loads every digit (0-9 for both BIGNUM
+ * and SMALLNUM), DASH, PLUS, and SLASH for a given color into that cache
+ * up front, via the same GetSpecialCharChr used to serve PutSpecialChar --
+ * it never touches a tilemap/OAM destination, so nothing is placed on
+ * screen. Call once (per color actually used) right after
+ * ResetText/ResetTextFont, before any PutNumber calls for that screen, so
+ * every subsequent number redraw allocates from a fixed, already-resident
+ * set instead of growing the cache unpredictably. */
+void PreallocateCommonGlyphs(int color)
+{
+    static const u8 sNumberGlyphIds[] = {
+        TEXT_SPECIAL_BIGNUM_0, TEXT_SPECIAL_BIGNUM_1, TEXT_SPECIAL_BIGNUM_2, TEXT_SPECIAL_BIGNUM_3,
+        TEXT_SPECIAL_BIGNUM_4, TEXT_SPECIAL_BIGNUM_5, TEXT_SPECIAL_BIGNUM_6, TEXT_SPECIAL_BIGNUM_7,
+        TEXT_SPECIAL_BIGNUM_8, TEXT_SPECIAL_BIGNUM_9,
+        TEXT_SPECIAL_SMALLNUM_0, TEXT_SPECIAL_SMALLNUM_1, TEXT_SPECIAL_SMALLNUM_2, TEXT_SPECIAL_SMALLNUM_3,
+        TEXT_SPECIAL_SMALLNUM_4, TEXT_SPECIAL_SMALLNUM_5, TEXT_SPECIAL_SMALLNUM_6, TEXT_SPECIAL_SMALLNUM_7,
+        TEXT_SPECIAL_SMALLNUM_8, TEXT_SPECIAL_SMALLNUM_9,
+        TEXT_SPECIAL_DASH, TEXT_SPECIAL_PLUS, TEXT_SPECIAL_SLASH, TEXT_SPECIAL_G, TEXT_SPECIAL_COLON,
+        TEXT_SPECIAL_DOT, TEXT_SPECIAL_ARROW, TEXT_SPECIAL_HEART, TEXT_SPECIAL_PERCENT, TEXT_SPECIAL_BONUS_MINUS
+    };
+    int i;
+
+    for (i = 0; i < ARRAY_COUNT(sNumberGlyphIds); ++i)
+        GetSpecialCharChr(color, sNumberGlyphIds[i]);
+}
+
+void PreallocateNumberGlyphs(int color)
+{
+    static const u8 sNumberGlyphIds[] = {
+        TEXT_SPECIAL_BIGNUM_0, TEXT_SPECIAL_BIGNUM_1, TEXT_SPECIAL_BIGNUM_2, TEXT_SPECIAL_BIGNUM_3,
+        TEXT_SPECIAL_BIGNUM_4, TEXT_SPECIAL_BIGNUM_5, TEXT_SPECIAL_BIGNUM_6, TEXT_SPECIAL_BIGNUM_7,
+        TEXT_SPECIAL_BIGNUM_8, TEXT_SPECIAL_BIGNUM_9,
+    };
+    int i;
+
+    for (i = 0; i < ARRAY_COUNT(sNumberGlyphIds); ++i)
+        GetSpecialCharChr(color, sNumberGlyphIds[i]);
+}
+#endif
+
 void PutNumberExt(u16 *tm, int color, int number, int id_zero)
 {
     if (number == 0) {

@@ -4,61 +4,147 @@
 #include "variables.h"
 
 /* These should related to status-bar gfx for stat-screen */
-
-void UnusedDrawOutline(u8 *buf, int bufWidth, int col)
+#if FE8_CO_POWERS
+enum statBarTileRows {
+    SB_bonusOutlineTop,
+    SB_outlineTop,
+    SB_highlight,
+    SB_fill,
+    // SB_fill2,
+    SB_outlineBottom,
+    SB_bonusOutlineShadow,
+};
+#define OUTLINE_COL_ID 4 // 4 
+#define SHADOW_COL_ID 4 // 4 
+void DrawStatBarCappedCol(u8 *buf, int bufWidth, int col)
 {
-    buf[0 * bufWidth + col] = 4;
-    buf[1 * bufWidth + col] = 4;
-    buf[2 * bufWidth + col] = 4;
-    buf[3 * bufWidth + col] = 4;
-    buf[4 * bufWidth + col] = 4;
+    buf[SB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineTop * bufWidth + col] = 13;
+    buf[SB_highlight * bufWidth + col] = 13;
+    buf[SB_fill * bufWidth + col] = 12;
+    // buf[SB_fill2 * bufWidth + col] = 12;
+}
+void DrawStatBarMinusCol(u8 *buf, int bufWidth, int col)
+{
+    // buf[SB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    // buf[SB_outlineTop * bufWidth + col] = 10;
+    // buf[SB_highlight * bufWidth + col] = 11;
+    // buf[SB_fill * bufWidth + col] = 11;
+    
+    buf[SB_bonusOutlineTop * bufWidth + col] = 0;
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = 10;
+    buf[SB_fill * bufWidth + col] = 11;
+    // buf[SB_fill2 * bufWidth + col] = 10;
 }
 
-void DrawStatBarLeftBorder(u8 *buf, int bufWidth, int col)
-{
-    buf[0 * bufWidth + col] = 4;
-    buf[1 * bufWidth + col] = 4;
-    buf[2 * bufWidth + col] = 4;
-    buf[3 * bufWidth + col] = 4;
-}
-
-void DrawStatBarShadow(u8 *buf, int bufWidth, int col)
-{
-    buf[1 * bufWidth + col] = 4;
-    buf[2 * bufWidth + col] = 4;
-    buf[3 * bufWidth + col] = 4;
-    buf[4 * bufWidth + col] = 4;
-}
-
-void DrawStatBarRightBorder(u8 *buf, int bufWidth, int col)
-{
-    buf[0 * bufWidth + col] = 4;
-    buf[1 * bufWidth + col] = 4;
-    buf[2 * bufWidth + col] = 4;
-    buf[3 * bufWidth + col] = 4;
-    buf[4 * bufWidth + col] = 4;
-}
 
 void DrawStatBarUnfilledCol(u8 *buf, int bufWidth, int col)
 {
-    buf[0 * bufWidth + col] = 4;
-    buf[1 * bufWidth + col] = 14;
-    buf[2 * bufWidth + col] = 3;
-    buf[3 * bufWidth + col] = 4;
-    buf[4 * bufWidth + col] = 4;
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = 14;
+    buf[SB_fill * bufWidth + col] = 3;
+    // buf[SB_fill2 * bufWidth + col] = 3;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
 }
 
 void DrawStatBarFilledCol(u8 *buf, int bufWidth, int col)
 {
-    buf[1 * bufWidth + col] = 1;
-    buf[2 * bufWidth + col] = 5;
+    buf[SB_highlight * bufWidth + col] = 1;
+    buf[SB_fill * bufWidth + col] = 5;
+    // buf[SB_fill2 * bufWidth + col] = 5;
 }
+
+void DrawStatBarRightBorderMinus(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_outlineTop * bufWidth + col] = 0;
+    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    // buf[SB_fill2 * bufWidth + col] = 4;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+}
+
+void DrawStatBarLeftBorderPlus(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    // buf[SB_fill2 * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineBottom * bufWidth + col] =OUTLINE_COL_ID;
+}
+
+#else 
+enum statBarTileRows {
+    SB_bonusOutlineTop,
+    SB_highlight,
+    SB_fill,
+    SB_bonusOutlineBottom,
+    SB_bonusOutlineShadow,
+};
 
 void DrawStatBarCappedCol(u8 *buf, int bufWidth, int col)
 {
-    buf[1 * bufWidth + col] = 13;
-    buf[2 * bufWidth + col] = 12;
+    buf[SB_highlight * bufWidth + col] = 13;
+    buf[SB_fill * bufWidth + col] = 12;
 }
+
+void DrawStatBarUnfilledCol(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = 14;
+    buf[SB_fill * bufWidth + col] = 3;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+}
+
+void DrawStatBarFilledCol(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_highlight * bufWidth + col] = 1;
+    buf[SB_fill * bufWidth + col] = 5;
+}
+
+#endif 
+
+void UnusedDrawOutline(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+}
+
+void DrawStatBarLeftBorder(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+}
+
+void DrawStatBarShadow(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+}
+
+void DrawStatBarRightBorder(u8 *buf, int bufWidth, int col)
+{
+    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+}
+
+
+
+
 
 void DrawStatBar(
     int tile, int padding, int bufWidth, int barWidth, int progressLength, int cappedLength)
@@ -94,3 +180,82 @@ void DrawStatBarGfx(
     DrawStatBar(tile, 2, bufWidth, barWidth, progressLength, cappedLength);
     PutAppliedBitmap(buf, tileBase + (tile & 0x3FF), bufWidth, 1);
 }
+
+#if FE8_CO_POWERS
+
+
+/* CO screen variant of DrawStatBar: instead of a single yellow fill up to
+ * some length, the WHOLE bar is filled yellow (DrawStatBarFilledCol), then
+ * overlaid with a run of colored columns showing how `progressLength`
+ * compares to `base`:
+ *   - progressLength > base: the first (progressLength - base) columns,
+ *     starting from the LEFT edge and moving right, are overlaid green
+ *     (DrawStatBarCappedCol) -- the stat's bonus over its base.
+ *   - progressLength < base: the last (base - progressLength) columns,
+ *     starting from the RIGHT edge and moving left, are overlaid red
+ *     (DrawStatBarMinusCol) -- the stat's shortfall below its base.
+ *   - progressLength == base: no overlay, the bar is plain yellow.
+ * Both overlay lengths are clamped to barWidth (a stat arbitrarily far
+ * from its base still only covers the visible bar). */
+void DrawStatBarCo(
+    int tile, int padding, int bufWidth, int barWidth, int progressLength, int base)
+{
+    int i;
+    u8 *buf = gGenericBuffer;
+    CpuFastFill(0, buf, 0x40 * bufWidth);
+
+    for (i = 1; i < barWidth + 1; i++)
+        DrawStatBarUnfilledCol(buf, 8 * bufWidth, i + (padding + 1));
+
+    
+    if (progressLength > base) { 
+    DrawStatBarLeftBorderPlus(buf, 8 * bufWidth, padding + 1);
+    DrawStatBarRightBorder(buf, 8 * bufWidth, padding + barWidth + 2);
+    } 
+    else { 
+    DrawStatBarLeftBorder(buf, 8 * bufWidth, padding + 1);
+    DrawStatBarRightBorderMinus(buf, 8 * bufWidth, padding + barWidth + 2);
+    } 
+    
+    DrawStatBarShadow(buf, 8 * bufWidth, padding + barWidth + 3);
+
+    for (i = 0; i < barWidth; i++)
+        DrawStatBarFilledCol(buf, 8 * bufWidth, i + (padding + 2));
+
+    if (progressLength > base)
+    {
+        int bonus = progressLength - base;
+
+        if (bonus > barWidth)
+            bonus = barWidth;
+
+        for (i = 0; i < bonus; i++)
+            DrawStatBarCappedCol(buf, 8 * bufWidth, i + (padding + 2));
+    }
+    else if (progressLength < base)
+    {
+        int shortfall = base - progressLength;
+
+        if (shortfall > barWidth)
+            shortfall = barWidth;
+
+        for (i = 0; i < shortfall; i++)
+            DrawStatBarMinusCol(buf, 8 * bufWidth, (barWidth - 1 - i) + (padding + 2));
+    }
+
+    ApplyBitmap(buf, (void*)(32 * tile + VRAM), bufWidth, 1);
+}
+
+// bufWidth: The width of the allocated buffer canvas
+// barWidth: The width of the bar itself (in tiles)
+// progressLength: The stat's current value, scaled to bar columns
+// base: The stat's reference/base value, scaled to bar columns
+void DrawStatBarGfxCo(
+    int tile, int bufWidth, u16* buf, int tileBase,
+    int barWidth, int progressLength, int base)
+{
+    DrawStatBarCo(tile, 2, bufWidth, barWidth, progressLength, base);
+    PutAppliedBitmap(buf, tileBase + (tile & 0x3FF), bufWidth, 1);
+}
+#endif
+

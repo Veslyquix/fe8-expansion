@@ -40319,3 +40319,102 @@ Liz[.][X]
 
 ## MSG_TERRAIN_CAMP
 Camp[X]
+
+## MSG_CO_LABEL_INFO
+Info[X]
+
+## MSG_CO_LABEL_POWER
+CO Power[X]
+
+## MSG_CO_LABEL_SUPER
+Super CO Power[X]
+
+## MSG_CO_LABEL_AFFINITY
+Class Affinity[X]
+
+## MSG_CO_FRANCIS_NAME
+Francis[.][X]
+
+## MSG_CO_FRANCIS_TITLE
+The Steadfast Commander[.][X]
+
+## MSG_CO_FRANCIS_INFO
+A stalwart tactician who leads[LF]
+from the front and never[LF]
+leaves a unit behind.[.][X]
+
+## MSG_CO_FRANCIS_POWER_NAME
+Barrage[.][X]
+
+## MSG_CO_FRANCIS_POWER_DESC
+All of Francis's units heal[LF]
+10 HP.[X]
+
+## MSG_CO_FRANCIS_SUPER_NAME
+War Council[.][X]
+
+## MSG_CO_FRANCIS_SUPER_DESC
+All of Francis's units are[LF]
+fully healed and deal[LF]
+more damage.[.][X]
+
+## MSG_CO_ONEILL_NAME
+O'Neill[.][X]
+
+## MSG_CO_ONEILL_TITLE
+The Reckless Brawler[X]
+
+## MSG_CO_ONEILL_INFO
+A brash commander who trusts[LF]
+raw power over careful[LF]
+planning.[.][X]
+
+## MSG_CO_ONEILL_POWER_NAME
+Barrage[.][X]
+
+## MSG_CO_ONEILL_POWER_DESC
+All of O'Neill's units deal[LF]
+1 extra damage for the turn.[X]
+
+## MSG_CO_ONEILL_SUPER_NAME
+Brutal Barrage[X]
+
+## MSG_CO_ONEILL_SUPER_DESC
+All of O'Neill's units deal[LF]
+2 extra damage for the turn.[X]
+
+## MSG_PURCHASE_GENERIC_PAGE
+Page[X]
+
+## MSG_PURCHASE_GENERIC_FUNDS
+ Funds:[.][X]
+
+## MSG_PURCHASE_GENERIC_COST
+ Cost:[X]
+
+## MSG_PURCHASE_GENERIC_BASE
+Base[X]
+
+## MSG_PURCHASE_GENERIC_STAT_HP
+HP[X]
+
+## MSG_PURCHASE_GENERIC_STAT_POW
+Pow[.][X]
+
+## MSG_PURCHASE_GENERIC_STAT_SKL
+Skl[.][X]
+
+## MSG_PURCHASE_GENERIC_STAT_SPD
+Spd[.][X]
+
+## MSG_PURCHASE_GENERIC_STAT_DEF
+Def[.][X]
+
+## MSG_PURCHASE_GENERIC_STAT_RES
+Res[.][X]
+
+## MSG_PURCHASE_GENERIC_STAT_MOV
+Mov[.][X]
+
+## MSG_PURCHASE_GENERIC_CAPTURE
+Capture[.][X]

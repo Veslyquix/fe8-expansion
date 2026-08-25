@@ -491,6 +491,17 @@ include release.mk
 # contiguous indices 0-13 and clobber that reserved gap.
 graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal &: graphics/convo_bg/kh.png scripts/convo_bg_to_source.py
 	$(PYTHON) scripts/convo_bg_to_source.py 224 $< graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal
+# frlgUiFrame (src/power.c's CO screen BG3 diagonal-scrolling background):
+# the source PNG holds exactly one repeat unit (a 32x32px / 4x4-tile block);
+# repeating_bg_tsa.py dedupes it to its unique 8x8 tiles and tiles the
+# resulting index pattern across a full 32x32-tile screen map. Verified
+# byte-identical to the original Pokemblem asset this was ported from.
+# Output named *.fetsa.bin (not *.tsa.bin) so it's swept by the existing
+# `-iname '*.fetsa*.bin'` clean glob below -- *.tsa.bin has no such rule
+# (see bg_Serafew_Village.tsa.bin, a hand-authored/committed asset with no
+# generator, which a generic *.tsa.bin glob would delete with no way back).
+graphics/bg/frlgUiFrame.4bpp graphics/bg/frlgUiFrame.fetsa.bin &: graphics/bg/frlgUiFrame.png scripts/gfxtools/repeating_bg_tsa.py
+	$(PYTHON) scripts/gfxtools/repeating_bg_tsa.py graphics/bg/frlgUiFrame.png graphics/bg/frlgUiFrame.4bpp graphics/bg/frlgUiFrame.fetsa.bin
 # These DemonLight sprite images were compressed in the original ROM with a
 # minimum LZ match distance of 3 (gbagfx defaults to 2). Reproduce byte-identically.
 graphics/banim/dragonfx/Img_DemonLightSprites_087A5BA4.4bpp.lz: LZ_FLAGS := -mindist 3

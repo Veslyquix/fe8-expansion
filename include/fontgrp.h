@@ -233,6 +233,10 @@ void EndGreenText(void);
 // ??? AddSpecialChar(???);
 // ??? GetSpecialCharChr(???);
 void PutSpecialChar(u16 * tm, int color, int id);
+#if FE8_PURCHASE_GENERICS
+void PreallocateCommonGlyphs(int color);
+void PreallocateNumberGlyphs(int color);
+#endif
 // ??? PutNumberExt(???);
 void PutNumber(u16 * tm, int color, int number);
 void PutNumberOrBlank(u16 * tm, int color, int number);

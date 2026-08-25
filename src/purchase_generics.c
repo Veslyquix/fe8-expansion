@@ -7,6 +7,7 @@
 #include "constants/items.h"
 #include "constants/songs.h"
 #include "constants/terrains.h"
+#include "constants/msg.h"
 
 #include "bm.h"
 #include "banim_data.h"
@@ -863,7 +864,7 @@ static void DrawPurchaseGenericList(void)
         PutPurchaseGenericText(GENERICS_MENU_X+1, GENERICS_MENU_Y + 1 + i * 2, color, 7, GetPurchaseGenericClassName(def));
     }
 
-    PutPurchaseGenericText(22, 18, TEXT_COLOR_SYSTEM_GREEN, 4, "Page");
+    PutPurchaseGenericText(22, 18, TEXT_COLOR_SYSTEM_GREEN, 4, GetStringFromIndex(MSG_PURCHASE_GENERIC_PAGE));
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 26, 18), TEXT_COLOR_SYSTEM_BLUE, sPurchaseGenericPage + 1);
     PutSpecialChar(TILEMAP_LOCATED(gBG0TilemapBuffer, 27, 18), TEXT_COLOR_SYSTEM_WHITE, TEXT_SPECIAL_SLASH);
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 28, 18), TEXT_COLOR_SYSTEM_BLUE, GetPurchaseGenericPageCount());
@@ -902,10 +903,10 @@ static void DrawPurchaseGenericGoldPanel(const struct PurchaseGenericDefinition*
     if (def == NULL)
         return;
 
-    PutPurchaseGenericText(9, FUNDS_Y, TEXT_COLOR_SYSTEM_GOLD, 4, " Funds:");
+    PutPurchaseGenericText(9, FUNDS_Y, TEXT_COLOR_SYSTEM_GOLD, 4, GetStringFromIndex(MSG_PURCHASE_GENERIC_FUNDS));
     PutPurchaseGenericGoldAmount(17, FUNDS_Y, GetFactionChapterGoldAmount(sPurchaseGenericFactionId));
 
-    PutPurchaseGenericText(9, FUNDS_Y+2, TEXT_COLOR_SYSTEM_GOLD, 4, " Cost:");
+    PutPurchaseGenericText(9, FUNDS_Y+2, TEXT_COLOR_SYSTEM_GOLD, 4, GetStringFromIndex(MSG_PURCHASE_GENERIC_COST));
     PutPurchaseGenericGoldAmount(17, FUNDS_Y+2, def->cost);
 }
 
@@ -919,6 +920,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
     EndPurchaseGenericPlatformPreview();
     ResetIconGraphics();
     ResetTextFont();
+    PreallocateCommonGlyphs(TEXT_COLOR_SYSTEM_BLUE);
 
     DrawPurchaseGenericUiBoxes(def);
     DrawPurchaseGenericList();
@@ -933,17 +935,17 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
     class = GetClassData(def->classId);
 
     PutPurchaseGenericTextIndent(1, 1, TEXT_COLOR_SYSTEM_GOLD, 7, GetPurchaseGenericClassName(def));
-    PutPurchaseGenericText(4, 3, TEXT_COLOR_SYSTEM_GOLD, 4, "Base");
+    PutPurchaseGenericText(4, 3, TEXT_COLOR_SYSTEM_GOLD, 4, GetStringFromIndex(MSG_PURCHASE_GENERIC_BASE));
 
     if (class != NULL)
     {
-        PutPurchaseGenericBaseStat(5, "HP", class->baseHP);
-        PutPurchaseGenericBaseStat(7, "Pow", class->basePow);
-        PutPurchaseGenericBaseStat(9, "Skl", class->baseSkl);
-        PutPurchaseGenericBaseStat(11, "Spd", class->baseSpd);
-        PutPurchaseGenericBaseStat(13, "Def", class->baseDef);
-        PutPurchaseGenericBaseStat(15, "Res", class->baseRes);
-        PutPurchaseGenericBaseStat(17, "Mov", class->baseMov);
+        PutPurchaseGenericBaseStat(5, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_HP), class->baseHP);
+        PutPurchaseGenericBaseStat(7, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_POW), class->basePow);
+        PutPurchaseGenericBaseStat(9, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_SKL), class->baseSkl);
+        PutPurchaseGenericBaseStat(11, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_SPD), class->baseSpd);
+        PutPurchaseGenericBaseStat(13, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_DEF), class->baseDef);
+        PutPurchaseGenericBaseStat(15, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_RES), class->baseRes);
+        PutPurchaseGenericBaseStat(17, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_MOV), class->baseMov);
     }
 
     DrawPurchaseGenericGoldPanel(def);
@@ -1117,7 +1119,7 @@ u8 PurchaseGenericsCommandUsability(const struct MenuItemDef* def, int number)
 
 int PurchaseGenericsCommandDraw(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
-    const char* text = "Capture";
+    const char* text = GetStringFromIndex(MSG_PURCHASE_GENERIC_CAPTURE);
 
     PutDrawText(
         &menuItem->text,

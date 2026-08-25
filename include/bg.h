@@ -131,6 +131,12 @@ extern unsigned char bg_Blank_tiles[];
 extern unsigned char bg_Blank_map[];
 extern unsigned char bg_Blank_palette[];
 
+#if FE8_CO_POWERS
+extern unsigned char frlgUiFrame_tiles[];
+extern unsigned short frlgUiFrame_map[];
+extern unsigned short frlgUiFrame_palette[];
+#endif
+
 #if FE8_MULTIPALETTE_BG
 extern unsigned char bg_AltarNight256_tiles[];
 extern unsigned short bg_AltarNight256_palette[];
