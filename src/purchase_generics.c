@@ -435,6 +435,10 @@ static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition
     if (unit == NULL)
         return false;
 
+    /* Sits at the level-up threshold so purchased units never level up --
+     * they're meant to stay as disposable/generic reinforcements. */
+    unit->exp = 255;
+
 #if FE8_FORT_UNITS_START_GREYED_OUT
     if (spawnedOnFort)
         unit->state |= US_UNSELECTABLE | US_HAS_MOVED | US_HAS_MOVED_AI;
