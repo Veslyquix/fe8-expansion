@@ -16,6 +16,12 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y);
 bool AiShouldCaptureBaseInsteadOfAttacking(void);
 bool AiFindClosestCapturableBase(struct Vec2* out, u8* distanceOut);
 
+/* The gold price a generic of this class would cost to (re)purchase, or 0
+ * if classId has no sPurchaseGenericDefinitions entry -- used by
+ * ActionMerge (src/bmmind.c) to price the gold a merge's HP overflow
+ * converts to. */
+int GetPurchaseGenericPrice(int classId);
+
 #endif
 
 #endif // GUARD_PURCHASE_GENERICS_H

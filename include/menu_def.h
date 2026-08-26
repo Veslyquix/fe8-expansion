@@ -39,5 +39,8 @@ extern struct SelectInfo CONST_DATA gSelectInfo_Give;
 extern struct SelectInfo CONST_DATA gSelectInfo_Take;
 extern struct SelectInfo CONST_DATA gSelectInfo_Drop;
 extern struct SelectInfo CONST_DATA gSelectInfo_Rescue;
+#if FE8_PURCHASE_GENERICS
+extern struct SelectInfo CONST_DATA gSelectInfo_Merge;
+#endif
 
 #endif // GUARD_MENU_DEF_H

@@ -16,6 +16,10 @@ void MakeTargetListForWeapon(struct Unit* unit, int item);
 void MakeTradeTargetList(struct Unit* unit);
 // ??? TryAddUnitToRescueTargetList(???);
 void MakeRescueTargetList(struct Unit* unit);
+#if FE8_PURCHASE_GENERICS
+void TryAddUnitToMergeTargetList(struct Unit* unit);
+void MakeMergeTargetList(struct Unit* unit);
+#endif
 // ??? TryAddToDropTargetList(???);
 void MakeDropTargetList(struct Unit* unit);
 // ??? TryAddRescuedUnitToTakeTargetList(???);

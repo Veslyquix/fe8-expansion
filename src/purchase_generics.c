@@ -162,6 +162,13 @@ static const struct PurchaseGenericDefinition* GetPurchaseGenericByClass(int cla
     return NULL;
 }
 
+int GetPurchaseGenericPrice(int classId)
+{
+    const struct PurchaseGenericDefinition* def = GetPurchaseGenericByClass(classId);
+
+    return def ? (int)def->cost : 0;
+}
+
 static void SetPurchaseGenericMenuPage(struct MenuProc* menu, int page)
 {
     int pageCount = GetPurchaseGenericPageCount();

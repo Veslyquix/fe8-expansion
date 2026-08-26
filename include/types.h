@@ -386,6 +386,9 @@ enum
 #if FE8_PROMOTE_COMMAND
     UNIT_ACTION_PROMOTE = 0x24,
 #endif
+#if FE8_PURCHASE_GENERICS
+    UNIT_ACTION_MERGE = 0x25,
+#endif
 };
 
 enum

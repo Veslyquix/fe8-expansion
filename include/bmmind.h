@@ -83,6 +83,9 @@ void StoreRNStateToActionStruct(void);
 void LoadRNStateFromActionStruct(void);
 u32 ApplyUnitAction(ProcPtr proc);
 s8 ActionRescue(ProcPtr);
+#if FE8_PURCHASE_GENERICS
+s8 ActionMerge(ProcPtr);
+#endif
 int AfterDrop_CheckTrapAfterDropMaybe(struct AfterDropActionProc * proc);
 int AfterDrop_RefreshMapAndSprites(void);
 s8 ActionDrop(ProcPtr);

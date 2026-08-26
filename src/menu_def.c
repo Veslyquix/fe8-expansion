@@ -222,8 +222,11 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　道具屋", 0x686, 0x6D0, 0, 0x60, VendorCommandUsability, 0, VendorCommandEffect, 0, 0, 0}, //Vendor > 
     {"　秘密店", 0x687, 0x6D1, 0, 0x61, SecretShopCommandUsability, 0, SecretShopCommandEffect, 0, 0, 0}, //SecretShop > 
     {"　闘技場", 0x688, 0x6D2, 0, 0x62, ArenaCommandUsability, 0, ArenaCommandEffect, 0, 0, 0}, // Arena
-    {"　救出", 0x689, 0x6C5, 0, 0x63, RescueUsability, 0, RescueEffect, 0, 0, 0}, // Rescue > 
-    {"　降ろす", 0x68A, 0x6C6, 0, 0x64, DropUsability, 0, DropEffect, 0, 0, 0}, // Drop > 
+    {"　救出", 0x689, 0x6C5, 0, 0x63, RescueUsability, 0, RescueEffect, 0, 0, 0}, // Rescue >
+#if FE8_PURCHASE_GENERICS
+    {"Merge", 0, 0, 0, 0, MergeUsability, 0, MergeEffect, 0, 0, 0}, // Merge with an adjacent generic of the same class >
+#endif
+    {"　降ろす", 0x68A, 0x6C6, 0, 0x64, DropUsability, 0, DropEffect, 0, 0, 0}, // Drop >
     {"　引受け", 0x68B, 0x6C8, 4, 0x65, TakeUsability, 0, TakeEffect, 0, 0, 0}, // Take > 
     {"　引渡し", 0x68C, 0x6C7, 4, 0x66, GiveUsability, 0, GiveEffect, 0, 0, 0}, // Give > 
     {"　持ち物", 0x68D, 0x6D3, 0, 0x67, ItemCommandUsability, 0, ItemCommandEffect, 0, 0, 0}, // Item > 
@@ -597,3 +600,12 @@ struct SelectInfo CONST_DATA gSelectInfo_Rescue =
     .onCancel = GenericSelection_BackToUM,
     .onHelp = RescueSelection_OnHelp,
 };
+
+#if FE8_PURCHASE_GENERICS
+struct SelectInfo CONST_DATA gSelectInfo_Merge =
+{
+    .onInit = MergeSelection_OnConstruction,
+    .onSelect = MergeSelection_OnSelect,
+    .onCancel = GenericSelection_BackToUM,
+};
+#endif

@@ -30,6 +30,12 @@ u8 RescueSelection_OnHelp(ProcPtr proc, struct SelectTarget * target);
 u8 RescueUsability(const struct MenuItemDef * def, int number);
 u8 RescueEffect(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 RescueSelection_OnSelect(ProcPtr proc, struct SelectTarget * target);
+#if FE8_PURCHASE_GENERICS
+void MergeSelection_OnConstruction(ProcPtr proc);
+u8 MergeUsability(const struct MenuItemDef * def, int number);
+u8 MergeEffect(struct MenuProc * menu, struct MenuItemProc * menuItem);
+u8 MergeSelection_OnSelect(ProcPtr proc, struct SelectTarget * target);
+#endif
 u8 DropUsability(const struct MenuItemDef * def, int number);
 u8 DropEffect(struct MenuProc * menu, struct MenuItemProc * menuItem);
 u8 DropSelection_OnSelect(ProcPtr proc, struct SelectTarget * target);
