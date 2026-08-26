@@ -324,6 +324,64 @@ void Copy2dChr(const void* src, void* dst, int width, int height)
     }
 }
 
+#if FE8_AW2_ASSETS
+/* Same as Copy2dChr, but per nibble (i.e. per pixel): a source pixel of
+ * index 0 is treated as transparent and leaves the destination pixel
+ * already in VRAM untouched, instead of overwriting it with 0.
+ *
+ * xOffset (0-15) shifts the whole source right by that many pixels before
+ * merging. A shift past a tile's own 8-pixel width spills into the next
+ * destination tile column -- same trick src/fontgrp.c's
+ * DrawTextGlyphNoClearBitmap uses for text's sub-tile x position (there
+ * splitting a 2bpp glyph row across dst[0x00]/dst[0x10]/dst[0x20]; here
+ * splitting a 4bpp tile row across two adjacent destination tiles). xOffset
+ * is split into a whole-tile part (which destination column to start at)
+ * and a 0-7 sub-tile part (the actual bit shift).
+ *
+ * Always merges a full word (8 pixels) at a time, never a byte or even a
+ * halfword -- VRAM doesn't support 8-bit stores (a byte write gets
+ * mirrored into both bytes of its containing halfword, corrupting the
+ * neighboring pixel pair), and shifting by 4-7 pixels needs the full
+ * 32-bit source row in play at once to compute the spillover correctly. */
+void Copy2dChrTransparent(const void* src, void* dst, int width, int height, int xOffset)
+{
+    int tileShift = (xOffset >> 3) * CHR_SIZE; // whole destination tiles to skip
+    int subx = xOffset & 7;                    // remaining 0-7 pixel shift
+    int row, col, pixelRow;
+
+    if (height <= 0)
+        return;
+
+    for (row = 0; row < height; ++row) {
+        for (col = 0; col < width; ++col) {
+            const u32* s = (const u32*)((const u8*)src + (row * width + col) * CHR_SIZE);
+            u32* dLo = (u32*)((u8*)dst + row * (CHR_SIZE * 0x20) + col * CHR_SIZE + tileShift);
+            u32* dHi = (u32*)((u8*)dLo + CHR_SIZE);
+
+            for (pixelRow = 0; pixelRow < 8; ++pixelRow) {
+                u64 shifted = (u64)s[pixelRow] << (subx * 4);
+                u32 lo = (u32)shifted;
+                u32 hi = (u32)(shifted >> 32);
+                u32 maskLo = 0, maskHi = 0;
+                int shift;
+
+                for (shift = 0; shift < 32; shift += 4) {
+                    if (((lo >> shift) & 0xF) != 0)
+                        maskLo |= (0xF << shift);
+                    if (subx != 0 && ((hi >> shift) & 0xF) != 0)
+                        maskHi |= (0xF << shift);
+                }
+
+                dLo[pixelRow] = (dLo[pixelRow] & ~maskLo) | (lo & maskLo);
+
+                if (subx != 0)
+                    dHi[pixelRow] = (dHi[pixelRow] & ~maskHi) | (hi & maskHi);
+            }
+        }
+    }
+}
+#endif
+
 void ApplyBitmap(const void* src, void* dst, int width, int height)
 {
     int i, line_size;

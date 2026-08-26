@@ -60,6 +60,14 @@ static void LoadAw2Image(
     ApplyPalette(palette, palId);
 }
 
+static void OverlapVram(
+    const void* tiles, const u16* palette, int tileWidth, int tileHeight,
+    void* dst, int palId, int xOffset)
+{
+    Decompress(tiles, gGenericBuffer);
+    Copy2dChrTransparent(gGenericBuffer, dst, tileWidth, tileHeight, xOffset);
+}
+
 void LoadAw2Gfx(void)
 {
     u8* dst = AW2_VRAM_BASE;
@@ -132,11 +140,40 @@ void LoadAw2CoMiniGfx(void)
     ApplyPalette(aw2uiCoMini_palette, AW2_COMINI_PAL_ID);
 }
 
+
+
+
+void GetStarsPlayer(void) { 
+    int faction = 0; // Player 
+    const struct CoDefinition* co = GetCoDefinition(gPlaySt.commanderId[sCoFactionIds[faction]]);
+    int gauge = gPlaySt.coGauge[sCoFactionIds[faction]]; 
+    int stars = gauge / 50; 
+    int halfStar = (gauge + 25) / 50; 
+    return halfStar; 
+} 
+// the co definition needs to include the number of stars required for co power and super co power. 
+// then we need to draw those stars to the ui. 
+// for example, Francis may require 3 stars for co power and 5 for super co power. So we draw 
+// 3 little stars, then 2 big stars. 
+// If his gauge has 1.5 stars filled, then we draw full little star, half little star, empty little star 
+// empty big star, empty big star. 
+
+
+
 void OverlapStars(u16* dst) { 
     u8* dest = (void*)(VRAM + GetBackgroundTileDataOffset(1) + AW2_COMINI_TILE_BASE * CHR_SIZE);
-    dest += AW2_COMINI_H * 4 * 0x20; 
-    LoadAw2Image(aw2uiStars_tiles, aw2uiStars_palette,
-        AW2_STARS_W, AW2_STARS_H, dest, AW2_COMINI_PAL_ID);
+    dest += AW2_COMINI_H * 2 * 0x20; // this dest is for just the top 2 pixels of the star. 
+    OverlapVram(aw2uiStars_tiles, aw2uiStars_palette,
+        1, AW2_STARS_H, dest, AW2_COMINI_PAL_ID, 3);
+    dest += AW2_COMINI_H * 2 * 0x20; // this dest is for the main part (the rest) of the star. 
+    OverlapVram(aw2uiStars_tiles, aw2uiStars_palette,
+        1, AW2_STARS_H, dest, AW2_COMINI_PAL_ID, 3);
+    // AW2_STARS_W is for all 3 stars 
+    // we need to decompress the 3 types of small stars: empty, half filled, and filled. 
+    // we also need to decompress the 3 types of large stars: empty, half filled, and filled. 
+    // then with all of these decompressed into the generic buffer, we need to overlap them onto the 
+    // UI using this function. 
+    
 
 
 } 
