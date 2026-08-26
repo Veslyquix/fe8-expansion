@@ -409,10 +409,10 @@ void OnMain(void)
     gBmSt.prevVCount = REG_VCOUNT;
 
 #if FE8_ANIMS_FAST_FORWARD
-    if (ShouldSpeedupAnims()) {
-        RunAnimsFastForwardTick();
-        return;
-    }
+    // if (ShouldSpeedupAnims()) {
+        // RunAnimsFastForwardTick();
+        // return;
+    // }
 #endif
 
     VBlankIntrWait();
