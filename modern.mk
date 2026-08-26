@@ -255,6 +255,9 @@ endif
 ifeq ($(FEBUILDER_POINTERS),1)
 MODERN_DEFINE_FLAGS += -DFE8_FEBUILDER_POINTERS=1
 endif
+ifeq ($(AW2_ASSETS),1)
+MODERN_DEFINE_FLAGS += -DFE8_AW2_ASSETS=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1569,11 +1572,14 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 	--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
 	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
+	--aw2-assets "$(AW2_ASSETS)" \
 		--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
 	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
+	--aw2-assets "$(AW2_ASSETS)" \
 		--co-powers "$(CO_POWERS)" \
 		--febuilder-pointers "$(FEBUILDER_POINTERS)" \
+		--aw2-assets "$(AW2_ASSETS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1660,6 +1666,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
 	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
+	--aw2-assets "$(AW2_ASSETS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1754,7 +1761,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_CREDITS=$(CREDITS) \
 	-DFE8_GAME_RANK=$(GAME_RANK) \
 	-DFE8_CO_POWERS=$(CO_POWERS) \
-	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS)
+	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS) \
+	-DFE8_AW2_ASSETS=$(AW2_ASSETS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1944,6 +1952,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'game_rank=$(GAME_RANK)'; \
 		printf '%s\n' 'co_powers=$(CO_POWERS)'; \
 		printf '%s\n' 'febuilder_pointers=$(FEBUILDER_POINTERS)'; \
+		printf '%s\n' 'aw2_assets=$(AW2_ASSETS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \

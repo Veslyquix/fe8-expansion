@@ -20,6 +20,7 @@
 #include "bmitem.h"
 
 #include "player_interface.h"
+#include "aw2_gfx.h"
 
 #include "constants/event-flags.h"
 #include "constants/msg.h"
@@ -1714,6 +1715,12 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
     TileMap_FillRect(gUiTmScratchB + TILEMAP_INDEX(20, 10), 11, 9, 0);
     TileMap_FillRect(gUiTmScratchA + TILEMAP_INDEX(20, 12), 11, 9, 0);
 
+#if FE8_AW2_ASSETS
+    DrawAw2CoMini(gUiTmScratchB + TILEMAP_INDEX(22, 11));
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_BLUE, GetChapterGoldAmount());
+    return;
+#endif
+
 #if FE8_PURCHASE_GENERICS
     if (proc->unitClock == 0)
         proc->unitClock = 1;
@@ -1747,6 +1754,10 @@ void GoalDisplay_Init(struct PlayerInterfaceProc * proc)
     int lastTurnNumber;
     char * str;
     struct Text * text;
+
+#if FE8_AW2_ASSETS
+    LoadAw2CoMiniGfx();
+#endif
 
     proc->showHideClock = 0;
     proc->isRetracting = false;

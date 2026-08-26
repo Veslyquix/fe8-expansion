@@ -476,6 +476,13 @@
 #define FE8_FEBUILDER_POINTERS 0
 #endif
 
+/* Advance Wars 2 VRAM-dump UI asset import (star/rank icons, POWER/SUPER
+ * labels, debug font) as LZ77-compressed OBJ tile graphics -- see
+ * src/aw2_gfx.c. No gameplay or save-format impact. */
+#ifndef FE8_AW2_ASSETS
+#define FE8_AW2_ASSETS 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -640,6 +647,10 @@
 
 #if (FE8_FEBUILDER_POINTERS != 0) && (FE8_FEBUILDER_POINTERS != 1)
 #error "FE8_FEBUILDER_POINTERS must be 0 or 1"
+#endif
+
+#if (FE8_AW2_ASSETS != 0) && (FE8_AW2_ASSETS != 1)
+#error "FE8_AW2_ASSETS must be 0 or 1"
 #endif
 
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)

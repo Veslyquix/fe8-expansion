@@ -363,6 +363,12 @@ CO_POWERS ?= 1
 # tooling support -- no gameplay or save-format impact.
 FEBUILDER_POINTERS ?= 1
 
+# --- Optional Advance Wars 2 UI asset import --------------------------------
+# Loads 5 PNGs dumped from Advance Wars 2's VRAM (no$gba) -- a star/rank icon
+# strip, a taller "big stars" variant, and "POWER"/"SUPER" label graphics,
+# plus a debug font -- as LZ77-compressed OBJ tile graphics. See src/aw2_gfx.c.
+AW2_ASSETS ?= 1
+
 
 
 
