@@ -94,41 +94,118 @@ void LoadAw2Gfx(void)
  * Reuses the power/super OBJ tile slot LoadAw2Gfx above reserves (nothing
  * calls LoadAw2Gfx, so it's otherwise sitting unused) -- only one of power
  * or super is ever shown at a time, so both just decompress into the same
- * spot and share AW2_POWER_PAL_ID. */
-#define AW2_POWER_BANNER_OBJ_TILE 0x180 // (AW2_VRAM_BASE - OBJ_VRAM_BASE) / CHR_SIZE
+ * slot(s) and share AW2_POWER_PAL_ID.
+ *
+ * Drawn at 4x native size via an affine OBJ, which needs GBA's "double
+ * size" affine mode to avoid the hardware clipping the scaled-up image to
+ * its unscaled bounding box -- double size doubles that box relative to
+ * the sprite's OWN shape, so the shape has to be big enough that doubling
+ * it comfortably covers the 4x content, and any of that shape's tiles
+ * past the real graphic have to be blanked (zeroed = transparent) rather
+ * than showing whatever else happens to be sitting in that VRAM range.
+ *
+ * OBJ character VRAM defaults to 2D mapping in this engine (obj1dMap is 0
+ * everywhere except a couple of screens that switch to it temporarily and
+ * switch back -- see src/opanim-main.c), which means a shape more than
+ * one tile TALL doesn't read its rows out of a linear block: row N of a
+ * W-tile-wide shape lives at (base + N * 0x20) tiles, 0x20 being a fixed
+ * VRAM tile-ROW's width regardless of the shape's own W (same stride
+ * Copy2dChr, src/bmlib.c, advances by per source row). ClearAw2BannerSlot
+ * below zeroes each row at its own strided address for exactly this
+ * reason -- a single linear fill only zeroed row 0 correctly and left
+ * rows 1+ (for slot A's 4-tall shape) pointing at whatever else was
+ * already sitting 0x20/0x40/0x60 tiles later.
+ *
+ * SUPER's 48x8 doesn't match any single OBJ shape (GBA sizes only go up to
+ * 64x64 in powers-of-two-ish steps -- 8/16/32/64) even before scaling, so
+ * -- same as the native-size version before this -- it's split into two:
+ * a 32x8-native-sized left half (the graphic's first 4 tiles) in slot A,
+ * and a 16x8-native-sized right half (the last 2 tiles) in slot B, placed
+ * side by side. POWER only ever uses slot A. Slot B sits far enough past
+ * slot A (0x200, vs. slot A's last row at 0x180 + 3*0x20 = 0x1E0) that
+ * none of slot A's four 2D-mapped rows land inside it. */
+#define AW2_POWER_BANNER_TILE_ROW_STRIDE 0x20 // one VRAM tile-row in 2D OBJ mapping
+
+#define AW2_POWER_BANNER_SLOTA_TILE_DECOMPRESS 0x1a2 // (AW2_VRAM_BASE - OBJ_VRAM_BASE) / CHR_SIZE
+#define AW2_POWER_BANNER_SLOTA_TILE 0x180 // (AW2_VRAM_BASE - OBJ_VRAM_BASE) / CHR_SIZE
+#define AW2_POWER_BANNER_SLOTA_TILE_W 8 // 64x32 shape: doubles to a 128x64 box,
+#define AW2_POWER_BANNER_SLOTA_TILE_H 4 // comfortably covering 128x32 (32x8 native x4)
+
+#define AW2_POWER_BANNER_SLOTB_TILE 0x200
+#define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x222
+#define AW2_POWER_BANNER_SLOTB_TILE_W 8 // 32x16 shape: doubles to exactly 64x32,
+#define AW2_POWER_BANNER_SLOTB_TILE_H 4 // matching 64x32 (16x8 native x4) with no slack
+
+#define AW2_POWER_BANNER_SCALE 0x400 // SetObjAffineAuto units, 0x100 == 1x (see include/ctc.h)
+
+static u16 CONST_DATA sAw2PowerBannerObjectA[] = {
+    // 1, OAM0_SHAPE_64x32 + OAM0_AFFINE_ENABLE + OAM0_DOUBLESIZE, OAM1_SIZE_64x32, 0,
+    1, OAM0_SHAPE_16x8 + OAM0_AFFINE_ENABLE + OAM0_DOUBLESIZE, OAM1_SIZE_64x32, 0,
+};
+static u16 CONST_DATA sAw2PowerBannerObjectB[] = {
+    1, OAM0_SHAPE_16x8 + OAM0_AFFINE_ENABLE + OAM0_DOUBLESIZE, OAM1_SIZE_64x32, 0,
+};
+
+/* Zeroes a tileW x tileH OBJ shape's worth of VRAM, one 2D-mapped row at a
+ * time -- see the big comment above for why a single linear fill across
+ * the whole shape is wrong for anything more than 1 tile tall. */
+static void ClearAw2BannerSlot(int baseTile, int tileW, int tileH)
+{
+    int row;
+
+    for (row = 0; row < tileH; ++row)
+        CpuFastFill(0, OBJ_CHR_ADDR(baseTile + row * AW2_POWER_BANNER_TILE_ROW_STRIDE), tileW * CHR_SIZE);
+}
 
 void LoadAw2PowerBannerGfx(bool8 isSuper)
 {
-    if (isSuper)
-        LoadAw2Image(super_tiles, super_palette,
-            AW2_SUPER_W, AW2_SUPER_H, AW2_VRAM_BASE, AW2_POWER_PAL_ID);
-    else
-        LoadAw2Image(power_tiles, power_palette,
-            AW2_POWER_W, AW2_POWER_H, AW2_VRAM_BASE, AW2_POWER_PAL_ID);
-}
-
-/* SUPER's 48x8 doesn't match any single OBJ shape (GBA sizes only go up to
- * 64x64 in powers-of-two-ish steps -- 8/16/32/64), so it's split into a
- * 32x8 sprite (the graphic's first 4 tiles) plus a 16x8 one right next to
- * it (the last 2 tiles), matching how obj_Phasechangefx_0
- * (src/phasechangefx.c) composes its own wide logo out of several OAM
- * entries. */
-void DrawAw2PowerBannerSprite(bool8 isSuper)
-{
-    int y = (DISPLAY_HEIGHT - 8) / 2;
+    ClearAw2BannerSlot(AW2_POWER_BANNER_SLOTA_TILE,
+        AW2_POWER_BANNER_SLOTA_TILE_W, AW2_POWER_BANNER_SLOTA_TILE_H);
 
     if (isSuper) {
-        int x = (DISPLAY_WIDTH - AW2_SUPER_W * 8) / 2;
+        ClearAw2BannerSlot(AW2_POWER_BANNER_SLOTB_TILE,
+            AW2_POWER_BANNER_SLOTB_TILE_W, AW2_POWER_BANNER_SLOTB_TILE_H);
 
-        PutSprite(2, x, y, gObject_32x8,
-            OAM2_CHR(AW2_POWER_BANNER_OBJ_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
-        PutSprite(2, x + 32, y, gObject_16x8,
-            OAM2_CHR(AW2_POWER_BANNER_OBJ_TILE + 4) | OAM2_PAL(AW2_POWER_PAL_ID));
+        /* super_tiles compresses all 6 tiles as one 6x1 image, but the two
+         * halves now live in separately-padded slots -- decompress once
+         * into the scratch buffer, then split it into the real slots.
+         * Both halves are a single tile tall, so this linear copy (unlike
+         * the zeroing above) is fine: it lands entirely within each
+         * slot's own row 0. */
+        Decompress(super_tiles, gGenericBuffer);
+        CpuFastCopy(gGenericBuffer, OBJ_CHR_ADDR(AW2_POWER_BANNER_SLOTA_TILE_DECOMPRESS), 4 * CHR_SIZE);
+        CpuFastCopy((u8*)gGenericBuffer + 4 * CHR_SIZE,
+            OBJ_CHR_ADDR(AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS), 2 * CHR_SIZE);
+        ApplyPalette(super_palette, AW2_POWER_PAL_ID);
     } else {
-        int x = (DISPLAY_WIDTH - AW2_POWER_W * 8) / 2;
+        Decompress(power_tiles, OBJ_CHR_ADDR(AW2_POWER_BANNER_SLOTA_TILE_DECOMPRESS));
+        ApplyPalette(power_palette, AW2_POWER_PAL_ID);
+    }
+}
 
-        PutSprite(2, x, y, gObject_32x8,
-            OAM2_CHR(AW2_POWER_BANNER_OBJ_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
+void DrawAw2PowerBannerSprite(bool8 isSuper)
+{
+    /* Content height is 32 (8px native x4) either way; slot A's double-size
+     * box is 64 tall (32x8 native shape, doubled), so its OAM y needs
+     * pulling up by the 16px of letterboxing above the visible content --
+     * slot B's box matches its content exactly, no adjustment needed. */
+    int y = (DISPLAY_HEIGHT - 8 * 4) / 2 + 4;
+
+    SetObjAffineAuto(0, 0, AW2_POWER_BANNER_SCALE, AW2_POWER_BANNER_SCALE);
+
+    if (isSuper) {
+        int totalW = AW2_SUPER_W * 8 * 4;
+        int x = (DISPLAY_WIDTH - totalW) / 2 + 16;
+
+        PutSprite(2, x, y, sAw2PowerBannerObjectA,
+            OAM2_CHR(AW2_POWER_BANNER_SLOTA_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
+        PutSprite(2, x + AW2_POWER_W * 8 * 4, y, sAw2PowerBannerObjectB,
+            OAM2_CHR(AW2_POWER_BANNER_SLOTB_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
+    } else {
+        int x = (DISPLAY_WIDTH - AW2_POWER_W * 8 * 4) / 2;
+
+        PutSprite(2, x, y, sAw2PowerBannerObjectA,
+            OAM2_CHR(AW2_POWER_BANNER_SLOTA_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
     }
 }
 

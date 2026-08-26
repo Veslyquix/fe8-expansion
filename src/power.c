@@ -33,6 +33,7 @@
 #include "constants/items.h"
 #include "constants/video-global.h"
 #include "icon.h"
+#include "player_interface.h" // EndPlayerPhaseSideWindows
 #if FE8_AW2_ASSETS
 #include "aw2_gfx.h"
 #include "phasechangefx.h" // gProcScr_PhaseIntroSquares/BlendBox, Img_PhaseChangeSquares
@@ -122,7 +123,8 @@ static void CoPowerBanner_Cleanup(struct CoPowersProc* proc);
 
 CONST_DATA struct ProcCmd gProcScr_CoPowers[] = {
     PROC_NAME("COPOWERS"),
-    // PROC_CALL(LockGame),
+    PROC_CALL(LockGame),
+    PROC_CALL(EndPlayerPhaseSideWindows),
     /* Proc_Start runs a script synchronously up to its first blocking
      * command before returning, so without this sleep, CoPowers_Init would
      * read proc->faction (to seed proc->unitIndex, see CoPowers_Init/_Step)
@@ -151,13 +153,14 @@ PROC_LABEL(0),
     PROC_CALL(CoPowers_Step),
     PROC_WHILE_EXISTS(ProcScr_CamMove),
     PROC_CALL(CoPowers_Anim),
+    PROC_SLEEP(1),
     PROC_WHILE_EXISTS(ProcScr_MapAnimBarrierfx2),
     // PROC_SLEEP(CO_POWERS_UNIT_DISPLAY_FRAMES),
     PROC_GOTO(0),
 PROC_LABEL(99),
     PROC_CALL(CoPowers_ReturnCamera),
     PROC_WHILE_EXISTS(ProcScr_CamMove),
-    // PROC_CALL(UnlockGame),
+    PROC_CALL(UnlockGame),
     PROC_END,
 };
 
@@ -362,6 +365,8 @@ u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number)
     return MENU_ENABLED;
 }
 
+
+
 /* Same as CoPowers_IsAvailable, gated on superPowerStars instead. */
 u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number)
 {
@@ -393,11 +398,17 @@ static u8 CoPowersMenuCommandCommon(bool8 isSuper)
 
 u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
+    if (CoPowers_IsAvailable(NULL, 0) != MENU_ENABLED) { 
+        return MENU_ACT_SND6B; 
+    } 
     return CoPowersMenuCommandCommon(FALSE);
 }
 
 u8 CoSuperPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
+    if (CoSuperPowers_IsAvailable(NULL, 0) != MENU_ENABLED) { 
+        return MENU_ACT_SND6B; 
+    } 
     return CoPowersMenuCommandCommon(TRUE);
 }
 

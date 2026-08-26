@@ -36,12 +36,13 @@ int GetActiveFactionStars(void);
 void OverlapStars(void);
 
 /* CO power/super power intro banner (src/power.c, gProcScr_CoPowers) --
- * decompresses whichever of power_tiles/super_tiles is needed into the
- * same OBJ VRAM slot LoadAw2Gfx reserves for it (unused elsewhere, since
- * nothing currently calls LoadAw2Gfx), then DrawAw2PowerBannerSprite puts
- * it on screen centred, one call per frame like any other OBJ sprite.
- * SUPER is 48x8, which isn't a single valid OBJ shape, so it's drawn as
- * two adjacent sprites (32x8 + 16x8). */
+ * decompresses whichever of power_tiles/super_tiles is needed into OBJ
+ * VRAM slots near where LoadAw2Gfx reserves for it (unused elsewhere,
+ * since nothing currently calls LoadAw2Gfx), then DrawAw2PowerBannerSprite
+ * puts it on screen centred at 4x native size (via an affine OBJ), one
+ * call per frame like any other OBJ sprite. SUPER is 48x8, which isn't a
+ * single valid OBJ shape even before scaling, so it's drawn as two
+ * adjacent sprites (32x8 + 16x8 native, each scaled 4x). */
 void LoadAw2PowerBannerGfx(bool8 isSuper);
 void DrawAw2PowerBannerSprite(bool8 isSuper);
 

@@ -40347,8 +40347,8 @@ leaves a unit behind.[.][X]
 Barrage[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
-All of Francis's units heal[LF]
-10 HP.[X]
+All of Francis's preferred[LF]
+units heal 10 HP.[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
 War Council[.][X]
