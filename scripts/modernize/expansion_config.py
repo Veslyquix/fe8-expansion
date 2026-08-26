@@ -404,7 +404,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
-                           febuilder_pointers=0, aw2_assets=0,
+                           febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -446,6 +446,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     co_powers_flag = validate_feature_flag("CO_POWERS", co_powers)
     febuilder_pointers_flag = validate_feature_flag("FEBUILDER_POINTERS", febuilder_pointers)
     aw2_assets_flag = validate_feature_flag("AW2_ASSETS", aw2_assets)
+    anims_fast_forward_flag = validate_feature_flag("ANIMS_FAST_FORWARD", anims_fast_forward)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -483,7 +484,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
-            game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag)
+            game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
+            anims_fast_forward_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -718,6 +720,7 @@ class ExpansionIdentity:
     co_powers: int = 0
     febuilder_pointers: int = 0
     aw2_assets: int = 0
+    anims_fast_forward: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -795,6 +798,7 @@ class ExpansionIdentity:
                 "co_powers": self.co_powers,
                 "febuilder_pointers": self.febuilder_pointers,
                 "aw2_assets": self.aw2_assets,
+                "anims_fast_forward": self.anims_fast_forward,
             },
         }
 
@@ -860,6 +864,7 @@ def load_identity(
     co_powers=None,
     febuilder_pointers=None,
     aw2_assets=None,
+    anims_fast_forward=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -923,7 +928,7 @@ def load_identity(
      resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
-     resolved_febuilder_pointers, resolved_aw2_assets) = validate_feature_flags(
+     resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1023,6 +1028,9 @@ def load_identity(
         aw2_assets
         if aw2_assets not in (None, "")
         else cfg.get("AW2_ASSETS", "0"),
+        anims_fast_forward
+        if anims_fast_forward not in (None, "")
+        else cfg.get("ANIMS_FAST_FORWARD", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1085,6 +1093,7 @@ def load_identity(
         co_powers=resolved_co_powers,
         febuilder_pointers=resolved_febuilder_pointers,
         aw2_assets=resolved_aw2_assets,
+        anims_fast_forward=resolved_anims_fast_forward,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1308,6 +1317,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override AW2_ASSETS (0 or 1)",
     )
     parser.add_argument(
+        "--anims-fast-forward",
+        default=None,
+        help="override ANIMS_FAST_FORWARD (0 or 1)",
+    )
+    parser.add_argument(
         "--fort-units-start-greyed-out",
         default=None,
         help="override FORT_UNITS_START_GREYED_OUT (0 or 1)",
@@ -1436,6 +1450,7 @@ def main(argv=None) -> int:
             co_powers=args.co_powers,
             febuilder_pointers=args.febuilder_pointers,
             aw2_assets=args.aw2_assets,
+            anims_fast_forward=args.anims_fast_forward,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

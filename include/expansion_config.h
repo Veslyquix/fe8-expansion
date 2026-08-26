@@ -483,6 +483,16 @@
 #define FE8_AW2_ASSETS 0
 #endif
 
+/* Held-button battle animation controls, ported from a standalone Lyn-hooked
+ * ASM patch (asm/AnimsFastForward on disk): L+B+A skips the main loop's
+ * normal VBlankIntrWait pacing so the current battle animation plays as
+ * fast as the hardware allows; L+R reverses whatever the current battle
+ * animation setting would have shown for just that fight. See
+ * src/anims_fast_forward.c. No save-format impact. */
+#ifndef FE8_ANIMS_FAST_FORWARD
+#define FE8_ANIMS_FAST_FORWARD 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -651,6 +661,10 @@
 
 #if (FE8_AW2_ASSETS != 0) && (FE8_AW2_ASSETS != 1)
 #error "FE8_AW2_ASSETS must be 0 or 1"
+#endif
+
+#if (FE8_ANIMS_FAST_FORWARD != 0) && (FE8_ANIMS_FAST_FORWARD != 1)
+#error "FE8_ANIMS_FAST_FORWARD must be 0 or 1"
 #endif
 
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)

@@ -25,6 +25,9 @@
 #include "mapanim.h"
 #include "worldmap.h"
 #include "debuffs.h"
+#if FE8_ANIMS_FAST_FORWARD
+#include "anims_fast_forward.h"
+#endif
 
 #include "constants/songs.h"
 #include "constants/items.h"
@@ -2158,23 +2161,57 @@ void BeginBattleAnimations(void) {
     }
 }
 
+#if FE8_ANIMS_FAST_FORWARD
+/* Held-button reversal, shared by GetSoloAnimPreconfType and
+ * GetBattleAnimPreconfType's own non-solo-anim branch: ON_UNIQUE_BG has no
+ * "opposite" of its own, so -- like ON -- reversing it just forces
+ * animations fully off for the fight. */
+static int ReverseAnimConfType(int type) {
+    switch (type) {
+        case PLAY_ANIMCONF_OFF:
+            return PLAY_ANIMCONF_ON;
+
+        case PLAY_ANIMCONF_ON:
+        case PLAY_ANIMCONF_ON_UNIQUE_BG:
+            return PLAY_ANIMCONF_OFF;
+
+        default:
+            return type;
+    }
+}
+#endif
+
 int GetSoloAnimPreconfType(struct Unit* unit) {
     // TODO: battle anim type constants
+    int type = PLAY_ANIMCONF_OFF;
 
     if (unit->state & US_SOLOANIM_1)
-        return PLAY_ANIMCONF_ON;
+        type = PLAY_ANIMCONF_ON;
 
     if (unit->state & US_SOLOANIM_2)
-        return PLAY_ANIMCONF_ON_UNIQUE_BG;
+        type = PLAY_ANIMCONF_ON_UNIQUE_BG;
 
-    return PLAY_ANIMCONF_OFF;
+#if FE8_ANIMS_FAST_FORWARD
+    if (ShouldReverseShowAnim())
+        type = ReverseAnimConfType(type);
+#endif
+
+    return type;
 }
 
 int GetBattleAnimPreconfType(void) {
 
     // If not solo anim, return global type
-    if (gPlaySt.config.animationType != PLAY_ANIMCONF_SOLO_ANIM)
-        return gPlaySt.config.animationType;
+    if (gPlaySt.config.animationType != PLAY_ANIMCONF_SOLO_ANIM) {
+        int type = gPlaySt.config.animationType;
+
+#if FE8_ANIMS_FAST_FORWARD
+        if (ShouldReverseShowAnim())
+            type = ReverseAnimConfType(type);
+#endif
+
+        return type;
+    }
 
     // If both units are players, use actor solo anim type
     if (UNIT_FACTION(&gBattleActor.unit) == FACTION_BLUE)
