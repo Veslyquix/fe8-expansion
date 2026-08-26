@@ -2035,6 +2035,14 @@ void Nop_PlayerInterface_1(void)
 //! FE8U = 0x0808D784
 void GoalDisplay_Loop_Display(struct PlayerInterfaceProc * proc)
 {
+#if FE8_AW2_ASSETS
+    /* Runs every frame this proc is alive, regardless of the early returns
+     * below (those are about whether the window needs to slide/reposition,
+     * not about whether it's still showing) -- so the cycle has to happen
+     * up here, ahead of all of them. */
+    UpdateAw2CoMiniPaletteCycle();
+#endif
+
     proc->xCursorPrev = proc->xCursor;
     proc->yCursorPrev = proc->yCursor;
 

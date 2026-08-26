@@ -368,6 +368,7 @@ FEBUILDER_POINTERS ?= 1
 # strip, a taller "big stars" variant, and "POWER"/"SUPER" label graphics,
 # plus a debug font -- as LZ77-compressed OBJ tile graphics. See src/aw2_gfx.c.
 AW2_ASSETS ?= 1
+# NOTE that AW2_COMINI_PAL_ID will need to be changed later, as it uses bg pal 15 (which fog also uses) 
 
 
 

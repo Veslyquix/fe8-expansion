@@ -106,8 +106,9 @@ void LoadAw2Gfx(void)
  * check in-game -- adjust AW2_COMINI_PAL_ID if colors look wrong). */
 #define AW2_COMINI_W        8  // 64x32
 #define AW2_COMINI_H        4
-#define AW2_COMINI_TILE_BASE 0x180  
-#define AW2_COMINI_PAL_ID   4 // 3 is mmb 
+#define AW2_COMINI_TILE_BASE 0x180
+/* AW2_COMINI_PAL_ID itself lives in include/aw2_gfx.h now -- src/player_
+ * interface.c's palette-cycle call needs it too. */
 
 static u8* GetCoMiniTileBase(void)
 {
@@ -118,6 +119,52 @@ void LoadAw2CoMiniGfx(void)
 {
     Decompress(aw2uiCoMini_tiles, GetCoMiniTileBase());
     ApplyPalette(aw2uiCoMini_palette, AW2_COMINI_PAL_ID);
+}
+
+/* Cycles the panel's color 11 through this exact 14-entry table, one step
+ * every 2 frames (28-frame loop) -- called once a frame from
+ * GoalDisplay_Loop_Display. Traced directly from the source rather than
+ * approximated: it isn't a clean fade between a few named colors (blue
+ * ramps up first while red/green hold, then green pulls back down while
+ * blue holds, then blue drops out while green climbs back to yellow), so
+ * there's no shorter formula to reconstruct it from -- this table is the
+ * actual behavior. RGB(r, g, b) (include/gba/defines.h) packs a color the
+ * same way the source art's own palette is already stored. As with any
+ * other gPaletteBuffer write, this only takes effect once
+ * EnablePaletteSync has flagged it for the next VBlank copy
+ * (SetBackdropColor, include/hardware.h, is the one-line version of that
+ * same pattern for the backdrop color). */
+#define AW2_COMINI_CYCLE_COLOR 11
+#define AW2_COMINI_CYCLE_STEP_FRAMES 2
+
+static const u16 sAw2CominiCycleColors[] = {
+    RGB(0x1F, 0x1F, 0x03),
+    RGB(0x1F, 0x1F, 0x08),
+    RGB(0x1F, 0x1F, 0x0D),
+    RGB(0x1F, 0x1F, 0x11),
+    RGB(0x1F, 0x1F, 0x16),
+    RGB(0x1F, 0x1D, 0x1A),
+    RGB(0x1F, 0x1B, 0x16),
+    RGB(0x1F, 0x19, 0x11),
+    RGB(0x1F, 0x14, 0x08),
+    RGB(0x1F, 0x10, 0x00),
+    RGB(0x1F, 0x13, 0x00),
+    RGB(0x1F, 0x16, 0x00),
+    RGB(0x1F, 0x1B, 0x00),
+    RGB(0x1F, 0x1F, 0x00),
+};
+#define AW2_COMINI_CYCLE_FRAMES \
+    (ARRAY_COUNT(sAw2CominiCycleColors) * AW2_COMINI_CYCLE_STEP_FRAMES)
+
+void UpdateAw2CoMiniPaletteCycle(void)
+{
+    static u8 sTimer = 0;
+
+    PAL_BG_COLOR(AW2_COMINI_PAL_ID, AW2_COMINI_CYCLE_COLOR) =
+        sAw2CominiCycleColors[sTimer / AW2_COMINI_CYCLE_STEP_FRAMES];
+    EnablePaletteSync();
+
+    sTimer = (sTimer + 1) % AW2_COMINI_CYCLE_FRAMES;
 }
 
 /* --- CO gauge stars ------------------------------------------------------
