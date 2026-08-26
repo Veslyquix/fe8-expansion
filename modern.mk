@@ -2477,20 +2477,29 @@ WIN_SYNC_DIR := /mnt/c/devkitPro/feex
 sync-win:
 	+scripts/log_build_error.sh "make sync-win" -- $(MAKE) --no-print-directory _sync_win_impl
 
+# WITH_UPS=1 make sync-win opts back into building+copying the UPS patch
+# (off by default -- it's a ~1 minute full-ROM diff, and most sync-win calls
+# just want the ROM in the emulator ASAP). `make expansion-modern-ups`
+# remains available on its own regardless of this.
+WITH_UPS ?= 0
+
 _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
-	+$(MAKE) expansion-modern-rom expansion-modern-sym \
-		$(if $(wildcard $(BASEROM)),expansion-modern-ups) \
-		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips) \
-		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
+	+$(MAKE) expansion-modern-rom
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
-	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
+	+$(MAKE) expansion-modern-sym \
+		$(if $(filter 1,$(WITH_UPS)),$(if $(wildcard $(BASEROM)),expansion-modern-ups)) \
+		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips) \
+		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
+	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
-	@if [ -f "$(BASEROM)" ]; then \
+	@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \
 		cp "$(MODERN_UPS)" "$(WIN_SYNC_DIR)/"; \
 		printf 'Copied %s -> %s/\n' "$(MODERN_UPS)" "$(WIN_SYNC_DIR)"; \
+	fi
+	@if [ -f "$(BASEROM)" ]; then \
 		if [ "$(MODERN_ROM_SIZE)" = "16M" ]; then \
 			cp "$(MODERN_IPS)" "$(WIN_SYNC_DIR)/"; \
 			printf 'Copied %s -> %s/\n' "$(MODERN_IPS)" "$(WIN_SYNC_DIR)"; \
@@ -2498,7 +2507,7 @@ _sync_win_impl:
 			echo "note: MODERN_ROM_SIZE=$(MODERN_ROM_SIZE) (not 16M), skipping IPS patch"; \
 		fi; \
 	else \
-		echo "note: $(BASEROM) not found, skipping UPS/IPS patches"; \
+		echo "note: $(BASEROM) not found, skipping IPS patch"; \
 	fi
 	@if [ "$(FEBUILDER_POINTERS)" = "1" ]; then \
 		cp "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)/"; \
