@@ -1667,6 +1667,23 @@ void EndPlayerPhaseSideWindows(void)
     return;
 }
 
+#if FE8_AW2_ASSETS
+void StartAiPhaseGoalDisplay(void)
+{
+    if ((gPlaySt.config.disableGoalDisplay == 0) && (CheckFlag(EVFLAG_OBJWINDOW_DISABLE) == 0))
+    {
+        Proc_Start(gProcScr_GoalDisplay, PROC_TREE_3);
+    }
+}
+
+void EndAiPhaseGoalDisplay(void)
+{
+    Proc_EndEach(gProcScr_GoalDisplay);
+
+    ClearBg0Bg1();
+}
+#endif
+
 //! FE8U = 0x0808D190
 bool IsCursorInLowerScreenHalf(void)
 {
@@ -1717,7 +1734,8 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
 
 #if FE8_AW2_ASSETS
     DrawAw2CoMini(gUiTmScratchB + TILEMAP_INDEX(22, 11));
-    PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_BLUE, GetChapterGoldAmount());
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_BLUE,
+        GetFactionChapterGoldAmount(gPlaySt.faction >> 6));
     return;
 #endif
 

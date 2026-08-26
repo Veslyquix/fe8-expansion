@@ -4062,7 +4062,8 @@ enum
 // capped well below its real u32 range. Fine for a debug tool.
 #define CoGoldEditMax 32000
 #define CoGaugeEditMax 9999
-#define CoGaugeStep 25
+// CO_GAUGE_PER_STAR: include/power.h -- shared with src/aw2_gfx.c, was a
+// separate CoGaugeStep define here before.
 #define CoGaugeHeartMax 10
 
 static const char * const sCoFactionNames[4] = { "Blue", "Green", "Red", "Purple" };
@@ -4092,7 +4093,7 @@ void RedrawCoMenu(DebuggerProc * proc)
     int i;
     int faction = proc->tmp[CoTmp_Faction];
     int gauge = GetCoFactionField(proc, CoField_Gauge);
-    int hearts = gauge / CoGaugeStep;
+    int hearts = gauge / CO_GAUGE_PER_STAR;
 
     if (hearts > CoGaugeHeartMax)
         hearts = CoGaugeHeartMax;
@@ -4316,7 +4317,7 @@ void EditCoIdle(DebuggerProc * proc)
     case CoRow_Gauge:
         if (newKeys & DPAD_RIGHT)
         {
-            int value = GetCoFactionField(proc, CoField_Gauge) + CoGaugeStep;
+            int value = GetCoFactionField(proc, CoField_Gauge) + CO_GAUGE_PER_STAR;
 
             if (value > CoGaugeEditMax)
                 value = CoGaugeEditMax;
@@ -4326,7 +4327,7 @@ void EditCoIdle(DebuggerProc * proc)
         }
         else if (newKeys & DPAD_LEFT)
         {
-            int value = GetCoFactionField(proc, CoField_Gauge) - CoGaugeStep;
+            int value = GetCoFactionField(proc, CoField_Gauge) - CO_GAUGE_PER_STAR;
 
             if (value < 0)
                 value = 0;

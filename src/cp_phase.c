@@ -7,6 +7,13 @@
 
 #include "cp_common.h"
 
+#if FE8_CO_POWERS
+#include "power.h"
+#endif
+#if FE8_AW2_ASSETS
+#include "player_interface.h"
+#endif
+
 #if FE8_VESLY_DEBUGGER
 int ShouldAIControlRemainingUnits(void);
 #endif
@@ -14,6 +21,13 @@ int ShouldAIControlRemainingUnits(void);
 static void AiPhaseInit(struct Proc* proc);
 static void AiPhaseBerserkInit(struct Proc* proc);
 static void AiPhaseCleanup(struct Proc* proc);
+#if FE8_CO_POWERS
+static void AiPhaseCoPowersHook(struct Proc* proc);
+#endif
+static void AiOrderStart(struct Proc* proc);
+#if FE8_AW2_ASSETS
+static void AiPhaseGoalDisplayCleanup(struct Proc* proc);
+#endif
 
 EWRAM_DATA struct AiState gAiState = {0};
 
@@ -23,8 +37,29 @@ struct ProcCmd gProcScr_CpPhase[] =
     PROC_NAME("E_CPPHASE"),
 
     PROC_CALL(AiPhaseInit),
+#if FE8_CO_POWERS
+    /* Its own script step (not folded into AiPhaseInit above) so that if
+     * CoPowers_OnAiPhaseStart decides to use a power, the roll-call/effect
+     * proc it starts (gProcScr_CoPowers, see src/power.c) fully finishes --
+     * camera pans, barrier animations, camera return -- before AiOrderStart
+     * below spins up the faction's actual turn logic. A blocking child
+     * only holds up ITS OWN parent's advancement past the step that
+     * started it; two blocking children started from the very same step
+     * would run concurrently as siblings instead of one after the other,
+     * which is why this needs its own step rather than sharing
+     * AiPhaseInit's. */
+    PROC_CALL(AiPhaseCoPowersHook),
+#endif
+    PROC_CALL(AiOrderStart),
     PROC_YIELD,
 
+#if FE8_AW2_ASSETS
+    /* Not folded into AiPhaseCleanup below -- that function is shared with
+     * gProcScr_BerserkCpPhase, which can interrupt an ongoing PLAYER phase
+     * (a unit going berserk mid-turn) and must not tear down whatever side
+     * windows the player already had up. */
+    PROC_CALL(AiPhaseGoalDisplayCleanup),
+#endif
     PROC_CALL(AiPhaseCleanup),
 
     PROC_END,
@@ -61,8 +96,29 @@ static void AiPhaseInit(struct Proc* proc)
     UpdateAllPhaseHealingAIStatus();
     SetupUnitInventoryAIFlags();
 
+#if FE8_AW2_ASSETS
+    StartAiPhaseGoalDisplay();
+#endif
+}
+
+#if FE8_CO_POWERS
+static void AiPhaseCoPowersHook(struct Proc* proc)
+{
+    CoPowers_OnAiPhaseStart(proc);
+}
+#endif
+
+static void AiOrderStart(struct Proc* proc)
+{
     Proc_StartBlocking(gProcScr_CpOrder, proc);
 }
+
+#if FE8_AW2_ASSETS
+static void AiPhaseGoalDisplayCleanup(struct Proc* proc)
+{
+    EndAiPhaseGoalDisplay();
+}
+#endif
 
 static void AiPhaseBerserkInit(struct Proc* proc)
 {

@@ -25,14 +25,25 @@ void DrawAw2CoMini(u16* dst);
  * src/player_interface.c) for the whole 32-frame back-and-forth. */
 void UpdateAw2CoMiniPaletteCycle(void);
 
-/* The player's CO gauge in half-star units (3 == one and a half stars
- * filled). OverlapStars merges that gauge onto the panel's tiles as the
- * CO's small "normal power" stars followed by its big "super" ones --
- * DrawAw2CoMini already calls it, so this is only for drawing the gauge
- * again on its own. Both are no-ops unless FE8_CO_POWERS is also on,
- * since the gauge itself lives in that feature. */
-int GetStarsPlayer(void);
+/* The currently active phase faction's (gPlaySt.faction) CO gauge in
+ * half-star units (3 == one and a half stars filled). OverlapStars merges
+ * that gauge onto the panel's tiles as the CO's small "normal power" stars
+ * followed by its big "super" ones -- DrawAw2CoMini already calls it, so
+ * this is only for drawing the gauge again on its own. Both are no-ops
+ * unless FE8_CO_POWERS is also on, since the gauge itself lives in that
+ * feature. */
+int GetActiveFactionStars(void);
 void OverlapStars(void);
+
+/* CO power/super power intro banner (src/power.c, gProcScr_CoPowers) --
+ * decompresses whichever of power_tiles/super_tiles is needed into the
+ * same OBJ VRAM slot LoadAw2Gfx reserves for it (unused elsewhere, since
+ * nothing currently calls LoadAw2Gfx), then DrawAw2PowerBannerSprite puts
+ * it on screen centred, one call per frame like any other OBJ sprite.
+ * SUPER is 48x8, which isn't a single valid OBJ shape, so it's drawn as
+ * two adjacent sprites (32x8 + 16x8). */
+void LoadAw2PowerBannerGfx(bool8 isSuper);
+void DrawAw2PowerBannerSprite(bool8 isSuper);
 
 #endif
 

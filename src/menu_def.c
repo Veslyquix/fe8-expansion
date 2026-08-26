@@ -245,7 +245,8 @@ CONST_DATA struct MenuItemDef gMapMenuItems[] = {
     {"　退却", 0x69D, 0x6E2, 0, 0x72, MapMenu_IsRetreatCommandAvailable, 0, MapMenu_RetreatCommand, 0, 0, 0}, // Retreat
     {"　中断", 0x69F, 0x6E4, 0, 0x73, MapMenu_IsSuspendCommandAvailable, 0, MapMenu_SuspendCommand, 0, 0, 0}, // Suspend
 #if FE8_CO_POWERS
-    {" Power", 0, 0, 0, 0, MenuAlwaysEnabled, 0, CoPowers_MenuCommand, 0, 0, 0},
+    {" Power", 0, 0, 0, 0, CoPowers_IsAvailable, 0, CoPowers_MenuCommand, 0, 0, 0},
+    {" Super Power", 0, 0, 0, 0, CoSuperPowers_IsAvailable, 0, CoSuperPowers_MenuCommand, 0, 0, 0},
 #endif
     {"　終了", 0x6A0, 0x6E6, 0, 0x78, MenuAlwaysEnabled, 0, CommandEffectEndPlayerPhase, 0, 0, 0}, // End Phase
 #if FE8_EXPANSION_DANGER_OVERLAY_MENU

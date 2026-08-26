@@ -7,6 +7,7 @@
 #include "bmlib.h"
 #include "variables.h"
 #include "bmunit.h" // FACTION_BLUE
+#include "ctc.h" // PutSprite, gObject_32x8/16x8, OAM2_CHR/OAM2_PAL
 #if FE8_CO_POWERS
 #include "power.h" // CoGauge_Get, CoScreen_GetCo*Stars
 #endif
@@ -87,6 +88,48 @@ void LoadAw2Gfx(void)
 
     LoadAw2Image(aw2debugFont_tiles, aw2debugFont_palette,
         AW2_FONT_W, AW2_FONT_H, dst, AW2_FONT_PAL_ID);
+}
+
+/* --- CO power/super power intro banner (src/power.c) ----------------------
+ * Reuses the power/super OBJ tile slot LoadAw2Gfx above reserves (nothing
+ * calls LoadAw2Gfx, so it's otherwise sitting unused) -- only one of power
+ * or super is ever shown at a time, so both just decompress into the same
+ * spot and share AW2_POWER_PAL_ID. */
+#define AW2_POWER_BANNER_OBJ_TILE 0x180 // (AW2_VRAM_BASE - OBJ_VRAM_BASE) / CHR_SIZE
+
+void LoadAw2PowerBannerGfx(bool8 isSuper)
+{
+    if (isSuper)
+        LoadAw2Image(super_tiles, super_palette,
+            AW2_SUPER_W, AW2_SUPER_H, AW2_VRAM_BASE, AW2_POWER_PAL_ID);
+    else
+        LoadAw2Image(power_tiles, power_palette,
+            AW2_POWER_W, AW2_POWER_H, AW2_VRAM_BASE, AW2_POWER_PAL_ID);
+}
+
+/* SUPER's 48x8 doesn't match any single OBJ shape (GBA sizes only go up to
+ * 64x64 in powers-of-two-ish steps -- 8/16/32/64), so it's split into a
+ * 32x8 sprite (the graphic's first 4 tiles) plus a 16x8 one right next to
+ * it (the last 2 tiles), matching how obj_Phasechangefx_0
+ * (src/phasechangefx.c) composes its own wide logo out of several OAM
+ * entries. */
+void DrawAw2PowerBannerSprite(bool8 isSuper)
+{
+    int y = (DISPLAY_HEIGHT - 8) / 2;
+
+    if (isSuper) {
+        int x = (DISPLAY_WIDTH - AW2_SUPER_W * 8) / 2;
+
+        PutSprite(2, x, y, gObject_32x8,
+            OAM2_CHR(AW2_POWER_BANNER_OBJ_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
+        PutSprite(2, x + 32, y, gObject_16x8,
+            OAM2_CHR(AW2_POWER_BANNER_OBJ_TILE + 4) | OAM2_PAL(AW2_POWER_PAL_ID));
+    } else {
+        int x = (DISPLAY_WIDTH - AW2_POWER_W * 8) / 2;
+
+        PutSprite(2, x, y, gObject_32x8,
+            OAM2_CHR(AW2_POWER_BANNER_OBJ_TILE) | OAM2_PAL(AW2_POWER_PAL_ID));
+    }
 }
 
 
@@ -182,10 +225,9 @@ enum {
 #define AW2_BIG_STAR_W    2
 #define AW2_BIG_STAR_H    2
 
-/* CO gauge points per star. CoGauge_Get returns raw points (see
- * CO_GAUGE_MAX, src/power.c). */
-#define AW2_GAUGE_PER_STAR      50
-#define AW2_GAUGE_PER_HALF_STAR (AW2_GAUGE_PER_STAR / 2)
+/* CO gauge points per star (include/power.h's CO_GAUGE_PER_STAR --
+ * CoGauge_Get returns raw points, see CO_GAUGE_MAX, src/power.c). */
+#define AW2_GAUGE_PER_HALF_STAR (CO_GAUGE_PER_STAR / 2)
 
 /* Where the gauge sits inside the 64x32 panel and how far apart
  * consecutive stars are, in pixels. The panel's drawn box spans rows 2-18,
@@ -205,12 +247,14 @@ enum {
 #define AW2_SMALL_STAR_STEP  6
 #define AW2_BIG_STAR_STEP   6
 
-/* The player's CO gauge in half-star units, so 3 means one and a half
- * stars are filled. */
-int GetStarsPlayer(void)
+/* The currently active phase's faction (gPlaySt.faction -- FACTION_BLUE
+ * during the player's own turn, FACTION_RED/GREEN during an AI-controlled
+ * one) CO gauge in half-star units, so 3 means one and a half stars are
+ * filled. */
+int GetActiveFactionStars(void)
 {
 #if FE8_CO_POWERS
-    return CoGauge_Get(FACTION_BLUE) / AW2_GAUGE_PER_HALF_STAR;
+    return CoGauge_Get(gPlaySt.faction) / AW2_GAUGE_PER_HALF_STAR;
 #else
     return 0;
 #endif
@@ -258,19 +302,19 @@ static void OverlapStarAt(
         tileWidth, tileHeight, px & 7, py & 7, AW2_COMINI_W);
 }
 
-/* Draws the player's CO gauge onto the panel: one small star per star the
- * CO's normal power costs, then big ones for the extra charge its super
- * needs on top (Francis at 3/5 gives three small then two big), each drawn
- * empty, half or full to match the gauge. */
+/* Draws the active phase faction's CO gauge onto the panel: one small star
+ * per star the CO's normal power costs, then big ones for the extra charge
+ * its super needs on top (Francis at 3/5 gives three small then two big),
+ * each drawn empty, half or full to match the gauge. */
 void OverlapStars(void)
 {
 #if FE8_CO_POWERS
     u8* smallSheet = gGenericBuffer;
     u8* bigSheet = gGenericBuffer + AW2_STARS_W * AW2_STARS_H * CHR_SIZE;
-    int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
+    int coId = gPlaySt.commanderId[gPlaySt.faction >> 6];
     int powerStars = CoScreen_GetCoPowerStars(coId);
     int superStars = CoScreen_GetCoSuperPowerStars(coId);
-    int halfStars = GetStarsPlayer();
+    int halfStars = GetActiveFactionStars();
     int i, x;
 
     /* Both sheets at once: they're 3 and 12 tiles against gGenericBuffer's

@@ -33,6 +33,10 @@
 #include "constants/items.h"
 #include "constants/video-global.h"
 #include "icon.h"
+#if FE8_AW2_ASSETS
+#include "aw2_gfx.h"
+#include "phasechangefx.h" // gProcScr_PhaseIntroSquares/BlendBox, Img_PhaseChangeSquares
+#endif
 
 
 /* 
@@ -86,23 +90,61 @@ When adding text, follow this schema:
 
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
-// moves the camera onto each blue unit 
+// moves the camera onto each of faction's units, applying that faction's CO's
+// power (or super, if isSuper) to whichever ones CoPower_AppliesToClass says
+// it targets -- used both for the player's own menu commands (faction always
+// FACTION_BLUE there) and for an AI faction's power at its phase start (see
+// CoPowers_OnAiPhaseStart)
 struct CoPowersProc
 {
     PROC_HEADER;
 
-    u8 unitIndex; // current unit 
+    u8 unitIndex; // current unit
+    u8 faction; // FACTION_BLUE/GREEN/RED/PURPLE (bmunit.h)
+    bool8 isSuper; // set by the caller right after Proc_Start, see below
+#if FE8_AW2_ASSETS
+    s8 bannerTimer; // CoPowerBanner_Init/_Loop -- frames left showing the intro banner
+#endif
 };
 
 static void CoPowers_Init(struct CoPowersProc* proc);
 static void CoPowers_Step(struct CoPowersProc* proc);
 static void CoPowers_Anim(struct CoPowersProc* proc);
 static void CoPowers_ReturnCamera(struct CoPowersProc* proc);
+static bool8 CoPower_AppliesToClass(int coId, bool8 isSuper, int classId);
+static void CoPower_ApplyEffect(int coId, bool8 isSuper, struct Unit* unit);
 struct ProcCmd CONST_DATA ProcScr_MapAnimBarrierfx2[];
+#if FE8_AW2_ASSETS
+static void CoPowerBanner_Init(struct CoPowersProc* proc);
+static void CoPowerBanner_Loop(struct CoPowersProc* proc);
+static void CoPowerBanner_Cleanup(struct CoPowersProc* proc);
+#endif
 
 CONST_DATA struct ProcCmd gProcScr_CoPowers[] = {
     PROC_NAME("COPOWERS"),
     // PROC_CALL(LockGame),
+    /* Proc_Start runs a script synchronously up to its first blocking
+     * command before returning, so without this sleep, CoPowers_Init would
+     * read proc->faction (to seed proc->unitIndex, see CoPowers_Init/_Step)
+     * before the caller -- CoPowersMenuCommandCommon or
+     * CoPowers_OnAiPhaseStart -- gets a chance to set it on the pointer
+     * Proc_Start hands back. proc->isSuper doesn't strictly need this (only
+     * CoPowers_Anim reads it, safely after the first real yield point,
+     * PROC_WHILE_EXISTS below), but faction does -- same hazard
+     * gProcScr_CoCommanderFade's leading PROC_SLEEP(0) guards against
+     * (there, the very first PROC_CALL reads a caller-set field too). */
+    PROC_SLEEP(0),
+#if FE8_AW2_ASSETS
+    /* POWER/SUPER banner, styled after the phase-change intro (see
+     * src/phasechangefx.c) -- CoPowerBanner_Init reads proc->isSuper
+     * (already valid past the PROC_SLEEP(0) above) to pick which graphic,
+     * starts the borrowed squares-wipe/blend-box decoration as its own
+     * children, and seeds the hold timer CoPowerBanner_Loop counts down
+     * (twice as fast with B held -- see its own comment). */
+    PROC_CALL(CoPowerBanner_Init),
+    PROC_REPEAT(CoPowerBanner_Loop),
+    PROC_CALL(CoPowerBanner_Cleanup),
+#endif
     PROC_CALL(CoPowers_Init),
 
 PROC_LABEL(0),
@@ -121,18 +163,86 @@ PROC_LABEL(99),
 
 static void CoPowers_Init(struct CoPowersProc* proc)
 {
-    proc->unitIndex = 0;
+    proc->unitIndex = proc->faction;
 }
 static void CoPowers_ReturnCamera(struct CoPowersProc* proc)
 {
     EnsureCameraOntoPosition(proc, gBmSt.playerCursor.x, gBmSt.playerCursor.y);
 }
+
+#if FE8_AW2_ASSETS
+/* ~1 second at 60fps; CoPowerBanner_Loop halves this (rounding down, so an
+ * odd leftover frame at 2x) whenever B is held. */
+#define CO_POWER_BANNER_HOLD_FRAMES 60
+
+/* Sets up the borrowed phase-change squares-wipe/blend-box decoration
+ * (src/phasechangefx.c) -- started as our own children rather than the
+ * bundled ProcScr_PhaseIntro, since that one is tied to Player/Enemy/Other
+ * phase text and pulls in a VCount-interrupt gradient this banner doesn't
+ * need. Pal_PhaseChange_0 is the one variant of that palette not already
+ * tied to a specific faction's tint. */
+static void CoPowerBanner_Init(struct CoPowersProc* proc)
+{
+    LoadAw2PowerBannerGfx(proc->isSuper);
+
+    Decompress(Img_PhaseChangeSquares, BG_CHR_ADDR(BGCHR_PHASE_CHANGE_SQUARES));
+    ApplyPalette(Pal_PhaseChange_0, BGPAL_PHASE_CHANGE);
+
+    BG_SetPosition(BG_0, 0, 0);
+    BG_SetPosition(BG_1, 0, 0);
+
+    SetWinEnable(1, 0, 0);
+    SetWin0Box(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    SetWin0Layers(1, 0, 1, 1, 1);
+    SetWOutLayers(1, 1, 1, 1, 1);
+    gLCDControlBuffer.wincnt.win0_enableBlend = 1;
+    gLCDControlBuffer.wincnt.wout_enableBlend = 1;
+
+    gBmSt.altBlendBCa = 0;
+    gBmSt.altBlendBCb = 0x10;
+    SetBlendConfig(1, gBmSt.altBlendBCa, gBmSt.altBlendBCb, 0);
+    SetBlendTargetA(0, 1, 0, 0, 0);
+    SetBlendTargetB(0, 0, 1, 1, 1);
+
+    Proc_Start(gProcScr_PhaseIntroSquares, proc);
+    Proc_Start(gProcScr_PhaseIntroBlendBox, proc);
+
+    proc->bannerTimer = CO_POWER_BANNER_HOLD_FRAMES;
+}
+
+static void CoPowerBanner_Loop(struct CoPowersProc* proc)
+{
+    SetBlendConfig(1, gBmSt.altBlendBCa, gBmSt.altBlendBCb, 0);
+
+    DrawAw2PowerBannerSprite(proc->isSuper);
+
+    proc->bannerTimer -= (gKeyStatusPtr->heldKeys & B_BUTTON) ? 2 : 1;
+
+    if (proc->bannerTimer <= 0)
+        Proc_Break(proc);
+}
+
+static void CoPowerBanner_Cleanup(struct CoPowersProc* proc)
+{
+    Proc_EndEach(gProcScr_PhaseIntroSquares);
+    Proc_EndEach(gProcScr_PhaseIntroBlendBox);
+
+    SetWinEnable(0, 0, 0);
+    SetDefaultColorEffects();
+
+    ClearBg0Bg1();
+
+    BG_SetPosition(BG_0, 0, 0);
+    BG_SetPosition(BG_1, 0, 0);
+}
+#endif
+
 static void CoPowers_Step(struct CoPowersProc* proc)
 {
     int i;
     struct Unit* unit = NULL;
 
-    for (i = proc->unitIndex + 1; i < FACTION_BLUE + 0x40; ++i) {
+    for (i = proc->unitIndex + 1; i < proc->faction + 0x40; ++i) {
         struct Unit* candidate = GetUnit(i);
 
         if (UNIT_IS_VALID(candidate) && !(candidate->state & (US_DEAD | US_HIDDEN | US_NOT_DEPLOYED))) {
@@ -152,7 +262,7 @@ static void CoPowers_Step(struct CoPowersProc* proc)
     // SetCursorMapPosition(unit->xPos, unit->yPos);
 }
 
-// display a glowy animation on each unit 
+// display a glowy animation on each unit
 void MapAnimBarrierfx_Loop2(struct MAEffectProc * proc)
 {
     static u8 const unk_param_list[] =
@@ -163,21 +273,40 @@ void MapAnimBarrierfx_Loop2(struct MAEffectProc * proc)
         // 1, 1, 1, 1, 1, 1, 1, 1,
         // 1, 1, 1, 1, 1, 1, 1, 1,
         // 1, 1, 1, 1, 0, 0,
-        
+
         UINT8_MAX, // end
     };
+    int steps = 1;
 
-    PutTmAnimFrameFromTsa(
-        gBG2TilemapBuffer,
-        proc->xDisplay / 8 - 2, proc->yDisplay / 8 - 8,
-        TILEREF(BGCHR_MANIM_160, BGPAL_MANIM_4),
-        4, 10, Tsa_Mapnightmare,
-        unk_param_list[proc->unk48++]);
+#if FE8_AW2_ASSETS
+    /* Holding B during a CO power/super power roll-call (see gProcScr_
+     * CoPowers, CoPower_ApplyEffect's caller) plays this same animation
+     * twice as fast on every unit it targets -- two real steps per tick
+     * instead of one, so it finishes in half the frames. Bounds-checked the
+     * same way each single step already was: never take a second step past
+     * one that just hit the terminator. */
+    if (gKeyStatusPtr->heldKeys & B_BUTTON)
+        steps = 2;
+#endif
+
+    while (steps-- > 0)
+    {
+        PutTmAnimFrameFromTsa(
+            gBG2TilemapBuffer,
+            proc->xDisplay / 8 - 2, proc->yDisplay / 8 - 8,
+            TILEREF(BGCHR_MANIM_160, BGPAL_MANIM_4),
+            4, 10, Tsa_Mapnightmare,
+            unk_param_list[proc->unk48++]);
+
+        if (unk_param_list[proc->unk48] == UINT8_MAX)
+        {
+            BG_EnableSyncByMask(BG2_SYNC_BIT);
+            Proc_Break(proc);
+            return;
+        }
+    }
 
     BG_EnableSyncByMask(BG2_SYNC_BIT);
-
-    if (unk_param_list[proc->unk48] == UINT8_MAX)
-        Proc_Break(proc);
 }
 struct ProcCmd CONST_DATA ProcScr_MapAnimBarrierfx2[] = {
     PROC_SLEEP(1),
@@ -197,21 +326,79 @@ void MapAnimCallSpellAssocBarrierfx2(struct Unit * unit)
 }
 static void CoPowers_Anim(struct CoPowersProc* proc)
 {
-    struct Unit* unit = GetUnit(proc->unitIndex); 
-    if (!UNIT_IS_VALID(unit)) 
-    { 
-        return; 
-    } 
+    struct Unit* unit = GetUnit(proc->unitIndex);
+    int coId;
+
+    if (!UNIT_IS_VALID(unit))
+        return;
+
+    coId = gPlaySt.commanderId[proc->faction >> 6];
+
+    /* Units of a class the power/super doesn't target are skipped
+     * silently -- no effect, no barrier animation on them either, so the
+     * roll-call only visibly stops on units it's actually doing something
+     * to. */
+    if (!CoPower_AppliesToClass(coId, proc->isSuper, unit->pClassData->number))
+        return;
+
+    CoPower_ApplyEffect(coId, proc->isSuper, unit);
 
     MapAnimCallSpellAssocBarrierfx2(unit);
+}
 
-} 
+/* Greyed out (visible, not selectable) until the player faction's CO
+ * gauge has charged up to their commander's powerStars requirement --
+ * gPlaySt.commanderId/coGauge are per-faction (FACTION_BLUE/GREEN/RED/
+ * PURPLE, bmunit.h; see include/types.h), and this is always the map
+ * menu's own player-side command, so FACTION_BLUE. */
+u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number)
+{
+    int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
+    int needed = CoScreen_GetCoPowerStars(coId) * CO_GAUGE_PER_STAR;
+
+    if (CoGauge_Get(FACTION_BLUE) < needed)
+        return MENU_DISABLED;
+
+    return MENU_ENABLED;
+}
+
+/* Same as CoPowers_IsAvailable, gated on superPowerStars instead. */
+u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number)
+{
+    int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
+    int needed = CoScreen_GetCoSuperPowerStars(coId) * CO_GAUGE_PER_STAR;
+
+    if (CoGauge_Get(FACTION_BLUE) < needed)
+        return MENU_DISABLED;
+
+    return MENU_ENABLED;
+}
+
+/* Shared by both menu commands below: spends the whole gauge (matching
+ * Advance Wars -- using either power drains it completely, not just the
+ * star cost) and starts the roll-call/effect proc, telling it via isSuper
+ * which of the two just got used. */
+static u8 CoPowersMenuCommandCommon(bool8 isSuper)
+{
+    struct CoPowersProc* proc;
+
+    CoGauge_OnPowerUsed(FACTION_BLUE);
+
+    proc = (struct CoPowersProc*)Proc_Start(gProcScr_CoPowers, PROC_TREE_3);
+    proc->faction = FACTION_BLUE;
+    proc->isSuper = isSuper;
+
+    return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+}
 
 u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
-    Proc_Start(gProcScr_CoPowers, PROC_TREE_3);
+    return CoPowersMenuCommandCommon(FALSE);
+}
 
-    return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+u8 CoSuperPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
+{
+    return CoPowersMenuCommandCommon(TRUE);
 }
 
 /* ---------------------------------------------------------------------- *
@@ -236,6 +423,26 @@ struct CoClassAffinity {
     u8 rating; // 1-5; not wired up to the bar yet, see CoScreen_DrawPageAffinity
 };
 
+/* CoScreen_DrawPageAffinity's bar base: a class's affinity bar (and
+ * CoPower_ClassAffinityGroup below) is green/positive above this, red/
+ * negative below it, plain yellow/neutral exactly at it. */
+#define CO_AFFINITY_NEUTRAL_RATING 30
+
+/* Which classes a CO power affects, by their affinity rating relative to
+ * CO_AFFINITY_NEUTRAL_RATING -- struct CoDefinition's powerTargetGroup/
+ * superPowerTargetGroup (the two needn't match: a power and its super
+ * don't have to target the same classes). A class the CO has no explicit
+ * struct CoClassAffinity entry for defaults to neutral (see
+ * CoPower_ClassAffinityGroup). */
+enum CoPowerTargetGroup {
+    CO_POWER_TARGET_ALL,
+    CO_POWER_TARGET_POSITIVE,
+    CO_POWER_TARGET_POSITIVE_NEUTRAL,
+    CO_POWER_TARGET_NEGATIVE,
+    CO_POWER_TARGET_NEGATIVE_NEUTRAL,
+    CO_POWER_TARGET_NEGATIVE_POSITIVE,
+};
+
 
 struct CoDefinition {
     u16 nameMsg;
@@ -252,6 +459,11 @@ struct CoDefinition {
      * so superPowerStars must be >= powerStars. */
     u8 powerStars;
     u8 superPowerStars;
+    /* enum CoPowerTargetGroup -- which classes the power/super actually
+     * affects when used (see CoPower_AppliesToClass). Defaults to
+     * CO_POWER_TARGET_ALL (0) if left off a CoDefinition. */
+    u8 powerTargetGroup;
+    u8 superPowerTargetGroup;
     const struct CoClassAffinity* affinities;
     u8 affinityCount;
 };
@@ -315,6 +527,12 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .superPowerDescMsg = MSG_CO_FRANCIS_SUPER_DESC,
         .powerStars = 3,
         .superPowerStars = 5,
+        /* Both only affect units of a class Francis has a positive or
+         * neutral affinity for (see sFrancisAffinities) -- the super just
+         * heals them further (to full) than the power does (10 HP), not a
+         * wider or narrower group. */
+        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
         .affinities = sFrancisAffinities,
         .affinityCount = ARRAY_COUNT(sFrancisAffinities),
     },
@@ -332,6 +550,9 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
          * them (see the width budget note in src/aw2_gfx.c). */
         .powerStars = 4,
         .superPowerStars = 5,
+        /* No effect implemented yet (see CoPower_ApplyEffect) -- left at
+         * the CO_POWER_TARGET_ALL default so the animation still plays for
+         * every unit, matching the pre-existing roll-call-only behavior. */
         .affinities = sOneillAffinities,
         .affinityCount = ARRAY_COUNT(sOneillAffinities),
     },
@@ -358,6 +579,81 @@ static const struct CoDefinition* GetCoDefinition(int coId)
         coId = CO_FRANCIS;
 
     return &sCoDefinitions[coId];
+}
+
+/* A class with no explicit struct CoClassAffinity entry for this CO is
+ * neutral -- same default the affinity page's bars use (they draw
+ * entirely yellow, no green/red overlay, for anything at exactly
+ * CO_AFFINITY_NEUTRAL_RATING, see DrawCoInfoBar). */
+static int GetClassAffinityRating(const struct CoDefinition* co, int classId)
+{
+    int i;
+
+    for (i = 0; i < co->affinityCount; ++i) {
+        if (co->affinities[i].classId == classId)
+            return co->affinities[i].rating;
+    }
+
+    return CO_AFFINITY_NEUTRAL_RATING;
+}
+
+/* Does coId's power (or its super, if isSuper) affect a unit of classId?
+ * Checked once per surveyed unit by CoPowers_Anim to decide whether that
+ * unit gets CoPower_ApplyEffect and the barrier animation, or is skipped
+ * silently -- see gProcScr_CoPowers below. */
+static bool8 CoPower_AppliesToClass(int coId, bool8 isSuper, int classId)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+    int rating = GetClassAffinityRating(co, classId);
+    int group = isSuper ? co->superPowerTargetGroup : co->powerTargetGroup;
+
+    switch (group) {
+    case CO_POWER_TARGET_POSITIVE:
+        return rating > CO_AFFINITY_NEUTRAL_RATING;
+
+    case CO_POWER_TARGET_POSITIVE_NEUTRAL:
+        return rating >= CO_AFFINITY_NEUTRAL_RATING;
+
+    case CO_POWER_TARGET_NEGATIVE:
+        return rating < CO_AFFINITY_NEUTRAL_RATING;
+
+    case CO_POWER_TARGET_NEGATIVE_NEUTRAL:
+        return rating <= CO_AFFINITY_NEUTRAL_RATING;
+
+    case CO_POWER_TARGET_NEGATIVE_POSITIVE:
+        return rating != CO_AFFINITY_NEUTRAL_RATING;
+
+    case CO_POWER_TARGET_ALL:
+    default:
+        return TRUE;
+    }
+}
+
+/* Amount Francis' power heals a matching unit for; his super heals them
+ * to full instead (see CoPower_ApplyEffect). */
+#define CO_FRANCIS_POWER_HEAL_AMOUNT 10
+
+/* The actual effect a CO's power/super has on a unit CoPower_AppliesToClass
+ * has already said it targets. Only Francis has one implemented so far --
+ * everyone else is a no-op, leaving the roll-call/barrier animation as the
+ * only visible effect (see CoPower_ApplyEffect's caller, CoPowers_Anim). */
+static void CoPower_ApplyEffect(int coId, bool8 isSuper, struct Unit* unit)
+{
+    switch (coId) {
+    case CO_FRANCIS:
+        if (isSuper) {
+            unit->curHP = GetUnitMaxHp(unit);
+        } else {
+            unit->curHP += CO_FRANCIS_POWER_HEAL_AMOUNT;
+
+            if (unit->curHP > GetUnitMaxHp(unit))
+                unit->curHP = GetUnitMaxHp(unit);
+        }
+        break;
+
+    default:
+        break;
+    }
 }
 
 int CoScreen_GetCoCount(void)
@@ -434,6 +730,44 @@ void CoGauge_Set(int faction, s16 value)
 void CoGauge_OnPowerUsed(int faction)
 {
     CoGauge_Set(faction, 0);
+}
+
+/* Called from AiPhaseInit (src/cp_phase.c) at the start of each AI-
+ * controlled phase (FACTION_RED/FACTION_GREEN), before that faction's own
+ * turn actions (Proc_StartBlocking(gProcScr_CpOrder, ...)) begin. Mirrors
+ * the player's own CoPowersMenuCommandCommon, but the AI decides *whether*
+ * to use a power for itself, on gauge fullness alone:
+ *   - super power, if the gauge has reached (or passed) superPowerStars
+ *     worth of half-stars -- "full stars".
+ *   - regular power, but only if the gauge is sitting at exactly
+ *     powerStars worth of half-stars -- once it's a half star or more
+ *     past that (and still short of the super), the AI holds out for the
+ *     super instead of spending early.
+ *   - otherwise, no power is used this phase.
+ * parent is AiPhaseInit's own proc, so the roll-call/effect proc
+ * (gProcScr_CoPowers) runs to completion -- including its camera return --
+ * before the caller's own AI turn logic starts. */
+void CoPowers_OnAiPhaseStart(struct Proc* parent)
+{
+    int faction = gPlaySt.faction;
+    int coId = gPlaySt.commanderId[faction >> 6];
+    const struct CoDefinition* co = GetCoDefinition(coId);
+    int halfStars = CoGauge_Get(faction) / (CO_GAUGE_PER_STAR / 2);
+    bool8 isSuper;
+    struct CoPowersProc* proc;
+
+    if (halfStars >= co->superPowerStars * 2)
+        isSuper = TRUE;
+    else if (halfStars == co->powerStars * 2)
+        isSuper = FALSE;
+    else
+        return;
+
+    CoGauge_OnPowerUsed(faction);
+
+    proc = (struct CoPowersProc*)Proc_StartBlocking(gProcScr_CoPowers, parent);
+    proc->faction = faction;
+    proc->isSuper = isSuper;
 }
 
 /* gStatScreen.text[] slots this screen borrows (see the EWRAM_OVERLAY(0)

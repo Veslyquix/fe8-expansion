@@ -24,6 +24,9 @@
 #include "eventinfo.h"
 #include "mapanim.h"
 #include "promote_command.h"
+#if FE8_AW2_ASSETS
+#include "player_interface.h"
+#endif
 
 #include "bmmind.h"
 
@@ -310,7 +313,24 @@ s8 ActionCombat(ProcPtr proc) {
         BattleGenerateReal(GetUnit(gActionData.subjectIndex), target);
     }
 
+#if FE8_AW2_ASSETS
+    /* Hide the AI goal window (gold + CO gauge stars, src/player_interface.c)
+     * for the actual battle scene -- this is the single point both the
+     * player's and the AI's combat funnel through (ApplyUnitAction), so
+     * gPlaySt.faction tells us which one is happening; the player's own
+     * side windows already manage their own visibility around every action
+     * (see Start/EndPlayerPhaseSideWindows, src/playerphase.c), so this
+     * only needs to act during an AI-controlled phase. */
+    if (gPlaySt.faction != FACTION_BLUE)
+        EndAiPhaseGoalDisplay();
+#endif
+
     Proc_StartBlocking(sProcScr_CombatAction, proc);
+
+#if FE8_AW2_ASSETS
+    if (gPlaySt.faction != FACTION_BLUE)
+        StartAiPhaseGoalDisplay();
+#endif
 
 #if FE8_GROUP_AI
     GroupAI_OnAttack(GetUnit(gActionData.subjectIndex), target);
