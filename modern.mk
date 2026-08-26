@@ -252,6 +252,9 @@ endif
 ifeq ($(CO_POWERS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CO_POWERS=1
 endif
+ifeq ($(FEBUILDER_POINTERS),1)
+MODERN_DEFINE_FLAGS += -DFE8_FEBUILDER_POINTERS=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1565,9 +1568,12 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
+	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
+	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--co-powers "$(CO_POWERS)" \
+		--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1653,6 +1659,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
+	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1746,7 +1753,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS) \
 	-DFE8_GAME_RANK=$(GAME_RANK) \
-	-DFE8_CO_POWERS=$(CO_POWERS)
+	-DFE8_CO_POWERS=$(CO_POWERS) \
+	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1935,6 +1943,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
 		printf '%s\n' 'game_rank=$(GAME_RANK)'; \
 		printf '%s\n' 'co_powers=$(CO_POWERS)'; \
+		printf '%s\n' 'febuilder_pointers=$(FEBUILDER_POINTERS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -2434,6 +2443,19 @@ $(MODERN_IPS): $(MODERN_ROM) $(BASEROM) $(MODERN_IPS_GENERATOR)
 expansion-modern-ips: expansion-modern-rom $(MODERN_IPS)
 	@printf 'Modern IPS patch ready: %s\n' "$(MODERN_IPS)"
 
+# fireemblem8.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
+# file): built from src/febuilder_pointers.c's gFebuilderPointers[] array
+# (#if FE8_FEBUILDER_POINTERS) -- see scripts/gen_custom_pointer_txt.py.
+MODERN_CUSTOM_POINTER_TXT := $(MODERN_ROM:.gba=.custom_pointer.txt)
+MODERN_CUSTOM_POINTER_GENERATOR := scripts/gen_custom_pointer_txt.py
+MODERN_FEBUILDER_FIELD_ORDER := tools/febuilder_pointers/field_order.txt
+
+$(MODERN_CUSTOM_POINTER_TXT): $(MODERN_ROM) $(MODERN_ELF) $(MODERN_FEBUILDER_FIELD_ORDER) $(MODERN_CUSTOM_POINTER_GENERATOR)
+	@"$(PYTHON)" "$(MODERN_CUSTOM_POINTER_GENERATOR)" "$(MODERN_ELF)" "$(MODERN_ROM)" "$(MODERN_FEBUILDER_FIELD_ORDER)" "$@"
+
+expansion-modern-custom-pointer-txt: expansion-modern-rom $(MODERN_CUSTOM_POINTER_TXT)
+	@printf 'FEBuilderGBA custom pointer file ready: %s\n' "$(MODERN_CUSTOM_POINTER_TXT)"
+
 # Opt-in convenience target (not part of `all`/boot-check): copy the built
 # modern ROM to a Windows-native path, for WSL setups where a GUI emulator
 # on the Windows side reads over \\wsl.localhost\ -- copying to a native
@@ -2450,7 +2472,8 @@ _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-rom expansion-modern-sym \
 		$(if $(wildcard $(BASEROM)),expansion-modern-ups) \
-		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips)
+		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips) \
+		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
@@ -2467,6 +2490,10 @@ _sync_win_impl:
 		fi; \
 	else \
 		echo "note: $(BASEROM) not found, skipping UPS/IPS patches"; \
+	fi
+	@if [ "$(FEBUILDER_POINTERS)" = "1" ]; then \
+		cp "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)/"; \
+		printf 'Copied %s -> %s/\n' "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)"; \
 	fi
 
 # Preflight the libmGBA-backed playtest backend before spending time building

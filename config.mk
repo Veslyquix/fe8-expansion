@@ -354,6 +354,15 @@ GAME_RANK ?= 1
 # the cursor on each for 5 frames. See src/power.c.
 CO_POWERS ?= 1
 
+# --- Optional FEBuilderGBA custom-pointer export ----------------------------
+# Emits a small const array (src/febuilder_pointers.c) of this build's real
+# addresses for the game-data tables FEBuilderGBA's ROMFE8U.cs hardcodes
+# vanilla addresses for, and `make sync-win` uses it to regenerate
+# fireemblem8.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
+# file) so FEBuilderGBA can be pointed at this ROM. Purely additive/opt-in
+# tooling support -- no gameplay or save-format impact.
+FEBUILDER_POINTERS ?= 1
+
 
 
 

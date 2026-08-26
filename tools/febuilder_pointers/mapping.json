@@ -1,0 +1,1615 @@
+[
+ {
+  "name": "mask_point_base_pointer",
+  "kind": "slot",
+  "expr": "gMsgHuffmanTableRoot"
+ },
+ {
+  "name": "mask_pointer",
+  "kind": "slot",
+  "expr": "gMsgHuffmanTable"
+ },
+ {
+  "name": "text_pointer",
+  "kind": "slot",
+  "expr": "gMsgTable"
+ },
+ {
+  "name": "text_recover_address",
+  "kind": "direct",
+  "expr": "gMsgTable"
+ },
+ {
+  "name": "unit_pointer",
+  "kind": "slot",
+  "expr": "gCharacterData"
+ },
+ {
+  "name": "unit_datasize",
+  "kind": "scalar",
+  "expr": "sizeof(struct CharacterData)"
+ },
+ {
+  "name": "class_pointer",
+  "kind": "slot",
+  "raw": true,
+  "expr": "(u32)&gClassData - sizeof(struct ClassData)"
+ },
+ {
+  "name": "class_datasize",
+  "kind": "scalar",
+  "expr": "sizeof(struct ClassData)"
+ },
+ {
+  "name": "bg_pointer",
+  "kind": "slot",
+  "expr": "gConvoBackgroundData"
+ },
+ {
+  "name": "portrait_pointer",
+  "kind": "slot",
+  "raw": true,
+  "expr": "(u32)&portrait_data - sizeof(struct FaceData)"
+ },
+ {
+  "name": "portrait_datasize",
+  "kind": "scalar",
+  "expr": "sizeof(struct FaceData)"
+ },
+ {
+  "name": "icon_pointer",
+  "kind": "slot",
+  "expr": "item_icon_tiles"
+ },
+ {
+  "name": "icon_orignal_address",
+  "kind": "direct",
+  "expr": "item_icon_tiles"
+ },
+ {
+  "name": "icon_palette_pointer",
+  "kind": "slot",
+  "expr": "item_icon_palette"
+ },
+ {
+  "name": "unit_wait_icon_pointer",
+  "kind": "slot",
+  "expr": "unit_icon_wait_table"
+ },
+ {
+  "name": "unit_icon_palette_address",
+  "kind": "direct",
+  "expr": "gPal_MapSprite"
+ },
+ {
+  "name": "unit_icon_enemey_palette_address",
+  "kind": "direct",
+  "expr": "unit_icon_pal_enemy"
+ },
+ {
+  "name": "unit_icon_npc_palette_address",
+  "kind": "direct",
+  "expr": "unit_icon_pal_npc"
+ },
+ {
+  "name": "unit_icon_gray_palette_address",
+  "kind": "direct",
+  "expr": "unit_icon_pal_after_action"
+ },
+ {
+  "name": "unit_icon_four_palette_address",
+  "kind": "direct",
+  "expr": "gPal_MapSpriteArena"
+ },
+ {
+  "name": "unit_icon_lightrune_palette_address",
+  "kind": "direct",
+  "expr": "gPal_LightRune"
+ },
+ {
+  "name": "unit_icon_sepia_palette_address",
+  "kind": "direct",
+  "expr": "gPal_MapSpriteSepia"
+ },
+ {
+  "name": "unit_move_icon_pointer",
+  "kind": "slot",
+  "expr": "unit_icon_move_table"
+ },
+ {
+  "name": "map_setting_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataTable"
+ },
+ {
+  "name": "map_setting_datasize",
+  "kind": "scalar",
+  "expr": "sizeof(struct ROMChapterData)"
+ },
+ {
+  "name": "map_setting_event_plist_pos",
+  "kind": "scalar",
+  "expr": "offsetof(struct ROMChapterData, mapEventDataId)"
+ },
+ {
+  "name": "map_setting_worldmap_plist_pos",
+  "kind": "scalar",
+  "expr": "offsetof(struct ROMChapterData, gmapEventId)"
+ },
+ {
+  "name": "map_setting_clear_conditon_text_pos",
+  "kind": "scalar",
+  "expr": "offsetof(struct ROMChapterData, goalWindowTextId)"
+ },
+ {
+  "name": "map_setting_name_text_pos",
+  "kind": "scalar",
+  "expr": "offsetof(struct ROMChapterData, chapTitleTextId)"
+ },
+ {
+  "name": "map_config_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_obj_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_pal_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_tileanime1_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_tileanime2_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_map_pointer_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_mapchange_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_event_pointer",
+  "kind": "slot",
+  "expr": "gChapterDataAssetTable"
+ },
+ {
+  "name": "map_worldmapevent_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "image_battle_animelist_pointer",
+  "kind": "slot",
+  "expr": "banim_data"
+ },
+ {
+  "name": "support_unit_pointer",
+  "kind": "slot",
+  "expr": "SupportData_Eirika"
+ },
+ {
+  "name": "support_talk_pointer",
+  "kind": "slot",
+  "expr": "gSupportTalkList"
+ },
+ {
+  "name": "unit_palette_color_pointer",
+  "kind": "slot",
+  "expr": "gAnimCharaPalIt"
+ },
+ {
+  "name": "unit_palette_class_pointer",
+  "kind": "slot",
+  "expr": "gAnimCharaPalConfig"
+ },
+ {
+  "name": "support_attribute_pointer",
+  "kind": "slot",
+  "expr": "gAffinityBonuses"
+ },
+ {
+  "name": "terrain_recovery_pointer",
+  "kind": "slot",
+  "expr": "TerrainTable_HealAmount"
+ },
+ {
+  "name": "terrain_bad_status_recovery_pointer",
+  "kind": "slot",
+  "expr": "TerrainTable_HealsStatus"
+ },
+ {
+  "name": "terrain_show_infomation_pointer",
+  "kind": "slot",
+  "expr": "TerrainTable_MovCost_BerserkerNormal"
+ },
+ {
+  "name": "ballista_movcost_pointer",
+  "kind": "slot",
+  "expr": "TerrainMoveCost_Ballista"
+ },
+ {
+  "name": "ccbranch_pointer",
+  "kind": "slot",
+  "expr": "gPromoJidLut"
+ },
+ {
+  "name": "ccbranch2_pointer",
+  "kind": "slot",
+  "raw": true,
+  "expr": "(u32)&gPromoJidLut + 1"
+ },
+ {
+  "name": "class_alphaname_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "map_terrain_name_pointer",
+  "kind": "slot",
+  "expr": "gTerrains_0"
+ },
+ {
+  "name": "image_chapter_title_pointer",
+  "kind": "slot",
+  "expr": "chap_title_data"
+ },
+ {
+  "name": "image_chapter_title_palette",
+  "kind": "direct",
+  "expr": "Pal_MenuScrollBar"
+ },
+ {
+  "name": "image_unit_palette_pointer",
+  "kind": "slot",
+  "expr": "character_battle_animation_palette_table"
+ },
+ {
+  "name": "item_pointer",
+  "kind": "slot",
+  "expr": "gItemData"
+ },
+ {
+  "name": "item_datasize",
+  "kind": "scalar",
+  "expr": "sizeof(struct ItemData)"
+ },
+ {
+  "name": "item_effect_pointer",
+  "kind": "slot",
+  "expr": "gSpellAssocData"
+ },
+ {
+  "name": "sound_table_pointer",
+  "kind": "slot",
+  "expr": "gSongTable"
+ },
+ {
+  "name": "sound_room_pointer",
+  "kind": "slot",
+  "expr": "gSoundRoomTable"
+ },
+ {
+  "name": "sound_room_datasize",
+  "kind": "scalar",
+  "expr": "sizeof(struct SoundRoomEnt)"
+ },
+ {
+  "name": "sound_room_cg_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "event_ballte_talk_pointer",
+  "kind": "slot",
+  "expr": "gBattleTalkList"
+ },
+ {
+  "name": "event_ballte_talk2_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "event_haiku_pointer",
+  "kind": "slot",
+  "expr": "gDefeatTalkList"
+ },
+ {
+  "name": "event_haiku_tutorial_1_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "event_haiku_tutorial_2_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "event_force_sortie_pointer",
+  "kind": "slot",
+  "expr": "gForceDeploymentList"
+ },
+ {
+  "name": "event_tutorial_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "map_exit_point_pointer",
+  "kind": "slot",
+  "expr": "gRedAiEscapePoints"
+ },
+ {
+  "name": "map_exit_point_blank",
+  "kind": "direct",
+  "expr": "AiEscapePts_None"
+ },
+ {
+  "name": "sound_boss_bgm_pointer",
+  "kind": "slot",
+  "expr": "gBanimBossBGMs"
+ },
+ {
+  "name": "sound_foot_steps_data_pointer",
+  "kind": "slot",
+  "expr": "MuSoundScr_Foot"
+ },
+ {
+  "name": "worldmap_scroll_somedata_pointer",
+  "kind": "slot",
+  "expr": "gWorldmapMapmu_2"
+ },
+ {
+  "name": "worldmap_point_pointer",
+  "kind": "slot",
+  "expr": "gWMNodeData"
+ },
+ {
+  "name": "worldmap_bgm_pointer",
+  "kind": "slot",
+  "expr": "gWMSongTable"
+ },
+ {
+  "name": "worldmap_icon_data_pointer",
+  "kind": "slot",
+  "expr": "gWMNodeIconData"
+ },
+ {
+  "name": "worldmap_event_on_stageclear_pointer",
+  "kind": "slot",
+  "expr": "Events_WM_Beginning"
+ },
+ {
+  "name": "worldmap_event_on_stageselect_pointer",
+  "kind": "slot",
+  "expr": "Events_WM_ChapterIntro"
+ },
+ {
+  "name": "worldmap_county_border_pointer",
+  "kind": "slot",
+  "expr": "GfxSet_WmNationMap"
+ },
+ {
+  "name": "worldmap_county_border_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_WmHighLightNationMap"
+ },
+ {
+  "name": "item_shop_hensei_pointer",
+  "kind": "slot",
+  "expr": "gPrepShopInventory"
+ },
+ {
+  "name": "ed_1_pointer",
+  "kind": "slot",
+  "expr": "gCharacterEndingDefeatLut"
+ },
+ {
+  "name": "ed_2_pointer",
+  "kind": "slot",
+  "expr": "gCharacterEndingTitleLut"
+ },
+ {
+  "name": "ed_3a_pointer",
+  "kind": "direct",
+  "expr": "gCharacterEndingsByRoute"
+ },
+ {
+  "name": "ed_3b_pointer",
+  "kind": "slot",
+  "expr": "gCharacterEndings_Ephraim"
+ },
+ {
+  "name": "ed_3c_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "cc_item_hero_crest_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_HEROCREST"
+ },
+ {
+  "name": "cc_item_knight_crest_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_KNIGHTCREST"
+ },
+ {
+  "name": "cc_item_orion_bolt_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_ORIONSBOLT"
+ },
+ {
+  "name": "cc_elysian_whip_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_ELYSIANWHIP"
+ },
+ {
+  "name": "cc_guiding_ring_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_GUIDINGRING"
+ },
+ {
+  "name": "cc_fallen_contract_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_HEAVENSEAL"
+ },
+ {
+  "name": "cc_master_seal_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_MASTERSEAL"
+ },
+ {
+  "name": "cc_ocean_seal_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_OCEANSEAL"
+ },
+ {
+  "name": "cc_moon_bracelet_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_LUNARBRACE"
+ },
+ {
+  "name": "cc_sun_bracelet_itemid",
+  "kind": "scalar",
+  "expr": "ITEM_SOLARBRACE"
+ },
+ {
+  "name": "cc_item_hero_crest_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_HeroCrest"
+ },
+ {
+  "name": "cc_item_knight_crest_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_KnightCrest"
+ },
+ {
+  "name": "cc_item_orion_bolt_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_OrionsBolt"
+ },
+ {
+  "name": "cc_elysian_whip_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_ElysianWhip"
+ },
+ {
+  "name": "cc_guiding_ring_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_GuidRing"
+ },
+ {
+  "name": "cc_fallen_contract_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_HeavenSeal"
+ },
+ {
+  "name": "cc_master_seal_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_MasterSeal"
+ },
+ {
+  "name": "cc_ocean_seal_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_OceanSeal"
+ },
+ {
+  "name": "cc_moon_bracelet_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_LunarBrace"
+ },
+ {
+  "name": "cc_sun_bracelet_pointer",
+  "kind": "slot",
+  "expr": "gItemUseJidList_SolarBrace"
+ },
+ {
+  "name": "op_class_demo_pointer",
+  "kind": "slot",
+  "expr": "gClassReelData"
+ },
+ {
+  "name": "op_class_font_pointer",
+  "kind": "slot",
+  "expr": "gOpinfo_1"
+ },
+ {
+  "name": "op_class_font_palette_pointer",
+  "kind": "slot",
+  "expr": "gPal_SupportScreenBanner"
+ },
+ {
+  "name": "status_font_pointer",
+  "kind": "slot",
+  "expr": "TextGlyphs_Special"
+ },
+ {
+  "name": "ed_staffroll_image_pointer",
+  "kind": "direct",
+  "expr": "gEndingCredits_0"
+ },
+ {
+  "name": "ed_staffroll_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_StaffReelEnt_EndingFin"
+ },
+ {
+  "name": "op_prologue_image_pointer",
+  "kind": "slot",
+  "expr": "gOpSubtitleGfxLut"
+ },
+ {
+  "name": "op_prologue_palette_color_pointer",
+  "kind": "slot",
+  "expr": "Pal_StaffReelEnt_EndingFin"
+ },
+ {
+  "name": "arena_class_near_weapon_pointer",
+  "kind": "slot",
+  "expr": "gClassList_MeleeArena"
+ },
+ {
+  "name": "arena_class_far_weapon_pointer",
+  "kind": "slot",
+  "expr": "gClassList_BowArena"
+ },
+ {
+  "name": "arena_class_magic_weapon_pointer",
+  "kind": "slot",
+  "expr": "gClassList_MagicArena"
+ },
+ {
+  "name": "link_arena_deny_unit_pointer",
+  "kind": "slot",
+  "expr": "gLinkArenaBanList"
+ },
+ {
+  "name": "worldmap_road_pointer",
+  "kind": "slot",
+  "expr": "gWMPathData"
+ },
+ {
+  "name": "menu_definiton_pointer",
+  "kind": "slot",
+  "expr": "gDebugClearMenuDef"
+ },
+ {
+  "name": "menu_promotion_pointer",
+  "kind": "slot",
+  "expr": "Menu_PromoSubConfirm"
+ },
+ {
+  "name": "menu_promotion_branch_pointer",
+  "kind": "slot",
+  "expr": "gMenuDef_PromoSel"
+ },
+ {
+  "name": "menu_definiton_split_pointer",
+  "kind": "slot",
+  "expr": "MenuDef_RouteSplit"
+ },
+ {
+  "name": "menu_definiton_worldmap_pointer",
+  "kind": "slot",
+  "expr": "gMenu_WMGeneralMenu"
+ },
+ {
+  "name": "menu_definiton_worldmap_shop_pointer",
+  "kind": "slot",
+  "expr": "gMenu_WMNodeMenu"
+ },
+ {
+  "name": "menu_unit_pointer",
+  "kind": "slot",
+  "expr": "gUnitActionMenuItems"
+ },
+ {
+  "name": "menu_game_pointer",
+  "kind": "slot",
+  "expr": "gMapMenuItems"
+ },
+ {
+  "name": "menu_debug1_pointer",
+  "kind": "slot",
+  "expr": "gDebugClearMenuItems"
+ },
+ {
+  "name": "menu_item_pointer",
+  "kind": "slot",
+  "expr": "gItemSubMenuItems"
+ },
+ {
+  "name": "MenuCommand_UsabilityAlways",
+  "kind": "direct",
+  "expr": "MenuAlwaysEnabled"
+ },
+ {
+  "name": "MenuCommand_UsabilityNever",
+  "kind": "direct",
+  "expr": "MenuAlwaysNotShown"
+ },
+ {
+  "name": "status_rmenu_unit_pointer",
+  "kind": "slot",
+  "expr": "gHelpInfo_Ss0Pow"
+ },
+ {
+  "name": "status_rmenu_game_pointer",
+  "kind": "slot",
+  "expr": "gHelpInfo_Ss1Item0"
+ },
+ {
+  "name": "status_rmenu3_pointer",
+  "kind": "slot",
+  "expr": "gHelpInfo_Ss2Rank0"
+ },
+ {
+  "name": "status_rmenu4_pointer",
+  "kind": "slot",
+  "expr": "gHelpInfo_MbpHp"
+ },
+ {
+  "name": "status_rmenu5_pointer",
+  "kind": "slot",
+  "expr": "gHelpInfo_CbpHp"
+ },
+ {
+  "name": "status_rmenu6_pointer",
+  "kind": "direct",
+  "expr": "sHelpInfo_ChapterStatus_TurnCount"
+ },
+ {
+  "name": "status_param1_pointer",
+  "kind": "slot",
+  "expr": "sPage0TextInfo"
+ },
+ {
+  "name": "status_param2_pointer",
+  "kind": "slot",
+  "expr": "sPage1TextInfo"
+ },
+ {
+  "name": "status_param3w_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "status_param3m_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "systemmenu_common_image_pointer",
+  "kind": "slot",
+  "expr": "gUiFrameImage"
+ },
+ {
+  "name": "systemmenu_common_palette_pointer",
+  "kind": "slot",
+  "expr": "gUiFramePaletteA"
+ },
+ {
+  "name": "systemmenu_goal_tsa_pointer",
+  "kind": "slot",
+  "expr": "gTSA_GoalBox_OneLine"
+ },
+ {
+  "name": "systemmenu_terrain_tsa_pointer",
+  "kind": "slot",
+  "expr": "gTSA_TerrainBox"
+ },
+ {
+  "name": "systemmenu_name_image_pointer",
+  "kind": "slot",
+  "expr": "gUiFrameImage"
+ },
+ {
+  "name": "systemmenu_name_tsa_pointer",
+  "kind": "slot",
+  "expr": "gTSA_MinimugBox"
+ },
+ {
+  "name": "systemmenu_name_palette_pointer",
+  "kind": "slot",
+  "expr": "gUiFramePaletteA"
+ },
+ {
+  "name": "systemmenu_battlepreview_image_pointer",
+  "kind": "slot",
+  "expr": "gUiFrameImage"
+ },
+ {
+  "name": "systemmenu_battlepreview_tsa_pointer",
+  "kind": "slot",
+  "expr": "gTSA_BattleForecastStandard"
+ },
+ {
+  "name": "systemmenu_battlepreview_palette_pointer",
+  "kind": "slot",
+  "expr": "gUiFramePaletteA"
+ },
+ {
+  "name": "systemarea_move_gradation_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_LimitViewBlue"
+ },
+ {
+  "name": "systemarea_attack_gradation_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_LimitViewRed"
+ },
+ {
+  "name": "systemarea_staff_gradation_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_LimitViewGreen"
+ },
+ {
+  "name": "systemmenu_badstatus_image_pointer",
+  "kind": "slot",
+  "expr": "gGfx_StatusText"
+ },
+ {
+  "name": "systemmenu_badstatus_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_HelpBox"
+ },
+ {
+  "name": "systemmenu_badstatus_old_image_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "systemmenu_badstatus_old_palette_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "bigcg_pointer",
+  "kind": "slot",
+  "expr": "gCGDataTable"
+ },
+ {
+  "name": "end_cg_address",
+  "kind": "direct",
+  "expr": "CreditsCG_EndingCredits_0"
+ },
+ {
+  "name": "worldmap_big_image_pointer",
+  "kind": "slot",
+  "expr": "gWorldmapGmap_0"
+ },
+ {
+  "name": "worldmap_big_palette_pointer",
+  "kind": "slot",
+  "expr": "gWorldmapGmap_2"
+ },
+ {
+  "name": "worldmap_big_dpalette_pointer",
+  "kind": "slot",
+  "expr": "gWorldmapGmap_1"
+ },
+ {
+  "name": "worldmap_big_palettemap_pointer",
+  "kind": "slot",
+  "expr": "gWorldmapGmap_3"
+ },
+ {
+  "name": "worldmap_event_image_pointer",
+  "kind": "slot",
+  "expr": "Img_EventGmap"
+ },
+ {
+  "name": "worldmap_event_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_EventGmap"
+ },
+ {
+  "name": "worldmap_event_tsa_pointer",
+  "kind": "slot",
+  "expr": "Tsa_EventGmap"
+ },
+ {
+  "name": "worldmap_mini_image_pointer",
+  "kind": "slot",
+  "expr": "Img_WorldmapMinimap"
+ },
+ {
+  "name": "worldmap_mini_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_WorldmapMinimap"
+ },
+ {
+  "name": "worldmap_icon_palette_pointer",
+  "kind": "slot",
+  "expr": "gWorldmapGmap_4"
+ },
+ {
+  "name": "worldmap_icon1_pointer",
+  "kind": "slot",
+  "expr": "Img_GmapNodes"
+ },
+ {
+  "name": "worldmap_icon2_pointer",
+  "kind": "slot",
+  "expr": "Img_GmapCastleNodes"
+ },
+ {
+  "name": "worldmap_road_tile_pointer",
+  "kind": "slot",
+  "expr": "Img_GmapPath"
+ },
+ {
+  "name": "system_icon_pointer",
+  "kind": "slot",
+  "expr": "gGfx_MiscUiGraphics"
+ },
+ {
+  "name": "system_icon_palette_pointer",
+  "kind": "slot",
+  "expr": "gPal_MiscUiGraphics"
+ },
+ {
+  "name": "system_weapon_icon_pointer",
+  "kind": "slot",
+  "expr": "Img_PrepItemListSpinningArrow"
+ },
+ {
+  "name": "system_weapon_icon_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_SpinningArrow"
+ },
+ {
+  "name": "system_music_icon_pointer",
+  "kind": "slot",
+  "expr": "Img_ConfigUiIcons"
+ },
+ {
+  "name": "system_music_icon_palette_pointer",
+  "kind": "slot",
+  "expr": "Pal_ConfigUiSprites"
+ },
+ {
+  "name": "font_item_address",
+  "kind": "direct",
+  "expr": "TextGlyphs_System"
+ },
+ {
+  "name": "font_serif_address",
+  "kind": "direct",
+  "expr": "TextGlyphs_Talk"
+ },
+ {
+  "name": "monster_probability_pointer",
+  "kind": "slot",
+  "expr": "gMonsterClassWeights"
+ },
+ {
+  "name": "monster_item_item_pointer",
+  "kind": "slot",
+  "expr": "gMonsterItemTable"
+ },
+ {
+  "name": "monster_item_probability_pointer",
+  "kind": "slot",
+  "expr": "gMonsterItemWeightsTable"
+ },
+ {
+  "name": "monster_item_table_pointer",
+  "kind": "slot",
+  "expr": "gMonsterItemsByClassIndex"
+ },
+ {
+  "name": "monster_wmap_base_point_pointer",
+  "kind": "slot",
+  "expr": "gWMMonsterSpawnLocations"
+ },
+ {
+  "name": "monster_wmap_stage_1_pointer",
+  "kind": "slot",
+  "expr": "WmMonsterGenerateRatesIdx_EirikaMode"
+ },
+ {
+  "name": "monster_wmap_stage_2_pointer",
+  "kind": "slot",
+  "expr": "WmMonsterGenerateRatesIdx_EphraimMode"
+ },
+ {
+  "name": "monster_wmap_probability_1_pointer",
+  "kind": "slot",
+  "expr": "WmMonsterGenerateRates_EirikaMode"
+ },
+ {
+  "name": "monster_wmap_probability_2_pointer",
+  "kind": "slot",
+  "expr": "WmMonsterGenerateRates_EphraimMode"
+ },
+ {
+  "name": "monster_wmap_probability_after_1_pointer",
+  "kind": "slot",
+  "expr": "WmMonsterGenerateRates_XmapEirika"
+ },
+ {
+  "name": "monster_wmap_probability_after_2_pointer",
+  "kind": "slot",
+  "expr": "WmMonsterGenerateRates_XmapEphraim"
+ },
+ {
+  "name": "worldmap_skirmish_startevent_pointer",
+  "kind": "slot",
+  "expr": "EventScr_SkirmishCommonBeginning"
+ },
+ {
+  "name": "worldmap_skirmish_endevent_pointer",
+  "kind": "slot",
+  "expr": "EventScr_SkirmishCommonEnd"
+ },
+ {
+  "name": "battle_bg_pointer",
+  "kind": "slot",
+  "expr": "gBattleBGDataTable"
+ },
+ {
+  "name": "battle_terrain_pointer",
+  "kind": "slot",
+  "expr": "battle_terrain_table"
+ },
+ {
+  "name": "senseki_comment_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "unit_custom_battle_anime_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "magic_effect_pointer",
+  "kind": "slot",
+  "expr": "gEkrSpellAnimLut"
+ },
+ {
+  "name": "system_move_allowicon_pointer",
+  "kind": "slot",
+  "expr": "gImg_PathArrow"
+ },
+ {
+  "name": "system_move_allowicon_palette_pointer",
+  "kind": "slot",
+  "expr": "gPal_PathArrow"
+ },
+ {
+  "name": "system_tsa_16color_304x240_pointer",
+  "kind": "slot",
+  "expr": "Tsa_CommGameBgScreenInShop"
+ },
+ {
+  "name": "oping_event_pointer",
+  "kind": "slot",
+  "expr": "EventScrWM_Prologue_Beginning"
+ },
+ {
+  "name": "ending1_event_pointer",
+  "kind": "slot",
+  "expr": "EventScr_EirikaModeGameEnd"
+ },
+ {
+  "name": "ending2_event_pointer",
+  "kind": "slot",
+  "expr": "EventScr_EphraimModeGameEnd"
+ },
+ {
+  "name": "RAMSlotTable_address",
+  "kind": "direct",
+  "expr": "gUnitLookup"
+ },
+ {
+  "name": "workmemory_player_units_address",
+  "kind": "direct",
+  "expr": "gUnitArrayBlue"
+ },
+ {
+  "name": "workmemory_enemy_units_address",
+  "kind": "direct",
+  "expr": "gUnitArrayRed"
+ },
+ {
+  "name": "workmemory_npc_units_address",
+  "kind": "direct",
+  "expr": "gUnitArrayGreen"
+ },
+ {
+  "name": "workmemory_chapterdata_size",
+  "kind": "scalar",
+  "expr": "sizeof(struct PlaySt)"
+ },
+ {
+  "name": "workmemory_battle_actor_address",
+  "kind": "direct",
+  "expr": "gBattleActor"
+ },
+ {
+  "name": "workmemory_battle_target_address",
+  "kind": "direct",
+  "expr": "gBattleTarget"
+ },
+ {
+  "name": "workmemory_arena_data_address",
+  "kind": "direct",
+  "expr": "gArenaState"
+ },
+ {
+  "name": "workmemory_ai_data_address",
+  "kind": "direct",
+  "expr": "gAiState"
+ },
+ {
+  "name": "workmemory_action_data_address",
+  "kind": "direct",
+  "expr": "gActionData"
+ },
+ {
+  "name": "workmemory_battlesome_data_address",
+  "kind": "direct",
+  "expr": "gBanimLinkArenaFlag"
+ },
+ {
+  "name": "workmemory_battleround_data_address",
+  "kind": "direct",
+  "expr": "gBattleHitArray"
+ },
+ {
+  "name": "workmemory_last_string_address",
+  "kind": "direct",
+  "expr": "sActiveMsg"
+ },
+ {
+  "name": "workmemory_text_buffer_address",
+  "kind": "direct",
+  "expr": "sMsgString"
+ },
+ {
+  "name": "workmemory_bwl_address",
+  "kind": "direct",
+  "expr": "gUnused_BmsaveLib_0"
+ },
+ {
+  "name": "workmemory_clear_turn_address",
+  "kind": "direct",
+  "expr": "gChapterStats"
+ },
+ {
+  "name": "workmemory_clear_turn_count",
+  "kind": "scalar",
+  "expr": "WIN_ARRAY_NUM"
+ },
+ {
+  "name": "workmemory_procs_forest_address",
+  "kind": "direct",
+  "expr": "gProcTreeRootArray"
+ },
+ {
+  "name": "workmemory_bgm_address",
+  "kind": "direct",
+  "expr": "gSoundSt"
+ },
+ {
+  "name": "workmemory_reference_procs_event_address_offset",
+  "kind": "scalar",
+  "expr": "offsetof(struct Proc, unk34)"
+ },
+ {
+  "name": "workmemory_palette_address",
+  "kind": "direct",
+  "expr": "gPaletteBuffer"
+ },
+ {
+  "name": "procs_maptask_pointer",
+  "kind": "slot",
+  "expr": "gProc_MapTask"
+ },
+ {
+  "name": "procs_soundroomUI_pointer",
+  "kind": "slot",
+  "expr": "gProcScr_SoundRoomUi"
+ },
+ {
+  "name": "procs_game_main_address",
+  "kind": "direct",
+  "expr": "gProcScr_GameControl"
+ },
+ {
+  "name": "summon_unit_pointer",
+  "kind": "slot",
+  "expr": "gSummonConfig"
+ },
+ {
+  "name": "summons_demon_king_pointer",
+  "kind": "slot",
+  "expr": "gUnitDefSumDK"
+ },
+ {
+  "name": "battle_screen_TSA1_pointer",
+  "kind": "slot",
+  "expr": "gBanimmisc_0"
+ },
+ {
+  "name": "battle_screen_TSA2_pointer",
+  "kind": "slot",
+  "expr": "gBanimmisc_1"
+ },
+ {
+  "name": "battle_screen_TSA3_pointer",
+  "kind": "slot",
+  "expr": "gBanimmisc_2"
+ },
+ {
+  "name": "battle_screen_TSA4_pointer",
+  "kind": "slot",
+  "expr": "gBanimmisc_3"
+ },
+ {
+  "name": "battle_screen_TSA5_pointer",
+  "kind": "slot",
+  "expr": "gBanimmisc_5"
+ },
+ {
+  "name": "battle_screen_palette_pointer",
+  "kind": "slot",
+  "expr": "gBanimmisc_6"
+ },
+ {
+  "name": "battle_screen_image1_pointer",
+  "kind": "slot",
+  "expr": "Img_Banimmisc_0"
+ },
+ {
+  "name": "battle_screen_image2_pointer",
+  "kind": "slot",
+  "expr": "Img_EfxLeftNameBox"
+ },
+ {
+  "name": "battle_screen_image3_pointer",
+  "kind": "slot",
+  "expr": "Img_EfxLeftItemBox"
+ },
+ {
+  "name": "battle_screen_image4_pointer",
+  "kind": "slot",
+  "expr": "Img_EfxRightNameBox"
+ },
+ {
+  "name": "battle_screen_image5_pointer",
+  "kind": "slot",
+  "expr": "Img_EfxRightItemBox"
+ },
+ {
+  "name": "ai1_pointer",
+  "kind": "direct",
+  "expr": "gpAi1Table"
+ },
+ {
+  "name": "ai2_pointer",
+  "kind": "direct",
+  "expr": "gpAi2Table"
+ },
+ {
+  "name": "ai3_pointer",
+  "kind": "slot",
+  "expr": "gAiCombatScoreCoefficientTable"
+ },
+ {
+  "name": "ai_steal_item_pointer",
+  "kind": "slot",
+  "expr": "gAiStealPriorityItemList"
+ },
+ {
+  "name": "ai_preform_staff_pointer",
+  "kind": "slot",
+  "expr": "sAiStaffFuncLut"
+ },
+ {
+  "name": "ai_preform_item_pointer",
+  "kind": "slot",
+  "expr": "sAiSpecialItemFuncLut"
+ },
+ {
+  "name": "ai_map_setting_pointer",
+  "kind": "slot",
+  "expr": "gAiItemConfigTable"
+ },
+ {
+  "name": "item_promotion2_array_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "item_promotion2_array_switch2_address",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "event_function_pointer_table_pointer",
+  "kind": "slot",
+  "expr": "gEventLoCmdTable"
+ },
+ {
+  "name": "event_function_pointer_table2_pointer",
+  "kind": "slot",
+  "expr": "gEventHiCmdTable"
+ },
+ {
+  "name": "item_effect_pointer_table_pointer",
+  "kind": "slot",
+  "expr": "gEkrSpellAnimLut"
+ },
+ {
+  "name": "dic_main_pointer",
+  "kind": "slot",
+  "expr": "gGuideTable"
+ },
+ {
+  "name": "dic_chaptor_pointer",
+  "kind": "slot",
+  "expr": "gTextIds_GuideCategoriesChapter"
+ },
+ {
+  "name": "dic_title_pointer",
+  "kind": "slot",
+  "expr": "gTextIds_GuideCategoriesTopic"
+ },
+ {
+  "name": "item_gold_id",
+  "kind": "scalar",
+  "expr": "ITEM_GOLD"
+ },
+ {
+  "name": "lookup_table_battle_terrain_00_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGroundDefault"
+ },
+ {
+  "name": "lookup_table_battle_terrain_01_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset01"
+ },
+ {
+  "name": "lookup_table_battle_terrain_02_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset02"
+ },
+ {
+  "name": "lookup_table_battle_terrain_03_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset03"
+ },
+ {
+  "name": "lookup_table_battle_terrain_04_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset04"
+ },
+ {
+  "name": "lookup_table_battle_terrain_05_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset05"
+ },
+ {
+  "name": "lookup_table_battle_terrain_06_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset06"
+ },
+ {
+  "name": "lookup_table_battle_terrain_07_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset07"
+ },
+ {
+  "name": "lookup_table_battle_terrain_08_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset08"
+ },
+ {
+  "name": "lookup_table_battle_terrain_09_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset09"
+ },
+ {
+  "name": "lookup_table_battle_terrain_10_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset0A"
+ },
+ {
+  "name": "lookup_table_battle_terrain_11_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset0B"
+ },
+ {
+  "name": "lookup_table_battle_terrain_12_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset0C"
+ },
+ {
+  "name": "lookup_table_battle_terrain_13_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset0D"
+ },
+ {
+  "name": "lookup_table_battle_terrain_14_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset0E"
+ },
+ {
+  "name": "lookup_table_battle_terrain_15_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset0F"
+ },
+ {
+  "name": "lookup_table_battle_terrain_16_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset10"
+ },
+ {
+  "name": "lookup_table_battle_terrain_17_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset11"
+ },
+ {
+  "name": "lookup_table_battle_terrain_18_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset12"
+ },
+ {
+  "name": "lookup_table_battle_terrain_19_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset13"
+ },
+ {
+  "name": "lookup_table_battle_terrain_20_pointer",
+  "kind": "slot",
+  "expr": "BanimTerrainGround_Tileset14"
+ },
+ {
+  "name": "lookup_table_battle_bg_00_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLutDefault"
+ },
+ {
+  "name": "lookup_table_battle_bg_01_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut01"
+ },
+ {
+  "name": "lookup_table_battle_bg_02_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut02"
+ },
+ {
+  "name": "lookup_table_battle_bg_03_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut03"
+ },
+ {
+  "name": "lookup_table_battle_bg_04_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut04"
+ },
+ {
+  "name": "lookup_table_battle_bg_05_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut05"
+ },
+ {
+  "name": "lookup_table_battle_bg_06_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut06"
+ },
+ {
+  "name": "lookup_table_battle_bg_07_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut07"
+ },
+ {
+  "name": "lookup_table_battle_bg_08_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut08"
+ },
+ {
+  "name": "lookup_table_battle_bg_09_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut09"
+ },
+ {
+  "name": "lookup_table_battle_bg_10_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut0A"
+ },
+ {
+  "name": "lookup_table_battle_bg_11_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut0B"
+ },
+ {
+  "name": "lookup_table_battle_bg_12_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut0C"
+ },
+ {
+  "name": "lookup_table_battle_bg_13_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut0D"
+ },
+ {
+  "name": "lookup_table_battle_bg_14_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut0E"
+ },
+ {
+  "name": "lookup_table_battle_bg_15_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut0F"
+ },
+ {
+  "name": "lookup_table_battle_bg_16_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut10"
+ },
+ {
+  "name": "lookup_table_battle_bg_17_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut11"
+ },
+ {
+  "name": "lookup_table_battle_bg_18_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut12"
+ },
+ {
+  "name": "lookup_table_battle_bg_19_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut13"
+ },
+ {
+  "name": "lookup_table_battle_bg_20_pointer",
+  "kind": "slot",
+  "expr": "gBanimBGLut14"
+ },
+ {
+  "name": "map_terrain_type_count",
+  "kind": "scalar",
+  "expr": "TERRAIN_COUNT"
+ },
+ {
+  "name": "menu_J12_always_address",
+  "kind": "direct",
+  "expr": "MenuAlwaysEnabled"
+ },
+ {
+  "name": "menu_J12_hide_address",
+  "kind": "direct",
+  "expr": "MenuAlwaysNotShown"
+ },
+ {
+  "name": "status_game_option_pointer",
+  "kind": "slot",
+  "expr": "gGameOptions"
+ },
+ {
+  "name": "status_game_option_order_pointer",
+  "kind": "slot",
+  "expr": "gGameOptionsUiOrder"
+ },
+ {
+  "name": "status_game_option_order2_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "status_units_menu_pointer",
+  "kind": "slot",
+  "expr": "gUnitListScreenFields"
+ },
+ {
+  "name": "tactician_affinity_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "event_final_serif_pointer",
+  "kind": "direct",
+  "expr": "Init"
+ },
+ {
+  "name": "builddate_address",
+  "kind": "direct",
+  "expr": "gBuildDateTime"
+ },
+ {
+  "name": "vanilla_field_config_address",
+  "kind": "direct",
+  "expr": "TileConfiguration1"
+ },
+ {
+  "name": "vanilla_field_image_address",
+  "kind": "direct",
+  "expr": "ObjectType1"
+ },
+ {
+  "name": "vanilla_village_config_address",
+  "kind": "direct",
+  "expr": "TileConfiguration2"
+ },
+ {
+  "name": "vanilla_village_image_address",
+  "kind": "direct",
+  "expr": "ObjectType2"
+ },
+ {
+  "name": "vanilla_casle_config_address",
+  "kind": "direct",
+  "expr": "TileConfiguration3"
+ },
+ {
+  "name": "vanilla_casle_image_address",
+  "kind": "direct",
+  "expr": "ObjectType3"
+ },
+ {
+  "name": "vanilla_plain_config_address",
+  "kind": "direct",
+  "expr": "TileConfiguration4"
+ },
+ {
+  "name": "vanilla_plain_image_address",
+  "kind": "direct",
+  "expr": "ObjectType4"
+ },
+ {
+  "name": "worldmap_node_armory_empty_address",
+  "kind": "direct",
+  "expr": "ItemList_WM_BorderMulan_Armory"
+ },
+ {
+  "name": "worldmap_node_vendor_empty_address",
+  "kind": "direct",
+  "expr": "ItemList_WM_BorderMulan_Vendor"
+ },
+ {
+  "name": "worldmap_node_secret_empty_address",
+  "kind": "direct",
+  "expr": "ItemList_WM_BorderMulan_SecretShop"
+ }
+]
