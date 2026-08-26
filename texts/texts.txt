@@ -40418,3 +40418,21 @@ Mov[.][X]
 
 ## MSG_PURCHASE_GENERIC_CAPTURE
 Capture[.][X]
+
+## MSG_UNIT_ACTION_MERGE
+Merge[.][X]
+
+## MSG_UNIT_ACTION_PROMOTE
+Promote[.][X]
+
+## MSG_MAP_MENU_CO
+ CO[.][X]
+
+## MSG_MAP_MENU_POWER
+ Power[.][X]
+
+## MSG_MAP_MENU_SUPER_POWER
+ Super[.][X]
+
+## MSG_EXPANSION_THREAT_RANGE
+ Threat Range[.][X]

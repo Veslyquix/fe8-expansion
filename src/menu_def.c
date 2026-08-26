@@ -13,6 +13,8 @@
 #include "promote_command.h"
 #include "power.h"
 
+#include "constants/msg.h"
+
 #include "menu_def.h"
 
 #ifdef MODERN
@@ -211,10 +213,10 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　支援", 0x681, 0x6CA, 0, 0x5B, SupportCommandUsability, 0, SupportCommandEffect, 0, 0, 0}, // Support
     {"　訪問", 0x682, 0x6CB, 0, 0x5C, VisitCommandUsability, 0, VisitCommandEffect, 0, 0, 0}, // Visit
 #if FE8_PURCHASE_GENERICS
-    {"Capture", 0, 0, 0, 0, PurchaseGenericsCommandUsability, PurchaseGenericsCommandDraw, PurchaseGenericsCommandEffect, 0, 0, 0},
+    {"", MSG_PURCHASE_GENERIC_CAPTURE, 0, 0, 0, PurchaseGenericsCommandUsability, PurchaseGenericsCommandDraw, PurchaseGenericsCommandEffect, 0, 0, 0},
 #endif
 #if FE8_PROMOTE_COMMAND
-    {"Promote", 0, 0, 0, 0x7A, PromoteCommandUsability, PromoteCommandDraw, PromoteCommandEffect, 0, 0, 0},
+    {"", MSG_UNIT_ACTION_PROMOTE, 0, 0, 0x7A, PromoteCommandUsability, PromoteCommandDraw, PromoteCommandEffect, 0, 0, 0},
 #endif
     {"　宝箱", 0x683, 0x6CE, 0, 0x5D, ChestCommandUsability, 0, ChestCommandEffect, 0, 0, 0}, // Chest
     {"　扉", 0x684, 0x6CD, 0, 0x5E, DoorCommandUsability, 0, DoorCommandEffect, 0, 0, 0}, // Door >
@@ -224,7 +226,7 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　闘技場", 0x688, 0x6D2, 0, 0x62, ArenaCommandUsability, 0, ArenaCommandEffect, 0, 0, 0}, // Arena
     {"　救出", 0x689, 0x6C5, 0, 0x63, RescueUsability, 0, RescueEffect, 0, 0, 0}, // Rescue >
 #if FE8_PURCHASE_GENERICS
-    {"Merge", 0, 0, 0, 0, MergeUsability, 0, MergeEffect, 0, 0, 0}, // Merge with an adjacent generic of the same class >
+    {"", MSG_UNIT_ACTION_MERGE, 0, 0, 0, MergeUsability, 0, MergeEffect, 0, 0, 0}, // Merge with an adjacent generic of the same class >
 #endif
     {"　降ろす", 0x68A, 0x6C6, 0, 0x64, DropUsability, 0, DropEffect, 0, 0, 0}, // Drop >
     {"　引受け", 0x68B, 0x6C8, 4, 0x65, TakeUsability, 0, TakeEffect, 0, 0, 0}, // Take > 
@@ -238,7 +240,7 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
 
 CONST_DATA struct MenuItemDef gMapMenuItems[] = {
 #if FE8_CO_POWERS
-    {" CO", 0, 0, 0, 0, MenuAlwaysEnabled, 0, CoScreen_MenuCommand, 0, 0, 0},
+    {"", MSG_MAP_MENU_CO, 0, 0, 0, MenuAlwaysEnabled, 0, CoScreen_MenuCommand, 0, 0, 0},
 #endif
     {"　部隊", 0x69A, 0x6DF, 0, 0x6e, MenuAlwaysEnabled, 0, MapMenu_UnitCommand, 0, 0, 0}, // Unit >
     {"　状況", 0x690, 0x6E0, 0, 0x6f, MenuAlwaysEnabled, 0, MapMenu_StatusCommand, 0, 0, 0}, // Status >
@@ -248,15 +250,15 @@ CONST_DATA struct MenuItemDef gMapMenuItems[] = {
     {"　退却", 0x69D, 0x6E2, 0, 0x72, MapMenu_IsRetreatCommandAvailable, 0, MapMenu_RetreatCommand, 0, 0, 0}, // Retreat
     {"　中断", 0x69F, 0x6E4, 0, 0x73, MapMenu_IsSuspendCommandAvailable, 0, MapMenu_SuspendCommand, 0, 0, 0}, // Suspend
 #if FE8_CO_POWERS
-    {" Power", 0, 0, 0, 0, CoPowers_IsAvailable, 0, CoPowers_MenuCommand, 0, 0, 0},
-    {" Super Power", 0, 0, 0, 0, CoSuperPowers_IsAvailable, 0, CoSuperPowers_MenuCommand, 0, 0, 0},
+    {"", MSG_MAP_MENU_POWER, 0, 0, 0, CoPowers_IsAvailable, 0, CoPowers_MenuCommand, 0, 0, 0},
+    {"", MSG_MAP_MENU_SUPER_POWER, 0, 0, 0, CoSuperPowers_IsAvailable, 0, CoSuperPowers_MenuCommand, 0, 0, 0},
 #endif
     {"　終了", 0x6A0, 0x6E6, 0, 0x78, MenuAlwaysEnabled, 0, CommandEffectEndPlayerPhase, 0, 0, 0}, // End Phase
 #if FE8_EXPANSION_DANGER_OVERLAY_MENU
     /* Issue #6 player QoL danger/range overlay (config-gated, default off):
-     * an original, copyright-free label drawn via def->name (nameMsgId 0,
-     * helpMsgId 0), reusing the promoted danger-zone command. */
-    {" Threat Range", 0, 0, 0, 0, MenuAlwaysEnabled, 0, ExpansionDangerOverlay_MenuSelect, 0, 0, 0},
+     * an original, copyright-free label, reusing the promoted danger-zone
+     * command. */
+    {"", MSG_EXPANSION_THREAT_RANGE, 0, 0, 0, MenuAlwaysEnabled, 0, ExpansionDangerOverlay_MenuSelect, 0, 0, 0},
 #endif
     MenuItemsEnd
 };

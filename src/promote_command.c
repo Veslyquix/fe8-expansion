@@ -10,6 +10,7 @@
 #include "classchg.h"
 #include "uimenu.h"
 #include "hardware.h"
+#include "constants/msg.h"
 
 /* Minimum level to manually promote without a promotion item. Ported from
  * the community "PromoteCommand" patch's default PromotionMenuList entry
@@ -46,7 +47,7 @@ u8 PromoteCommandUsability(const struct MenuItemDef* def, int number)
 
 int PromoteCommandDraw(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
-    const char* text = "Promote";
+    const char* text = GetStringFromIndex(MSG_UNIT_ACTION_PROMOTE);
 
     PutDrawText(
         &menuItem->text,
