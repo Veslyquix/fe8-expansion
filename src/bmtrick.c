@@ -336,6 +336,14 @@ int GetPurchaseBaseTrapOwner(struct Trap* trap)
     return trap->data[TRAP_EXTDATA_PURCHASE_BASE_OWNER];
 }
 
+int GetPurchaseBaseTrapKind(struct Trap* trap)
+{
+    if (trap == NULL)
+        return PURCHASE_BASE_KIND_VILLAGE;
+
+    return trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND];
+}
+
 void SetPurchaseBaseTrapCapturer(struct Trap* trap, int capturer)
 {
     if (trap != NULL)

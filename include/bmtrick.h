@@ -114,6 +114,7 @@ struct Trap* AddPurchaseBaseTrap(int x, int y, int owner, int kind);
 struct Trap* GetPurchaseBaseTrapAt(int x, int y);
 void SetPurchaseBaseTrapOwner(struct Trap* trap, int owner);
 int GetPurchaseBaseTrapOwner(struct Trap* trap);
+int GetPurchaseBaseTrapKind(struct Trap* trap);
 void SetPurchaseBaseTrapCapturer(struct Trap* trap, int capturer);
 int GetPurchaseBaseTrapCapturer(struct Trap* trap);
 void ResetPurchaseBaseTrapCapture(struct Trap* trap);

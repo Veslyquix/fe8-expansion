@@ -1293,6 +1293,21 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y)
     if (GetPurchaseBaseTrapOwner(trap) != FACTION_ID_BLUE)
         return false;
 
+    /* Only Fort/Camp/Tent are deploy points -- House (and Gate/Throne/
+     * Village) still capture and generate income via GrantIncomeForFaction
+     * and still heal via vanilla's own TERRAIN_HOUSE/TERRAIN_FORT healing,
+     * but shouldn't offer the unit-purchase tile menu. */
+    switch (GetPurchaseBaseTrapKind(trap))
+    {
+    case PURCHASE_BASE_KIND_FORT:
+    case PURCHASE_BASE_KIND_CAMP:
+    case PURCHASE_BASE_KIND_TENT:
+        break;
+
+    default:
+        return false;
+    }
+
     sPurchaseGenericPage = 0;
     sPurchaseGenericBaseX = x;
     sPurchaseGenericBaseY = y;

@@ -1,0 +1,3196 @@
+{
+ "mask_point_base_pointer": {
+  "kind": "indirect",
+  "cell": 1756,
+  "target": 135648392,
+  "sym": "gMsgHuffmanTableRoot",
+  "delta": 0,
+  "exact": true
+ },
+ "mask_pointer": {
+  "kind": "indirect",
+  "cell": 1760,
+  "target": 135636780,
+  "sym": "gMsgHuffmanTable",
+  "delta": 0,
+  "exact": true
+ },
+ "text_pointer": {
+  "kind": "indirect",
+  "cell": 41632,
+  "target": 135648396,
+  "sym": "gMsgTable",
+  "delta": 0,
+  "exact": true
+ },
+ "text_recover_address": {
+  "kind": "indirect",
+  "cell": 1430668,
+  "target": 135169044,
+  "sym": "BnaimFrames_DkMiss",
+  "delta": 134,
+  "exact": false
+ },
+ "text_data_start_address": {
+  "kind": "direct",
+  "addr": 135169044,
+  "sym": "BnaimFrames_DkMiss",
+  "delta": 134,
+  "exact": false
+ },
+ "text_data_end_address": {
+  "kind": "direct",
+  "addr": 135637888,
+  "sym": "gMsgHuffmanTable",
+  "delta": 1108,
+  "exact": false
+ },
+ "unit_pointer": {
+  "kind": "indirect",
+  "cell": 65800,
+  "target": 142622052,
+  "sym": "gCharacterData",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_maxcount": {
+  "kind": "direct",
+  "addr": 134217983,
+  "sym": "IrqMain",
+  "delta": 3,
+  "exact": false
+ },
+ "unit_datasize": {
+  "kind": "direct",
+  "addr": 134217780,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 48,
+  "exact": false
+ },
+ "max_level_address": {
+  "kind": "direct",
+  "addr": 134396536,
+  "sym": "CheckBattleUnitLevelUp",
+  "delta": 80,
+  "exact": false
+ },
+ "max_luck_address": {
+  "kind": "direct",
+  "addr": 134397974,
+  "sym": "CheckBattleUnitStatCaps",
+  "delta": 242,
+  "exact": false
+ },
+ "class_pointer": {
+  "kind": "indirect",
+  "cell": 96952,
+  "target": 142635280,
+  "sym": "gCharacterData",
+  "delta": 13228,
+  "exact": false
+ },
+ "class_datasize": {
+  "kind": "direct",
+  "addr": 134217812,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 80,
+  "exact": false
+ },
+ "bg_pointer": {
+  "kind": "indirect",
+  "cell": 59540,
+  "target": 144039196,
+  "sym": "gConvoBackgroundData",
+  "delta": 0,
+  "exact": true
+ },
+ "portrait_pointer": {
+  "kind": "indirect",
+  "cell": 21796,
+  "target": 143313860,
+  "sym": "portrait_Mystery_1_tileset",
+  "delta": 4072,
+  "exact": false
+ },
+ "portrait_datasize": {
+  "kind": "direct",
+  "addr": 134217756,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 24,
+  "exact": false
+ },
+ "icon_pointer": {
+  "kind": "indirect",
+  "cell": 14004,
+  "target": 140060404,
+  "sym": "item_icon_tiles",
+  "delta": 0,
+  "exact": true
+ },
+ "icon_orignal_address": {
+  "kind": "direct",
+  "addr": 140060404,
+  "sym": "item_icon_tiles",
+  "delta": 0,
+  "exact": true
+ },
+ "icon_orignal_max": {
+  "kind": "direct",
+  "addr": 134217951,
+  "sym": "crt0",
+  "delta": 31,
+  "exact": false
+ },
+ "icon_palette_pointer": {
+  "kind": "indirect",
+  "cell": 13776,
+  "target": 140089076,
+  "sym": "item_icon_palette",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_wait_icon_pointer": {
+  "kind": "indirect",
+  "cell": 157488,
+  "target": 143325312,
+  "sym": "unit_icon_wait_table",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_wait_barista_anime_address": {
+  "kind": "indirect",
+  "cell": 160472,
+  "target": 143326042,
+  "sym": "unit_icon_wait_table",
+  "delta": 730,
+  "exact": false
+ },
+ "unit_wait_barista_id": {
+  "kind": "direct",
+  "addr": 134217819,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 87,
+  "exact": false
+ },
+ "unit_icon_palette_address": {
+  "kind": "direct",
+  "addr": 140111392,
+  "sym": "gPal_MapSprite",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_icon_enemey_palette_address": {
+  "kind": "direct",
+  "addr": 140111424,
+  "sym": "unit_icon_pal_enemy",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_icon_npc_palette_address": {
+  "kind": "direct",
+  "addr": 140111456,
+  "sym": "unit_icon_pal_npc",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_icon_gray_palette_address": {
+  "kind": "direct",
+  "addr": 140111488,
+  "sym": "unit_icon_pal_after_action",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_icon_four_palette_address": {
+  "kind": "direct",
+  "addr": 140111520,
+  "sym": "gPal_MapSpriteArena",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_icon_lightrune_palette_address": {
+  "kind": "direct",
+  "addr": 140111552,
+  "sym": "gPal_LightRune",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_icon_sepia_palette_address": {
+  "kind": "direct",
+  "addr": 140111584,
+  "sym": "gPal_MapSpriteSepia",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_move_icon_pointer": {
+  "kind": "indirect",
+  "cell": 497028,
+  "target": 144322048,
+  "sym": "unit_icon_move_table",
+  "delta": 0,
+  "exact": true
+ },
+ "lightrune_uniticon_id": {
+  "kind": "direct",
+  "addr": 134217830,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 98,
+  "exact": false
+ },
+ "map_setting_pointer": {
+  "kind": "indirect",
+  "cell": 745368,
+  "target": 143329424,
+  "sym": "gChapterDataTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_setting_datasize": {
+  "kind": "direct",
+  "addr": 134217876,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 144,
+  "exact": false
+ },
+ "map_setting_event_plist_pos": {
+  "kind": "direct",
+  "addr": 134217844,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 112,
+  "exact": false
+ },
+ "map_setting_worldmap_plist_pos": {
+  "kind": "direct",
+  "addr": 134217845,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 113,
+  "exact": false
+ },
+ "map_setting_clear_conditon_text_pos": {
+  "kind": "direct",
+  "addr": 134217866,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 134,
+  "exact": false
+ },
+ "map_setting_name_text_pos": {
+  "kind": "direct",
+  "addr": 134217840,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 108,
+  "exact": false
+ },
+ "map_config_pointer": {
+  "kind": "indirect",
+  "cell": 104704,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_obj_pointer": {
+  "kind": "indirect",
+  "cell": 104808,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_pal_pointer": {
+  "kind": "indirect",
+  "cell": 104860,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_tileanime1_pointer": {
+  "kind": "indirect",
+  "cell": 196916,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_tileanime2_pointer": {
+  "kind": "indirect",
+  "cell": 199800,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_map_pointer_pointer": {
+  "kind": "indirect",
+  "cell": 214656,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_mapchange_pointer": {
+  "kind": "indirect",
+  "cell": 214700,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_event_pointer": {
+  "kind": "indirect",
+  "cell": 214748,
+  "target": 143341116,
+  "sym": "gChapterDataAssetTable",
+  "delta": 0,
+  "exact": true
+ },
+ "map_worldmapevent_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "map_map_pointer_list_default_size": {
+  "kind": "direct",
+  "addr": 134217964,
+  "sym": "crt0",
+  "delta": 44,
+  "exact": false
+ },
+ "image_battle_animelist_pointer": {
+  "kind": "indirect",
+  "cell": 367576,
+  "target": 146800648,
+  "sym": "banim_data",
+  "delta": 0,
+  "exact": true
+ },
+ "support_unit_pointer": {
+  "kind": "indirect",
+  "cell": 8404368,
+  "target": 143322028,
+  "sym": "SupportData_Eirika",
+  "delta": 0,
+  "exact": true
+ },
+ "support_talk_pointer": {
+  "kind": "indirect",
+  "cell": 542596,
+  "target": 144625932,
+  "sym": "gSupportTalkList",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_palette_color_pointer": {
+  "kind": "indirect",
+  "cell": 357268,
+  "target": 144043684,
+  "sym": "gAnimCharaPalIt",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_palette_class_pointer": {
+  "kind": "indirect",
+  "cell": 357812,
+  "target": 144040100,
+  "sym": "gAnimCharaPalConfig",
+  "delta": 0,
+  "exact": true
+ },
+ "support_attribute_pointer": {
+  "kind": "indirect",
+  "cell": 165172,
+  "target": 143328760,
+  "sym": "gAffinityBonuses",
+  "delta": 0,
+  "exact": true
+ },
+ "terrain_recovery_pointer": {
+  "kind": "indirect",
+  "cell": 107108,
+  "target": 142657348,
+  "sym": "TerrainTable_HealAmount",
+  "delta": 0,
+  "exact": true
+ },
+ "terrain_bad_status_recovery_pointer": {
+  "kind": "indirect",
+  "cell": 107124,
+  "target": 142657413,
+  "sym": "TerrainTable_HealsStatus",
+  "delta": 0,
+  "exact": true
+ },
+ "terrain_show_infomation_pointer": {
+  "kind": "indirect",
+  "cell": 576092,
+  "target": 142653708,
+  "sym": "TerrainTable_MovCost_BerserkerNormal",
+  "delta": 0,
+  "exact": true
+ },
+ "ballista_movcost_pointer": {
+  "kind": "indirect",
+  "cell": 101728,
+  "target": 142654488,
+  "sym": "TerrainMoveCost_Ballista",
+  "delta": 0,
+  "exact": true
+ },
+ "ccbranch_pointer": {
+  "kind": "indirect",
+  "cell": 837584,
+  "target": 144039844,
+  "sym": "gPromoJidLut",
+  "delta": 0,
+  "exact": true
+ },
+ "ccbranch2_pointer": {
+  "kind": "indirect",
+  "cell": 837576,
+  "target": 144039845,
+  "sym": "gPromoJidLut",
+  "delta": 1,
+  "exact": false
+ },
+ "class_alphaname_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "map_terrain_name_pointer": {
+  "kind": "indirect",
+  "cell": 107092,
+  "target": 142660468,
+  "sym": "gTerrains_0",
+  "delta": 0,
+  "exact": true
+ },
+ "image_chapter_title_pointer": {
+  "kind": "indirect",
+  "cell": 562792,
+  "target": 144708104,
+  "sym": "chap_title_data",
+  "delta": 0,
+  "exact": true
+ },
+ "image_chapter_title_palette": {
+  "kind": "direct",
+  "addr": 144809132,
+  "sym": "Pal_MenuScrollBar",
+  "delta": 0,
+  "exact": true
+ },
+ "image_unit_palette_pointer": {
+  "kind": "indirect",
+  "cell": 367612,
+  "target": 149913608,
+  "sym": "character_battle_animation_palette_table",
+  "delta": 0,
+  "exact": true
+ },
+ "item_pointer": {
+  "kind": "indirect",
+  "cell": 96192,
+  "target": 142646032,
+  "sym": "gItemData",
+  "delta": 0,
+  "exact": true
+ },
+ "item_datasize": {
+  "kind": "direct",
+  "addr": 134217764,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 32,
+  "exact": false
+ },
+ "item_effect_pointer": {
+  "kind": "indirect",
+  "cell": 360468,
+  "target": 143326168,
+  "sym": "gSpellAssocData",
+  "delta": 0,
+  "exact": true
+ },
+ "sound_table_pointer": {
+  "kind": "indirect",
+  "cell": 10428,
+  "target": 136463472,
+  "sym": "gSongTable",
+  "delta": 0,
+  "exact": true
+ },
+ "sound_room_pointer": {
+  "kind": "indirect",
+  "cell": 113684,
+  "target": 144838260,
+  "sym": "gSoundRoomTable",
+  "delta": 0,
+  "exact": true
+ },
+ "sound_room_datasize": {
+  "kind": "direct",
+  "addr": 134217744,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 12,
+  "exact": false
+ },
+ "sound_room_cg_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "event_ballte_talk_pointer": {
+  "kind": "indirect",
+  "cell": 542380,
+  "target": 144623292,
+  "sym": "gBattleTalkList",
+  "delta": 0,
+  "exact": true
+ },
+ "event_ballte_talk2_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "event_haiku_pointer": {
+  "kind": "indirect",
+  "cell": 542508,
+  "target": 144624972,
+  "sym": "gDefeatTalkList",
+  "delta": 0,
+  "exact": true
+ },
+ "event_haiku_tutorial_1_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "event_haiku_tutorial_2_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "event_force_sortie_pointer": {
+  "kind": "indirect",
+  "cell": 542780,
+  "target": 144627276,
+  "sym": "gForceDeploymentList",
+  "delta": 0,
+  "exact": true
+ },
+ "event_tutorial_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "map_exit_point_pointer": {
+  "kind": "indirect",
+  "cell": 256172,
+  "target": 140149128,
+  "sym": "gRedAiEscapePoints",
+  "delta": 0,
+  "exact": true
+ },
+ "map_exit_point_npc_blockadd": {
+  "kind": "direct",
+  "addr": 134217793,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 61,
+  "exact": false
+ },
+ "map_exit_point_blank": {
+  "kind": "direct",
+  "addr": 135103712,
+  "sym": "AiEscapePts_None",
+  "delta": 0,
+  "exact": true
+ },
+ "sound_boss_bgm_pointer": {
+  "kind": "indirect",
+  "cell": 469256,
+  "target": 141920864,
+  "sym": "gBanimBossBGMs",
+  "delta": 0,
+  "exact": true
+ },
+ "sound_foot_steps_pointer": {
+  "kind": "indirect",
+  "cell": 495060,
+  "target": 134712792,
+  "sym": "UpdateMuStepSounds",
+  "delta": 108,
+  "exact": false
+ },
+ "sound_foot_steps_switch2_address": {
+  "kind": "direct",
+  "addr": 134712770,
+  "sym": "UpdateMuStepSounds",
+  "delta": 86,
+  "exact": false
+ },
+ "sound_foot_steps_data_pointer": {
+  "kind": "indirect",
+  "cell": 495660,
+  "target": 144320920,
+  "sym": "MuSoundScr_Foot",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_scroll_somedata_pointer": {
+  "kind": "indirect",
+  "cell": 779560,
+  "target": 144958200,
+  "sym": "gWorldmapMapmu_2",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_point_pointer": {
+  "kind": "indirect",
+  "cell": 48772,
+  "target": 136339632,
+  "sym": "gWMNodeData",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_bgm_pointer": {
+  "kind": "indirect",
+  "cell": 761748,
+  "target": 144956808,
+  "sym": "gWMSongTable",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_icon_data_pointer": {
+  "kind": "indirect",
+  "cell": 767604,
+  "target": 136339360,
+  "sym": "gWMNodeIconData",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_event_on_stageclear_pointer": {
+  "kind": "indirect",
+  "cell": 762832,
+  "target": 143342060,
+  "sym": "Events_WM_Beginning",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_event_on_stageselect_pointer": {
+  "kind": "indirect",
+  "cell": 762908,
+  "target": 143342296,
+  "sym": "Events_WM_ChapterIntro",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_county_border_pointer": {
+  "kind": "indirect",
+  "cell": 797556,
+  "target": 136342256,
+  "sym": "GfxSet_WmNationMap",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_county_border_palette_pointer": {
+  "kind": "indirect",
+  "cell": 796580,
+  "target": 145352328,
+  "sym": "Pal_WmHighLightNationMap",
+  "delta": 0,
+  "exact": true
+ },
+ "item_shop_hensei_pointer": {
+  "kind": "indirect",
+  "cell": 630372,
+  "target": 144804068,
+  "sym": "gPrepShopInventory",
+  "delta": 0,
+  "exact": true
+ },
+ "item_cornered_pointer": {
+  "kind": "indirect",
+  "cell": 182220,
+  "target": 140098192,
+  "sym": "gProcScr_SquareSelectTorch",
+  "delta": 88,
+  "exact": false
+ },
+ "ed_1_pointer": {
+  "kind": "indirect",
+  "cell": 747340,
+  "target": 144954048,
+  "sym": "gCharacterEndingDefeatLut",
+  "delta": 0,
+  "exact": true
+ },
+ "ed_2_pointer": {
+  "kind": "indirect",
+  "cell": 747304,
+  "target": 144953776,
+  "sym": "gCharacterEndingTitleLut",
+  "delta": 0,
+  "exact": true
+ },
+ "ed_3a_pointer": {
+  "kind": "indirect",
+  "cell": 10736040,
+  "target": 144952680,
+  "sym": "gCharacterEndings_Eirika",
+  "delta": 0,
+  "exact": true
+ },
+ "ed_3b_pointer": {
+  "kind": "indirect",
+  "cell": 10736044,
+  "target": 144953224,
+  "sym": "gCharacterEndings_Ephraim",
+  "delta": 0,
+  "exact": true
+ },
+ "ed_3c_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "generic_enemy_portrait_pointer": {
+  "kind": "indirect",
+  "cell": 24468,
+  "target": 135100348,
+  "sym": "gSinLookup",
+  "delta": 672,
+  "exact": false
+ },
+ "generic_enemy_portrait_count": {
+  "kind": "direct",
+  "addr": 134217736,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 4,
+  "exact": false
+ },
+ "cc_item_hero_crest_itemid": {
+  "kind": "direct",
+  "addr": 134217828,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 96,
+  "exact": false
+ },
+ "cc_item_knight_crest_itemid": {
+  "kind": "direct",
+  "addr": 134217829,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 97,
+  "exact": false
+ },
+ "cc_item_orion_bolt_itemid": {
+  "kind": "direct",
+  "addr": 134217830,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 98,
+  "exact": false
+ },
+ "cc_elysian_whip_itemid": {
+  "kind": "direct",
+  "addr": 134217831,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 99,
+  "exact": false
+ },
+ "cc_guiding_ring_itemid": {
+  "kind": "direct",
+  "addr": 134217832,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 100,
+  "exact": false
+ },
+ "cc_fallen_contract_itemid": {
+  "kind": "direct",
+  "addr": 134217866,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 134,
+  "exact": false
+ },
+ "cc_master_seal_itemid": {
+  "kind": "direct",
+  "addr": 134217864,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 132,
+  "exact": false
+ },
+ "cc_ocean_seal_itemid": {
+  "kind": "direct",
+  "addr": 134217879,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 147,
+  "exact": false
+ },
+ "cc_moon_bracelet_itemid": {
+  "kind": "direct",
+  "addr": 134217880,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 148,
+  "exact": false
+ },
+ "cc_sun_bracelet_itemid": {
+  "kind": "direct",
+  "addr": 134217881,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 149,
+  "exact": false
+ },
+ "cc_item_hero_crest_pointer": {
+  "kind": "indirect",
+  "cell": 168856,
+  "target": 143318871,
+  "sym": "gItemUseJidList_HeroCrest",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_item_knight_crest_pointer": {
+  "kind": "indirect",
+  "cell": 168864,
+  "target": 143318878,
+  "sym": "gItemUseJidList_KnightCrest",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_item_orion_bolt_pointer": {
+  "kind": "indirect",
+  "cell": 168872,
+  "target": 143318884,
+  "sym": "gItemUseJidList_OrionsBolt",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_elysian_whip_pointer": {
+  "kind": "indirect",
+  "cell": 168880,
+  "target": 143318887,
+  "sym": "gItemUseJidList_ElysianWhip",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_guiding_ring_pointer": {
+  "kind": "indirect",
+  "cell": 168888,
+  "target": 143318891,
+  "sym": "gItemUseJidList_GuidRing",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_fallen_contract_pointer": {
+  "kind": "indirect",
+  "cell": 168920,
+  "target": 143318934,
+  "sym": "gItemUseJidList_HeavenSeal",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_master_seal_pointer": {
+  "kind": "indirect",
+  "cell": 168896,
+  "target": 143318902,
+  "sym": "gItemUseJidList_MasterSeal",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_ocean_seal_pointer": {
+  "kind": "indirect",
+  "cell": 168968,
+  "target": 143318942,
+  "sym": "gItemUseJidList_OceanSeal",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_moon_bracelet_pointer": {
+  "kind": "indirect",
+  "cell": 168400,
+  "target": 143318948,
+  "sym": "gItemUseJidList_LunarBrace",
+  "delta": 0,
+  "exact": true
+ },
+ "cc_sun_bracelet_pointer": {
+  "kind": "indirect",
+  "cell": 168468,
+  "target": 143318950,
+  "sym": "gItemUseJidList_SolarBrace",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_increase_height_pointer": {
+  "kind": "indirect",
+  "cell": 23608,
+  "target": 134241340,
+  "sym": "ShouldFaceBeRaised",
+  "delta": 24,
+  "exact": false
+ },
+ "unit_increase_height_switch2_address": {
+  "kind": "direct",
+  "addr": 134241318,
+  "sym": "ShouldFaceBeRaised",
+  "delta": 2,
+  "exact": false
+ },
+ "op_class_demo_pointer": {
+  "kind": "indirect",
+  "cell": 10681524,
+  "target": 144897728,
+  "sym": "gClassReelData",
+  "delta": 0,
+  "exact": true
+ },
+ "op_class_font_pointer": {
+  "kind": "indirect",
+  "cell": 732576,
+  "target": 144896704,
+  "sym": "gOpinfo_1",
+  "delta": 0,
+  "exact": true
+ },
+ "op_class_font_palette_pointer": {
+  "kind": "indirect",
+  "cell": 613504,
+  "target": 144814452,
+  "sym": "gPal_SupportScreenBanner",
+  "delta": 0,
+  "exact": true
+ },
+ "status_font_pointer": {
+  "kind": "indirect",
+  "cell": 19144,
+  "target": 140053316,
+  "sym": "TextGlyphs_Special",
+  "delta": 0,
+  "exact": true
+ },
+ "status_font_count": {
+  "kind": "direct",
+  "addr": 134217984,
+  "sym": "IrqMain",
+  "delta": 4,
+  "exact": false
+ },
+ "ed_staffroll_image_pointer": {
+  "kind": "indirect",
+  "cell": 2125348,
+  "target": 136342432,
+  "sym": "StaffReelEnt_EndingCredits_0",
+  "delta": 0,
+  "exact": true
+ },
+ "ed_staffroll_palette_pointer": {
+  "kind": "indirect",
+  "cell": 804292,
+  "target": 144969672,
+  "sym": "Pal_StaffReelEnt_EndingFin",
+  "delta": 0,
+  "exact": true
+ },
+ "op_prologue_image_pointer": {
+  "kind": "indirect",
+  "cell": 806076,
+  "target": 136343524,
+  "sym": "gOpSubtitleGfxLut",
+  "delta": 0,
+  "exact": true
+ },
+ "op_prologue_palette_color_pointer": {
+  "kind": "indirect",
+  "cell": 804292,
+  "target": 144969672,
+  "sym": "Pal_StaffReelEnt_EndingFin",
+  "delta": 0,
+  "exact": true
+ },
+ "arena_class_near_weapon_pointer": {
+  "kind": "indirect",
+  "cell": 203084,
+  "target": 140106236,
+  "sym": "gClassList_MeleeArena",
+  "delta": 0,
+  "exact": true
+ },
+ "arena_class_far_weapon_pointer": {
+  "kind": "indirect",
+  "cell": 203096,
+  "target": 140106314,
+  "sym": "gClassList_BowArena",
+  "delta": 0,
+  "exact": true
+ },
+ "arena_class_magic_weapon_pointer": {
+  "kind": "indirect",
+  "cell": 203176,
+  "target": 140106274,
+  "sym": "gClassList_MagicArena",
+  "delta": 0,
+  "exact": true
+ },
+ "arena_enemy_weapon_basic_pointer": {
+  "kind": "indirect",
+  "cell": 203704,
+  "target": 135102300,
+  "sym": "JunaItemEffLevelLut",
+  "delta": 792,
+  "exact": false
+ },
+ "arena_enemy_weapon_rankup_pointer": {
+  "kind": "indirect",
+  "cell": 203736,
+  "target": 135102308,
+  "sym": "JunaItemEffLevelLut",
+  "delta": 800,
+  "exact": false
+ },
+ "link_arena_deny_unit_pointer": {
+  "kind": "indirect",
+  "cell": 622220,
+  "target": 136338428,
+  "sym": "gLinkArenaBanList",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_road_pointer": {
+  "kind": "indirect",
+  "cell": 49856,
+  "target": 136341108,
+  "sym": "gWMPathData",
+  "delta": 0,
+  "exact": true
+ },
+ "submenu_pointer": {
+  "kind": "nonliteral",
+  "raw": "PatchUtil.SearchSubMenuMenuDefinePointerFE8U(rom)"
+ },
+ "menu_definiton_pointer": {
+  "kind": "indirect",
+  "cell": 114732,
+  "target": 140103600,
+  "sym": "gDebugClearMenuDef",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_promotion_pointer": {
+  "kind": "indirect",
+  "cell": 842768,
+  "target": 145828144,
+  "sym": "Menu_PromoSubConfirm",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_promotion_branch_pointer": {
+  "kind": "indirect",
+  "cell": 843212,
+  "target": 145828324,
+  "sym": "gMenuDef_PromoSel",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_definiton_split_pointer": {
+  "kind": "indirect",
+  "cell": 550160,
+  "target": 144651936,
+  "sym": "MenuDef_RouteSplit",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_definiton_worldmap_pointer": {
+  "kind": "indirect",
+  "cell": 771208,
+  "target": 144957732,
+  "sym": "gMenu_WMGeneralMenu",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_definiton_worldmap_shop_pointer": {
+  "kind": "indirect",
+  "cell": 771564,
+  "target": 144957952,
+  "sym": "gMenu_WMNodeMenu",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_unit_pointer": {
+  "kind": "indirect",
+  "cell": 5886456,
+  "target": 140102196,
+  "sym": "gUnitActionMenuItems",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_game_pointer": {
+  "kind": "indirect",
+  "cell": 5886492,
+  "target": 140103276,
+  "sym": "gMapMenuItems",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_debug1_pointer": {
+  "kind": "indirect",
+  "cell": 5885880,
+  "target": 140099136,
+  "sym": "gDebugClearMenuItems",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_item_pointer": {
+  "kind": "indirect",
+  "cell": 5886240,
+  "target": 140101044,
+  "sym": "gItemSubMenuItems",
+  "delta": 0,
+  "exact": true
+ },
+ "MenuCommand_UsabilityAlways": {
+  "kind": "direct",
+  "addr": 134542408,
+  "sym": "MenuAlwaysEnabled",
+  "delta": 0,
+  "exact": true
+ },
+ "MenuCommand_UsabilityNever": {
+  "kind": "direct",
+  "addr": 134542416,
+  "sym": "MenuAlwaysNotShown",
+  "delta": 0,
+  "exact": true
+ },
+ "status_rmenu_unit_pointer": {
+  "kind": "indirect",
+  "cell": 559576,
+  "target": 144706500,
+  "sym": "gHelpInfo_Ss0Pow",
+  "delta": 0,
+  "exact": true
+ },
+ "status_rmenu_game_pointer": {
+  "kind": "indirect",
+  "cell": 559584,
+  "target": 144706976,
+  "sym": "gHelpInfo_Ss1Item0",
+  "delta": 0,
+  "exact": true
+ },
+ "status_rmenu3_pointer": {
+  "kind": "indirect",
+  "cell": 559608,
+  "target": 144707396,
+  "sym": "gHelpInfo_Ss2Rank0",
+  "delta": 0,
+  "exact": true
+ },
+ "status_rmenu4_pointer": {
+  "kind": "indirect",
+  "cell": 226384,
+  "target": 144707564,
+  "sym": "gHelpInfo_MbpHp",
+  "delta": 0,
+  "exact": true
+ },
+ "status_rmenu5_pointer": {
+  "kind": "indirect",
+  "cell": 226408,
+  "target": 144707732,
+  "sym": "gHelpInfo_CbpHp",
+  "delta": 0,
+  "exact": true
+ },
+ "status_rmenu6_pointer": {
+  "kind": "indirect",
+  "cell": 10493152,
+  "target": 144710852,
+  "sym": "sHelpInfo_ChapterStatus_Goal",
+  "delta": 0,
+  "exact": true
+ },
+ "status_param1_pointer": {
+  "kind": "indirect",
+  "cell": 553404,
+  "target": 136337764,
+  "sym": "sPage0TextInfo",
+  "delta": 0,
+  "exact": true
+ },
+ "status_param2_pointer": {
+  "kind": "indirect",
+  "cell": 554224,
+  "target": 136337956,
+  "sym": "sPage1TextInfo",
+  "delta": 0,
+  "exact": true
+ },
+ "status_param3w_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "status_param3m_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_common_image_pointer": {
+  "kind": "indirect",
+  "cell": 5989488,
+  "target": 140207552,
+  "sym": "gUiFrameImage",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_common_palette_pointer": {
+  "kind": "indirect",
+  "cell": 224556,
+  "target": 140209076,
+  "sym": "gUiFramePaletteA",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_goal_tsa_pointer": {
+  "kind": "indirect",
+  "cell": 578176,
+  "target": 144799556,
+  "sym": "gTSA_GoalBox_OneLine",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_terrain_tsa_pointer": {
+  "kind": "indirect",
+  "cell": 576304,
+  "target": 144798764,
+  "sym": "gTSA_TerrainBox",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_name_image_pointer": {
+  "kind": "indirect",
+  "cell": 5989488,
+  "target": 140207552,
+  "sym": "gUiFrameImage",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_name_tsa_pointer": {
+  "kind": "indirect",
+  "cell": 575244,
+  "target": 144798852,
+  "sym": "gTSA_MinimugBox",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_name_palette_pointer": {
+  "kind": "indirect",
+  "cell": 224556,
+  "target": 140209076,
+  "sym": "gUiFramePaletteA",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_battlepreview_image_pointer": {
+  "kind": "indirect",
+  "cell": 5989488,
+  "target": 140207552,
+  "sym": "gUiFrameImage",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_battlepreview_tsa_pointer": {
+  "kind": "indirect",
+  "cell": 223392,
+  "target": 140118440,
+  "sym": "gTSA_BattleForecastStandard",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_battlepreview_palette_pointer": {
+  "kind": "indirect",
+  "cell": 224556,
+  "target": 140209076,
+  "sym": "gUiFramePaletteA",
+  "delta": 0,
+  "exact": true
+ },
+ "systemarea_move_gradation_palette_pointer": {
+  "kind": "indirect",
+  "cell": 121428,
+  "target": 144715572,
+  "sym": "Pal_LimitViewBlue",
+  "delta": 0,
+  "exact": true
+ },
+ "systemarea_attack_gradation_palette_pointer": {
+  "kind": "indirect",
+  "cell": 121432,
+  "target": 144715668,
+  "sym": "Pal_LimitViewRed",
+  "delta": 0,
+  "exact": true
+ },
+ "systemarea_staff_gradation_palette_pointer": {
+  "kind": "indirect",
+  "cell": 121436,
+  "target": 144715764,
+  "sym": "Pal_LimitViewGreen",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_badstatus_image_pointer": {
+  "kind": "indirect",
+  "cell": 574544,
+  "target": 144797164,
+  "sym": "gGfx_StatusText",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_badstatus_palette_pointer": {
+  "kind": "indirect",
+  "cell": 563392,
+  "target": 140111680,
+  "sym": "Pal_HelpBox",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_badstatus_old_image_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "systemmenu_badstatus_old_palette_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "bigcg_pointer": {
+  "kind": "indirect",
+  "cell": 746992,
+  "target": 144952556,
+  "sym": "gCGDataTable",
+  "delta": 0,
+  "exact": true
+ },
+ "end_cg_address": {
+  "kind": "indirect",
+  "cell": 2124808,
+  "target": 145019368,
+  "sym": "cg_0_part_0_tiles",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_big_image_pointer": {
+  "kind": "indirect",
+  "cell": 763900,
+  "target": 145240932,
+  "sym": "gWorldmapGmap_0",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_big_palette_pointer": {
+  "kind": "indirect",
+  "cell": 763912,
+  "target": 145317860,
+  "sym": "gWorldmapGmap_2",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_big_dpalette_pointer": {
+  "kind": "indirect",
+  "cell": 784304,
+  "target": 145317732,
+  "sym": "gWorldmapGmap_1",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_big_palettemap_pointer": {
+  "kind": "indirect",
+  "cell": 763904,
+  "target": 145317988,
+  "sym": "gWorldmapGmap_3",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_event_image_pointer": {
+  "kind": "indirect",
+  "cell": 794692,
+  "target": 145330496,
+  "sym": "Img_EventGmap",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_event_palette_pointer": {
+  "kind": "indirect",
+  "cell": 794696,
+  "target": 145351876,
+  "sym": "Pal_EventGmap",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_event_tsa_pointer": {
+  "kind": "indirect",
+  "cell": 794700,
+  "target": 145350516,
+  "sym": "Tsa_EventGmap",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_mini_image_pointer": {
+  "kind": "indirect",
+  "cell": 802412,
+  "target": 145363584,
+  "sym": "Img_WorldmapMinimap",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_mini_palette_pointer": {
+  "kind": "indirect",
+  "cell": 802420,
+  "target": 145365132,
+  "sym": "Pal_WorldmapMinimap",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_icon_palette_pointer": {
+  "kind": "indirect",
+  "cell": 757320,
+  "target": 145324608,
+  "sym": "gWorldmapGmap_4",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_icon1_pointer": {
+  "kind": "indirect",
+  "cell": 757324,
+  "target": 145318664,
+  "sym": "Img_GmapNodes",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_icon2_pointer": {
+  "kind": "indirect",
+  "cell": 757332,
+  "target": 145323024,
+  "sym": "Img_GmapCastleNodes",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_road_tile_pointer": {
+  "kind": "indirect",
+  "cell": 757656,
+  "target": 145325784,
+  "sym": "Img_GmapPath",
+  "delta": 0,
+  "exact": true
+ },
+ "map_load_function_pointer": {
+  "kind": "indirect",
+  "cell": 774276,
+  "target": 134992008,
+  "sym": "GetBattleMapKind",
+  "delta": 32,
+  "exact": false
+ },
+ "map_load_function_switch1_address": {
+  "kind": "direct",
+  "addr": 134991984,
+  "sym": "GetBattleMapKind",
+  "delta": 8,
+  "exact": false
+ },
+ "system_icon_pointer": {
+  "kind": "indirect",
+  "cell": 87724,
+  "target": 140110048,
+  "sym": "gGfx_MiscUiGraphics",
+  "delta": 0,
+  "exact": true
+ },
+ "system_icon_palette_pointer": {
+  "kind": "indirect",
+  "cell": 87736,
+  "target": 140111216,
+  "sym": "gPal_MiscUiGraphics",
+  "delta": 0,
+  "exact": true
+ },
+ "system_icon_width_address": {
+  "kind": "direct",
+  "addr": 134305424,
+  "sym": "LoadObjUIGfx",
+  "delta": 16,
+  "exact": false
+ },
+ "system_weapon_icon_pointer": {
+  "kind": "indirect",
+  "cell": 646236,
+  "target": 144809164,
+  "sym": "Img_PrepItemListSpinningArrow",
+  "delta": 0,
+  "exact": true
+ },
+ "system_weapon_icon_palette_pointer": {
+  "kind": "indirect",
+  "cell": 594296,
+  "target": 144810116,
+  "sym": "Pal_SpinningArrow",
+  "delta": 0,
+  "exact": true
+ },
+ "system_music_icon_pointer": {
+  "kind": "indirect",
+  "cell": 728188,
+  "target": 144733516,
+  "sym": "Img_ConfigUiIcons",
+  "delta": 0,
+  "exact": true
+ },
+ "system_music_icon_palette_pointer": {
+  "kind": "indirect",
+  "cell": 728176,
+  "target": 144734872,
+  "sym": "Pal_ConfigUiSprites",
+  "delta": 0,
+  "exact": true
+ },
+ "weapon_rank_s_bonus_address": {
+  "kind": "direct",
+  "addr": 134393204,
+  "sym": "ComputeBattleUnitWeaponRankBonuses",
+  "delta": 32,
+  "exact": false
+ },
+ "weapon_battle_flash_address": {
+  "kind": "direct",
+  "addr": 134580946,
+  "sym": "IsWeaponLegency",
+  "delta": 10,
+  "exact": false
+ },
+ "weapon_effectiveness_2x3x_address": {
+  "kind": "direct",
+  "addr": 134392600,
+  "sym": "ComputeBattleUnitAttack",
+  "delta": 92,
+  "exact": false
+ },
+ "font_item_address": {
+  "kind": "direct",
+  "addr": 140036076,
+  "sym": "TextGlyphs_System",
+  "delta": 0,
+  "exact": true
+ },
+ "font_serif_address": {
+  "kind": "direct",
+  "addr": 140048116,
+  "sym": "TextGlyphs_Talk",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_probability_pointer": {
+  "kind": "indirect",
+  "cell": 492364,
+  "target": 143466592,
+  "sym": "gMonsterClassWeights",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_item_item_pointer": {
+  "kind": "indirect",
+  "cell": 492528,
+  "target": 143466952,
+  "sym": "gMonsterItemTable",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_item_probability_pointer": {
+  "kind": "indirect",
+  "cell": 492524,
+  "target": 143467207,
+  "sym": "gMonsterItemWeightsTable",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_item_table_pointer": {
+  "kind": "indirect",
+  "cell": 492384,
+  "target": 143467584,
+  "sym": "gMonsterItemsByClassIndex",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_base_point_pointer": {
+  "kind": "indirect",
+  "cell": 792792,
+  "target": 136341832,
+  "sym": "gWMMonsterSpawnLocations",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_stage_1_pointer": {
+  "kind": "indirect",
+  "cell": 792512,
+  "target": 136341976,
+  "sym": "WmMonsterGenerateRatesIdx_EirikaMode",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_stage_2_pointer": {
+  "kind": "indirect",
+  "cell": 792568,
+  "target": 136341987,
+  "sym": "WmMonsterGenerateRatesIdx_EphraimMode",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_probability_1_pointer": {
+  "kind": "indirect",
+  "cell": 792516,
+  "target": 136341998,
+  "sym": "WmMonsterGenerateRates_EirikaMode",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_probability_2_pointer": {
+  "kind": "indirect",
+  "cell": 792572,
+  "target": 136342097,
+  "sym": "WmMonsterGenerateRates_EphraimMode",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_probability_after_1_pointer": {
+  "kind": "indirect",
+  "cell": 792596,
+  "target": 136342088,
+  "sym": "WmMonsterGenerateRates_XmapEirika",
+  "delta": 0,
+  "exact": true
+ },
+ "monster_wmap_probability_after_2_pointer": {
+  "kind": "indirect",
+  "cell": 792788,
+  "target": 136342187,
+  "sym": "WmMonsterGenerateRates_XmapEphraim",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_skirmish_startevent_pointer": {
+  "kind": "indirect",
+  "cell": 87052,
+  "target": 144702512,
+  "sym": "EventScr_SkirmishCommonBeginning",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_skirmish_endevent_pointer": {
+  "kind": "indirect",
+  "cell": 537280,
+  "target": 144702820,
+  "sym": "EventScr_SkirmishCommonEnd",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_bg_pointer": {
+  "kind": "indirect",
+  "cell": 481896,
+  "target": 141928340,
+  "sym": "gBattleBGDataTable",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_terrain_pointer": {
+  "kind": "indirect",
+  "cell": 335432,
+  "target": 149815304,
+  "sym": "battle_terrain_table",
+  "delta": 0,
+  "exact": true
+ },
+ "senseki_comment_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "unit_custom_battle_anime_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "magic_effect_pointer": {
+  "kind": "indirect",
+  "cell": 373752,
+  "target": 140332640,
+  "sym": "gEkrSpellAnimLut",
+  "delta": 0,
+  "exact": true
+ },
+ "magic_effect_original_data_count": {
+  "kind": "direct",
+  "addr": 134217800,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 68,
+  "exact": false
+ },
+ "system_move_allowicon_pointer": {
+  "kind": "indirect",
+  "cell": 208536,
+  "target": 144715860,
+  "sym": "gImg_PathArrow",
+  "delta": 0,
+  "exact": true
+ },
+ "system_move_allowicon_palette_pointer": {
+  "kind": "indirect",
+  "cell": 208544,
+  "target": 144716428,
+  "sym": "gPal_PathArrow",
+  "delta": 0,
+  "exact": true
+ },
+ "system_tsa_16color_304x240_pointer": {
+  "kind": "indirect",
+  "cell": 722336,
+  "target": 144872916,
+  "sym": "Tsa_CommGameBgScreenInShop",
+  "delta": 0,
+  "exact": true
+ },
+ "eventunit_data_size": {
+  "kind": "direct",
+  "addr": 134217748,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 16,
+  "exact": false
+ },
+ "eventcond_tern_size": {
+  "kind": "direct",
+  "addr": 134217740,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 8,
+  "exact": false
+ },
+ "eventcond_talk_size": {
+  "kind": "direct",
+  "addr": 134217744,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 12,
+  "exact": false
+ },
+ "oping_event_pointer": {
+  "kind": "indirect",
+  "cell": 9124336,
+  "target": 144938856,
+  "sym": "EventScrWM_Prologue_Beginning",
+  "delta": 0,
+  "exact": true
+ },
+ "ending1_event_pointer": {
+  "kind": "indirect",
+  "cell": 40640,
+  "target": 144704380,
+  "sym": "EventScr_EirikaModeGameEnd",
+  "delta": 0,
+  "exact": true
+ },
+ "ending2_event_pointer": {
+  "kind": "indirect",
+  "cell": 40664,
+  "target": 144704652,
+  "sym": "EventScr_EphraimModeGameEnd",
+  "delta": 0,
+  "exact": true
+ },
+ "RAMSlotTable_address": {
+  "kind": "direct",
+  "addr": 140092880,
+  "sym": "gUnitLookup",
+  "delta": 0,
+  "exact": true
+ },
+ "supply_pointer_address": {
+  "kind": "direct",
+  "addr": 134419748,
+  "sym": "ClearSupplyItems",
+  "delta": 28,
+  "exact": false
+ },
+ "workmemory_player_units_address": {
+  "kind": "direct",
+  "addr": 33734220,
+  "sym": "gUnitArrayBlue",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_enemy_units_address": {
+  "kind": "direct",
+  "addr": 33738684,
+  "sym": "gUnitArrayRed",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_npc_units_address": {
+  "kind": "direct",
+  "addr": 33742284,
+  "sym": "gUnitArrayGreen",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_mapid_address": {
+  "kind": "direct",
+  "addr": 33733886,
+  "sym": "gPlaySt",
+  "delta": 14,
+  "exact": false
+ },
+ "workmemory_chapterdata_address": {
+  "kind": "nonliteral",
+  "raw": "workmemory_mapid_address - 0xE"
+ },
+ "workmemory_chapterdata_size": {
+  "kind": "direct",
+  "addr": 134217804,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 72,
+  "exact": false
+ },
+ "workmemory_battle_actor_address": {
+  "kind": "direct",
+  "addr": 33793260,
+  "sym": "gBattleActor",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_battle_target_address": {
+  "kind": "direct",
+  "addr": 33793388,
+  "sym": "gBattleTarget",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_worldmap_data_address": {
+  "kind": "direct",
+  "addr": 50352768,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 10424,
+  "exact": false
+ },
+ "workmemory_worldmap_data_size": {
+  "kind": "direct",
+  "addr": 134217924,
+  "sym": "crt0",
+  "delta": 4,
+  "exact": false
+ },
+ "workmemory_arena_data_address": {
+  "kind": "direct",
+  "addr": 33794288,
+  "sym": "gArenaState",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_ai_data_address": {
+  "kind": "direct",
+  "addr": 33794564,
+  "sym": "gAiState",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_action_data_address": {
+  "kind": "direct",
+  "addr": 33794392,
+  "sym": "gActionData",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_dungeon_data_address": {
+  "kind": "scalar",
+  "value": 50337696
+ },
+ "workmemory_battlesome_data_address": {
+  "kind": "direct",
+  "addr": 33808624,
+  "sym": "gBanimLinkArenaFlag",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_battleround_data_address": {
+  "kind": "direct",
+  "addr": 33793516,
+  "sym": "gBattleHitArray",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_last_string_address": {
+  "kind": "direct",
+  "addr": 33732268,
+  "sym": "sActiveMsg",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_text_buffer_address": {
+  "kind": "direct",
+  "addr": 33728172,
+  "sym": "sMsgString",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_next_text_buffer_address": {
+  "kind": "scalar",
+  "value": 50331720
+ },
+ "workmemory_local_flag_address": {
+  "kind": "direct",
+  "addr": 50352752,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 10408,
+  "exact": false
+ },
+ "workmemory_global_flag_address": {
+  "kind": "direct",
+  "addr": 50352720,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 10376,
+  "exact": false
+ },
+ "workmemory_trap_address": {
+  "kind": "direct",
+  "addr": 33793556,
+  "sym": "gpTradeMenuProc",
+  "delta": 4,
+  "exact": false
+ },
+ "workmemory_bwl_address": {
+  "kind": "direct",
+  "addr": 33810564,
+  "sym": "gUnused_BmsaveLib_0",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_clear_turn_address": {
+  "kind": "direct",
+  "addr": 33811700,
+  "sym": "gChapterStats",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_clear_turn_count": {
+  "kind": "direct",
+  "addr": 134217764,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 32,
+  "exact": false
+ },
+ "workmemory_memoryslot_address": {
+  "kind": "scalar",
+  "value": 50332856
+ },
+ "workmemory_eventcounter_address": {
+  "kind": "scalar",
+  "value": 50333032
+ },
+ "workmemory_procs_forest_address": {
+  "kind": "direct",
+  "addr": 33712752,
+  "sym": "gProcTreeRootArray",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_procs_pool_address": {
+  "kind": "direct",
+  "addr": 33705576,
+  "sym": "gSoundSt",
+  "delta": 12,
+  "exact": false
+ },
+ "function_sleep_handle_address": {
+  "kind": "nonliteral",
+  "raw": "0x08003290 + 1"
+ },
+ "workmemory_user_stack_base_address": {
+  "kind": "direct",
+  "addr": 50363884,
+  "sym": "errno",
+  "delta": 5700,
+  "exact": false
+ },
+ "function_fe_main_return_address": {
+  "kind": "nonliteral",
+  "raw": "0x08000AE0 + 1"
+ },
+ "workmemory_control_unit_address": {
+  "kind": "direct",
+  "addr": 50351696,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 9352,
+  "exact": false
+ },
+ "workmemory_bgm_address": {
+  "kind": "direct",
+  "addr": 33705564,
+  "sym": "gSoundSt",
+  "delta": 0,
+  "exact": true
+ },
+ "function_event_engine_loop_address": {
+  "kind": "nonliteral",
+  "raw": "0x0800ce4c + 1"
+ },
+ "workmemory_reference_procs_event_address_offset": {
+  "kind": "direct",
+  "addr": 134217780,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 48,
+  "exact": false
+ },
+ "workmemory_procs_game_main_address": {
+  "kind": "direct",
+  "addr": 33705576,
+  "sym": "gSoundSt",
+  "delta": 12,
+  "exact": false
+ },
+ "workmemory_palette_address": {
+  "kind": "direct",
+  "addr": 33695912,
+  "sym": "gPaletteBuffer",
+  "delta": 0,
+  "exact": true
+ },
+ "workmemory_sound_player_00_address": {
+  "kind": "direct",
+  "addr": 50357312,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 14968,
+  "exact": false
+ },
+ "workmemory_sound_player_01_address": {
+  "kind": "direct",
+  "addr": 50357840,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 15496,
+  "exact": false
+ },
+ "workmemory_sound_player_02_address": {
+  "kind": "direct",
+  "addr": 50357904,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 15560,
+  "exact": false
+ },
+ "workmemory_sound_player_03_address": {
+  "kind": "direct",
+  "addr": 50357968,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 15624,
+  "exact": false
+ },
+ "workmemory_sound_player_04_address": {
+  "kind": "direct",
+  "addr": 50358048,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 15704,
+  "exact": false
+ },
+ "workmemory_sound_player_05_address": {
+  "kind": "direct",
+  "addr": 50358112,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 15768,
+  "exact": false
+ },
+ "workmemory_sound_player_06_address": {
+  "kind": "direct",
+  "addr": 50357776,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 15432,
+  "exact": false
+ },
+ "workmemory_sound_player_07_address": {
+  "kind": "direct",
+  "addr": 50357248,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 14904,
+  "exact": false
+ },
+ "workmemory_sound_player_08_address": {
+  "kind": "direct",
+  "addr": 50357184,
+  "sym": "gMPlayTrack_SE7_EVT",
+  "delta": 14840,
+  "exact": false
+ },
+ "workmemory_keybuffer_address": {
+  "kind": "direct",
+  "addr": 33705152,
+  "sym": "gMainCallback",
+  "delta": 8,
+  "exact": false
+ },
+ "procs_maptask_pointer": {
+  "kind": "indirect",
+  "cell": 200664,
+  "target": 140105992,
+  "sym": "gProc_MapTask",
+  "delta": 0,
+  "exact": true
+ },
+ "procs_soundroomUI_pointer": {
+  "kind": "indirect",
+  "cell": 720684,
+  "target": 144839480,
+  "sym": "gProcScr_SoundRoomUi",
+  "delta": 0,
+  "exact": true
+ },
+ "procs_game_main_address": {
+  "kind": "direct",
+  "addr": 140056276,
+  "sym": "gProcScr_GameControl",
+  "delta": 0,
+  "exact": true
+ },
+ "summon_unit_pointer": {
+  "kind": "indirect",
+  "cell": 148524,
+  "target": 144045476,
+  "sym": "gSummonConfig",
+  "delta": 0,
+  "exact": true
+ },
+ "summons_demon_king_pointer": {
+  "kind": "indirect",
+  "cell": 504620,
+  "target": 143466324,
+  "sym": "gUnitDefSumDK",
+  "delta": 0,
+  "exact": true
+ },
+ "summons_demon_king_count_address": {
+  "kind": "direct",
+  "addr": 134722236,
+  "sym": "LoadSumMonsterFromDK",
+  "delta": 8,
+  "exact": false
+ },
+ "mant_command_pointer": {
+  "kind": "indirect",
+  "cell": 446672,
+  "target": 134664404,
+  "sym": "NewEfxMagfcast",
+  "delta": 84,
+  "exact": false
+ },
+ "mant_command_startadd": {
+  "kind": "direct",
+  "addr": 134217835,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 103,
+  "exact": false
+ },
+ "mant_command_count_address": {
+  "kind": "direct",
+  "addr": 134664374,
+  "sym": "NewEfxMagfcast",
+  "delta": 54,
+  "exact": false
+ },
+ "unit_increase_height_yes": {
+  "kind": "direct",
+  "addr": 134241432,
+  "sym": "ShouldFaceBeRaised",
+  "delta": 116,
+  "exact": false
+ },
+ "unit_increase_height_no": {
+  "kind": "direct",
+  "addr": 134241436,
+  "sym": "ShouldFaceBeRaised",
+  "delta": 120,
+  "exact": false
+ },
+ "battle_screen_TSA1_pointer": {
+  "kind": "indirect",
+  "cell": 335036,
+  "target": 142614796,
+  "sym": "gBanimmisc_0",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_TSA2_pointer": {
+  "kind": "indirect",
+  "cell": 335040,
+  "target": 142614976,
+  "sym": "gBanimmisc_1",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_TSA3_pointer": {
+  "kind": "indirect",
+  "cell": 332664,
+  "target": 142615156,
+  "sym": "gBanimmisc_2",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_TSA4_pointer": {
+  "kind": "indirect",
+  "cell": 332672,
+  "target": 142615368,
+  "sym": "gBanimmisc_3",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_TSA5_pointer": {
+  "kind": "indirect",
+  "cell": 336240,
+  "target": 142615816,
+  "sym": "gBanimmisc_5",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_palette_pointer": {
+  "kind": "indirect",
+  "cell": 336248,
+  "target": 142615896,
+  "sym": "gBanimmisc_6",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_image1_pointer": {
+  "kind": "indirect",
+  "cell": 335720,
+  "target": 142613524,
+  "sym": "Img_Banimmisc_0",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_image2_pointer": {
+  "kind": "indirect",
+  "cell": 335816,
+  "target": 142614396,
+  "sym": "Img_EfxLeftNameBox",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_image3_pointer": {
+  "kind": "indirect",
+  "cell": 335912,
+  "target": 142614516,
+  "sym": "Img_EfxLeftItemBox",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_image4_pointer": {
+  "kind": "indirect",
+  "cell": 336008,
+  "target": 142614596,
+  "sym": "Img_EfxRightNameBox",
+  "delta": 0,
+  "exact": true
+ },
+ "battle_screen_image5_pointer": {
+  "kind": "indirect",
+  "cell": 336228,
+  "target": 142614716,
+  "sym": "Img_EfxRightItemBox",
+  "delta": 0,
+  "exact": true
+ },
+ "ai1_pointer": {
+  "kind": "indirect",
+  "cell": 5935588,
+  "target": 140153220,
+  "sym": "gAi1ScriptTable",
+  "delta": 0,
+  "exact": true
+ },
+ "ai2_pointer": {
+  "kind": "indirect",
+  "cell": 5935576,
+  "target": 140153144,
+  "sym": "gAi2ScriptTable",
+  "delta": 0,
+  "exact": true
+ },
+ "ai3_pointer": {
+  "kind": "indirect",
+  "cell": 254428,
+  "target": 135102840,
+  "sym": "gAiCombatScoreCoefficientTable",
+  "delta": 0,
+  "exact": true
+ },
+ "ai_steal_item_pointer": {
+  "kind": "indirect",
+  "cell": 243648,
+  "target": 140149668,
+  "sym": "gAiStealPriorityItemList",
+  "delta": 0,
+  "exact": true
+ },
+ "ai_preform_staff_pointer": {
+  "kind": "indirect",
+  "cell": 260668,
+  "target": 135104140,
+  "sym": "sAiStaffFuncLut",
+  "delta": 0,
+  "exact": true
+ },
+ "ai_preform_staff_direct_asm_pointer": {
+  "kind": "indirect",
+  "cell": 260832,
+  "target": 135104144,
+  "sym": "sAiStaffFuncLut",
+  "delta": 4,
+  "exact": false
+ },
+ "ai_preform_item_pointer": {
+  "kind": "indirect",
+  "cell": 264224,
+  "target": 135104244,
+  "sym": "sAiSpecialItemFuncLut",
+  "delta": 0,
+  "exact": true
+ },
+ "ai_preform_item_direct_asm_pointer": {
+  "kind": "indirect",
+  "cell": 264392,
+  "target": 135104248,
+  "sym": "sAiSpecialItemFuncLut",
+  "delta": 4,
+  "exact": false
+ },
+ "ai_map_setting_pointer": {
+  "kind": "indirect",
+  "cell": 235276,
+  "target": 135103800,
+  "sym": "gAiItemConfigTable",
+  "delta": 0,
+  "exact": true
+ },
+ "item_usability_array_pointer": {
+  "kind": "indirect",
+  "cell": 166060,
+  "target": 134383792,
+  "sym": "CanUnitUseItem",
+  "delta": 64,
+  "exact": false
+ },
+ "item_usability_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134383770,
+  "sym": "CanUnitUseItem",
+  "delta": 42,
+  "exact": false
+ },
+ "item_effect_array_pointer": {
+  "kind": "indirect",
+  "cell": 195724,
+  "target": 134413456,
+  "sym": "ActionStaffDoorChestUseItem",
+  "delta": 72,
+  "exact": false
+ },
+ "item_effect_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134413426,
+  "sym": "ActionStaffDoorChestUseItem",
+  "delta": 42,
+  "exact": false
+ },
+ "item_promotion1_array_pointer": {
+  "kind": "indirect",
+  "cell": 168472,
+  "target": 134386204,
+  "sym": "CanUnitUsePromotionItem",
+  "delta": 116,
+  "exact": false
+ },
+ "item_promotion1_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134386178,
+  "sym": "CanUnitUsePromotionItem",
+  "delta": 90,
+  "exact": false
+ },
+ "item_promotion2_array_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "item_promotion2_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "item_staff1_array_pointer": {
+  "kind": "indirect",
+  "cell": 167560,
+  "target": 134385292,
+  "sym": "DoItemUse",
+  "delta": 44,
+  "exact": false
+ },
+ "item_staff1_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134385270,
+  "sym": "DoItemUse",
+  "delta": 22,
+  "exact": false
+ },
+ "item_staff2_array_pointer": {
+  "kind": "indirect",
+  "cell": 468368,
+  "target": 134686100,
+  "sym": "EfxCheckStaffType",
+  "delta": 36,
+  "exact": false
+ },
+ "item_staff2_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134686076,
+  "sym": "EfxCheckStaffType",
+  "delta": 12,
+  "exact": false
+ },
+ "item_statbooster1_array_pointer": {
+  "kind": "indirect",
+  "cell": 194740,
+  "target": 134412472,
+  "sym": "ApplyStatBoostItem",
+  "delta": 176,
+  "exact": false
+ },
+ "item_statbooster1_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134412452,
+  "sym": "ApplyStatBoostItem",
+  "delta": 156,
+  "exact": false
+ },
+ "item_statbooster2_array_pointer": {
+  "kind": "indirect",
+  "cell": 171824,
+  "target": 134389556,
+  "sym": "CanUnitUseItemPrepScreen",
+  "delta": 52,
+  "exact": false
+ },
+ "item_statbooster2_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134389532,
+  "sym": "CanUnitUseItemPrepScreen",
+  "delta": 28,
+  "exact": false
+ },
+ "item_errormessage_array_pointer": {
+  "kind": "indirect",
+  "cell": 166952,
+  "target": 134384684,
+  "sym": "GetItemCantUseMsgid",
+  "delta": 32,
+  "exact": false
+ },
+ "item_errormessage_array_switch2_address": {
+  "kind": "direct",
+  "addr": 134384662,
+  "sym": "GetItemCantUseMsgid",
+  "delta": 10,
+  "exact": false
+ },
+ "event_function_pointer_table_pointer": {
+  "kind": "indirect",
+  "cell": 52960,
+  "target": 140057384,
+  "sym": "gEventLoCmdTable",
+  "delta": 0,
+  "exact": true
+ },
+ "event_function_pointer_table2_pointer": {
+  "kind": "indirect",
+  "cell": 53000,
+  "target": 140057752,
+  "sym": "gEventHiCmdTable",
+  "delta": 0,
+  "exact": true
+ },
+ "item_effect_pointer_table_pointer": {
+  "kind": "indirect",
+  "cell": 373752,
+  "target": 140332640,
+  "sym": "gEkrSpellAnimLut",
+  "delta": 0,
+  "exact": true
+ },
+ "command_85_pointer_table_pointer": {
+  "kind": "indirect",
+  "cell": 465960,
+  "target": 134683692,
+  "sym": "EfxPlaySEwithCmdCtrl",
+  "delta": 192,
+  "exact": false
+ },
+ "dic_main_pointer": {
+  "kind": "indirect",
+  "cell": 844672,
+  "target": 145858060,
+  "sym": "gGuideTable",
+  "delta": 0,
+  "exact": true
+ },
+ "dic_chaptor_pointer": {
+  "kind": "indirect",
+  "cell": 844284,
+  "target": 145828576,
+  "sym": "gTextIds_GuideCategoriesChapter",
+  "delta": 0,
+  "exact": true
+ },
+ "dic_title_pointer": {
+  "kind": "indirect",
+  "cell": 844348,
+  "target": 145828612,
+  "sym": "gTextIds_GuideCategoriesTopic",
+  "delta": 0,
+  "exact": true
+ },
+ "itemicon_mine_id": {
+  "kind": "direct",
+  "addr": 134217868,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 136,
+  "exact": false
+ },
+ "item_gold_id": {
+  "kind": "direct",
+  "addr": 134217847,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 115,
+  "exact": false
+ },
+ "unitaction_function_pointer": {
+  "kind": "indirect",
+  "cell": 204892,
+  "target": 134422624,
+  "sym": "ApplyUnitAction",
+  "delta": 84,
+  "exact": false
+ },
+ "lookup_table_battle_terrain_00_pointer": {
+  "kind": "indirect",
+  "cell": 360140,
+  "target": 142657478,
+  "sym": "BanimTerrainGroundDefault",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_01_pointer": {
+  "kind": "indirect",
+  "cell": 359968,
+  "target": 142657543,
+  "sym": "BanimTerrainGround_Tileset01",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_02_pointer": {
+  "kind": "indirect",
+  "cell": 359976,
+  "target": 142657608,
+  "sym": "BanimTerrainGround_Tileset02",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_03_pointer": {
+  "kind": "indirect",
+  "cell": 359984,
+  "target": 142657673,
+  "sym": "BanimTerrainGround_Tileset03",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_04_pointer": {
+  "kind": "indirect",
+  "cell": 359992,
+  "target": 142657738,
+  "sym": "BanimTerrainGround_Tileset04",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_05_pointer": {
+  "kind": "indirect",
+  "cell": 360000,
+  "target": 142657803,
+  "sym": "BanimTerrainGround_Tileset05",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_06_pointer": {
+  "kind": "indirect",
+  "cell": 360008,
+  "target": 142657868,
+  "sym": "BanimTerrainGround_Tileset06",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_07_pointer": {
+  "kind": "indirect",
+  "cell": 360016,
+  "target": 142657933,
+  "sym": "BanimTerrainGround_Tileset07",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_08_pointer": {
+  "kind": "indirect",
+  "cell": 360024,
+  "target": 142657998,
+  "sym": "BanimTerrainGround_Tileset08",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_09_pointer": {
+  "kind": "indirect",
+  "cell": 360032,
+  "target": 142658063,
+  "sym": "BanimTerrainGround_Tileset09",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_10_pointer": {
+  "kind": "indirect",
+  "cell": 360040,
+  "target": 142658128,
+  "sym": "BanimTerrainGround_Tileset0A",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_11_pointer": {
+  "kind": "indirect",
+  "cell": 360048,
+  "target": 142658193,
+  "sym": "BanimTerrainGround_Tileset0B",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_12_pointer": {
+  "kind": "indirect",
+  "cell": 360056,
+  "target": 142658258,
+  "sym": "BanimTerrainGround_Tileset0C",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_13_pointer": {
+  "kind": "indirect",
+  "cell": 360064,
+  "target": 142658323,
+  "sym": "BanimTerrainGround_Tileset0D",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_14_pointer": {
+  "kind": "indirect",
+  "cell": 360072,
+  "target": 142658388,
+  "sym": "BanimTerrainGround_Tileset0E",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_15_pointer": {
+  "kind": "indirect",
+  "cell": 360080,
+  "target": 142658453,
+  "sym": "BanimTerrainGround_Tileset0F",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_16_pointer": {
+  "kind": "indirect",
+  "cell": 360088,
+  "target": 142658518,
+  "sym": "BanimTerrainGround_Tileset10",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_17_pointer": {
+  "kind": "indirect",
+  "cell": 360096,
+  "target": 142658583,
+  "sym": "BanimTerrainGround_Tileset11",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_18_pointer": {
+  "kind": "indirect",
+  "cell": 360104,
+  "target": 142658648,
+  "sym": "BanimTerrainGround_Tileset12",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_19_pointer": {
+  "kind": "indirect",
+  "cell": 360112,
+  "target": 142658713,
+  "sym": "BanimTerrainGround_Tileset13",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_terrain_20_pointer": {
+  "kind": "indirect",
+  "cell": 360120,
+  "target": 142658778,
+  "sym": "BanimTerrainGround_Tileset14",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_00_pointer": {
+  "kind": "indirect",
+  "cell": 360436,
+  "target": 142658843,
+  "sym": "gBanimBGLutDefault",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_01_pointer": {
+  "kind": "indirect",
+  "cell": 360264,
+  "target": 142658908,
+  "sym": "gBanimBGLut01",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_02_pointer": {
+  "kind": "indirect",
+  "cell": 360272,
+  "target": 142658973,
+  "sym": "gBanimBGLut02",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_03_pointer": {
+  "kind": "indirect",
+  "cell": 360280,
+  "target": 142659038,
+  "sym": "gBanimBGLut03",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_04_pointer": {
+  "kind": "indirect",
+  "cell": 360288,
+  "target": 142659103,
+  "sym": "gBanimBGLut04",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_05_pointer": {
+  "kind": "indirect",
+  "cell": 360296,
+  "target": 142659168,
+  "sym": "gBanimBGLut05",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_06_pointer": {
+  "kind": "indirect",
+  "cell": 360304,
+  "target": 142659233,
+  "sym": "gBanimBGLut06",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_07_pointer": {
+  "kind": "indirect",
+  "cell": 360312,
+  "target": 142659298,
+  "sym": "gBanimBGLut07",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_08_pointer": {
+  "kind": "indirect",
+  "cell": 360320,
+  "target": 142659363,
+  "sym": "gBanimBGLut08",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_09_pointer": {
+  "kind": "indirect",
+  "cell": 360328,
+  "target": 142659428,
+  "sym": "gBanimBGLut09",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_10_pointer": {
+  "kind": "indirect",
+  "cell": 360336,
+  "target": 142659493,
+  "sym": "gBanimBGLut0A",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_11_pointer": {
+  "kind": "indirect",
+  "cell": 360344,
+  "target": 142659558,
+  "sym": "gBanimBGLut0B",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_12_pointer": {
+  "kind": "indirect",
+  "cell": 360352,
+  "target": 142659623,
+  "sym": "gBanimBGLut0C",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_13_pointer": {
+  "kind": "indirect",
+  "cell": 360360,
+  "target": 142659688,
+  "sym": "gBanimBGLut0D",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_14_pointer": {
+  "kind": "indirect",
+  "cell": 360368,
+  "target": 142659753,
+  "sym": "gBanimBGLut0E",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_15_pointer": {
+  "kind": "indirect",
+  "cell": 360376,
+  "target": 142659818,
+  "sym": "gBanimBGLut0F",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_16_pointer": {
+  "kind": "indirect",
+  "cell": 360384,
+  "target": 142659883,
+  "sym": "gBanimBGLut10",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_17_pointer": {
+  "kind": "indirect",
+  "cell": 360392,
+  "target": 142659948,
+  "sym": "gBanimBGLut11",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_18_pointer": {
+  "kind": "indirect",
+  "cell": 360400,
+  "target": 142660013,
+  "sym": "gBanimBGLut12",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_19_pointer": {
+  "kind": "indirect",
+  "cell": 360408,
+  "target": 142660078,
+  "sym": "gBanimBGLut13",
+  "delta": 0,
+  "exact": true
+ },
+ "lookup_table_battle_bg_20_pointer": {
+  "kind": "indirect",
+  "cell": 360416,
+  "target": 142660143,
+  "sym": "gBanimBGLut14",
+  "delta": 0,
+  "exact": true
+ },
+ "map_terrain_type_count": {
+  "kind": "direct",
+  "addr": 134217793,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 61,
+  "exact": false
+ },
+ "menu_J12_always_address": {
+  "kind": "direct",
+  "addr": 134542408,
+  "sym": "MenuAlwaysEnabled",
+  "delta": 0,
+  "exact": true
+ },
+ "menu_J12_hide_address": {
+  "kind": "direct",
+  "addr": 134542416,
+  "sym": "MenuAlwaysNotShown",
+  "delta": 0,
+  "exact": true
+ },
+ "status_game_option_pointer": {
+  "kind": "indirect",
+  "cell": 727000,
+  "target": 144894364,
+  "sym": "gGameOptions",
+  "delta": 0,
+  "exact": true
+ },
+ "status_game_option_order_pointer": {
+  "kind": "indirect",
+  "cell": 726776,
+  "target": 144894328,
+  "sym": "gGameOptionsUiOrder",
+  "delta": 0,
+  "exact": true
+ },
+ "status_game_option_order2_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "status_game_option_order_count_address": {
+  "kind": "direct",
+  "addr": 134945330,
+  "sym": "Config_Init",
+  "delta": 42,
+  "exact": false
+ },
+ "status_units_menu_pointer": {
+  "kind": "indirect",
+  "cell": 598672,
+  "target": 144800840,
+  "sym": "gUnitListScreenFields",
+  "delta": 0,
+  "exact": true
+ },
+ "tactician_affinity_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "event_final_serif_pointer": {
+  "kind": "direct",
+  "addr": 134217728,
+  "sym": "Init",
+  "delta": 0,
+  "exact": true
+ },
+ "compress_image_borderline_address": {
+  "kind": "direct",
+  "addr": 135114752,
+  "sym": "gBanimTerrainBlankTm",
+  "delta": 160,
+  "exact": false
+ },
+ "builddate_address": {
+  "kind": "direct",
+  "addr": 135099600,
+  "sym": "gBuildDateTime",
+  "delta": 0,
+  "exact": true
+ },
+ "Default_event_script_term_code": {
+  "kind": "nonliteral",
+  "raw": "new byte[] { 0x28, 0x02, 0x07, 0x00, 0x20, 0x01, 0x00, 0x00 }"
+ },
+ "Default_event_script_toplevel_code": {
+  "kind": "nonliteral",
+  "raw": "new byte[] { 0x28, 0x02, 0x07, 0x00, 0x20, 0x01, 0x00, 0x00 }"
+ },
+ "Default_event_script_mapterm_code": {
+  "kind": "nonliteral",
+  "raw": "new byte[] { 0x20, 0x01, 0x00, 0x00 }"
+ },
+ "main_menu_width_address": {
+  "kind": "direct",
+  "addr": 140104214,
+  "sym": "gMapMenuDef",
+  "delta": 2,
+  "exact": false
+ },
+ "map_default_count": {
+  "kind": "direct",
+  "addr": 134217807,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 75,
+  "exact": false
+ },
+ "wait_menu_command_id": {
+  "kind": "direct",
+  "addr": 134217835,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 103,
+  "exact": false
+ },
+ "font_default_begin": {
+  "kind": "direct",
+  "addr": 140024988,
+  "sym": "gFontgrp_16",
+  "delta": 0,
+  "exact": true
+ },
+ "font_default_end": {
+  "kind": "direct",
+  "addr": 140049136,
+  "sym": "TextGlyphs_Talk",
+  "delta": 1020,
+  "exact": false
+ },
+ "item_name_article_pointer": {
+  "kind": "indirect",
+  "cell": 90540,
+  "target": 134308272,
+  "sym": "GetItemNameWithArticle",
+  "delta": 36,
+  "exact": false
+ },
+ "item_name_article_switch2_address": {
+  "kind": "direct",
+  "addr": 134308248,
+  "sym": "GetItemNameWithArticle",
+  "delta": 12,
+  "exact": false
+ },
+ "vanilla_field_config_address": {
+  "kind": "direct",
+  "addr": 135968412,
+  "sym": "TileConfiguration1",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_field_image_address": {
+  "kind": "direct",
+  "addr": 135892364,
+  "sym": "ObjectType1",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_village_config_address": {
+  "kind": "direct",
+  "addr": 135962944,
+  "sym": "TileConfiguration2",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_village_image_address": {
+  "kind": "direct",
+  "addr": 135863060,
+  "sym": "ObjectType2",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_casle_config_address": {
+  "kind": "direct",
+  "addr": 135957708,
+  "sym": "TileConfiguration3",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_casle_image_address": {
+  "kind": "direct",
+  "addr": 135837852,
+  "sym": "ObjectType3",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_plain_config_address": {
+  "kind": "direct",
+  "addr": 135951988,
+  "sym": "TileConfiguration4",
+  "delta": 0,
+  "exact": true
+ },
+ "vanilla_plain_image_address": {
+  "kind": "direct",
+  "addr": 135811412,
+  "sym": "ObjectType4",
+  "delta": 0,
+  "exact": true
+ },
+ "map_minimap_tile_array_pointer": {
+  "kind": "indirect",
+  "cell": 686644,
+  "target": 134904376,
+  "sym": "GetMinimapTileAt",
+  "delta": 44,
+  "exact": false
+ },
+ "bg_reserve_black_bgid": {
+  "kind": "direct",
+  "addr": 134217781,
+  "sym": "RomHeaderNintendoLogo",
+  "delta": 49,
+  "exact": false
+ },
+ "bg_reserve_random_bgid": {
+  "kind": "indirect",
+  "cell": 55,
+  "target": 155963028,
+  "sym": "gUnkData_110",
+  "delta": 4972180,
+  "exact": false
+ },
+ "worldmap_node_armory_empty_address": {
+  "kind": "direct",
+  "addr": 144961460,
+  "sym": "ItemList_WM_BorderMulan_Armory",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_node_vendor_empty_address": {
+  "kind": "direct",
+  "addr": 144961656,
+  "sym": "ItemList_WM_BorderMulan_Vendor",
+  "delta": 0,
+  "exact": true
+ },
+ "worldmap_node_secret_empty_address": {
+  "kind": "direct",
+  "addr": 144961898,
+  "sym": "ItemList_WM_BorderMulan_SecretShop",
+  "delta": 0,
+  "exact": true
+ }
+}

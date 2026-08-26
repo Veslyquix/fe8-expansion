@@ -252,6 +252,9 @@ endif
 ifeq ($(CO_POWERS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CO_POWERS=1
 endif
+ifeq ($(FEBUILDER_POINTERS),1)
+MODERN_DEFINE_FLAGS += -DFE8_FEBUILDER_POINTERS=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1448,11 +1451,13 @@ MODERN_CLEAN_IWRAM := linker/iwram.ld
 $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 
 # ROM size configuration: 16M or 32M. Production profiles enabling ja or
-# zh-Hans are validated below as 32M-only; the upper locale bank carries their
-# full-game catalog and localized font data. Default is 32M: the 16M budget
-# is already essentially exhausted (see reports/linker-budget), and FE8_MAPGEN
-# alone adds ~48K of chunk data that no longer fits in the 16M target.
-MODERN_ROM_SIZE ?= 32M
+# zh-Hans are validated (scripts/modernize/expansion_config.py) as 32M-only;
+# the upper locale bank carries their full-game catalog and localized font
+# data. Default is 16M: the current config.mk default flag set (including
+# FE8_MAPGEN) fits comfortably under the 16M ceiling with room to spare;
+# opt into MODERN_ROM_SIZE=32M for CJK locales or once real headroom is
+# needed.
+MODERN_ROM_SIZE ?= 16M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000
@@ -1563,9 +1568,12 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
+	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
+	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--co-powers "$(CO_POWERS)" \
+		--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1651,6 +1659,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
 	--co-powers "$(CO_POWERS)" \
+	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1744,7 +1753,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS) \
 	-DFE8_GAME_RANK=$(GAME_RANK) \
-	-DFE8_CO_POWERS=$(CO_POWERS)
+	-DFE8_CO_POWERS=$(CO_POWERS) \
+	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1933,6 +1943,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
 		printf '%s\n' 'game_rank=$(GAME_RANK)'; \
 		printf '%s\n' 'co_powers=$(CO_POWERS)'; \
+		printf '%s\n' 'febuilder_pointers=$(FEBUILDER_POINTERS)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -2394,6 +2405,57 @@ $(MODERN_SYM): $(MODERN_ELF)
 expansion-modern-sym: expansion-modern-elf $(MODERN_SYM)
 	@printf 'Modern symbol file ready: %s\n' "$(MODERN_SYM)"
 
+# UPS patch (baserom.gba -> the built modern ROM), for distributing the
+# expansion without redistributing the vanilla ROM directly. The modern ROM
+# isn't byte-matched to vanilla (see docs/framework-support.md), so this is
+# a full-rewrite-sized patch, not a small diff -- but UPS still applies
+# correctly regardless of how much differs. scripts/gen_ups.py implements
+# the plain UPS1 format (no external patcher tool required).
+BASEROM := baserom.gba
+MODERN_UPS := $(MODERN_ROM:.gba=.ups)
+MODERN_UPS_GENERATOR := scripts/gen_ups.py
+
+$(MODERN_UPS): $(MODERN_ROM) $(BASEROM) $(MODERN_UPS_GENERATOR)
+	@if [ ! -f "$(BASEROM)" ]; then \
+		echo "error: $(BASEROM) not found (required to build a UPS patch)" >&2; \
+		exit 1; \
+	fi
+	@"$(PYTHON)" "$(MODERN_UPS_GENERATOR)" "$(BASEROM)" "$(MODERN_ROM)" "$@"
+
+expansion-modern-ups: expansion-modern-rom $(MODERN_UPS)
+	@printf 'Modern UPS patch ready: %s\n' "$(MODERN_UPS)"
+
+# IPS patch (baserom.gba -> the built modern ROM): simpler/more widely
+# supported than UPS, but its 3-byte address field caps both files at 16MB
+# -- only valid while MODERN_ROM_SIZE=16M (the default). Errors out (via
+# scripts/gen_ips.py's own size check) rather than silently truncating if
+# built against a 32M ROM.
+MODERN_IPS := $(MODERN_ROM:.gba=.ips)
+MODERN_IPS_GENERATOR := scripts/gen_ips.py
+
+$(MODERN_IPS): $(MODERN_ROM) $(BASEROM) $(MODERN_IPS_GENERATOR)
+	@if [ ! -f "$(BASEROM)" ]; then \
+		echo "error: $(BASEROM) not found (required to build an IPS patch)" >&2; \
+		exit 1; \
+	fi
+	@"$(PYTHON)" "$(MODERN_IPS_GENERATOR)" "$(BASEROM)" "$(MODERN_ROM)" "$@"
+
+expansion-modern-ips: expansion-modern-rom $(MODERN_IPS)
+	@printf 'Modern IPS patch ready: %s\n' "$(MODERN_IPS)"
+
+# fireemblem8.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
+# file): built from src/febuilder_pointers.c's gFebuilderPointers[] array
+# (#if FE8_FEBUILDER_POINTERS) -- see scripts/gen_custom_pointer_txt.py.
+MODERN_CUSTOM_POINTER_TXT := $(MODERN_ROM:.gba=.custom_pointer.txt)
+MODERN_CUSTOM_POINTER_GENERATOR := scripts/gen_custom_pointer_txt.py
+MODERN_FEBUILDER_FIELD_ORDER := tools/febuilder_pointers/field_order.txt
+
+$(MODERN_CUSTOM_POINTER_TXT): $(MODERN_ROM) $(MODERN_ELF) $(MODERN_FEBUILDER_FIELD_ORDER) $(MODERN_CUSTOM_POINTER_GENERATOR)
+	@"$(PYTHON)" "$(MODERN_CUSTOM_POINTER_GENERATOR)" "$(MODERN_ELF)" "$(MODERN_ROM)" "$(MODERN_FEBUILDER_FIELD_ORDER)" "$@"
+
+expansion-modern-custom-pointer-txt: expansion-modern-rom $(MODERN_CUSTOM_POINTER_TXT)
+	@printf 'FEBuilderGBA custom pointer file ready: %s\n' "$(MODERN_CUSTOM_POINTER_TXT)"
+
 # Opt-in convenience target (not part of `all`/boot-check): copy the built
 # modern ROM to a Windows-native path, for WSL setups where a GUI emulator
 # on the Windows side reads over \\wsl.localhost\ -- copying to a native
@@ -2408,12 +2470,31 @@ sync-win:
 
 _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
-	+$(MAKE) expansion-modern-rom expansion-modern-sym
+	+$(MAKE) expansion-modern-rom expansion-modern-sym \
+		$(if $(wildcard $(BASEROM)),expansion-modern-ups) \
+		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips) \
+		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
+	@if [ -f "$(BASEROM)" ]; then \
+		cp "$(MODERN_UPS)" "$(WIN_SYNC_DIR)/"; \
+		printf 'Copied %s -> %s/\n' "$(MODERN_UPS)" "$(WIN_SYNC_DIR)"; \
+		if [ "$(MODERN_ROM_SIZE)" = "16M" ]; then \
+			cp "$(MODERN_IPS)" "$(WIN_SYNC_DIR)/"; \
+			printf 'Copied %s -> %s/\n' "$(MODERN_IPS)" "$(WIN_SYNC_DIR)"; \
+		else \
+			echo "note: MODERN_ROM_SIZE=$(MODERN_ROM_SIZE) (not 16M), skipping IPS patch"; \
+		fi; \
+	else \
+		echo "note: $(BASEROM) not found, skipping UPS/IPS patches"; \
+	fi
+	@if [ "$(FEBUILDER_POINTERS)" = "1" ]; then \
+		cp "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)/"; \
+		printf 'Copied %s -> %s/\n' "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)"; \
+	fi
 
 # Preflight the libmGBA-backed playtest backend before spending time building
 # the ROM, with an actionable error pointing at the same backend-check

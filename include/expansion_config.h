@@ -468,6 +468,14 @@
 #define FE8_CO_POWERS 0
 #endif
 
+/* Emits src/febuilder_pointers.c's gFebuilderPointers[] array (this build's
+ * real addresses for the tables FEBuilderGBA's ROMFE8U.cs hardcodes vanilla
+ * addresses for) -- consumed by scripts/gen_custom_pointer_txt.py to
+ * produce fireemblem8.custom_pointer.txt. No gameplay/save impact. */
+#ifndef FE8_FEBUILDER_POINTERS
+#define FE8_FEBUILDER_POINTERS 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -628,6 +636,10 @@
 
 #if (FE8_CO_POWERS != 0) && (FE8_CO_POWERS != 1)
 #error "FE8_CO_POWERS must be 0 or 1"
+#endif
+
+#if (FE8_FEBUILDER_POINTERS != 0) && (FE8_FEBUILDER_POINTERS != 1)
+#error "FE8_FEBUILDER_POINTERS must be 0 or 1"
 #endif
 
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)

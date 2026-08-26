@@ -1045,6 +1045,10 @@
       "category": "lookup-table",
       "reason": null
     },
+    "include/cp_script.h|function-signature|item|AiFindBestAttackPositionAgainstTarget": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/cp_utility.h|function-signature|character|AiFindTargetInReachByCharId": {
       "category": "external-interface",
       "reason": null
@@ -2529,6 +2533,22 @@
       "category": "ui-buffer",
       "reason": null
     },
+    "include/power.h|function-signature|unit|CoGauge_Get": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/power.h|function-signature|unit|CoGauge_OnDamage": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/power.h|function-signature|unit|CoGauge_OnPowerUsed": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "include/power.h|function-signature|unit|CoGauge_Set": {
+      "category": "external-interface",
+      "reason": null
+    },
     "include/prepscreen.h|data-symbol|item|Img_PrepItemListSpinningArrow": {
       "category": "reviewed-exclusion",
       "reason": "graphics payload (tile/palette/TSA bytes) whose asset name mentions the item/chapter UI it decorates; stores no ID and is never indexed by one"
@@ -3533,7 +3553,35 @@
       "category": "ui-buffer",
       "reason": null
     },
+    "src/VeslyDebugger.c|data-symbol|unit|sCoFactionIds": {
+      "category": "lookup-table",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|function-signature|class|GetDebuggerDefaultPreviewWeapon": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|function-signature|class|GetNextDebuggerClassPaletteCycle": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|function-signature|class|HasDebuggerBanimForClass": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|function-signature|class|StartDebuggerBanimPreview": {
+      "category": "external-interface",
+      "reason": null
+    },
     "src/VeslyDebugger.c|function-signature|item|DebuggerHelpBox": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|function-signature|item|GetDebuggerPreviewWeaponName": {
+      "category": "external-interface",
+      "reason": null
+    },
+    "src/VeslyDebugger.c|function-signature|item|GetNextDebuggerPreviewWeapon": {
       "category": "external-interface",
       "reason": null
     },
@@ -3921,6 +3969,14 @@
       "category": "lookup-table",
       "reason": null
     },
+    "src/power.c|struct-field|class|CoClassAffinity.classId": {
+      "category": "runtime-struct",
+      "reason": null
+    },
+    "src/power.c|struct-field|unit|CoPowersProc.unitIndex": {
+      "category": "runtime-struct",
+      "reason": null
+    },
     "src/prep_itemscreen.c|data-symbol|item|gPrepShopInventory": {
       "category": "lookup-table",
       "reason": null
@@ -3979,6 +4035,10 @@
     },
     "src/purchase_generics.c|struct-field|item|PurchaseGenericDefinition.items": {
       "category": "runtime-struct",
+      "reason": null
+    },
+    "src/turn_autosave.c|macro|unit|TURN_AUTOSAVE_UNIT_SLOT_MAX": {
+      "category": "runtime-macro",
       "reason": null
     },
     "src/uimenu.c|data-symbol|item|sItemCountYOffsetLookup": {
