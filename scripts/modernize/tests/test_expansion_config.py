@@ -1178,6 +1178,26 @@ class ValidateFeatureFlagTests(unittest.TestCase):
 class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
     """Issue #6: the sample mechanic can only exist with the hook registry."""
 
+    def _expect(self, hooks=0, sample=0, danger=0, content=0, debuffs=0, debuffs_stack=0):
+        """The full validate_feature_flags() return tuple for an all-off
+        baseline, with just the handful of fields these tests actually
+        exercise overridden by position (0-indexed: hooks, sample, danger,
+        content, ..., debuffs at 13, debuffs_stack at 14 -- see
+        validate_feature_flags's own parameter list and return statement,
+        expansion_config.py). Every flag added after Issue #6 defaults to 0
+        and sits further down the tail this helper never has to name, so
+        appending a new one (as ANIMS_FAST_FORWARD's own port just did)
+        can't go stale here again the way a hardcoded full-length literal
+        tuple already had five times over by the time that was ported."""
+        baseline = list(ec.validate_feature_flags("0", "0", "0"))
+        baseline[0] = hooks
+        baseline[1] = sample
+        baseline[2] = danger
+        baseline[3] = content
+        baseline[13] = debuffs
+        baseline[14] = debuffs_stack
+        return tuple(baseline)
+
     def test_sample_requires_hooks(self):
         with self.assertRaises(ec.ConfigError) as ctx:
             ec.validate_feature_flags("0", "1", "0")
@@ -1188,19 +1208,19 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
     def test_sample_with_hooks_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("1", "1", "0"),
-            (1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            self._expect(hooks=1, sample=1),
         )
 
     def test_all_off_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("0", "0", "0"),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            self._expect(),
         )
 
     def test_hooks_without_sample_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("1", "0", "1"),
-            (1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            self._expect(hooks=1, danger=1),
         )
 
     def test_content_defaults_off_for_legacy_three_argument_callers(self):
@@ -1209,7 +1229,7 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
         simply resolves the content flag to 0."""
         self.assertEqual(
             ec.validate_feature_flags("1", "1", "1"),
-            (1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            self._expect(hooks=1, sample=1, danger=1),
         )
 
     def test_debuff_stack_requires_debuff_storage(self):
@@ -1222,7 +1242,7 @@ class ValidateFeatureFlagRelationshipTests(unittest.TestCase):
     def test_debuff_stack_with_debuff_storage_is_ok(self):
         self.assertEqual(
             ec.validate_feature_flags("0", "0", "0", debuffs_exist="1", debuffs_stack="1"),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0),
+            self._expect(debuffs=1, debuffs_stack=1),
         )
 
 
