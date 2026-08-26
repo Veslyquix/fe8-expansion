@@ -15,6 +15,15 @@ void LoadAw2Gfx(void);
 void LoadAw2CoMiniGfx(void);
 void DrawAw2CoMini(u16* dst);
 
+/* The player's CO gauge in half-star units (3 == one and a half stars
+ * filled). OverlapStars merges that gauge onto the panel's tiles as the
+ * CO's small "normal power" stars followed by its big "super" ones --
+ * DrawAw2CoMini already calls it, so this is only for drawing the gauge
+ * again on its own. Both are no-ops unless FE8_CO_POWERS is also on,
+ * since the gauge itself lives in that feature. */
+int GetStarsPlayer(void);
+void OverlapStars(void);
+
 #endif
 
 #endif // GUARD_AW2_GFX_H

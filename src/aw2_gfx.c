@@ -6,6 +6,10 @@
 #include "hardware.h"
 #include "bmlib.h"
 #include "variables.h"
+#include "bmunit.h" // FACTION_BLUE
+#if FE8_CO_POWERS
+#include "power.h" // CoGauge_Get, CoScreen_GetCo*Stars
+#endif
 
 /* Defined in src/data/data_aw2.c (INCBIN_U8/U16 only expand for files under
  * src/data/, which go through tools/preproc -- see modern.mk). */
@@ -60,13 +64,6 @@ static void LoadAw2Image(
     ApplyPalette(palette, palId);
 }
 
-static void OverlapVram(
-    const void* tiles, const u16* palette, int tileWidth, int tileHeight,
-    void* dst, int palId, int xOffset)
-{
-    Decompress(tiles, gGenericBuffer);
-    Copy2dChrTransparent(gGenericBuffer, dst, tileWidth, tileHeight, xOffset);
-}
 
 void LoadAw2Gfx(void)
 {
@@ -112,71 +109,147 @@ void LoadAw2Gfx(void)
 #define AW2_COMINI_TILE_BASE 0x180  
 #define AW2_COMINI_PAL_ID   4 // 3 is mmb 
 
-void LoadAw2Stars(void) 
-{ 
-    u8* dst = (void*)(VRAM + GetBackgroundTileDataOffset(1) + AW2_COMINI_TILE_BASE * CHR_SIZE);
-    
-    Decompress(aw2uiCoMini_tiles, dst);
-    dst += AW2_COMINI_H * AW2_COMINI_W * 0x20; 
-
-    LoadAw2Image(aw2uiStars_tiles, aw2uiStars_palette,
-        AW2_STARS_W, AW2_STARS_H, dst, AW2_COMINI_PAL_ID);
-    dst += AW2_STARS_H * CHR_SIZE * 0x20;
-
-    LoadAw2Image(aw2uiStarsBig_tiles, aw2uiStarsBig_palette,
-        AW2_STARSBIG_W, AW2_STARSBIG_H, dst, AW2_COMINI_PAL_ID);
-    dst += AW2_STARSBIG_H * CHR_SIZE * 0x20;
-
-    
-} 
-
+static u8* GetCoMiniTileBase(void)
+{
+    return (u8*)(VRAM + GetBackgroundTileDataOffset(1) + AW2_COMINI_TILE_BASE * CHR_SIZE);
+}
 
 void LoadAw2CoMiniGfx(void)
 {
-    LoadAw2Stars(); 
-    
-    // Decompress(aw2uiCoMini_tiles,
-        // (void*)(VRAM + GetBackgroundTileDataOffset(1) + AW2_COMINI_TILE_BASE * CHR_SIZE));
+    Decompress(aw2uiCoMini_tiles, GetCoMiniTileBase());
     ApplyPalette(aw2uiCoMini_palette, AW2_COMINI_PAL_ID);
 }
 
+/* --- CO gauge stars ------------------------------------------------------
+ * Both star sheets hold their three fill states in the same order, so one
+ * enum indexes either: aw2uiStars is 3 tiles left-to-right, aw2uiStarsBig
+ * is three 2x2-tile stars stacked top-to-bottom. */
+enum {
+    AW2_STAR_EMPTY = 0,
+    AW2_STAR_HALF  = 1,
+    AW2_STAR_FULL  = 2,
+};
 
+#define AW2_SMALL_STAR_W  1
+#define AW2_SMALL_STAR_H  1
+#define AW2_BIG_STAR_W    2
+#define AW2_BIG_STAR_H    2
 
+/* CO gauge points per star. CoGauge_Get returns raw points (see
+ * CO_GAUGE_MAX, src/power.c). */
+#define AW2_GAUGE_PER_STAR      50
+#define AW2_GAUGE_PER_HALF_STAR (AW2_GAUGE_PER_STAR / 2)
 
-void GetStarsPlayer(void) { 
-    int faction = 0; // Player 
-    const struct CoDefinition* co = GetCoDefinition(gPlaySt.commanderId[sCoFactionIds[faction]]);
-    int gauge = gPlaySt.coGauge[sCoFactionIds[faction]]; 
-    int stars = gauge / 50; 
-    int halfStar = (gauge + 25) / 50; 
-    return halfStar; 
-} 
-// the co definition needs to include the number of stars required for co power and super co power. 
-// then we need to draw those stars to the ui. 
-// for example, Francis may require 3 stars for co power and 5 for super co power. So we draw 
-// 3 little stars, then 2 big stars. 
-// If his gauge has 1.5 stars filled, then we draw full little star, half little star, empty little star 
-// empty big star, empty big star. 
+/* Where the gauge sits inside the 64x32 panel and how far apart
+ * consecutive stars are, in pixels. The panel's drawn box spans rows 2-18,
+ * so both star rows are placed to sit centred inside it (a small star at
+ * y=6 and a big one at y=2 share the same midpoint). Pure layout -- tune
+ * against the panel art.
+ *
+ * Mind the width budget when picking a CO's star counts: the gauge needs
+ * powerStars*8 + (superPowerStars - powerStars)*16 pixels, and anything
+ * that would run past the panel's 64 is dropped by OverlapStarAt rather
+ * than wrapping into the next tile row. At AW2_STAR_X=8 that leaves 56px,
+ * which is exactly a 3/5 CO -- a 4/6 one would need all 64 and have to
+ * start at x=0. */
+#define AW2_STAR_X           2
+#define AW2_SMALL_STAR_Y     15
+#define AW2_BIG_STAR_Y       15
+#define AW2_SMALL_STAR_STEP  6
+#define AW2_BIG_STAR_STEP   6
 
+/* The player's CO gauge in half-star units, so 3 means one and a half
+ * stars are filled. */
+int GetStarsPlayer(void)
+{
+#if FE8_CO_POWERS
+    return CoGauge_Get(FACTION_BLUE) / AW2_GAUGE_PER_HALF_STAR;
+#else
+    return 0;
+#endif
+}
 
+/* How full the `starIndex`'th star along the gauge is, given how many
+ * half-stars are charged: each star swallows two half-steps, so a gauge of
+ * 3 leaves star 0 full, star 1 half and everything past it empty. */
+static int GetStarFill(int starIndex, int halfStars)
+{
+    int filled = halfStars - starIndex * 2;
 
-void OverlapStars(u16* dst) { 
-    u8* dest = (void*)(VRAM + GetBackgroundTileDataOffset(1) + AW2_COMINI_TILE_BASE * CHR_SIZE);
-    dest += AW2_COMINI_H * 2 * 0x20; // this dest is for just the top 2 pixels of the star. 
-    OverlapVram(aw2uiStars_tiles, aw2uiStars_palette,
-        1, AW2_STARS_H, dest, AW2_COMINI_PAL_ID, 3);
-    dest += AW2_COMINI_H * 2 * 0x20; // this dest is for the main part (the rest) of the star. 
-    OverlapVram(aw2uiStars_tiles, aw2uiStars_palette,
-        1, AW2_STARS_H, dest, AW2_COMINI_PAL_ID, 3);
-    // AW2_STARS_W is for all 3 stars 
-    // we need to decompress the 3 types of small stars: empty, half filled, and filled. 
-    // we also need to decompress the 3 types of large stars: empty, half filled, and filled. 
-    // then with all of these decompressed into the generic buffer, we need to overlap them onto the 
-    // UI using this function. 
-    
+    if (filled >= 2)
+        return AW2_STAR_FULL;
 
+    if (filled == 1)
+        return AW2_STAR_HALF;
 
-} 
+    return AW2_STAR_EMPTY;
+}
+
+/* Merges one star, picked out of an already-decompressed sheet, onto the
+ * panel's tiles at pixel (px, py) within the panel. */
+static void OverlapStarAt(
+    const u8* sheet, int fill, int tileWidth, int tileHeight, int px, int py)
+{
+    const u8* src = sheet + fill * tileWidth * tileHeight * CHR_SIZE;
+
+    /* The panel's tiles are one linear AW2_COMINI_W-wide block (see
+     * LoadAw2CoMiniGfx / DrawAw2CoMini), so a star running past its right
+     * edge would silently reappear at the start of the row below, and one
+     * past the bottom edge would land in whatever unrelated graphics
+     * follow the panel in VRAM. Drop it rather than corrupt either. */
+    if (px < 0 || py < 0)
+        return;
+
+    if (px + tileWidth * 8 > AW2_COMINI_W * 8)
+        return;
+
+    if (py + tileHeight * 8 > AW2_COMINI_H * 8)
+        return;
+
+    Copy2dChrTransparent(src,
+        GetCoMiniTileBase() + ((py / 8) * AW2_COMINI_W + (px / 8)) * CHR_SIZE,
+        tileWidth, tileHeight, px & 7, py & 7, AW2_COMINI_W);
+}
+
+/* Draws the player's CO gauge onto the panel: one small star per star the
+ * CO's normal power costs, then big ones for the extra charge its super
+ * needs on top (Francis at 3/5 gives three small then two big), each drawn
+ * empty, half or full to match the gauge. */
+void OverlapStars(void)
+{
+#if FE8_CO_POWERS
+    u8* smallSheet = gGenericBuffer;
+    u8* bigSheet = gGenericBuffer + AW2_STARS_W * AW2_STARS_H * CHR_SIZE;
+    int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
+    int powerStars = CoScreen_GetCoPowerStars(coId);
+    int superStars = CoScreen_GetCoSuperPowerStars(coId);
+    int halfStars = GetStarsPlayer();
+    int i, x;
+
+    /* Both sheets at once: they're 3 and 12 tiles against gGenericBuffer's
+     * 0x2000 bytes, so each star can just be indexed straight out of them
+     * below instead of decompressing again per star. */
+    Decompress(aw2uiStars_tiles, smallSheet);
+    Decompress(aw2uiStarsBig_tiles, bigSheet);
+
+    x = AW2_STAR_X;
+
+    for (i = 0; i < powerStars; ++i) {
+        OverlapStarAt(smallSheet, GetStarFill(i, halfStars),
+            AW2_SMALL_STAR_W, AW2_SMALL_STAR_H, x, AW2_SMALL_STAR_Y);
+
+        x += AW2_SMALL_STAR_STEP;
+    }
+    x -= 3;
+
+    for (; i < superStars; ++i) {
+        OverlapStarAt(bigSheet, GetStarFill(i, halfStars),
+            AW2_BIG_STAR_W, AW2_BIG_STAR_H, x, AW2_BIG_STAR_Y);
+
+        x += AW2_BIG_STAR_STEP;
+    }
+#endif
+}
 
 void DrawAw2CoMini(u16* dst)
 {
@@ -188,7 +261,11 @@ void DrawAw2CoMini(u16* dst)
                 TILEREF(AW2_COMINI_TILE_BASE + y * AW2_COMINI_W + x, AW2_COMINI_PAL_ID);
         }
     }
-    OverlapStars(dst); 
+
+    /* After the panel tiles are re-decompressed clean by LoadAw2CoMiniGfx,
+     * so the stars are merged onto fresh art rather than onto last frame's
+     * stars. */
+    OverlapStars();
 }
 
 #endif

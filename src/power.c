@@ -246,6 +246,12 @@ struct CoDefinition {
     u16 powerDescMsg; // single texts.txt entry, [LF]-separated
     u16 superPowerNameMsg;
     u16 superPowerDescMsg; // single texts.txt entry, [LF]-separated
+    /* CO gauge stars each power costs. The mini CO gauge (src/aw2_gfx.c)
+     * draws powerStars small stars followed by the
+     * (superPowerStars - powerStars) big ones that top it up to the super,
+     * so superPowerStars must be >= powerStars. */
+    u8 powerStars;
+    u8 superPowerStars;
     const struct CoClassAffinity* affinities;
     u8 affinityCount;
 };
@@ -307,6 +313,8 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .powerDescMsg = MSG_CO_FRANCIS_POWER_DESC,
         .superPowerNameMsg = MSG_CO_FRANCIS_SUPER_NAME,
         .superPowerDescMsg = MSG_CO_FRANCIS_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 5,
         .affinities = sFrancisAffinities,
         .affinityCount = ARRAY_COUNT(sFrancisAffinities),
     },
@@ -319,6 +327,11 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .powerDescMsg = MSG_CO_ONEILL_POWER_DESC,
         .superPowerNameMsg = MSG_CO_ONEILL_SUPER_NAME,
         .superPowerDescMsg = MSG_CO_ONEILL_SUPER_DESC,
+        /* 4/5 rather than a rounder 4/6: the mini gauge only has 64px of
+         * panel to draw in, and 4 small + 2 big stars needs every one of
+         * them (see the width budget note in src/aw2_gfx.c). */
+        .powerStars = 4,
+        .superPowerStars = 5,
         .affinities = sOneillAffinities,
         .affinityCount = ARRAY_COUNT(sOneillAffinities),
     },
@@ -355,6 +368,24 @@ int CoScreen_GetCoCount(void)
 const char* CoScreen_GetCoName(int coId)
 {
     return GetStringFromIndex(GetCoDefinition(coId)->nameMsg);
+}
+
+int CoScreen_GetCoPowerStars(int coId)
+{
+    return GetCoDefinition(coId)->powerStars;
+}
+
+int CoScreen_GetCoSuperPowerStars(int coId)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+
+    /* The super is a top-up of the normal power's charge, never cheaper
+     * than it -- a table typo the other way round would otherwise make
+     * the gauge draw a negative number of big stars. */
+    if (co->superPowerStars < co->powerStars)
+        return co->powerStars;
+
+    return co->superPowerStars;
 }
 
 #define CO_GAUGE_MAX 9999

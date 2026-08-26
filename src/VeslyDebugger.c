@@ -4062,8 +4062,8 @@ enum
 // capped well below its real u32 range. Fine for a debug tool.
 #define CoGoldEditMax 32000
 #define CoGaugeEditMax 9999
-#define CoGaugeStep 50
-#define CoGaugeHeartMax 5
+#define CoGaugeStep 25
+#define CoGaugeHeartMax 10
 
 static const char * const sCoFactionNames[4] = { "Blue", "Green", "Red", "Purple" };
 static const int sCoFactionIds[4] = { FACTION_ID_BLUE, FACTION_ID_GREEN, FACTION_ID_RED, FACTION_ID_PURPLE };

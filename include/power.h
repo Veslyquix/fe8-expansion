@@ -34,6 +34,14 @@ void CoGauge_OnPowerUsed(int faction);
 int CoScreen_GetCoCount(void);
 const char* CoScreen_GetCoName(int coId);
 
+/* CO gauge stars each of a CO's two powers costs. The mini CO gauge
+ * (src/aw2_gfx.c) draws CoScreen_GetCoPowerStars small stars followed by
+ * the (super - normal) big ones that top it up to the super power.
+ * CoScreen_GetCoSuperPowerStars is clamped to never report fewer stars
+ * than the normal power costs. */
+int CoScreen_GetCoPowerStars(int coId);
+int CoScreen_GetCoSuperPowerStars(int coId);
+
 #endif // FE8_CO_POWERS
 
 #endif // GUARD_POWER_H
