@@ -570,6 +570,10 @@ void AiScriptCmd_11_MoveTowardsSafety(u8* pc) {
 void AiScriptCmd_12_MoveTowardsEnemy(u8* pc) {
     struct Vec2 pos;
     s8 foundTarget;
+#if FE8_PURCHASE_GENERICS
+    bool8 targetIsBase = FALSE;
+    struct Vec2 basePos;
+#endif
 
     if (gpAiScriptCurrent->unk_08 == 0) {
         foundTarget = AiFindTargetInReachByFunc(AiIsUnitEnemy, &pos);
@@ -583,18 +587,32 @@ void AiScriptCmd_12_MoveTowardsEnemy(u8* pc) {
         // runs, since it -- like AiFindTargetInReachByFunc above --
         // overwrites gBmMapRange with its own extended-movement-range scan.
         u8 enemyDistance = foundTarget ? gBmMapRange[pos.y][pos.x] : 0xFF;
-        struct Vec2 basePos;
         u8 baseDistance;
 
         if (AiFindClosestCapturableBase(&basePos, &baseDistance) && baseDistance <= enemyDistance) {
             pos = basePos;
             foundTarget = 1;
+            targetIsBase = TRUE;
         }
     }
 #endif
 
     if (foundTarget == 1) {
         AiTryMoveTowards(pos.x, pos.y, 0, gpAiScriptCurrent->unk_02, 1);
+
+#if FE8_PURCHASE_GENERICS
+        // AiTryMoveTowards only ever decides AI_ACTION_NONE (a move-only
+        // decision, see its own AiSetDecision calls, src/cp_utility.c) --
+        // upgrade that to AI_ACTION_CAPTURE, but only if the unit's
+        // decided destination is actually the base tile itself: on a
+        // crowded/distant map AiTryMoveTowards may only get partway there,
+        // landing gAiDecision.xMove/yMove on some closer tile instead, and
+        // a unit standing next to (not on) the base has nothing to
+        // capture yet.
+        if (targetIsBase && gAiDecision.xMove == basePos.x && gAiDecision.yMove == basePos.y) {
+            AiUpdateDecision(AI_ACTION_CAPTURE, 0xFF, 0xFF, 0xFF, 0xFF);
+        }
+#endif
     }
 
     (*pc)++;

@@ -1608,6 +1608,25 @@ static void RunAiCapturesForFaction(int factionId)
     }
 }
 
+// AI-facing wrapper around the same capture-resolution sequence
+// RunAiCapturesForFaction above uses per-unit (trap lookup, ownership
+// check, TryCapturePurchaseBase) -- for AiCaptureAction (src/cp_perform.c)
+// to call the moment a unit finishes moving onto a capturable base THIS
+// turn, instead of only picking up progress at the start of its next
+// phase the way RunAiCapturesForFaction's deferred sweep does.
+bool AiTryCapturePurchaseBase(struct Unit* unit)
+{
+    struct Trap* trap = GetOrCreatePurchaseBaseTrapAt(unit->xPos, unit->yPos);
+
+    if (trap == NULL)
+        return false;
+
+    if (GetPurchaseBaseTrapOwner(trap) == GetFactionIdForUnit(unit))
+        return false;
+
+    return TryCapturePurchaseBase(trap, unit);
+}
+
 // Used by AiAttemptOffensiveAction (src/cp_battle.c) to prefer holding a
 // base the active unit is already standing on over going to fight -- the
 // actual capture progress is applied automatically at the start of this
@@ -1689,8 +1708,8 @@ void PurchaseGenerics_OnNewPhase(void)
 {
     int factionId = GetCurrentFactionId();
 
-    if (gPlaySt.faction != FACTION_BLUE)
-        RunAiCapturesForFaction(factionId);
+    // if (gPlaySt.faction != FACTION_BLUE)
+        // RunAiCapturesForFaction(factionId);
 
     GrantIncomeForFaction(factionId);
 

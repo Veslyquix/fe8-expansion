@@ -22,6 +22,9 @@
 #include "eventinfo.h"
 
 #include "cp_perform.h"
+#if FE8_PURCHASE_GENERICS
+#include "purchase_generics.h"
+#endif
 
 #include "constants/terrains.h"
 #include "constants/songs.h"
@@ -301,6 +304,31 @@ s8 AiPillageAction(struct CpPerformProc* proc) {
     return 1;
 }
 
+#if FE8_PURCHASE_GENERICS
+// Mirrors PurchaseGenericsCommandEffect's player-side capture flow
+// (src/purchase_generics.c): resolve the capture, pick UNIT_ACTION_CAPTURE
+// vs. UNIT_ACTION_CAPTURED off whether it actually completed this action,
+// then run the matching handler directly -- same as AiStaffAction/
+// AiUseItemAction below call ActionStaffDoorChestUseItem directly rather
+// than going through ApplyUnitAction's switch.
+s8 AiCaptureAction(struct CpPerformProc* proc) {
+    bool8 captured;
+
+    gActiveUnit->xPos = gAiDecision.xMove;
+    gActiveUnit->yPos = gAiDecision.yMove;
+
+    captured = AiTryCapturePurchaseBase(gActiveUnit);
+    gActionData.unitActionType = captured ? UNIT_ACTION_CAPTURED : UNIT_ACTION_CAPTURE;
+
+    if (captured)
+        ActionCaptured(proc);
+    else
+        ActionCapture(proc);
+
+    return 1;
+}
+#endif
+
 s8 AiStaffAction(struct CpPerformProc* proc) {
     gActiveUnit->xPos = gAiDecision.xMove;
     gActiveUnit->yPos = gAiDecision.yMove;
@@ -430,6 +458,9 @@ void CpPerform_MoveCameraOntoTarget(struct CpPerformProc* proc) {
         case AI_ACTION_DKNIGHTMARE:
         case AI_ACTION_DKSUMMON:
         case AI_ACTION_PICK:
+#if FE8_PURCHASE_GENERICS
+        case AI_ACTION_CAPTURE: // acts on the unit's own tile, no separate target to re-center on
+#endif
 
             return;
 
@@ -537,6 +568,13 @@ void CpPerform_PerformAction(struct CpPerformProc* proc) {
             proc->func = AiPillageAction;
 
             break;
+
+#if FE8_PURCHASE_GENERICS
+        case AI_ACTION_CAPTURE:
+            proc->func = AiCaptureAction;
+
+            break;
+#endif
 
         case AI_ACTION_STAFF:
             proc->func = AiStaffAction;
