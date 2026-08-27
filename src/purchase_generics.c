@@ -1154,10 +1154,10 @@ static const u8 sCapturePropertyBobScript[] = {
     
     
 
-    MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+    UP_TWICE, UP_TWICE, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
     MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
 
-    MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    DOWN_TWICE, DOWN_TWICE, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
     MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
     
     MOVE_CMD_SLEEP, MOVE_CMD_SLEEP, MOVE_CMD_SLEEP, 
@@ -1200,24 +1200,28 @@ static void CapturePropertyBob_Loop(struct CapturePropertyBobProc* proc)
         case MOVE_CMD_END:
         case MOVE_CMD_HALT:
         default:
-            ShowUnitSprite(proc->unit);
+            // ShowUnitSprite(proc->unit);
+            ShowMuDefault(); 
             Proc_Break(proc);
             return;
     }
     // PutStandingMuSprite(int layer, int x, int y, u16 oam2, int class, int idx)
     // void PutUnitSprite(int layer, int x, int y, struct Unit * unit)
-    PutStandingMuSprite(7, proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y + proc->yOffset, 
-    ((unsigned)OBCHR_MU_380
-                | ((GetUnitSpritePalette(proc->unit)) << 12)), proc->unit->pClassData->number, 0);
-    HideUnitSprite(proc->unit); // for insurance 
+    // PutStandingMuSprite(7, proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y + proc->yOffset, 
+    // ((unsigned)OBCHR_MU_380
+                // | ((GetUnitSpritePalette(proc->unit)) << 12)), proc->unit->pClassData->number, 0);
+                
+    PutSprite(7, proc->x - gBmSt.camera.x - 8, proc->y - gBmSt.camera.y + proc->yOffset - 16, gObject_32x32, ((unsigned)OBCHR_MU_380
+                | ((GetUnitSpritePalette(proc->unit)) << 12)));
+    // HideUnitSprite(proc->unit); // for insurance 
 }
 
 static void CapturePropertyBob_End(struct CapturePropertyBobProc* proc)
 {
 
     // gActiveUnit->state |= US_HAS_MOVED;
-    RefreshEntityBmMaps();
-    RefreshUnitSprites();
+    // RefreshEntityBmMaps();
+    // RefreshUnitSprites();
 
     if (proc->captured) {
         StartMuFogBump(proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y);
@@ -1226,26 +1230,29 @@ static void CapturePropertyBob_End(struct CapturePropertyBobProc* proc)
 
 void CapturePropertyBobInit(struct CapturePropertyBobProc* proc) 
 { 
+    HideMuDefault();
     PlaySoundEffect(SONG_77);
-    HideUnitSprite(proc->unit);
+    // HideUnitSprite(proc->unit);
     // proc->unit->state |= US_HIDDEN; 
-    RefreshUnitSprites();
+    // RefreshUnitSprites();
+
 }
 
 CONST_DATA struct ProcCmd sProcScr_CapturePropertyBob[] = {
-    
+    // PROC_CALL(LockGame),
     PROC_SLEEP(3), // 3 frames if you don't want HideUnitSprite called every frame 
-    PROC_CALL(LockGame),
+    
     PROC_CALL(CapturePropertyBobInit),
     PROC_REPEAT(CapturePropertyBob_Loop),
     PROC_CALL(CapturePropertyBob_End),
-    PROC_CALL(UnlockGame),
+    // PROC_CALL(UnlockGame),
     PROC_END,
 };
 
-static void StartCapturePropertyBob(struct Unit* unit, bool8 captured)
+static void StartCapturePropertyBob(ProcPtr parent, struct Unit* unit, bool8 captured)
 {
-    struct CapturePropertyBobProc* proc = Proc_Start(sProcScr_CapturePropertyBob, PROC_TREE_3);
+    // struct CapturePropertyBobProc* proc = Proc_Start(sProcScr_CapturePropertyBob, PROC_TREE_3);
+    struct CapturePropertyBobProc* proc = Proc_StartBlocking(sProcScr_CapturePropertyBob, parent);
 
     proc->unit = unit;
     proc->x = unit->xPos * 16;
@@ -1253,8 +1260,28 @@ static void StartCapturePropertyBob(struct Unit* unit, bool8 captured)
     proc->yOffset = 0;
     proc->pc = sCapturePropertyBobScript;
     proc->captured = captured;
-    SetAutoMuDefaultFacing();
+    
+    // SetAutoMuDefaultFacing();
+    SetAutoMuFacingSelected();
 }
+
+int ActionCapture(ProcPtr proc)
+{
+    int captured = false; 
+    StartCapturePropertyBob(proc, gActiveUnit, captured);
+
+
+    return 0; 
+}  
+
+int ActionCaptured(ProcPtr proc)
+{
+    int captured = true; 
+    StartCapturePropertyBob(proc, gActiveUnit, captured);
+
+
+    return 0; 
+}   
 
 u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
@@ -1279,10 +1306,13 @@ u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* men
         return MENU_ACT_SND6B;
 
     captured = TryCapturePurchaseBase(trap, gActiveUnit);
-    gActionData.unitActionType = UNIT_ACTION_PURCHASE_GENERIC;
+    gActionData.unitActionType = UNIT_ACTION_CAPTURE;
+    if (captured) { 
+        gActionData.unitActionType = UNIT_ACTION_CAPTURED;
+    } 
     
 
-    StartCapturePropertyBob(gActiveUnit, captured);
+    
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }

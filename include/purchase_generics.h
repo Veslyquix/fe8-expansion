@@ -7,6 +7,8 @@
 
 extern CONST_DATA struct MenuDef gPurchaseGenericsMenuDef;
 
+int ActionCapture(ProcPtr proc); 
+int ActionCaptured(ProcPtr proc); 
 u8 PurchaseGenericsCommandUsability(const struct MenuItemDef* def, int number);
 int PurchaseGenericsCommandDraw(struct MenuProc* menu, struct MenuItemProc* menuItem);
 u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem);

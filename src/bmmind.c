@@ -122,7 +122,7 @@ u32 ApplyUnitAction(ProcPtr proc) {
     gActiveUnit = GetUnit(gActionData.subjectIndex);
 
 #if FE8_PURCHASE_GENERICS
-    if (gActionData.unitActionType != UNIT_ACTION_PURCHASE_GENERIC)
+    if ((gActionData.unitActionType != UNIT_ACTION_CAPTURE) && (gActionData.unitActionType != UNIT_ACTION_CAPTURED))
         ResetPurchaseBaseTrapCaptureByUnit(gActionData.subjectIndex);
 #endif
 
@@ -139,9 +139,6 @@ u32 ApplyUnitAction(ProcPtr proc) {
 
     switch (gActionData.unitActionType) {
         case UNIT_ACTION_WAIT:
-#if FE8_PURCHASE_GENERICS
-        case UNIT_ACTION_PURCHASE_GENERIC:
-#endif
         case UNIT_ACTION_TRAPPED:
             gActiveUnit->state |= US_HAS_MOVED;
             return 1;
@@ -200,6 +197,14 @@ u32 ApplyUnitAction(ProcPtr proc) {
 #if FE8_PURCHASE_GENERICS
         case UNIT_ACTION_MERGE:
             return ActionMerge(proc);
+#endif
+
+#if FE8_PURCHASE_GENERICS
+        case UNIT_ACTION_CAPTURE:
+            return ActionCapture(proc); 
+            
+        case UNIT_ACTION_CAPTURED:
+            return ActionCaptured(proc); 
 #endif
 
         default:
