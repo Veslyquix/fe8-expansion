@@ -32,6 +32,7 @@
 #include "icon.h"
 #include "m4a.h"
 #include "menu_def.h"
+#include "mu.h" // StartMuFogBump
 #include "purchase_generics.h"
 #include "rng.h"
 #include "soundwrapper.h"
@@ -1141,10 +1142,125 @@ int PurchaseGenericsCommandDraw(struct MenuProc* menu, struct MenuItemProc* menu
     return 0;
 }
 
+
+#define UP_TWICE 0x12 
+#define DOWN_TWICE 0x34 
+static const u8 sCapturePropertyBobScript[] = {
+
+    UP_TWICE, UP_TWICE, UP_TWICE, UP_TWICE, UP_TWICE, UP_TWICE, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+
+    MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, 
+    
+    
+
+    MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+    MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+
+    MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    
+    MOVE_CMD_SLEEP, MOVE_CMD_SLEEP, MOVE_CMD_SLEEP, 
+
+    MOVE_CMD_END,
+};
+
+struct CapturePropertyBobProc {
+    PROC_HEADER;
+
+    struct Unit* unit;
+    s16 x, y;
+    s16 yOffset;
+    bool8 captured;
+    const u8* pc;
+};
+
+static void CapturePropertyBob_Loop(struct CapturePropertyBobProc* proc)
+{
+    switch (*proc->pc++) {
+        case UP_TWICE: 
+            proc->yOffset -= 2;
+            break; 
+        
+        case DOWN_TWICE: 
+            proc->yOffset += 2;
+            break; 
+        
+        case MOVE_CMD_MOVE_UP:
+            proc->yOffset--;
+            break;
+
+        case MOVE_CMD_MOVE_DOWN:
+            proc->yOffset++;
+            break;
+            
+        case MOVE_CMD_SLEEP:
+            break; 
+
+        case MOVE_CMD_END:
+        case MOVE_CMD_HALT:
+        default:
+            ShowUnitSprite(proc->unit);
+            Proc_Break(proc);
+            return;
+    }
+    // PutStandingMuSprite(int layer, int x, int y, u16 oam2, int class, int idx)
+    // void PutUnitSprite(int layer, int x, int y, struct Unit * unit)
+    PutStandingMuSprite(7, proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y + proc->yOffset, 
+    ((unsigned)OBCHR_MU_380
+                | ((GetUnitSpritePalette(proc->unit)) << 12)), proc->unit->pClassData->number, 0);
+    HideUnitSprite(proc->unit); // for insurance 
+}
+
+static void CapturePropertyBob_End(struct CapturePropertyBobProc* proc)
+{
+
+    // gActiveUnit->state |= US_HAS_MOVED;
+    RefreshEntityBmMaps();
+    RefreshUnitSprites();
+
+    if (proc->captured) {
+        StartMuFogBump(proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y);
+    }
+}
+
+void CapturePropertyBobInit(struct CapturePropertyBobProc* proc) 
+{ 
+    PlaySoundEffect(SONG_77);
+    HideUnitSprite(proc->unit);
+    // proc->unit->state |= US_HIDDEN; 
+    RefreshUnitSprites();
+}
+
+CONST_DATA struct ProcCmd sProcScr_CapturePropertyBob[] = {
+    
+    PROC_SLEEP(3), // 3 frames if you don't want HideUnitSprite called every frame 
+    PROC_CALL(LockGame),
+    PROC_CALL(CapturePropertyBobInit),
+    PROC_REPEAT(CapturePropertyBob_Loop),
+    PROC_CALL(CapturePropertyBob_End),
+    PROC_CALL(UnlockGame),
+    PROC_END,
+};
+
+static void StartCapturePropertyBob(struct Unit* unit, bool8 captured)
+{
+    struct CapturePropertyBobProc* proc = Proc_Start(sProcScr_CapturePropertyBob, PROC_TREE_3);
+
+    proc->unit = unit;
+    proc->x = unit->xPos * 16;
+    proc->y = unit->yPos * 16;
+    proc->yOffset = 0;
+    proc->pc = sCapturePropertyBobScript;
+    proc->captured = captured;
+    SetAutoMuDefaultFacing();
+}
+
 u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
     struct Trap* trap;
     int factionId;
+    bool8 captured;
 
     (void)menu;
     (void)menuItem;
@@ -1162,9 +1278,11 @@ u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* men
     if (!CanUnitCapturePurchaseBase(gActiveUnit))
         return MENU_ACT_SND6B;
 
-    TryCapturePurchaseBase(trap, gActiveUnit);
+    captured = TryCapturePurchaseBase(trap, gActiveUnit);
     gActionData.unitActionType = UNIT_ACTION_PURCHASE_GENERIC;
-    gActiveUnit->state |= US_HAS_MOVED;
+    
+
+    StartCapturePropertyBob(gActiveUnit, captured);
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }

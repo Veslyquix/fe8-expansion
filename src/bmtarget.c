@@ -228,7 +228,7 @@ void TryAddUnitToTradeTargetList(struct Unit* unit) {
         return;
     }
 
-    if (gSubjectUnit->pClassData->number == CLASS_PHANTOM || unit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gSubjectUnit) || !CanUnitTradeOrSupply(unit)) {
         return;
     }
 

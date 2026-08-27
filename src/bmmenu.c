@@ -966,7 +966,7 @@ u8 ItemCommandUsability(const struct MenuItemDef* def, int number) {
         return MENU_NOTSHOWN;
     }
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1698,7 +1698,7 @@ u8 SupplyUsability(const struct MenuItemDef * def, int number)
         return MENU_NOTSHOWN;
     }
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM)
+    if (!CanUnitTradeOrSupply(gActiveUnit))
     {
         return MENU_NOTSHOWN;
     }
@@ -1742,7 +1742,7 @@ u8 SupplyCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
 u8 ArmoryCommandUsability(const struct MenuItemDef* def, int number) {
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1763,7 +1763,7 @@ u8 ArmoryCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
 u8 VendorCommandUsability(const struct MenuItemDef* def, int number) {
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1783,7 +1783,7 @@ u8 VendorCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 }
 
 u8 SecretShopCommandUsability(const struct MenuItemDef* def, int number) {
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1803,7 +1803,7 @@ u8 SecretShopCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem)
 
 u8 ArenaCommandUsability(const struct MenuItemDef* def, int number) {
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
