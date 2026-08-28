@@ -4,6 +4,7 @@
 #include "global.h"
 #include "ap.h"
 
+
 /*
     "MOVEUNIT" proc and related functions.
     Handles managing and displaying moving map sprites.
@@ -337,5 +338,10 @@ extern CONST_DATA struct ProcCmd ProcScr_MuBlink[];
 extern CONST_DATA struct ProcCmd ProcScr_MuRestorePalInfo[];
 
 extern const u16 * CONST_DATA gMuFlashPalLut[];
+#if FE8_PURCHASE_GENERICS
+void SetAutoMuFacingSelected(void);
+void HideMuDefault(void);
+void ShowMuDefault(void); 
+#endif 
 
 #endif // GUARD_MU_H

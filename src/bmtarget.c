@@ -16,6 +16,9 @@
 
 #include "constants/classes.h"
 #include "constants/terrains.h"
+#if FE8_PURCHASE_GENERICS
+#include "constants/characters.h" // CHARACTER_CITIZEN
+#endif
 
 struct Unit* EWRAM_DATA gSubjectUnit = NULL;
 
@@ -225,7 +228,7 @@ void TryAddUnitToTradeTargetList(struct Unit* unit) {
         return;
     }
 
-    if (gSubjectUnit->pClassData->number == CLASS_PHANTOM || unit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gSubjectUnit) || !CanUnitTradeOrSupply(unit)) {
         return;
     }
 
@@ -317,6 +320,53 @@ void MakeRescueTargetList(struct Unit* unit) {
 
     return;
 }
+
+#if FE8_PURCHASE_GENERICS
+/* Merge targets: an adjacent, allied generic (CHARACTER_CITIZEN -- every
+ * purchased generic uses this same character, see BuildGenericUnitDefinition,
+ * src/purchase_generics.c) of the exact same class as gSubjectUnit. Named/
+ * unique characters never match here, even if some oddity gave two of them
+ * the same class -- only interchangeable generics are mergeable. */
+void TryAddUnitToMergeTargetList(struct Unit* unit) {
+
+    if (!IsSameAllegiance(gSubjectUnit->index, unit->index)) {
+        return;
+    }
+
+    if (unit->pCharacterData->number != CHARACTER_CITIZEN) {
+        return;
+    }
+
+    if (unit->pClassData->number != gSubjectUnit->pClassData->number) {
+        return;
+    }
+
+    if (unit->statusIndex == UNIT_STATUS_BERSERK) {
+        return;
+    }
+
+    if (unit->state & (US_RESCUING | US_RESCUED)) {
+        return;
+    }
+
+    AddTarget(unit->xPos, unit->yPos, unit->index, 0);
+
+    return;
+}
+
+void MakeMergeTargetList(struct Unit* unit) {
+    int x = unit->xPos;
+    int y = unit->yPos;
+
+    gSubjectUnit = unit;
+
+    BmMapFill(gBmMapRange, 0);
+
+    ForEachAdjacentUnit(x, y, TryAddUnitToMergeTargetList);
+
+    return;
+}
+#endif
 
 void TryAddToDropTargetList(int x, int y) {
 

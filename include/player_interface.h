@@ -86,6 +86,15 @@ void BurstDisplay_Loop_Display(struct PlayerInterfaceProc * proc);
 void InitPlayerPhaseInterface(void);
 void StartPlayerPhaseSideWindows(void);
 void EndPlayerPhaseSideWindows(void);
+#if FE8_AW2_ASSETS
+/* Just the goal window (gPlaySt.faction's gold + CO gauge stars, see
+ * DrawGoalDisplayWindow) rather than the full player-phase side-window set
+ * -- used for AI-controlled phases (FACTION_RED/FACTION_GREEN), see
+ * AiPhaseInit/AiPhaseCleanup (src/cp_phase.c) and ActionCombat
+ * (src/bmmind.c, which hides it around the battle scene itself). */
+void StartAiPhaseGoalDisplay(void);
+void EndAiPhaseGoalDisplay(void);
+#endif
 s8 IsCursorInLowerScreenHalf(void);
 int GetCursorScreenQuadrant(void);
 void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc);

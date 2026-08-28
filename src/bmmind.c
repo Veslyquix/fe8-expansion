@@ -24,6 +24,12 @@
 #include "eventinfo.h"
 #include "mapanim.h"
 #include "promote_command.h"
+#if FE8_AW2_ASSETS
+#include "player_interface.h"
+#endif
+#if FE8_PURCHASE_GENERICS
+#include "purchase_generics.h"
+#endif
 
 #include "bmmind.h"
 
@@ -116,7 +122,7 @@ u32 ApplyUnitAction(ProcPtr proc) {
     gActiveUnit = GetUnit(gActionData.subjectIndex);
 
 #if FE8_PURCHASE_GENERICS
-    if (gActionData.unitActionType != UNIT_ACTION_PURCHASE_GENERIC)
+    if ((gActionData.unitActionType != UNIT_ACTION_CAPTURE) && (gActionData.unitActionType != UNIT_ACTION_CAPTURED))
         ResetPurchaseBaseTrapCaptureByUnit(gActionData.subjectIndex);
 #endif
 
@@ -133,9 +139,6 @@ u32 ApplyUnitAction(ProcPtr proc) {
 
     switch (gActionData.unitActionType) {
         case UNIT_ACTION_WAIT:
-#if FE8_PURCHASE_GENERICS
-        case UNIT_ACTION_PURCHASE_GENERIC:
-#endif
         case UNIT_ACTION_TRAPPED:
             gActiveUnit->state |= US_HAS_MOVED;
             return 1;
@@ -191,6 +194,19 @@ u32 ApplyUnitAction(ProcPtr proc) {
             return 0;
 #endif
 
+#if FE8_PURCHASE_GENERICS
+        case UNIT_ACTION_MERGE:
+            return ActionMerge(proc);
+#endif
+
+#if FE8_PURCHASE_GENERICS
+        case UNIT_ACTION_CAPTURE:
+            return ActionCapture(proc); 
+            
+        case UNIT_ACTION_CAPTURED:
+            return ActionCaptured(proc); 
+#endif
+
         default:
             return 1;
     }
@@ -215,6 +231,90 @@ s8 ActionRescue(ProcPtr proc) {
 
     return 0;
 }
+
+#if FE8_PURCHASE_GENERICS
+/* Merges gActionData.targetIndex into subject (see MergeSelection_OnSelect,
+ * src/bmmenu.c -- both are already-verified same-class generics by the
+ * time this runs, see TryAddUnitToMergeTargetList, src/bmtarget.c): each
+ * combat stat becomes whichever unit's was higher, HP is summed, and any
+ * HP past the new (also higher-of-the-two) max is converted to gold, 10%
+ * of that max per gold increment, priced off whatever this class would
+ * cost to (re)purchase (GetPurchaseGenericPrice, src/purchase_generics.c;
+ * a class with no purchase listing converts no gold, since there'd be no
+ * price to convert it at). Items of a kind subject already carries have
+ * their durability joined onto subject's copy instead of taking a second
+ * inventory slot -- capped at that item's own max uses, since durability
+ * past max is worthless (an unbreakable item, GetItemMaxUses() == 0xFF,
+ * just keeps subject's copy as-is: there's no meaningful "uses" number to
+ * combine). Anything subject doesn't already carry moves over via
+ * UnitAddItem instead. Then target is wiped via ClearUnit -- silent and
+ * permanent, same as any other "no longer on the map, not a death" removal
+ * (e.g. ClearTemporaryUnits, src/bmunit.c) -- and the usual post-action
+ * refresh (RefreshEntityBmMaps/RefreshUnitSprites) picks up its absence. */
+s8 ActionMerge(ProcPtr proc) {
+    struct Unit* subject = GetUnit(gActionData.subjectIndex);
+    struct Unit* target = GetUnit(gActionData.targetIndex);
+    int combinedHp = subject->curHP + target->curHP;
+    int combinedMaxHp = subject->maxHP > target->maxHP ? subject->maxHP : target->maxHP;
+    int overflow = combinedHp - combinedMaxHp;
+    int i;
+
+    subject->maxHP = combinedMaxHp;
+    subject->pow = subject->pow > target->pow ? subject->pow : target->pow;
+    subject->skl = subject->skl > target->skl ? subject->skl : target->skl;
+    subject->spd = subject->spd > target->spd ? subject->spd : target->spd;
+    subject->def = subject->def > target->def ? subject->def : target->def;
+    subject->res = subject->res > target->res ? subject->res : target->res;
+    subject->lck = subject->lck > target->lck ? subject->lck : target->lck;
+
+    if (overflow > 0) {
+        int tenPercent = combinedMaxHp / 10;
+
+        if (tenPercent > 0) {
+            int price = GetPurchaseGenericPrice(subject->pClassData->number);
+
+            if (price > 0)
+                AddFactionChapterGoldAmount(UNIT_FACTION(subject) >> 6, (overflow / tenPercent) * price);
+        }
+
+        subject->curHP = combinedMaxHp;
+    } else {
+        subject->curHP = combinedHp;
+    }
+
+    for (i = 0; i < UNIT_ITEM_COUNT; ++i) {
+        int itemIndex = GetItemIndex(target->items[i]);
+        int j;
+
+        if (target->items[i] == ITEM_NONE)
+            continue;
+
+        for (j = 0; j < UNIT_ITEM_COUNT; ++j) {
+            if (subject->items[j] != ITEM_NONE && GetItemIndex(subject->items[j]) == itemIndex)
+                break;
+        }
+
+        if (j < UNIT_ITEM_COUNT) {
+            int maxUses = GetItemMaxUses(subject->items[j]);
+
+            if (maxUses != 0xFF) {
+                int combinedUses = GetItemUses(subject->items[j]) + GetItemUses(target->items[i]);
+
+                if (combinedUses > maxUses)
+                    combinedUses = maxUses;
+
+                subject->items[j] = (combinedUses << 8) | itemIndex;
+            }
+        } else {
+            UnitAddItem(subject, target->items[i]);
+        }
+    }
+
+    ClearUnit(target);
+
+    return 0;
+}
+#endif
 
 //! FE8U = 0x080321B8
 int AfterDrop_CheckTrapAfterDropMaybe(struct AfterDropActionProc* proc) {
@@ -310,7 +410,24 @@ s8 ActionCombat(ProcPtr proc) {
         BattleGenerateReal(GetUnit(gActionData.subjectIndex), target);
     }
 
+#if FE8_AW2_ASSETS
+    /* Hide the AI goal window (gold + CO gauge stars, src/player_interface.c)
+     * for the actual battle scene -- this is the single point both the
+     * player's and the AI's combat funnel through (ApplyUnitAction), so
+     * gPlaySt.faction tells us which one is happening; the player's own
+     * side windows already manage their own visibility around every action
+     * (see Start/EndPlayerPhaseSideWindows, src/playerphase.c), so this
+     * only needs to act during an AI-controlled phase. */
+    if (gPlaySt.faction != FACTION_BLUE)
+        EndAiPhaseGoalDisplay();
+#endif
+
     Proc_StartBlocking(sProcScr_CombatAction, proc);
+
+#if FE8_AW2_ASSETS
+    if (gPlaySt.faction != FACTION_BLUE)
+        StartAiPhaseGoalDisplay();
+#endif
 
 #if FE8_GROUP_AI
     GroupAI_OnAttack(GetUnit(gActionData.subjectIndex), target);

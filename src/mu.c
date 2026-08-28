@@ -410,6 +410,38 @@ void SetAutoMuDefaultFacing(void)
         SetMuDefaultFacing(proc);
 }
 
+#if FE8_PURCHASE_GENERICS
+void SetAutoMuFacingSelected(void)
+{
+    struct MuProc * proc = Proc_Find(ProcScr_Mu);
+    if (proc)
+        // SetMuFacing(proc, MU_FACING_SELECTED);
+        StartMuActionAnim(proc); 
+    
+    
+}
+
+void HideMuDefault(void) 
+{ 
+    struct MuProc * proc = Proc_Find(ProcScr_Mu);
+    if (proc)
+    {
+        HideMu(proc);
+    }
+
+} 
+
+void ShowMuDefault(void) 
+{ 
+    struct MuProc * proc = Proc_Find(ProcScr_Mu);
+    if (proc)
+    {
+        ShowMu(proc);
+    }
+
+} 
+#endif 
+
 void SetAutoMuMoveScript(const u8 commands[MOVE_CMD_MAX_COUNT])
 {
     struct MuProc * proc = Proc_Find(ProcScr_Mu);

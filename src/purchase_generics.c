@@ -32,6 +32,7 @@
 #include "icon.h"
 #include "m4a.h"
 #include "menu_def.h"
+#include "mu.h" // StartMuFogBump
 #include "purchase_generics.h"
 #include "rng.h"
 #include "soundwrapper.h"
@@ -160,6 +161,13 @@ static const struct PurchaseGenericDefinition* GetPurchaseGenericByClass(int cla
     }
 
     return NULL;
+}
+
+int GetPurchaseGenericPrice(int classId)
+{
+    const struct PurchaseGenericDefinition* def = GetPurchaseGenericByClass(classId);
+
+    return def ? (int)def->cost : 0;
 }
 
 static void SetPurchaseGenericMenuPage(struct MenuProc* menu, int page)
@@ -434,6 +442,10 @@ static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition
 
     if (unit == NULL)
         return false;
+
+    /* Sits at the level-up threshold so purchased units never level up --
+     * they're meant to stay as disposable/generic reinforcements. */
+    unit->exp = 255;
 
 #if FE8_FORT_UNITS_START_GREYED_OUT
     if (spawnedOnFort)
@@ -1130,10 +1142,152 @@ int PurchaseGenericsCommandDraw(struct MenuProc* menu, struct MenuItemProc* menu
     return 0;
 }
 
+
+#define UP_TWICE 0x12 
+#define DOWN_TWICE 0x34 
+static const u8 sCapturePropertyBobScript[] = {
+
+    UP_TWICE, UP_TWICE, UP_TWICE, UP_TWICE, UP_TWICE, UP_TWICE, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+
+    MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, DOWN_TWICE, 
+    
+    
+
+    UP_TWICE, UP_TWICE, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+    MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP, MOVE_CMD_MOVE_UP,
+
+    DOWN_TWICE, DOWN_TWICE, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN, MOVE_CMD_MOVE_DOWN,
+    
+    MOVE_CMD_SLEEP, MOVE_CMD_SLEEP, MOVE_CMD_SLEEP, 
+
+    MOVE_CMD_END,
+};
+
+struct CapturePropertyBobProc {
+    PROC_HEADER;
+
+    struct Unit* unit;
+    s16 x, y;
+    s16 yOffset;
+    bool8 captured;
+    const u8* pc;
+};
+
+static void CapturePropertyBob_Loop(struct CapturePropertyBobProc* proc)
+{
+    switch (*proc->pc++) {
+        case UP_TWICE: 
+            proc->yOffset -= 2;
+            break; 
+        
+        case DOWN_TWICE: 
+            proc->yOffset += 2;
+            break; 
+        
+        case MOVE_CMD_MOVE_UP:
+            proc->yOffset--;
+            break;
+
+        case MOVE_CMD_MOVE_DOWN:
+            proc->yOffset++;
+            break;
+            
+        case MOVE_CMD_SLEEP:
+            break; 
+
+        case MOVE_CMD_END:
+        case MOVE_CMD_HALT:
+        default:
+            // ShowUnitSprite(proc->unit);
+            ShowMuDefault(); 
+            Proc_Break(proc);
+            return;
+    }
+    // PutStandingMuSprite(int layer, int x, int y, u16 oam2, int class, int idx)
+    // void PutUnitSprite(int layer, int x, int y, struct Unit * unit)
+    // PutStandingMuSprite(7, proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y + proc->yOffset, 
+    // ((unsigned)OBCHR_MU_380
+                // | ((GetUnitSpritePalette(proc->unit)) << 12)), proc->unit->pClassData->number, 0);
+                
+    PutSprite(7, proc->x - gBmSt.camera.x - 8, proc->y - gBmSt.camera.y + proc->yOffset - 16, gObject_32x32, ((unsigned)OBCHR_MU_380
+                | ((GetUnitSpritePalette(proc->unit)) << 12)));
+    // HideUnitSprite(proc->unit); // for insurance 
+}
+
+static void CapturePropertyBob_End(struct CapturePropertyBobProc* proc)
+{
+
+    // gActiveUnit->state |= US_HAS_MOVED;
+    // RefreshEntityBmMaps();
+    // RefreshUnitSprites();
+
+    if (proc->captured) {
+        StartMuFogBump(proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y);
+    }
+}
+
+void CapturePropertyBobInit(struct CapturePropertyBobProc* proc) 
+{ 
+    HideMuDefault();
+    PlaySoundEffect(SONG_77);
+    // HideUnitSprite(proc->unit);
+    // proc->unit->state |= US_HIDDEN; 
+    // RefreshUnitSprites();
+
+}
+
+CONST_DATA struct ProcCmd sProcScr_CapturePropertyBob[] = {
+    // PROC_CALL(LockGame),
+    PROC_SLEEP(3), // 3 frames if you don't want HideUnitSprite called every frame 
+    
+    PROC_CALL(CapturePropertyBobInit),
+    PROC_REPEAT(CapturePropertyBob_Loop),
+    PROC_CALL(CapturePropertyBob_End),
+    // PROC_CALL(UnlockGame),
+    PROC_END,
+};
+
+static void StartCapturePropertyBob(ProcPtr parent, struct Unit* unit, bool8 captured)
+{
+    // struct CapturePropertyBobProc* proc = Proc_Start(sProcScr_CapturePropertyBob, PROC_TREE_3);
+    struct CapturePropertyBobProc* proc = Proc_StartBlocking(sProcScr_CapturePropertyBob, parent);
+
+    proc->unit = unit;
+    proc->x = unit->xPos * 16;
+    proc->y = unit->yPos * 16;
+    proc->yOffset = 0;
+    proc->pc = sCapturePropertyBobScript;
+    proc->captured = captured;
+    
+    // SetAutoMuDefaultFacing();
+    SetAutoMuFacingSelected();
+}
+
+int ActionCapture(ProcPtr proc)
+{
+    int captured = false; 
+    StartCapturePropertyBob(proc, gActiveUnit, captured);
+
+
+    return 0; 
+}  
+
+int ActionCaptured(ProcPtr proc)
+{
+    int captured = true; 
+    StartCapturePropertyBob(proc, gActiveUnit, captured);
+
+
+    return 0; 
+}   
+
 u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
     struct Trap* trap;
     int factionId;
+    bool8 captured;
 
     (void)menu;
     (void)menuItem;
@@ -1151,9 +1305,14 @@ u8 PurchaseGenericsCommandEffect(struct MenuProc* menu, struct MenuItemProc* men
     if (!CanUnitCapturePurchaseBase(gActiveUnit))
         return MENU_ACT_SND6B;
 
-    TryCapturePurchaseBase(trap, gActiveUnit);
-    gActionData.unitActionType = UNIT_ACTION_PURCHASE_GENERIC;
-    gActiveUnit->state |= US_HAS_MOVED;
+    captured = TryCapturePurchaseBase(trap, gActiveUnit);
+    gActionData.unitActionType = UNIT_ACTION_CAPTURE;
+    if (captured) { 
+        gActionData.unitActionType = UNIT_ACTION_CAPTURED;
+    } 
+    
+
+    
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
@@ -1449,6 +1608,25 @@ static void RunAiCapturesForFaction(int factionId)
     }
 }
 
+// AI-facing wrapper around the same capture-resolution sequence
+// RunAiCapturesForFaction above uses per-unit (trap lookup, ownership
+// check, TryCapturePurchaseBase) -- for AiCaptureAction (src/cp_perform.c)
+// to call the moment a unit finishes moving onto a capturable base THIS
+// turn, instead of only picking up progress at the start of its next
+// phase the way RunAiCapturesForFaction's deferred sweep does.
+bool AiTryCapturePurchaseBase(struct Unit* unit)
+{
+    struct Trap* trap = GetOrCreatePurchaseBaseTrapAt(unit->xPos, unit->yPos);
+
+    if (trap == NULL)
+        return false;
+
+    if (GetPurchaseBaseTrapOwner(trap) == GetFactionIdForUnit(unit))
+        return false;
+
+    return TryCapturePurchaseBase(trap, unit);
+}
+
 // Used by AiAttemptOffensiveAction (src/cp_battle.c) to prefer holding a
 // base the active unit is already standing on over going to fight -- the
 // actual capture progress is applied automatically at the start of this
@@ -1530,8 +1708,8 @@ void PurchaseGenerics_OnNewPhase(void)
 {
     int factionId = GetCurrentFactionId();
 
-    if (gPlaySt.faction != FACTION_BLUE)
-        RunAiCapturesForFaction(factionId);
+    // if (gPlaySt.faction != FACTION_BLUE)
+        // RunAiCapturesForFaction(factionId);
 
     GrantIncomeForFaction(factionId);
 

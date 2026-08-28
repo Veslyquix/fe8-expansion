@@ -978,6 +978,32 @@ s8 CanUnitRescue(struct Unit* actor, struct Unit* target) {
     return (actorAid >= targetCon) ? TRUE : FALSE;
 }
 
+/* Phantom summons can't Trade, open their own Item menu, Supply, fight at
+ * the Arena, or obtain items from a shop -- vanilla behavior, previously a
+ * repeated `pClassData->number == CLASS_PHANTOM` check scattered across
+ * ItemCommandUsability/SupplyUsability/ArmoryCommandUsability/
+ * VendorCommandUsability/SecretShopCommandUsability/ArenaCommandUsability
+ * (src/bmmenu.c) and TryAddUnitToTradeTargetList (src/bmtarget.c).
+ * Purchased generics (see BuildGenericUnitDefinition,
+ * src/purchase_generics.c -- every one uses CHARACTER_CITIZEN) get the
+ * same restriction under FE8_PURCHASE_GENERICS: a disposable, endlessly
+ * repurchasable unit shouldn't be able to funnel gear to/from the rest of
+ * the roster, restock at Supply for free, or gamble away gear at the
+ * Arena. Rescuing is deliberately NOT gated here -- still just the
+ * vanilla phantom-only check in TryAddUnitToRescueTargetList
+ * (src/bmtarget.c). */
+bool8 CanUnitTradeOrSupply(struct Unit* unit) {
+    if (unit->pClassData->number == CLASS_PHANTOM)
+        return FALSE;
+
+#if FE8_PURCHASE_GENERICS
+    if (unit->pCharacterData->number == CHARACTER_CITIZEN)
+        return FALSE;
+#endif
+
+    return TRUE;
+}
+
 void UnitRescue(struct Unit* actor, struct Unit* target) {
     actor->state  |= US_RESCUING;
     target->state |= US_RESCUED | US_HIDDEN;

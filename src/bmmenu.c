@@ -7,6 +7,7 @@
 #include "uimenu.h"
 #include "bmmenu.h"
 #include "playerphase.h"
+#include "player_interface.h"
 #include "uichapterstatus.h"
 #include "uiselecttarget.h"
 #include "bmunit.h"
@@ -109,6 +110,17 @@ u8 MapMenu_SuspendCommand(struct MenuProc* menu, struct MenuItemProc* menuItem) 
 }
 
 u8 CommandEffectEndPlayerPhase(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+    /* Opening this menu already hid the side windows once (see
+     * PlayerPhase_MainIdle's A_BUTTON handling, src/playerphase.c), but
+     * immediately restarted them via Proc_Goto(proc, 9) right after --
+     * that label's whole point is to keep them visible behind the menu.
+     * Proc_EndEach(gProcScr_PlayerPhase) below only ends that one script;
+     * gProcScr_GoalDisplay/UnitDisplay_Burst/TerrainDisplay were started
+     * as their own PROC_TREE_3 roots (not children of gProcScr_PlayerPhase),
+     * so without this they're left running as orphans straight into
+     * whichever faction's phase comes next. */
+    EndPlayerPhaseSideWindows();
+
     Proc_EndEach(gProcScr_PlayerPhase);
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
@@ -334,6 +346,47 @@ u8 RescueSelection_OnSelect(ProcPtr proc, struct SelectTarget* target) {
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
+
+#if FE8_PURCHASE_GENERICS
+void MergeSelection_OnConstruction(ProcPtr proc) {
+    StartSubtitleHelp(proc, "Select a unit to merge with.");
+    return;
+}
+
+u8 MergeUsability(const struct MenuItemDef* def, int number) {
+
+    if (gActiveUnit->state & US_HAS_MOVED) {
+        return MENU_NOTSHOWN;
+    }
+
+    if (gActiveUnit->pCharacterData->number != CHARACTER_CITIZEN) {
+        return MENU_NOTSHOWN;
+    }
+
+    MakeMergeTargetList(gActiveUnit);
+
+    if (GetSelectTargetCount() == 0) {
+        return MENU_NOTSHOWN;
+    }
+
+    return MENU_ENABLED;
+}
+
+u8 MergeEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+    MakeMergeTargetList(gActiveUnit);
+    NewTargetSelection(&gSelectInfo_Merge);
+
+    return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A;
+}
+
+u8 MergeSelection_OnSelect(ProcPtr proc, struct SelectTarget* target) {
+
+    gActionData.targetIndex = target->uid;
+    gActionData.unitActionType = UNIT_ACTION_MERGE;
+
+    return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+}
+#endif
 
 u8 DropUsability(const struct MenuItemDef* def, int number) {
 
@@ -913,7 +966,7 @@ u8 ItemCommandUsability(const struct MenuItemDef* def, int number) {
         return MENU_NOTSHOWN;
     }
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1645,7 +1698,7 @@ u8 SupplyUsability(const struct MenuItemDef * def, int number)
         return MENU_NOTSHOWN;
     }
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM)
+    if (!CanUnitTradeOrSupply(gActiveUnit))
     {
         return MENU_NOTSHOWN;
     }
@@ -1689,7 +1742,7 @@ u8 SupplyCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
 u8 ArmoryCommandUsability(const struct MenuItemDef* def, int number) {
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1710,7 +1763,7 @@ u8 ArmoryCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
 u8 VendorCommandUsability(const struct MenuItemDef* def, int number) {
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1730,7 +1783,7 @@ u8 VendorCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 }
 
 u8 SecretShopCommandUsability(const struct MenuItemDef* def, int number) {
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 
@@ -1750,7 +1803,7 @@ u8 SecretShopCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem)
 
 u8 ArenaCommandUsability(const struct MenuItemDef* def, int number) {
 
-    if (gActiveUnit->pClassData->number == CLASS_PHANTOM) {
+    if (!CanUnitTradeOrSupply(gActiveUnit)) {
         return MENU_NOTSHOWN;
     }
 

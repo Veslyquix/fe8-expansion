@@ -6,11 +6,23 @@
 struct MenuProc;
 struct MenuItemProc;
 
-/* Map-menu ("Unit"/"Status"/"Guide"/... command list) entry point -- see
+/* Map-menu ("Unit"/"Status"/"Guide"/... command list) entry points -- see
  * gMapMenuItems, src/menu_def.c. An Advance Wars-style "CO Powers" roll
- * call: pans the camera onto every one of the player's units in turn and
- * parks the map cursor on each for CO_POWERS_UNIT_DISPLAY_FRAMES frames. */
+ * call: pans the camera onto every one of the player's units in turn,
+ * applying the commander's power (or super, for the second one) to
+ * whichever ones CoPower_AppliesToClass (src/power.c) says it targets --
+ * see also CO_FRANCIS_POWER_HEAL_AMOUNT there for the one CO with an
+ * effect implemented so far. */
 u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
+u8 CoSuperPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
+
+/* Menu usability checks for the two entries above: MENU_DISABLED (greyed
+ * out, still visible) until the player faction's CO gauge reaches their
+ * commander's powerStars/superPowerStars requirement (respectively),
+ * MENU_ENABLED once it has. */
+struct MenuItemDef;
+u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number);
+u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number);
 
 /* Map-menu "CO" entry point -- a full-screen, 4-page commander profile
  * (Info / CO Power / Super CO Power / class affinities), reusing the
@@ -18,21 +30,51 @@ u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
  * open at the same time as the unit stat screen. See src/power.c. */
 u8 CoScreen_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
 
+/* CO gauge points one star (struct CoDefinition's powerStars/
+ * superPowerStars, and the CO gauge stat screen/mini-gauge UI) is worth.
+ * The one place this belongs, shared by src/aw2_gfx.c (which star of the
+ * gauge to fill in) and src/VeslyDebugger.c (its CO editor's +/- gauge
+ * step and heart display) -- previously each had their own copy of this
+ * same number (AW2_GAUGE_PER_STAR, CoGaugeStep). */
+#define CO_GAUGE_PER_STAR 50
+
 /* CO gauge: gPlaySt.coGauge[faction >> 6] (see include/types.h). Called
  * from BattleGenerateHitEffects (src/bmbattle.c) for every point of
  * battle damage dealt or received by a faction's units. CoGauge_OnPowerUsed
- * is the depletion hook for whenever a "use CO power" action is added --
- * no such action exists yet, so nothing calls it today. */
+ * is the depletion hook for using either CO power (see
+ * CoPowersMenuCommandCommon, src/power.c) -- resets to 0, matching Advance
+ * Wars: using a power drains the whole gauge, not just its star cost. */
 void CoGauge_OnDamage(int faction, int amount);
 s16 CoGauge_Get(int faction);
 void CoGauge_Set(int faction, s16 value);
 void CoGauge_OnPowerUsed(int faction);
+
+/* Called from AiPhaseCoPowersHook (src/cp_phase.c), its own step in
+ * gProcScr_CpPhase, right after AiPhaseInit and before the faction's own
+ * turn logic (gProcScr_CpOrder) starts. gPlaySt.faction is already the AI
+ * faction (FACTION_RED/FACTION_GREEN) by this point. Decides, from gauge
+ * fullness alone, whether to use the super power (gauge at or past
+ * superPowerStars), the regular power (gauge at exactly powerStars, no
+ * more), or neither (gauge short of powerStars, or past it but still
+ * short of the super -- the AI holds out rather than spending early).
+ * parent must be the caller's own proc, so the roll-call/effect proc this
+ * starts (when it does) blocks the caller until it fully finishes. */
+struct Proc;
+void CoPowers_OnAiPhaseStart(struct Proc* parent);
 
 /* Small read-only accessors onto the CO definition table (src/power.c),
  * for UI code (the CO screen, the VeslyDebugger CO editor) that needs a
  * CO's display name without depending on struct CoDefinition directly. */
 int CoScreen_GetCoCount(void);
 const char* CoScreen_GetCoName(int coId);
+
+/* CO gauge stars each of a CO's two powers costs. The mini CO gauge
+ * (src/aw2_gfx.c) draws CoScreen_GetCoPowerStars small stars followed by
+ * the (super - normal) big ones that top it up to the super power.
+ * CoScreen_GetCoSuperPowerStars is clamped to never report fewer stars
+ * than the normal power costs. */
+int CoScreen_GetCoPowerStars(int coId);
+int CoScreen_GetCoSuperPowerStars(int coId);
 
 #endif // FE8_CO_POWERS
 

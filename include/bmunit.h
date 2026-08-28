@@ -428,6 +428,7 @@ void UnitCheckStatCaps(struct Unit* unit);
 struct Unit* GetUnitFromCharId(int charId);
 struct Unit* GetUnitFromCharIdAndFaction(int charId, int faction);
 bool CanUnitRescue(struct Unit* actor, struct Unit* target);
+bool8 CanUnitTradeOrSupply(struct Unit* unit);
 void UnitRescue(struct Unit* actor, struct Unit* target);
 void UnitDrop(struct Unit* actor, int xTarget, int yTarget);
 s8 UnitGive(struct Unit* actor, struct Unit* target);

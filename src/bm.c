@@ -28,6 +28,9 @@
 #include "eventcall.h"
 #include "purchase_generics.h"
 #include "gamerank.h"
+#if FE8_ANIMS_FAST_FORWARD
+#include "anims_fast_forward.h"
+#endif
 
 #include "bm.h"
 
@@ -347,6 +350,35 @@ void OnVBlank(void)
     m4aSoundMain();
 }
 
+#if FE8_ANIMS_FAST_FORWARD
+/* Runs an extra, un-paced copy of what OnVBlank above does (proc tree 0 +
+ * the graphics flush) instead of yielding to the hardware vblank wait --
+ * ported from a standalone Lyn-hooked ASM patch (asm/AnimsFastForward on
+ * disk)'s FastForwardBattles. Deliberately doesn't touch sound
+ * (m4aSoundVSync/m4aSoundMain) or MapGen_TickBootFrames like OnVBlank
+ * does: those stay paced by the real vblank interrupt alone, which still
+ * fires on its own schedule underneath this -- only the proc/graphics
+ * side gets the extra, unthrottled tick. */
+static void RunAnimsFastForwardTick(void)
+{
+    INTR_CHECK = INTR_FLAG_VBLANK;
+
+    IncrementGameClock();
+    Proc_Run(gProcTreeRootArray[0]);
+
+    SyncLoOam();
+
+    if (gBmSt.main_loop_ended) {
+        gBmSt.main_loop_ended = 0;
+
+        FlushLCDControl();
+        FlushBackgrounds();
+        FlushTiles();
+        SyncHiOam();
+    }
+}
+#endif
+
 //! FE8U = 0x080152F4
 void OnMain(void)
 {
@@ -375,6 +407,13 @@ void OnMain(void)
 
     gBmSt.main_loop_ended = 1;
     gBmSt.prevVCount = REG_VCOUNT;
+
+#if FE8_ANIMS_FAST_FORWARD
+    // if (ShouldSpeedupAnims()) {
+        // RunAnimsFastForwardTick();
+        // return;
+    // }
+#endif
 
     VBlankIntrWait();
 }

@@ -363,6 +363,23 @@ CO_POWERS ?= 1
 # tooling support -- no gameplay or save-format impact.
 FEBUILDER_POINTERS ?= 1
 
+# --- Optional Advance Wars 2 UI asset import --------------------------------
+# Loads 5 PNGs dumped from Advance Wars 2's VRAM (no$gba) -- a star/rank icon
+# strip, a taller "big stars" variant, and "POWER"/"SUPER" label graphics,
+# plus a debug font -- as LZ77-compressed OBJ tile graphics. See src/aw2_gfx.c.
+AW2_ASSETS ?= 1
+# NOTE that AW2_COMINI_PAL_ID will need to be changed later, as it uses bg pal 15 (which fog also uses)
+
+# --- Optional battle animation fast-forward ---------------------------------
+# Ported from a standalone Lyn-hooked ASM patch (asm/AnimsFastForward on
+# disk): holding L+B+A during a battle skips the main loop's normal
+# VBlankIntrWait pacing so the animation plays as fast as the hardware
+# allows (not during a promotion animation); holding L+R instead reverses
+# whatever the current battle animation setting would have shown (full anims
+# force off, off/map-anims forces full) for just that fight. See
+# src/anims_fast_forward.c.
+ANIMS_FAST_FORWARD ?= 1
+
 
 
 

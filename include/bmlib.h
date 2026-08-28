@@ -84,6 +84,10 @@ int GetDataSize(const void* data);
 // ??? GfxLoadCursor_Skip(???);
 void Register2dChrMove(const void* source, void* target, int width, int height);
 void Copy2dChr(const void* src, void* dst, int tileWidth, int tileHeight);
+#if FE8_AW2_ASSETS
+void Copy2dChrTransparent(const void* src, void* dst, int tileWidth, int tileHeight,
+    int xOffset, int yOffset, int dstTileStride);
+#endif
 void ApplyBitmap(const void* src, void* dst, int width, int height);
 void ApplyBitmapLine(const void *src, void *dst, int width);
 void ApplyBitmapTile(const u8 *src, u32 *dst, int width);

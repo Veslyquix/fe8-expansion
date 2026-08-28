@@ -20,6 +20,7 @@
 #include "bmitem.h"
 
 #include "player_interface.h"
+#include "aw2_gfx.h"
 
 #include "constants/event-flags.h"
 #include "constants/msg.h"
@@ -1666,6 +1667,23 @@ void EndPlayerPhaseSideWindows(void)
     return;
 }
 
+#if FE8_AW2_ASSETS
+void StartAiPhaseGoalDisplay(void)
+{
+    if ((gPlaySt.config.disableGoalDisplay == 0) && (CheckFlag(EVFLAG_OBJWINDOW_DISABLE) == 0))
+    {
+        Proc_Start(gProcScr_GoalDisplay, PROC_TREE_3);
+    }
+}
+
+void EndAiPhaseGoalDisplay(void)
+{
+    Proc_EndEach(gProcScr_GoalDisplay);
+
+    ClearBg0Bg1();
+}
+#endif
+
 //! FE8U = 0x0808D190
 bool IsCursorInLowerScreenHalf(void)
 {
@@ -1714,6 +1732,13 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
     TileMap_FillRect(gUiTmScratchB + TILEMAP_INDEX(20, 10), 11, 9, 0);
     TileMap_FillRect(gUiTmScratchA + TILEMAP_INDEX(20, 12), 11, 9, 0);
 
+#if FE8_AW2_ASSETS
+    DrawAw2CoMini(gUiTmScratchB + TILEMAP_INDEX(22, 11));
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_BLUE,
+        GetFactionChapterGoldAmount(gPlaySt.faction >> 6));
+    return;
+#endif
+
 #if FE8_PURCHASE_GENERICS
     if (proc->unitClock == 0)
         proc->unitClock = 1;
@@ -1747,6 +1772,10 @@ void GoalDisplay_Init(struct PlayerInterfaceProc * proc)
     int lastTurnNumber;
     char * str;
     struct Text * text;
+
+#if FE8_AW2_ASSETS
+    LoadAw2CoMiniGfx();
+#endif
 
     proc->showHideClock = 0;
     proc->isRetracting = false;
@@ -2024,6 +2053,14 @@ void Nop_PlayerInterface_1(void)
 //! FE8U = 0x0808D784
 void GoalDisplay_Loop_Display(struct PlayerInterfaceProc * proc)
 {
+#if FE8_AW2_ASSETS
+    /* Runs every frame this proc is alive, regardless of the early returns
+     * below (those are about whether the window needs to slide/reposition,
+     * not about whether it's still showing) -- so the cycle has to happen
+     * up here, ahead of all of them. */
+    UpdateAw2CoMiniPaletteCycle();
+#endif
+
     proc->xCursorPrev = proc->xCursor;
     proc->yCursorPrev = proc->yCursor;
 

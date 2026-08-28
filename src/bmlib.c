@@ -324,6 +324,78 @@ void Copy2dChr(const void* src, void* dst, int width, int height)
     }
 }
 
+#if FE8_AW2_ASSETS
+/* Same as Copy2dChr, but per nibble (i.e. per pixel): a source pixel of
+ * index 0 is treated as transparent and leaves the destination pixel
+ * already in VRAM untouched, instead of overwriting it with 0.
+ *
+ * xOffset/yOffset shift the whole source right/down by that many pixels
+ * before merging. A shift past a tile's own 8-pixel extent spills into the
+ * neighbouring destination tile -- same trick src/fontgrp.c's
+ * DrawTextGlyphNoClearBitmap uses for text's sub-tile x position (there
+ * splitting a 2bpp glyph row across dst[0x00]/dst[0x10]/dst[0x20]; here
+ * splitting a 4bpp tile across the tile to the right and the one below).
+ * Each offset is split into a whole-tile part (which destination tile to
+ * start at) and a 0-7 sub-tile part (the actual shift).
+ *
+ * dstTileStride is how many tiles make up one row of the destination, so
+ * a downward spill lands on the right tile: 0x20 for a normal 32-tile-wide
+ * VRAM char block (what Copy2dChr assumes), or the image's own width for a
+ * smaller block written out linearly.
+ *
+ * Always merges a full word (8 pixels) at a time, never a byte or even a
+ * halfword -- VRAM doesn't support 8-bit stores (a byte write gets
+ * mirrored into both bytes of its containing halfword, corrupting the
+ * neighboring pixel pair), and shifting by 4-7 pixels needs the full
+ * 32-bit source row in play at once to compute the spillover correctly. */
+void Copy2dChrTransparent(const void* src, void* dst, int width, int height,
+    int xOffset, int yOffset, int dstTileStride)
+{
+    int tileX = xOffset >> 3; // whole destination tile columns to skip
+    int subx = xOffset & 7;   // remaining 0-7 pixel shift
+    int tileY = yOffset >> 3; // whole destination tile rows to skip
+    int suby = yOffset & 7;
+    int row, col, pixelRow;
+
+    if (width <= 0 || height <= 0)
+        return;
+
+    for (row = 0; row < height; ++row) {
+        for (col = 0; col < width; ++col) {
+            const u32* s = (const u32*)((const u8*)src + (row * width + col) * CHR_SIZE);
+
+            for (pixelRow = 0; pixelRow < 8; ++pixelRow) {
+                /* Where this source pixel row lands once shifted down --
+                 * past the tile's last row it belongs to the tile below. */
+                int dstY = pixelRow + suby;
+                int dstTile = (row + tileY + (dstY >> 3)) * dstTileStride + col + tileX;
+                u32* dLo = (u32*)((u8*)dst + dstTile * CHR_SIZE) + (dstY & 7);
+
+                u64 shifted = (u64)s[pixelRow] << (subx * 4);
+                u32 lo = (u32)shifted;
+                u32 hi = (u32)(shifted >> 32);
+                u32 maskLo = 0, maskHi = 0;
+                int shift;
+
+                for (shift = 0; shift < 32; shift += 4) {
+                    if (((lo >> shift) & 0xF) != 0)
+                        maskLo |= (0xFu << shift);
+                    if (((hi >> shift) & 0xF) != 0)
+                        maskHi |= (0xFu << shift);
+                }
+
+                dLo[0] = (dLo[0] & ~maskLo) | (lo & maskLo);
+
+                /* The tile to the right sits one whole tile further on, so
+                 * its matching pixel row is CHR_SIZE/4 words along. */
+                if (subx != 0)
+                    dLo[CHR_SIZE / 4] = (dLo[CHR_SIZE / 4] & ~maskHi) | (hi & maskHi);
+            }
+        }
+    }
+}
+#endif
+
 void ApplyBitmap(const void* src, void* dst, int width, int height)
 {
     int i, line_size;
