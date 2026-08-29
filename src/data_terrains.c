@@ -3,30 +3,6 @@
 #include "constants/terrains.h"
 #include "constants/msg.h"
 
-/* Issue #5 Batch 2: the 32 movement-cost arrays below (through the
- * matching #endif) -- all 15 named mobility profiles' Normal array plus
- * TerrainTable_MovCost_DemonKing and TerrainMoveCost_Ballista -- and the
- * 15 Rain arrays further below (second #if using this same guard) are
- * canonically generated from src/data/movecost.json -- see
- * scripts/generated_data/movecost/ and docs/generated_data.md's
- * "movecost" schema section. build/generated/data/data_movecost.o(.data)
- * is linked in this block's place (ldscript.txt places it immediately
- * before this file's own (.data), so this excluded prefix leaves zero
- * address gap -- it is literally the first content of this translation
- * unit). The 15 named profiles' Snow arrays (later in this file) are
- * generated from the same JSON/object and are guarded the same way, via
- * their own dedicated .data.movecostsnow section (see the redirect
- * comment around Unk_TerrainTable_1 below), since Unk_TerrainTable_1
- * separates this Normal+Rain prefix from the Snow block. The blocks
- * themselves are deliberately left in place, verbatim, rather than
- * deleted: generated-data-check's round-trip parser
- * (scripts/generated_data/movecost/parser.py) reads this exact source
- * text to keep proving the generated tables byte-for-byte identical in
- * meaning to it. Never hand-edit these blocks -- edit
- * src/data/movecost.json and regenerate instead. */
-#define GENERATED_DATA_MOVECOST_LINKED 1
-
-#if !GENERATED_DATA_MOVECOST_LINKED
 CONST_DATA s8 TerrainTable_MovCost_CommonT2Normal[] = {
     [TERRAIN_NONE] = -1,
     [TERRAIN_PLAINS] = 1,
@@ -2202,7 +2178,6 @@ CONST_DATA s8 TerrainTable_MovCost_FlyRain[] = {
     [TERRAIN_BRACE] = -1,
     [TERRAIN_MAST] = -1,
 };
-#endif /* !GENERATED_DATA_MOVECOST_LINKED */
 
 CONST_DATA s8 Unk_TerrainTable_1[] = {
     [TERRAIN_NONE] = -1,
@@ -2282,7 +2257,6 @@ CONST_DATA s8 Unk_TerrainTable_1[] = {
 #undef CONST_DATA
 #define CONST_DATA SECTION(".data.movecostsnow")
 
-#if !GENERATED_DATA_MOVECOST_LINKED
 CONST_DATA s8 TerrainTable_MovCost_CommonT2Snow[] = {
     [TERRAIN_NONE] = -1,
     [TERRAIN_PLAINS] = 2,
@@ -3302,7 +3276,6 @@ CONST_DATA s8 TerrainTable_MovCost_FlySnow[] = {
     [TERRAIN_BRACE] = -1,
     [TERRAIN_MAST] = -1,
 };
-#endif /* !GENERATED_DATA_MOVECOST_LINKED */
 
 /* Redirect back out of .data.movecostsnow for Unk_TerrainTable_2 below,
  * which must stay glued, unshifted, right after the Snow block excluded
@@ -3397,14 +3370,7 @@ CONST_DATA s8 Unk_TerrainTable_2[] = {
  * itself is deliberately left in place, verbatim, rather than deleted:
  * generated-data-check's round-trip parser (scripts/generated_data/
  * terrainstats/parser.py) reads this exact source text to keep proving
- * the generated table byte-for-byte identical in meaning to it. Never
- * hand-edit the block below -- edit src/data/terrainstats.json and
- * regenerate instead. TerrainTable_HealAmount/TerrainTable_HealsStatus
- * (later in this file) are generated from the same JSON/object and are
- * guarded the same way. */
-#define GENERATED_DATA_TERRAINSTATS_LINKED 1
-
-#if !GENERATED_DATA_TERRAINSTATS_LINKED
+ * the generated table byte-for-byte identical in meaning to it. */
 CONST_DATA s8 TerrainTable_Avo_Common[] = {
     [TERRAIN_NONE] = 0,
     [TERRAIN_PLAINS] = 0,
@@ -3812,7 +3778,6 @@ CONST_DATA s8 TerrainTable_Res_Fly[] = {
     [TERRAIN_BRACE] = 0,
     [TERRAIN_MAST] = 0,
 };
-#endif /* !GENERATED_DATA_TERRAINSTATS_LINKED */
 
 /* The excluded block above is not actually a binary-layout prefix of
  * this translation unit's .data -- the movement-cost tables and
@@ -4168,15 +4133,6 @@ CONST_DATA s8 Unk_TerrainTable_7[] = {
     [TERRAIN_MAST] = 0,
 };
 
-/* Issue #5 Batch 1: TerrainTable_HealAmount/TerrainTable_HealsStatus
- * (hand-mode-agnostic heal-tile stats, guarded here) are generated from
- * the same src/data/terrainstats.json / build/generated/data/
- * data_terrainstats.o as the terrainAvoid/terrainDefense/
- * terrainResistance arrays guarded near the top of this file. Reuses the
- * guard macro defined above (already 1) -- do not redefine it here. Hand
- * text preserved verbatim for the round-trip parser; never hand-edit --
- * regenerate instead. */
-#if !GENERATED_DATA_TERRAINSTATS_LINKED
 CONST_DATA s8 TerrainTable_HealAmount[] = {
     [TERRAIN_NONE] = 0,
     [TERRAIN_PLAINS] = 0,
@@ -4312,7 +4268,6 @@ CONST_DATA s8 TerrainTable_HealsStatus[] = {
     [TERRAIN_BRACE] = 0,
     [TERRAIN_MAST] = 0,
 };
-#endif /* !GENERATED_DATA_TERRAINSTATS_LINKED */
 
 /* Same reasoning as the .data.terrainmid redirect above: everything
  * from here (BanimTerrainGroundDefault) to end-of-file (the

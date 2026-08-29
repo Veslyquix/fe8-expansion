@@ -11,30 +11,7 @@
 #include "events/prologue-eventinfo.h"
 #include "events/ch1-eventinfo.h"
 
-/* Issue #5 Batch 3d: the 7 EventListScr_Ch2_* event-list arrays, the
- * EventListScr_Ch2_Tutorial pointer list, and the struct
- * ChapterEventGroup Ch2Events manifest -- all of "events/ch2-eventinfo.h"
- * -- are canonically generated from src/data/ch2_eventlists.json -- see
- * scripts/generated_data/eventlists/ and docs/generated_data.md's
- * "eventlists" schema section. build/generated/data/data_ch2_eventlists.o
- * is linked in its place (ldscript.txt places it immediately after this
- * file's own (.data), so this excluded include leaves zero address gap).
- * Unlike the units/traps/shops tables (Batch 3a/3b/3c), whose Chapter 2
- * content lives inline in a shared hand .c file, Chapter 2's event-list
- * composition lives entirely in its own header, "events/ch2-eventinfo.h",
- * so the include itself is guarded here rather than any content inside
- * it. The header is deliberately left in place, verbatim, rather than
- * deleted: generated-data-check's round-trip parser
- * (scripts/generated_data/eventlists/parser.py) reads that exact source
- * text (plain regex/brace-depth parsing, never the compiler) to keep
- * proving the generated table byte-for-byte identical in meaning to it.
- * Never hand-edit "events/ch2-eventinfo.h" -- edit
- * src/data/ch2_eventlists.json and regenerate instead. */
-#define GENERATED_DATA_EVENTLISTS_CH2_LINKED 1
-
-#if !GENERATED_DATA_EVENTLISTS_CH2_LINKED
 #include "events/ch2-eventinfo.h"
-#endif /* !GENERATED_DATA_EVENTLISTS_CH2_LINKED */
 
 /* The excluded header above is not actually a binary-layout prefix of
  * this translation unit's .data -- the "events/prologue-eventinfo.h" and

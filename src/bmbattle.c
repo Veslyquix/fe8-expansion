@@ -40,23 +40,6 @@
 void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit * defender);
 #endif
 
-/* Issue #5 mechanics Batch 3: sWeaponTriangleRules (the struct itself is
- * now declared in bmbattle.h, not here -- see the comment there) is
- * canonically generated from src/data/weapontriangle.json -- see
- * scripts/generated_data/weapontriangle/ and docs/generated_data.md's
- * "weapontriangle" section. build/generated/data/data_weapontriangle.o
- * (.data) is linked in this block's place (ldscript.txt places it
- * immediately before src/bmbattle.o(.data), so this excluded prefix
- * leaves zero address gap -- it is literally the first content of this
- * translation unit's .data). The block below is deliberately left in
- * place, verbatim, rather than deleted: generated-data-check's
- * round-trip parser (scripts/generated_data/weapontriangle/parser.py)
- * reads this exact source text to keep proving the generated table
- * byte-for-byte identical in meaning to it. Never hand-edit this block
- * -- edit src/data/weapontriangle.json and regenerate instead. */
-#define GENERATED_DATA_WEAPONTRIANGLE_LINKED 1
-
-#if !GENERATED_DATA_WEAPONTRIANGLE_LINKED
 static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
     { ITYPE_SWORD, ITYPE_LANCE, -15, -1 },
     { ITYPE_SWORD, ITYPE_AXE,   +15, +1 },
@@ -78,19 +61,7 @@ static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
 
     { -1 },
 };
-#else
-/* The generated object above supplies the definition; this file only
- * needs the declaration so BattleApplyWeaponTriangleEffect below keeps
- * compiling and referencing the same symbol/type unchanged. */
-extern struct WeaponTriangleRule sWeaponTriangleRules[];
-#endif /* !GENERATED_DATA_WEAPONTRIANGLE_LINKED */
 
-/* Since sWeaponTriangleRules is the literal first content of this file's
- * .data section, everything from here onward (sProcScr_BattleAnimSimpleLock
- * is currently the only other .data symbol in this file) is redirected
- * into its own section so the generated object above can be spliced in
- * at sWeaponTriangleRules' exact original address with zero shift -- see
- * ldscript.txt's own comment at this splice. */
 #undef CONST_DATA
 #define CONST_DATA SECTION(".data.bmbattletail")
 
