@@ -493,6 +493,19 @@
 #define FE8_ANIMS_FAST_FORWARD 0
 #endif
 
+/* Custom BGM support: the NIMAP2 General-MIDI instrument map (voicegroup000)
+ * plus the percussion "drumfix" (voicegroups 079/080/081/083/084), and the
+ * custom songs in sound/songs/bgm/ appended to gSongTable past vanilla's 1000
+ * entries. Pure sound data -- no C code is compiled in or out by this flag,
+ * beyond the custom song IDs in include/constants/songs.h; it is defined so
+ * the config fingerprint and the generated build metadata record it like
+ * every other feature flag. Note the voicegroup000 swap also changes how
+ * vanilla's title theme (song001) sounds -- see config.mk's NIMAP2 block and
+ * docs/custom_bgm.md. */
+#ifndef FE8_NIMAP2
+#define FE8_NIMAP2 0
+#endif
+
 /* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
  * map, and replaces the prologue's scripted beginning-of-chapter events with
  * a version that still loads Eirika and Seth the same way but skips the
@@ -665,6 +678,10 @@
 
 #if (FE8_ANIMS_FAST_FORWARD != 0) && (FE8_ANIMS_FAST_FORWARD != 1)
 #error "FE8_ANIMS_FAST_FORWARD must be 0 or 1"
+#endif
+
+#if (FE8_NIMAP2 != 0) && (FE8_NIMAP2 != 1)
+#error "FE8_NIMAP2 must be 0 or 1"
 #endif
 
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)

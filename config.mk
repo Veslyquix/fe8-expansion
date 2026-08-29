@@ -380,6 +380,34 @@ AW2_ASSETS ?= 1
 # src/anims_fast_forward.c.
 ANIMS_FAST_FORWARD ?= 1
 
+# --- Optional custom BGM (NIMAP2) -------------------------------------------
+# Swaps in the community "native instrument map, revision 2" so custom music
+# written against General MIDI instrument numbers plays with the intended
+# timbres, and appends custom songs to the end of gSongTable:
+#
+#   * voicegroup000 -- vanilla fills only 23 of its 128 slots (the other 105
+#     are dummy square waves); NIMAP2 replaces the whole group with a
+#     GM-shaped instrument map. Every custom song's _grp points here.
+#   * voicegroups 079/080/081/083/084 -- the "drumfix". Purely additive: all
+#     44 entries it writes land on slots that were dummy square waves in
+#     vanilla, so GM drum-track note numbers hit real percussion samples
+#     while every percussion voice vanilla actually plays is left untouched.
+#   * sound/songs/bgm/*.s -- the custom songs themselves, appended to
+#     gSongTable after vanilla's 1000 entries (see include/constants/songs.h).
+#
+# Modern lane only: the archival legacy lane keeps vanilla's voicegroups and
+# song table so it stays byte-matching, exactly as every other feature flag
+# leaves it alone. See docs/custom_bgm.md and scripts/sound/.
+#
+# TRADEOFF: replacing voicegroup000 is NOT vanilla-neutral. song001
+# (agbfe3_bgm_opening, the title theme) is the one vanilla song that uses
+# voicegroup000, and NIMAP2 changes every one of the 11 voice slots it plays
+# -- mostly swapped strings/brass samples, but slot 126 goes from a
+# percussion keysplit (voicegroup083) to a pitched sample, which is audible.
+# Set NIMAP2=0 to keep vanilla's opening intact, or give the custom songs
+# their own voicegroup instead (see docs/custom_bgm.md).
+NIMAP2 ?= 1
+
 
 
 

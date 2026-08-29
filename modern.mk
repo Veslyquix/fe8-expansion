@@ -261,6 +261,9 @@ endif
 ifeq ($(ANIMS_FAST_FORWARD),1)
 MODERN_DEFINE_FLAGS += -DFE8_ANIMS_FAST_FORWARD=1
 endif
+ifeq ($(NIMAP2),1)
+MODERN_DEFINE_FLAGS += -DFE8_NIMAP2=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -361,11 +364,18 @@ MODERN_COHORT_ASM_SOURCES ?= \
 	asm/arm.s \
 	asm/arm_call.s
 
+# Hand-written assembly cannot see MODERN_DEFINE_FLAGS (it is not preprocessed
+# by cpp), so feature flags an .s file needs come through as GAS symbols
+# instead. Only NIMAP2 needs one today -- sound/song_table.s appends its custom
+# song entries under `.if FE8_NIMAP2`, and self-defaults the symbol to 0 when
+# it is absent, which is exactly how the archival legacy lane (plain `as`, no
+# defsym) keeps assembling the vanilla table.
 MODERN_ASFLAGS := \
 	$(MODERN_DRIVER_FLAGS) \
 	$(MODERN_ARCH_FLAGS) \
 	$(MODERN_INCLUDE_FLAGS) \
-	$(MODERN_ABI_FLAGS)
+	$(MODERN_ABI_FLAGS) \
+	-Wa,--defsym,FE8_NIMAP2=$(if $(filter 1,$(NIMAP2)),1,0)
 
 MODERN_COHORT_C_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_COHORT_SOURCES:.c=.o))
 MODERN_COHORT_ASM_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_COHORT_ASM_SOURCES:.s=.o))
@@ -1417,6 +1427,36 @@ endif
 
 # Link-only assembly objects not in expansion-modern-all.
 MODERN_ELF_EXTRA_ASM_SOURCES := src/rom_header.s src/crt0.s src/m4a_1.s
+
+# --- Custom BGM / NIMAP2 (config.mk NIMAP2) ---------------------------------
+# Modern-lane-only, exactly like every other feature flag: the archival legacy
+# lane keeps vanilla's voicegroups and song table (its own ldscript names each
+# vanilla voicegroup object explicitly), so `make legacy` stays byte-matching
+# whatever NIMAP2 is set to.
+#
+# Each sound/voicegroups/<name>_nimap2.s defines the *same* symbol as its
+# vanilla counterpart (only the filename differs), so exactly one of each pair
+# may be linked -- the vanilla objects are dropped from MODERN_ELF_LEGACY_ASM
+# below. sound/song_table.s moves to the modern-built list too: it grows the
+# custom entries under a `.if FE8_NIMAP2` guard, and only the modern assembler
+# is handed that symbol (see MODERN_NIMAP2_ASFLAGS).
+MODERN_NIMAP2_VOICEGROUPS := \
+	voicegroup000 voicegroup079 voicegroup080 \
+	voicegroup081 voicegroup083 voicegroup084
+
+MODERN_NIMAP2_VANILLA_OBJECTS := \
+	$(addprefix sound/voicegroups/,$(addsuffix .o,$(MODERN_NIMAP2_VOICEGROUPS)))
+
+ifeq ($(NIMAP2),1)
+MODERN_NIMAP2_SOURCES := \
+	$(addprefix sound/voicegroups/,$(addsuffix _nimap2.s,$(MODERN_NIMAP2_VOICEGROUPS))) \
+	$(sort $(wildcard sound/songs/bgm/*.s))
+MODERN_ELF_EXTRA_ASM_SOURCES += $(MODERN_NIMAP2_SOURCES) sound/song_table.s
+MODERN_ELF_NIMAP2_DROPPED := $(MODERN_NIMAP2_VANILLA_OBJECTS)
+else
+MODERN_NIMAP2_SOURCES :=
+MODERN_ELF_NIMAP2_DROPPED :=
+endif
 MODERN_ELF_EXTRA_ASM_OBJECTS := \
 	$(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ELF_EXTRA_ASM_SOURCES:.s=.o))
 
@@ -1438,6 +1478,7 @@ MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 MODERN_ELF_LEGACY_ASM := $(filter-out \
 	$(C_OBJECTS) $(DATA_SRC_C_OBJECTS) \
 	$(MODERN_ELF_FE6SIO) $(BANIM_OBJECT) \
+	$(MODERN_ELF_NIMAP2_DROPPED) \
 	$(MODERN_ELF_REPLACED_ASM), \
 	$(ASM_OBJECTS))
 MODERN_ELF_LEGACY_MIDI := $(MID_OBJECTS)
@@ -1584,6 +1625,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--aw2-assets "$(AW2_ASSETS)" \
 		--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
+		--nimap2 "$(NIMAP2)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1672,6 +1714,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 	--aw2-assets "$(AW2_ASSETS)" \
 	--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
+	--nimap2 "$(NIMAP2)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1768,7 +1811,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_CO_POWERS=$(CO_POWERS) \
 	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS) \
 	-DFE8_AW2_ASSETS=$(AW2_ASSETS) \
-	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD)
+	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD) \
+	-DFE8_NIMAP2=$(NIMAP2)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1960,6 +2004,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'febuilder_pointers=$(FEBUILDER_POINTERS)'; \
 		printf '%s\n' 'aw2_assets=$(AW2_ASSETS)'; \
 		printf '%s\n' 'anims_fast_forward=$(ANIMS_FAST_FORWARD)'; \
+		printf '%s\n' 'nimap2=$(NIMAP2)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \

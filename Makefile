@@ -124,7 +124,14 @@ DATA_SRC_SFILES_COMPILED := $(DATA_SRC_C_FILES:.c=.s)
 # src/data/ subdirs (not the top-level src/data/*.s wildcard, which holds
 # compiler intermediates of the typed .c data).
 DATA_SRC_S_FILES := $(filter-out $(DATA_SRC_SFILES_COMPILED),$(wildcard $(DATA_SRC_SUBDIR)/map/*.s $(DATA_SRC_SUBDIR)/unit_icon/*.s $(DATA_SRC_SUBDIR)/banim/*.s $(DATA_SRC_SUBDIR)/mapanim/*.s $(DATA_SRC_SUBDIR)/menu/*.s $(DATA_SRC_SUBDIR)/ending/*.s $(DATA_SRC_SUBDIR)/worldmap/*.s $(DATA_SRC_SUBDIR)/ui/*.s))
-SOUND_S_FILES := $(wildcard sound/*.s sound/songs/*.s sound/songs/mml/*.s sound/voicegroups/*.s)
+# voicegroup[0-9][0-9][0-9].s rather than *.s: sound/voicegroups/ also holds
+# the NIMAP2 variants (voicegroupNNN_nimap2.s), which define the *same* symbols
+# as their vanilla counterparts and so must never be assembled into this shared
+# object list -- the modern lane opts into them itself, swapping out the
+# vanilla objects as it does (see MODERN_NIMAP2_* in modern.mk). Likewise
+# sound/songs/bgm/ is deliberately absent: those custom songs are modern-lane
+# only, so the archival legacy lane keeps building vanilla's sound data alone.
+SOUND_S_FILES := $(wildcard sound/*.s sound/songs/*.s sound/songs/mml/*.s sound/voicegroups/voicegroup[0-9][0-9][0-9].s)
 SFILES       := $(ASM_S_FILES) $(SRC_S_FILES) $(DATA_S_FILES) $(DATA_SRC_S_FILES) $(SOUND_S_FILES)
 SFILES_COMPILED := $(CFILES:.c=.s)
 C_OBJECTS    := $(CFILES:.c=.o)

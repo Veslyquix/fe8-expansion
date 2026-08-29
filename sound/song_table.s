@@ -1,5 +1,14 @@
     .include "asm/macros/m4a.inc"
 
+    @ Custom-BGM entries are appended at the end of this table under
+    @ `.if FE8_NIMAP2` (see the tail of this file and config.mk's NIMAP2).
+    @ The modern lane passes the symbol in with --defsym; the archival legacy
+    @ lane assembles with plain `as` and no defsym, so it self-defaults to 0
+    @ here and emits the vanilla 1000-entry table unchanged.
+    .ifndef FE8_NIMAP2
+    .equ FE8_NIMAP2, 0
+    .endif
+
     .section .rodata
 
 	.align 2
@@ -1006,3 +1015,13 @@ gSongTable:	@ 0x08224470
 	song song998_sys_class_light2, 2, 2
 	song dummy_song, 0, 0
 
+	@ ---- Custom BGM (config.mk NIMAP2) ------------------------------------
+	@ Appended past vanilla's 1000 entries (IDs 0x000-0x3E7), so every vanilla
+	@ song ID is untouched. Music-player/priority fields are 1, 1 -- the same
+	@ pair vanilla map BGM uses (e.g. song004_agbfe3_bgm_wmap_01 above), which
+	@ is what these are meant to be usable as. Named IDs live in
+	@ include/constants/songs.h; the song bodies are in sound/songs/bgm/.
+	.if FE8_NIMAP2
+	song GoldenSunVenusLighthouseAReliableChair, 1, 1	@ SONG_BGM_GS_VENUS_LIGHTHOUSE
+	song PokemonGSGoldenrodCityAReliableChair, 1, 1	@ SONG_BGM_POKEMON_GS_GOLDENROD_CITY
+	.endif

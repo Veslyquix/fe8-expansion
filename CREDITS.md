@@ -36,6 +36,31 @@ Generally sourced from the community
 | Liz | `Flyer Girl Liz[F2E].png` | RandomWizard (tagged **F2E**, "Free to Edit") |
 
 
+## Custom BGM (`NIMAP2`)
+
+Sound data sourced from the [Fire Emblem: Sacred Rewritten
+Randomizer](https://github.com/Vesly-FE/SRR) BGM pack (`bgm/`). Re-expressed as
+decomp voicegroup/song assembly by `scripts/sound/gen_nimap2.py` and
+`scripts/sound/import_bgm.py`; see [docs/custom_bgm.md](docs/custom_bgm.md).
+
+### Instrument maps
+
+| Component | Credits |
+| --- | --- |
+| NIMAP2 native instrument map (`voicegroup000`) | Community FE-hacking patch, distributed with the SRR BGM pack. No individual attribution is recorded upstream. |
+| Percussion drumfix (`voicegroup079`/`080`/`081`/`083`/`084`) | As above. The pack's companion FE7 16-track/12-sound fix is credited upstream to Agro/Brendor; the FE8 drumfix data itself carries no separate attribution. |
+
+### Songs
+
+| Song ID | Track | Arranger |
+| --- | --- | --- |
+| `SONG_BGM_GS_VENUS_LIGHTHOUSE` | Golden Sun — Venus Lighthouse | AReliableChair |
+| `SONG_BGM_POKEMON_GS_GOLDENROD_CITY` | Pokémon Gold/Silver — Goldenrod City | AReliableChair |
+
+Original compositions remain the property of their respective rights holders
+(Camelot/Nintendo for *Golden Sun*; Game Freak/Nintendo for *Pokémon
+Gold/Silver*); only the GBA arrangements are credited above.
+
 ## Ported Code Patches
 
 | Patch | Author |
@@ -60,6 +85,8 @@ Generally sourced from the community
 | `PROMOTE_COMMAND` | Vesly |
 | `TURN_AUTOSAVE` | Vesly |
 | `TEXT_CHAPTER_NAMES` | circleseverywhere, hypergammaspaces |
+| `ANIMS_FAST_FORWARD` | Vesly |
+| `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
 
 
 

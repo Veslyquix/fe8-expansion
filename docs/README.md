@@ -19,6 +19,7 @@ the authoritative technical documentation and are checked by CI.
 | Author game content (characters/classes/items/etc.) | [`generated_data_tutorial.md`](generated_data_tutorial.md) |
 | Enable/extend starter content, mechanics, or Threat Range QoL | [`starter_features.md`](starter_features.md) |
 | Author expansion-localized UI text/locales | [`localization.md`](localization.md) |
+| Add custom BGM / instrument maps | [`custom_bgm.md`](custom_bgm.md) |
 | Generate or test localized full-game message catalogs | [`game_localization_catalog.md`](game_localization_catalog.md) |
 | Contribute code/docs and know the review process | [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`project-governance.md`](project-governance.md) |
 | Come from the old decomp-base/agbcc workflow | [`migration-from-decomp.md`](migration-from-decomp.md) |
@@ -64,6 +65,7 @@ numbers mark merged (closed) contracts only:
 | Debug-tools extension (issue #11) | Action-registration API (`include/expansion_debugtools.h`), `FE8_EXPANSION_DEBUGTOOLS_ENABLED` | [`debugtools.md`](debugtools.md) |
 | Starter features (issue #6) | Four default-off flags; `include/expansion_mechanics.h`; `include/expansion_starter_content.h`; danger-overlay menu | [`starter_features.md`](starter_features.md) |
 | Localization (issue #18) | `ExpansionLocaleId`/`ExpansionMsgId`, `texts/expansion/`, prefs + selector/settings APIs | [`localization.md`](localization.md), [`save_format.md`](save_format.md) |
+| Custom BGM (`NIMAP2`) | NIMAP2 instrument map + percussion drumfix voicegroups, `sound/songs/bgm/`, `scripts/sound/` | [`custom_bgm.md`](custom_bgm.md) |
 | Runtime test harness (issue #13) | JSON scenario format + fingerprints, `GBA_PLAYTEST_HOST_ONLY` | [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md) |
 | Upstream-port review tooling | `python3 -m scripts.upstream_port {scan,drift,verify,update-state}` | [`upstream-porting.md`](upstream-porting.md) |
 | Proc/runtime core | `include/proc.h` (`struct Proc`, `struct ProcCmd[]`) | [`architecture.md`](architecture.md) |
