@@ -1492,8 +1492,7 @@ static void CoScreen_LoadBgFrame(void)
 
     for (y = 0; y < CO_BG_FRAME_TILE_HEIGHT; ++y) {
         for (x = 0; x < CO_BG_FRAME_TILE_WIDTH; ++x) {
-            gBG3TilemapBuffer[TILEMAP_INDEX(x, y)] =
-                (frlgUiFrame_map[y * CO_BG_FRAME_TILE_WIDTH + x] + CO_BG_FRAME_TILE_INDEX_OFFSET) | (CO_BG_FRAME_PAL_SLOT << 12);
+            gBG3TilemapBuffer[TILEMAP_INDEX(x, y)] = (frlgUiFrame_map[y * CO_BG_FRAME_TILE_WIDTH + x] + CO_BG_FRAME_TILE_INDEX_OFFSET) | (CO_BG_FRAME_PAL_SLOT << 12);
         }
     }
 

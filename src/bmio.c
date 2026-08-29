@@ -993,7 +993,7 @@ void StartBattleMap(struct GameCtrlProc* gameCtrl) {
     ClearTraps();
 #if FE8_PURCHASE_GENERICS
     ResetChapterGoldAmount();
-    SetChapterGoldAmount(5000);
+    SetChapterGoldAmount(55000);
 #endif
 
     gPlaySt.faction = FACTION_GREEN; // TODO: PHASE/ALLEGIANCE DEFINITIONS

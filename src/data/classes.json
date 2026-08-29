@@ -527,11 +527,11 @@
       "sortOrder": 12,
       "defaultPortraitId": 118,
       "base": {
-        "hp": 17,
-        "pow": 8,
-        "skl": 2,
-        "spd": 0,
-        "def": 9,
+        "hp": 14,
+        "pow": 10,
+        "skl": 3,
+        "spd": 2,
+        "def": 11,
         "res": 0,
         "con": 13,
         "mov": 3
@@ -892,11 +892,11 @@
       "sortOrder": 3,
       "defaultPortraitId": 144,
       "base": {
-        "hp": 18,
-        "pow": 4,
-        "skl": 8,
-        "spd": 8,
-        "def": 4,
+        "hp": 14,
+        "pow": 6,
+        "skl": 6,
+        "spd": 5,
+        "def": 2,
         "res": 0,
         "con": 9,
         "mov": 4
@@ -1508,12 +1508,12 @@
       "sortOrder": 10,
       "defaultPortraitId": 120,
       "base": {
-        "hp": 18,
+        "hp": 14,
         "pow": 7,
         "skl": 3,
         "spd": 3,
         "def": 3,
-        "res": 0,
+        "res": 3,
         "con": 7,
         "mov": 4
       },
@@ -2268,11 +2268,11 @@
       "sortOrder": 18,
       "defaultPortraitId": 124,
       "base": {
-        "hp": 16,
-        "pow": 1,
+        "hp": 13,
+        "pow": 5,
         "skl": 2,
-        "spd": 3,
-        "def": 1,
+        "spd": 6,
+        "def": 0,
         "res": 3,
         "con": 6,
         "mov": 4
@@ -3870,10 +3870,10 @@
       "defaultPortraitId": 116,
       "base": {
         "hp": 20,
-        "pow": 5,
+        "pow": 7,
         "skl": 2,
         "spd": 4,
-        "def": 2,
+        "def": 1,
         "res": 0,
         "con": 11,
         "mov": 4
@@ -4771,13 +4771,13 @@
       "smsId": 63,
       "defaultPortraitId": 138,
       "base": {
-        "hp": 20,
-        "pow": 3,
+        "hp": 15,
+        "pow": 4,
         "skl": 0,
-        "spd": 1,
+        "spd": 3,
         "def": 0,
-        "res": 0,
-        "con": 6,
+        "res": 2,
+        "con": 8,
         "mov": 4
       },
       "max": {
