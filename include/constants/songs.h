@@ -341,6 +341,13 @@ enum song_idx {
     SONG_3CF = 0x3CF,
     SONG_SILENT = 0x7fff,
 
+    /* Sentinel for an unused per-chapter BGM slot, not a playable song: the
+     * engine tests mapBgmIds[...] against 0xFFFF and simply plays nothing
+     * (see StartBgm's callers in src/chapterintrofx.c). Named so
+     * src/data/chapter_settings.json's bgm fields can spell every slot as a
+     * constant -- see docs/custom_bgm.md. */
+    SONG_MAP_BGM_NONE = 0xffff,
+
     /* Custom BGM (config.mk NIMAP2), appended past vanilla's 1000-entry
      * gSongTable (IDs 0x000-0x3E7) so no vanilla ID moves -- see the tail of
      * sound/song_table.s, which emits these entries only when FE8_NIMAP2 is

@@ -3,6 +3,10 @@
 #include "agb_sram.h"
 #include "bmsave.h"
 
+/* chapter_settings.h (generated below from src/data/chapter_settings.json)
+ * spells its .mapBgmIds entries as SONG_* constants rather than raw numbers. */
+#include "constants/songs.h"
+
 #include "src/data/chapter_settings.h"
 
 const struct ROMChapterData* GetROMChapterStruct(unsigned chIndex) {
