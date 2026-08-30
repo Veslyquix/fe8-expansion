@@ -72,6 +72,7 @@ s8 CameraMove_0(ProcPtr parent);
 void UnkMapCursor_OnLoop(struct UnkMapCursorProc * proc);
 void StartMapCursorSlide(int x, int y, int duration);
 int GetCurrentMapMusicIndex(void);
+int GetBGMTrack(void);
 void StartMapSongBgm(void);
 void CamMoveLinear_OnLoop(struct CamMoveProc * proc);
 void CamMoveLinear_OnEnd(void);

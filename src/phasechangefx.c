@@ -142,9 +142,9 @@ void PhaseIntroInitText(struct PhaseIntroSubProc *proc)
     int curBgm = GetCurrentBgmSong();
 
 #if FE8_VESLY_DEBUGGER
-    if ((curBgm != GetCurrentMapMusicIndex()) && (VeslyDebugger_GetBgmOverride() != curBgm))
+    if ((curBgm != GetBGMTrack()) && (VeslyDebugger_GetBgmOverride() != curBgm))
 #else
-    if (curBgm != GetCurrentMapMusicIndex())
+    if (curBgm != GetBGMTrack())
 #endif
         Sound_FadeOutBGM(4);
 

@@ -24,7 +24,11 @@ int Mod(int a, int b) PUREFUNC;
 #define _u46 ai_counter
 #define actorCount_maybe actorCount
 #define u62 mapAnimKind
-#define GetBGMTrack GetCurrentMapMusicIndex
+/* NOTE: no `#define GetBGMTrack ...` here (deliberately removed) -- a real
+ * GetBGMTrack(void) now lives in src/bm.c (see include/bm.h), and this
+ * file's own extern declaration/calls below should resolve to it directly
+ * so this dead debugger scaffolding composes correctly with RandBgm if it
+ * is ever revived, instead of silently bypassing it. */
 #define EventCallGameOverExt Debugger_EventCallGameOverExt
 #define GameControl_CallEraseSaveEventWithKeyCombo Debugger_GameControl_CallEraseSaveEventWithKeyCombo
 #define PhaseIntroInitText Debugger_PhaseIntroInitText

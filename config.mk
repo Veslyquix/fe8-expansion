@@ -212,8 +212,25 @@ TITLE_256_COLORS ?= 1
 TEXT_CHAPTER_NAMES ?= 1
 
 # --- Optional Credits ----------------------------------------------------------
-# Scrolling end-credits sequence using text instead of images. 
+# Scrolling end-credits sequence using text instead of images.
 CREDITS ?= 0
+
+# --- Optional RandBgm ---------------------------------------------------------
+# Map BGM selection becomes seeded-random instead of vanilla's fixed
+# per-chapter table lookup: each time map BGM would (re)start, a random song
+# sharing the vanilla pick's music-player/priority pair is chosen instead,
+# deterministically from the current save's playthrough identifier plus
+# chapter/turn/phase (not the live combat RNG, so this never perturbs, or is
+# perturbed by, actual combat rolls). Off by default: vanilla-equivalent
+# unless explicitly enabled. See docs/random_bgm.md.
+RAND_BGM ?= 0
+
+# --- Optional ContinueBgmBattle ------------------------------------------------
+# Entering a battle animation keeps the current map BGM playing instead of
+# swapping to a distinct battle theme. See docs/random_bgm.md for what this
+# does (and does not) change in this codebase, since vanilla FE8's own combat
+# does not swap BGM in the first place.
+CONTINUE_BGM_BATTLE ?= 0
 
 
 

@@ -240,6 +240,12 @@ endif
 ifeq ($(CREDITS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
 endif
+ifeq ($(RAND_BGM),1)
+MODERN_DEFINE_FLAGS += -DFE8_RAND_BGM=1
+endif
+ifeq ($(CONTINUE_BGM_BATTLE),1)
+MODERN_DEFINE_FLAGS += -DFE8_CONTINUE_BGM_BATTLE=1
+endif
 ifeq ($(CUSTOM_CAMPAIGN),1)
 MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_CAMPAIGN=1
 endif
@@ -1611,6 +1617,8 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--promote-command "$(PROMOTE_COMMAND)" \
 		--fix-bugs "$(FIX_BUGS)" \
 		--credits "$(CREDITS)" \
+		--rand-bgm "$(RAND_BGM)" \
+		--continue-bgm-battle "$(CONTINUE_BGM_BATTLE)" \
 		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 		--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
@@ -1707,6 +1715,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--promote-command "$(PROMOTE_COMMAND)" \
 	--fix-bugs "$(FIX_BUGS)" \
 	--credits "$(CREDITS)" \
+	--rand-bgm "$(RAND_BGM)" \
+	--continue-bgm-battle "$(CONTINUE_BGM_BATTLE)" \
 	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 	--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
@@ -1807,6 +1817,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS) \
+	-DFE8_RAND_BGM=$(RAND_BGM) \
+	-DFE8_CONTINUE_BGM_BATTLE=$(CONTINUE_BGM_BATTLE) \
 	-DFE8_GAME_RANK=$(GAME_RANK) \
 	-DFE8_CO_POWERS=$(CO_POWERS) \
 	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS) \
@@ -1997,6 +2009,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \
 		printf '%s\n' 'fix_bugs=$(FIX_BUGS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
+		printf '%s\n' 'rand_bgm=$(RAND_BGM)'; \
+		printf '%s\n' 'continue_bgm_battle=$(CONTINUE_BGM_BATTLE)'; \
 		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
 		printf '%s\n' 'game_rank=$(GAME_RANK)'; \

@@ -1,4 +1,4 @@
-import json
+import re
 
 
 # ============================================================
@@ -29,21 +29,126 @@ CLASS_WEAPONS = {
 # Fire Emblem doubling threshold
 DOUBLE_SPEED_DIFFERENCE = 4
 
+CLASSES_C_PATH = "../src/data_classes.c"
+ITEMS_C_PATH = "../src/data_items.c"
+WEAPON_TRIANGLE_C_PATH = "../src/bmbattle.c"
+
 
 # ============================================================
-# JSON FUNCTIONS
+# C SOURCE PARSING
 # ============================================================
+#
+# These files are the hand-written tables the modern build actually
+# compiles (see docs, "unlink json things") -- classes.json/items.json/
+# weapontriangle.json are no longer the build's source of truth, so this
+# script reads the same C the ROM links instead of the JSON siblings.
+# Parsing is deliberately simple regex/brace-matching, not a real C
+# parser: it only needs to survive the flat designated-initializer shape
+# these tables actually use.
 
-def load_json(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
+def _find_matching_brace(text, open_index):
+    depth = 0
+    for i in range(open_index, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return i
+    raise ValueError("unbalanced braces starting at %d" % open_index)
 
 
-def find_by_field(entries, field, value):
-    for entry in entries:
-        if entry.get(field) == value:
-            return entry
-    return None
+def parse_designated_array(path, key_pattern):
+    """Parse `[KEY] = { .field = value, ... },` entries into
+    {key: {field: value_str}}. Ignores fields whose value is itself a
+    brace-enclosed initializer (nested structs/arrays aren't needed here)."""
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    entries = {}
+    for m in re.finditer(key_pattern + r"\s*=\s*\{", text):
+        key = m.group(1)
+        open_brace = m.end() - 1
+        close_brace = _find_matching_brace(text, open_brace)
+        body = text[open_brace + 1:close_brace]
+
+        fields = {}
+        for fm in re.finditer(r"\.(\w+)\s*=\s*([^,{}]+),", body):
+            fields[fm.group(1)] = fm.group(2).strip()
+        entries[key] = fields
+
+    return entries
+
+
+def parse_int(value_str):
+    value_str = value_str.strip()
+    try:
+        return int(value_str, 0)
+    except ValueError:
+        return value_str
+
+
+def load_classes(path=CLASSES_C_PATH):
+    raw = parse_designated_array(path, r"\[(CLASS_\w+)(?:\s*-\s*1)?\]")
+
+    classes = {}
+    for class_name, fields in raw.items():
+        classes[class_name] = {
+            "base": {
+                "hp": parse_int(fields.get("baseHP", "0")),
+                "pow": parse_int(fields.get("basePow", "0")),
+                "skl": parse_int(fields.get("baseSkl", "0")),
+                "spd": parse_int(fields.get("baseSpd", "0")),
+                "def": parse_int(fields.get("baseDef", "0")),
+                "res": parse_int(fields.get("baseRes", "0")),
+                "con": parse_int(fields.get("baseCon", "0")),
+                "mov": parse_int(fields.get("baseMov", "0")),
+            },
+        }
+
+    return classes
+
+
+def load_items(path=ITEMS_C_PATH):
+    raw = parse_designated_array(path, r"\[(ITEM_\w+)\]")
+
+    items = {}
+    for item_name, fields in raw.items():
+        items[item_name] = {
+            "weaponType": fields.get("weaponType"),
+            "might": parse_int(fields.get("might", "0")),
+        }
+
+    return items
+
+
+def load_weapon_triangle(path=WEAPON_TRIANGLE_C_PATH):
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    m = re.search(
+        r"sWeaponTriangleRules\[\]\s*=\s*\{(.*?)\n\};",
+        text,
+        re.DOTALL,
+    )
+    if not m:
+        raise ValueError("sWeaponTriangleRules not found in %s" % path)
+
+    body = m.group(1)
+
+    rules = []
+    for rm in re.finditer(
+        r"\{\s*(ITYPE_\w+)\s*,\s*(ITYPE_\w+)\s*,\s*([+-]?\d+)\s*,\s*([+-]?\d+)\s*\}",
+        body,
+    ):
+        rules.append({
+            "attackerWeaponType": rm.group(1),
+            "defenderWeaponType": rm.group(2),
+            "hitBonus": int(rm.group(3)),
+            "atkBonus": int(rm.group(4)),
+        })
+
+    return rules
 
 
 # ============================================================
@@ -66,28 +171,18 @@ def get_target_defense(weapon, defender_class):
 
     return defender_class["base"]["def"], "DEF"
 
-def calculate_wta(weapon, defender_weapon):
+def calculate_wta(weapon, defender_weapon, weapon_triangle_rules):
     attacker_type = weapon.get("weaponType")
     defender_type = defender_weapon.get("weaponType")
 
-    advantages = {
-        "ITYPE_SWORD": "ITYPE_AXE",
-        "ITYPE_AXE": "ITYPE_LANCE",
-        "ITYPE_LANCE": "ITYPE_SWORD",
-    }
+    for rule in weapon_triangle_rules:
+        if (rule["attackerWeaponType"] == attacker_type
+                and rule["defenderWeaponType"] == defender_type):
+            return rule["atkBonus"]
 
-    # Attacker has weapon triangle advantage
-    if advantages.get(attacker_type) == defender_type:
-        return 1
-
-    # Defender has weapon triangle advantage
-    if advantages.get(defender_type) == attacker_type:
-        return -1
-
-    # No weapon triangle interaction
     return 0
 
-def calculate_single_hit_damage(attacker_class, weapon, defender_class, defender_weapon):
+def calculate_single_hit_damage(attacker_class, weapon, defender_class, defender_weapon, weapon_triangle_rules):
     attacker_pow = attacker_class["base"]["pow"]
     weapon_might = weapon.get("might", 0)
 
@@ -95,7 +190,7 @@ def calculate_single_hit_damage(attacker_class, weapon, defender_class, defender
         weapon,
         defender_class
     )
-    attacker_pow += calculate_wta(weapon, defender_weapon) 
+    attacker_pow += calculate_wta(weapon, defender_weapon, weapon_triangle_rules)
 
     damage = max(
         0,
@@ -113,7 +208,7 @@ def can_double(attacker_class, defender_class):
 
 
 def calculate_round(attacker_class, attacker_weapon,
-                    defender_class, defender_weapon):
+                    defender_class, defender_weapon, weapon_triangle_rules):
 
     # Damage for each direction
     attacker_hit_damage, attacker_defense_type = (
@@ -121,7 +216,8 @@ def calculate_round(attacker_class, attacker_weapon,
             attacker_class,
             attacker_weapon,
             defender_class,
-            defender_weapon
+            defender_weapon,
+            weapon_triangle_rules
         )
     )
 
@@ -130,7 +226,8 @@ def calculate_round(attacker_class, attacker_weapon,
             defender_class,
             defender_weapon,
             attacker_class,
-            defender_weapon
+            defender_weapon,
+            weapon_triangle_rules
         )
     )
 
@@ -181,13 +278,15 @@ def calculate_round(attacker_class, attacker_weapon,
 # ============================================================
 
 def print_matchup(class_a_name, class_a, weapon_a_name, weapon_a,
-                  class_b_name, class_b, weapon_b_name, weapon_b):
+                  class_b_name, class_b, weapon_b_name, weapon_b,
+                  weapon_triangle_rules):
 
     result = calculate_round(
         class_a,
         weapon_a,
         class_b,
-        weapon_b
+        weapon_b,
+        weapon_triangle_rules
     )
 
     # Remove CLASS_ from the names
@@ -221,39 +320,21 @@ def print_matchup(class_a_name, class_a, weapon_a_name, weapon_a,
 
 def main():
 
-    # Load JSON files
-    classes_data = load_json(
-        "../src/data/classes.json"
-    )
-
-    items_data = load_json(
-        "../src/data/items.json"
-    )
-
-    classes = classes_data["classes"]
-    items = items_data["items"]
-
-    # Build lookup dictionaries
-    class_lookup = {
-        entry["class"]: entry
-        for entry in classes
-    }
-
-    item_lookup = {
-        entry["item"]: entry
-        for entry in items
-    }
+    # Load data straight from the hand C tables the build actually links.
+    classes = load_classes()
+    items = load_items()
+    weapon_triangle_rules = load_weapon_triangle()
 
     # Validate all requested classes and weapons
     for class_name in CLASSES_TO_TEST:
 
-        if class_name not in class_lookup:
+        if class_name not in classes:
             print(f"ERROR: Class not found: {class_name}")
             return
 
         weapon_name = CLASS_WEAPONS[class_name]
 
-        if weapon_name not in item_lookup:
+        if weapon_name not in items:
             print(f"ERROR: Item not found: {weapon_name}")
             return
 
@@ -267,14 +348,16 @@ def main():
 
             print_matchup(
                 class_a_name,
-                class_lookup[class_a_name],
+                classes[class_a_name],
                 weapon_a_name,
-                item_lookup[weapon_a_name],
+                items[weapon_a_name],
 
                 class_b_name,
-                class_lookup[class_b_name],
+                classes[class_b_name],
                 weapon_b_name,
-                item_lookup[weapon_b_name]
+                items[weapon_b_name],
+
+                weapon_triangle_rules
             )
 
 

@@ -529,6 +529,34 @@
 #define FE8_CREDITS 0
 #endif
 
+/* Map BGM selection becomes seeded-random instead of vanilla's fixed
+ * per-chapter table lookup: GetBGMTrack() (src/bm.c, next to
+ * GetCurrentMapMusicIndex(), which it wraps and falls back to when this
+ * flag is off) picks a random song matching the current pick's vanilla
+ * music-player/priority pair (gSongTable[].ms/.me), deterministically from
+ * gPlaySt.playthroughIdentifier (an existing per-save byte -- no new save
+ * data) plus the current chapter/turn/phase. Uses a private, stateless hash
+ * chain, never NextRN()/gRNSeeds (the live combat RNG stream) and never the
+ * shared cosmetic-FX gLCGRNValue LCG, so map BGM selection can never
+ * perturb, or be perturbed by, combat rolls or weather/face/sparkle FX. See
+ * docs/random_bgm.md. */
+#ifndef FE8_RAND_BGM
+#define FE8_RAND_BGM 0
+#endif
+
+/* Entering a battle animation no longer swaps to a distinct battle theme --
+ * the current map BGM keeps playing through combat. In this codebase's own
+ * decompiled FE8 sources, ordinary combat does not already trigger a BGM
+ * swap (unlike the FE6/7-oriented source this was ported from); the one
+ * spot that COULD force a restart is src/bmmind.c's RestoreMapSongBgm(),
+ * which currently has no callers anywhere in src/. This flag makes that
+ * function an explicit no-op, so map BGM is guaranteed to keep playing
+ * through combat even if/when RestoreMapSongBgm() gains a caller. See
+ * docs/random_bgm.md. */
+#ifndef FE8_CONTINUE_BGM_BATTLE
+#define FE8_CONTINUE_BGM_BATTLE 0
+#endif
+
 /* Defence in depth: the same relationships expansion_config.py rejects at
  * configure time are hard compile errors here, so a hand-passed -D (or a
  * future include-only consumer) can never build a sample with no registry,
@@ -694,6 +722,14 @@
 
 #if (FE8_CREDITS != 0) && (FE8_CREDITS != 1)
 #error "FE8_CREDITS must be 0 or 1"
+#endif
+
+#if (FE8_RAND_BGM != 0) && (FE8_RAND_BGM != 1)
+#error "FE8_RAND_BGM must be 0 or 1"
+#endif
+
+#if (FE8_CONTINUE_BGM_BATTLE != 0) && (FE8_CONTINUE_BGM_BATTLE != 1)
+#error "FE8_CONTINUE_BGM_BATTLE must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

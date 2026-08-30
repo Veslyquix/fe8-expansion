@@ -111,6 +111,7 @@ and
 | [`generated_data.md`](generated_data.md) | Current, reference | Full generated-data design reference (issue #5) |
 | [`generated_data_tutorial.md`](generated_data_tutorial.md) | Current, tutorial | Contributor-facing generated-data walkthrough |
 | [`starter_features.md`](starter_features.md) | Current | Four opt-in flags, typed mechanics/content API, QoL and matrices (issue #6) |
+| [`random_bgm.md`](random_bgm.md) | Current | `RandBgm`/`ContinueBgmBattle` map-BGM flags: seeded selection, hook points, save-compat |
 | [`localization.md`](localization.md) | Current | Stable locale/message IDs, authoring, prefs/UI, budgets and matrices (issue #18) |
 | [`text_drawing_guide.md`](text_drawing_guide.md) | Current | `struct Text`/VRAM text-drawing schema: texts.txt → GetStringFromIndex → InitText → ... → PutText, plus number-glyph preallocation and multi-line strings |
 | [`game_localization_catalog.md`](game_localization_catalog.md) | Current | Full-game FE8U-indexed CJK catalog generation, runtime bounds, and synthetic link gate |

@@ -125,6 +125,8 @@ CONFIG_MK_FEATURE_KEYS = (
     "SELECT_VIEW_GROWTHS",
     "CUSTOM_CAMPAIGN",
     "SKIP_OPENING",
+    "RAND_BGM",
+    "CONTINUE_BGM_BATTLE",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -406,6 +408,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
                            nimap2=0,
+                           rand_bgm=0, continue_bgm_battle=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -449,6 +452,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     aw2_assets_flag = validate_feature_flag("AW2_ASSETS", aw2_assets)
     anims_fast_forward_flag = validate_feature_flag("ANIMS_FAST_FORWARD", anims_fast_forward)
     nimap2_flag = validate_feature_flag("NIMAP2", nimap2)
+    rand_bgm_flag = validate_feature_flag("RAND_BGM", rand_bgm)
+    continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -487,7 +492,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
-            anims_fast_forward_flag, nimap2_flag)
+            anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -724,6 +729,8 @@ class ExpansionIdentity:
     aw2_assets: int = 0
     anims_fast_forward: int = 0
     nimap2: int = 0
+    rand_bgm: int = 0
+    continue_bgm_battle: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -803,6 +810,8 @@ class ExpansionIdentity:
                 "aw2_assets": self.aw2_assets,
                 "anims_fast_forward": self.anims_fast_forward,
                 "nimap2": self.nimap2,
+                "rand_bgm": self.rand_bgm,
+                "continue_bgm_battle": self.continue_bgm_battle,
             },
         }
 
@@ -870,6 +879,8 @@ def load_identity(
     aw2_assets=None,
     anims_fast_forward=None,
     nimap2=None,
+    rand_bgm=None,
+    continue_bgm_battle=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -934,7 +945,7 @@ def load_identity(
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
-     resolved_nimap2) = validate_feature_flags(
+     resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1040,6 +1051,12 @@ def load_identity(
         nimap2
         if nimap2 not in (None, "")
         else cfg.get("NIMAP2", "0"),
+        rand_bgm
+        if rand_bgm not in (None, "")
+        else cfg.get("RAND_BGM", "0"),
+        continue_bgm_battle
+        if continue_bgm_battle not in (None, "")
+        else cfg.get("CONTINUE_BGM_BATTLE", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1104,6 +1121,8 @@ def load_identity(
         aw2_assets=resolved_aw2_assets,
         anims_fast_forward=resolved_anims_fast_forward,
         nimap2=resolved_nimap2,
+        rand_bgm=resolved_rand_bgm,
+        continue_bgm_battle=resolved_continue_bgm_battle,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1337,6 +1356,16 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override NIMAP2 (0 or 1)",
     )
     parser.add_argument(
+        "--rand-bgm",
+        default=None,
+        help="override RAND_BGM (0 or 1)",
+    )
+    parser.add_argument(
+        "--continue-bgm-battle",
+        default=None,
+        help="override CONTINUE_BGM_BATTLE (0 or 1)",
+    )
+    parser.add_argument(
         "--fort-units-start-greyed-out",
         default=None,
         help="override FORT_UNITS_START_GREYED_OUT (0 or 1)",
@@ -1467,6 +1496,8 @@ def main(argv=None) -> int:
             aw2_assets=args.aw2_assets,
             anims_fast_forward=args.anims_fast_forward,
             nimap2=args.nimap2,
+            rand_bgm=args.rand_bgm,
+            continue_bgm_battle=args.continue_bgm_battle,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

@@ -87,6 +87,7 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `TEXT_CHAPTER_NAMES` | circleseverywhere, hypergammaspaces |
 | `ANIMS_FAST_FORWARD` | Vesly |
 | `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
+| `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
 
 
 

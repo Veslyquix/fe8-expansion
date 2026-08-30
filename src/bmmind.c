@@ -758,7 +758,16 @@ void BATTLE_HandleCombatDeaths(struct CombatActionProc* proc) {
 
 //! FE8U = 0x080328B0
 void RestoreMapSongBgm(void) {
-    int bgmIdx = GetCurrentMapMusicIndex();
+#if FE8_CONTINUE_BGM_BATTLE
+    /* ContinueBgmBattle: never force a BGM restart here. This function has
+     * no callers anywhere in this codebase's decompiled src/ as of this
+     * writing (see docs/random_bgm.md for what was checked), so this is
+     * currently a defensive no-op rather than an observable behavior
+     * change -- it guarantees map BGM keeps playing through combat even if
+     * this function later gains a caller. */
+    return;
+#else
+    int bgmIdx = GetBGMTrack();
     int curBgm = GetCurrentBgmSong();
 
 #if FE8_VESLY_DEBUGGER
@@ -771,6 +780,7 @@ void RestoreMapSongBgm(void) {
     }
 
     return;
+#endif
 }
 
 //! FE8U = 0x080328D0
