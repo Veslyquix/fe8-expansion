@@ -997,8 +997,8 @@ bool8 CanUnitTradeOrSupply(struct Unit* unit) {
         return FALSE;
 
 #if FE8_PURCHASE_GENERICS
-    if (unit->pCharacterData->number == CHARACTER_CITIZEN)
-        return FALSE;
+    // if (unit->pCharacterData->number == CHARACTER_CITIZEN)
+        // return FALSE;
 #endif
 
     return TRUE;

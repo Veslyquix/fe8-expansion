@@ -266,6 +266,14 @@ void Make6C_PromotionMenuSelect(struct ProcPromoSel* proc) {
         if (unit->pCharacterData->number !=  proc->pid)
             continue;
 
+#if FE8_PURCHASE_GENERICS
+        /* Multiple generic units can share a char ID (see PURCHASE_GENERICS),
+         * so a char-ID match alone isn't enough to pick the right one --
+         * skip until this is the exact unit the promotion was started for. */
+        if (parent->unit && unit != parent->unit)
+            continue;
+#endif
+
         pid = unit->pClassData->number;
         weapon = GetUnitEquippedWeapon(unit);
 
@@ -403,7 +411,14 @@ void LoadBattleSpritesForBranchScreen(struct ProcPromoSel *proc) {
             _pid = proc->pid - 1;
             _jid = proc->jid[proc->main_select];
             chara_pal = -1;
+#if FE8_PURCHASE_GENERICS
+            {
+                struct ProcPromoMain *parent = proc->proc_parent;
+                unit = parent->unit ? parent->unit : GetUnitFromCharId(proc->pid);
+            }
+#else
             unit = GetUnitFromCharId(proc->pid);
+#endif
             copied_unit = *unit;
             copied_unit.pClassData = GetClassData(proc->jid[proc->main_select]);
             battle_anim_ptr = copied_unit.pClassData->pBattleAnimDef;

@@ -30,7 +30,11 @@ u8 ClassChgMenuItem_OnSelect(struct MenuProc *pmenu, struct MenuItemProc *pmitem
     gparent = parent->proc_parent;
     ggparent = gparent->proc_parent;
     if (gparent->stat == 0) {
+#if FE8_PURCHASE_GENERICS
+        struct Unit *unit = ggparent->unit ? ggparent->unit : GetUnitFromCharId(ggparent->pid);
+#else
         struct Unit *unit = GetUnitFromCharId(ggparent->pid);
+#endif
         u8 classnumber = unit->pClassData->number;
         if (pmitem->itemNumber <= 1) {
             classnumber = gPromoJidLut[classnumber][pmitem->itemNumber];
