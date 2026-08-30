@@ -223,14 +223,14 @@ CREDITS ?= 0
 # chapter/turn/phase (not the live combat RNG, so this never perturbs, or is
 # perturbed by, actual combat rolls). Off by default: vanilla-equivalent
 # unless explicitly enabled. See docs/random_bgm.md.
-RAND_BGM ?= 0
+RAND_BGM ?= 1
 
 # --- Optional ContinueBgmBattle ------------------------------------------------
 # Entering a battle animation keeps the current map BGM playing instead of
 # swapping to a distinct battle theme. See docs/random_bgm.md for what this
 # does (and does not) change in this codebase, since vanilla FE8's own combat
 # does not swap BGM in the first place.
-CONTINUE_BGM_BATTLE ?= 0
+CONTINUE_BGM_BATTLE ?= 1
 
 
 
@@ -395,7 +395,8 @@ AW2_ASSETS ?= 1
 # whatever the current battle animation setting would have shown (full anims
 # force off, off/map-anims forces full) for just that fight. See
 # src/anims_fast_forward.c.
-ANIMS_FAST_FORWARD ?= 1
+## speedup 
+ANIMS_FAST_FORWARD ?= 1 
 
 # --- Optional custom BGM (NIMAP2) -------------------------------------------
 # Swaps in the community "native instrument map, revision 2" so custom music

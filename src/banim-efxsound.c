@@ -880,6 +880,10 @@ int EfxCheckStaffType(int weapon)
 
 void EkrPlayMainBGM(void)
 {
+#if FE8_CONTINUE_BGM_BATTLE
+    gEkrMainBgmPlaying = 0;
+    return;
+#else
     int ret, songid, songid2, pid, staff_type;
     struct BattleUnit * bu, * bul, * bur, ** pbul, ** pbur;
 
@@ -1011,10 +1015,21 @@ void EkrPlayMainBGM(void)
         return;
     }
     gEkrMainBgmPlaying = false;
+#endif
 }
 
 void EkrRestoreBGM(void)
 {
+#if FE8_CONTINUE_BGM_BATTLE
+    /* EkrPlayMainBGM() never overrode anything (see there), so there is
+     * nothing to restore or persist here -- leave gSoundSt untouched. Not
+     * just an early return for symmetry: MakeBgmOverridePersist() below
+     * would zero gSoundSt.songId from gSoundSt.unk2, which OverrideBgm()
+     * never set on this path, making a later "is the right song playing?"
+     * check see a false mismatch and restart the still-correctly-playing
+     * map BGM. */
+    return;
+#else
     if (CheckBanimHensei() == true || gBmSt.gameStateBits & BM_FLAG_5 || gEkrMainBgmPlaying == false)
     {
         MakeBgmOverridePersist();
@@ -1022,6 +1037,7 @@ void EkrRestoreBGM(void)
     }
 
     RestoreBgm();
+#endif
 }
 
 CONST_DATA int gBanimBossBGMs[32 * 2] = {
