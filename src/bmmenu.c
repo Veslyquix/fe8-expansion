@@ -9,6 +9,7 @@
 #include "playerphase.h"
 #include "player_interface.h"
 #include "uichapterstatus.h"
+#include "uichapterstatus_generics.h"
 #include "uiselecttarget.h"
 #include "bmunit.h"
 #include "bmtarget.h"
@@ -148,9 +149,13 @@ u8 MapMenu_IsStatusCommandAvailable(void) {
 }
 
 u8 MapMenu_StatusCommand(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+#if FE8_PURCHASE_GENERICS
+    return FactionStatus_MenuCommand(menu, menuItem);
+#else
     StartChapterStatusScreen(NULL);
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+#endif
 }
 
 u8 MapMenu_IsGuideCommandAvailable(const struct MenuItemDef* def, int number) {

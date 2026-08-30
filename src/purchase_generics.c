@@ -1541,6 +1541,45 @@ static void GrantIncomeForFaction(int factionId)
     }
 }
 
+/* Read-only counterpart to GrantIncomeForFaction above, for display
+ * purposes (e.g. the faction status screen) -- computes the same
+ * per-turn income total a turn transition would grant factionId from its
+ * currently-owned TRAP_PURCHASE_BASE traps, but returns the sum instead
+ * of applying it via AddFactionChapterGoldAmount. Keep this in sync with
+ * GrantIncomeForFaction's per-trap logic if that ever changes. */
+int GetFactionIncomePreview(int factionId)
+{
+    int i;
+    int total = 0;
+
+    for (i = 0; i < TRAP_MAX_COUNT; ++i)
+    {
+        struct Trap* trap = GetTrap(i);
+        int kind;
+
+        if (trap->type == TRAP_NONE)
+            break;
+
+        if (trap->type != TRAP_PURCHASE_BASE)
+            continue;
+
+        if (GetPurchaseBaseTrapOwner(trap) != factionId)
+            continue;
+
+        kind = trap->data[TRAP_EXTDATA_PURCHASE_BASE_KIND];
+
+        if (kind == PURCHASE_BASE_KIND_CAMP || kind == PURCHASE_BASE_KIND_TENT)
+        {
+            total += CAMP_TENT_GOLD_PER_TURN;
+            continue;
+        }
+
+        total += PURCHASE_BASE_GOLD_UNIT * GetPurchaseBaseTrapGoldPerTurn(trap);
+    }
+
+    return total;
+}
+
 static const struct PurchaseGenericDefinition* GetAiPriorityPurchase(int factionId)
 {
     if (CountFactionUnitsByClass(factionId, CLASS_SOLDIER) < 3)

@@ -753,7 +753,10 @@ void ClearUnitMapUiStatus(struct PlayerInterfaceProc * proc, u16 * buffer, struc
 //! FE8U = 0x0808C388
 void PutUnitMapUiStatus(u16 * buffer, struct Unit * unit)
 {
-    int offset;
+    /* UNIT_STATUS_12 has no dedicated status-icon offset (falls straight
+     * through to the CpuFastCopy below) -- default to POISON's offset (0)
+     * rather than leaving this uninitialized. */
+    int offset = 0;
 
     int tileIdx = TILEREF(0x16F, 0);
 
@@ -1734,8 +1737,10 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
 
 #if FE8_AW2_ASSETS
     DrawAw2CoMini(gUiTmScratchB + TILEMAP_INDEX(22, 11));
+#if FE8_PURCHASE_GENERICS
     PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_BLUE,
         GetFactionChapterGoldAmount(gPlaySt.faction >> 6));
+#endif
     return;
 #endif
 

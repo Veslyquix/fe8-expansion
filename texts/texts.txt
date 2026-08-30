@@ -40436,3 +40436,24 @@ Promote[.][X]
 
 ## MSG_EXPANSION_THREAT_RANGE
  Threat Range[.][X]
+
+## MSG_FACSTAT_TURN
+Turn[X]
+
+## MSG_FACSTAT_UNITS
+Units[.][X]
+
+## MSG_FACSTAT_LOST
+Lost[X]
+
+## MSG_FACSTAT_BASES
+Bases[.][X]
+
+## MSG_FACSTAT_INCOME
+Income[X]
+
+## MSG_FACSTAT_FUNDS
+Funds[.][X]
+
+## MSG_FACSTAT_NEUTRAL_BASES
+Neutral Bases[.][X]

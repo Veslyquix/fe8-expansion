@@ -24,17 +24,7 @@ int Mod(int a, int b) PUREFUNC;
 #define _u46 ai_counter
 #define actorCount_maybe actorCount
 #define u62 mapAnimKind
-/* NOTE: no `#define GetBGMTrack ...` here (deliberately removed) -- a real
- * GetBGMTrack(void) now lives in src/bm.c (see include/bm.h), and this
- * file's own extern declaration/calls below should resolve to it directly
- * so this dead debugger scaffolding composes correctly with RandBgm if it
- * is ever revived, instead of silently bypassing it. */
-#define EventCallGameOverExt Debugger_EventCallGameOverExt
-#define GameControl_CallEraseSaveEventWithKeyCombo Debugger_GameControl_CallEraseSaveEventWithKeyCombo
-#define PhaseIntroInitText Debugger_PhaseIntroInitText
 #define StartMapSongBgm Debugger_StartMapSongBgm
-#define ComputeBattleUnitEffectiveStats Debugger_ComputeBattleUnitEffectiveStats
-#define BmMain_StartPhase Debugger_BmMain_StartPhase
 static inline void sub_802C334(void) {}
 static inline void DeleteBattleAnimInfoThing(void) {}
 #endif
@@ -239,12 +229,6 @@ int VeslyDebugger_TryApplyBootMode(ProcPtr aproc)
     }
 }
 
-static void EventCallGameOverExt(ProcPtr proc)
-{
-    Proc_StartBlocking(ProcScr_BmGameOver, proc);
-    SetBootType(4); // title screen after game over
-}
-
 void sub_8009C5C_edit(struct GameCtrlProc * proc)
 {
     // if (proc->nextAction == GAME_ACTION_5)
@@ -262,66 +246,9 @@ void sub_8009C5C_edit(struct GameCtrlProc * proc)
     ReadGameSave(ReadLastGameSaveId()); // added
 }
 
-#define LGAMECTRL_EXEC_BM_EXT 6 // Directly goto bmmap
-
 // StartupDebugMenu_WorldMapEffect
 // StartupDebugMenu_ChapterSelectEffect
 
-static void GameControl_CallEraseSaveEventWithKeyCombo(ProcPtr aproc)
-{
-    struct GameCtrlProc * proc = (void *)aproc;
-    if (gKeyStatusPtr->heldKeys == (L_BUTTON | DPAD_RIGHT | SELECT_BUTTON))
-    {
-        Proc_Goto(proc, LGAMECTRL_ERASE_SAVE);
-    }
-    else
-    {
-        int var = GetBootType();
-        switch (var)
-        {
-            case 1:
-            {
-                // GmDataInit();
-                proc->unk_2E = 20;
-                sub_8009C5C_edit(proc);
-                Proc_Goto(proc, LGAMECTRL_EXEC_BM);
-                break;
-            }
-            // case 2:
-            // {
-            // // GmDataInit();
-            // proc->unk_2E = 20;
-            // sub_8009C5C_edit(proc);
-            // Proc_Goto(proc, LGAMECTRL_EXEC_BM_EXT);
-            // break;
-            // } // Directly goto bmmap / skirmish
-            case 2:
-            {
-                if (IsValidSuspendSave(SAVE_ID_SUSPEND))
-                {
-                    ReadSuspendSave(3);
-                    // SetNextGameActionId(GAME_ACTION_4);
-                    Proc_Goto(proc, 8);
-                    break;
-                }
-            } // Resume ch
-            case 3:
-            {
-                if (IsValidSuspendSave(SAVE_ID_SUSPEND))
-                {
-                    ReadSuspendSave(3);
-                    // SetNextGameActionId(GAME_ACTION_4);
-                    Proc_Goto(proc, 8);
-                    break;
-                }
-            } // Resume ch once
-            default:
-        }
-    }
-
-    // 8 = resume
-    //
-}
 void BackPressSFX(void)
 {
     int id;
@@ -3958,36 +3885,6 @@ void sub_80328B0(void)
 
     return;
 }
-struct PhaseIntroSubProc
-{
-    PROC_HEADER;
-    /* 29 */ u8 _pad_29[0x4C - 0x29];
-    /* 4C */ s16 timer;
-    /* 4E */ s16 stat_index;
-};
-static void PhaseIntroInitText(struct PhaseIntroSubProc * proc)
-{
-    int override = GetDebuggerBgmOverride();
-    int bgmIdx = GetBGMTrack();
-    int curBgm = GetCurrentBgmSong();
-    if ((curBgm != bgmIdx) && (override != curBgm))
-    {                        // 80034DC, 8002F68
-        Sound_FadeOutBGM(4); // 80035EC, 8003064
-    }
-
-#ifdef FE8
-    PlaySoundEffect(0x73); // 803DD98, 8036D08
-#endif
-#ifdef FE7
-    PlaySoundEffect(0x393); // 803DD98, 8036D08
-#endif
-#ifdef FE6
-    PlaySoundEffect(0x73); // 73 as well apparently
-#endif
-
-    proc->timer = 15;
-}
-
 static void StartMapSongBgm(void)
 {
     int override = GetDebuggerBgmOverride();
@@ -6154,50 +6051,7 @@ u8 PageIncrementNow(struct MenuProc * menu, struct MenuItemProc * menuItem)
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
 
-static void ComputeBattleUnitEffectiveStats(struct BattleUnit * attacker, struct BattleUnit * defender)
-{
-    ComputeBattleUnitEffectiveHitRate(attacker, defender);
-    ComputeBattleUnitEffectiveCritRate(attacker, defender);
-    ComputeBattleUnitSilencerRate(attacker, defender);
-    ComputeBattleUnitSpecialWeaponStats(attacker, defender);
-    DebuggerProc * proc;
-    proc = Proc_Find(DebuggerProcCmdIdler);
-    if (!proc)
-    {
-        return;
-    }
 #define MaxStat 99
-    if (proc->godMode)
-    {
-        struct BattleUnit * bunitA = attacker;
-        struct BattleUnit * bunitB = defender;
-        if (UNIT_FACTION(&attacker->unit) == FACTION_RED)
-        {
-            bunitA = defender;
-            bunitB = attacker;
-        }
-        bunitA->battleAttack = bunitB->unit.maxHP;
-        bunitA->battleDefense = MaxStat;
-        bunitA->battleSpeed = MaxStat;
-        bunitA->battleHitRate = MaxStat * 2;
-        bunitA->battleAvoidRate = MaxStat;
-        bunitA->battleEffectiveHitRate = 100;
-        bunitA->battleCritRate = MaxStat * 2;
-        bunitA->battleDodgeRate = 100;
-        bunitA->battleEffectiveCritRate = 100;
-
-        bunitB->hpInitial = 1;
-        bunitB->battleAttack = 0;
-        bunitB->battleDefense = 0;
-        bunitB->battleSpeed = 0;
-        bunitB->battleHitRate = 0;
-        bunitB->battleAvoidRate = 0;
-        bunitB->battleEffectiveHitRate = 0;
-        bunitB->battleCritRate = 0;
-        bunitB->battleDodgeRate = 0;
-        bunitB->battleEffectiveCritRate = 0;
-    }
-}
 
 void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit * defender)
 {
@@ -6927,41 +6781,6 @@ void InitProc(DebuggerProc * proc)
     }
 }
 
-//! FE8U = 0x08015450
-static void BmMain_StartPhase(ProcPtr proc)
-{
-    int phaseControl = gPlaySt.faction;
-    if (gPlaySt.faction == FACTION_RED)
-    {
-        if (gPlaySt.config.debugControlRed)
-        {
-            phaseControl = FACTION_BLUE;
-        }
-    }
-    if (gPlaySt.faction == FACTION_GREEN)
-    {
-        if (gPlaySt.config.debugControlGreen)
-        {
-            phaseControl = FACTION_BLUE;
-        }
-    }
-    switch (phaseControl)
-    {
-        case FACTION_BLUE:
-            Proc_StartBlocking(gProcScr_PlayerPhase, proc);
-            break;
-
-        case FACTION_RED:
-            Proc_StartBlocking(gProcScr_CpPhase, proc);
-            break;
-
-        case FACTION_GREEN:
-            Proc_StartBlocking(gProcScr_CpPhase, proc);
-            break;
-    }
-
-    Proc_Break(proc);
-}
 void DebuggerStartNameFace(DebuggerProc * proc);
 void RestartDebuggerMenu(DebuggerProc * proc)
 {
