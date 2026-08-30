@@ -382,8 +382,25 @@ void TradeMenu_InitItemDisplay(struct TradeMenuProc * proc)
     TradeMenu_RefreshItemText(proc);
 
     // TODO: face display type (arg 5) constants
+#if FE8_PURCHASE_GENERICS
+    /* FACE_DISP_BIT_12: skip the blink/mouth sub-procs for both trade
+     * faces. Not just cosmetic -- slot 1's VRAM address is remapped tight
+     * against the end of VRAM by ExtendWeaponDescBox.c's
+     * sTradeMenuGfxData, with only enough room for a portrait's own base
+     * pose, not the trailing blink-frame tiles FaceBlink_PutEyeSprite
+     * reads at oam2+24/+88 within that same decompressed image. Without a
+     * blink proc requesting those tiles, Face_OnInit can safely truncate
+     * the decompression to what fits (see its FACE_DISP_BIT_12 branch)
+     * instead of silently dropping the whole face when the full portrait
+     * doesn't fit, which is why the real character's face went missing
+     * whenever a generic (whose class-card face always fits) was traded
+     * in first. */
+    StartFace(0, GetUnitPortraitId(proc->units[0]), 64,  -4, 3 | FACE_DISP_BIT_12);
+    StartFace(1, GetUnitPortraitId(proc->units[1]), 176, -4, 2 | FACE_DISP_BIT_12);
+#else
     StartFace(0, GetUnitPortraitId(proc->units[0]), 64,  -4, 3);
     StartFace(1, GetUnitPortraitId(proc->units[1]), 176, -4, 2);
+#endif
 
     SetFaceBlinkControlById(0, 5);
     SetFaceBlinkControlById(1, 5);

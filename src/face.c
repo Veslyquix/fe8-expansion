@@ -411,17 +411,56 @@ int FindFreeFaceSlot(void) {
     return -1;
 }
 
+#if FE8_PURCHASE_GENERICS
+/* Decompresses `src` into gGenericBuffer, then copies only the first
+ * `keepSize` bytes on to `dest` -- for a slot whose VRAM address doesn't
+ * have room for the full asset. Used by Face_OnInit's FACE_DISP_BIT_12
+ * branch: a portrait's `img` includes trailing blink-frame tiles
+ * (FaceBlink_PutEyeSprite reads them at oam2+24/+88 within this same
+ * decompressed image), so an undersized slot can still safely show the
+ * base pose by dropping just the tail, as long as no blink proc is
+ * requesting those later tiles. Silently does nothing if `src`'s declared
+ * size doesn't fit gGenericBuffer, matching DecompressViaGenericBuf's own
+ * guard -- this is a scratch stage, not a resize of the real asset. */
+static void FaceDecompressTruncated(const void* src, void* dest, u32 keepSize) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidDecompressionData(src) || (u32)GetDataSize(src) > sizeof(gGenericBuffer))
+        return;
+#endif
+
+    if (keepSize > sizeof(gGenericBuffer))
+        keepSize = sizeof(gGenericBuffer);
+
+    keepSize &= ~3;
+
+    Decompress(src, gGenericBuffer);
+    CpuFastCopy(gGenericBuffer, dest, keepSize);
+}
+#endif
+
 //! FE8U = 0x08005594
 void Face_OnInit(struct FaceProc* proc) {
+    void* dest = (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000);
+
 #if FE8_PURCHASE_GENERICS
     if (FaceUsesClassCard(proc)) {
-        CpuFastFill(0, (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000), FACE_VRAM_SLOT_SIZE);
-        Decompress(proc->pFaceInfo->imgCard, (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000));
+        CpuFastFill(0, dest, FACE_VRAM_SLOT_SIZE);
+        Decompress(proc->pFaceInfo->imgCard, dest);
         return;
+    }
+
+    if (GetFaceDisplayBits(proc) & FACE_DISP_BIT_12) {
+        u32 room = (VRAM + VRAM_SIZE) - (u32)dest;
+        u32 fullSize = GetDataSize(proc->pFaceInfo->img);
+
+        if (fullSize > room) {
+            FaceDecompressTruncated(proc->pFaceInfo->img, dest, room);
+            return;
+        }
     }
 #endif
 
-    Decompress(proc->pFaceInfo->img, (void *)(sFaceConfig[proc->faceSlot].tileOffset + 0x06010000));
+    Decompress(proc->pFaceInfo->img, dest);
     return;
 }
 
@@ -1377,6 +1416,18 @@ void FaceBlink_WinkLoop(struct FaceBlinkProc* proc) {
 void SetFaceBlinkControl(struct FaceProc* proc, int blinkControl) {
     struct FaceBlinkProc* blinkProc;
 
+#if FE8_PURCHASE_GENERICS
+    /* Class-card faces (see FaceUsesClassCard) never get a blink proc --
+     * StartFace leaves pBlinkProc NULL for them, matching how it already
+     * skips one for FACE_DISP_BIT_12. Blind callers like
+     * TradeMenu_InitItemDisplay call this for every face slot regardless
+     * of what's in it, so this must no-op instead of writing through a
+     * NULL pBlinkProc. */
+    if (proc->pBlinkProc == NULL) {
+        return;
+    }
+#endif
+
     if (blinkControl == 0) {
         blinkControl = proc->pFaceInfo->blinkKind;
     }
@@ -1521,6 +1572,12 @@ void FaceChange_LoadGfx(struct UnkFaceProc* proc) {
 
     proc->pFaceInfo = GetPortraitData(proc->faceId);
 
+#if FE8_PURCHASE_GENERICS
+    if (proc->pFaceInfo->img == NULL && proc->pFaceInfo->imgCard != NULL) {
+        CpuFastFill(0, (void *)(sFaceConfig[proc->pFaceProc->faceSlot].tileOffset + 0x06010000), FACE_VRAM_SLOT_SIZE);
+        Decompress(proc->pFaceInfo->imgCard, (void *)(sFaceConfig[proc->pFaceProc->faceSlot].tileOffset + 0x06010000));
+    } else
+#endif
     Decompress(proc->pFaceInfo->img, (void*)(sFaceConfig[proc->pFaceProc->faceSlot].tileOffset + 0x06010000));
 
     ApplyPalette(proc->pFaceInfo->pal, sFaceConfig[proc->pFaceProc->faceSlot].paletteId + 0x10);
