@@ -59,6 +59,8 @@ struct CoPowersProc
 #endif
 };
 
+static void CoPowers_LockIfPlayerPhase(struct CoPowersProc* proc);
+static void CoPowers_UnlockIfPlayerPhase(struct CoPowersProc* proc);
 static void CoPowers_Init(struct CoPowersProc* proc);
 static void CoPowers_Step(struct CoPowersProc* proc);
 static void CoPowers_Anim(struct CoPowersProc* proc);
@@ -74,20 +76,29 @@ static void CoPowerBanner_Cleanup(struct CoPowersProc* proc);
 
 CONST_DATA struct ProcCmd gProcScr_CoPowers[] = {
     PROC_NAME("COPOWERS"),
-    PROC_YIELD, 
-    PROC_CALL(LockGame),
+    /* Proc_Start/Proc_StartBlocking run the script synchronously up to its
+     * first blocking command before returning, so this leading sleep has
+     * to come before ANYTHING that reads a caller-set field -- both
+     * proc->faction (CoPowers_Init, and now CoPowers_LockIfPlayerPhase
+     * below) and, transitively, proc->isSuper -- since neither
+     * CoPowersMenuCommandCommon nor CoPowers_OnAiPhaseStart get a chance
+     * to set them on the pointer Proc_Start/Proc_StartBlocking hands back
+     * until AFTER that call returns. Same hazard gProcScr_CoCommanderFade's
+     * leading PROC_SLEEP(0) guards against. */
+    PROC_SLEEP(0),
+    /* LockGame skips PROC_TREE_2 entirely for as long as it's held (see
+     * src/bm.c) -- correct here for the player's own menu command, which
+     * CoPowersMenuCommandCommon starts on its own PROC_TREE_3 (freezing
+     * the map/cursor under it is exactly the point). But gProc_BMapMain
+     * (the whole map main loop, AI phase included) is itself rooted on
+     * PROC_TREE_2 -- CoPowers_OnAiPhaseStart starts this proc as a CHILD
+     * of an AI-phase proc that's already running ON tree 2, so calling
+     * LockGame there stops this proc's own tree from ever being ticked
+     * again, permanently deadlocking it one frame in. There's no player
+     * cursor to protect during an AI turn anyway, so only lock when
+     * faction is FACTION_BLUE -- see CoPowers_LockIfPlayerPhase below. */
+    PROC_CALL(CoPowers_LockIfPlayerPhase),
     PROC_CALL(EndPlayerPhaseSideWindows),
-    /* Proc_Start runs a script synchronously up to its first blocking
-     * command before returning, so without this sleep, CoPowers_Init would
-     * read proc->faction (to seed proc->unitIndex, see CoPowers_Init/_Step)
-     * before the caller -- CoPowersMenuCommandCommon or
-     * CoPowers_OnAiPhaseStart -- gets a chance to set it on the pointer
-     * Proc_Start hands back. proc->isSuper doesn't strictly need this (only
-     * CoPowers_Anim reads it, safely after the first real yield point,
-     * PROC_WHILE_EXISTS below), but faction does -- same hazard
-     * gProcScr_CoCommanderFade's leading PROC_SLEEP(0) guards against
-     * (there, the very first PROC_CALL reads a caller-set field too). */
-    PROC_SLEEP(1),
 #if FE8_AW2_ASSETS
     /* POWER/SUPER banner, styled after the phase-change intro (see
      * src/phasechangefx.c) -- CoPowerBanner_Init reads proc->isSuper
@@ -112,9 +123,24 @@ PROC_LABEL(0),
 PROC_LABEL(99),
     PROC_CALL(CoPowers_ReturnCamera),
     PROC_WHILE_EXISTS(ProcScr_CamMove),
-    PROC_CALL(UnlockGame),
+    PROC_CALL(CoPowers_UnlockIfPlayerPhase),
     PROC_END,
 };
+
+/* See the leading-comment block on gProcScr_CoPowers above: only lock for
+ * the player's own menu command (always FACTION_BLUE, and started on its
+ * own PROC_TREE_3) -- locking during an AI faction's turn would freeze
+ * PROC_TREE_2, which this proc itself is running on there, deadlocking it. */
+static void CoPowers_LockIfPlayerPhase(struct CoPowersProc* proc)
+{
+    if (proc->faction == FACTION_BLUE)
+        LockGame();
+}
+static void CoPowers_UnlockIfPlayerPhase(struct CoPowersProc* proc)
+{
+    if (proc->faction == FACTION_BLUE)
+        UnlockGame();
+}
 
 static void CoPowers_Init(struct CoPowersProc* proc)
 {
@@ -167,7 +193,6 @@ static void CoPowerBanner_Init(struct CoPowersProc* proc)
 
 static void CoPowerBanner_Loop(struct CoPowersProc* proc)
 {
-    brk;
     SetBlendConfig(1, gBmSt.altBlendBCa, gBmSt.altBlendBCb, 0);
 
     DrawAw2PowerBannerSprite(proc->isSuper);

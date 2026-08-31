@@ -22,7 +22,7 @@ static void AiPhaseInit(struct Proc* proc);
 static void AiPhaseBerserkInit(struct Proc* proc);
 static void AiPhaseCleanup(struct Proc* proc);
 #if FE8_CO_POWERS
-static void AiPhaseCoPowersHook(struct Proc* proc);
+static int AiPhaseCoPowersHook(struct Proc* proc);
 #endif
 static void AiOrderStart(struct Proc* proc);
 #if FE8_AW2_ASSETS
@@ -48,7 +48,7 @@ struct ProcCmd gProcScr_CpPhase[] =
      * would run concurrently as siblings instead of one after the other,
      * which is why this needs its own step rather than sharing
      * AiPhaseInit's. */
-    PROC_CALL(AiPhaseCoPowersHook),
+    PROC_CALL_2(AiPhaseCoPowersHook),
 #endif
     PROC_CALL(AiOrderStart),
     PROC_YIELD,
@@ -102,9 +102,9 @@ static void AiPhaseInit(struct Proc* proc)
 }
 
 #if FE8_CO_POWERS
-static void AiPhaseCoPowersHook(struct Proc* proc)
+static int AiPhaseCoPowersHook(struct Proc* proc)
 {
-    CoPowers_OnAiPhaseStart(proc);
+    return CoPowers_OnAiPhaseStart(proc);
 }
 #endif
 
