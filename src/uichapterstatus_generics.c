@@ -82,6 +82,20 @@ enum
     FACSTAT_ICON_CHR_GREEN  = 0x7E,
     FACSTAT_ICON_CHR_PURPLE = 0x7F,
 
+    /* The icon is shifted up 2px from its tile-aligned position: each
+     * FACSTAT_ICON_CHR_* tile keeps only its top 6 rows filled (the
+     * bottom 2 are cleared), and a second tile placed directly above it
+     * on the tilemap carries the spilled-over bottom 2 rows in ITS
+     * bottom 2 rows (its own top 6 are cleared). Stacked on screen, the
+     * two tiles' filled rows line up into one 8px-tall square sitting
+     * 2px higher than a plain single-tile icon would. Tiles 0x78-0x7B
+     * sit directly below the main icon tiles, still clear of both the
+     * font glyph range and the UI frame's own (much smaller) tile set. */
+    FACSTAT_ICON_TOP_CHR_BLUE   = 0x78,
+    FACSTAT_ICON_TOP_CHR_RED    = 0x79,
+    FACSTAT_ICON_TOP_CHR_GREEN  = 0x7A,
+    FACSTAT_ICON_TOP_CHR_PURPLE = 0x7B,
+
     /* Single BG palette bank for all 4 faction icon tiles -- each tile is
      * filled with a different color INDEX (1-4) into this one bank,
      * rather than 4 separate one-color-each banks. UI frame uses banks
@@ -225,8 +239,13 @@ static void PutTitleText(u16* dest, int width, int color, const char* str)
     PutText(text, dest);
 }
 
+/* Draws both halves of the 2px-shifted-up icon: the spilled-over top
+ * tile (FACSTAT_ICON_TOP_CHR_*, chr - 4) one tilemap row above row, and
+ * the main tile (chr) at row itself -- see the FACSTAT_ICON_TOP_CHR_*
+ * comment for how the two combine into one shifted 8x8 square. */
 static void FactionStatus_DrawIcon(int row, int chr)
 {
+    gBG0TilemapBuffer[TILEMAP_INDEX(FACSTAT_ICON_X, row - 1)] = TILEREF(chr - 4, FACSTAT_PAL_ICONS);
     gBG0TilemapBuffer[TILEMAP_INDEX(FACSTAT_ICON_X, row)] = TILEREF(chr, FACSTAT_PAL_ICONS);
 }
 
@@ -362,11 +381,35 @@ static void FactionStatus_Setup(ProcPtr proc)
     // Four solid-color icon tiles, one per faction, each tile filled with
     // its own color index (see FACSTAT_ICON_IDX_* / Pal_FacStatIcons) --
     // all 4 nibbles of each fill word are the same index, since a 4bpp
-    // tile packs 2 pixels/byte.
-    CpuFastFill(FACSTAT_ICON_IDX_BLUE   * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_BLUE),   CHR_SIZE);
-    CpuFastFill(FACSTAT_ICON_IDX_RED    * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_RED),    CHR_SIZE);
-    CpuFastFill(FACSTAT_ICON_IDX_GREEN  * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_GREEN),  CHR_SIZE);
-    CpuFastFill(FACSTAT_ICON_IDX_PURPLE * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_PURPLE), CHR_SIZE);
+    // tile packs 2 pixels/byte. Each tile is a 4bpp 8x8 tile: CHR_SIZE
+    // (0x20) bytes total, 4 bytes (one u32 fill) per row -- the top 6
+    // rows are the first 0x18 bytes, the bottom 2 rows the last 8. See
+    // the FACSTAT_ICON_TOP_CHR_* comment above for why the fill is split
+    // this way instead of one fill per tile. CpuFill32 (not CpuFastFill)
+    // here: CpuFastSet always transfers in fixed 8-word blocks, and
+    // neither 0x18 nor 8 bytes (6 and 2 words) is a multiple of that --
+    // CpuFill32 has no such alignment requirement.
+#define FACSTAT_ICON_TOP_ROWS_SIZE 0x14
+#define FACSTAT_ICON_BOTTOM_ROWS_SIZE (CHR_SIZE - FACSTAT_ICON_TOP_ROWS_SIZE)
+    CpuFill32(FACSTAT_ICON_IDX_BLUE   * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_BLUE),   FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(0,                                    BG_CHR_ADDR(FACSTAT_ICON_CHR_BLUE)   + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_RED    * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_RED),    FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(0,                                    BG_CHR_ADDR(FACSTAT_ICON_CHR_RED)    + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_GREEN  * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_GREEN),  FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(0,                                    BG_CHR_ADDR(FACSTAT_ICON_CHR_GREEN)  + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_PURPLE * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_CHR_PURPLE), FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(0,                                    BG_CHR_ADDR(FACSTAT_ICON_CHR_PURPLE) + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+
+    CpuFill32(0, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_BLUE),   FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_BLUE   * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_BLUE)   + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+    CpuFill32(0, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_RED),    FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_RED    * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_RED)    + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+    CpuFill32(0, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_GREEN),  FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_GREEN  * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_GREEN)  + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+    CpuFill32(0, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_PURPLE), FACSTAT_ICON_TOP_ROWS_SIZE);
+    CpuFill32(FACSTAT_ICON_IDX_PURPLE * 0x11111111, BG_CHR_ADDR(FACSTAT_ICON_TOP_CHR_PURPLE) + FACSTAT_ICON_TOP_ROWS_SIZE, FACSTAT_ICON_BOTTOM_ROWS_SIZE);
+#undef FACSTAT_ICON_TOP_ROWS_SIZE
+#undef FACSTAT_ICON_BOTTOM_ROWS_SIZE
 
     ApplyPalette(Pal_FacStatIcons, FACSTAT_PAL_ICONS);
 
