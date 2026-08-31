@@ -182,6 +182,7 @@ def calculate_wta(weapon, defender_weapon, weapon_triangle_rules):
 
     return 0
 
+
 def calculate_single_hit_damage(attacker_class, weapon, defender_class, defender_weapon, weapon_triangle_rules):
     attacker_pow = attacker_class["base"]["pow"]
     weapon_might = weapon.get("might", 0)
@@ -226,7 +227,7 @@ def calculate_round(attacker_class, attacker_weapon,
             defender_class,
             defender_weapon,
             attacker_class,
-            defender_weapon,
+            attacker_weapon,
             weapon_triangle_rules
         )
     )
@@ -311,7 +312,7 @@ def print_matchup(class_a_name, class_a, weapon_a_name, weapon_a,
 ##        f"{result['attacker_hit_damage']}x{result['attacker_hits']} "
         f"{class_a_percent:.0f}% vs "
 ##        f"{result['defender_hit_damage']}x{result['defender_hits']} "
-        f"{class_b_percent:.0f}%"
+        f"{class_b_percent:.0f}% "
     )
 
 # ============================================================

@@ -2553,7 +2553,8 @@ _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-rom
 	@mkdir -p "$(WIN_SYNC_DIR)"
-	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
+	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp"
+	mv -f "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp" "$(WIN_SYNC_DIR)/$(notdir $(MODERN_ROM))"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	+$(MAKE) expansion-modern-sym \
 		$(if $(filter 1,$(WITH_UPS)),$(if $(wildcard $(BASEROM)),expansion-modern-ups)) \
