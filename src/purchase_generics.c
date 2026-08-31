@@ -40,6 +40,7 @@
 #include "opinfo.h"
 #include "helpbox.h"
 #include "statscreen.h"
+#include "power.h"
 
 #define PURCHASE_GENERIC_PAGE_SIZE 7
 // #define PURCHASE_GENERIC_PAGE_SLOT 5
@@ -523,6 +524,22 @@ static void PutPurchaseGenericBaseStat(int y, const char* label, int base)
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 6, y), TEXT_COLOR_SYSTEM_BLUE, base);
 }
 
+/* Pow only -- see AdjustStatForCo (src/power.c): a CO's class affinity
+ * scales that class's power the same way a weapon's Pow bonus does. This
+ * is a preview of a not-yet-recruited generic, so there's no struct Unit
+ * to run through GetUnitPower -- look the bonus up directly from the
+ * class and the buying (Blue) faction's commander instead. */
+static void PutPurchaseGenericPowStat(int y, const char* label, int base, int classId)
+{
+    PutPurchaseGenericText(2, y, TEXT_COLOR_SYSTEM_GOLD, 3, label);
+    PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 6, y), TEXT_COLOR_SYSTEM_BLUE, base);
+#if FE8_CO_POWERS
+    PutNumberBonus(
+        AdjustStatForCo(gPlaySt.commanderId[FACTION_ID_BLUE], classId, base),
+        TILEMAP_LOCATED(gBG0TilemapBuffer, 7, y));
+#endif
+}
+
 static void PutPurchaseGenericGoldAmount(int x, int y, int amount)
 {
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, x, y), TEXT_COLOR_SYSTEM_BLUE, amount);
@@ -936,6 +953,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
 
     DrawPurchaseGenericUiBoxes(def);
     DrawPurchaseGenericList();
+    
 
     if (def == NULL)
     {
@@ -943,6 +961,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
         BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
         return;
     }
+    DrawPurchaseGenericGoldPanel(def);
 
     class = GetClassData(def->classId);
 
@@ -952,15 +971,16 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
     if (class != NULL)
     {
         PutPurchaseGenericBaseStat(5, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_HP), class->baseHP);
-        PutPurchaseGenericBaseStat(7, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_POW), class->basePow);
+
         PutPurchaseGenericBaseStat(9, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_SKL), class->baseSkl);
         PutPurchaseGenericBaseStat(11, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_SPD), class->baseSpd);
         PutPurchaseGenericBaseStat(13, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_DEF), class->baseDef);
         PutPurchaseGenericBaseStat(15, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_RES), class->baseRes);
         PutPurchaseGenericBaseStat(17, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_MOV), class->baseMov);
+        PutPurchaseGenericPowStat(7, GetStringFromIndex(MSG_PURCHASE_GENERIC_STAT_POW), class->basePow, def->classId); // last so PutNumberBonus looks better 
     }
 
-    DrawPurchaseGenericGoldPanel(def);
+    
     // DrawPurchaseGenericStartingItems(def);
     StartPurchaseGenericClassCard(def);
     StartPurchaseGenericPlatformPreview(def);

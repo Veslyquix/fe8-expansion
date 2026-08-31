@@ -40,55 +40,6 @@
 #endif
 
 
-/* 
-PutDrawText generally causes graphical glitches when text before does not have a fixed width in vram. 
-Using `GetStringTextLen(str) + 8) / 8` to get the width of text is problematic, because 
-the text in vram will shift around when being redrawn. This doesn't matter if the screen is faded to black. 
-
-When adding text, follow this schema: 
-1. In root\texts\texts.txt, add a new text entry at the end and write the text with a definition. 
-
-2. Refer to this text only through `char *GetStringFromIndex(int index);`, never raw strings. 
-    GetStringFromIndexInBuffer can be used to join multiple strings together when necessary (e.g. with Text_DrawNumber).
-
-3. Init 
-    void InitSystemTextFont(void); (for everything that isn't a dialogue event) 
-    void ResetText(void); // resets to the default font and initializes text vram location
-        void ResetTextFont(void); // resets text vram location for the active font. Use this if you
-    // aren't using gDefaultFont but need to update all text. (E.g. after InitTextFont)
-    // Skip this step 3 if text is being drawn after menu text was just drawn. 
-
-4. Width
-    void InitText(struct Text *a, int tileWidth); // Set the width for all text handles that will be used. Also does TextClear
-    // void InitTextDb(struct Text * text, int tileWidth);  /  void InitTextInitInfo(const struct TextInitInfo* a);
-    // flips it between the two halves of that reserved space so the new string renders into the other VRAM half while the previously-drawn one is still on screen. 
-    // That avoids the flicker/tearing you'd get from redrawing glyphs into the same tiles currently being scanned out
-    Use InitTextDb instead of InitText when this text redraws every frame (live counters). 
-    tileWidth should default to 10 for things that are 1-3 words, or 20 for lines of text. 
-
-5. Clear vram 
-    void ClearText(struct Text *text); 
-    // If you are redrawing text and skipping steps 3-4, start here. This is unnecessary if steps 1-2 were done. 
-            
-6. Optional parameters 
-    void Text_SetParams(struct Text* th, int x, int colorId); // offset the x position and/or set a colour. 
-    // default to 0x and TEXT_COLOR_SYSTEM_WHITE, except for titles as TEXT_COLOR_SYSTEM_GOLD or TEXT_COLOR_SYSTEM_BLUE
-
-7. Draw into vram 
-    void Text_DrawString(struct Text * text, const char* str);
-    Draw the text to vram. 
-    Only use Text_DrawNumber if a variable number is needed in the middle of a text str. 
-
-8. Erase the gBG dest buffer space where the text will be placed. 
-    void TileMap_FillRect(u16 *dest, int width, int height, int fillValue);
-    Each line of text is always height 2. fillValue is generally 0, except for sprite text with 
-    the box, which is 0x4444 (using SpriteText_DrawBackground). 
-    
-9. Place it on the screen 
-    void PutText(struct Text* th, u16* dest);
-    
-*/
-
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
 // moves the camera onto each of faction's units, applying that faction's CO's
@@ -123,6 +74,7 @@ static void CoPowerBanner_Cleanup(struct CoPowersProc* proc);
 
 CONST_DATA struct ProcCmd gProcScr_CoPowers[] = {
     PROC_NAME("COPOWERS"),
+    PROC_YIELD, 
     PROC_CALL(LockGame),
     PROC_CALL(EndPlayerPhaseSideWindows),
     /* Proc_Start runs a script synchronously up to its first blocking
@@ -135,7 +87,7 @@ CONST_DATA struct ProcCmd gProcScr_CoPowers[] = {
      * PROC_WHILE_EXISTS below), but faction does -- same hazard
      * gProcScr_CoCommanderFade's leading PROC_SLEEP(0) guards against
      * (there, the very first PROC_CALL reads a caller-set field too). */
-    PROC_SLEEP(0),
+    PROC_SLEEP(1),
 #if FE8_AW2_ASSETS
     /* POWER/SUPER banner, styled after the phase-change intro (see
      * src/phasechangefx.c) -- CoPowerBanner_Init reads proc->isSuper
@@ -215,6 +167,7 @@ static void CoPowerBanner_Init(struct CoPowersProc* proc)
 
 static void CoPowerBanner_Loop(struct CoPowersProc* proc)
 {
+    brk;
     SetBlendConfig(1, gBmSt.altBlendBCa, gBmSt.altBlendBCb, 0);
 
     DrawAw2PowerBannerSprite(proc->isSuper);
@@ -608,6 +561,30 @@ static int GetClassAffinityRating(const struct CoDefinition* co, int classId)
     return CO_AFFINITY_NEUTRAL_RATING;
 }
 
+/* See declaration comment (include/power.h) -- returns the delta to add to
+ * baseValue, not the adjusted total. */
+int AdjustStatForCo(int coId, int classId, int baseValue)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+    int rating = GetClassAffinityRating(co, classId);
+    int adjusted;
+
+    if (rating == CO_AFFINITY_NEUTRAL_RATING)
+        return 0;
+
+    adjusted = (baseValue * rating + CO_AFFINITY_NEUTRAL_RATING / 2) / CO_AFFINITY_NEUTRAL_RATING;
+
+    // Proportional scaling can round to no change (e.g. small base values) --
+    // a non-neutral affinity must still move the stat by at least 1 point.
+    if (adjusted == baseValue)
+        adjusted += (rating > CO_AFFINITY_NEUTRAL_RATING) ? 1 : -1;
+
+    if (adjusted < 0)
+        adjusted = 0;
+
+    return adjusted - baseValue;
+}
+
 /* Does coId's power (or its super, if isSuper) affect a unit of classId?
  * Checked once per surveyed unit by CoPowers_Anim to decide whether that
  * unit gets CoPower_ApplyEffect and the barrier animation, or is skipped
@@ -758,7 +735,7 @@ void CoGauge_OnPowerUsed(int faction)
  * parent is AiPhaseInit's own proc, so the roll-call/effect proc
  * (gProcScr_CoPowers) runs to completion -- including its camera return --
  * before the caller's own AI turn logic starts. */
-void CoPowers_OnAiPhaseStart(struct Proc* parent)
+int CoPowers_OnAiPhaseStart(struct Proc* parent)
 {
     int faction = gPlaySt.faction;
     int coId = gPlaySt.commanderId[faction >> 6];
@@ -772,13 +749,14 @@ void CoPowers_OnAiPhaseStart(struct Proc* parent)
     else if (halfStars == co->powerStars * 2)
         isSuper = FALSE;
     else
-        return;
+        return 1;
 
     CoGauge_OnPowerUsed(faction);
 
     proc = (struct CoPowersProc*)Proc_StartBlocking(gProcScr_CoPowers, parent);
     proc->faction = faction;
     proc->isSuper = isSuper;
+    return 0; // yield 
 }
 
 /* gStatScreen.text[] slots this screen borrows (see the EWRAM_OVERLAY(0)

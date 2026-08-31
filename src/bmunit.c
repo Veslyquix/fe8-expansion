@@ -27,6 +27,7 @@
 #include "debuffs.h"
 #include "turn_autosave.h"
 #include "gamerank.h"
+#include "power.h"
 
 #if FE8_DISPLAY_OBTAINABLE_ITEM
 void SetupCacheForStealableItems(void);
@@ -288,6 +289,9 @@ inline int GetUnitCurrentHp(struct Unit* unit) {
 
 inline int GetUnitPower(struct Unit* unit) {
     int result = unit->pow + GetItemPowBonus((u16) GetUnitEquippedWeapon(unit));
+#if FE8_CO_POWERS
+    result += AdjustStatForCo(gPlaySt.commanderId[UNIT_FACTION(unit) >> 6], UNIT_CLASS_ID(unit), unit->pow);
+#endif
 #ifdef DEBUFFS_EXIST
     result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_POW, result);
 #endif

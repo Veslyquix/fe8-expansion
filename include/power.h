@@ -60,7 +60,7 @@ void CoGauge_OnPowerUsed(int faction);
  * parent must be the caller's own proc, so the roll-call/effect proc this
  * starts (when it does) blocks the caller until it fully finishes. */
 struct Proc;
-void CoPowers_OnAiPhaseStart(struct Proc* parent);
+int CoPowers_OnAiPhaseStart(struct Proc* parent);
 
 /* Small read-only accessors onto the CO definition table (src/power.c),
  * for UI code (the CO screen, the VeslyDebugger CO editor) that needs a
@@ -75,6 +75,18 @@ const char* CoScreen_GetCoName(int coId);
  * than the normal power costs. */
 int CoScreen_GetCoPowerStars(int coId);
 int CoScreen_GetCoSuperPowerStars(int coId);
+
+/* A CO's class affinity (struct CoClassAffinity, sFrancisAffinities etc.)
+ * scales a class's power the same way a weapon's Pow bonus does: this
+ * returns the delta to add to baseValue (POW only -- other stats are
+ * unaffected), not the adjusted total, so callers use it exactly like
+ * GetItemPowBonus (src/bmunit.c's GetUnitPower, purchase_generics.c's
+ * class-preview stat). A rating != CO_AFFINITY_NEUTRAL_RATING (30) always
+ * moves the stat by at least 1 point, even when proportional scaling would
+ * round to no change; the result is never allowed to bring the stat below
+ * 0. An out-of-range coId falls back to CO_FRANCIS, same as every other
+ * lookup through GetCoDefinition. */
+int AdjustStatForCo(int coId, int classId, int baseValue);
 
 #endif // FE8_CO_POWERS
 
