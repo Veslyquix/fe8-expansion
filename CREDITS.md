@@ -34,6 +34,11 @@ Generally sourced from the community
 | Frederick | `{Nickt} Frederick.png` | Nickt |
 | Fox | `{Nickt} Fox.png` | Nickt |
 | Liz | `Flyer Girl Liz[F2E].png` | RandomWizard (tagged **F2E**, "Free to Edit") |
+| Ishkode | `{Eden} Ishkode.png` | Eden |
+| Wakwi | `{Eden} Wakwi.png` | Eden |
+
+Hannah and Francis are no longer used by `src/portrait_data.c` (replaced by
+Wakwi and Ishkode respectively) but remain credited/linked, not removed.
 
 
 ## Custom BGM (`NIMAP2`)

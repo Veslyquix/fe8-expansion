@@ -12,9 +12,16 @@ struct FaceData CONST_DATA portrait_data[] =
 	 * template's mouth/eye reference crops) -- these 5 all converged on
 	 * the same tile offsets since all 5 replacement portraits share the
 	 * same standardized template proportions. */
-	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 1
-	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 3, 5, 3, 3, FACE_BLINK_CLOSED}, // 2
-	{portrait_Francis_tileset, portrait_Francis_chibi, portrait_Francis_palette, portrait_Francis_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
+	/* Slots 1-3 (originally Eirika/Seth's slots, then Hannah/Francis) now
+	 * use Wakwi/Ishkode (art by Eden, see src/Credits.c) -- Hannah and
+	 * Francis are no longer used by anything but are kept linked (see
+	 * include/portrait_pointer.h) rather than removed. Wakwi/Ishkode's
+	 * own xMouth/yMouth/xEye/yEye did NOT converge on the same 3/5/3/3
+	 * offsets as the other replacements -- insert_portrait.py detected
+	 * Wakwi at 3/6/3/4 and Ishkode at 3/5/3/3 (matching by coincidence). */
+	{portrait_Wakwi_tileset, portrait_Wakwi_chibi, portrait_Wakwi_palette, portrait_Wakwi_mouth, 0, 3, 6, 3, 4, FACE_BLINK_NORMAL}, // 1
+	{portrait_Wakwi_tileset, portrait_Wakwi_chibi, portrait_Wakwi_palette, portrait_Wakwi_mouth, 0, 3, 6, 3, 4, FACE_BLINK_CLOSED}, // 2
+	{portrait_Ishkode_tileset, portrait_Ishkode_chibi, portrait_Ishkode_palette, portrait_Ishkode_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
 	{portrait_Frederick_tileset, portrait_Frederick_chibi, portrait_Frederick_palette, portrait_Frederick_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 4
 	{portrait_Fox_tileset, portrait_Fox_chibi, portrait_Fox_palette, portrait_Fox_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 5
 	{portrait_Moulder_tileset, portrait_Moulder_chibi, portrait_Moulder_palette, portrait_Moulder_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 6
