@@ -339,10 +339,11 @@ def main():
             print(f"ERROR: Item not found: {weapon_name}")
             return
 
-    # Run every unique matchup
-    for i, class_a_name in enumerate(CLASSES_TO_TEST):
+    # Run every matchup as seen from each class's perspective (including
+    # the mirror match), grouped by attacker so repeats stay easy to scan.
+    for class_a_name in CLASSES_TO_TEST:
 
-        for class_b_name in CLASSES_TO_TEST[i + 1:]:
+        for class_b_name in CLASSES_TO_TEST:
 
             weapon_a_name = CLASS_WEAPONS[class_a_name]
             weapon_b_name = CLASS_WEAPONS[class_b_name]
@@ -360,6 +361,8 @@ def main():
 
                 weapon_triangle_rules
             )
+
+        print()
 
 
 if __name__ == "__main__":

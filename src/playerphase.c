@@ -19,7 +19,6 @@
 #include "hardware.h"
 #include "bmphase.h"
 #include "expansion_danger_overlay.h"
-#include "alpha_sprite_arrow.h"
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "minimap.h"
@@ -1207,11 +1206,7 @@ bool CanMoveActiveUnitTo(int x, int y)
 //! FE8U = 0x0801D624
 void PlayerPhase_DisplayUnitMovement(void)
 {
-#if FE8_ALPHA_SPRITE_ARROW
-    GenerateBestMovementScript(gBmSt.playerCursor.x, gBmSt.playerCursor.y, gWorkingMovementScript);
-#else
     GetMovementScriptFromPath();
-#endif
     UnitApplyWorkingMovementScript(gActiveUnit, gActiveUnit->xPos, gActiveUnit->yPos);
     SetAutoMuMoveScript(gWorkingMovementScript);
 
