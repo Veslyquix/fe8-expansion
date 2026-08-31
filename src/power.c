@@ -40,6 +40,15 @@
 #endif
 
 
+/* Define this to make the CO screen's Up/Down scroll (CoScreen_KeyListener)
+ * cycle through every defined CO, including ones no faction is currently
+ * using -- useful for browsing/debugging all COs regardless of the actual
+ * match. Left undefined by default: scrolling only reaches a CO that some
+ * faction's gPlaySt.commanderId[] is actually set to (see IsCoInUse/
+ * FindNextUsedCoId below), so e.g. Blue using Ishkode and Red using
+ * O'Neill won't also scroll past unused COs like Francis. */
+// #define SCROLL_ALL_COS
+
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
 // moves the camera onto each of faction's units, applying that faction's CO's
@@ -709,6 +718,43 @@ int CoScreen_GetCoCount(void)
 {
     return CO_COUNT;
 }
+
+#ifndef SCROLL_ALL_COS
+/* Is coId the commander of any faction right now? gPlaySt.commanderId[]
+ * has one entry per faction (Blue/Green/Red/Purple, see include/types.h),
+ * same array CoGauge_Get/aw2_gfx.c's mini gauge read. */
+static bool8 IsCoInUse(int coId)
+{
+    int i;
+
+    for (i = 0; i < 4; ++i) {
+        if (gPlaySt.commanderId[i] == coId)
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+/* Steps coId by direction (+1/-1), wrapping through CoScreen_GetCoCount(),
+ * until landing on one IsCoInUse says a faction is actually using. If none
+ * are (shouldn't happen outside of a debug/test setup with commanderId
+ * left unset), this just walks all the way around back to the original
+ * coId rather than looping forever. */
+static int FindNextUsedCoId(int coId, int direction)
+{
+    int count = CoScreen_GetCoCount();
+    int i;
+
+    for (i = 0; i < count; ++i) {
+        coId = (coId + direction + count) % count;
+
+        if (IsCoInUse(coId))
+            return coId;
+    }
+
+    return coId;
+}
+#endif
 
 const char* CoScreen_GetCoName(int coId)
 {
@@ -1690,10 +1736,18 @@ static void CoScreen_KeyListener(ProcPtr proc)
         gStatScreen.page = (gStatScreen.page + 1) % CO_SCREEN_PAGE_COUNT;
         CoStartSlide(DPAD_RIGHT, proc);
     } else if (keys & DPAD_UP) {
+#ifdef SCROLL_ALL_COS
         gCoScreen.coId = (gCoScreen.coId + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
+#else
+        gCoScreen.coId = FindNextUsedCoId(gCoScreen.coId, -1);
+#endif
         CoStartCommanderFade(-1, proc);
     } else if (keys & DPAD_DOWN) {
+#ifdef SCROLL_ALL_COS
         gCoScreen.coId = (gCoScreen.coId + 1) % CoScreen_GetCoCount();
+#else
+        gCoScreen.coId = FindNextUsedCoId(gCoScreen.coId, +1);
+#endif
         CoStartCommanderFade(+1, proc);
     }
 }
