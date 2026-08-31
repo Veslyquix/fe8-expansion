@@ -41,23 +41,23 @@ void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit 
 #endif
 
 static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
-    { ITYPE_SWORD, ITYPE_LANCE, -25, -5 },
-    { ITYPE_SWORD, ITYPE_AXE,   +25, +5 },
+    { ITYPE_SWORD, ITYPE_LANCE, -25, -3 },
+    { ITYPE_SWORD, ITYPE_AXE,   +25, +3 },
 
-    { ITYPE_LANCE, ITYPE_AXE,   -25, -5 },
-    { ITYPE_LANCE, ITYPE_SWORD, +25, +5 },
+    { ITYPE_LANCE, ITYPE_AXE,   -25, -3 },
+    { ITYPE_LANCE, ITYPE_SWORD, +25, +3 },
 
-    { ITYPE_AXE,   ITYPE_SWORD, -25, -5 },
-    { ITYPE_AXE,   ITYPE_LANCE, +25, +5 },
+    { ITYPE_AXE,   ITYPE_SWORD, -25, -3 },
+    { ITYPE_AXE,   ITYPE_LANCE, +25, +3 },
 
-    { ITYPE_ANIMA, ITYPE_DARK,  -15, -1 },
-    { ITYPE_ANIMA, ITYPE_LIGHT, +15, +1 },
+    { ITYPE_ANIMA, ITYPE_DARK,  -25, -3 },
+    { ITYPE_ANIMA, ITYPE_LIGHT, +25, +3 },
 
-    { ITYPE_LIGHT, ITYPE_ANIMA, -15, -1 },
-    { ITYPE_LIGHT, ITYPE_DARK,  +15, +1 },
+    { ITYPE_LIGHT, ITYPE_ANIMA, -25, -3 },
+    { ITYPE_LIGHT, ITYPE_DARK,  +25, +3 },
 
-    { ITYPE_DARK,  ITYPE_LIGHT, -15, -1 },
-    { ITYPE_DARK,  ITYPE_ANIMA, +15, +1 },
+    { ITYPE_DARK,  ITYPE_LIGHT, -25, -3 },
+    { ITYPE_DARK,  ITYPE_ANIMA, +25, +3 },
 
     { -1 },
 };

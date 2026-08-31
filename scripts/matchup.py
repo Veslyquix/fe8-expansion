@@ -1,5 +1,6 @@
 import re
 
+EXPAND_DETAILS = True  
 
 # ============================================================
 # CONFIGURATION
@@ -13,17 +14,21 @@ CLASSES_TO_TEST = [
     "CLASS_FIGHTER",
     "CLASS_MERCENARY",
     "CLASS_MAGE",
+    "CLASS_PEGASUS_KNIGHT",
 ]
 
-# Weapon assignment for each class
+# Weapon(s) assigned to each class. Most classes get one weapon, but a
+# class with access to multiple weapon types (e.g. Cavalier) can list more
+# than one -- every listed weapon is tested against every matchup.
 CLASS_WEAPONS = {
-    "CLASS_SOLDIER": "ITEM_LANCE_IRON",
-    "CLASS_ARMOR_KNIGHT": "ITEM_LANCE_IRON",
-    "CLASS_ARCHER": "ITEM_BOW_IRON",
-    "CLASS_CAVALIER": "ITEM_SWORD_IRON",
-    "CLASS_FIGHTER": "ITEM_AXE_IRON",
-    "CLASS_MERCENARY": "ITEM_SWORD_IRON",
-    "CLASS_MAGE": "ITEM_ANIMA_FIRE",
+    "CLASS_SOLDIER": ["ITEM_LANCE_IRON"],
+    "CLASS_ARMOR_KNIGHT": ["ITEM_LANCE_IRON"],
+    "CLASS_ARCHER": ["ITEM_BOW_IRON"],
+    "CLASS_CAVALIER": ["ITEM_SWORD_IRON", "ITEM_LANCE_IRON"],
+    "CLASS_FIGHTER": ["ITEM_AXE_IRON"],
+    "CLASS_MERCENARY": ["ITEM_SWORD_IRON"],
+    "CLASS_MAGE": ["ITEM_ANIMA_FIRE"],
+    "CLASS_PEGASUS_KNIGHT": ["ITEM_LANCE_IRON"]
 }
 
 # Fire Emblem doubling threshold
@@ -294,6 +299,13 @@ def print_matchup(class_a_name, class_a, weapon_a_name, weapon_a,
     class_a_display = class_a_name.replace("CLASS_", "")
     class_b_display = class_b_name.replace("CLASS_", "")
 
+    # Only disambiguate with the weapon when the class has more than one
+    # weapon option -- keeps single-weapon classes' output unchanged.
+    if len(CLASS_WEAPONS[class_a_name]) > 1:
+        class_a_display += " (%s)" % weapon_a_name.replace("ITEM_", "")
+    if len(CLASS_WEAPONS[class_b_name]) > 1:
+        class_b_display += " (%s)" % weapon_b_name.replace("ITEM_", "")
+
     # Percentage of the target's HP dealt during the round
     class_a_percent = (
         result["attacker_total_damage"]
@@ -306,14 +318,20 @@ def print_matchup(class_a_name, class_a, weapon_a_name, weapon_a,
         / class_a["base"]["hp"]
         * 100
     )
-
-    print(
-        f"{class_a_display} vs {class_b_display}: "
-##        f"{result['attacker_hit_damage']}x{result['attacker_hits']} "
-        f"{class_a_percent:.0f}% vs "
-##        f"{result['defender_hit_damage']}x{result['defender_hits']} "
-        f"{class_b_percent:.0f}% "
-    )
+    if EXPAND_DETAILS:
+            print(
+            f"{class_a_display} vs {class_b_display}: "
+            f"{result['attacker_hit_damage']}x{result['attacker_hits']} "
+            f"{class_a_percent:.0f}% vs "
+            f"{result['defender_hit_damage']}x{result['defender_hits']} "
+            f"{class_b_percent:.0f}% "
+        )
+    else:
+        print(
+            f"{class_a_display} vs {class_b_display}: "
+            f"{class_a_percent:.0f}% vs "
+            f"{class_b_percent:.0f}% "
+        )
 
 # ============================================================
 # MAIN
@@ -333,36 +351,37 @@ def main():
             print(f"ERROR: Class not found: {class_name}")
             return
 
-        weapon_name = CLASS_WEAPONS[class_name]
-
-        if weapon_name not in items:
-            print(f"ERROR: Item not found: {weapon_name}")
-            return
+        for weapon_name in CLASS_WEAPONS[class_name]:
+            if weapon_name not in items:
+                print(f"ERROR: Item not found: {weapon_name}")
+                return
 
     # Run every matchup as seen from each class's perspective (including
-    # the mirror match), grouped by attacker so repeats stay easy to scan.
+    # the mirror match), across every weapon each class has access to,
+    # grouped by attacker so repeats stay easy to scan.
     for class_a_name in CLASSES_TO_TEST:
 
-        for class_b_name in CLASSES_TO_TEST:
+        for weapon_a_name in CLASS_WEAPONS[class_a_name]:
 
-            weapon_a_name = CLASS_WEAPONS[class_a_name]
-            weapon_b_name = CLASS_WEAPONS[class_b_name]
+            for class_b_name in CLASSES_TO_TEST:
 
-            print_matchup(
-                class_a_name,
-                classes[class_a_name],
-                weapon_a_name,
-                items[weapon_a_name],
+                for weapon_b_name in CLASS_WEAPONS[class_b_name]:
 
-                class_b_name,
-                classes[class_b_name],
-                weapon_b_name,
-                items[weapon_b_name],
+                    print_matchup(
+                        class_a_name,
+                        classes[class_a_name],
+                        weapon_a_name,
+                        items[weapon_a_name],
 
-                weapon_triangle_rules
-            )
+                        class_b_name,
+                        classes[class_b_name],
+                        weapon_b_name,
+                        items[weapon_b_name],
 
-        print()
+                        weapon_triangle_rules
+                    )
+
+            print()
 
 
 if __name__ == "__main__":

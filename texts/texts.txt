@@ -40344,14 +40344,14 @@ from the front and never[LF]
 leaves a unit behind.[.][X]
 
 ## MSG_CO_FRANCIS_POWER_NAME
-Barrage[.][X]
+Hyper Repair[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
 All of Francis's preferred[LF]
 units heal 10 HP.[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
-War Council[.][X]
+Hyper Upgrade[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_DESC
 All of Francis's units are[LF]
@@ -40417,13 +40417,13 @@ Res[.][X]
 Mov[.][X]
 
 ## MSG_PURCHASE_GENERIC_CAPTURE
-Capture[.][X]
+ Capture[.][X]
 
 ## MSG_UNIT_ACTION_MERGE
-Merge[.][X]
+ Merge[.][X]
 
 ## MSG_UNIT_ACTION_PROMOTE
-Promote[.][X]
+ Promote[.][X]
 
 ## MSG_MAP_MENU_CO
  CO[.][X]

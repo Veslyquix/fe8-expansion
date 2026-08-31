@@ -44,7 +44,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
     },
     { 0 },
 };
-
+// #define DEBUG_TESTING 
 // 0x88B3C50
 CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
     // {
@@ -71,6 +71,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         },
         .ai = {0x0, 0x3, 0x0, 0x1},
     },
+#if DEBUG_TESTING
     {
         .charIndex = 0x80,
         .classIndex = CLASS_SOLDIER,
@@ -156,6 +157,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         },
         .ai = {0x0, 3, 0x2, 0x1},
     },
+#endif 
 
     { 0 },
 };
