@@ -189,6 +189,9 @@ endif
 ifeq ($(EXTEND_DESC_BOX),1)
 MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DESC_BOX=1
 endif
+ifeq ($(EXTEND_DIALOGUE_BOX),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DIALOGUE_BOX=1
+endif
 ifeq ($(OVERFLOW_SAFETY_CHECKS),0)
 MODERN_DEFINE_FLAGS += -DFE8_OVERFLOW_SAFETY_CHECKS=0
 endif
@@ -1603,6 +1606,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--purchase-generics "$(PURCHASE_GENERICS)" \
 		--mmb "$(MMB)" \
 		--extend-desc-box "$(EXTEND_DESC_BOX)" \
+		--extend-dialogue-box "$(EXTEND_DIALOGUE_BOX)" \
 		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
@@ -1701,6 +1705,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--purchase-generics "$(PURCHASE_GENERICS)" \
 	--mmb "$(MMB)" \
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
+	--extend-dialogue-box "$(EXTEND_DIALOGUE_BOX)" \
 	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 	--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
@@ -1800,6 +1805,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_MAPGEN=$(MAPGEN) \
 	-DFE8_MMB=$(MMB) \
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
+	-DFE8_EXTEND_DIALOGUE_BOX=$(EXTEND_DIALOGUE_BOX) \
 	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \
 	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
 	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
@@ -1993,6 +1999,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
 		printf '%s\n' 'mmb=$(MMB)'; \
 		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \
+		printf '%s\n' 'extend_dialogue_box=$(EXTEND_DIALOGUE_BOX)'; \
 		printf '%s\n' 'overflow_safety_checks=$(OVERFLOW_SAFETY_CHECKS)'; \
 		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
 		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \

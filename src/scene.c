@@ -33,7 +33,19 @@ extern u8 CONST_DATA Img_TalkBubble[];
 
 static struct TalkState sTalkStateCore;
 struct TalkState* CONST_DATA sTalkState = &sTalkStateCore;
-static struct Text sTalkText[3];
+
+/* sTalkState->lines is normally whatever a caller passed to InitTalk (2 for
+ * event/conversation dialogue), but FE8_EXTEND_DIALOGUE_BOX overrides it
+ * dynamically per bubble (see TalkPrepNextChar) up to 4 -- sTalkText[]
+ * needs a slot for every line that can ever be reached, independent of
+ * what "lines" InitTalk was originally called with (see its own loop). */
+#if FE8_EXTEND_DIALOGUE_BOX
+#define TALK_TEXT_MAX_LINES 4
+#else
+#define TALK_TEXT_MAX_LINES 3
+#endif
+
+static struct Text sTalkText[TALK_TEXT_MAX_LINES];
 static int sTalkChoiceResult;
 static struct Font sTalkFont;
 
@@ -317,7 +329,14 @@ void InitTalk(int chr, int lines, s8 unpackBubble) {
 
     sTalkState->lines = lines;
 
+#if FE8_EXTEND_DIALOGUE_BOX
+    /* Every slot up to TALK_TEXT_MAX_LINES needs to be ready to use, since
+     * TalkPrepNextChar can raise sTalkState->lines above whatever "lines"
+     * this call was given, on a per-bubble basis. */
+    for (i = 0; i < TALK_TEXT_MAX_LINES; i++) {
+#else
     for (i = 0; i < lines; i++) {
+#endif
         InitText(sTalkText + i, 30);
         Text_SetColor(sTalkText + i, 1);
     }
@@ -640,6 +659,22 @@ s8 TalkPrepNextChar(ProcPtr proc) {
         } else {
             sTalkState->activeWidth = 2 + Div(GetStrTalkLen(sTalkState->strBackup, 0) + 7, 8);
         }
+
+#if FE8_EXTEND_DIALOGUE_BOX
+        {
+            int lineCount = (sTalkState->strBackup == NULL)
+                ? GetStrTalkLineCount(sTalkState->str, 0)
+                : GetStrTalkLineCount(sTalkState->strBackup, 0);
+
+            if (lineCount < 1) {
+                lineCount = 1;
+            } else if (lineCount > 4) {
+                lineCount = 4;
+            }
+
+            sTalkState->lines = lineCount;
+        }
+#endif
 
         ClearTalkBubble();
 
@@ -2060,10 +2095,21 @@ void StartTalkOpen(int talkFace, ProcPtr parent) {
     struct Proc* proc = Proc_StartBlocking(gProcScr_TalkOpen, parent);
 
     proc->unk64 = GetTalkFaceHPos(talkFace);
+#if FE8_EXTEND_DIALOGUE_BOX
+    /* unk6A is the box's tile height: 2 border rows + 2 tile-rows per
+     * text line (a font glyph is 16px/2 tiles tall) -- 2+2*2=6 for the
+     * vanilla fixed 2 lines, unchanged from before this flag existed.
+     * A box that grows to the full 4 lines is shifted down 1 tile
+     * (unk66) so its extra height doesn't grow off the top of the
+     * screen. */
+    proc->unk66 = (sTalkState->lines == 4) ? 9 : 8;
+    proc->unk6A = 2 + sTalkState->lines * 2;
+#else
     proc->unk66 = 8;
+    proc->unk6A = 6;
+#endif
 
     proc->unk68 = sTalkState->activeWidth;
-    proc->unk6A = 6;
 
     if (proc->unk64 < 0) {
         proc->unk64 = 0;
@@ -2402,6 +2448,321 @@ static int GetStrTalkLenUtf8(const char *str, s8 isBubbleOpen)
     }
 }
 #endif
+
+#if FE8_EXTEND_DIALOGUE_BOX
+#ifdef FE8_TEXT_UTF8_ENABLED
+/* Mirrors GetStrTalkLenUtf8's scan exactly (same terminators: end of
+ * string, [CloseSpeechSlow], [ClearFace] on the speaking face, a
+ * [NormalPrint]/[FastPrint]/[CloseSpeechFast] transition while no bubble
+ * is open yet, or the active face changing to someone other than the
+ * speaker) -- except it counts physical text lines instead of pixel
+ * width, and resets that count at each [A] wait rather than at each
+ * [LF]/[NL2] (so a run of several [A]-separated screens for the same
+ * speaker each restart the count). The result is the tallest single
+ * [A]-delimited screen anywhere in the upcoming bubble's text, i.e. how
+ * many lines the box needs to show all of it without scrolling. */
+static int GetStrTalkLineCountUtf8(const char *str, s8 isBubbleOpen)
+{
+    struct TextUtf8Token token;
+    const char *next;
+    int speakFace;
+    int activeFace;
+    int currentLines;
+    int maxLines;
+
+    speakFace = sTalkState->speakingFaceSlot;
+    activeFace = sTalkState->activeFaceSlot;
+    currentLines = 1;
+    maxLines = 1;
+
+    for (;;)
+    {
+        next = TextUtf8_Next(str, &token);
+
+        if (token.kind == TEXT_UTF8_TOKEN_END
+            || (token.kind == TEXT_UTF8_TOKEN_CONTROL
+                && token.control == CHFE_L_CloseSpeechSlow))
+        {
+            if (currentLines > maxLines)
+                maxLines = currentLines;
+            return maxLines;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_CONTROL)
+        {
+            switch (token.control)
+            {
+            case CHFE_L_NL:
+            case CHFE_L_2NL:
+                currentLines++;
+                break;
+
+            case CHFE_L_A:
+                if (currentLines > maxLines)
+                    maxLines = currentLines;
+                currentLines = 1;
+                break;
+
+            case CHFE_L_OpenFarLeft:
+            case CHFE_L_OpenMidLeft:
+            case CHFE_L_OpenLeft:
+            case CHFE_L_OpenRight:
+            case CHFE_L_OpenMidRight:
+            case CHFE_L_OpenFarRight:
+            case CHFE_L_OpenFarFarLeft:
+            case CHFE_L_OpenFarFarRight:
+                activeFace = token.control - CHFE_L_OpenFarLeft;
+                break;
+
+            case CHFE_L_ClearFace:
+                if (activeFace == speakFace)
+                {
+                    if (currentLines > maxLines)
+                        maxLines = currentLines;
+                    return maxLines;
+                }
+                break;
+
+            case CHFE_L_NormalPrint:
+            case CHFE_L_FastPrint:
+            case CHFE_L_CloseSpeechFast:
+                if (!isBubbleOpen)
+                {
+                    if (currentLines > maxLines)
+                        maxLines = currentLines;
+                    return maxLines;
+                }
+                break;
+            }
+
+            str = next;
+            continue;
+        }
+
+        if (token.kind == TEXT_UTF8_TOKEN_EXTENDED_CONTROL)
+        {
+            switch (token.payload)
+            {
+            case 0x0A:
+            case 0x0B:
+            case 0x0C:
+            case 0x0D:
+            case 0x0E:
+            case 0x0F:
+            case 0x10:
+            case 0x11:
+                activeFace = token.payload - 0x0A;
+                break;
+            }
+
+            str = next;
+            continue;
+        }
+
+        if ((activeFace != speakFace) && (activeFace != 0xFF))
+        {
+            if (!isBubbleOpen)
+            {
+                isBubbleOpen = TRUE;
+                speakFace = activeFace;
+            }
+            else
+            {
+                if (currentLines > maxLines)
+                    maxLines = currentLines;
+                return maxLines;
+            }
+        }
+
+        str = next;
+    }
+}
+#endif
+
+/* See GetStrTalkLineCountUtf8 -- clamped to [1, 4] by the one caller,
+ * TalkPrepNextChar. FE8_TEXT_UTF8_ENABLED is only defined when a CJK
+ * locale (ja/zh-Hans) is enabled (see include/text_utf8.h) -- this
+ * repo's default en-only build does NOT define it, so GetStrTalkLen
+ * itself normally runs this same raw-byte-switch branch below, not
+ * GetStrTalkLenUtf8. This mirrors that legacy branch's exact byte
+ * values/terminators (see its comments there) the same way
+ * GetStrTalkLineCountUtf8 mirrors GetStrTalkLenUtf8: counting physical
+ * lines instead of pixel width, resetting at 0x03 ([A]) instead of at
+ * 0x01/0x02 ([LF]/[NL2]). */
+int GetStrTalkLineCount(const char* str, s8 isBubbleOpen) {
+#ifdef FE8_TEXT_UTF8_ENABLED
+    return GetStrTalkLineCountUtf8(str, isBubbleOpen);
+#else
+    u32 chrLen;
+
+    int speakFace = sTalkState->speakingFaceSlot;
+    int activeFace = sTalkState->activeFaceSlot;
+
+    int currentLines = 1;
+    int maxLines = 1;
+
+    while (1) {
+        switch (*str) {
+            case 0x00:
+            case 0x15:
+                if (currentLines > maxLines) {
+                    maxLines = currentLines;
+                }
+
+                goto _line_count_done;
+
+            case 0x01:
+            case 0x02:
+                currentLines++;
+                str++;
+                break;
+
+            case 0x04:
+            case 0x05:
+            case 0x06:
+            case 0x07:
+            case 0x16:
+            case 0x17:
+            case 0x1C:
+            case 0x1D:
+                str++;
+                break;
+
+            case 0x03:
+                if (currentLines > maxLines) {
+                    maxLines = currentLines;
+                }
+
+                currentLines = 1;
+                str++;
+                break;
+
+            case 0x08:
+            case 0x09:
+            case 0x0A:
+            case 0x0B:
+            case 0x0C:
+            case 0x0D:
+            case 0x0E:
+            case 0x0F:
+                activeFace = *str - 0x08;
+                str++;
+                break;
+
+            case 0x10:
+                while (1) {
+                    switch (*str) {
+                        case 0x08:
+                        case 0x09:
+                        case 0x0A:
+                        case 0x0B:
+                        case 0x0C:
+                        case 0x0D:
+                        case 0x0E:
+                        case 0x0F:
+                            activeFace = *str - 0x08;
+                            str++;
+
+                            continue;
+
+                        case 0x10:
+                            str += 3;
+
+                            continue;
+                    }
+
+                    break;
+                }
+
+                break;
+
+            case 0x11:
+                if (activeFace == speakFace) {
+                    if (currentLines > maxLines) {
+                        maxLines = currentLines;
+                    }
+
+                    goto _line_count_done;
+                }
+
+                str++;
+                break;
+
+            case 0x12:
+            case 0x13:
+            case 0x14:
+                if (!isBubbleOpen) {
+                    if (currentLines > maxLines) {
+                        maxLines = currentLines;
+                    }
+
+                    goto _line_count_done;
+                }
+
+                str++;
+                break;
+
+            case 0x18:
+            case 0x19:
+            case 0x1A:
+            case 0x1B:
+                str++;
+                break;
+
+            case 0x80:
+                str++;
+
+                switch (*str) {
+                    case 0x0A:
+                    case 0x0B:
+                    case 0x0C:
+                    case 0x0D:
+                    case 0x0E:
+                    case 0x0F:
+                    case 0x10:
+                    case 0x11:
+                        activeFace = *str - 0x0A;
+                        str++;
+                        break;
+
+                    default:
+                        str++;
+                        break;
+                }
+
+                break;
+
+            case 0x81:
+                if (str[1] == 0x40) {
+                    str += 2;
+                    break;
+                }
+
+                // fallthrough
+
+            default:
+                if ((activeFace != speakFace) && (activeFace != 0xFF)) {
+                    if (!isBubbleOpen) {
+                        isBubbleOpen = 1;
+                        speakFace = activeFace;
+                    } else {
+                        if (currentLines > maxLines) {
+                            maxLines = currentLines;
+                        }
+
+                        goto _line_count_done;
+                    }
+                }
+
+                str = GetCharTextLen(str, &chrLen);
+        }
+    }
+
+_line_count_done:
+    return maxLines;
+#endif
+}
+#endif /* FE8_EXTEND_DIALOGUE_BOX */
 
 //! FE8U = 0x08008B44
 int GetStrTalkLen(const char* str, s8 isBubbleOpen) {

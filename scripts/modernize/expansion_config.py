@@ -399,6 +399,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            starter_content=0, vesly_debugger=0, danger_bones=0,
                            new_anims=0, new_tilesets=0,
                            purchase_generics=0, mmb=0, extend_desc_box=0,
+                           extend_dialogue_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
                            select_view_growths=0,
@@ -428,6 +429,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
     mmb_flag = validate_feature_flag("MMB", mmb)
     desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
+    dialogue_box = validate_feature_flag("EXTEND_DIALOGUE_BOX", extend_dialogue_box)
     overflow_checks = validate_feature_flag("OVERFLOW_SAFETY_CHECKS", overflow_safety_checks)
     obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
     debuffs = validate_feature_flag("DEBUFFS_EXIST", debuffs_exist)
@@ -492,7 +494,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
-            anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag)
+            anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
+            dialogue_box)
 
 
 def validate_rom_size(value) -> int:
@@ -705,6 +708,7 @@ class ExpansionIdentity:
     purchase_generics: int = 0
     mmb: int = 0
     extend_desc_box: int = 0
+    extend_dialogue_box: int = 0
     overflow_safety_checks: int = 1
     display_obtainable_item: int = 0
     debuffs_exist: int = 0
@@ -786,6 +790,7 @@ class ExpansionIdentity:
                 "purchase_generics": self.purchase_generics,
                 "mmb": self.mmb,
                 "extend_desc_box": self.extend_desc_box,
+                "extend_dialogue_box": self.extend_dialogue_box,
                 "overflow_safety_checks": self.overflow_safety_checks,
                 "display_obtainable_item": self.display_obtainable_item,
                 "debuffs_exist": self.debuffs_exist,
@@ -855,6 +860,7 @@ def load_identity(
     purchase_generics=None,
     mmb=None,
     extend_desc_box=None,
+    extend_dialogue_box=None,
     overflow_safety_checks=None,
     display_obtainable_item=None,
     debuffs_exist=None,
@@ -945,7 +951,8 @@ def load_identity(
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
-     resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle) = validate_feature_flags(
+     resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
+     resolved_dialogue_box) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -979,6 +986,9 @@ def load_identity(
         extend_desc_box
         if extend_desc_box not in (None, "")
         else cfg.get("EXTEND_DESC_BOX", "0"),
+        extend_dialogue_box
+        if extend_dialogue_box not in (None, "")
+        else cfg.get("EXTEND_DIALOGUE_BOX", "0"),
         overflow_safety_checks
         if overflow_safety_checks not in (None, "")
         else cfg.get("OVERFLOW_SAFETY_CHECKS", "1"),
@@ -1097,6 +1107,7 @@ def load_identity(
         purchase_generics=resolved_generics,
         mmb=resolved_mmb,
         extend_desc_box=resolved_desc_box,
+        extend_dialogue_box=resolved_dialogue_box,
         overflow_safety_checks=resolved_overflow_checks,
         display_obtainable_item=resolved_obtainable_item,
         debuffs_exist=resolved_debuffs,
@@ -1264,6 +1275,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--extend-desc-box",
         default=None,
         help="override EXTEND_DESC_BOX (0 or 1)",
+    )
+    parser.add_argument(
+        "--extend-dialogue-box",
+        default=None,
+        help="override EXTEND_DIALOGUE_BOX (0 or 1)",
     )
     parser.add_argument(
         "--overflow-safety-checks",
@@ -1472,6 +1488,7 @@ def main(argv=None) -> int:
             purchase_generics=args.purchase_generics,
             mmb=args.mmb,
             extend_desc_box=args.extend_desc_box,
+            extend_dialogue_box=args.extend_dialogue_box,
             overflow_safety_checks=args.overflow_safety_checks,
             display_obtainable_item=args.display_obtainable_item,
             debuffs_exist=args.debuffs_exist,

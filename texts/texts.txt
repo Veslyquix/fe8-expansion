@@ -40308,6 +40308,33 @@ Wakwi[.][X]
 ## MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE
 Ishkode[.][X]
 
+## MSG_CO_ISHKODE_NAME
+Ishkode[.][X]
+
+## MSG_CO_ISHKODE_TITLE
+The Steadfast Commander[.][X]
+
+## MSG_CO_ISHKODE_INFO
+A stalwart tactician who leads[LF]
+from the front and never[LF]
+leaves a unit behind.[.][X]
+
+## MSG_CO_ISHKODE_POWER_NAME
+Hyper Repair[.][X]
+
+## MSG_CO_ISHKODE_POWER_DESC
+All of Ishkode's preferred[LF]
+units heal 10 HP.[.][X]
+
+## MSG_CO_ISHKODE_SUPER_NAME
+Hyper Upgrade[.][X]
+
+## MSG_CO_ISHKODE_SUPER_DESC
+All of Ishkode's units are[LF]
+fully healed and deal[LF]
+more damage.[.][X]
+
+
 ## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
 Frederick[.][X]
 
@@ -40465,17 +40492,17 @@ A secluded valley, Sacae[.][X]
 [OpenMidLeft][LoadFace][FID_Eirika]
 [OpenMidRight][LoadFace][FID_Seth]
 [OpenMidLeft]We should have stayed on the[LF]
-eastern trail.[.][A][LF]
+eastern trail.[.][LF]
 The mountains are too quiet.[A]
-[OpenMidRight]The Naskwa have made every trail[LF]
-dangerous.[.][A][LF]
+[OpenMidRight]The Naskwa have made every[LF]
+trail dangerous.[.][LF]
 We cannot keep running from them.[A]
 [OpenMidLeft]We aren't running.[.][LF]
 We are surviving.[A]
 [OpenMidRight]And for how long?[.][LF]
-Our people have abandoned three[LF]
-camps this season.[A]
-[OpenMidLeft]Until we can take our lands back.[.][A][CloseSpeechFast]
+Our people have abandoned[LF]
+three camps this season.[A]
+[OpenMidLeft]Until we can take our lands back.[.][A][CloseSpeechSlow]
 [OpenFarFarRight][LoadFace][FID_Soldier1]
 [OpenFarFarRight][MoveRight]
 [OpenRight]The fort[ToggleMouthMove]...[.][ToggleMouthMove][LF]
@@ -40490,9 +40517,6 @@ nightfall.[A][CloseSpeechFast]
 camp.[.][A]
 [OpenMidLeft]And our allies may not live to[.][LF]
 see another sunrise.[A]
-[OpenMidRight]Gather the warriors.[.][A]
-[OpenMidLeft]Already on their way.[.][A]
-[OpenMidRight]Good.[.][LF]
-Let the Naskwa learn that we are[.][LF]
+[OpenMidRight]Let the Naskwa learn that we are[.][LF]
 not so easily driven from our home.[A]
 [OpenMidLeft]To the mountains, then.[.][A][X]

@@ -210,6 +210,9 @@ void TalkPutSpriteText_OnIdle(struct Proc*);
 void ClearPrimaryHBlank(void);
 void TalkPutSpriteText_OnEnd(void);
 int GetStrTalkLen(const char*, s8);
+#if FE8_EXTEND_DIALOGUE_BOX
+int GetStrTalkLineCount(const char*, s8);
+#endif
 bool GetZero(void);
 void TalkDebugNop(void);
 void TalkBgSync(int bg);

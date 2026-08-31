@@ -341,6 +341,12 @@
 #define FE8_EXTEND_DESC_BOX 0
 #endif
 
+/* Dynamic (1-4 line) event/conversation dialogue box sizing (src/scene.c),
+ * instead of the vanilla fixed 2 lines. */
+#ifndef FE8_EXTEND_DIALOGUE_BOX
+#define FE8_EXTEND_DIALOGUE_BOX 0
+#endif
+
 /* PutSprite/PutSpriteExt (src/ctc.c) sprite-pool overflow bounds check. */
 #ifndef FE8_OVERFLOW_SAFETY_CHECKS
 #define FE8_OVERFLOW_SAFETY_CHECKS 1
@@ -614,6 +620,10 @@
 
 #if (FE8_EXTEND_DESC_BOX != 0) && (FE8_EXTEND_DESC_BOX != 1)
 #error "FE8_EXTEND_DESC_BOX must be 0 or 1"
+#endif
+
+#if (FE8_EXTEND_DIALOGUE_BOX != 0) && (FE8_EXTEND_DIALOGUE_BOX != 1)
+#error "FE8_EXTEND_DIALOGUE_BOX must be 0 or 1"
 #endif
 
 #if (FE8_OVERFLOW_SAFETY_CHECKS != 0) && (FE8_OVERFLOW_SAFETY_CHECKS != 1)

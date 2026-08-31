@@ -458,6 +458,7 @@ struct CoDefinition {
 };
 
 enum {
+    CO_ISHKODE,
     CO_FRANCIS,
     CO_ONEILL,
     CO_COUNT,
@@ -466,6 +467,25 @@ enum {
 /* Mirrors the classes actually sellable in sPurchaseGenericDefinitions
  * (src/purchase_generics.c) -- keep the class list in sync if that table
  * changes. */
+ 
+static const struct CoClassAffinity sIshkodeAffinities[] = {
+    { "Soldier",    CLASS_SOLDIER,       30 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
+    { "Brigand",    CLASS_BRIGAND,       30 },
+    { "Archer",     CLASS_ARCHER,        36 },
+    { "Fighter",    CLASS_FIGHTER,       30 },
+    { "Mercenary",  CLASS_MERCENARY,     30 },
+    { "Cavalier",   CLASS_CAVALIER,      30 },
+    { "Monk",       CLASS_MONK,          30 },
+    { "Mage",       CLASS_MAGE,          30 },
+    { "Cleric",     CLASS_CLERIC,        30 },
+    { "Shaman",     CLASS_SHAMAN,        30 },
+    // { "Dancer",     CLASS_DANCER,        30 },
+    { "Thief",      CLASS_THIEF,         30 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
+};
+ 
 static const struct CoClassAffinity sFrancisAffinities[] = {
     { "Soldier",    CLASS_SOLDIER,       36 },
     { "Knight",     CLASS_ARMOR_KNIGHT,  36 },
@@ -505,6 +525,22 @@ static const struct CoClassAffinity sOneillAffinities[] = {
 
 
 static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
+    [CO_ISHKODE] = {
+        .nameMsg = MSG_CO_ISHKODE_NAME,
+        .faceId = 4,
+        .titleMsg = MSG_CO_ISHKODE_TITLE,
+        .infoMsg = MSG_CO_ISHKODE_INFO,
+        .powerNameMsg = MSG_CO_ISHKODE_POWER_NAME,
+        .powerDescMsg = MSG_CO_ISHKODE_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ISHKODE_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ISHKODE_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 5,
+        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .affinities = sIshkodeAffinities,
+        .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
+    },
     [CO_FRANCIS] = {
         .nameMsg = MSG_CO_FRANCIS_NAME,
         .faceId = 4,

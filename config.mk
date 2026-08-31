@@ -315,6 +315,13 @@ MMB ?= 1
 # depends on.
 EXTEND_DESC_BOX ?= 1
 
+# --- Optional ExtendDialogueBox -----------------------------------------------
+# Sizes event/conversation dialogue boxes dynamically (1-4 lines) instead of
+# always 2, based on the longest run of lines between [A] waits in the
+# current speaker's text. A box that ends up 4 lines tall shifts down one
+# tile so it doesn't grow off the top of the screen.
+EXTEND_DIALOGUE_BOX ?= 1
+
 # --- Optional DisplayObtainableItem ------------------------------------------
 # Draws a small icon over enemy units carrying a droppable or stealable.
 DISPLAY_OBTAINABLE_ITEM ?= 1
