@@ -13,23 +13,27 @@
 #include "constants/items.h"
 #include "constants/songs.h"
 #include "constants/chapters.h"
+#include "constants/msg.h"
 
 #if FE8_CUSTOM_CAMPAIGN
 
 CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
-    // {
-        // .charIndex = CHARACTER_SETH,
-        // .classIndex = CLASS_PALADIN,
-        // .allegiance = FACTION_ID_BLUE,
-        // .level = 1,
-        // .xPosition = 3,
-        // .yPosition = 5,
-        // .items = {
-            // ITEM_SWORD_STEEL,
-            // ITEM_LANCE_SILVER,
-            // ITEM_VULNERARY,
-        // },
-    // },
+    /* Ishkode (see src/portrait_data.c/texts.txt) -- needed on the field
+     * for EventScr_Prologue_BeginningScene_Custom's opening conversation
+     * (FlashCursor(CHARACTER_SETH, ...) requires a live unit to flash). */
+    {
+        .charIndex = CHARACTER_SETH,
+        .classIndex = CLASS_PALADIN,
+        .allegiance = FACTION_ID_BLUE,
+        .level = 1,
+        .xPosition = 3,
+        .yPosition = 5,
+        .items = {
+            ITEM_SWORD_STEEL,
+            ITEM_LANCE_SILVER,
+            ITEM_VULNERARY,
+        },
+    },
     {
         .charIndex = CHARACTER_EIRIKA,
         .classIndex = CLASS_SOLDIER,
@@ -162,12 +166,17 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
     { 0 },
 };
 
-/* Custom-campaign prologue intro: Eirika and Seth are placed with the exact
- * same UnitDefinition (position/level/items/starting HP) as the stock
- * beginning scene, and Eirika still receives the Rapier and O'Neill's
- * squad still spawns (both needed for the chapter to actually be playable
- * and winnable via DefeatBoss), but the Renais-throne-room cutscene and
- * every dialogue box are skipped -- the player gets control immediately. */
+/* Custom-campaign prologue intro: Wakwi (Eirika's slot) and Ishkode
+ * (Seth's slot) are placed with the same starting position/level/items as
+ * the stock beginning scene's Eirika/Seth, Wakwi still receives the Rapier
+ * and O'Neill's squad still spawns (both needed for the chapter to
+ * actually be playable and winnable via DefeatBoss) -- but instead of the
+ * Renais-throne-room cutscene, this plays the custom campaign's own
+ * opening: Wakwi and Ishkode, spiritual leaders of the Akiya (a nomadic
+ * Sacae people fighting to reclaim their lands from the Naskwa), have
+ * just made a temporary camp when a wounded scout arrives warning that an
+ * allied fort is about to be besieged -- see
+ * MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING (texts/texts.txt). */
 CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     ENUT(0x8)
     LOAD1(1, UnitDef_PrologueAllies)
@@ -175,24 +184,13 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
 
     LOAD1(1, UnitDef_PrologueEnemies)
     ENUN
-    
-    // MUSI
-    // Text_BG(BG_KH_224, 0x90D)
-    // MUNO
-    
-    /* 
-    // test FE8_MULTIPALETTE_BG - seems to work 
-    // (no$gba has weird sprite blending quirks, so check on mgba) 
+
     MUSI
-    SetBackground(BG_ALTAR_NIGHT_256)   
-    EvtTextStartType2                    
-    TEXTSHOW(0xc22)
-    TEXTEND
+    Text_BG(BG_GRASS_PLAINS, MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION)
     MUNO
-    FADI(4)
-    REMA
-    CLEAN
-    */ 
+
+    FlashCursor(CHARACTER_EIRIKA, 60)
+    Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
 
     NoFade
     ENDA

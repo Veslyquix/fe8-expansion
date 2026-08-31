@@ -508,20 +508,19 @@ static void PutPurchaseGenericText(int x, int y, int color, int width, const cha
     PutDrawText(&text, TILEMAP_LOCATED(gBG0TilemapBuffer, x, y), color, 0, width, str);
 }
 
-static void PutPurchaseGenericTextIndent(int x, int y, int color, int width, const char* str)
+static void PutPurchaseGenericTextIndent(int x, int y, int xPos, int color, int width, const char* str)
 {
     struct Text text;
 
     InitText(&text, width);
-    Text_SetCursor(&text, 2);
-    PutDrawText(&text, TILEMAP_LOCATED(gBG0TilemapBuffer, x, y), color, 0, width, str);
+    PutDrawText(&text, TILEMAP_LOCATED(gBG0TilemapBuffer, x, y), color, xPos, width, str);
 }
-
+#define STAT_LABEL_XINDENT 3 
 
 static void PutPurchaseGenericBaseStat(int y, const char* label, int base)
 {
-    PutPurchaseGenericText(2, y, TEXT_COLOR_SYSTEM_GOLD, 3, label);
-    PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 6, y), TEXT_COLOR_SYSTEM_BLUE, base);
+    PutPurchaseGenericTextIndent(1, y, STAT_LABEL_XINDENT, TEXT_COLOR_SYSTEM_GOLD, 3, label);
+    PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 5, y), TEXT_COLOR_SYSTEM_BLUE, base);
 }
 
 /* Pow only -- see AdjustStatForCo (src/power.c): a CO's class affinity
@@ -531,12 +530,12 @@ static void PutPurchaseGenericBaseStat(int y, const char* label, int base)
  * class and the buying (Blue) faction's commander instead. */
 static void PutPurchaseGenericPowStat(int y, const char* label, int base, int classId)
 {
-    PutPurchaseGenericText(2, y, TEXT_COLOR_SYSTEM_GOLD, 3, label);
-    PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 6, y), TEXT_COLOR_SYSTEM_BLUE, base);
+    PutPurchaseGenericTextIndent(1, y, STAT_LABEL_XINDENT, TEXT_COLOR_SYSTEM_GOLD, 3, label);
+    PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 5, y), TEXT_COLOR_SYSTEM_BLUE, base);
 #if FE8_CO_POWERS
     PutNumberBonus(
         AdjustStatForCo(gPlaySt.commanderId[FACTION_ID_BLUE], classId, base),
-        TILEMAP_LOCATED(gBG0TilemapBuffer, 7, y));
+        TILEMAP_LOCATED(gBG0TilemapBuffer, 6, y));
 #endif
 }
 
@@ -965,7 +964,7 @@ static void DrawPurchaseGenericDetails(const struct PurchaseGenericDefinition* d
 
     class = GetClassData(def->classId);
 
-    PutPurchaseGenericTextIndent(1, 1, TEXT_COLOR_SYSTEM_GOLD, 7, GetPurchaseGenericClassName(def));
+    PutPurchaseGenericTextIndent(1, 1, 2, TEXT_COLOR_SYSTEM_GOLD, 7, GetPurchaseGenericClassName(def));
     PutPurchaseGenericText(4, 3, TEXT_COLOR_SYSTEM_GOLD, 4, GetStringFromIndex(MSG_PURCHASE_GENERIC_BASE));
 
     if (class != NULL)

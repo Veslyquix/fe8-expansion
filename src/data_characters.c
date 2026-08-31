@@ -10,7 +10,7 @@
 CONST_DATA struct CharacterData gCharacterData[] = {
     [CHARACTER_EIRIKA - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_HANNAH,
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_WAKWI,
 #else
         .nameTextId = 0x212,
 #endif
@@ -48,7 +48,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_SETH - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS,
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE,
 #else
         .nameTextId = 0x213,
 #endif
