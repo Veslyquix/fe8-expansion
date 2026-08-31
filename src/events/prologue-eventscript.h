@@ -14,35 +14,34 @@
 #include "constants/songs.h"
 #include "constants/chapters.h"
 #include "constants/msg.h"
+#include "power.h"
 
 #if FE8_CUSTOM_CAMPAIGN
 
+
+
 CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
-    /* Ishkode (see src/portrait_data.c/texts.txt) -- needed on the field
-     * for EventScr_Prologue_BeginningScene_Custom's opening conversation
-     * (FlashCursor(CHARACTER_SETH, ...) requires a live unit to flash). */
     {
         .charIndex = CHARACTER_SETH,
-        .classIndex = CLASS_PALADIN,
+        .classIndex = CLASS_RANGER,
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
-        .xPosition = 3,
-        .yPosition = 5,
+        .xPosition = 6,
+        .yPosition = 0,
         .items = {
-            ITEM_SWORD_STEEL,
-            ITEM_LANCE_SILVER,
+            ITEM_BOW_IRON,
             ITEM_VULNERARY,
         },
     },
     {
         .charIndex = CHARACTER_EIRIKA,
-        .classIndex = CLASS_SOLDIER,
+        .classIndex = CLASS_MYRMIDON_F,
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
-        .xPosition = 2,
-        .yPosition = 2,
+        .xPosition = 1,
+        .yPosition = 1,
         .items = {
-            ITEM_LANCE_IRON,
+            ITEM_SWORD_IRON,
             ITEM_VULNERARY,
         },
     },
@@ -177,22 +176,59 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
  * just made a temporary camp when a wounded scout arrives warning that an
  * allied fort is about to be besieged -- see
  * MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING (texts/texts.txt). */
-CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
-    ENUT(0x8)
-    LOAD1(1, UnitDef_PrologueAllies)
-    ENUN
+/* ASMC callback for setting a faction's CO from event slots, so a script
+ * can drive SetFactionCo (src/power.c) with SVAL instead of a one-off C
+ * function hardcoding the faction/CO pair -- SVAL(EVT_SLOT_1, faction)
+ * SVAL(EVT_SLOT_2, coId) ASMC(SetFactionCoFromSlots), once per faction.
+ * EVT_SLOT_1/2 are free at the very start of a fresh event (see
+ * include/event.h) -- reusing them here is safe as long as this runs
+ * before anything else in the same script needs those two slots. */
+static void SetFactionCoFromSlots(void)
+{
+    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
+}
 
-    LOAD1(1, UnitDef_PrologueEnemies)
-    ENUN
+CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
+    /* Blue plays as Ishkode, the Naskwa (Red) play as O'Neill -- see
+     * CoScreen_KeyListener's SCROLL_ALL_COS gate (src/power.c): without
+     * this, the CO screen has nothing to scroll to (neither faction's
+     * commanderId ever gets set, so IsCoInUse never matches anything). */
+    SVAL(EVT_SLOT_1, FACTION_BLUE)
+    SVAL(EVT_SLOT_2, CO_ISHKODE)
+    ASMC(SetFactionCoFromSlots)
+
+    SVAL(EVT_SLOT_1, FACTION_RED)
+    SVAL(EVT_SLOT_2, CO_ONEILL)
+    ASMC(SetFactionCoFromSlots)
+    LOAD1(1, UnitDef_PrologueAllies)
+    FADU(16)
 
     MUSI
     BROWNBOXTEXT(MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION, 8, 8)
-    // Text_BG(BG_GRASS_PLAINS, )
     MUNO
+
+    ENUT(0x8)
+
+    FlashCursor(CHARACTER_EIRIKA, 20)
+    MOVE(4, CHARACTER_SETH, 10, 0)
+    MOVE(1, CHARACTER_EIRIKA, 1, 2)
+    ENUN
+    MOVE(3, CHARACTER_SETH, 5, 1)
+
+    
+    // MOVE(3, CHARACTER_EIRIKA, 3, 1)
+    MOVE(3, CHARACTER_EIRIKA, 4, 1)
+    ENUN
 
     FlashCursor(CHARACTER_EIRIKA, 60)
     Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
-
+    MOVE(0, CHARACTER_SETH, 1, 1)
+    ENUN
+    DISA(CHARACTER_SETH)
+    // FlashCursor(CHARACTER_SETH, 20)
+    
+    LOAD1(1, UnitDef_PrologueEnemies)
+    ENUN
     NoFade
     ENDA
 };

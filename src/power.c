@@ -466,13 +466,6 @@ struct CoDefinition {
     u8 affinityCount;
 };
 
-enum {
-    CO_ISHKODE,
-    CO_FRANCIS,
-    CO_ONEILL,
-    CO_COUNT,
-};
-
 /* Mirrors the classes actually sellable in sPurchaseGenericDefinitions
  * (src/purchase_generics.c) -- keep the class list in sync if that table
  * changes. */
@@ -610,7 +603,7 @@ static bool8 sCoCommanderFading = FALSE;
 static const struct CoDefinition* GetCoDefinition(int coId)
 {
     if (coId < 0 || coId >= CO_COUNT)
-        coId = CO_FRANCIS;
+        coId = CO_ISHKODE;
 
     return &sCoDefinitions[coId];
 }
@@ -825,6 +818,19 @@ void CoGauge_Set(int faction, s16 value)
 void CoGauge_OnPowerUsed(int faction)
 {
     CoGauge_Set(faction, 0);
+}
+
+void SetFactionCo(int faction, int coId)
+{
+    int slot = faction >> 6;
+
+    if (slot < 0 || slot >= 4)
+        return;
+
+    if (coId < 0 || coId >= CO_COUNT)
+        return;
+
+    gPlaySt.commanderId[slot] = coId;
 }
 
 /* Called from AiPhaseInit (src/cp_phase.c) at the start of each AI-

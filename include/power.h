@@ -3,6 +3,16 @@
 
 #if FE8_CO_POWERS
 
+/* CO ids -- also the index into sCoDefinitions (src/power.c). Public so
+ * event scripts (e.g. src/events/prologue-eventscript.h) can name a CO
+ * when setting up a faction's commander via SetFactionCo. */
+enum {
+    CO_ISHKODE,
+    CO_FRANCIS,
+    CO_ONEILL,
+    CO_COUNT,
+};
+
 struct MenuProc;
 struct MenuItemProc;
 
@@ -61,6 +71,14 @@ void CoGauge_OnPowerUsed(int faction);
  * starts (when it does) blocks the caller until it fully finishes. */
 struct Proc;
 int CoPowers_OnAiPhaseStart(struct Proc* parent);
+
+/* Sets which CO (a CO_* id above) is faction's commander --
+ * gPlaySt.commanderId[faction >> 6] (see include/types.h; faction is a
+ * raw FACTION_BLUE/GREEN/RED/PURPLE byte, not a FACTION_ID_*, same
+ * convention as CoGauge_Get/_Set above). Called from event setup code
+ * (e.g. ASMC in an EventListScr) to assign each side's commander before
+ * the map starts -- see src/events/prologue-eventscript.h. */
+void SetFactionCo(int faction, int coId);
 
 /* Small read-only accessors onto the CO definition table (src/power.c),
  * for UI code (the CO screen, the VeslyDebugger CO editor) that needs a

@@ -7764,13 +7764,13 @@ void DebuggerUpdateMMS(int id, struct Unit * unit)
         const struct ClassData * classData = unit->pClassData;
         unit->pClassData = GetClassData(id);
 
-        struct MuProc * muProc1 = MU_CreateForUI(unit, 48, 144); // StartUiMu
+        struct MuProc * muProc1 = MU_CreateForUI(unit, 48, 158); // StartUiMu
         MU_SetFacing(muProc1, 0 + facing);
-        struct MuProc * muProc2 = MU_CreateForUI(unit, 88, 144); // StartUiMu
+        struct MuProc * muProc2 = MU_CreateForUI(unit, 88, 158); // StartUiMu
         MU_SetFacing(muProc2, 1 + facing);
-        struct MuProc * muProc3 = MU_CreateForUI(unit, 128, 144); // StartUiMu
+        struct MuProc * muProc3 = MU_CreateForUI(unit, 128, 158); // StartUiMu
         MU_SetFacing(muProc3, 2 + facing);
-        struct MuProc * muProc4 = MU_CreateForUI(unit, 168, 144); // StartUiMu
+        struct MuProc * muProc4 = MU_CreateForUI(unit, 168, 158); // StartUiMu
         MU_SetFacing(muProc4, 3 + facing);
         unit->pClassData = classData;
     }
@@ -7823,7 +7823,7 @@ void RedrawGfxFromIDs(int id, DebuggerProc * proc)
     if (id && (GetClassData(id) != 0) && CanDisplaySMS(GetClassData(id)->SMSId))
     {
         // SMS_SomethingGmapUnit(id, 1, 16);
-        PutUnitSpriteForClassId(0, 8, 128, 0xC800, id);
+        PutUnitSpriteForClassId(0, 8, 142, 0xC800, id);
     }
     // UseUnitSprite(12);
 }
