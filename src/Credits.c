@@ -884,6 +884,11 @@ static const signed char body3[] =
     " Venus Lighthouse arrangement by AReliableChair" NL
     " Goldenrod City arrangement by AReliableChair";
 
+/* Kept in sync with CREDITS.md's "CO Screen Graphics" table. */
+static const signed char header5[] = "CO Screen Graphics";
+static const signed char body5[] =
+    " CO info screen backdrop by PatrickHoang";
+
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
@@ -933,6 +938,9 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
 #endif
 #if FE8_NIMAP2
     { header3, body3, DemonKingCG, CG_Type, 0x80, 0 },
+#endif
+#if FE8_CO_POWERS
+    { header5, body5, SubstituteRandomBG, BG_Type, 0, 0 },
 #endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },

@@ -41,6 +41,12 @@ Hannah and Francis are no longer used by `src/portrait_data.c` (replaced by
 Wakwi and Ishkode respectively) but remain credited/linked, not removed.
 
 
+## CO Screen Graphics (`CO_POWERS`)
+
+| Asset | File | Artist |
+| --- | --- | --- |
+| CO info screen backdrop | `graphics/bg/bg_CoStatusScreen.png` | PatrickHoang |
+
 ## Custom BGM (`NIMAP2`)
 
 Sound data sourced from the [Fire Emblem: Sacred Rewritten
