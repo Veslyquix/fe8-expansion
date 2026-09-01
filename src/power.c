@@ -34,6 +34,7 @@
 #include "constants/video-global.h"
 #include "icon.h"
 #include "player_interface.h" // EndPlayerPhaseSideWindows
+#include "savemenu.h"
 #if FE8_AW2_ASSETS
 #include "aw2_gfx.h"
 #include "phasechangefx.h" // gProcScr_PhaseIntroSquares/BlendBox, Img_PhaseChangeSquares
@@ -1596,14 +1597,30 @@ static void CoScreen_LoadBgFrame(void)
     gLCDControlBuffer.bg3cnt.priority = 3;
     BG_SetColorBpp(3, 4);
 
-    Decompress(frlgUiFrame_tiles, (void*)(VRAM + GetBackgroundTileDataOffset(3) + CO_BG_FRAME_TILE_BYTE_OFFSET));
-    ApplyPalette(frlgUiFrame_palette, CO_BG_FRAME_PAL_SLOT);
+    // Decompress(frlgUiFrame_tiles, (void*)(VRAM + GetBackgroundTileDataOffset(3) + CO_BG_FRAME_TILE_BYTE_OFFSET));
+    // ApplyPalette(frlgUiFrame_palette, CO_BG_FRAME_PAL_SLOT);
 
-    for (y = 0; y < CO_BG_FRAME_TILE_HEIGHT; ++y) {
-        for (x = 0; x < CO_BG_FRAME_TILE_WIDTH; ++x) {
-            gBG3TilemapBuffer[TILEMAP_INDEX(x, y)] = (frlgUiFrame_map[y * CO_BG_FRAME_TILE_WIDTH + x] + CO_BG_FRAME_TILE_INDEX_OFFSET) | (CO_BG_FRAME_PAL_SLOT << 12);
-        }
-    }
+    // for (y = 0; y < CO_BG_FRAME_TILE_HEIGHT; ++y) {
+        // for (x = 0; x < CO_BG_FRAME_TILE_WIDTH; ++x) {
+            // gBG3TilemapBuffer[TILEMAP_INDEX(x, y)] = (frlgUiFrame_map[y * CO_BG_FRAME_TILE_WIDTH + x] + CO_BG_FRAME_TILE_INDEX_OFFSET) | (CO_BG_FRAME_PAL_SLOT << 12);
+        // }
+    // }
+    
+    // ApplyPalette(Pal_MainMenuBgFog, BGPAL_SAVEMENU_BGFOG);
+    // Decompress(Img_MainMenuBgFog, (void*)BG_VRAM + GetBackgroundTileDataOffset(BG_3) + BGCHR_SAVEMENU_BGFOG * TILE_SIZE_4BPP);
+    // Decompress(Tsa_MainMenuBgFog, gGenericBuffer);
+    // CallARM_FillTileRect(
+        // gBG2TilemapBuffer,
+        // gGenericBuffer,
+        // OBJ_PALETTE(BGPAL_SAVEMENU_BGFOG) + OBJ_PRIORITY(0) + OBJ_CHAR(BGCHR_SAVEMENU_BGFOG));
+
+    
+    ApplyPalette(Pal_MainMenuBgFog, 7);
+
+    Decompress(Img_MainMenuBgFog, (void*)(GetBackgroundTileDataOffset(3) + 0x06004C00));
+
+    Decompress(Tsa_MainMenuBgFog, gGenericBuffer);
+    CallARM_FillTileRect(gBG3TilemapBuffer, gGenericBuffer, 0x00007260);
 
     gCoScreen.bgScrollTimer = 0;
     BG_SetPosition(3, 0, 0);
@@ -1635,10 +1652,40 @@ static void CoScreen_LoadStatusBg(void)
  * fills its full 32x32-tile (256x256px) screen. */
 static void CoScreen_UpdateBgScroll(ProcPtr proc)
 {
-    gCoScreen.bgScrollTimer++;
+    // gCoScreen.bgScrollTimer++;
 
-    BG_SetPosition(3, -(gCoScreen.bgScrollTimer >> 1), -(gCoScreen.bgScrollTimer >> 1));
+    // BG_SetPosition(3, -(gCoScreen.bgScrollTimer >> 1), -(gCoScreen.bgScrollTimer >> 1));
+// }
+// void SaveDraw_ScrollFogBG(struct SaveDrawProc * proc)
+// {
+    u16 * ptr;
+    int i;
+    s16 x;
+    u32 bg_y;
+    u32 angle;
+
+    proc->bg_x++;
+    proc->bg_y += 2;
+
+    x = (proc->bg_x & 0xfff) >> 3;
+    bg_y = (proc->bg_y / 8) & 0xff;
+
+    ptr = GetBgVerticalScrollBuffer(0, true);
+    angle = bg_y;
+
+    for (i = 0; i < DISPLAY_HEIGHT; i++)
+    {
+        int v = SIN(angle) / 0x300;
+        ptr[i] = (v + x) & 0x1ff;
+        angle += 12;
+    }
+
+    BG_SetPosition(BG_2, x, bg_y);
+
+    FlipBgVerticalScroll();
 }
+
+
 
 /* Vertical panel offset applied every frame from gStatScreen.yDispOff --
  * same mechanism as statscreen.c's BgOffCtrl_OnLoop/gProcScr_SSBgOffsetCtrl,
