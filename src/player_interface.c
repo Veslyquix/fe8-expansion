@@ -1801,6 +1801,18 @@ void GoalDisplay_Init(struct PlayerInterfaceProc * proc)
     LoadAw2CoMiniGfx();
 #endif
 
+    /* MapMain_ResumeFromPhaseChange (src/bmio.c) unconditionally turns
+     * every BG layer off when resuming after a phase transition, relying
+     * on whatever renders next to turn back on whichever it needs --
+     * RenderBmMap() (src/bmmap.c) does that for BG0/1/2/3/OBJ, but only
+     * once player phase's own UI calls it. Vanilla AI/CP phase never drew
+     * anything on BG1, so nothing there re-enables it, leaving this
+     * window's tiles sitting in gBG1TilemapBuffer but never displayed
+     * (StartAiPhaseGoalDisplay, this proc's other Proc_Start caller,
+     * needs this exactly as much as player phase's own does). */
+    gLCDControlBuffer.dispcnt.bg1_on = TRUE;
+    gLCDControlBuffer.bg1cnt.priority = 0;
+
     proc->showHideClock = 0;
     proc->isRetracting = false;
     proc->cursorQuadrant = 0;

@@ -8,6 +8,8 @@
 /* These should related to status-bar gfx for stat-screen */
 #if FE8_CO_POWERS
 enum statBarCoTileRows {
+    CSB_BLANK1,
+    CSB_BLANK2,
     CSB_bonusOutlineTop,
     CSB_outlineTop,
     CSB_highlight,

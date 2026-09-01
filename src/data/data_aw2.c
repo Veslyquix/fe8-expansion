@@ -21,4 +21,12 @@ const u16 __attribute__((aligned(4))) aw2debugFont_palette[] = INCBIN_U16("graph
 const u8 __attribute__((aligned(4))) aw2uiCoMini_tiles[] = INCBIN_U8("graphics/aw2/aw2uiCoMini.4bpp.lz");
 const u16 __attribute__((aligned(4))) aw2uiCoMini_palette[] = INCBIN_U16("graphics/aw2/aw2uiCoMini.gbapal");
 
+/* CO screen class-affinity movement/range bonus icons (see src/power.c,
+ * CoScreen_DrawAffinityBonusIcon) -- dumped from C:\devkitPro\feex\aw2dmp\new,
+ * one 8x8 tile each, left-to-right: range-arrow, foot (movement), '+',
+ * '-', '1', '2', '3'. All share one palette (aw2plus.gbapal in that dump,
+ * renamed here to match this sheet). */
+const u8 __attribute__((aligned(4))) gGfx_CoAffinityBonusIcons_tiles[] = INCBIN_U8("graphics/aw2/gGfx_CoAffinityBonusIcons.4bpp.lz");
+const u16 __attribute__((aligned(4))) gGfx_CoAffinityBonusIcons_palette[] = INCBIN_U16("graphics/aw2/gGfx_CoAffinityBonusIcons.gbapal");
+
 #endif

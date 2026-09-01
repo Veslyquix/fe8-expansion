@@ -419,7 +419,13 @@ enum {
 struct CoClassAffinity {
     const char* className; // unused for display now (SMS icon + bar replace name+hearts); kept for reference/tooling
     u8 classId;
-    u8 rating; // 1-5; not wired up to the bar yet, see CoScreen_DrawPageAffinity
+    u8 rating;
+    /* Purely visual for now (see CoScreen_DrawPageAffinityClassBonusIcons):
+     * -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
+     * below the class's affinity bar. 0 draws nothing. Not yet wired into
+     * actual movement/weapon-range calculation. */
+    s8 movBon;
+    s8 rangeBon;
 };
 
 /* CoScreen_DrawPageAffinity's bar base: a class's affinity bar (and
@@ -472,15 +478,15 @@ struct CoDefinition {
  * changes. */
  
 static const struct CoClassAffinity sIshkodeAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       30 },
+    { "Soldier",    CLASS_SOLDIER,       30, .movBon = +2 },
     { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
     { "Brigand",    CLASS_BRIGAND,       30 },
-    { "Archer",     CLASS_ARCHER,        36 },
+    { "Archer",     CLASS_ARCHER,        36, .rangeBon = +1 },
     { "Fighter",    CLASS_FIGHTER,       30 },
     { "Mercenary",  CLASS_MERCENARY,     30 },
     { "Cavalier",   CLASS_CAVALIER,      30 },
     { "Monk",       CLASS_MONK,          30 },
-    { "Mage",       CLASS_MAGE,          30 },
+    { "Mage",       CLASS_MAGE,          30, .movBon = -3 },
     { "Cleric",     CLASS_CLERIC,        30 },
     { "Shaman",     CLASS_SHAMAN,        30 },
     // { "Dancer",     CLASS_DANCER,        30 },
@@ -908,11 +914,89 @@ enum {
  * in real screen pixel coordinates every frame -- sprites aren't part of
  * the BG tile scratch buffers, same as how the page-number arrows/mu
  * platform are also plain OBJ sprites unaffected by the page slide. */
-#define CO_TEXT_Y 1 
+#define CO_TEXT_Y 1
 #define CO_AFFINITY_ROW_Y0 (CO_TEXT_Y+1)
 #define CO_AFFINITY_ROW_STEP 2
 #define CO_AFFINITY_ICON_TILE_X (CO_PAGE_X + 1)
 #define CO_AFFINITY_BAR_TILE_X 6
+
+#if FE8_AW2_ASSETS
+/* Class movement/range bonus icons (struct CoClassAffinity's movBon/
+ * rangeBon -- e.g. CO_ISHKODE's sIshkodeAffinities below), drawn on the
+ * one free tile row between one class's affinity bar (row
+ * CO_AFFINITY_ROW_Y0 + i*CO_AFFINITY_ROW_STEP + 1, see DrawCoInfoBar) and
+ * the next class's row -- i.e. +2 from the bar-drawing loop's own
+ * (pre-increment) y, directly below that bar without touching the next
+ * entry's row. gGfx_CoAffinityBonusIcons_tiles (src/data/data_aw2.c),
+ * dumped from C:\devkitPro\feex\aw2dmp\new -- see graphics/aw2/
+ * gGfx_CoAffinityBonusIcons.png for the source and CoScreen_Setup for
+ * where this gets decompressed/palette-applied.
+ *
+ * VRAM placement: BG0/BG1 share char base 0x0000 (see CoScreen_Setup's
+ * bgConfig) with the common UI-frame sheet (128 tiles) and, further up,
+ * CoScreen_DrawHeader's face graphic at tile 0x280 (~90 tiles, ending
+ * ~0x2DA) -- this sheet's 7 tiles start right after that, at 0x2E0, well
+ * clear of BG0's own map data at byte 0x6000 (tile index 0x300). Palette
+ * bank 5 is otherwise unused anywhere else in this file. Both are a
+ * judgment call made without being able to render this screen -- if
+ * either turns out already claimed by something this file's other
+ * Decompress/ApplyPalette calls didn't make obvious, adjust
+ * CO_AFFINITY_BONUS_ICON_TILE_BASE/_PAL_SLOT below to a clear
+ * region/bank. */
+#define CO_AFFINITY_BONUS_ICON_TILE_BASE 0x220
+#define CO_AFFINITY_BONUS_ICON_PAL_SLOT 5
+
+enum {
+    CO_BONUS_ICON_ARROW,  // range
+    CO_BONUS_ICON_FOOT,   // movement
+    CO_BONUS_ICON_PLUS,
+    CO_BONUS_ICON_MINUS,
+    CO_BONUS_ICON_DIGIT1,
+    CO_BONUS_ICON_DIGIT2,
+    CO_BONUS_ICON_DIGIT3,
+};
+
+extern const u8 gGfx_CoAffinityBonusIcons_tiles[];
+extern const u16 gGfx_CoAffinityBonusIcons_palette[];
+
+static void CoScreen_LoadAffinityBonusIcons(void)
+{
+    Decompress(gGfx_CoAffinityBonusIcons_tiles,
+        (void*)(VRAM + GetBackgroundTileDataOffset(0) + CO_AFFINITY_BONUS_ICON_TILE_BASE * 0x20));
+    ApplyPalette(gGfx_CoAffinityBonusIcons_palette, CO_AFFINITY_BONUS_ICON_PAL_SLOT);
+}
+
+/* Draws [type icon][sign icon][magnitude digit] at (x, y) in the
+ * gUiTmScratchA page-region coordinate space (same space DrawCoInfoBar's
+ * bars use). movBon takes priority if a class somehow has both set (no
+ * current CO does) -- only one row is free per class without further
+ * restructuring CO_AFFINITY_ROW_STEP, so only one bonus type can be shown
+ * per class for now. Draws nothing if both are 0. */
+static void CoScreen_DrawAffinityBonusIcon(int x, int y, const struct CoClassAffinity* affinity)
+{
+    int bon;
+    int typeIcon;
+    int signIcon;
+    int digitIcon;
+
+    if (affinity->movBon != 0) {
+        bon = affinity->movBon;
+        typeIcon = CO_BONUS_ICON_FOOT;
+    } else if (affinity->rangeBon != 0) {
+        bon = affinity->rangeBon;
+        typeIcon = CO_BONUS_ICON_ARROW;
+    } else {
+        return;
+    }
+
+    signIcon = (bon > 0) ? CO_BONUS_ICON_PLUS : CO_BONUS_ICON_MINUS;
+    digitIcon = CO_BONUS_ICON_DIGIT1 + (ABS(bon) - 1); // 1/2/3 -> DIGIT1/2/3
+
+    gUiTmScratchA[TILEMAP_INDEX(x + 1, y)] = TILEREF(CO_AFFINITY_BONUS_ICON_TILE_BASE + typeIcon, CO_AFFINITY_BONUS_ICON_PAL_SLOT);
+    gUiTmScratchA[TILEMAP_INDEX(x + 2, y)] = TILEREF(CO_AFFINITY_BONUS_ICON_TILE_BASE + signIcon, CO_AFFINITY_BONUS_ICON_PAL_SLOT);
+    gUiTmScratchA[TILEMAP_INDEX(x + 3, y)] = TILEREF(CO_AFFINITY_BONUS_ICON_TILE_BASE + digitIcon, CO_AFFINITY_BONUS_ICON_PAL_SLOT);
+}
+#endif // FE8_AW2_ASSETS
 
 /* Page-content area, same footprint statscreen.c's own page region uses
  * (see gUiTmScratchA/C, sized exactly for an 18x18 area) -- screen tile
@@ -1049,18 +1133,24 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(2, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_AFFINITY);
      
-    // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green. 
+    // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green.
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 30, co->affinities[i].rating, 30);
+#if FE8_AW2_ASSETS
+        CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X - 2, y + 2, &co->affinities[i]);
+#endif
         y += CO_AFFINITY_ROW_STEP;
     }
-    int offset = i; 
-    y = CO_AFFINITY_ROW_Y0; 
+    int offset = i;
+    y = CO_AFFINITY_ROW_Y0;
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30, co->affinities[i+offset].rating, 30);
+#if FE8_AW2_ASSETS
+        CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X + 9 - 2, y + 2, &co->affinities[i+offset]);
+#endif
         y += CO_AFFINITY_ROW_STEP;
     }
-    
+
 }
 
 /* Class SMS icons for the affinity page -- OBJ sprites, so they need
@@ -1768,6 +1858,9 @@ static void CoScreen_Setup(ProcPtr proc)
 
     CoScreen_LoadBgFrame();
     CoScreen_LoadStatusBg();
+#if FE8_AW2_ASSETS
+    CoScreen_LoadAffinityBonusIcons();
+#endif
 
     CoScreen_DrawPage();
     EnablePaletteSync();
