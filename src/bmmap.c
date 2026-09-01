@@ -683,7 +683,18 @@ void RefreshEntityBmMaps(void) {
 
     // 2. Clear fog map, with 1 (visible) if no fog, with 0 (hidden) if yes fog
 
-    BmMapFill(gBmMapFog, !gPlaySt.chapterVisionRange ? 1 : 0);
+#if FE8_DANGER_RADIUS
+    /* Danger Radius repurposes gBmMapFog to mark its overlay tiles whenever
+     * FOW is off (see src/dangerradius.c) -- while it's active, this is the
+     * one thing in this function that would otherwise blow the marks away
+     * every time anything calls RefreshEntityBmMaps (which is far more call
+     * sites than just Danger Radius's own hooks, e.g. starting to select a
+     * unit's move destination). Skip the reset; step 3 below doesn't touch
+     * gBmMapFog at all when chapterVisionRange == 0, so nothing else needs
+     * it freshly reset here either. */
+    if (DangerRadius_GetActiveCount() == 0)
+#endif
+        BmMapFill(gBmMapFog, !gPlaySt.chapterVisionRange ? 1 : 0);
 
     // 3. Populate unit, fog & hidden maps
 
