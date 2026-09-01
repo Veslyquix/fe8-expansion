@@ -438,6 +438,17 @@
 #define FE8_ALPHA_SPRITE_ARROW 0
 #endif
 
+/* Weapon attack range computed from each carried weapon's own min/max
+ * range (GetUnitItemEffectiveMinRange/MaxRange, src/bmitem.c) instead of
+ * the vanilla-profile-only reach-bits switch in
+ * GenerateUnitCompleteAttackRange (src/bmidoten.c), so a non-vanilla
+ * range (e.g. 2-4) actually works. Also lets a CO's class-affinity
+ * rangeBon (struct CoClassAffinity, src/power.c) shift max range for
+ * real, not just display it. */
+#ifndef FE8_RANGE_REWORK
+#define FE8_RANGE_REWORK 0
+#endif
+
 /* Consolidates every vanilla per-action suspend-save write down to one,
  * conditional write at the start of Player Phase (see src/turn_autosave.c). */
 #ifndef FE8_TURN_AUTOSAVE
@@ -696,6 +707,10 @@
 
 #if (FE8_ALPHA_SPRITE_ARROW != 0) && (FE8_ALPHA_SPRITE_ARROW != 1)
 #error "FE8_ALPHA_SPRITE_ARROW must be 0 or 1"
+#endif
+
+#if (FE8_RANGE_REWORK != 0) && (FE8_RANGE_REWORK != 1)
+#error "FE8_RANGE_REWORK must be 0 or 1"
 #endif
 
 #if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)

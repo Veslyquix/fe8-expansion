@@ -11,6 +11,9 @@
 
 #include "bmitem.h"
 #include "id_space.h"
+#if FE8_RANGE_REWORK && FE8_CO_POWERS
+#include "power.h"
+#endif
 
 /* Issue #6 bundled content example. The header declares its narrow, typed
  * accessor ONLY under FE8_EXPANSION_STARTER_CONTENT (default 0, and never
@@ -240,6 +243,38 @@ inline int GetItemMaxRange(int item) {
 inline int GetItemEncodedRange(int item) {
     return GetItemData(ITEM_INDEX(item))->encodedRange;
 }
+
+#if FE8_RANGE_REWORK
+/* See declaration comment (include/bmitem.h). */
+int GetUnitItemEffectiveMinRange(struct Unit* unit, int item) {
+    return GetItemMinRange(item);
+}
+
+int GetUnitItemEffectiveMaxRange(struct Unit* unit, int item) {
+    int maxRange = GetItemMaxRange(item);
+    int minRange = GetItemMinRange(item);
+    int bonus = 0;
+
+#if FE8_CO_POWERS
+    bonus += GetCoClassRangeBonus(gPlaySt.commanderId[UNIT_FACTION(unit) >> 6], UNIT_CLASS_ID(unit));
+#endif
+
+    /* Future unit-specific skill hook: bonus += GetUnitSkillRangeBonus(unit); */
+
+    if (bonus == 0)
+        return maxRange;
+
+    maxRange += bonus;
+
+    if (maxRange < minRange)
+        maxRange = minRange; // never below the weapon's own minimum
+
+    if (maxRange > 15)
+        maxRange = 15; // nibble-encoded range caps at 15
+
+    return maxRange;
+}
+#endif
 
 inline int GetItemRequiredExp(int item) {
     return GetItemData(ITEM_INDEX(item))->weaponRank;

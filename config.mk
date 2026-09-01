@@ -339,9 +339,21 @@ HP_BARS ?= 1
 # its icon sheet.
 DANGER_RADIUS ?= 1
 
+# --- Optional RangeRework ---------------------------------------------------
+# Weapon attack range is computed from each carried weapon's own min/max
+# range directly (GetUnitItemEffectiveMinRange/MaxRange, src/bmitem.c)
+# instead of the vanilla-profile-only reach-bits switch, so a non-vanilla
+# range (e.g. 2-4) actually works instead of silently reaching nothing.
+# Also lets a CO's class-affinity rangeBon (struct CoClassAffinity,
+# src/power.c) actually shift max range, not just display it -- never
+# below the weapon's own minimum, capped at 15 (the nibble's own max).
+# Does not yet extend the coarse reach-bits system menus/R-button range
+# text/staff AI still use for display (see GetItemReachBits, src/bmitem.c).
+RANGE_REWORK ?= 0
+
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
-# Displays a ghost of the unit at the tip of the blue arrow when selecting 
-# where to move the unit to. 
+# Displays a ghost of the unit at the tip of the blue arrow when selecting
+# where to move the unit to.
 ALPHA_SPRITE_ARROW ?= 1
 
 

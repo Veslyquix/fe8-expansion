@@ -404,7 +404,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            debuffs_exist=0, debuffs_stack=0,
                            select_view_growths=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
@@ -441,6 +441,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     bars = validate_feature_flag("HP_BARS", hp_bars)
     group_ai_flag = validate_feature_flag("GROUP_AI", group_ai)
     alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
+    range_rework_flag = validate_feature_flag("RANGE_REWORK", range_rework)
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
     fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
@@ -498,6 +499,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
+            range_rework_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
             anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
@@ -726,6 +728,7 @@ class ExpansionIdentity:
     hp_bars: int = 0
     group_ai: int = 0
     alpha_sprite_arrow: int = 0
+    range_rework: int = 0
     turn_autosave: int = 0
     fort_units_start_greyed_out: int = 0
     promote_command: int = 0
@@ -809,6 +812,7 @@ class ExpansionIdentity:
                 "hp_bars": self.hp_bars,
                 "group_ai": self.group_ai,
                 "alpha_sprite_arrow": self.alpha_sprite_arrow,
+                "range_rework": self.range_rework,
                 "turn_autosave": self.turn_autosave,
                 "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "promote_command": self.promote_command,
@@ -880,6 +884,7 @@ def load_identity(
     hp_bars=None,
     group_ai=None,
     alpha_sprite_arrow=None,
+    range_rework=None,
     turn_autosave=None,
     fort_units_start_greyed_out=None,
     promote_command=None,
@@ -956,7 +961,8 @@ def load_identity(
      resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
      resolved_select_growths, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
-     resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
+     resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow,
+     resolved_range_rework, resolved_autosave,
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
@@ -1031,6 +1037,9 @@ def load_identity(
         alpha_sprite_arrow
         if alpha_sprite_arrow not in (None, "")
         else cfg.get("ALPHA_SPRITE_ARROW", "0"),
+        range_rework
+        if range_rework not in (None, "")
+        else cfg.get("RANGE_REWORK", "0"),
         turn_autosave
         if turn_autosave not in (None, "")
         else cfg.get("TURN_AUTOSAVE", "0"),
@@ -1131,6 +1140,7 @@ def load_identity(
         hp_bars=resolved_hp_bars,
         group_ai=resolved_group_ai,
         alpha_sprite_arrow=resolved_alpha_sprite_arrow,
+        range_rework=resolved_range_rework,
         turn_autosave=resolved_autosave,
         fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         promote_command=resolved_promote_command,
@@ -1350,6 +1360,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override ALPHA_SPRITE_ARROW (0 or 1)",
     )
     parser.add_argument(
+        "--range-rework",
+        default=None,
+        help="override RANGE_REWORK (0 or 1)",
+    )
+    parser.add_argument(
         "--turn-autosave",
         default=None,
         help="override TURN_AUTOSAVE (0 or 1)",
@@ -1518,6 +1533,7 @@ def main(argv=None) -> int:
             hp_bars=args.hp_bars,
             group_ai=args.group_ai,
             alpha_sprite_arrow=args.alpha_sprite_arrow,
+            range_rework=args.range_rework,
             turn_autosave=args.turn_autosave,
             fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             promote_command=args.promote_command,

@@ -231,6 +231,9 @@ endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
 endif
+ifeq ($(RANGE_REWORK),1)
+MODERN_DEFINE_FLAGS += -DFE8_RANGE_REWORK=1
+endif
 ifeq ($(TURN_AUTOSAVE),1)
 MODERN_DEFINE_FLAGS += -DFE8_TURN_AUTOSAVE=1
 endif
@@ -1620,6 +1623,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--danger-radius "$(DANGER_RADIUS)" \
 		--group-ai "$(GROUP_AI)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+		--range-rework "$(RANGE_REWORK)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
 		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 		--promote-command "$(PROMOTE_COMMAND)" \
@@ -1720,6 +1724,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--danger-radius "$(DANGER_RADIUS)" \
 	--group-ai "$(GROUP_AI)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+	--range-rework "$(RANGE_REWORK)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
 	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 	--promote-command "$(PROMOTE_COMMAND)" \
@@ -1824,6 +1829,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DANGER_RADIUS=$(DANGER_RADIUS) \
 	-DFE8_GROUP_AI=$(GROUP_AI) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
+	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
@@ -2018,6 +2024,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'danger_radius=$(DANGER_RADIUS)'; \
 		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
+		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
 		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
 		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \

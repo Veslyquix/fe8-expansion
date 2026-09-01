@@ -106,6 +106,18 @@ int CoScreen_GetCoSuperPowerStars(int coId);
  * lookup through GetCoDefinition. */
 int AdjustStatForCo(int coId, int classId, int baseValue);
 
+#if FE8_RANGE_REWORK
+/* A CO's class-affinity rangeBon (struct CoClassAffinity) for classId, or
+ * 0 if coId has no explicit entry for that class. Unlike AdjustStatForCo's
+ * rating, this is the raw signed shift already -- not proportionally
+ * scaled against a base value, since a range shift is a flat +/-N, not a
+ * stat-growth-style percentage. See GetUnitItemEffectiveMaxRange
+ * (src/bmitem.c) for how this actually gets applied to a weapon's max
+ * range. An out-of-range coId falls back the same way GetCoDefinition
+ * always does. */
+int GetCoClassRangeBonus(int coId, int classId);
+#endif
+
 #endif // FE8_CO_POWERS
 
 #endif // GUARD_POWER_H

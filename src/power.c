@@ -656,6 +656,22 @@ int AdjustStatForCo(int coId, int classId, int baseValue)
     return adjusted - baseValue;
 }
 
+#if FE8_RANGE_REWORK
+/* See declaration comment (include/power.h). */
+int GetCoClassRangeBonus(int coId, int classId)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+    int i;
+
+    for (i = 0; i < co->affinityCount; ++i) {
+        if (co->affinities[i].classId == classId)
+            return co->affinities[i].rangeBon;
+    }
+
+    return 0;
+}
+#endif
+
 /* Does coId's power (or its super, if isSuper) affect a unit of classId?
  * Checked once per surveyed unit by CoPowers_Anim to decide whether that
  * unit gets CoPower_ApplyEffect and the barrier animation, or is skipped
