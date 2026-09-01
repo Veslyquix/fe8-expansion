@@ -7688,13 +7688,17 @@ void DebuggerStartFace(int id, int side)
          * Once that growth passed 0x240 it silently overwrote the card
          * portrait's tiles with font glyph data (or vice versa,
          * depending on draw order) -- hence "doesn't display correctly".
-         * CHR 0x10 sits in the large unused gap below the font instead:
-         * the UI frame graphic decompressed to CHR 0 is only 8 tiles, so
-         * 0x10-0x6A (card's 90 tiles) is clear of both it and the font. */
+         * CHR 0x10 (VRAM 0x06000200) was tried next, but that falls
+         * inside 0x6000000-0x6001000 (CHR 0x00-0x7F), which menu tiles
+         * occupy most of the time -- a different, worse conflict. CHR
+         * 0x180 (VRAM 0x06003000) clears both: above the menu-tile range,
+         * and with 0x80 (128) tiles of headroom below the font base
+         * (double the 0x40-tile margin 0x240 had), so 0x180-0x1D9 (the
+         * card's 90 tiles) stays clear even as the font grows. */
         DrawUiFrame(
             BG_GetMapBuffer(1),                        // back BG
             (side * 15), 6, 12, 11, TILEREF(0, 0), 2); // white bg style
-        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x10, 0xB);
+        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x180, 0xB);
         BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
         return;
