@@ -6,7 +6,7 @@
 /* BG palette bank the CO-mini goal-window replacement draws with (see
  * src/aw2_gfx.c) -- exposed here so other files (src/player_interface.c's
  * palette-cycle call) don't need their own copy of the constant. */
-#define AW2_COMINI_PAL_ID 15 // 3 is mmb. This will need to be changed later because it conflicts with fog. 
+#define AW2_COMINI_PAL_ID 3 // now 1 is mmb. 
 
 /* Loads all 5 Advance Wars 2 UI graphics (star/rank icons, POWER/SUPER
  * labels, debug font) into OBJ VRAM, back to back starting at 0x6013000. */

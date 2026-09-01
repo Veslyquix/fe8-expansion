@@ -28,6 +28,12 @@
 
 // clang-format off
 
+#if FE8_AW2_ASSETS
+#define UnitMapUiFramePal 1 
+#else 
+#define UnitMapUiFramePal 3 
+#endif 
+
 #if FE8_MMB
 #define MMB_WINDOW_WIDTH 18
 #define MMB_WINDOW_HEIGHT 6
@@ -1048,8 +1054,8 @@ void DrawUnitMapUi(struct PlayerInterfaceProc * proc, struct Unit * unit)
     UnitMapUiUpdate(proc, unit);
     MMB_DrawBattleStats(proc, unit);
 
-    CallARM_FillTileRect(gUiTmScratchB, sTsa_CatballMinimugBox, TILEREF(0x0, 3));
-    ApplyUnitMapUiFramePal(UNIT_FACTION(unit), 3);
+    CallARM_FillTileRect(gUiTmScratchB, sTsa_CatballMinimugBox, TILEREF(0x0, UnitMapUiFramePal));
+    ApplyUnitMapUiFramePal(UNIT_FACTION(unit), UnitMapUiFramePal);
 
     return;
 }
@@ -1080,6 +1086,8 @@ int GetUnitBurstMapUiOrientationAt(int x, int y)
 
     return result;
 }
+
+
 
 //! FE8U = 0x0808C750
 void DrawUnitBurstMapUi(struct PlayerInterfaceProc * proc, struct Unit * unit)
@@ -1125,13 +1133,13 @@ void DrawUnitBurstMapUi(struct PlayerInterfaceProc * proc, struct Unit * unit)
 
     UnitMapUiUpdate(proc, unit);
 
-    CallARM_FillTileRect(gBG1TilemapBuffer + TILEMAP_INDEX(x, y), gPlayerInterface_0[orientation], TILEREF(0x100, 3));
-    CallARM_FillTileRect(gBG1TilemapBuffer + TILEMAP_INDEX(x, y + 1), gTsa_UnitBurstMapUiMiddle, TILEREF(0x100, 3));
-    CallARM_FillTileRect(gBG1TilemapBuffer + TILEMAP_INDEX(x, y + 4), gPlayerInterface_1[orientation], TILEREF(0x100, 3));
+    CallARM_FillTileRect(gBG1TilemapBuffer + TILEMAP_INDEX(x, y), gPlayerInterface_0[orientation], TILEREF(0x100, UnitMapUiFramePal));
+    CallARM_FillTileRect(gBG1TilemapBuffer + TILEMAP_INDEX(x, y + 1), gTsa_UnitBurstMapUiMiddle, TILEREF(0x100, UnitMapUiFramePal));
+    CallARM_FillTileRect(gBG1TilemapBuffer + TILEMAP_INDEX(x, y + 4), gPlayerInterface_1[orientation], TILEREF(0x100, UnitMapUiFramePal));
 
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
-    ApplyUnitMapUiFramePal(UNIT_FACTION(unit), 3);
+    ApplyUnitMapUiFramePal(UNIT_FACTION(unit), UnitMapUiFramePal);
 
     return;
 }
