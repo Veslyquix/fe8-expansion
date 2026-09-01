@@ -7680,11 +7680,21 @@ void DebuggerStartFace(int id, int side)
     const struct FaceData * info = GetPortraitData(id);
     if (info->img == 0 && info->imgCard)
     {
-        // class card, so handled differently.
+        /* class card, so handled differently. The card's 10x9=90 tiles
+         * used to be decompressed to CHR 0x240 -- only 0x40 (64) tiles
+         * above GfxViewerInit's own font base (VRAM+0x4000 = CHR 0x200,
+         * see InitTextFont there), which grows upward as the menu's
+         * labels/class name/weapon name/hex values allocate more glyphs.
+         * Once that growth passed 0x240 it silently overwrote the card
+         * portrait's tiles with font glyph data (or vice versa,
+         * depending on draw order) -- hence "doesn't display correctly".
+         * CHR 0x10 sits in the large unused gap below the font instead:
+         * the UI frame graphic decompressed to CHR 0 is only 8 tiles, so
+         * 0x10-0x6A (card's 90 tiles) is clear of both it and the font. */
         DrawUiFrame(
             BG_GetMapBuffer(1),                        // back BG
             (side * 15), 6, 12, 11, TILEREF(0, 0), 2); // white bg style
-        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x240, 0xB);
+        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x10, 0xB);
         BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
         return;
