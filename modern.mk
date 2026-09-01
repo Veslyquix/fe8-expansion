@@ -222,6 +222,9 @@ endif
 ifeq ($(HP_BARS),1)
 MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
 endif
+ifeq ($(DANGER_RADIUS),1)
+MODERN_DEFINE_FLAGS += -DFE8_DANGER_RADIUS=1
+endif
 ifeq ($(GROUP_AI),1)
 MODERN_DEFINE_FLAGS += -DFE8_GROUP_AI=1
 endif
@@ -1614,6 +1617,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 		--hp-bars "$(HP_BARS)" \
+		--danger-radius "$(DANGER_RADIUS)" \
 		--group-ai "$(GROUP_AI)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1713,6 +1717,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
+	--danger-radius "$(DANGER_RADIUS)" \
 	--group-ai "$(GROUP_AI)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1816,6 +1821,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
 	-DFE8_BATTLE_ANIMATION_NUMBERS=$(BATTLE_ANIMATION_NUMBERS) \
 	-DFE8_HP_BARS=$(HP_BARS) \
+	-DFE8_DANGER_RADIUS=$(DANGER_RADIUS) \
 	-DFE8_GROUP_AI=$(GROUP_AI) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
@@ -2009,6 +2015,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
+		printf '%s\n' 'danger_radius=$(DANGER_RADIUS)'; \
 		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \

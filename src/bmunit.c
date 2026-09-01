@@ -28,6 +28,7 @@
 #include "turn_autosave.h"
 #include "gamerank.h"
 #include "power.h"
+#include "dangerradius.h"
 
 #if FE8_DISPLAY_OBTAINABLE_ITEM
 void SetupCacheForStealableItems(void);
@@ -236,6 +237,9 @@ void InitUnits(void) {
 
 void ClearUnit(struct Unit* unit) {
     u8 id = unit->index;
+#if FE8_DANGER_RADIUS
+    DangerRadius_UnitRemoved(unit);
+#endif
     CpuFill16(0, unit, sizeof(struct Unit));
     unit->index = id;
 }
@@ -1078,6 +1082,9 @@ void UnitKill(struct Unit* unit) {
 #if FE8_GAME_RANK
         if (UNIT_FACTION(unit) == FACTION_RED)
             GameRank_OnEnemyUnitKilled();
+#endif
+#if FE8_DANGER_RADIUS
+        DangerRadius_UnitRemoved(unit);
 #endif
         unit->pCharacterData = NULL;
     }

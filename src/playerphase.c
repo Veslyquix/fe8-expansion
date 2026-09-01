@@ -30,6 +30,7 @@
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
 #include "purchase_generics.h"
+#include "dangerradius.h"
 
 #include "playerphase.h"
 
@@ -434,6 +435,18 @@ else_stmt:
 
                 return;
             }
+#if FE8_DANGER_RADIUS
+            /* Hook.asm/DetermineDR.asm: Select toggles the danger radius
+             * overlay for the unit under the cursor (or all enemies, when
+             * not hovering one -- see DangerRadius_Determine). Unavailable
+             * during Fog of War (see include/dangerradius.h). */
+            else if ((gKeyStatusPtr->newKeys & SELECT_BUTTON) && (gPlaySt.chapterVisionRange == 0))
+            {
+                struct Unit * unit = GetUnit(gBmMapUnit[gBmSt.playerCursor.y][gBmSt.playerCursor.x]);
+
+                DangerRadius_Determine(unit);
+            }
+#endif
         }
     }
 
@@ -811,6 +824,14 @@ void PlayerPhase_BackToMove(ProcPtr proc)
 
     RefreshEntityBmMaps();
     RenderBmMap();
+
+#if FE8_DANGER_RADIUS
+    /* ActionCancelDR.asm: recalc Danger Radius after cancelling a move,
+     * when FOW is off and DR is active. */
+    if ((gPlaySt.chapterVisionRange == 0) && (DangerRadius_GetActiveCount() > 0))
+        DangerRadius_Refresh();
+#endif
+
     RefreshUnitSprites();
 
     if (!(gActiveUnit->state & US_HAS_MOVED))
@@ -1023,6 +1044,13 @@ void PlayerPhase_FinishAction(ProcPtr proc)
 
         RefreshEntityBmMaps();
         RenderBmMap();
+
+#if FE8_DANGER_RADIUS
+        /* ActionCommitDR.asm: recalc Danger Radius after committing to an
+         * action (FOW-off path only -- DR is unavailable during FOW). */
+        if (DangerRadius_GetActiveCount() > 0)
+            DangerRadius_Refresh();
+#endif
     }
 
     SetCursorMapPosition(gActiveUnit->xPos, gActiveUnit->yPos);
@@ -1091,6 +1119,19 @@ void PlayerPhase_ApplyUnitMovement(ProcPtr proc)
     gActiveUnit->yPos = gActionData.yMove;
 
     UnitFinalizeMovement(gActiveUnit);
+
+#if FE8_DANGER_RADIUS
+    /* UpdateDRMove.asm: recalc Danger Radius mid-action (before committing),
+     * when FOW is off and DR is active. The original hook also temporarily
+     * re-inserts the active unit into the unit map and recomputes its
+     * remaining movement range so the recalculated overlay accounts for
+     * the unit's own new position; that refinement isn't implemented here
+     * yet -- DangerRadius_Refresh() is currently a stub regardless (see
+     * include/dangerradius.h), so it has no effect until the rendering
+     * pipeline is ported. */
+    if ((gPlaySt.chapterVisionRange == 0) && (DangerRadius_GetActiveCount() > 0))
+        DangerRadius_Refresh();
+#endif
 
     if ((!(gActiveUnit->state & US_HAS_MOVED) && (gActionData.unitActionType == 0)) && (gBmSt.taken_action == 0))
     {

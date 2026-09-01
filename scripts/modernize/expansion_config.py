@@ -409,7 +409,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
                            nimap2=0,
-                           rand_bgm=0, continue_bgm_battle=0,
+                           rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -456,6 +456,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     nimap2_flag = validate_feature_flag("NIMAP2", nimap2)
     rand_bgm_flag = validate_feature_flag("RAND_BGM", rand_bgm)
     continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
+    danger_radius_flag = validate_feature_flag("DANGER_RADIUS", danger_radius)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -489,13 +490,18 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "warning-icon tiles it draws live in the icon sheet that flag "
             "loads"
         )
+    if danger_radius_flag and not obtainable_item:
+        raise ConfigError(
+            "DANGER_RADIUS=1 requires DISPLAY_OBTAINABLE_ITEM=1: the danger "
+            "radius overlay's icons live in the icon sheet that flag loads"
+        )
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
             anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
-            dialogue_box)
+            dialogue_box, danger_radius_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -735,6 +741,7 @@ class ExpansionIdentity:
     nimap2: int = 0
     rand_bgm: int = 0
     continue_bgm_battle: int = 0
+    danger_radius: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -817,6 +824,7 @@ class ExpansionIdentity:
                 "nimap2": self.nimap2,
                 "rand_bgm": self.rand_bgm,
                 "continue_bgm_battle": self.continue_bgm_battle,
+                "danger_radius": self.danger_radius,
             },
         }
 
@@ -887,6 +895,7 @@ def load_identity(
     nimap2=None,
     rand_bgm=None,
     continue_bgm_battle=None,
+    danger_radius=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -952,7 +961,7 @@ def load_identity(
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
      resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
-     resolved_dialogue_box) = validate_feature_flags(
+     resolved_dialogue_box, resolved_danger_radius) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1067,6 +1076,9 @@ def load_identity(
         continue_bgm_battle
         if continue_bgm_battle not in (None, "")
         else cfg.get("CONTINUE_BGM_BATTLE", "0"),
+        danger_radius
+        if danger_radius not in (None, "")
+        else cfg.get("DANGER_RADIUS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1134,6 +1146,7 @@ def load_identity(
         nimap2=resolved_nimap2,
         rand_bgm=resolved_rand_bgm,
         continue_bgm_battle=resolved_continue_bgm_battle,
+        danger_radius=resolved_danger_radius,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1382,6 +1395,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override CONTINUE_BGM_BATTLE (0 or 1)",
     )
     parser.add_argument(
+        "--danger-radius",
+        default=None,
+        help="override DANGER_RADIUS (0 or 1)",
+    )
+    parser.add_argument(
         "--fort-units-start-greyed-out",
         default=None,
         help="override FORT_UNITS_START_GREYED_OUT (0 or 1)",
@@ -1515,6 +1533,7 @@ def main(argv=None) -> int:
             nimap2=args.nimap2,
             rand_bgm=args.rand_bgm,
             continue_bgm_battle=args.continue_bgm_battle,
+            danger_radius=args.danger_radius,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

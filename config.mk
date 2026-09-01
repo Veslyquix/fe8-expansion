@@ -330,8 +330,14 @@ DISPLAY_OBTAINABLE_ITEM ?= 1
 # Draws a partial-fill HP bar over each visible unit, plus a small icon
 # over enemies the selected unit could hit for bonus effectiveness, land a
 # high crit on, or start a support/talk event with. Requires
-# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet 
+# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet
 HP_BARS ?= 1
+
+# --- Optional DangerRadius -----------------------------------------------------
+# Ports the "Danger Radius" fog-of-war-aware enemy attack range overlay
+# (original hack by Huichelaar). Requires DISPLAY_OBTAINABLE_ITEM=1 -- shares
+# its icon sheet.
+DANGER_RADIUS ?= 0
 
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
 # Displays a ghost of the unit at the tip of the blue arrow when selecting 

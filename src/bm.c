@@ -28,6 +28,7 @@
 #include "eventcall.h"
 #include "purchase_generics.h"
 #include "gamerank.h"
+#include "dangerradius.h"
 
 #include "bm.h"
 
@@ -443,6 +444,13 @@ int CallBeginningEvents(void)
 //! FE8U = 0x08015410
 int BmMain_ChangePhase(void)
 {
+#if FE8_DANGER_RADIUS
+    /* EndDR.asm: clear Danger Radius on any phase switch while FOW is off
+     * and the ending phase is player phase (DR is unavailable whenever FOW
+     * is active -- see include/dangerradius.h). */
+    if ((gPlaySt.chapterVisionRange == 0) && (gPlaySt.faction == FACTION_BLUE))
+        DangerRadius_End();
+#endif
 
     ClearActiveFactionGrayedStates();
     RefreshUnitSprites();

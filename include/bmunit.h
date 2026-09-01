@@ -274,7 +274,9 @@ enum
     // = (1 << 28),
     // = (1 << 29),
     // = (1 << 30),
-    // = (1 << 31),
+    // Whether this unit's attack range is currently shown by the Danger
+    // Radius overlay (see FE8_DANGER_RADIUS, src/dangerradius.c).
+    US_SHOWRANGE = (1 << 31),
 
     // Helpers
     US_UNAVAILABLE = (US_DEAD | US_NOT_DEPLOYED | US_BIT16),

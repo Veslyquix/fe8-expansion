@@ -416,6 +416,14 @@
 #define FE8_HP_BARS 0
 #endif
 
+/* Modern-build port of the "Danger Radius" fog-of-war-aware enemy attack
+ * range overlay (original hack by Huichelaar; see src/dangerradius.c).
+ * Requires FE8_DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet
+ * (validated below). */
+#ifndef FE8_DANGER_RADIUS
+#define FE8_DANGER_RADIUS 0
+#endif
+
 /* Group AI (ported from Pokemblem's GroupAI patch): attacking (or being
  * attacked by) a group-tagged enemy wakes the rest of its group to Charge
  * and queues them to act again this enemy phase (see src/group_ai.c). */
@@ -672,6 +680,14 @@
 
 #if FE8_HP_BARS && !FE8_DISPLAY_OBTAINABLE_ITEM
 #error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
+#endif
+
+#if (FE8_DANGER_RADIUS != 0) && (FE8_DANGER_RADIUS != 1)
+#error "FE8_DANGER_RADIUS must be 0 or 1"
+#endif
+
+#if FE8_DANGER_RADIUS && !FE8_DISPLAY_OBTAINABLE_ITEM
+#error "FE8_DANGER_RADIUS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
 #endif
 
 #if (FE8_GROUP_AI != 0) && (FE8_GROUP_AI != 1)
