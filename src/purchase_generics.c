@@ -1238,7 +1238,7 @@ static void CapturePropertyBob_Loop(struct CapturePropertyBobProc* proc)
 static void CapturePropertyBob_End(struct CapturePropertyBobProc* proc)
 {
 
-    // gActiveUnit->state |= US_HAS_MOVED;
+    gActiveUnit->state |= US_HAS_MOVED;
     // RefreshEntityBmMaps();
     // RefreshUnitSprites();
 

@@ -201,12 +201,14 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     SVAL(EVT_SLOT_2, CO_ONEILL)
     ASMC(SetFactionCoFromSlots)
     LOAD1(1, UnitDef_PrologueAllies)
+    ENUN 
     FADU(16)
 
     MUSI
     BROWNBOXTEXT(MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION, 8, 8)
     MUNO
 
+    ENUT(0x7)
     ENUT(0x8)
 
     FlashCursor(CHARACTER_EIRIKA, 20)
