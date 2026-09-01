@@ -8,13 +8,13 @@
     },
     {
       "frame": 60,
-      "framebuffer_hash": "fnv1a64-rgb24:a5c9d142b5ed56fd",
+      "framebuffer_hash": "fnv1a64-rgb24:2c6c4541164fdda2",
       "name": "boot-animation",
       "probes": []
     },
     {
       "frame": 120,
-      "framebuffer_hash": "fnv1a64-rgb24:909eb4ce4f78d368",
+      "framebuffer_hash": "fnv1a64-rgb24:6f77a32b3d8af065",
       "name": "boot-settled",
       "probes": []
     }
@@ -22,7 +22,7 @@
   "format_version": 2,
   "rom": {
     "game_code": "BE8E",
-    "sha1": "5e653f6df1bdeeab478a62152b46c1e399217e9a",
+    "sha1": "d13f97db51c37a7fbaf1ee585ff4e9b3170bf424",
     "size": 16777216,
     "title": "FIREEMBLEM2E"
   },
