@@ -9,6 +9,7 @@
 #include "bmidoten.h"
 #include "bmtrick.h"
 #include "bmlib.h"
+#include "dangerradius.h"
 
 #include "constants/terrains.h"
 #include "constants/chapters.h"
@@ -276,12 +277,27 @@ void UnpackChapterMapGraphics(int chapterId) {
     ApplyPalettes(
         gChapterDataAssetTable[GetROMChapterStruct(chapterId)->map.paletteId],
         6, 10); // TODO: palette id constant?
+
+#if FE8_DANGER_RADIUS
+    /* TilesetFogFilter.py, ported: on a chapter with no Fog of War, banks
+     * 0xB-0xF (the tileset's own FOW-dimmed palette, just loaded above)
+     * are irrelevant and may hold garbage -- regenerate them as Danger
+     * Radius's red-tinted overlay palette instead. A real FOW chapter
+     * keeps the tileset's own authored 0xB-0xF (needed for real fog). */
+    if (gPlaySt.chapterVisionRange == 0)
+        DangerRadius_GenerateFogPalette();
+#endif
 }
 
 void UnpackChapterMapPalette(void) {
     ApplyPalettes(
         gChapterDataAssetTable[GetROMChapterStruct(gPlaySt.chapterIndex)->map.paletteId],
         6, 10); // TODO: palette id constant?
+
+#if FE8_DANGER_RADIUS
+    if (gPlaySt.chapterVisionRange == 0)
+        DangerRadius_GenerateFogPalette();
+#endif
 }
 
 void InitBaseTilesBmMap(void) {

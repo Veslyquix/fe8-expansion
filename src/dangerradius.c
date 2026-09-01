@@ -8,7 +8,23 @@
 
 #include "dangerradius.h"
 #include "bmunit.h"
+#include "bmmap.h"
+#include "bmidoten.h"
+#include "bm.h"
+#include "ctc.h"
 #include "hardware.h"
+
+/* Shares the merged icon sheet gGfx_ObtainableItemIcons already loads for
+ * FE8_DISPLAY_OBTAINABLE_ITEM/FE8_HP_BARS (see LoadObjUIGfx, src/bm.c;
+ * DISPLAY_OBTAINABLE_ITEM's own IconID_Stealable already claims the
+ * original hack's tile 0x65, so this uses the free slot the sheet's
+ * updated source graphics/misc/gGfx_ObtainableItemIcons.png actually
+ * places the new icon at instead -- see the port's status notes for how
+ * that tile index was derived). */
+enum
+{
+    IconID_DangerRadius = 0x4C | 0x800,
+};
 
 /* Number of enemy units currently flagged with US_SHOWRANGE (mirrors
  * DRCountByte in the original hack). */
@@ -67,7 +83,11 @@ static void DangerRadius_SetUnitShown(struct Unit* unit, bool shown)
 }
 
 /* Clears US_SHOWRANGE from every enemy unit and resets the active count.
- * Equivalent to EndDR.asm / UnsetAllDR. */
+ * Equivalent to EndDR.asm / UnsetAllDR. Always leaves the overlay redrawn
+ * to match (an empty overlay when nothing is left flagged), so every
+ * caller (the phase-end hook in BmMain_ChangePhase, and
+ * DangerRadius_Determine's "clear an active overlay" branch) gets a
+ * consistent result without having to remember to refresh separately. */
 void DangerRadius_End(void)
 {
     int i;
@@ -84,6 +104,7 @@ void DangerRadius_End(void)
     }
 
     sDangerRadiusActiveCount = 0;
+    DangerRadius_Refresh();
 }
 
 static void DangerRadius_SetAll(void)
@@ -124,11 +145,14 @@ void DangerRadius_Determine(struct Unit* hoveredEnemy)
     }
 
     if (sDangerRadiusActiveCount > 0)
-        DangerRadius_End();
+    {
+        DangerRadius_End(); /* self-refreshes */
+    }
     else
+    {
         DangerRadius_SetAll();
-
-    DangerRadius_Refresh();
+        DangerRadius_Refresh();
+    }
 }
 
 /* Mirrors ClearDR1-4.asm: called whenever a unit is being permanently
@@ -150,11 +174,104 @@ void DangerRadius_UnitRemoved(struct Unit* unit)
         sDangerRadiusActiveCount--;
 }
 
-/* TODO(danger-radius-tier2): stub. See include/dangerradius.h's doc comment
- * for exactly what's not yet ported (MapAddInRange/SetFog/InvertFog/
- * RefreshFog/DisplayDR/DisplayMarker/DisplayIcon/InitializeDR). */
+/* Computes the union of every US_SHOWRANGE-flagged enemy's attack range
+ * into gBmMapRange (scratch -- reusing the same buffer/primitives vanilla
+ * GenerateDangerZoneRange uses for the unused Danger Zone feature, since
+ * the two are never active at once), then writes the *inverse* into
+ * gBmMapFog: 0 (the engine's "tile is fogged/hidden" value -- see
+ * DisplayBmTile's gBmMapFog[y][x] ? paletteBank6 : paletteBank11 palette
+ * pick in src/bmmap.c) for every danger tile, 1 ("visible") everywhere
+ * else. This gives danger tiles the fog-tinted palette (which
+ * DangerRadius_GenerateFogPalette keeps populated) without needing to
+ * touch DisplayBmTile at all -- the vanilla FOW rendering path already
+ * does exactly what Danger Radius needs, once gBmMapFog holds the right
+ * marks. Deliberately reimplements GenerateDangerZoneRange's loop (rather
+ * than adding a filter parameter to it) to keep this feature fully
+ * additive/isolated from that shared vanilla function; the original
+ * hack's SetFog.asm instead redirected MapAddInRange's writes directly
+ * with a blunt unconditional "mark 1", which is over-inclusive for any
+ * enemy with attack min-range > 1 (it also marks the too-close excluded
+ * tiles) -- going through gBmMapRange's normal 0-accumulate-then-
+ * threshold semantics here avoids that inaccuracy. */
+static void DangerRadius_ComputeOverlay(void)
+{
+    int i, x, y;
+    int hasMagicRank, prevHasMagicRank = -1;
+    u8 savedUnitId;
+
+    BmMapFill(gBmMapRange, 0);
+
+    for (i = 0; i < 50; i++)
+    {
+        struct Unit* unit = &gUnitArrayRed[i];
+
+        if (unit->pCharacterData == NULL)
+            continue;
+
+        if (!(unit->state & US_SHOWRANGE))
+            continue;
+
+        if (unit->state & US_UNDER_A_ROOF)
+            continue;
+
+        GenerateUnitMovementMapExt(unit, UNIT_MOV(unit));
+
+        savedUnitId = gBmMapUnit[unit->yPos][unit->xPos];
+        gBmMapUnit[unit->yPos][unit->xPos] = 0;
+
+        hasMagicRank = UnitHasMagicRank(unit);
+
+        if (prevHasMagicRank != hasMagicRank)
+        {
+            BmMapFill(gBmMapOther, 0);
+
+            if (hasMagicRank)
+                GenerateMagicSealMap(1);
+
+            prevHasMagicRank = hasMagicRank;
+        }
+
+        SetWorkingBmMap(gBmMapRange);
+        GenerateUnitCompleteAttackRange(unit);
+
+        gBmMapUnit[unit->yPos][unit->xPos] = savedUnitId;
+    }
+
+    BmMapFill(gBmMapMovement, -1);
+
+    for (y = 0; y < gBmMapSize.y; y++)
+        for (x = 0; x < gBmMapSize.x; x++)
+            gBmMapFog[y][x] = (gBmMapRange[y][x] == 0);
+}
+
+/* Recalculates and redraws the danger radius overlay. Mirrors
+ * InitializeDR.lyn.event's FOW-off branch (the FOW-active branch isn't
+ * ported -- Danger Radius is unavailable whenever FOW is active, see
+ * include/dangerradius.h). Callers are responsible for the
+ * chapterVisionRange == 0 gate; this always recomputes unconditionally
+ * (including "overlay is now empty" when nothing is flagged), matching
+ * DangerRadius_End's need to redraw a cleared overlay. */
 void DangerRadius_Refresh(void)
 {
+    DangerRadius_ComputeOverlay();
+    RenderBmMap();
+}
+
+/* DisplayIcon.asm. */
+void DangerRadius_DrawIcon(struct Unit* unit)
+{
+    int x, y;
+
+    x = unit->xPos * 16 - 8 - gBmSt.camera.x;
+    y = unit->yPos * 16 + 7 - gBmSt.camera.y;
+
+    if (x < -16 || x > DISPLAY_WIDTH)
+        return;
+
+    if (y < -16 || y > DISPLAY_HEIGHT)
+        return;
+
+    CallARM_PushToSecondaryOAM(OAM1_X(x + 0x209), OAM0_Y(y + 0x100), gObject_8x8, IconID_DangerRadius);
 }
 
 #endif /* FE8_DANGER_RADIUS */

@@ -57,22 +57,29 @@ void DangerRadius_UnitRemoved(struct Unit* unit);
  * in the original hack). Danger Radius is "active" whenever this is > 0. */
 int DangerRadius_GetActiveCount(void);
 
+/* Draws the blinking Danger Radius marker over a unit with US_SHOWRANGE
+ * set. Mirrors DisplayIcon.asm; call once per on-screen unit from
+ * PutUnitSpriteIconsOam (see src/bmudisp.c), guarded the same way that
+ * function already gates its other blinking per-unit icons (poison/sleep/
+ * rescue/boss/DrawObtainableItemIcon) on its displayRescueIcon timer --
+ * DisplayIcon.asm itself has no blink timing of its own, so this reuses
+ * that existing cadence rather than inventing a new one. Caller must
+ * check unit->state & US_SHOWRANGE first. */
+void DangerRadius_DrawIcon(struct Unit* unit);
+
 /* Recalculates and redraws the danger radius overlay for every unit
- * currently flagged with US_SHOWRANGE. Mirrors InitializeDR.lyn.event
- * (which itself drives MapAddInRange/SetFog.asm to paint the overlay into
- * the map's fog-palette-tagged tiles). Call sites that trigger a recalc
- * (ActionCommitDR/ActionCancelDR/UpdateDRMove in the original hack) should
- * only call this when DangerRadius_GetActiveCount() > 0.
+ * currently flagged with US_SHOWRANGE, by writing into gBmMapFog (see the
+ * .c file's doc comment for exactly how) and forcing a tile redraw.
+ * Mirrors InitializeDR.lyn.event's FOW-off branch. Call sites that trigger
+ * a recalc (ActionCommitDR/ActionCancelDR/UpdateDRMove in the original
+ * hack) should only call this when DangerRadius_GetActiveCount() > 0 --
+ * DangerRadius_Determine/_End call it unconditionally themselves since
+ * they also need to redraw an overlay that just became empty.
  *
- * NOT YET IMPLEMENTED: this is a stub. The actual tile/palette-buffer
- * rendering pipeline (MapAddInRange's fog-aware range paint, DisplayBmTile's
- * fog-palette tile selection, RefreshEntityBmMaps' gating, the blinking
- * enemy-sprite icon, and the escape-tile-marker fog interaction) has not
- * been ported yet -- see the port's status notes for the full remaining
- * hook list (SetFog/InvertFog/RefreshFog/DisplayDR/DisplayMarker/
- * DisplayIcon/InitializeDR in the original hack's ASM/ directory). Until
- * that lands, toggling US_SHOWRANGE (via DangerRadius_Determine) changes
- * game state correctly but draws nothing on screen. */
+ * NOT YET PORTED: the blinking enemy-sprite icon (DisplayIcon.asm) needs a
+ * new graphics asset this port hasn't brought in yet. Everything else
+ * (the fog-palette tile tint itself, and the escape-tile-marker fix so it
+ * isn't hidden by DR's fog-palette repurposing) is implemented. */
 void DangerRadius_Refresh(void);
 
 #endif /* FE8_DANGER_RADIUS */

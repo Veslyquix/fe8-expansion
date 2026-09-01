@@ -12,6 +12,7 @@
 
 #include "bmudisp.h"
 #include "bmlib.h"
+#include "dangerradius.h"
 #include "constants/terrains.h"
 #include "constants/event-flags.h"
 #include "constants/video-global.h"
@@ -1101,8 +1102,17 @@ void PutChapterMarkedTileIconOam(void)
     if (shouldDisplay == 0)
         return;
 
+#if FE8_DANGER_RADIUS
+    /* DisplayMarker.asm: Danger Radius repurposes gBmMapFog to mark danger
+     * tiles (see src/dangerradius.c) whenever FOW is off, so it no longer
+     * reflects real fog-of-war there -- only suppress the marker for an
+     * actually-fogged tile on a real FOW map. */
+    if ((gPlaySt.chapterVisionRange != 0) && (gBmMapFog[yTile][xTile] == 0))
+        return;
+#else
     if (gBmMapFog[yTile][xTile] == 0)
         return;
+#endif
 
     if (gBmMapTerrain[yTile][xTile] == TERRAIN_ROOF)
         return;
@@ -1255,6 +1265,11 @@ void PutUnitSpriteIconsOam(void)
         
 #if FE8_DISPLAY_OBTAINABLE_ITEM
         DrawObtainableItemIcon(unit);
+#endif
+
+#if FE8_DANGER_RADIUS
+        if (unit->state & US_SHOWRANGE)
+            DangerRadius_DrawIcon(unit);
 #endif
 
         if (unit->state & US_RESCUING)

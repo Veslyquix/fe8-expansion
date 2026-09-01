@@ -337,7 +337,7 @@ HP_BARS ?= 1
 # Ports the "Danger Radius" fog-of-war-aware enemy attack range overlay
 # (original hack by Huichelaar). Requires DISPLAY_OBTAINABLE_ITEM=1 -- shares
 # its icon sheet.
-DANGER_RADIUS ?= 0
+DANGER_RADIUS ?= 1
 
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
 # Displays a ghost of the unit at the tip of the blue arrow when selecting 
