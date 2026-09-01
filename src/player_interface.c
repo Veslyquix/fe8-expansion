@@ -716,6 +716,17 @@ void ApplyUnitMapUiFramePal(int faction, int palId)
     return;
 }
 
+/* UnitMapUiFramePal (BG palette bank 1 under FE8_AW2_ASSETS, else bank 3)
+ * is shared between the unit-burst UI above and other UI drawn with the
+ * same bank -- e.g. under FE8_AW2_ASSETS, the map/chapter menu. Hovering
+ * an enemy loads ApplyUnitMapUiFramePal(FACTION_RED, ...) for their burst
+ * display; call this before drawing anything that expects the player's
+ * own tint (blue) in that bank, to reload it back. */
+void ReloadPlayerUnitMapUiFramePal(void)
+{
+    ApplyUnitMapUiFramePal(FACTION_BLUE, UnitMapUiFramePal);
+}
+
 //! FE8U = 0x0808C314
 int GetCursorScreenSideX(void)
 {

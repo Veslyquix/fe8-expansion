@@ -388,6 +388,14 @@ void PlayerPhase_MainIdle(ProcPtr proc)
                         ShowUnitSprite(unit);
                     }
 
+                    /* UnitMapUiFramePal (src/player_interface.c) shares BG
+                     * palette bank 1 with the unit-burst UI under
+                     * FE8_AW2_ASSETS, so hovering an enemy just before
+                     * opening this menu (ApplyUnitMapUiFramePal(FACTION_RED,
+                     * ...) from the burst display) leaves it tinted red.
+                     * Reload the player's own tint before the menu draws. */
+                    ReloadPlayerUnitMapUiFramePal();
+
                     StartOrphanMenuAdjusted(&gMapMenuDef, gBmSt.cursorTarget.x - gBmSt.camera.x, 1, 0x17);
                     Eventinfo_CondFalse_2();
 
@@ -1121,16 +1129,24 @@ void PlayerPhase_ApplyUnitMovement(ProcPtr proc)
     UnitFinalizeMovement(gActiveUnit);
 
 #if FE8_DANGER_RADIUS
-    /* UpdateDRMove.asm: recalc Danger Radius mid-action (before committing),
-     * when FOW is off and DR is active. The original hook also temporarily
-     * re-inserts the active unit into the unit map and recomputes its
-     * remaining movement range so the recalculated overlay accounts for
-     * the unit's own new position; that refinement isn't implemented here
-     * yet -- DangerRadius_Refresh() is currently a stub regardless (see
-     * include/dangerradius.h), so it has no effect until the rendering
-     * pipeline is ported. */
+    /* UpdateDRMove.asm: recalc Danger Radius mid-action (before
+     * committing), when FOW is off and DR is active. gActiveUnit is
+     * normally absent from gBmMapUnit here -- removed at UnitBeginAction,
+     * and not re-added until the move actually commits (RefreshUnitsOnBmMap,
+     * via RefreshEntityBmMaps in PlayerPhase_FinishAction) -- so without
+     * this, enemies' attack ranges get computed as if the player's unit
+     * wasn't standing on the tile they're considering moving to. Temporarily
+     * re-add it at its (already-updated, see above) new position so an
+     * enemy's range correctly treats that tile as blocked -- letting the
+     * overlay show whether moving there would shield an ally standing
+     * behind it -- then remove it again since the move isn't committed
+     * yet and every other system still expects it absent until it is. */
     if ((gPlaySt.chapterVisionRange == 0) && (DangerRadius_GetActiveCount() > 0))
+    {
+        gBmMapUnit[gActiveUnit->yPos][gActiveUnit->xPos] = gActiveUnit->index;
         DangerRadius_Refresh();
+        gBmMapUnit[gActiveUnit->yPos][gActiveUnit->xPos] = 0;
+    }
 #endif
 
     if ((!(gActiveUnit->state & US_HAS_MOVED) && (gActionData.unitActionType == 0)) && (gBmSt.taken_action == 0))

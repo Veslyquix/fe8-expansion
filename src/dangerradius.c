@@ -126,6 +126,15 @@ static void DangerRadius_SetAll(void)
     sDangerRadiusActiveCount = count;
 }
 
+/* Sets US_SHOWRANGE on every live enemy and redraws, unconditionally.
+ * Called automatically at the start of every player phase -- see
+ * include/dangerradius.h. */
+void DangerRadius_ActivateAllAtPhaseStart(void)
+{
+    DangerRadius_SetAll();
+    DangerRadius_Refresh();
+}
+
 /* Toggles danger radius display. When called while the cursor is over a
  * live enemy unit, only that unit's overlay is toggled; otherwise this
  * clears an already-active overlay, or (when inactive) shows every enemy's

@@ -909,7 +909,7 @@ enum {
  * the BG tile scratch buffers, same as how the page-number arrows/mu
  * platform are also plain OBJ sprites unaffected by the page slide. */
 #define CO_TEXT_Y 1 
-#define CO_AFFINITY_ROW_Y0 (CO_TEXT_Y+2)
+#define CO_AFFINITY_ROW_Y0 (CO_TEXT_Y+1)
 #define CO_AFFINITY_ROW_STEP 2
 #define CO_AFFINITY_ICON_TILE_X (CO_PAGE_X + 1)
 #define CO_AFFINITY_BAR_TILE_X 6
@@ -1086,7 +1086,7 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
         return;
 
     co = GetCoDefinition(gCoScreen.coId);
-    y = CO_AFFINITY_ROW_Y0;
+    y = CO_AFFINITY_ROW_Y0+1;
 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,
@@ -1098,7 +1098,7 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
         y += CO_AFFINITY_ROW_STEP;
     }
     int offset = i; 
-    y = CO_AFFINITY_ROW_Y0;
+    y = CO_AFFINITY_ROW_Y0+1;
 
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,

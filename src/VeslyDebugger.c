@@ -7698,7 +7698,7 @@ void DebuggerStartFace(int id, int side)
         DrawUiFrame(
             BG_GetMapBuffer(1),                        // back BG
             (side * 15), 6, 12, 11, TILEREF(0, 0), 2); // white bg style
-        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x180, 0xB);
+        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x180, 0x5);
         BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
         return;

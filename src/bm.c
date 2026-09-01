@@ -493,6 +493,17 @@ void BmMain_StartPhase(ProcPtr proc)
     PurchaseGenerics_OnNewPhase();
 #endif
 
+#if FE8_DANGER_RADIUS
+    /* Auto-activate Danger Radius for every enemy as soon as player phase
+     * begins (not part of the original hack, which only ever activated it
+     * manually via Select -- see include/dangerradius.h). Gated on the real
+     * gPlaySt.faction, not phaseControl, since debug-controlling an enemy
+     * phase as blue isn't genuinely player phase for Danger Radius's
+     * purposes. */
+    if ((gPlaySt.faction == FACTION_BLUE) && (gPlaySt.chapterVisionRange == 0))
+        DangerRadius_ActivateAllAtPhaseStart();
+#endif
+
     switch (phaseControl) {
     case FACTION_BLUE:
         Proc_StartBlocking(gProcScr_PlayerPhase, proc);

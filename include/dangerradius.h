@@ -41,6 +41,18 @@ void DangerRadius_Determine(struct Unit* hoveredEnemy);
  * called from BmMain_ChangePhase). */
 void DangerRadius_End(void);
 
+/* Sets US_SHOWRANGE on every live enemy and redraws the overlay,
+ * unconditionally (not a toggle -- unlike DangerRadius_Determine(NULL),
+ * this doesn't clear an already-active overlay first). Called once,
+ * automatically, at the start of every player phase (see
+ * BmMain_StartPhase, src/bm.c) so Danger Radius is already showing every
+ * enemy's threat range as soon as the player gets control, without
+ * needing to press Select -- not part of the original hack (which only
+ * ever activated it manually), added per this repo's own request. Callers
+ * must gate this on gPlaySt.chapterVisionRange == 0 themselves, same as
+ * DangerRadius_Determine. */
+void DangerRadius_ActivateAllAtPhaseStart(void);
+
 /* Clears US_SHOWRANGE and decrements the active count for a single unit
  * being removed from play (death, RAM-slot clear, faction change).
  * Idempotent: safe to call on a unit that never had US_SHOWRANGE set, or
@@ -76,10 +88,11 @@ void DangerRadius_DrawIcon(struct Unit* unit);
  * DangerRadius_Determine/_End call it unconditionally themselves since
  * they also need to redraw an overlay that just became empty.
  *
- * NOT YET PORTED: the blinking enemy-sprite icon (DisplayIcon.asm) needs a
- * new graphics asset this port hasn't brought in yet. Everything else
- * (the fog-palette tile tint itself, and the escape-tile-marker fix so it
- * isn't hidden by DR's fog-palette repurposing) is implemented. */
+ * Does not itself re-add the active unit to gBmMapUnit at its tentative
+ * (uncommitted) move destination -- callers computing DR mid-move (see
+ * PlayerPhase_ApplyUnitMovement) must do that themselves around this
+ * call, same as UpdateDRMove.asm did, so enemy range calculations treat
+ * that tile as occupied. */
 void DangerRadius_Refresh(void);
 
 #endif /* FE8_DANGER_RADIUS */
