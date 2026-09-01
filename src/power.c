@@ -588,7 +588,8 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
 
 struct CoScreenSt {
     u8 coId;
-    u16 bgScrollTimer; // BG3 frlgUiFrame diagonal scroll, see CoScreen_UpdateBgScroll
+    u16 bgFogX; // BG3 fog scroll, see CoScreen_UpdateBgScroll (ported from SaveDraw_ScrollFogBG)
+    u16 bgFogY;
 };
 
 /* Group 0 -- shared/aliased with gStatScreen, gUiTmScratchA/B/C
@@ -1622,10 +1623,19 @@ static void CoScreen_LoadBgFrame(void)
     Decompress(Tsa_MainMenuBgFog, gGenericBuffer);
     CallARM_FillTileRect(gBG3TilemapBuffer, gGenericBuffer, 0x00007260);
 
-    gCoScreen.bgScrollTimer = 0;
+    gCoScreen.bgFogX = 0;
+    gCoScreen.bgFogY = 0;
     BG_SetPosition(3, 0, 0);
 
     BG_EnableSyncByMask(BG3_SYNC_BIT);
+
+    /* Per-scanline HBlank scroll for the fog wave, same mechanism
+     * SaveDraw_Init sets up for the save-menu fog (channel 0, BG2HOFS) --
+     * here targeting BG3HOFS instead. */
+    StartBgVerticalScroll(EWRAM_ENTRY);
+    SetBgVerticalScrollPosition(0, (void*)REG_ADDR_BG3HOFS);
+    ClearBgVerticalScrollChannelFlags(0);
+    gpBgVerticalScrollSt->scroll_en = true;
 }
 
 /* CO screen static backdrop (BG2), contributed by PatrickHoang -- replaces
@@ -1646,29 +1656,25 @@ static void CoScreen_LoadStatusBg(void)
     BG_EnableSyncByMask(BG2_SYNC_BIT);
 }
 
-/* Called every frame (see gProcScr_CoPageNumCtrl) -- advances the diagonal
- * scroll by half a pixel per frame on both axes (matching Pokemblem's own
- * `0 - (timer >> 1)`), wrapping seamlessly since the BG3 tilemap already
- * fills its full 32x32-tile (256x256px) screen. */
+/* Called every frame (see gProcScr_CoPageNumCtrl) -- ported from
+ * SaveDraw_ScrollFogBG (src/savedraw.c), targeting BG3/BG3HOFS instead of
+ * BG2/BG2HOFS. Advances a base scroll (gCoScreen.bgFogX/Y) and writes a
+ * per-scanline sine-wave horizontal offset into the HBlank scroll buffer
+ * set up by CoScreen_LoadBgFrame's StartBgVerticalScroll, giving the fog
+ * its waviness instead of a flat diagonal scroll. */
 static void CoScreen_UpdateBgScroll(ProcPtr proc)
 {
-    // gCoScreen.bgScrollTimer++;
-
-    // BG_SetPosition(3, -(gCoScreen.bgScrollTimer >> 1), -(gCoScreen.bgScrollTimer >> 1));
-// }
-// void SaveDraw_ScrollFogBG(struct SaveDrawProc * proc)
-// {
-    u16 * ptr;
+    u16* ptr;
     int i;
     s16 x;
     u32 bg_y;
     u32 angle;
 
-    proc->bg_x++;
-    proc->bg_y += 2;
+    gCoScreen.bgFogX++;
+    gCoScreen.bgFogY += 2;
 
-    x = (proc->bg_x & 0xfff) >> 3;
-    bg_y = (proc->bg_y / 8) & 0xff;
+    x = (gCoScreen.bgFogX & 0xfff) >> 3;
+    bg_y = (gCoScreen.bgFogY / 8) & 0xff;
 
     ptr = GetBgVerticalScrollBuffer(0, true);
     angle = bg_y;
@@ -1680,7 +1686,7 @@ static void CoScreen_UpdateBgScroll(ProcPtr proc)
         angle += 12;
     }
 
-    BG_SetPosition(BG_2, x, bg_y);
+    BG_SetPosition(BG_3, x, bg_y);
 
     FlipBgVerticalScroll();
 }
@@ -1782,6 +1788,8 @@ static void CoScreen_Setup(ProcPtr proc)
 static void CoScreen_Teardown(ProcPtr proc)
 {
     Proc_EndEach(gProcScr_CoPageNumCtrl);
+
+    EndBgVerticalScroll();
 
     BG_Fill(gBG0TilemapBuffer, 0);
     BG_Fill(gBG1TilemapBuffer, 0);
