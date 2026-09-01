@@ -2081,8 +2081,15 @@ void GoalDisplay_Loop_Display(struct PlayerInterfaceProc * proc)
     /* Runs every frame this proc is alive, regardless of the early returns
      * below (those are about whether the window needs to slide/reposition,
      * not about whether it's still showing) -- so the cycle has to happen
-     * up here, ahead of all of them. */
-    UpdateAw2CoMiniPaletteCycle();
+     * up here, ahead of all of them. Gated on hideContents (this proc's own
+     * shown/hidden flag, set all over this file -- e.g. line 1409/2038 hide,
+     * line 1512/2025/2049 show) so the cycle actually pauses while the
+     * interface itself is hidden, instead of continuing to advance/write
+     * AW2_COMINI_PAL_ID's color 11 (BG palette bank 3) off-screen, where
+     * another screen using that bank in the meantime would otherwise get
+     * its colors silently overwritten out from under it. */
+    if (!proc->hideContents)
+        UpdateAw2CoMiniPaletteCycle();
 #endif
 
     proc->xCursorPrev = proc->xCursor;
