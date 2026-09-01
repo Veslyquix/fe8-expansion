@@ -1252,7 +1252,7 @@ void ChapterChangeUnitCleanup(void) {
         struct Unit* unit = GetUnit(i);
 
         if (unit && unit->pCharacterData)
-            if (UNIT_IS_PHANTOM(unit))
+            if (UnitIsTemporary(unit))
                 ClearUnit(unit);
     }
 

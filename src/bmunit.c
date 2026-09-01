@@ -1001,8 +1001,8 @@ bool8 CanUnitTradeOrSupply(struct Unit* unit) {
         return FALSE;
 
 #if FE8_PURCHASE_GENERICS
-    // if (unit->pCharacterData->number == CHARACTER_CITIZEN)
-        // return FALSE;
+    if (unit->pCharacterData->number == CHARACTER_CITIZEN)
+        return FALSE;
 #endif
 
     return TRUE;
@@ -1053,6 +1053,15 @@ inline char* GetUnitRescueName(struct Unit* unit) {
 
     return GetStringFromIndex(GetUnit(unit->rescue)->pCharacterData->nameTextId);
 }
+
+
+int UnitIsTemporary(struct Unit* unit) { 
+#if FE8_PURCHASE_GENERICS
+    if (unit->pCharacterData->number == CHARACTER_CITIZEN)
+        return true;
+#endif
+    return UNIT_IS_PHANTOM(unit); 
+} 
 
 void UnitKill(struct Unit* unit) {
     if (UNIT_FACTION(unit) == FACTION_BLUE) {
@@ -1584,7 +1593,7 @@ void ClearTemporaryUnits(void) {
         UnitClearStatModifiers(unit);
 #endif
 
-        if (UNIT_IS_PHANTOM(unit))
+        if (UnitIsTemporary(unit))
             ClearUnit(unit);
     }
 
