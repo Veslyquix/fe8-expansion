@@ -1245,6 +1245,8 @@ static void CapturePropertyBob_End(struct CapturePropertyBobProc* proc)
 
     if (proc->captured) {
         StartMuFogBump(proc->x - gBmSt.camera.x, proc->y - gBmSt.camera.y);
+        // if (gPlaySt.faction == FACTION_BLUE) 
+            Proc_Goto(proc, 98); // just wait 10 frames for ! instead of the entire ! frames 
     }
 }
 
@@ -1265,7 +1267,20 @@ CONST_DATA struct ProcCmd sProcScr_CapturePropertyBob[] = {
     PROC_CALL(CapturePropertyBobInit),
     PROC_REPEAT(CapturePropertyBob_Loop),
     PROC_CALL(CapturePropertyBob_End),
-    // PROC_CALL(UnlockGame),
+    /* CapturePropertyBob_End's StartMuFogBump (mu.c) fires the "!" bump fx
+     * as its own fire-and-forget PROC_START (ProcScr_MuFogBump) rather than
+     * blocking -- without this, this whole proc (Proc_StartBlocking'd from
+     * ActionCapture/ActionCaptured) ends immediately and the "!" gets cut
+     * off by whatever runs right after instead of actually being seen.
+     * MU_IsFogBumpFxActive (mu.c) is the same existence check Mu_OnStateBump
+     * itself waits on for a unit's own movement-triggered bump. Harmless
+     * when proc->captured was false (StartMuFogBump never ran, so this is
+     * already false). */
+    PROC_WHILE(MU_IsFogBumpFxActive),
+    PROC_GOTO(99),
+    PROC_LABEL(98),
+    PROC_SLEEP(10),
+    PROC_LABEL(99),
     PROC_END,
 };
 

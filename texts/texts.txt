@@ -40309,23 +40309,25 @@ Wakwi[.][X]
 Wakwi[.][X]
 
 ## MSG_CO_WAKWI_TITLE
-The Steadfast Commander[.][X]
+The Unyielding Blade[.][X]
 
 ## MSG_CO_WAKWI_INFO
-A stalwart tactician who leads[LF]
-from the front and never[LF]
-leaves a unit behind.[.][LF]
-Passive: all units have +10 crit.[X]
+A fearless leader who stands[LF]
+at the heart of every battle,[LF]
+inspiring allies to strike true.[LF]
+ [LF]
+Passive: her units have[LF]
++10 critical hit rate.[.][X]
 
 ## MSG_CO_WAKWI_POWER_NAME
-?[.][X]
+Keen Edge[.][X]
 
 ## MSG_CO_WAKWI_POWER_DESC
 Wakwi's units gain +30[LF]
 critical hit rate.[.][X]
 
 ## MSG_CO_WAKWI_SUPER_NAME
-?[.][X]
+Deadly Edge[.][X]
 
 ## MSG_CO_WAKWI_SUPER_DESC
 Wakwi's units gain +100[LF]
@@ -40338,27 +40340,29 @@ Ishkode[.][X]
 Ishkode[.][X]
 
 ## MSG_CO_ISHKODE_TITLE
-The Steadfast Commander[.][X]
+The Hunter's Eye[.][X]
 
 ## MSG_CO_ISHKODE_INFO
-A stalwart tactician who leads[LF]
-from the front and never[LF]
-leaves a unit behind.[.][X]
+A young leader who treads[LF]
+carefully into battle,[LF]
+guiding his allies from afar.[LF]
+ [LF]
+Passive: his bow wielders[LF]
+have +1 range.[X]
 
 ## MSG_CO_ISHKODE_POWER_NAME
-Hyper Repair[.][X]
+Keen Eye[.][X]
 
 ## MSG_CO_ISHKODE_POWER_DESC
-All of Ishkode's preferred[LF]
-units heal 10 HP.[.][X]
+Bow wielders gain[LF]
++1 range and 20% power.[.][X]
 
 ## MSG_CO_ISHKODE_SUPER_NAME
-Hyper Upgrade[.][X]
+Eagle Eye[.][X]
 
 ## MSG_CO_ISHKODE_SUPER_DESC
-All of Ishkode's units are[LF]
-fully healed and deal[LF]
-more damage.[.][X]
+Bow wielders gain[LF]
++2 range and 40% power.[.][X]
 
 
 ## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
@@ -40397,14 +40401,14 @@ from the front and never[LF]
 leaves a unit behind.[.][X]
 
 ## MSG_CO_FRANCIS_POWER_NAME
-Hyper Repair[.][X]
+Rekindle[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
 All of Francis's preferred[LF]
 units heal 10 HP.[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
-Hyper Upgrade[.][X]
+Resurgance[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_DESC
 All of Francis's units are[LF]
@@ -40420,7 +40424,10 @@ The Reckless Brawler[X]
 ## MSG_CO_KARGAN_INFO
 A brash commander who trusts[LF]
 raw power over careful[LF]
-planning.[.][X]
+planning.[LF]
+ [LF]
+Passive: his axe-wielders[LF]
+have +1 movement.[.][X]
 
 ## MSG_CO_KARGAN_POWER_NAME
 Barrage[.][X]

@@ -33,7 +33,7 @@
 #include "constants/items.h"
 #include "constants/video-global.h"
 #include "icon.h"
-#include "player_interface.h" // EndPlayerPhaseSideWindows
+#include "player_interface.h" // Start/EndPlayerPhaseSideWindows
 #include "savemenu.h"
 #if FE8_AW2_ASSETS
 #include "aw2_gfx.h"
@@ -115,6 +115,7 @@ struct CoPowersProc
 
 static void CoPowers_LockIfPlayerPhase(struct CoPowersProc* proc);
 static void CoPowers_UnlockIfPlayerPhase(struct CoPowersProc* proc);
+static void CoPowers_ReopenSideWindowsIfPlayerPhase(struct CoPowersProc* proc);
 static void CoPowers_Init(struct CoPowersProc* proc);
 static void CoPowers_Step(struct CoPowersProc* proc);
 static void CoPowers_Anim(struct CoPowersProc* proc);
@@ -178,6 +179,7 @@ PROC_LABEL(99),
     PROC_CALL(CoPowers_ReturnCamera),
     PROC_WHILE_EXISTS(ProcScr_CamMove),
     PROC_CALL(CoPowers_UnlockIfPlayerPhase),
+    PROC_CALL(CoPowers_ReopenSideWindowsIfPlayerPhase),
     PROC_END,
 };
 
@@ -194,6 +196,19 @@ static void CoPowers_UnlockIfPlayerPhase(struct CoPowersProc* proc)
 {
     if (proc->faction == FACTION_BLUE)
         UnlockGame();
+}
+
+/* EndPlayerPhaseSideWindows (above, this proc's leading steps) tears down
+ * the goal/terrain/MMB windows before the roll-call starts, but nothing
+ * ever restarted them once it's done -- StartPlayerPhaseSideWindows is the
+ * same call playerphase.c itself makes at the start of a player phase.
+ * AI/CP phase's own goal window (gProcScr_AiGoalDisplay, src/player_
+ * interface.c) is a separate proc EndPlayerPhaseSideWindows above doesn't
+ * touch, so this only needs to act for the player's own turn. */
+static void CoPowers_ReopenSideWindowsIfPlayerPhase(struct CoPowersProc* proc)
+{
+    if (proc->faction == FACTION_BLUE)
+        StartPlayerPhaseSideWindows();
 }
 
 static void CoPowers_Init(struct CoPowersProc* proc)
@@ -570,6 +585,7 @@ struct CoDefinition {
 */ 
  
 /* Wakwi is a critical hit specialist */ 
+// issue: classes not shown here don't get the crit bonus 
  static const struct CoClassAffinity sWakwiAffinities[] = {
     { "Soldier",        CLASS_SOLDIER,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Knight",         CLASS_ARMOR_KNIGHT,     30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
@@ -580,8 +596,8 @@ struct CoDefinition {
     { "Cavalier",       CLASS_CAVALIER,         30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Monk",           CLASS_MONK,             30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Mage",           CLASS_MAGE,             30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Cleric",         CLASS_CLERIC,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Shaman",         CLASS_SHAMAN,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Cleric",         CLASS_CLERIC,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Thief",          CLASS_THIEF,            30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,    30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
@@ -592,15 +608,15 @@ static const struct CoClassAffinity sIshkodeAffinities[] = {
     { "Soldier",    CLASS_SOLDIER,       30 },
     { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
     { "Brigand",    CLASS_BRIGAND,       30 },
-    { "Archer",     CLASS_ARCHER,        36, .ratingPow = 3, .ratingSup = 6, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 },
-    // { "Nomad",     CLASS_ARCHER,        36, .ratingPow = 3, .ratingSup = 6, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
+    { "Archer",     CLASS_ARCHER,        36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 },
+    // { "Nomad",     CLASS_ARCHER,        36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
     { "Fighter",    CLASS_FIGHTER,       30 },
     { "Mercenary",  CLASS_MERCENARY,     30 },
     { "Cavalier",   CLASS_CAVALIER,      30 },
     { "Monk",       CLASS_MONK,          30 },
     { "Mage",       CLASS_MAGE,          30 },
-    { "Cleric",     CLASS_CLERIC,        30 },
     { "Shaman",     CLASS_SHAMAN,        30 },
+    { "Cleric",     CLASS_CLERIC,        30 },
     { "Thief",      CLASS_THIEF,         30 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
@@ -617,8 +633,8 @@ static const struct CoClassAffinity sFrancisAffinities[] = {
     { "Cavalier",   CLASS_CAVALIER,      39, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
     { "Monk",       CLASS_MONK,          24 },
     { "Mage",       CLASS_MAGE,          24 },
-    { "Cleric",     CLASS_CLERIC,        24 },
     { "Shaman",     CLASS_SHAMAN,        24 },
+    { "Cleric",     CLASS_CLERIC,        24 },
     { "Thief",      CLASS_THIEF,         30 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      33 },
@@ -635,8 +651,8 @@ static const struct CoClassAffinity sKarganAffinities[] = {
     { "Cavalier",   CLASS_CAVALIER,      30, .ratingPow = 3, .ratingSup = 6 },
     { "Monk",       CLASS_MONK,          24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
     { "Mage",       CLASS_MAGE,          24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
-    { "Cleric",     CLASS_CLERIC,        24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
     { "Shaman",     CLASS_SHAMAN,        24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { "Cleric",     CLASS_CLERIC,        24 },
     { "Thief",      CLASS_THIEF,         27, .ratingPow = 3, .ratingSup = 6 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      27 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
@@ -1128,6 +1144,9 @@ enum {
     CO_TEXT_LINE1,
     CO_TEXT_LINE2,
     CO_TEXT_LINE3,
+    CO_TEXT_LINE4,
+    CO_TEXT_LINE5,
+    CO_TEXT_LINE6,
     CO_TEXT_COUNT,
 };
 
@@ -1279,12 +1298,13 @@ static void CoScreen_PutText(int slot, u16* tm, int tileWidth, int color, int ms
  * accumulated in the current line's handle before moving to the next
  * handle in the array. tm here is line 0's destination; PrintStringToTexts
  * advances by a tilemap row pair (0x40) per line internally. */
+ #define MULTILINE_MAX 7 
 static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
 {
-    struct Text* texts[4];
+    struct Text* texts[MULTILINE_MAX];
     int i;
 
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < MULTILINE_MAX; ++i) {
         struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + i];
 
         InitText(text, CO_TEXT_WIDTH_LINE);
@@ -1292,9 +1312,9 @@ static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
         texts[i] = text;
     }
 
-    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, 4 * 2, 0);
+    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, MULTILINE_MAX * 2, 0);
 
-    PrintStringToTexts(texts, GetStringFromIndex(msgId), tm, 4);
+    PrintStringToTexts(texts, GetStringFromIndex(msgId), tm, MULTILINE_MAX);
 }
 
 static void CoScreen_DrawHeader(void)
@@ -1365,10 +1385,16 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
     int y = CO_AFFINITY_ROW_Y0;
 
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(2, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_AFFINITY);
-     
+
     // pixels long. base in yellow. if total is higher, those pixels in green. if max, all green.
+    /* GetEffectiveClassAffinityRating (not the plain co->affinities[].rating)
+     * so this bar reflects ratingPow/ratingSup while gCoScreen.coId's power/
+     * super happens to be active (browsing to a DIFFERENT CO than the one
+     * with an active power still shows their own plain rating, same as
+     * always -- the effective lookup is per-coId, not global). */
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 30, co->affinities[i].rating, 30);
+        DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 30,
+            GetEffectiveClassAffinityRating(co, gCoScreen.coId, co->affinities[i].classId), 30);
 #if FE8_AW2_ASSETS
         CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X - 2, y + 2, &co->affinities[i]);
 #endif
@@ -1377,7 +1403,8 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
     int offset = i;
     y = CO_AFFINITY_ROW_Y0;
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
-        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30, co->affinities[i+offset].rating, 30);
+        DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30,
+            GetEffectiveClassAffinityRating(co, gCoScreen.coId, co->affinities[i+offset].classId), 30);
 #if FE8_AW2_ASSETS
         CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X + 9 - 2, y + 2, &co->affinities[i+offset]);
 #endif
