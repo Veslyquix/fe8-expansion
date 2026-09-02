@@ -791,7 +791,7 @@ static void SetupPurchaseGenericPlatformAnim(struct OpInfoClassDisplayProc* proc
     gUnk_4.objChr = 0x300;
     gUnk_4.objPalId = 0xD;
     gUnk_4.bgChr = 0x1E0; 
-    gUnk_4.bgPalId = 0xD;
+    gUnk_4.bgPalId = 0x3;
     gUnk_4.bg = 1;
     gUnk_4.bgTmBuf = gBG1TilemapBuffer;
     gUnk_4.bgImgBuf = gSpellAnimBgfx;
