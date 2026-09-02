@@ -574,7 +574,7 @@ static void StartPurchaseGenericClassCard(const struct PurchaseGenericDefinition
     if (portraitId == 0 || gFaces[PURCHASE_GENERIC_FACE_SLOT] != NULL)
         return;
 
-    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x180, 0xB);
+    PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX(20, 1), portraitId, 0x180, 0x2);
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG2_SYNC_BIT);
     // if (StartFace(
         // PURCHASE_GENERIC_FACE_SLOT,

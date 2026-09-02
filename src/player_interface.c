@@ -18,6 +18,7 @@
 #include "bmlib.h"
 #include "worldmap.h"
 #include "bmitem.h"
+#include "bmmind.h" // sProcScr_CombatAction (AiGoalDisplay_Loop)
 
 #include "player_interface.h"
 #include "aw2_gfx.h"
@@ -233,6 +234,78 @@ s8 CONST_DATA sGoalSlideInWidthLut[5] =
 {
     1, 3, 4, 5, 6
 };
+
+#if FE8_AW2_ASSETS
+/* AI/CP-phase goal window: a completely separate, minimal proc from
+ * gProcScr_GoalDisplay below rather than a branch inside it -- that proc's
+ * whole state machine (OnSideChange/SlideIn/Display/SlideOut, the
+ * PROC_WHILE_EXISTS(ProcScr_CamMove) camera-pan wait) exists to position a
+ * BG window relative to the player's own cursor, none of which the AW2
+ * CO-mini panel needs (it's a fixed-position OBJ sprite, not BG, and there
+ * is no player cursor during the AI's own turn to dodge). Piggybacking on
+ * that proc meant this sprite silently stopped being resubmitted for
+ * however long any of those states blocked it (camera pans are constant
+ * during AI phase, since the camera follows every acting unit) -- it has
+ * to be pushed to OAM every single frame it's up or it disappears, unlike
+ * BG tiles which just sit in VRAM once written. This proc's only job is
+ * that per-frame resubmission, with nothing else to block it. */
+#define AI_GOAL_DISPLAY_SPRITE_X (DISPLAY_WIDTH - 64 - 8)
+#define AI_GOAL_DISPLAY_SPRITE_Y 8
+#define AI_GOAL_DISPLAY_GOLD_X (AI_GOAL_DISPLAY_SPRITE_X + 52)
+#define AI_GOAL_DISPLAY_GOLD_Y (AI_GOAL_DISPLAY_SPRITE_Y + 5)
+
+/* 0 whenever a battle scene exists (its own graphics are free to reuse
+ * this OBJ VRAM range), 1 once the panel's been redrawn since -- checked
+ * every frame in AiGoalDisplay_Loop below, so the reload happens on the
+ * very first tick where the combat proc is gone rather than depending on
+ * exactly where/when something outside this proc calls back in (a plain
+ * synchronous reload at the Start/EndAiPhaseGoalDisplay callsite could
+ * still land a frame or more behind whatever else the returning-to-map
+ * teardown touches in that range). Reset to 0 whenever the combat proc is
+ * seen, including every frame it's still up, so a long battle doesn't
+ * leave this looking prematurely "fresh" the instant it ends. */
+static bool8 sAiGoalDisplayObjGfxFresh = FALSE;
+
+void AiGoalDisplay_Loop(ProcPtr proc)
+{
+    /* Battle animations (src/bmmind.c's ApplyUnitAction, the funnel both
+     * the player's and the AI's attacks go through) already tear this proc
+     * down before Proc_StartBlocking(sProcScr_CombatAction, ...) and start
+     * it back up after -- see Start/EndAiPhaseGoalDisplay below -- but this
+     * checks the actual combat proc directly too, in case some other
+     * attack path (a boss special, group AI, ...) doesn't funnel through
+     * that same bracket. */
+    if (Proc_Find(sProcScr_CombatAction) != NULL)
+    {
+        sAiGoalDisplayObjGfxFresh = FALSE;
+
+        return;
+    }
+
+    if (!sAiGoalDisplayObjGfxFresh)
+    {
+        LoadAw2CoMiniObjGfx();
+
+        sAiGoalDisplayObjGfxFresh = TRUE;
+    }
+
+    UpdateAw2CoMiniObjPaletteCycle();
+
+    DrawAw2CoMiniObjSprite(AI_GOAL_DISPLAY_SPRITE_X, AI_GOAL_DISPLAY_SPRITE_Y);
+
+#if FE8_PURCHASE_GENERICS
+    DrawAw2GoldDigitsObjSprite(AI_GOAL_DISPLAY_GOLD_X, AI_GOAL_DISPLAY_GOLD_Y,
+        GetFactionChapterGoldAmount(gPlaySt.faction >> 6));
+#endif
+}
+
+struct ProcCmd CONST_DATA gProcScr_AiGoalDisplay[] =
+{
+    PROC_NAME("AIGS"),
+    PROC_REPEAT(AiGoalDisplay_Loop),
+    PROC_END,
+};
+#endif
 
 s8 CONST_DATA sGoalSlideOutWidthLut[3] =
 {
@@ -1177,8 +1250,23 @@ void DrawTerrainDisplayWindow(struct PlayerInterfaceProc * proc)
 {
     char * str;
     int num;
+    struct Unit * hoveredUnit;
 
     int terrainId = gBmMapTerrain[gBmSt.playerCursor.y][gBmSt.playerCursor.x];
+
+    /* Same UnitMapUiFramePal clobber as the menu fix in playerphase.c: the
+     * unit-burst UI (DrawUnitMapUi/DrawUnitBurstMapUi) retints BG palette
+     * bank 1 to the hovered unit's own faction color, and this window
+     * shares that bank. Reload the player's own tint here too -- except
+     * while hovering an enemy, where the burst box is showing that same
+     * red tint on purpose and we want this window to match it rather than
+     * fight it back to blue every time it redraws. */
+    hoveredUnit = GetUnit(gBmMapUnit[gBmSt.playerCursor.y][gBmSt.playerCursor.x]);
+
+    if ((hoveredUnit == NULL) || (UNIT_FACTION(hoveredUnit) == FACTION_BLUE))
+    {
+        ReloadPlayerUnitMapUiFramePal();
+    }
 
     TileMap_FillRect(gUiTmScratchA + TILEMAP_INDEX(0, 10), 14, 7, 0);
     TileMap_FillRect(gUiTmScratchB + TILEMAP_INDEX(0, 10), 14, 7, 0);
@@ -1694,15 +1782,24 @@ void StartAiPhaseGoalDisplay(void)
 {
     if ((gPlaySt.config.disableGoalDisplay == 0) && (CheckFlag(EVFLAG_OBJWINDOW_DISABLE) == 0))
     {
-        Proc_Start(gProcScr_GoalDisplay, PROC_TREE_3);
+        /* Force AiGoalDisplay_Loop's very first tick to reload the panel
+         * into OBJ VRAM (see sAiGoalDisplayObjGfxFresh above) -- covers
+         * AI/CP phase's very first start, same as every post-battle
+         * restart, in case something touched this OBJ VRAM range between
+         * EndAiPhaseGoalDisplay and here without going through combat's
+         * own proc. */
+        sAiGoalDisplayObjGfxFresh = FALSE;
+
+        /* gProcScr_AiGoalDisplay (below), not gProcScr_GoalDisplay -- see
+         * the comment above it for why AI/CP phase needs its own proc
+         * instead of reusing the player phase one. */
+        Proc_Start(gProcScr_AiGoalDisplay, PROC_TREE_3);
     }
 }
 
 void EndAiPhaseGoalDisplay(void)
 {
-    Proc_EndEach(gProcScr_GoalDisplay);
-
-    ClearBg0Bg1();
+    Proc_EndEach(gProcScr_AiGoalDisplay);
 }
 #endif
 
@@ -1757,7 +1854,7 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
 #if FE8_AW2_ASSETS
     DrawAw2CoMini(gUiTmScratchB + TILEMAP_INDEX(22, 11));
 #if FE8_PURCHASE_GENERICS
-    PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_BLUE,
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(28, 13), TEXT_COLOR_SYSTEM_GOLD,
         GetFactionChapterGoldAmount(gPlaySt.faction >> 6));
 #endif
     return;
@@ -1782,7 +1879,7 @@ void DrawGoalDisplayWindow(struct PlayerInterfaceProc * proc)
     }
 
 #if FE8_PURCHASE_GENERICS
-    PutNumber(gUiTmScratchA + TILEMAP_INDEX(27, 15), TEXT_COLOR_SYSTEM_BLUE, GetChapterGoldAmount());
+    PutNumber(gUiTmScratchA + TILEMAP_INDEX(27, 15), TEXT_COLOR_SYSTEM_GOLD, GetChapterGoldAmount());
     PutSpecialChar(gUiTmScratchA + TILEMAP_INDEX(28, 15), TEXT_COLOR_SYSTEM_GOLD, TEXT_SPECIAL_G);
 #endif
 }

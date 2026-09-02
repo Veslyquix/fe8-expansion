@@ -29,4 +29,13 @@ const u16 __attribute__((aligned(4))) aw2uiCoMini_palette[] = INCBIN_U16("graphi
 const u8 __attribute__((aligned(4))) gGfx_CoAffinityBonusIcons_tiles[] = INCBIN_U8("graphics/aw2/gGfx_CoAffinityBonusIcons.4bpp.lz");
 const u16 __attribute__((aligned(4))) gGfx_CoAffinityBonusIcons_palette[] = INCBIN_U16("graphics/aw2/gGfx_CoAffinityBonusIcons.gbapal");
 
+/* AI-phase gold digits drawn over the OBJ copy of the CO-mini panel (see
+ * DrawAw2GoldDigitsObjSprite, src/aw2_gfx.c) -- the same digit glyph sheet
+ * src/draw_mapanim.c uses for battle damage numbers (that file's own copy
+ * is gated behind FE8_DRAW_MAP_ANIMS; this is the same source asset dumped
+ * from the vanilla save screen, included independently of that flag).
+ * Raw, uncompressed dump -- CpuFastCopy it, don't Decompress. */
+const u8 __attribute__((aligned(4))) gAw2GoldDigits_tiles[] = INCBIN_U8("graphics/mapanim/draw/dmp/NumbersFromSaveScreen.dmp");
+const u16 __attribute__((aligned(4))) gAw2GoldDigits_palette[] = INCBIN_U16("graphics/mapanim/draw/dmp/NumbersFromSaveScreen_pal.dmp");
+
 #endif

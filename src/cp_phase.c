@@ -12,6 +12,7 @@
 #endif
 #if FE8_AW2_ASSETS
 #include "player_interface.h"
+#include "uichapterstatus.h" // CountUnitsByFaction
 #endif
 
 #if FE8_VESLY_DEBUGGER
@@ -97,7 +98,13 @@ static void AiPhaseInit(struct Proc* proc)
     SetupUnitInventoryAIFlags();
 
 #if FE8_AW2_ASSETS
-    StartAiPhaseGoalDisplay();
+    /* Skip the window entirely for a phase with no units to act -- e.g. an
+     * NPC phase with no NPCs on the map, which AiOrderStart below finishes
+     * in essentially 0 frames, just long enough for the window's own
+     * appear (and, moments later, AiPhaseGoalDisplayCleanup's disappear)
+     * to be visibly seen flashing by. */
+    if (CountUnitsByFaction(gPlaySt.faction) != 0)
+        StartAiPhaseGoalDisplay();
 #endif
 }
 
