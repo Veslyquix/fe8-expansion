@@ -701,7 +701,11 @@ s8 AiFindBestAttackPositionAgainstTarget(int x, int y, struct Vec2* out, u8* ite
         }
 
         BmMapFill(gBmMapRange, 0);
+#if FE8_RANGE_REWORK
+        MapAddInBoundedRange(x, y, GetUnitItemEffectiveMinRange(gActiveUnit, item), GetUnitItemEffectiveMaxRange(gActiveUnit, item));
+#else
         MapAddInBoundedRange(x, y, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
 
         for (iy = gBmMapSize.y - 1; iy >= 0; iy--) {
             for (ix = gBmMapSize.x - 1; ix >= 0; ix--) {

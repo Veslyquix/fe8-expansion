@@ -130,7 +130,11 @@ int GetUnitBattleAiPriority(struct Unit* unit)
 
         if (GetItemAttributes(item) & IA_WEAPON)
         {
+#if FE8_RANGE_REWORK
+            int range = GetUnitItemEffectiveMaxRange(unit, item);
+#else
             int range = GetItemMaxRange(item);
+#endif
 
             if (range > 1)
                 rangedAmt++;

@@ -583,7 +583,11 @@ s8 AiTryUseNightmareStaff(struct UnknownAiInputA* input) {
                     }
 
                     BmMapFill(gBmMapRange, 0);
+#if FE8_RANGE_REWORK
+                    MapAddInBoundedRange(ix, iy, GetUnitItemEffectiveMinRange(gActiveUnit, ITEM_NIGHTMARE), GetUnitItemEffectiveMaxRange(gActiveUnit, ITEM_NIGHTMARE));
+#else
                     MapAddInBoundedRange(ix, iy, GetItemMinRange(ITEM_NIGHTMARE), GetItemMaxRange(ITEM_NIGHTMARE));
+#endif
 
                     targetUnitId = AiDetermineNightmareEffectiveness(&numValidTargets, &numHit, input->unk_02);
 
@@ -661,7 +665,11 @@ s8 AiTryDKSummon(struct UnknownAiInputB* input) {
     }
 
     BmMapFill(gBmMapRange, 0);
+#if FE8_RANGE_REWORK
+    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetUnitItemEffectiveMinRange(gActiveUnit, ITEM_NIGHTMARE), GetUnitItemEffectiveMaxRange(gActiveUnit, ITEM_NIGHTMARE));
+#else
     MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetItemMinRange(ITEM_NIGHTMARE), GetItemMaxRange(ITEM_NIGHTMARE));
+#endif
 
     AiDetermineNightmareEffectiveness(&numValidTargets, &numHit, 0);
 

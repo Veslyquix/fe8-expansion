@@ -213,7 +213,11 @@ void MakeTargetListForWeapon(struct Unit* unit, int item) {
 
     BmMapFill(gBmMapRange, 0);
 
+#if FE8_RANGE_REWORK
+    MapAddInBoundedRange(x, y, GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+#else
     MapAddInBoundedRange(x, y, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
 
     ForEachUnitInRange(AddUnitToTargetListIfNotAllied);
 
