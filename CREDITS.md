@@ -36,18 +36,10 @@ Generally sourced from the community
 | Liz | `Flyer Girl Liz[F2E].png` | RandomWizard (tagged **F2E**, "Free to Edit") |
 | Ishkode | `{Eden} Ishkode.png` | Eden |
 | Wakwi | `{Eden} Wakwi.png` | Eden |
+| Kargan (replaces O'Neill) | `{Eden} Kargan[F2E].png` | Eden |
 
 Hannah and Francis are no longer used by `src/portrait_data.c` (replaced by
 Wakwi and Ishkode respectively) but remain credited/linked, not removed.
-
-## Other Portraits
-
-Not gated behind a feature flag -- replaces a portrait the base campaign
-already used, rather than adding a custom-campaign OC.
-
-| Character | Portrait | Artist |
-| --- | --- | --- |
-| Kargan (replaces O'Neill) | `{Eden} Kargan[F2E].png` | Eden |
 
 
 ## CO Screen Graphics (`CO_POWERS`)

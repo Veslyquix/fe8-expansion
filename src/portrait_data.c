@@ -74,13 +74,18 @@ struct FaceData CONST_DATA portrait_data[] =
 	{portrait_Eirika_tileset, portrait_Eirika_chibi, portrait_Eirika_flashback_palette, portrait_Eirika_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 44
 	{portrait_Ephraim_tileset, portrait_Ephraim_chibi, portrait_Ephraim_flashback_palette, portrait_Ephraim_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 45
 	{portrait_Knoll_tileset, portrait_Knoll_chibi, portrait_Knoll_flashback_palette, portrait_Knoll_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 46
-	{portrait_O_Neill_tileset, portrait_O_Neill_chibi, portrait_O_Neill_palette, portrait_O_Neill_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 47
-	/* Was portrait_Breguet_* -- CHARACTER_ONEILL (characters.json) points
-	 * at this slot, not his own portrait_O_Neill_* below (a vanilla FE8
-	 * quirk). Replaced with Kargan, art by Eden (src/Credits.c), same
+#if FE8_CUSTOM_CAMPAIGN
+	/* CHARACTER_ONEILL (characters.json) has "portrait": 48, which is
+	 * 1-indexed against this 0-indexed array -- slot 47, i.e. this one,
+	 * his own named portrait (not slot 48/Breguet, which is unrelated).
+	 * Replaced with Kargan, art by Eden (src/Credits.c), same
 	 * insert_portrait.py workflow as Wakwi/Ishkode above -- own detected
-	 * xMouth/yMouth/xEyes/yEyes rather than reusing Breguet's. */
-	{portrait_Kargan_tileset, portrait_Kargan_chibi, portrait_Kargan_palette, portrait_Kargan_mouth, 0, 2, 5, 2, 3, FACE_BLINK_NORMAL}, // 48
+	 * xMouth/yMouth/xEyes/yEyes rather than reusing O_Neill's. */
+	{portrait_Kargan_tileset, portrait_Kargan_chibi, portrait_Kargan_palette, portrait_Kargan_mouth, 0, 2, 5, 2, 3, FACE_BLINK_NORMAL}, // 47
+#else
+	{portrait_O_Neill_tileset, portrait_O_Neill_chibi, portrait_O_Neill_palette, portrait_O_Neill_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 47
+#endif
+	{portrait_Breguet_tileset, portrait_Breguet_chibi, portrait_Breguet_palette, portrait_Breguet_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 48
 	{portrait_Bone_tileset, portrait_Bone_chibi, portrait_Bone_palette, portrait_Bone_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 49
 	{portrait_Bazba_tileset, portrait_Bazba_chibi, portrait_Bazba_palette, portrait_Bazba_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 50
 	{portrait_Saar_tileset, portrait_Saar_chibi, portrait_Saar_palette, portrait_Saar_mouth, 0, 2, 5, 2, 3, FACE_BLINK_NORMAL}, // 51

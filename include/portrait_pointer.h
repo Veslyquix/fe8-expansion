@@ -333,10 +333,6 @@ extern unsigned short portrait_Breguet_palette[];
 extern unsigned char portrait_Breguet_mouth[];
 extern unsigned char portrait_Breguet_chibi[];
 extern unsigned char portrait_Breguet_tileset[];
-extern unsigned short portrait_Kargan_palette[];
-extern unsigned char portrait_Kargan_mouth[];
-extern unsigned char portrait_Kargan_chibi[];
-extern unsigned char portrait_Kargan_tileset[];
 extern unsigned short portrait_O_Neill_palette[];
 extern unsigned char portrait_O_Neill_mouth[];
 extern unsigned char portrait_O_Neill_chibi[];
@@ -514,6 +510,10 @@ extern unsigned short portrait_Liz_palette[];
 extern unsigned char portrait_Liz_mouth[];
 extern unsigned char portrait_Liz_chibi[];
 extern unsigned char portrait_Liz_tileset[];
+extern unsigned short portrait_Kargan_palette[];
+extern unsigned char portrait_Kargan_mouth[];
+extern unsigned char portrait_Kargan_chibi[];
+extern unsigned char portrait_Kargan_tileset[];
 #endif
 
 extern unsigned short portrait_Mystery_1_palette[];
