@@ -7,9 +7,10 @@
  * event scripts (e.g. src/events/prologue-eventscript.h) can name a CO
  * when setting up a faction's commander via SetFactionCo. */
 enum {
+    CO_WAKWI,
     CO_ISHKODE,
     CO_FRANCIS,
-    CO_ONEILL,
+    CO_KARGAN,
     CO_COUNT,
 };
 

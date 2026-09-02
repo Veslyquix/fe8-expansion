@@ -420,6 +420,9 @@ struct CoClassAffinity {
     const char* className; // unused for display now (SMS icon + bar replace name+hearts); kept for reference/tooling
     u8 classId;
     u8 rating;
+    u8 ratingPow;
+    u8 ratingSup;
+    
     /* -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
      * below the class's affinity bar (see
      * CoScreen_DrawPageAffinityClassBonusIcons). 0 draws nothing.
@@ -433,7 +436,14 @@ struct CoClassAffinity {
      * into can't represent a shifted range at all -- see RANGE_REWORK's
      * config.mk comment). */
     s8 movBon;
+    s8 movBonPow;
+    s8 movBonSup;
     s8 rangeBon;
+    s8 rangeBonPow;
+    s8 rangeBonSup;
+    s8 critBon; // not yet functional. 
+    s8 critBonPow; // not yet functional. 
+    s8 critBonSup; // not yet functional. 
 };
 
 /* CoScreen_DrawPageAffinity's bar base: a class's affinity bar (and
@@ -485,63 +495,109 @@ struct CoDefinition {
  * (src/purchase_generics.c) -- keep the class list in sync if that table
  * changes. */
  
+/* Co power ideas: 
+- Spawn generics in empty controlled properties + adjacent to camp
+- Spawn generics of x class in forests within x tiles from controlled properties 
+- Grant x classes +n movement or attack range 
+- 
+
+
+
+
+*/ 
+ 
+/* Wakwi is a critical hit specialist */ 
+ static const struct CoClassAffinity sWakwiAffinities[] = {
+    { "Soldier",        CLASS_SOLDIER,          30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Knight",         CLASS_ARMOR_KNIGHT,     30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Brigand",        CLASS_BRIGAND,          30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Archer",         CLASS_ARCHER,           30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Fighter",        CLASS_FIGHTER,          30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Mercenary",      CLASS_MERCENARY,        30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Cavalier",       CLASS_CAVALIER,         30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Monk",           CLASS_MONK,             30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Mage",           CLASS_MAGE,             30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Cleric",         CLASS_CLERIC,           30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Shaman",         CLASS_SHAMAN,           30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Thief",          CLASS_THIEF,            30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,    30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+};
+
+/* Ishkode is a ranged specialist */
 static const struct CoClassAffinity sIshkodeAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       30, .movBon = +2 },
+    { "Soldier",    CLASS_SOLDIER,       30 },
     { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
     { "Brigand",    CLASS_BRIGAND,       30 },
-    { "Archer",     CLASS_ARCHER,        36, .rangeBon = +1 },
+    { "Archer",     CLASS_ARCHER,        36, .ratingPow = 3, .ratingSup = 6, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 },
+    // { "Nomad",     CLASS_ARCHER,        36, .ratingPow = 3, .ratingSup = 6, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
     { "Fighter",    CLASS_FIGHTER,       30 },
     { "Mercenary",  CLASS_MERCENARY,     30 },
     { "Cavalier",   CLASS_CAVALIER,      30 },
     { "Monk",       CLASS_MONK,          30 },
-    { "Mage",       CLASS_MAGE,          30, .movBon = -3 },
+    { "Mage",       CLASS_MAGE,          30 },
     { "Cleric",     CLASS_CLERIC,        30 },
     { "Shaman",     CLASS_SHAMAN,        30 },
-    // { "Dancer",     CLASS_DANCER,        30 },
     { "Thief",      CLASS_THIEF,         30 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
 };
- 
+
+/* Francis is a soldier specialist, with weak magic units. */
 static const struct CoClassAffinity sFrancisAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       36 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  36 },
+    { "Soldier",    CLASS_SOLDIER,       36, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  36, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
     { "Brigand",    CLASS_BRIGAND,       30 },
     { "Archer",     CLASS_ARCHER,        30 },
     { "Fighter",    CLASS_FIGHTER,       30 },
     { "Mercenary",  CLASS_MERCENARY,     30 },
-    { "Cavalier",   CLASS_CAVALIER,      39 },
+    { "Cavalier",   CLASS_CAVALIER,      39, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
     { "Monk",       CLASS_MONK,          24 },
     { "Mage",       CLASS_MAGE,          24 },
     { "Cleric",     CLASS_CLERIC,        24 },
     { "Shaman",     CLASS_SHAMAN,        24 },
-    // { "Dancer",     CLASS_DANCER,        30 },
     { "Thief",      CLASS_THIEF,         30 },
     { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      33 },
 };
 
-/* O'Neill leans hard into offense, like Flak; weak with anything magical. */
-static const struct CoClassAffinity sOneillAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       30 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
-    { "Brigand",    CLASS_BRIGAND,       42 },
-    { "Archer",     CLASS_ARCHER,        24 },
-    { "Fighter",    CLASS_FIGHTER,       45 },
-    { "Mercenary",  CLASS_MERCENARY,     24 },
-    { "Cavalier",   CLASS_CAVALIER,      30 },
-    { "Monk",       CLASS_MONK,          27 },
-    { "Mage",       CLASS_MAGE,          27 },
-    { "Cleric",     CLASS_CLERIC,        27 },
-    { "Shaman",     CLASS_SHAMAN,        27 },
-    // { "Dancer",     CLASS_DANCER,        30 },
-    { "Thief",      CLASS_THIEF,         24 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      24 },
+/* Kargan is an axe specialist, but weak with anything magical. */
+static const struct CoClassAffinity sKarganAffinities[] = {
+    { "Soldier",    CLASS_SOLDIER,       30, .ratingPow = 3, .ratingSup = 6 },
+    { "Knight",     CLASS_ARMOR_KNIGHT,  30, .ratingPow = 3, .ratingSup = 6 },
+    { "Brigand",    CLASS_BRIGAND,       42, .ratingPow = 3, .ratingSup = 6, .movBon = +1 },
+    { "Archer",     CLASS_ARCHER,        24, .ratingPow = 3, .ratingSup = 6 },
+    { "Fighter",    CLASS_FIGHTER,       45, .ratingPow = 3, .ratingSup = 6, .movBon = +1 },
+    { "Mercenary",  CLASS_MERCENARY,     24, .ratingPow = 3, .ratingSup = 6 },
+    { "Cavalier",   CLASS_CAVALIER,      30, .ratingPow = 3, .ratingSup = 6 },
+    { "Monk",       CLASS_MONK,          24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { "Mage",       CLASS_MAGE,          24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { "Cleric",     CLASS_CLERIC,        24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { "Shaman",     CLASS_SHAMAN,        24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { "Thief",      CLASS_THIEF,         27, .ratingPow = 3, .ratingSup = 6 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      27 },
     { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
 };
 
 
 static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
+    
+    [CO_WAKWI] = {
+        .nameMsg = MSG_CO_WAKWI_NAME,
+        .faceId = 4,
+        .titleMsg = MSG_CO_WAKWI_TITLE,
+        .infoMsg = MSG_CO_WAKWI_INFO,
+        .powerNameMsg = MSG_CO_WAKWI_POWER_NAME,
+        .powerDescMsg = MSG_CO_WAKWI_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_WAKWI_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_WAKWI_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 5,
+        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .affinities = sWakwiAffinities,
+        .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
+    },
     [CO_ISHKODE] = {
         .nameMsg = MSG_CO_ISHKODE_NAME,
         .faceId = 4,
@@ -578,15 +634,15 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .affinities = sFrancisAffinities,
         .affinityCount = ARRAY_COUNT(sFrancisAffinities),
     },
-    [CO_ONEILL] = {
-        .nameMsg = MSG_CO_ONEILL_NAME,
+    [CO_KARGAN] = {
+        .nameMsg = MSG_CO_KARGAN_NAME,
         .faceId = 0x30,
-        .titleMsg = MSG_CO_ONEILL_TITLE,
-        .infoMsg = MSG_CO_ONEILL_INFO,
-        .powerNameMsg = MSG_CO_ONEILL_POWER_NAME,
-        .powerDescMsg = MSG_CO_ONEILL_POWER_DESC,
-        .superPowerNameMsg = MSG_CO_ONEILL_SUPER_NAME,
-        .superPowerDescMsg = MSG_CO_ONEILL_SUPER_DESC,
+        .titleMsg = MSG_CO_KARGAN_TITLE,
+        .infoMsg = MSG_CO_KARGAN_INFO,
+        .powerNameMsg = MSG_CO_KARGAN_POWER_NAME,
+        .powerDescMsg = MSG_CO_KARGAN_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_KARGAN_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_KARGAN_SUPER_DESC,
         /* 4/5 rather than a rounder 4/6: the mini gauge only has 64px of
          * panel to draw in, and 4 small + 2 big stars needs every one of
          * them (see the width budget note in src/aw2_gfx.c). */
@@ -595,8 +651,8 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         /* No effect implemented yet (see CoPower_ApplyEffect) -- left at
          * the CO_POWER_TARGET_ALL default so the animation still plays for
          * every unit, matching the pre-existing roll-call-only behavior. */
-        .affinities = sOneillAffinities,
-        .affinityCount = ARRAY_COUNT(sOneillAffinities),
+        .affinities = sKarganAffinities,
+        .affinityCount = ARRAY_COUNT(sKarganAffinities),
     },
 };
 

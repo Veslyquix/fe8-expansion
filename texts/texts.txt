@@ -40305,6 +40305,32 @@ This cannot be undone.[X]
 ## MSG_CUSTOM_CAMPAIGN_NAME_WAKWI
 Wakwi[.][X]
 
+## MSG_CO_WAKWI_NAME
+Wakwi[.][X]
+
+## MSG_CO_WAKWI_TITLE
+The Steadfast Commander[.][X]
+
+## MSG_CO_WAKWI_INFO
+A stalwart tactician who leads[LF]
+from the front and never[LF]
+leaves a unit behind.[.][X]
+
+## MSG_CO_WAKWI_POWER_NAME
+Hyper Repair[.][X]
+
+## MSG_CO_WAKWI_POWER_DESC
+All of Wakwi's preferred[LF]
+units heal 10 HP.[.][X]
+
+## MSG_CO_WAKWI_SUPER_NAME
+Hyper Upgrade[.][X]
+
+## MSG_CO_WAKWI_SUPER_DESC
+All of Wakwi's units are[LF]
+fully healed and deal[LF]
+more damage.[.][X]
+
 ## MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE
 Ishkode[.][X]
 
@@ -40385,29 +40411,29 @@ All of Francis's units are[LF]
 fully healed and deal[LF]
 more damage.[.][X]
 
-## MSG_CO_ONEILL_NAME
-O'Neill[.][X]
+## MSG_CO_KARGAN_NAME
+Kargan[.][X]
 
-## MSG_CO_ONEILL_TITLE
+## MSG_CO_KARGAN_TITLE
 The Reckless Brawler[X]
 
-## MSG_CO_ONEILL_INFO
+## MSG_CO_KARGAN_INFO
 A brash commander who trusts[LF]
 raw power over careful[LF]
 planning.[.][X]
 
-## MSG_CO_ONEILL_POWER_NAME
+## MSG_CO_KARGAN_POWER_NAME
 Barrage[.][X]
 
-## MSG_CO_ONEILL_POWER_DESC
-All of O'Neill's units deal[LF]
+## MSG_CO_KARGAN_POWER_DESC
+All of Kargan's units deal[LF]
 1 extra damage for the turn.[X]
 
-## MSG_CO_ONEILL_SUPER_NAME
+## MSG_CO_KARGAN_SUPER_NAME
 Brutal Barrage[X]
 
-## MSG_CO_ONEILL_SUPER_DESC
-All of O'Neill's units deal[LF]
+## MSG_CO_KARGAN_SUPER_DESC
+All of Kargan's units deal[LF]
 2 extra damage for the turn.[X]
 
 ## MSG_PURCHASE_GENERIC_PAGE
@@ -40489,8 +40515,8 @@ Neutral Bases[.][X]
 Nahara Valley[.][X]
 
 ## MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING
-[OpenMidLeft][LoadFace][FID_Eirika]
-[OpenMidRight][LoadFace][FID_Seth]
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
 [OpenMidLeft]We should have stayed[LF]
 on the eastern trail.[.][LF]
 The mountains are too quiet.[A]

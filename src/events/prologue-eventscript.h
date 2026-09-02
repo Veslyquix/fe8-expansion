@@ -198,7 +198,7 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     ASMC(SetFactionCoFromSlots)
 
     SVAL(EVT_SLOT_1, FACTION_RED)
-    SVAL(EVT_SLOT_2, CO_ONEILL)
+    SVAL(EVT_SLOT_2, CO_KARGAN)
     ASMC(SetFactionCoFromSlots)
     LOAD1(1, UnitDef_PrologueAllies)
     ENUN 
