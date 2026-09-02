@@ -967,7 +967,7 @@ static void MMB_DrawSmallNumber(struct PlayerInterfaceProc * proc, int relX, int
             x,
             y,
             gObject_8x8,
-            digit + OAM2_CHR(0x2E0) + OAM2_PAL(8) + OAM2_LAYER(1));
+            digit + OAM2_CHR(0x2E0) + OAM2_PAL(8) + OAM2_LAYER(0));
     }
 }
 
