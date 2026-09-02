@@ -339,6 +339,15 @@ u8 __attribute__((aligned(4))) portrait_Breguet_palette[] = INCBIN_U8("graphics/
 u8 __attribute__((aligned(4))) portrait_Breguet_mouth[] = INCBIN_U8("graphics/portrait/portrait_Breguet_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Breguet_chibi[] = INCBIN_U8("graphics/portrait/portrait_Breguet_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Breguet_tileset[] = INCBIN_U8("graphics/portrait/portrait_Breguet_tileset.4bpp.fk");
+/* Replaces Breguet in portrait_data.c's slot 48 -- the actual portrait
+ * CHARACTER_ONEILL displays (a vanilla FE8 quirk: ONEILL's own named
+ * slot, portrait_O_Neill_* below, isn't what characters.json points him
+ * at). Art by Eden (see src/Credits.c), same insert_portrait.py workflow
+ * as Wakwi/Ishkode above. */
+u8 __attribute__((aligned(4))) portrait_Kargan_palette[] = INCBIN_U8("graphics/portrait/portrait_Kargan_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Kargan_mouth[] = INCBIN_U8("graphics/portrait/portrait_Kargan_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Kargan_chibi[] = INCBIN_U8("graphics/portrait/portrait_Kargan_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Kargan_tileset[] = INCBIN_U8("graphics/portrait/portrait_Kargan_tileset.4bpp.fk");
 u8 __attribute__((aligned(4))) portrait_O_Neill_palette[] = INCBIN_U8("graphics/portrait/portrait_O_Neill_palette.agbpal");
 u8 __attribute__((aligned(4))) portrait_O_Neill_mouth[] = INCBIN_U8("graphics/portrait/portrait_O_Neill_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_O_Neill_chibi[] = INCBIN_U8("graphics/portrait/portrait_O_Neill_chibi.4bpp.lz");

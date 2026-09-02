@@ -889,6 +889,14 @@ static const signed char header5[] = "CO Screen Graphics";
 static const signed char body5[] =
     " CO info screen backdrop by PatrickHoang";
 
+/* Kept in sync with CREDITS.md's "Other Portraits" table. Unconditional
+ * (not gated behind any feature flag) since this replaces the vanilla
+ * campaign's own CHARACTER_ONEILL portrait, not a custom-campaign OC --
+ * see src/portrait_data.c. */
+static const signed char header6[] = "Other Portraits";
+static const signed char body6[] =
+    " Kargan (replaces O'Neill) portrait by Eden";
+
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
@@ -942,6 +950,7 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
 #if FE8_CO_POWERS
     { header5, body5, SubstituteRandomBG, BG_Type, 0, 0 },
 #endif
+    { header6, body6, SubstituteRandomBG, BG_Type, 0, 0 },
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },
     { theEnd, emptyString, BlackBG, BG_Type, 0, 0 },
