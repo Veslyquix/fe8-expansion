@@ -456,7 +456,7 @@ void SetBattleUnitWeapon(struct BattleUnit* bu, int itemSlot) {
             } // switch (GetItemIndex(bu->weapon))
         } // if (bu->weaponAttributes & IA_MAGICDAMAGE)
 
-        if (!IsItemCoveringRange(bu->weapon, gBattleStats.range) || bu->weaponSlotIndex == 0xFF) {
+        if (!IsItemCoveringRange(&bu->unit, bu->weapon, gBattleStats.range) || bu->weaponSlotIndex == 0xFF) {
             bu->weapon = 0;
             bu->canCounter = FALSE;
         }

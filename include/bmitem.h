@@ -183,7 +183,7 @@ void DrawItemStatScreenLine(struct Text* text, int item, int nameColor, u16* map
 u16 GetItemAfterUse(int item);
 u16 GetUnitEquippedWeapon(struct Unit* unit);
 int GetUnitEquippedWeaponSlot(struct Unit* unit);
-s8 IsItemCoveringRange(int item, int range);
+s8 IsItemCoveringRange(struct Unit* unit, int item, int range);
 void EquipUnitItemSlot(struct Unit* unit, int itemSlot);
 s8 IsItemEffectiveAgainst(u16 item, struct Unit* unit);
 s8 IsUnitEffectiveAgainst(struct Unit* actor, struct Unit* target);

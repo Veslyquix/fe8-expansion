@@ -566,7 +566,11 @@ void FillBallistaRangeMaybe(struct Unit* unit) {
     if (unk != 0) {
         BmMapFill(gBmMapRange, 0);
 
+#if FE8_RANGE_REWORK
+        MapAddInBoundedRange(x, y, GetUnitItemEffectiveMinRange(unit, unk), GetUnitItemEffectiveMaxRange(unit, unk));
+#else
         MapAddInBoundedRange(x, y, GetItemMinRange(unk), GetItemMaxRange(unk));
+#endif
 
         ForEachUnitInRange(AddUnitToTargetListIfAllied);
 

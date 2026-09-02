@@ -1346,7 +1346,11 @@ int FillBallistaRange(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
     UpdateMenuItemPanel(item);
 
+#if FE8_RANGE_REWORK
+    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetUnitItemEffectiveMinRange(gActiveUnit, item), GetUnitItemEffectiveMaxRange(gActiveUnit, item));
+#else
     MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
 
     DisplayMoveRangeGraphics(2);
 

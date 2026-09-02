@@ -677,8 +677,13 @@ void GenerateUnitCompleteAttackRange(struct Unit* unit)
 
             if (item)
             {
+#if FE8_RANGE_REWORK
+                MapAddInBoundedRange(ix, iy,
+                    GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+#else
                 MapAddInBoundedRange(ix, iy,
                     GetItemMinRange(item), GetItemMaxRange(item));
+#endif
             }
         })
     }

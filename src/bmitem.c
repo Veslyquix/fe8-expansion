@@ -632,9 +632,17 @@ int GetUnitEquippedWeaponSlot(struct Unit* unit) {
     return -1;
 }
 
-s8 IsItemCoveringRange(int item, int range) {
-    int min = GetItemMinRange(item);
-    int max = GetItemMaxRange(item);
+s8 IsItemCoveringRange(struct Unit* unit, int item, int range) {
+    int min;
+    int max;
+
+#if FE8_RANGE_REWORK
+    min = GetUnitItemEffectiveMinRange(unit, item);
+    max = GetUnitItemEffectiveMaxRange(unit, item);
+#else
+    min = GetItemMinRange(item);
+    max = GetItemMaxRange(item);
+#endif
 
     if ((min <= range) && (range <= max))
         return TRUE;
