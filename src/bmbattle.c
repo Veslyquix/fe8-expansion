@@ -618,6 +618,11 @@ void ComputeBattleUnitCritRate(struct BattleUnit* bu) {
 
     if (UNIT_CATTRIBUTES(&bu->unit) & CA_CRITBONUS)
         bu->battleCritRate += 15;
+
+#if FE8_CO_POWERS
+    bu->battleCritRate += GetCoClassCritBonus(
+        gPlaySt.commanderId[UNIT_FACTION(&bu->unit) >> 6], UNIT_CLASS_ID(&bu->unit));
+#endif
 }
 
 void ComputeBattleUnitDodgeRate(struct BattleUnit* bu) {

@@ -29,6 +29,9 @@
 #include "purchase_generics.h"
 #include "gamerank.h"
 #include "dangerradius.h"
+#if FE8_CO_POWERS
+#include "power.h" // CoPowers_OnPhaseEnd
+#endif
 
 #include "bm.h"
 
@@ -450,6 +453,14 @@ int BmMain_ChangePhase(void)
      * is active -- see include/dangerradius.h). */
     if ((gPlaySt.chapterVisionRange == 0) && (gPlaySt.faction == FACTION_BLUE))
         DangerRadius_End();
+#endif
+
+#if FE8_CO_POWERS
+    /* A CO power/super (struct CoClassAffinity's *Pow/*Sup fields,
+     * src/power.c) only lasts for the rest of its own faction's turn --
+     * gPlaySt.faction is still the ending phase's faction here, before
+     * SwitchPhases() below flips it. */
+    CoPowers_OnPhaseEnd(gPlaySt.faction);
 #endif
 
     ClearActiveFactionGrayedStates();

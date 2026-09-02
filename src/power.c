@@ -52,6 +52,50 @@
 
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
+/* Which power state (none/normal/super) each faction's CO currently has
+ * active. A CO Power in this system lasts for the rest of its own
+ * faction's turn (Advance Wars rules -- using either power drains the
+ * whole gauge, see CoPowersMenuCommandCommon), so this is set the moment
+ * the gauge gets spent (CoPowersMenuCommandCommon for the player,
+ * CoPowers_OnAiPhaseStart for the AI) and cleared at that faction's own
+ * next phase change (CoPowers_OnPhaseEnd, called from BmMain_ChangePhase,
+ * src/bm.c). Transient, not saved -- EWRAM_DATA like gAiState (src/
+ * cp_phase.c), not gPlaySt (which IS saved and would need a save-compat
+ * epoch bump for a new field).
+ *
+ * Read through GetCoActivePowerStateForCo below by coId rather than
+ * faction, matching AdjustStatForCo/GetCoClassMovBonus/GetCoClassRangeBonus's
+ * existing (coId, classId) signature -- a coId is always commanding at
+ * most one faction at a time, so the reverse lookup there is unambiguous. */
+enum {
+    CO_POWER_STATE_NONE,
+    CO_POWER_STATE_NORMAL,
+    CO_POWER_STATE_SUPER,
+};
+
+EWRAM_DATA static u8 sCoActivePowerState[4] = {0};
+
+/* See declaration comment (include/power.h). */
+void CoPowers_OnPhaseEnd(int faction)
+{
+    sCoActivePowerState[faction >> 6] = CO_POWER_STATE_NONE;
+}
+
+/* coId's active power state, if it's any faction's current commander right
+ * now (CO_POWER_STATE_NONE if it isn't commanding anyone -- shouldn't
+ * normally happen for a live call, but a safe default). */
+static int GetCoActivePowerStateForCo(int coId)
+{
+    int f;
+
+    for (f = 0; f < 4; ++f) {
+        if (gPlaySt.commanderId[f] == coId)
+            return sCoActivePowerState[f];
+    }
+
+    return CO_POWER_STATE_NONE;
+}
+
 // moves the camera onto each of faction's units, applying that faction's CO's
 // power (or super, if isSuper) to whichever ones CoPower_AppliesToClass says
 // it targets -- used both for the player's own menu commands (faction always
@@ -376,6 +420,7 @@ static u8 CoPowersMenuCommandCommon(bool8 isSuper)
     struct CoPowersProc* proc;
 
     CoGauge_OnPowerUsed(FACTION_BLUE);
+    sCoActivePowerState[FACTION_BLUE >> 6] = isSuper ? CO_POWER_STATE_SUPER : CO_POWER_STATE_NORMAL;
 
     proc = (struct CoPowersProc*)Proc_Start(gProcScr_CoPowers, PROC_TREE_3);
     proc->faction = FACTION_BLUE;
@@ -419,10 +464,18 @@ enum {
 struct CoClassAffinity {
     const char* className; // unused for display now (SMS icon + bar replace name+hearts); kept for reference/tooling
     u8 classId;
+
+    /* rating: the class's baseline affinity (CO_AFFINITY_NEUTRAL_RATING ==
+     * neutral), proportionally scaling POW same as a weapon's own Pow bonus
+     * -- see AdjustStatForCo. ratingPow/ratingSup ADD to rating while
+     * coId's power/super is active (see GetCoActivePowerStateForCo,
+     * GetEffectiveClassAffinityRating) -- unlike the *Bon fields below,
+     * this one stacks rather than replaces, since it's already a
+     * proportional adjustment rather than a flat shift. */
     u8 rating;
     u8 ratingPow;
     u8 ratingSup;
-    
+
     /* -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
      * below the class's affinity bar (see
      * CoScreen_DrawPageAffinityClassBonusIcons). 0 draws nothing.
@@ -434,16 +487,26 @@ struct CoClassAffinity {
      * this still draws the icon but doesn't change what the unit can
      * actually hit (the vanilla reach-bits system it would need to feed
      * into can't represent a shifted range at all -- see RANGE_REWORK's
-     * config.mk comment). */
+     * config.mk comment). critBon: applied unconditionally (FE8_CO_POWERS
+     * alone) to battle crit rate -- see GetCoClassCritBonus,
+     * ComputeBattleUnitCritRate (src/bmbattle.c).
+     *
+     * movBonPow/rangeBonPow/critBonPow REPLACE their plain field while
+     * coId's power is active, and movBonSup/rangeBonSup/critBonSup REPLACE
+     * it while coId's super is active -- unlike rating above, these don't
+     * stack with the plain value, since a flat +/-N shift doesn't have a
+     * sensible "add both" reading. None of the icon drawing reflects the
+     * Pow/Sup variants -- the affinity page always shows the plain
+     * movBon/rangeBon regardless of whether a power happens to be active. */
     s8 movBon;
     s8 movBonPow;
     s8 movBonSup;
     s8 rangeBon;
     s8 rangeBonPow;
     s8 rangeBonSup;
-    s8 critBon; // not yet functional. 
-    s8 critBonPow; // not yet functional. 
-    s8 critBonSup; // not yet functional. 
+    s8 critBon;
+    s8 critBonPow;
+    s8 critBonSup;
 };
 
 /* CoScreen_DrawPageAffinity's bar base: a class's affinity bar (and
@@ -508,20 +571,20 @@ struct CoDefinition {
  
 /* Wakwi is a critical hit specialist */ 
  static const struct CoClassAffinity sWakwiAffinities[] = {
-    { "Soldier",        CLASS_SOLDIER,          30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Knight",         CLASS_ARMOR_KNIGHT,     30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Brigand",        CLASS_BRIGAND,          30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Archer",         CLASS_ARCHER,           30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Fighter",        CLASS_FIGHTER,          30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Mercenary",      CLASS_MERCENARY,        30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Cavalier",       CLASS_CAVALIER,         30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Monk",           CLASS_MONK,             30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Mage",           CLASS_MAGE,             30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Cleric",         CLASS_CLERIC,           30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Shaman",         CLASS_SHAMAN,           30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Thief",          CLASS_THIEF,            30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,    30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30, .critBon = 10, .critBonPow = 30, .critBonSup = 100 },
+    { "Soldier",        CLASS_SOLDIER,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Knight",         CLASS_ARMOR_KNIGHT,     30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Brigand",        CLASS_BRIGAND,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Archer",         CLASS_ARCHER,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Fighter",        CLASS_FIGHTER,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Mercenary",      CLASS_MERCENARY,        30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Cavalier",       CLASS_CAVALIER,         30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Monk",           CLASS_MONK,             30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Mage",           CLASS_MAGE,             30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Cleric",         CLASS_CLERIC,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Shaman",         CLASS_SHAMAN,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Thief",          CLASS_THIEF,            30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,    30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
 };
 
 /* Ishkode is a ranged specialist */
@@ -584,17 +647,17 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     
     [CO_WAKWI] = {
         .nameMsg = MSG_CO_WAKWI_NAME,
-        .faceId = 4,
+        .faceId = 2,
         .titleMsg = MSG_CO_WAKWI_TITLE,
         .infoMsg = MSG_CO_WAKWI_INFO,
         .powerNameMsg = MSG_CO_WAKWI_POWER_NAME,
         .powerDescMsg = MSG_CO_WAKWI_POWER_DESC,
         .superPowerNameMsg = MSG_CO_WAKWI_SUPER_NAME,
         .superPowerDescMsg = MSG_CO_WAKWI_SUPER_DESC,
-        .powerStars = 3,
-        .superPowerStars = 5,
-        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
-        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .powerStars = 2,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
         .affinities = sWakwiAffinities,
         .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
     },
@@ -609,8 +672,8 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .superPowerDescMsg = MSG_CO_ISHKODE_SUPER_DESC,
         .powerStars = 3,
         .superPowerStars = 5,
-        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
-        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
         .affinities = sIshkodeAffinities,
         .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
     },
@@ -625,10 +688,6 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .superPowerDescMsg = MSG_CO_FRANCIS_SUPER_DESC,
         .powerStars = 3,
         .superPowerStars = 5,
-        /* Both only affect units of a class Francis has a positive or
-         * neutral affinity for (see sFrancisAffinities) -- the super just
-         * heals them further (to full) than the power does (10 HP), not a
-         * wider or narrower group. */
         .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
         .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
         .affinities = sFrancisAffinities,
@@ -643,14 +702,10 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .powerDescMsg = MSG_CO_KARGAN_POWER_DESC,
         .superPowerNameMsg = MSG_CO_KARGAN_SUPER_NAME,
         .superPowerDescMsg = MSG_CO_KARGAN_SUPER_DESC,
-        /* 4/5 rather than a rounder 4/6: the mini gauge only has 64px of
-         * panel to draw in, and 4 small + 2 big stars needs every one of
-         * them (see the width budget note in src/aw2_gfx.c). */
-        .powerStars = 4,
-        .superPowerStars = 5,
-        /* No effect implemented yet (see CoPower_ApplyEffect) -- left at
-         * the CO_POWER_TARGET_ALL default so the animation still plays for
-         * every unit, matching the pre-existing roll-call-only behavior. */
+        .powerStars = 2,
+        .superPowerStars = 4,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
         .affinities = sKarganAffinities,
         .affinityCount = ARRAY_COUNT(sKarganAffinities),
     },
@@ -696,12 +751,44 @@ static int GetClassAffinityRating(const struct CoDefinition* co, int classId)
     return CO_AFFINITY_NEUTRAL_RATING;
 }
 
+/* rating, plus ratingPow/ratingSup on top if coId's power/super is
+ * currently active for whichever faction it commands (see
+ * GetCoActivePowerStateForCo) -- used by AdjustStatForCo's stat scaling
+ * below. CoPower_AppliesToClass's own targeting check deliberately keeps
+ * using GetClassAffinityRating's plain base rating instead of this:
+ * which classes a power targets shouldn't shift just because the power
+ * itself is the thing that's now active. */
+static int GetEffectiveClassAffinityRating(const struct CoDefinition* co, int coId, int classId)
+{
+    int i;
+
+    for (i = 0; i < co->affinityCount; ++i) {
+        if (co->affinities[i].classId == classId) {
+            int rating = co->affinities[i].rating;
+
+            switch (GetCoActivePowerStateForCo(coId)) {
+            case CO_POWER_STATE_NORMAL:
+                rating += co->affinities[i].ratingPow;
+                break;
+
+            case CO_POWER_STATE_SUPER:
+                rating += co->affinities[i].ratingSup;
+                break;
+            }
+
+            return rating;
+        }
+    }
+
+    return CO_AFFINITY_NEUTRAL_RATING;
+}
+
 /* See declaration comment (include/power.h) -- returns the delta to add to
  * baseValue, not the adjusted total. */
 int AdjustStatForCo(int coId, int classId, int baseValue)
 {
     const struct CoDefinition* co = GetCoDefinition(coId);
-    int rating = GetClassAffinityRating(co, classId);
+    int rating = GetEffectiveClassAffinityRating(co, coId, classId);
     int adjusted;
 
     if (rating == CO_AFFINITY_NEUTRAL_RATING)
@@ -720,35 +807,86 @@ int AdjustStatForCo(int coId, int classId, int baseValue)
     return adjusted - baseValue;
 }
 
-/* See declaration comment (include/power.h). */
+/* See declaration comment (include/power.h). movBonPow/movBonSup REPLACE
+ * movBon while coId's power/super is active (unlike rating above, which
+ * ratingPow/ratingSup add on top of) -- a flat movement shift doesn't have
+ * a sensible "stack the two" reading the way a proportional stat bonus
+ * does. */
 int GetCoClassMovBonus(int coId, int classId)
 {
     const struct CoDefinition* co = GetCoDefinition(coId);
     int i;
 
     for (i = 0; i < co->affinityCount; ++i) {
-        if (co->affinities[i].classId == classId)
-            return co->affinities[i].movBon;
+        if (co->affinities[i].classId == classId) {
+            switch (GetCoActivePowerStateForCo(coId)) {
+            case CO_POWER_STATE_NORMAL:
+                return co->affinities[i].movBonPow;
+
+            case CO_POWER_STATE_SUPER:
+                return co->affinities[i].movBonSup;
+
+            default:
+                return co->affinities[i].movBon;
+            }
+        }
     }
 
     return 0;
 }
 
 #if FE8_RANGE_REWORK
-/* See declaration comment (include/power.h). */
+/* See declaration comment (include/power.h). rangeBonPow/rangeBonSup
+ * REPLACE rangeBon while active, same as GetCoClassMovBonus's movBon. */
 int GetCoClassRangeBonus(int coId, int classId)
 {
     const struct CoDefinition* co = GetCoDefinition(coId);
     int i;
 
     for (i = 0; i < co->affinityCount; ++i) {
-        if (co->affinities[i].classId == classId)
-            return co->affinities[i].rangeBon;
+        if (co->affinities[i].classId == classId) {
+            switch (GetCoActivePowerStateForCo(coId)) {
+            case CO_POWER_STATE_NORMAL:
+                return co->affinities[i].rangeBonPow;
+
+            case CO_POWER_STATE_SUPER:
+                return co->affinities[i].rangeBonSup;
+
+            default:
+                return co->affinities[i].rangeBon;
+            }
+        }
     }
 
     return 0;
 }
 #endif
+
+/* See declaration comment (include/power.h). critBonPow/critBonSup
+ * REPLACE critBon while active, same as GetCoClassMovBonus's movBon --
+ * applied in src/bmbattle.c's ComputeBattleUnitCritRate. */
+int GetCoClassCritBonus(int coId, int classId)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+    int i;
+
+    for (i = 0; i < co->affinityCount; ++i) {
+        if (co->affinities[i].classId == classId) {
+            switch (GetCoActivePowerStateForCo(coId)) {
+            case CO_POWER_STATE_NORMAL:
+                return co->affinities[i].critBonPow;
+
+            case CO_POWER_STATE_SUPER:
+                return co->affinities[i].critBonSup;
+
+            default:
+                return co->affinities[i].critBon;
+            }
+        }
+    }
+
+    return 0;
+}
 
 /* Does coId's power (or its super, if isSuper) affect a unit of classId?
  * Checked once per surveyed unit by CoPowers_Anim to decide whether that
@@ -967,11 +1105,12 @@ int CoPowers_OnAiPhaseStart(struct Proc* parent)
         return 1;
 
     CoGauge_OnPowerUsed(faction);
+    sCoActivePowerState[faction >> 6] = isSuper ? CO_POWER_STATE_SUPER : CO_POWER_STATE_NORMAL;
 
     proc = (struct CoPowersProc*)Proc_StartBlocking(gProcScr_CoPowers, parent);
     proc->faction = faction;
     proc->isSuper = isSuper;
-    return 0; // yield 
+    return 0; // yield
 }
 
 /* gStatScreen.text[] slots this screen borrows (see the EWRAM_OVERLAY(0)

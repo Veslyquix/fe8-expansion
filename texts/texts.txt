@@ -40314,22 +40314,22 @@ The Steadfast Commander[.][X]
 ## MSG_CO_WAKWI_INFO
 A stalwart tactician who leads[LF]
 from the front and never[LF]
-leaves a unit behind.[.][X]
+leaves a unit behind.[.][LF]
+Passive: all units have +10 crit.[X]
 
 ## MSG_CO_WAKWI_POWER_NAME
-Hyper Repair[.][X]
+?[.][X]
 
 ## MSG_CO_WAKWI_POWER_DESC
-All of Wakwi's preferred[LF]
-units heal 10 HP.[.][X]
+Wakwi's units gain +30[LF]
+critical hit rate.[.][X]
 
 ## MSG_CO_WAKWI_SUPER_NAME
-Hyper Upgrade[.][X]
+?[.][X]
 
 ## MSG_CO_WAKWI_SUPER_DESC
-All of Wakwi's units are[LF]
-fully healed and deal[LF]
-more damage.[.][X]
+Wakwi's units gain +100[LF]
+critical hit rate.[.][X]
 
 ## MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE
 Ishkode[.][X]

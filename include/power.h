@@ -73,6 +73,15 @@ void CoGauge_OnPowerUsed(int faction);
 struct Proc;
 int CoPowers_OnAiPhaseStart(struct Proc* parent);
 
+/* Marks faction's CO power/super as no longer active (see the *Pow/*Sup
+ * fields of struct CoClassAffinity, src/power.c, and AdjustStatForCo/
+ * GetCoClassMovBonus/GetCoClassRangeBonus/GetCoClassCritBonus below) -- a
+ * power lasts only for the rest of its own faction's turn (Advance Wars
+ * rules), so call this once at that faction's own phase end. Currently
+ * called from BmMain_ChangePhase (src/bm.c), for whichever faction's phase
+ * is ending. Safe to call even if that faction had no power active. */
+void CoPowers_OnPhaseEnd(int faction);
+
 /* Sets which CO (a CO_* id above) is faction's commander --
  * gPlaySt.commanderId[faction >> 6] (see include/types.h; faction is a
  * raw FACTION_BLUE/GREEN/RED/PURPLE byte, not a FACTION_ID_*, same
@@ -103,19 +112,28 @@ int CoScreen_GetCoSuperPowerStars(int coId);
  * class-preview stat). A rating != CO_AFFINITY_NEUTRAL_RATING (30) always
  * moves the stat by at least 1 point, even when proportional scaling would
  * round to no change; the result is never allowed to bring the stat below
- * 0. An out-of-range coId falls back to CO_FRANCIS, same as every other
- * lookup through GetCoDefinition. */
+ * 0. While coId's power/super is active (see CoPowers_OnPhaseEnd above),
+ * ratingPow/ratingSup are added on top of rating first -- unlike the
+ * *Bon fields below, these stack rather than replace. An out-of-range
+ * coId falls back to CO_FRANCIS, same as every other lookup through
+ * GetCoDefinition. */
 int AdjustStatForCo(int coId, int classId, int baseValue);
 
 /* A CO's class-affinity movBon (struct CoClassAffinity) for classId, or 0
- * if coId has no explicit entry for that class. Like GetCoClassRangeBonus
- * below, this is the raw signed shift already -- not proportionally
- * scaled against a base value the way AdjustStatForCo's rating is, since
- * a movement shift is a flat +/-N. See GetUnitMovement (src/bmunit.c) for
- * how this actually gets applied. Unconditional on FE8_CO_POWERS alone
- * (not FE8_RANGE_REWORK) -- movement isn't a range-mechanic fix, just
- * another CO-driven stat adjustment alongside AdjustStatForCo's POW. An
- * out-of-range coId falls back the same way GetCoDefinition always does. */
+ * if coId has no explicit entry for that class. Like GetCoClassRangeBonus/
+ * GetCoClassCritBonus below, this is the raw signed shift already -- not
+ * proportionally scaled against a base value the way AdjustStatForCo's
+ * rating is, since a movement shift is a flat +/-N. See GetUnitMovement
+ * (src/bmunit.c) for how this actually gets applied. Unconditional on
+ * FE8_CO_POWERS alone (not FE8_RANGE_REWORK) -- movement isn't a
+ * range-mechanic fix, just another CO-driven stat adjustment alongside
+ * AdjustStatForCo's POW. An out-of-range coId falls back the same way
+ * GetCoDefinition always does.
+ *
+ * While coId's power/super is active, this returns movBonPow/movBonSup
+ * INSTEAD of movBon -- unlike AdjustStatForCo's rating, a flat +/-N shift
+ * doesn't have a sensible "stack both" reading, so the Pow/Sup value
+ * replaces the plain one rather than adding to it. */
 int GetCoClassMovBonus(int coId, int classId);
 
 #if FE8_RANGE_REWORK
@@ -126,9 +144,18 @@ int GetCoClassMovBonus(int coId, int classId);
  * stat-growth-style percentage. See GetUnitItemEffectiveMaxRange
  * (src/bmitem.c) for how this actually gets applied to a weapon's max
  * range. An out-of-range coId falls back the same way GetCoDefinition
- * always does. */
+ * always does. Replaced (not added to) by rangeBonPow/rangeBonSup while
+ * coId's power/super is active -- same rule as GetCoClassMovBonus. */
 int GetCoClassRangeBonus(int coId, int classId);
 #endif
+
+/* A CO's class-affinity critBon (struct CoClassAffinity) for classId, or 0
+ * if coId has no explicit entry for that class -- same raw-flat-shift,
+ * Pow/Sup-replaces-not-adds convention as GetCoClassMovBonus. Applied to
+ * battle crit rate in ComputeBattleUnitCritRate (src/bmbattle.c).
+ * Unconditional on FE8_CO_POWERS alone, same as movBon (crit isn't a
+ * range mechanic either). */
+int GetCoClassCritBonus(int coId, int classId);
 
 #endif // FE8_CO_POWERS
 
