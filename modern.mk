@@ -228,6 +228,9 @@ endif
 ifeq ($(GROUP_AI),1)
 MODERN_DEFINE_FLAGS += -DFE8_GROUP_AI=1
 endif
+ifeq ($(NULL_BOSSAI_MOV),1)
+MODERN_DEFINE_FLAGS += -DFE8_NULL_BOSSAI_MOV=1
+endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
 endif
@@ -1622,6 +1625,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--hp-bars "$(HP_BARS)" \
 		--danger-radius "$(DANGER_RADIUS)" \
 		--group-ai "$(GROUP_AI)" \
+		--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 		--range-rework "$(RANGE_REWORK)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1723,6 +1727,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--hp-bars "$(HP_BARS)" \
 	--danger-radius "$(DANGER_RADIUS)" \
 	--group-ai "$(GROUP_AI)" \
+	--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 	--range-rework "$(RANGE_REWORK)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1828,6 +1833,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_HP_BARS=$(HP_BARS) \
 	-DFE8_DANGER_RADIUS=$(DANGER_RADIUS) \
 	-DFE8_GROUP_AI=$(GROUP_AI) \
+	-DFE8_NULL_BOSSAI_MOV=$(NULL_BOSSAI_MOV) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
 	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
@@ -2023,6 +2029,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
 		printf '%s\n' 'danger_radius=$(DANGER_RADIUS)'; \
 		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
+		printf '%s\n' 'null_bossai_mov=$(NULL_BOSSAI_MOV)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
 		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \

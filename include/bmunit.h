@@ -519,6 +519,12 @@ void UnitRemoveItem(struct Unit* unit, int slot);
 #define UNIT_CON(aUnit) (UNIT_CON_BASE(aUnit) + (aUnit)->conBonus)
 #ifdef DEBUFFS_EXIST
 #define UNIT_MOV(aUnit) GetUnitMovement(aUnit)
+#elif FE8_NULL_BOSSAI_MOV
+// ai4 (the high byte of ai_config, see cp_common.h) of 0x20 is the
+// FEBuilder "AI Stay" flag with no group id -- typically hand-set on
+// bosses that should never leave their tile, even if provoked.
+#define UNIT_MOV(aUnit) \
+    ((((aUnit)->ai_config >> 8 & 0xFF) == 0x20) ? 0 : ((aUnit)->movBonus + UNIT_MOV_BASE(aUnit)))
 #else
 #define UNIT_MOV(aUnit) ((aUnit)->movBonus + UNIT_MOV_BASE(aUnit))
 #endif

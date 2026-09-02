@@ -367,6 +367,13 @@ int GetUnitMovement(struct Unit* unit) {
     if (result > UNIT_MOV_MAX(unit))
         result = UNIT_MOV_MAX(unit);
 #endif
+#if FE8_NULL_BOSSAI_MOV
+    // ai4 (the high byte of ai_config, see cp_common.h) of 0x20 is the
+    // FEBuilder "AI Stay" flag with no group id -- typically hand-set on
+    // bosses that should never leave their tile, even if provoked.
+    if ((unit->ai_config >> 8 & 0xFF) == 0x20)
+        result = 0;
+#endif
     return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, result);
 }
 #endif

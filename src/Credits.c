@@ -891,15 +891,20 @@ static const signed char body5[] =
     " CO info screen backdrop by PatrickHoang";
 
 /* Kept in sync with CREDITS.md's "Battle Animations" table -- only the
- * new classes' own wired packs (LynLord, Nomad(_F), Nomad Trooper(_F));
- * the two Archer and two Mage packs imported alongside them aren't
- * assigned to any class (see that table's own note), so aren't credited
- * here as a class's animation either. The original 8 NEW_ANIMS packs
- * (Soldier, Brigand, Fighter, Knight, Mercenary, Archer, Cavalier,
- * Pegasus) predate this in-game credits section and are documented in
+ * packs wired to the new/changed classes (Archer, Archer_F, Mage,
+ * Mage_F, LynLord, Nomad(_F), Nomad Trooper(_F)); Pushwall's original
+ * Archer pack is no longer assigned to any class (see that table's own
+ * note), so isn't credited here. The other 7 original NEW_ANIMS packs
+ * (Soldier, Brigand, Fighter, Knight, Mercenary, Cavalier, Pegasus)
+ * predate this in-game credits section and are documented in
  * CREDITS.md only. */
 static const signed char header6[] = "Battle Animations";
 static const signed char body6[] =
+    " Archer anim by IS, Flasuban," NL
+    "  DerTheVaporeon" NL
+    " Mage anim by HyperGammaSpaces," NL
+    "  Teraspark, Obsidian_Daddy," NL
+    "  Devisian_Nights, Raulster/Alice" NL
     " LynLord anim by Blazt, Seliost1" NL
     " Nomad anim by Pikmin1211, Maiser6" NL
     " Nomad Trooper anim by Levin64, Fuyu";

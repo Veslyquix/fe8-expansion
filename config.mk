@@ -368,8 +368,16 @@ DEBUFFS_STACK ?= 0
 
 
 # --- Optional GroupAI ----------------------------------------------------------
-# Attack one member of a tagged group and the rest immediately aggro. 
+# Attack one member of a tagged group and the rest immediately aggro.
 GROUP_AI ?= 1
+
+# --- Optional NullBossAiMov -------------------------------------------------
+# A unit whose ai4 (the FEBuilder AI4 byte, i.e. the high byte of
+# ai_config -- see AI_UNIT_CONFIG_FLAG_STAY in include/cp_common.h) is
+# exactly 0x20 ("AI Stay", no group id) has its effective movement stat
+# (UNIT_MOV, include/bmunit.h) forced to 0. Typically hand-set on bosses
+# that must never leave their tile, even if provoked or lured.
+NULL_BOSSAI_MOV ?= 1
 
 
 # --- Optional PromoteCommand ------------------------------------------------------

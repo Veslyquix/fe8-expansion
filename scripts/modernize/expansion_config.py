@@ -404,7 +404,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            debuffs_exist=0, debuffs_stack=0,
                            select_view_growths=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, null_bossai_mov=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
@@ -440,6 +440,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
     bars = validate_feature_flag("HP_BARS", hp_bars)
     group_ai_flag = validate_feature_flag("GROUP_AI", group_ai)
+    null_bossai_mov_flag = validate_feature_flag("NULL_BOSSAI_MOV", null_bossai_mov)
     alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
     range_rework_flag = validate_feature_flag("RANGE_REWORK", range_rework)
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
@@ -503,7 +504,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
             anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
-            dialogue_box, danger_radius_flag)
+            dialogue_box, danger_radius_flag, null_bossai_mov_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -727,6 +728,7 @@ class ExpansionIdentity:
     draw_map_anims: int = 0
     hp_bars: int = 0
     group_ai: int = 0
+    null_bossai_mov: int = 0
     alpha_sprite_arrow: int = 0
     range_rework: int = 0
     turn_autosave: int = 0
@@ -811,6 +813,7 @@ class ExpansionIdentity:
                 "draw_map_anims": self.draw_map_anims,
                 "hp_bars": self.hp_bars,
                 "group_ai": self.group_ai,
+                "null_bossai_mov": self.null_bossai_mov,
                 "alpha_sprite_arrow": self.alpha_sprite_arrow,
                 "range_rework": self.range_rework,
                 "turn_autosave": self.turn_autosave,
@@ -883,6 +886,7 @@ def load_identity(
     draw_map_anims=None,
     hp_bars=None,
     group_ai=None,
+    null_bossai_mov=None,
     alpha_sprite_arrow=None,
     range_rework=None,
     turn_autosave=None,
@@ -967,7 +971,7 @@ def load_identity(
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
      resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
-     resolved_dialogue_box, resolved_danger_radius) = validate_feature_flags(
+     resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1034,6 +1038,9 @@ def load_identity(
         group_ai
         if group_ai not in (None, "")
         else cfg.get("GROUP_AI", "0"),
+        null_bossai_mov
+        if null_bossai_mov not in (None, "")
+        else cfg.get("NULL_BOSSAI_MOV", "0"),
         alpha_sprite_arrow
         if alpha_sprite_arrow not in (None, "")
         else cfg.get("ALPHA_SPRITE_ARROW", "0"),
@@ -1139,6 +1146,7 @@ def load_identity(
         draw_map_anims=resolved_draw_map_anims,
         hp_bars=resolved_hp_bars,
         group_ai=resolved_group_ai,
+        null_bossai_mov=resolved_null_bossai_mov,
         alpha_sprite_arrow=resolved_alpha_sprite_arrow,
         range_rework=resolved_range_rework,
         turn_autosave=resolved_autosave,
@@ -1355,6 +1363,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override GROUP_AI (0 or 1)",
     )
     parser.add_argument(
+        "--null-bossai-mov",
+        default=None,
+        help="override NULL_BOSSAI_MOV (0 or 1)",
+    )
+    parser.add_argument(
         "--alpha-sprite-arrow",
         default=None,
         help="override ALPHA_SPRITE_ARROW (0 or 1)",
@@ -1532,6 +1545,7 @@ def main(argv=None) -> int:
             draw_map_anims=args.draw_map_anims,
             hp_bars=args.hp_bars,
             group_ai=args.group_ai,
+            null_bossai_mov=args.null_bossai_mov,
             alpha_sprite_arrow=args.alpha_sprite_arrow,
             range_rework=args.range_rework,
             turn_autosave=args.turn_autosave,

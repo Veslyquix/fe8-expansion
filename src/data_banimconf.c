@@ -489,11 +489,11 @@ CONST_DATA struct BattleAnimDef AnimConf_23[] = {
  * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
  * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
  * exact item id (wtype < 0x100, first pass) rather than weapon type. */
-CONST_DATA struct BattleAnimDef AnimConf_24[] = {
+CONST_DATA struct BattleAnimDef AnimConf_24[] = { // CLASS_ARCHER
     {
         .wtype = 0x0100 | ITYPE_BOW,
 #if FE8_NEW_ANIMS
-        .index = 0x00DB,
+        .index = 0x00E9, // derarcm bow -- [Archer-Variant] Der's Improved [M]
 #else
         .index = 0x0026,
 #endif
@@ -501,7 +501,7 @@ CONST_DATA struct BattleAnimDef AnimConf_24[] = {
     {
         .wtype = 0x0100 | ITYPE_ITEM,
 #if FE8_NEW_ANIMS
-        .index = 0x00DC,
+        .index = 0x00EA, // derarcm unarmed
 #else
         .index = 0x0027,
 #endif
@@ -521,14 +521,22 @@ CONST_DATA struct BattleAnimDef AnimConf_24[] = {
     { 0 }
 };
 
-CONST_DATA struct BattleAnimDef AnimConf_25[] = {
+CONST_DATA struct BattleAnimDef AnimConf_25[] = { // CLASS_ARCHER_F
     {
         .wtype = 0x0100 | ITYPE_BOW,
+#if FE8_NEW_ANIMS
+        .index = 0x00EB, // derarcf bow -- [Archer-Variant] Der's Improved [F]
+#else
         .index = 0x0028,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00EC, // derarcf unarmed
+#else
         .index = 0x0029,
+#endif
     },
     {
         .wtype = ITEM_BALLISTA_REGULAR,
@@ -705,42 +713,74 @@ CONST_DATA struct BattleAnimDef AnimConf_35[] = {
     { 0 }
 };
 
-CONST_DATA struct BattleAnimDef AnimConf_36[] = {
+CONST_DATA struct BattleAnimDef AnimConf_36[] = { // CLASS_MAGE
     {
         .wtype = 0x0100 | ITYPE_ANIMA,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED, // gaidenmage_framefix magic -- [Mage-Custom] Gaiden-Style Frame Fix [F] by Gamma
+#else
         .index = 0x006B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_LIGHT,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED,
+#else
         .index = 0x006B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_DARK,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED,
+#else
         .index = 0x006B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED,
+#else
         .index = 0x006B,
+#endif
     },
     { 0 }
 };
 
-CONST_DATA struct BattleAnimDef AnimConf_37[] = {
+CONST_DATA struct BattleAnimDef AnimConf_37[] = { // CLASS_MAGE_F
     {
         .wtype = 0x0100 | ITYPE_ANIMA,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE, // gaidenmage_ponytail magic -- [Mage-Custom] Gaiden-Style Ponytail [F] by Gamma
+#else
         .index = 0x006C,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_LIGHT,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE,
+#else
         .index = 0x006C,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_DARK,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE,
+#else
         .index = 0x006C,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE,
+#else
         .index = 0x006C,
+#endif
     },
     { 0 }
 };
