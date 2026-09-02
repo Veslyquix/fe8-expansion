@@ -106,6 +106,17 @@ int CoScreen_GetCoSuperPowerStars(int coId);
  * lookup through GetCoDefinition. */
 int AdjustStatForCo(int coId, int classId, int baseValue);
 
+/* A CO's class-affinity movBon (struct CoClassAffinity) for classId, or 0
+ * if coId has no explicit entry for that class. Like GetCoClassRangeBonus
+ * below, this is the raw signed shift already -- not proportionally
+ * scaled against a base value the way AdjustStatForCo's rating is, since
+ * a movement shift is a flat +/-N. See GetUnitMovement (src/bmunit.c) for
+ * how this actually gets applied. Unconditional on FE8_CO_POWERS alone
+ * (not FE8_RANGE_REWORK) -- movement isn't a range-mechanic fix, just
+ * another CO-driven stat adjustment alongside AdjustStatForCo's POW. An
+ * out-of-range coId falls back the same way GetCoDefinition always does. */
+int GetCoClassMovBonus(int coId, int classId);
+
 #if FE8_RANGE_REWORK
 /* A CO's class-affinity rangeBon (struct CoClassAffinity) for classId, or
  * 0 if coId has no explicit entry for that class. Unlike AdjustStatForCo's

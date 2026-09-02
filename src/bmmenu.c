@@ -578,8 +578,12 @@ int DisplayUnitStandingAttackRange(struct MenuProc* menu, struct MenuItemProc* m
     if (gActiveUnit->state & US_IN_BALLISTA) {
         MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, 1, 10);
     } else {
+#if FE8_RANGE_REWORK
+        GenerateUnitStandingReachRangeForSlot(gActiveUnit, -1, TRUE);
+#else
         int reach = GetUnitWeaponReachBits(gActiveUnit, -1);
         GenerateUnitStandingReachRange(gActiveUnit, reach);
+#endif
     }
 
     DisplayMoveRangeGraphics(3);
@@ -646,15 +650,19 @@ int WeaponSelectMenu_Draw(struct MenuProc* menu, struct MenuItemProc* menuItem) 
 
 int WeaponSelectMenu_SwitchIn(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
-    int reach;
-
     UpdateMenuItemPanel(menuItem->itemNumber);
 
     BmMapFill(gBmMapMovement, -1);
     BmMapFill(gBmMapRange, 0);
 
-    reach = GetUnitWeaponReachBits(gActiveUnit, menuItem->itemNumber);
-    GenerateUnitStandingReachRange(gActiveUnit, reach);
+#if FE8_RANGE_REWORK
+    GenerateUnitStandingReachRangeForSlot(gActiveUnit, menuItem->itemNumber, TRUE);
+#else
+    {
+        int reach = GetUnitWeaponReachBits(gActiveUnit, menuItem->itemNumber);
+        GenerateUnitStandingReachRange(gActiveUnit, reach);
+    }
+#endif
 
     DisplayMoveRangeGraphics(2);
 
@@ -1401,12 +1409,17 @@ u8 StaffCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 }
 
 int StaffCommandRange(struct MenuProc* menu, struct MenuItemProc* menuItem) {
-    int reach = GetUnitItemUseReachBits(gActiveUnit, -1);
-
     BmMapFill(gBmMapMovement, -1);
     BmMapFill(gBmMapRange, 0);
 
-    GenerateUnitStandingReachRange(gActiveUnit, reach);
+#if FE8_RANGE_REWORK
+    GenerateUnitStandingReachRangeForSlot(gActiveUnit, -1, FALSE);
+#else
+    {
+        int reach = GetUnitItemUseReachBits(gActiveUnit, -1);
+        GenerateUnitStandingReachRange(gActiveUnit, reach);
+    }
+#endif
 
     DisplayMoveRangeGraphics(5);
 
@@ -1452,14 +1465,19 @@ int StaffItemSelect_TextDraw(struct MenuProc* menu, struct MenuItemProc* menuIte
 }
 
 int StaffItemSelect_OnHover(struct MenuProc* menu, struct MenuItemProc* menuItem) {
-    int reach = GetUnitItemUseReachBits(gActiveUnit, menuItem->itemNumber);
-
     UpdateMenuItemPanel(menuItem->itemNumber);
 
     BmMapFill(gBmMapMovement, -1);
     BmMapFill(gBmMapRange, 0);
 
-    GenerateUnitStandingReachRange(gActiveUnit, reach);
+#if FE8_RANGE_REWORK
+    GenerateUnitStandingReachRangeForSlot(gActiveUnit, menuItem->itemNumber, FALSE);
+#else
+    {
+        int reach = GetUnitItemUseReachBits(gActiveUnit, menuItem->itemNumber);
+        GenerateUnitStandingReachRange(gActiveUnit, reach);
+    }
+#endif
 
     DisplayMoveRangeGraphics(4);
 

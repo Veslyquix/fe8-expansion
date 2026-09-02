@@ -358,7 +358,16 @@ inline int GetUnitLuck(struct Unit* unit) {
 
 #ifdef DEBUFFS_EXIST
 int GetUnitMovement(struct Unit* unit) {
-    return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, unit->movBonus + UNIT_MOV_BASE(unit));
+    int result = unit->movBonus + UNIT_MOV_BASE(unit);
+#if FE8_CO_POWERS
+    result += GetCoClassMovBonus(gPlaySt.commanderId[UNIT_FACTION(unit) >> 6], UNIT_CLASS_ID(unit));
+
+    if (result < 0)
+        result = 0;
+    if (result > UNIT_MOV_MAX(unit))
+        result = UNIT_MOV_MAX(unit);
+#endif
+    return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, result);
 }
 #endif
 

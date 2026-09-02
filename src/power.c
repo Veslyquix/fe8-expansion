@@ -420,10 +420,18 @@ struct CoClassAffinity {
     const char* className; // unused for display now (SMS icon + bar replace name+hearts); kept for reference/tooling
     u8 classId;
     u8 rating;
-    /* Purely visual for now (see CoScreen_DrawPageAffinityClassBonusIcons):
-     * -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
-     * below the class's affinity bar. 0 draws nothing. Not yet wired into
-     * actual movement/weapon-range calculation. */
+    /* -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
+     * below the class's affinity bar (see
+     * CoScreen_DrawPageAffinityClassBonusIcons). 0 draws nothing.
+     * movBon: applied unconditionally (FE8_CO_POWERS alone) to actual
+     * unit movement -- see GetCoClassMovBonus, GetUnitMovement
+     * (src/bmunit.c). rangeBon: applied to actual weapon attack range
+     * only when FE8_RANGE_REWORK is also on -- see GetCoClassRangeBonus,
+     * GetUnitItemEffectiveMaxRange (src/bmitem.c); with RANGE_REWORK off,
+     * this still draws the icon but doesn't change what the unit can
+     * actually hit (the vanilla reach-bits system it would need to feed
+     * into can't represent a shifted range at all -- see RANGE_REWORK's
+     * config.mk comment). */
     s8 movBon;
     s8 rangeBon;
 };
@@ -654,6 +662,20 @@ int AdjustStatForCo(int coId, int classId, int baseValue)
         adjusted = 0;
 
     return adjusted - baseValue;
+}
+
+/* See declaration comment (include/power.h). */
+int GetCoClassMovBonus(int coId, int classId)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+    int i;
+
+    for (i = 0; i < co->affinityCount; ++i) {
+        if (co->affinities[i].classId == classId)
+            return co->affinities[i].movBon;
+    }
+
+    return 0;
 }
 
 #if FE8_RANGE_REWORK

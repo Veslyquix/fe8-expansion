@@ -349,7 +349,7 @@ DANGER_RADIUS ?= 1
 # below the weapon's own minimum, capped at 15 (the nibble's own max).
 # Does not yet extend the coarse reach-bits system menus/R-button range
 # text/staff AI still use for display (see GetItemReachBits, src/bmitem.c).
-RANGE_REWORK ?= 0
+RANGE_REWORK ?= 1
 
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
 # Displays a ghost of the unit at the tip of the blue arrow when selecting
