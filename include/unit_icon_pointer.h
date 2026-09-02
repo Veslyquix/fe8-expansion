@@ -109,6 +109,12 @@ extern char unit_icon_wait_Fallen_Peer_sheet[];
 extern char unit_icon_wait_Camp_sheet[];
 extern char unit_icon_wait_TentStructure_sheet[];
 extern char unit_icon_wait_Flag_sheet[];
+// New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad Trooper(_F).
+extern char unit_icon_wait_LynLord_sheet[];
+extern char unit_icon_wait_Nomad_sheet[];
+extern char unit_icon_wait_Nomad_F_sheet[];
+extern char unit_icon_wait_Nomad_Trooper_sheet[];
+extern char unit_icon_wait_Nomad_Trooper_F_sheet[];
 // moving map sprite
 extern char unit_icon_move_Ephraim_Lord_sheet[];
 extern char unit_icon_move_Ephraim_Lord_motion[];
@@ -324,3 +330,14 @@ extern char unit_icon_move_Pontifex_sheet[];
 extern char unit_icon_move_Pontifex_motion[];
 extern char unit_icon_move_Fallen_Peer_sheet[];
 extern char unit_icon_move_Fallen_Peer_motion[];
+// New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad Trooper(_F).
+extern char unit_icon_move_LynLord_sheet[];
+extern char unit_icon_move_LynLord_motion[];
+extern char unit_icon_move_Nomad_sheet[];
+extern char unit_icon_move_Nomad_motion[];
+extern char unit_icon_move_Nomad_F_sheet[];
+extern char unit_icon_move_Nomad_F_motion[];
+extern char unit_icon_move_Nomad_Trooper_sheet[];
+extern char unit_icon_move_Nomad_Trooper_motion[];
+extern char unit_icon_move_Nomad_Trooper_F_sheet[];
+extern char unit_icon_move_Nomad_Trooper_F_motion[];

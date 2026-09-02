@@ -7643,6 +7643,320 @@
       "terrainAvoid": "TerrainTable_Avo_Common",
       "terrainDefense": "TerrainTable_Def_Common",
       "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_LYN_LORD",
+      "nameTextId": 3479,
+      "descTextId": 3480,
+      "promotion": "CLASS_SWORDMASTER",
+      "smsId": 110,
+      "sortOrder": 44,
+      "defaultPortraitId": 0,
+      "base": {
+        "hp": 16,
+        "pow": 4,
+        "skl": 7,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 5,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 90,
+        "pow": 45,
+        "skl": 40,
+        "spd": 45,
+        "def": 40,
+        "res": 15,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_101",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_NOMAD",
+      "nameTextId": 3481,
+      "descTextId": 3482,
+      "promotion": "CLASS_NOMAD_TROOPER",
+      "smsId": 111,
+      "sortOrder": 45,
+      "defaultPortraitId": 0,
+      "base": {
+        "hp": 16,
+        "pow": 5,
+        "skl": 4,
+        "spd": 5,
+        "def": 4,
+        "res": 0,
+        "con": 7,
+        "mov": 7
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 30,
+        "skl": 40,
+        "spd": 45,
+        "def": 30,
+        "res": 12,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 2,
+        "skl": 1,
+        "spd": 1,
+        "def": 3,
+        "res": 3
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_102",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT1Normal",
+        "TerrainTable_MovCost_HorseT1Rain",
+        "TerrainTable_MovCost_HorseT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_NOMAD_F",
+      "nameTextId": 3481,
+      "descTextId": 3482,
+      "promotion": "CLASS_NOMAD_TROOPER_F",
+      "smsId": 112,
+      "sortOrder": 46,
+      "defaultPortraitId": 0,
+      "base": {
+        "hp": 16,
+        "pow": 5,
+        "skl": 4,
+        "spd": 5,
+        "def": 4,
+        "res": 0,
+        "con": 7,
+        "mov": 7
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 30,
+        "skl": 40,
+        "spd": 45,
+        "def": 30,
+        "res": 12,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 2,
+        "skl": 1,
+        "spd": 1,
+        "def": 3,
+        "res": 3
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_103",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT1Normal",
+        "TerrainTable_MovCost_HorseT1Rain",
+        "TerrainTable_MovCost_HorseT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_NOMAD_TROOPER",
+      "nameTextId": 3483,
+      "descTextId": 3484,
+      "promotion": "CLASS_NOMAD",
+      "smsId": 113,
+      "sortOrder": 47,
+      "defaultPortraitId": 0,
+      "base": {
+        "hp": 21,
+        "pow": 7,
+        "skl": 6,
+        "spd": 7,
+        "def": 6,
+        "res": 3,
+        "con": 8,
+        "mov": 8
+      },
+      "max": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 28,
+        "spd": 30,
+        "def": 24,
+        "res": 23,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 30,
+        "spd": 35,
+        "def": 25,
+        "res": 15,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_PROMOTED",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_E",
+        "ITYPE_BOW": "WPN_EXP_C"
+      },
+      "battleAnim": "AnimConf_104",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT2Normal",
+        "TerrainTable_MovCost_HorseT2Rain",
+        "TerrainTable_MovCost_HorseT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_NOMAD_TROOPER_F",
+      "nameTextId": 3483,
+      "descTextId": 3484,
+      "promotion": "CLASS_NOMAD_F",
+      "smsId": 114,
+      "sortOrder": 48,
+      "defaultPortraitId": 0,
+      "base": {
+        "hp": 21,
+        "pow": 7,
+        "skl": 6,
+        "spd": 7,
+        "def": 6,
+        "res": 3,
+        "con": 8,
+        "mov": 8
+      },
+      "max": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 28,
+        "spd": 30,
+        "def": 24,
+        "res": 23,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 30,
+        "spd": 35,
+        "def": 25,
+        "res": 15,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_PROMOTED",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_E",
+        "ITYPE_BOW": "WPN_EXP_C"
+      },
+      "battleAnim": "AnimConf_105",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT2Normal",
+        "TerrainTable_MovCost_HorseT2Rain",
+        "TerrainTable_MovCost_HorseT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
     }
   ]
 }

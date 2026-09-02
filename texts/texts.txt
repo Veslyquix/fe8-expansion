@@ -40553,3 +40553,24 @@ to see another sunrise.[A]
 [OpenMidRight]Let the Naskwa learn that we are[.][LF]
 not so easily driven from our home.[A]
 [OpenMidLeft]To the mountains, then.[.][A][X]
+
+## MSG_CLASS_LYN_LORD_NAME
+LynLord[.][X]
+
+## MSG_CLASS_LYN_LORD_DESC
+A swift blade wielder skilled with[LF]
+the sword. Equip: Swords.[.][X]
+
+## MSG_CLASS_NOMAD_NAME
+Nomad[.][X]
+
+## MSG_CLASS_NOMAD_DESC
+Mounted archers who strike from afar[LF]
+and range far ahead. Equip: Bows.[.][X]
+
+## MSG_CLASS_NOMAD_TROOPER_NAME
+Nomad Trooper[.][X]
+
+## MSG_CLASS_NOMAD_TROOPER_DESC
+Veteran nomads who have added the[LF]
+sword to their bow. Equip: Swords, Bows.[X]

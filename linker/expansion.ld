@@ -269,17 +269,30 @@ SECTIONS
         banim/data_banim.o(.data)
 
         FILL(0xFF);
-        . = 0xEE0000;
+        /* Was 0xEE0000: banim/data_banim.o (the FE8_NEW_ANIMS custom
+         * animation table, .index 0xC9 on) grew past the old 0xC02000-
+         * 0xEE0000 budget (~2.86MB) once the 2026-09 pack import added 17
+         * more animations on top of the existing 31 -- see
+         * scripts/banim_event_to_source.py's module docstring for why
+         * only rtl OAM is stored per entry (that's what got this far in
+         * the first place). Bumped the whole banim_terrain/banim_pal
+         * region by +0x60000 (384K) to cover that plus headroom for
+         * further packs, rather than just enough for exactly today's
+         * content -- verified by nothing else referencing these
+         * addresses as a literal (only *_start/*_size linker symbols and
+         * the offline scripts/dump_*.py tools, which anchor against the
+         * ORIGINAL vanilla ROM, not this one) before moving it. */
+        . = 0xF40000;
         *banim_terrain_data.o(.data)
         *banim_terrain_data.o(.data.banim_terrain_head)
         *banim_terrain_data.o(.data.banim_terrain_ptr_table)
 
         FILL(0x00);
-        . = 0xEE0C00;
+        . = 0xF40C00;
         *data_banim_terrain.o(.data)
 
         FILL(0xFF);
-        _banim_pal_start = 0xEF8000;
+        _banim_pal_start = 0xF58000;
         . = _banim_pal_start;
         *banim_pal_chara.o(.data)
         *banim_pal_chara.o(.data.banim_pal_head)

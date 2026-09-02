@@ -890,6 +890,28 @@ static const signed char header5[] = "CO Screen Graphics";
 static const signed char body5[] =
     " CO info screen backdrop by PatrickHoang";
 
+/* Kept in sync with CREDITS.md's "Battle Animations" table -- only the
+ * new classes' own wired packs (LynLord, Nomad(_F), Nomad Trooper(_F));
+ * the two Archer and two Mage packs imported alongside them aren't
+ * assigned to any class (see that table's own note), so aren't credited
+ * here as a class's animation either. The original 8 NEW_ANIMS packs
+ * (Soldier, Brigand, Fighter, Knight, Mercenary, Archer, Cavalier,
+ * Pegasus) predate this in-game credits section and are documented in
+ * CREDITS.md only. */
+static const signed char header6[] = "Battle Animations";
+static const signed char body6[] =
+    " LynLord anim by Blazt, Seliost1" NL
+    " Nomad anim by Pikmin1211, Maiser6" NL
+    " Nomad Trooper anim by Levin64, Fuyu";
+
+/* Kept in sync with CREDITS.md's "Map Sprites" table. */
+static const signed char header7[] = "Map Sprites";
+static const signed char body7[] =
+    " LynLord map sprite by Merpin" NL
+    " Nomad map sprite by IS," NL
+    "  MeatOfJustice, UltraFenix" NL
+    " Nomad Trooper map sprite by IS";
+
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
@@ -942,6 +964,10 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
 #endif
 #if FE8_CO_POWERS
     { header5, body5, SubstituteRandomBG, BG_Type, 0, 0 },
+#endif
+#if FE8_NEW_ANIMS
+    { header6, body6, SubstituteRandomBG, BG_Type, 0, 0 },
+    { header7, body7, SubstituteRandomBG, BG_Type, 0, 0 },
 #endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },

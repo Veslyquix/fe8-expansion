@@ -2079,3 +2079,130 @@ CONST_DATA struct BattleAnimDef AnimConf_100[] = {
     },
     { 0 }
 };
+
+/* New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad
+ * Trooper(_F) -- see scripts/banim_packs.json / src/banim_data.c slots
+ * 0xEE-0xF8. Unlike AnimConf_24 (Archer)/_36 (Mage) above, which the
+ * import left untouched on purpose (their existing custom/vanilla anims
+ * stay wired), these ARE the new classes' only anim, so .index isn't
+ * #if FE8_NEW_ANIMS-gated the way Archer's is -- these classes don't
+ * exist without FE8_NEW_ANIMS's animation data to draw them with in the
+ * first place. ITYPE_ITEM (unarmed) reuses the weapon's own index where
+ * no dedicated unarmed animation was provided (LynLord, both Mage packs
+ * had no "Unarmed" subfolder in their source pack) -- same convention
+ * vanilla AnimConf_36 (Mage) already uses for all 4 of its wtypes. */
+CONST_DATA struct BattleAnimDef AnimConf_101[] = { // LynLord
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00EF,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00EF,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_102[] = { // Nomad
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F0,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F1,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_103[] = { // Nomad_F
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F2,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F3,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_104[] = { // Nomad Trooper
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00F4,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F6,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_105[] = { // Nomad Trooper_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00F7,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F8,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F9,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};

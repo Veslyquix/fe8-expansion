@@ -136,4 +136,13 @@ UnitIconMove unit_icon_move_table[] = {
 	// an inert placeholder rather than authoring unused walk-cycle frames.
 	{unit_icon_move_Tent_sheet, unit_icon_move_Tent_motion}, // 127 (CLASS_CAMP)
 	{unit_icon_move_Tent_sheet, unit_icon_move_Tent_motion}, // 128 (CLASS_TENT_STRUCTURE)
+
+	// New classes (2026-09 FE-Repo pack import), appended to classes.json's
+	// array in this same order -- indexed by classId-1 (see gMuInfoTable,
+	// src/mu.c), so this row order MUST match classes.json's insertion order.
+	{unit_icon_move_LynLord_sheet, unit_icon_move_LynLord_motion}, // 129 (CLASS_LYN_LORD)
+	{unit_icon_move_Nomad_sheet, unit_icon_move_Nomad_motion}, // 130 (CLASS_NOMAD)
+	{unit_icon_move_Nomad_F_sheet, unit_icon_move_Nomad_F_motion}, // 131 (CLASS_NOMAD_F)
+	{unit_icon_move_Nomad_Trooper_sheet, unit_icon_move_Nomad_Trooper_motion}, // 132 (CLASS_NOMAD_TROOPER)
+	{unit_icon_move_Nomad_Trooper_F_sheet, unit_icon_move_Nomad_Trooper_F_motion}, // 133 (CLASS_NOMAD_TROOPER_F)
 };
