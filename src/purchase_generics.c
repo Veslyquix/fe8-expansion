@@ -403,7 +403,6 @@ static void BuildGenericUnitDefinition(
         out->items[i] = def->items[i];
 }
 
-#if FE8_FORT_UNITS_START_GREYED_OUT
 static bool TryFortSpawnPosition(int baseX, int baseY, int* xOut, int* yOut)
 {
     if (GetPurchaseBaseKindAt(baseX, baseY) != PURCHASE_BASE_KIND_FORT)
@@ -419,7 +418,6 @@ static bool TryFortSpawnPosition(int baseX, int baseY, int* xOut, int* yOut)
     *yOut = baseY;
     return true;
 }
-#endif
 
 static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition* def, int factionId, int baseX, int baseY)
 {
@@ -427,16 +425,23 @@ static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition
     struct Unit* unit;
     int x, y;
     bool spawnedOnFort = false;
+    bool isFort = GetPurchaseBaseKindAt(baseX, baseY) == PURCHASE_BASE_KIND_FORT;
 
     if (GetFactionChapterGoldAmount(factionId) < def->cost)
         return false;
 
-#if FE8_FORT_UNITS_START_GREYED_OUT
-    spawnedOnFort = TryFortSpawnPosition(baseX, baseY, &x, &y);
-#endif
+    /* Fort only ever spawns the unit onto its own tile -- unlike Camp/Tent,
+     * it never spills over onto an adjacent tile, even if the fort tile
+     * itself is occupied (in which case the purchase simply fails this
+     * turn rather than spawning next to it). */
+    if (isFort)
+        spawnedOnFort = TryFortSpawnPosition(baseX, baseY, &x, &y);
 
-    if (!spawnedOnFort && !FindSpawnPositionFrom(baseX, baseY, def->classId, &x, &y))
-        return false;
+    if (!spawnedOnFort)
+    {
+        if (isFort || !FindSpawnPositionFrom(baseX, baseY, def->classId, &x, &y))
+            return false;
+    }
 
     BuildGenericUnitDefinition(def, factionId, x, y, &uDef);
 
@@ -1643,6 +1648,21 @@ static void RunAiPurchasesForFaction(int factionId)
 
         if (GetPurchaseBaseTrapOwner(trap) != factionId)
             continue;
+
+        /* Only Fort/Camp/Tent are deploy points -- same rule as the
+         * player's own tile-menu trigger above. House (and Gate/Throne/
+         * Village) still capture and generate income/healing, but the AI
+         * must not spawn units from them either. */
+        switch (GetPurchaseBaseTrapKind(trap))
+        {
+        case PURCHASE_BASE_KIND_FORT:
+        case PURCHASE_BASE_KIND_CAMP:
+        case PURCHASE_BASE_KIND_TENT:
+            break;
+
+        default:
+            continue;
+        }
 
         def = GetAiPriorityPurchase(factionId);
 

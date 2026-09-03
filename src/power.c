@@ -53,13 +53,15 @@
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
 
 /* Which power state (none/normal/super) each faction's CO currently has
- * active. A CO Power in this system lasts for the rest of its own
- * faction's turn (Advance Wars rules -- using either power drains the
- * whole gauge, see CoPowersMenuCommandCommon), so this is set the moment
- * the gauge gets spent (CoPowersMenuCommandCommon for the player,
- * CoPowers_OnAiPhaseStart for the AI) and cleared at that faction's own
- * next phase change (CoPowers_OnPhaseEnd, called from BmMain_ChangePhase,
- * src/bm.c). Transient, not saved -- EWRAM_DATA like gAiState (src/
+ * active. A CO Power in this system lasts until its own faction's *next*
+ * turn -- it stays active through every other faction's phase in between
+ * (Advance Wars rules -- using either power drains the whole gauge, see
+ * CoPowersMenuCommandCommon), so this is set the moment the gauge gets
+ * spent (CoPowersMenuCommandCommon for the player, CoPowers_OnAiPhaseStart
+ * for the AI) and cleared right as that faction's own phase starts again
+ * (CoPowers_OnPhaseStart, called from BmMain_ChangePhase, src/bm.c, right
+ * after SwitchPhases() flips gPlaySt.faction to the newly-starting phase).
+ * Transient, not saved -- EWRAM_DATA like gAiState (src/
  * cp_phase.c), not gPlaySt (which IS saved and would need a save-compat
  * epoch bump for a new field).
  *
@@ -76,7 +78,7 @@ enum {
 EWRAM_DATA static u8 sCoActivePowerState[4] = {0};
 
 /* See declaration comment (include/power.h). */
-void CoPowers_OnPhaseEnd(int faction)
+void CoPowers_OnPhaseStart(int faction)
 {
     sCoActivePowerState[faction >> 6] = CO_POWER_STATE_NONE;
 }

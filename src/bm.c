@@ -30,7 +30,7 @@
 #include "gamerank.h"
 #include "dangerradius.h"
 #if FE8_CO_POWERS
-#include "power.h" // CoPowers_OnPhaseEnd
+#include "power.h" // CoPowers_OnPhaseStart
 #endif
 
 #include "bm.h"
@@ -455,17 +455,19 @@ int BmMain_ChangePhase(void)
         DangerRadius_End();
 #endif
 
-#if FE8_CO_POWERS
-    /* A CO power/super (struct CoClassAffinity's *Pow/*Sup fields,
-     * src/power.c) only lasts for the rest of its own faction's turn --
-     * gPlaySt.faction is still the ending phase's faction here, before
-     * SwitchPhases() below flips it. */
-    CoPowers_OnPhaseEnd(gPlaySt.faction);
-#endif
-
     ClearActiveFactionGrayedStates();
     RefreshUnitSprites();
     SwitchPhases();
+
+#if FE8_CO_POWERS
+    /* A CO power/super (struct CoClassAffinity's *Pow/*Sup fields,
+     * src/power.c) lasts until its own faction's *next* turn -- it stays
+     * active through every other faction's phase in between, and only
+     * clears here, right as that faction's own phase starts again.
+     * SwitchPhases() above already flipped gPlaySt.faction to the
+     * newly-starting phase's faction. */
+    CoPowers_OnPhaseStart(gPlaySt.faction);
+#endif
 
     if (RunPhaseSwitchEvents() == true)
         return false;

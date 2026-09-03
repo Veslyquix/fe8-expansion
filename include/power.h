@@ -76,11 +76,12 @@ int CoPowers_OnAiPhaseStart(struct Proc* parent);
 /* Marks faction's CO power/super as no longer active (see the *Pow/*Sup
  * fields of struct CoClassAffinity, src/power.c, and AdjustStatForCo/
  * GetCoClassMovBonus/GetCoClassRangeBonus/GetCoClassCritBonus below) -- a
- * power lasts only for the rest of its own faction's turn (Advance Wars
- * rules), so call this once at that faction's own phase end. Currently
- * called from BmMain_ChangePhase (src/bm.c), for whichever faction's phase
- * is ending. Safe to call even if that faction had no power active. */
-void CoPowers_OnPhaseEnd(int faction);
+ * power lasts until its own faction's *next* turn (Advance Wars rules), so
+ * call this once right as that faction's own phase starts again. Currently
+ * called from BmMain_ChangePhase (src/bm.c), right after SwitchPhases(),
+ * for whichever faction's phase is starting. Safe to call even if that
+ * faction had no power active. */
+void CoPowers_OnPhaseStart(int faction);
 
 /* Sets which CO (a CO_* id above) is faction's commander --
  * gPlaySt.commanderId[faction >> 6] (see include/types.h; faction is a
