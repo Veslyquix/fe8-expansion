@@ -71,7 +71,6 @@ static bool sPurchaseGenericFaceActive = false;
 static bool sPurchaseGenericPlatformActive = false;
 static bool sPurchaseGenericMenuOpen = false;
 static bool sPurchaseGenericPreviewStartedMiniAnim = false;
-static u8 sPurchaseGenericSavedBg0Priority = 0;
 
 struct PurchaseGenericMenuLockProc
 {
@@ -1002,6 +1001,11 @@ static void ClearPurchaseGenericDetails(void)
     TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
     TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
     TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
+    gLCDControlBuffer.bg0cnt.priority = 0; // text 
+    gLCDControlBuffer.bg1cnt.priority = 1; // menu
+    gLCDControlBuffer.bg2cnt.priority = 1; // ?  
+    gLCDControlBuffer.bg3cnt.priority = 2; // map 
+    
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT);
 }
 
@@ -1142,7 +1146,6 @@ static void PurchaseGenericMenuEnd(struct MenuProc* menu)
 
     sPurchaseGenericMenuOpen = false;
     ClearPurchaseGenericDetails();
-    gLCDControlBuffer.bg0cnt.priority = sPurchaseGenericSavedBg0Priority;
     EndPurchaseGenericMenuLockProc();
 }
 
@@ -1513,8 +1516,13 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y)
     sPurchaseGenericFactionId = FACTION_ID_BLUE;
     TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
     BG_EnableSyncByMask(BG2_SYNC_BIT);
-    sPurchaseGenericSavedBg0Priority = gLCDControlBuffer.bg0cnt.priority;
-    gLCDControlBuffer.bg0cnt.priority = 1;
+    
+    gLCDControlBuffer.bg0cnt.priority = 1; // text 
+    gLCDControlBuffer.bg1cnt.priority = 0; // spell 
+    gLCDControlBuffer.bg2cnt.priority = 2; // menu 
+    gLCDControlBuffer.bg3cnt.priority = 3; // map 
+    
+
     
     // struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
     struct MenuProc* menu = StartOrphanMenuExt(&gPurchaseGenericsMenuDef, 2, TILEREF(0, 0), 0, 0); // backBg as 2, frontBg (text) as 0
