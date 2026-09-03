@@ -531,10 +531,12 @@
 #define FE8_NIMAP2 0
 #endif
 
-/* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
- * map, and replaces the prologue's scripted beginning-of-chapter events with
- * a version that still loads Eirika and Seth the same way but skips the
- * Renais-throne-room cutscene and dialogue (see src/data/data_8B363C.c and
+/* Swaps in graphics/map/layout/NewPrologueMap.tmx (see scripts/tmx_to_map.py
+ * and docs/map_authoring.md -- this map is authored directly in Tiled, not
+ * FEBuilder's own .mar format) for the prologue chapter's map, and replaces
+ * the prologue's scripted beginning-of-chapter events with a version that
+ * still loads Eirika and Seth the same way but skips the Renais-throne-room
+ * cutscene and dialogue (see src/data/data_8B363C.c and
  * src/events/prologue-eventscript.h). */
 #ifndef FE8_CUSTOM_CAMPAIGN
 #define FE8_CUSTOM_CAMPAIGN 0

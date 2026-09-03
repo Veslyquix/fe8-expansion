@@ -20,6 +20,7 @@ the authoritative technical documentation and are checked by CI.
 | Enable/extend starter content, mechanics, or Threat Range QoL | [`starter_features.md`](starter_features.md) |
 | Author expansion-localized UI text/locales | [`localization.md`](localization.md) |
 | Add custom BGM / instrument maps | [`custom_bgm.md`](custom_bgm.md) |
+| Author or convert a chapter map layout (.tmx/.mar) | [`map_authoring.md`](map_authoring.md) |
 | Generate or test localized full-game message catalogs | [`game_localization_catalog.md`](game_localization_catalog.md) |
 | Contribute code/docs and know the review process | [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`project-governance.md`](project-governance.md) |
 | Come from the old decomp-base/agbcc workflow | [`migration-from-decomp.md`](migration-from-decomp.md) |

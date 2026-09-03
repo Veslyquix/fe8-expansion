@@ -39,7 +39,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
         .xPosition = 1,
-        .yPosition = 1,
+        .yPosition = 2,
         .items = {
             ITEM_SWORD_IRON,
             ITEM_VULNERARY,
@@ -213,7 +213,7 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
 
     FlashCursor(CHARACTER_EIRIKA, 20)
     MOVE(4, CHARACTER_SETH, 10, 0)
-    MOVE(1, CHARACTER_EIRIKA, 1, 2)
+    MOVE(1, CHARACTER_EIRIKA, 1, 3)
     ENUN
     MOVE(3, CHARACTER_SETH, 5, 1)
 
@@ -224,7 +224,7 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
 
     FlashCursor(CHARACTER_EIRIKA, 60)
     Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
-    MOVE(0, CHARACTER_SETH, 1, 1)
+    MOVE(0, CHARACTER_SETH, 1, 2)
     ENUN
     DISA(CHARACTER_SETH)
     // FlashCursor(CHARACTER_SETH, 20)

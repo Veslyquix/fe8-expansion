@@ -42,6 +42,7 @@ endif
 FETSATOOL  := $(PYTHON) scripts/gfxtools/tsa_generator.py
 TMAP2TSA   := $(PYTHON) scripts/tmap2tsa.py
 MARTOMAP   := $(PYTHON) scripts/mar_to_map.py
+TMXTOMAP   := $(PYTHON) scripts/tmx_to_map.py
 PAL2GBAPAL := $(GBAGFX)
 
 ifeq ($(UNAME),Darwin)
@@ -548,6 +549,11 @@ graphics/titlescreen/title_dragon_foreground.map.bin.lz: LZ_FLAGS := -mindist 1
 %.rl: % ; $(GBAGFX) $< $@
 %.fk: % ; ./scripts/compressor.py $< fk
 %.bin: %.mar  ; $(MARTOMAP)  $< $@
+# Custom maps authored/edited directly in Tiled (mapeditor.org) instead of
+# round-tripping through FEBuilder's own .mar map editor -- see
+# scripts/tmx_to_map.py. Vanilla maps stay .mar; a map can be converted to
+# .tmx (scripts/mar_to_tmx.py) when you want to edit it here instead.
+%.bin: %.tmx  ; $(TMXTOMAP)  $< $@
 sound/%.bin: sound/%.aif ; $(AIF2PCM) $< $@
 
 %.4bpp.h: %.4bpp
