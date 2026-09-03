@@ -40555,7 +40555,7 @@ not so easily driven from our home.[A]
 [OpenMidLeft]To the mountains, then.[.][A][X]
 
 ## MSG_CLASS_LYN_LORD_NAME
-LynLord[.][X]
+Lord[.][X]
 
 ## MSG_CLASS_LYN_LORD_DESC
 A swift blade wielder skilled with[LF]

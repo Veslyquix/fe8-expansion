@@ -23,7 +23,7 @@
 CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
     {
         .charIndex = CHARACTER_SETH,
-        .classIndex = CLASS_RANGER,
+        .classIndex = CLASS_NOMAD,
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
         .xPosition = 6,
@@ -35,7 +35,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
     },
     {
         .charIndex = CHARACTER_EIRIKA,
-        .classIndex = CLASS_MYRMIDON_F,
+        .classIndex = CLASS_LYN_LORD, //CLASS_MYRMIDON_F
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
         .xPosition = 1,
