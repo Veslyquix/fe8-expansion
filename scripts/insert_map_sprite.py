@@ -66,6 +66,7 @@ import re
 import shutil
 import sys
 
+import numpy as np
 from PIL import Image
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -127,6 +128,111 @@ def clone_motion_block(template, name):
     return block.replace(template, name)
 
 
+# One .2byte-triple OAM entry ("Y, attr1, attr2") followed by its tile
+# pointer, for a single frame_N -- matches the shape every frame in this
+# repo's move-sheet motion blocks uses (regular, non-affine, one sprite
+# per frame). attr1's low 9 bits are a signed on-screen X offset (see
+# _signed9/_pack_x9 below); everything above bit8 (shape/size/flip) is
+# preserved untouched by the correction pass.
+_FRAME_RE = re.compile(
+    r'(unit_icon_move_(\w+)_frame_(\d+): @[^\n]*\n'
+    r'\t\.2byte 1 @ oam entries\n'
+    r'\t\.2byte (0x[0-9A-Fa-f]+), (0x[0-9A-Fa-f]+), (0x[0-9A-Fa-f]+) @ OAM Data #0\n'
+    r'\t\.2byte (0x[0-9A-Fa-f]+) @ Sheet Tile #0\n)'
+)
+
+
+def _signed9(raw):
+    raw &= 0x1FF
+    return raw - 512 if raw & 0x100 else raw
+
+
+def _pack_x9(attr1, x):
+    return (attr1 & ~0x1FF) | (x & 0x1FF)
+
+
+def _block_content_x_range(img, tile_val, sheet_width_px=32, tile_px=8):
+    """(min_x, max_x) of non-background pixels in the 32x32 block this
+    frame's tile pointer selects, or None if the block is blank. tile_val
+    is in TILE units (8x8 each); sheet is sheet_width_px wide, so every
+    (sheet_width_px // tile_px) tiles is one 8px-tall strip -- a 32px-tall
+    block is 4 such strips, i.e. tile_val steps of 0x10 between frames'
+    own blocks (matches this repo's actual const_data_unit_icon_move.s
+    tile pointers: 0x0, 0x10, 0x20, ...)."""
+    tiles_per_row = sheet_width_px // tile_px
+    y0 = (tile_val // tiles_per_row) * tile_px
+    w, h = img.size
+    if y0 >= h:
+        return None
+    arr = np.array(img)
+    crop = arr[y0:min(y0 + 32, h), 0:min(sheet_width_px, w)]
+    nz = np.argwhere(crop != 0)
+    if len(nz) == 0:
+        return None
+    xs = nz[:, 1]
+    return int(xs.min()), int(xs.max())
+
+
+def align_motion_block_to_own_art(block, name, template_img_path, new_img_path):
+    """Corrects each frame's OAM X offset so the NEW class's own art lands
+    at the same on-screen position the TEMPLATE's art does for that frame,
+    instead of leaving the template's cloned (donor-art-tuned) X offsets
+    in place unchanged.
+
+    Why this exists: the motion table's frame layout/timing IS a genuine
+    fixed template shared across same-UNIT_ICON_SIZE classes, but a few
+    individual frames (typically the trailing "settle" frames, seen for
+    both Archer and Thief) carry a small hand-tuned per-class X nudge
+    compensating for exactly where that donor's artist happened to draw
+    the character within the frame's 32px-wide block. A new class's art
+    only coincidentally shares a donor's placement in most frames (whole
+    sprite sheets are often traced/adapted from one specific donor, e.g.
+    LynLord's from Eirika_Lord) -- but not always in every single frame.
+    Blindly cloning the donor's OAM bytes wholesale silently carries over
+    THAT donor's nudges, which is wrong for any frame where the new art's
+    own placement doesn't match the donor's. Confirmed via a real bug:
+    LynLord's frames 0-15 pixel-matched Eirika_Lord's art exactly (fine to
+    clone as-is), but frames 16-18 sat ~4px further right in LynLord's own
+    sheet -- cloning Archer's (or even Eirika_Lord's) OAM X for those 3
+    frames put LynLord's sprite visibly off during that animation.
+
+    Returns (corrected_block, corrections) where corrections is a list of
+    (frame_num, delta_px) for every frame this actually changed -- print
+    these so a human can sanity-check the result once, rather than
+    trusting silent pixel math forever.
+    """
+    template_img = Image.open(template_img_path)
+    new_img = Image.open(new_img_path)
+
+    corrections = []
+
+    def _replace(m):
+        whole, frame_name, frame_num, y, attr1_s, attr2, tile_s = m.groups()
+        if frame_name != name:
+            return whole
+        tile_val = int(tile_s, 16)
+        tmpl_range = _block_content_x_range(template_img, tile_val)
+        new_range = _block_content_x_range(new_img, tile_val)
+        if tmpl_range is None or new_range is None:
+            return whole
+        tmpl_center = (tmpl_range[0] + tmpl_range[1]) / 2
+        new_center = (new_range[0] + new_range[1]) / 2
+        delta = round(tmpl_center - new_center)
+        if delta == 0:
+            return whole
+        attr1 = int(attr1_s, 16)
+        x = _signed9(attr1)
+        new_attr1 = _pack_x9(attr1, x + delta)
+        corrections.append((int(frame_num), delta))
+        return whole.replace(
+            f"{attr1_s}, {attr2} @ OAM Data #0",
+            f"0x{new_attr1:04X}, {attr2} @ OAM Data #0",
+        )
+
+    corrected = _FRAME_RE.sub(_replace, block)
+    return corrected, corrections
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -156,6 +262,34 @@ def main():
     idx = next_wait_index()
     motion_block = clone_motion_block(args.motion_template, args.name)
 
+    # Re-derive each frame's OAM X offset from where THIS class's own art
+    # actually sits, instead of trusting the donor's cloned bytes verbatim
+    # -- see align_motion_block_to_own_art's docstring for why (a real bug:
+    # LynLord's frames 16-18 sat ~4px right of Eirika_Lord's, which her
+    # cloned motion table didn't account for).
+    template_move_png = REPO / "graphics" / "unit_icon" / "move" / f"unit_icon_move_{args.motion_template}_sheet.png"
+    corrections = []
+    if template_move_png.exists():
+        motion_block, corrections = align_motion_block_to_own_art(
+            motion_block, args.name, template_move_png, move_dst)
+    else:
+        print(f"warning: {template_move_png.relative_to(REPO)} not found on disk -- "
+              f"skipping per-frame alignment correction, motion block is an "
+              f"UNCHECKED clone of {args.motion_template!r}'s own OAM offsets",
+              file=sys.stderr)
+
+    if corrections:
+        print(f"note: adjusted {len(corrections)} frame(s)' OAM X offset (bbox-center "
+              f"alignment against {args.name}'s own art instead of "
+              f"{args.motion_template!r}'s) -- (frame, delta_px): {corrections}. "
+              f"This is a best-effort SUGGESTION, not a guaranteed-correct value --  "
+              f"bbox-center comparison is thrown off when the new class's art is "
+              f"legitimately a different width than the template's (different horse "
+              f"breed, hair, cape, ...), producing a nonzero 'correction' for frames "
+              f"that don't actually need one. Load both PNGs side by side and eyeball "
+              f"the flagged frames before trusting this over the template's own value.",
+              file=sys.stderr)
+
     print(f"""
 --- append to {WAIT_C.relative_to(REPO)} (before the closing "}};") ---
 \t{{2, {size_class}, unit_icon_wait_{args.name}_sheet}}, // {idx}
@@ -168,7 +302,7 @@ extern char unit_icon_move_{args.name}_motion[];
 --- append to src/data/const_data_unit_icon_wait.c ---
 const u8 __attribute__((aligned(4))) unit_icon_wait_{args.name}_sheet[] = INCBIN_U8("graphics/unit_icon/wait/unit_icon_wait_{args.name}_sheet.4bpp.lz");
 
---- append to {MOVE_S.relative_to(REPO)} (cloned from {args.motion_template!r}, {size_class}) ---
+--- append to {MOVE_S.relative_to(REPO)} (cloned from {args.motion_template!r}, {size_class}, per-frame X-aligned to {args.name}'s own art) ---
 {motion_block}
 --- append to src/unit_icon_move_data.c (before the closing "}};") ---
 \t{{unit_icon_move_{args.name}_sheet, unit_icon_move_{args.name}_motion}}, // MUST be the Nth new row matching this class's position in classes.json

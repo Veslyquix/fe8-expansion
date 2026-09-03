@@ -18940,17 +18940,24 @@ unit_icon_move_LynLord_frame_15: @ +$CA
 
 unit_icon_move_LynLord_frame_16: @ +$D4
 	.2byte 1 @ oam entries
-	.2byte 0xE0, 0x81F2, 0x0 @ OAM Data #0
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- uniform X=-16, same as every
+	@ other frame in this table (and identical to Eirika_Lord's own, whose
+	@ art LynLord's is a direct reskin of). A per-frame bbox-fitted offset
+	@ was tried here and reverted: it "centered" each frame in isolation,
+	@ but a walk cycle needs a CONSTANT offset across all its frames --
+	@ per-frame correction broke that, causing a visible side-to-side
+	@ wobble instead of smooth motion. See
+	@ reference_adding_classes_banims_mapsprites.md.
 	.2byte 0xC0 @ Sheet Tile #0
 
 unit_icon_move_LynLord_frame_17: @ +$DE
 	.2byte 1 @ oam entries
-	.2byte 0xE0, 0x81F2, 0x0 @ OAM Data #0
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- see frame_16's comment
 	.2byte 0xD0 @ Sheet Tile #0
 
 unit_icon_move_LynLord_frame_18: @ +$E8
 	.2byte 1 @ oam entries
-	.2byte 0xE0, 0x81F2, 0x0 @ OAM Data #0
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- see frame_16's comment
 	.2byte 0xE0 @ Sheet Tile #0
 
 unit_icon_move_LynLord_anim_0: @ +$F2
