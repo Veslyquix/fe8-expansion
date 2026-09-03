@@ -979,9 +979,9 @@ u8 ItemCommandUsability(const struct MenuItemDef* def, int number) {
         return MENU_NOTSHOWN;
     }
 
-    if (!CanUnitTradeOrSupply(gActiveUnit)) {
-        return MENU_NOTSHOWN;
-    }
+    // if (!CanUnitTradeOrSupply(gActiveUnit)) {
+        // return MENU_NOTSHOWN;
+    // }
 
     if (gActiveUnit->items[0] == 0) {
         return MENU_NOTSHOWN;
