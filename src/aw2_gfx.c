@@ -134,8 +134,10 @@ void LoadAw2Gfx(void)
 #define AW2_POWER_BANNER_SLOTA_TILE_W 8 // 64x32 shape: doubles to a 128x64 box,
 #define AW2_POWER_BANNER_SLOTA_TILE_H 4 // comfortably covering 128x32 (32x8 native x4)
 
-#define AW2_POWER_BANNER_SLOTB_TILE 0x200
-#define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x222
+#define AW2_POWER_BANNER_SLOTB_TILE 0x188
+// #define AW2_POWER_BANNER_SLOTB_TILE 0x200
+#define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x1AA
+// #define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x222
 #define AW2_POWER_BANNER_SLOTB_TILE_W 8 // 32x16 shape: doubles to exactly 64x32,
 #define AW2_POWER_BANNER_SLOTB_TILE_H 4 // matching 64x32 (16x8 native x4) with no slack
 
