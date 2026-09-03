@@ -1304,6 +1304,9 @@ void EnqueueTutEvent(uintptr_t ptr, u8 event_enqueue_type)
 
 bool CheckTutorialEvent(u8 type)
 {
+    #if FE8_CUSTOM_CAMPAIGN 
+    return false; 
+    #endif 
     if ((gPlaySt.tutorial_counter != 0) && (gPlaySt.tutorial_exec_type == type))
         return true;
 
@@ -1312,6 +1315,9 @@ bool CheckTutorialEvent(u8 type)
 
 bool RunTutorialEvent(u8 type)
 {
+    #if FE8_CUSTOM_CAMPAIGN 
+    return false; 
+    #endif 
     int counter;
     if ((gPlaySt.tutorial_counter != 0) && (gPlaySt.tutorial_exec_type == type)) {
         counter = gPlaySt.tutorial_counter;
