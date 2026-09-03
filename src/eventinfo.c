@@ -19,6 +19,7 @@
 #include "eventinfo.h"
 #include "eventcall.h"
 #include "eventscript.h"
+#include "player_interface.h" // EndAiPhaseGoalDisplay
 
 #include "constants/characters.h"
 #include "constants/items.h"
@@ -696,6 +697,20 @@ void ForceGameOver(void) {
     SetFlag(EVFLAG_GAMEOVER);
     StartBgm(SONG_GAME_OVER, NULL);
     gPlaySt.config.disableBgm = 1;
+
+#if FE8_AW2_ASSETS
+    /* gProcScr_AiGoalDisplay (src/player_interface.c) is its own PROC_TREE_3
+     * root, started/ended around the AI's own turn (see cp_phase.c) -- a
+     * game over triggered mid-AI-phase (e.g. the last player unit dying to
+     * an AI attack) short-circuits that normal end-of-turn cleanup, which
+     * would otherwise leave it drawing its sprite every frame straight
+     * through the game-over screen and into whatever's resumed afterward
+     * (this engine never actually reboots between a suspend/game-over and
+     * Continue -- it's one continuously-running proc tree). Safe to call
+     * even if the AI's turn isn't the one in progress. */
+    EndAiPhaseGoalDisplay();
+#endif
+
     CallGameOverEvent();
 
     return;
