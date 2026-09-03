@@ -1,6 +1,7 @@
 
 
 #include "gbafe.h"
+#include "fontgrp.h"
 #include "power.h"
 #define FE8
 #define PUREFUNC __attribute__((pure))
@@ -3961,14 +3962,14 @@ enum
 // practice, see power.c's CO_GAUGE_MAX) and chapter gold is normally u32,
 // but proc->tmp[] here is s16 (see DebuggerProc), so editable gold is
 // capped well below its real u32 range. Fine for a debug tool.
-#define CoGoldEditMax 32000
+#define CoGoldEditMax 65535
 #define CoGaugeEditMax 9999
 // CO_GAUGE_PER_STAR: include/power.h -- shared with src/aw2_gfx.c, was a
 // separate CoGaugeStep define here before.
 #define CoGaugeHeartMax 10
 
-static const char * const sCoFactionNames[4] = { "Blue", "Green", "Red", "Purple" };
-static const int sCoFactionIds[4] = { FACTION_ID_BLUE, FACTION_ID_GREEN, FACTION_ID_RED, FACTION_ID_PURPLE };
+static const char * const sCoFactionNames[4] = { "Blue", "Red", "Green", "Purple" };
+static const int sCoFactionIds[4] = { FACTION_ID_BLUE, FACTION_ID_RED, FACTION_ID_GREEN, FACTION_ID_PURPLE };
 static const char * const sCoRowLabels[CoRowCount] = { "Team", "Gold", "Commander", "Gauge" };
 
 // proc->tmp layout: [0] = faction index being edited (0-3, see
@@ -4001,9 +4002,15 @@ void RedrawCoMenu(DebuggerProc * proc)
 
     BG_Fill(gBG0TilemapBuffer, 0);
     BG_EnableSyncByMask(BG0_SYNC_BIT);
+    ResetText(); 
+    
     ResetIconGraphics();
-
+    // PreallocateCommonGlyphs(); 
+    PreallocateNumberGlyphs(TEXT_COLOR_SYSTEM_BLUE); 
     struct Text * th = gStatScreen.text;
+    for (i = 0; i < (CoRowCount+2); ++i)
+        InitText(&th[i], CoLabelWidth);
+
 
     for (i = 0; i < CoRowCount; ++i)
     {
@@ -4014,19 +4021,21 @@ void RedrawCoMenu(DebuggerProc * proc)
         Text_DrawString(&th[i], sCoRowLabels[i]);
         PutText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(3, Y_HAND + (i * 2)));
     }
-
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Team * 2)),
-        TEXT_COLOR_SYSTEM_BLUE, sCoFactionNames[faction]);
-
-    PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Gold * 2)),
-        TEXT_COLOR_SYSTEM_BLUE, GetCoFactionField(proc, CoField_Gold));
-
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Commander * 2)),
-        TEXT_COLOR_SYSTEM_BLUE, CoScreen_GetCoName(GetCoFactionField(proc, CoField_CoId)));
+    
+    // void PutDrawText(struct Text* text, u16* dest, int colorId, int x, int tileWidth, const char* string);
+    PutDrawText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Team * 2)), TEXT_COLOR_SYSTEM_BLUE, 0, CoLabelWidth, sCoFactionNames[faction]);
+    // PutString(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Team * 2)),
+        // TEXT_COLOR_SYSTEM_BLUE, );
+    i++; 
+    PutDrawText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Commander * 2)), TEXT_COLOR_SYSTEM_BLUE, 0, CoLabelWidth, CoScreen_GetCoName(GetCoFactionField(proc, CoField_CoId)));
+    i++;
 
     for (i = 0; i < hearts; ++i)
         PutSpecialChar(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX + i, Y_HAND + (CoRow_Gauge * 2)),
             TEXT_COLOR_SYSTEM_BLUE, TEXT_SPECIAL_HEART);
+
+    PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX+4, Y_HAND + (CoRow_Gold * 2)),
+        TEXT_COLOR_SYSTEM_BLUE, GetCoFactionField(proc, CoField_Gold));
 
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 }
@@ -4056,10 +4065,9 @@ void EditCoInit(DebuggerProc * proc)
     h = (CoRowCount * 2) + 2;
 
     DrawUiFrame(BG_GetMapBuffer(1), x, y, w, h, TILEREF(0, 0), 0);
+    StartGreenText(proc);
 
-    struct Text * th = gStatScreen.text;
-    for (f = 0; f < CoRowCount; ++f)
-        InitText(&th[f], CoLabelWidth);
+
 
     RedrawCoMenu(proc);
 }
@@ -4078,10 +4086,10 @@ static void SaveCoState(DebuggerProc * proc)
 
 void EditCoIdle(DebuggerProc * proc)
 {
-    u16 keys = gKeyStatusPtr->repeatedKeys;
-    u16 newKeys = gKeyStatusPtr->newKeys;
+    u16 keys = gKeyStatusPtr->newKeys | gKeyStatusPtr->repeatedKeys;
+    
 
-    if (newKeys & (A_BUTTON | START_BUTTON))
+    if (keys & (A_BUTTON | START_BUTTON))
     {
         // A/Start: commit proc->tmp[] to gPlaySt/chapter gold and exit.
         SaveCoState(proc);
@@ -4090,10 +4098,11 @@ void EditCoIdle(DebuggerProc * proc)
         return;
     }
 
-    if (newKeys & B_BUTTON)
+    if (keys & B_BUTTON)
     {
         // B: discard -- proc->tmp[] is thrown away with the proc, nothing
         // in gPlaySt/chapter gold was ever touched.
+        // EndGreenText();
         Proc_Goto(proc, RestartLabel);
         BackPressSFX();
         return;
@@ -4105,7 +4114,7 @@ void EditCoIdle(DebuggerProc * proc)
         // EditStatsIdle/EditWExpIdle above).
         int max_digits = GetMaxDigits(CoGoldEditMax, 0);
 
-        DisplayVertUiHand(CoValueX * 8 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
+        DisplayVertUiHand(CoValueX * 8 - 4 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
         {
@@ -4156,14 +4165,14 @@ void EditCoIdle(DebuggerProc * proc)
 
     DisplayUiHand(CoValueX * 8 - (CoLabelWidth * 8) + 4, (Y_HAND + (proc->id * 2)) * 8);
 
-    if (newKeys & DPAD_UP)
+    if (keys & DPAD_UP)
     {
         proc->id = (proc->id + CoRowCount - 1) % CoRowCount;
         RedrawCoMenu(proc);
         return;
     }
 
-    if (newKeys & DPAD_DOWN)
+    if (keys & DPAD_DOWN)
     {
         proc->id = (proc->id + 1) % CoRowCount;
         RedrawCoMenu(proc);
@@ -4173,12 +4182,12 @@ void EditCoIdle(DebuggerProc * proc)
     switch (proc->id)
     {
     case CoRow_Team:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             proc->tmp[CoTmp_Faction] = (proc->tmp[CoTmp_Faction] + 1) % 4;
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             proc->tmp[CoTmp_Faction] = (proc->tmp[CoTmp_Faction] + 3) % 4;
             RedrawCoMenu(proc);
@@ -4186,13 +4195,13 @@ void EditCoIdle(DebuggerProc * proc)
         break;
 
     case CoRow_Gold:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             proc->digit = 1;
             proc->editing = true;
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             proc->digit = 0;
             proc->editing = true;
@@ -4201,13 +4210,13 @@ void EditCoIdle(DebuggerProc * proc)
         break;
 
     case CoRow_Commander:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             int value = (GetCoFactionField(proc, CoField_CoId) + 1) % CoScreen_GetCoCount();
             SetCoFactionField(proc, CoField_CoId, value);
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             int value = (GetCoFactionField(proc, CoField_CoId) + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
             SetCoFactionField(proc, CoField_CoId, value);
@@ -4216,7 +4225,7 @@ void EditCoIdle(DebuggerProc * proc)
         break;
 
     case CoRow_Gauge:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             int value = GetCoFactionField(proc, CoField_Gauge) + CO_GAUGE_PER_STAR;
 
@@ -4226,7 +4235,7 @@ void EditCoIdle(DebuggerProc * proc)
             SetCoFactionField(proc, CoField_Gauge, value);
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             int value = GetCoFactionField(proc, CoField_Gauge) - CO_GAUGE_PER_STAR;
 
