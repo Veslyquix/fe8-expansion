@@ -122,6 +122,7 @@ def load_items(path=ITEMS_C_PATH):
         items[item_name] = {
             "weaponType": fields.get("weaponType"),
             "might": parse_int(fields.get("might", "0")),
+            "weight": parse_int(fields.get("weight", "0")),
         }
 
     return items
@@ -206,9 +207,17 @@ def calculate_single_hit_damage(attacker_class, weapon, defender_class, defender
     return damage, defense_name
 
 
-def can_double(attacker_class, defender_class):
-    attacker_spd = attacker_class["base"]["spd"]
-    defender_spd = defender_class["base"]["spd"]
+def get_effective_speed(cls, weapon):
+    """Weapon weight over the wielder's own con drags speed down 1-for-1
+    (e.g. a 9-con Cavalier with a 10-weight Iron Axe: 10 - 9 = 1 overweight,
+    so their effective spd is base spd - 1)."""
+    overweight = max(0, weapon.get("weight", 0) - cls["base"]["con"])
+    return cls["base"]["spd"] - overweight
+
+
+def can_double(attacker_class, attacker_weapon, defender_class, defender_weapon):
+    attacker_spd = get_effective_speed(attacker_class, attacker_weapon)
+    defender_spd = get_effective_speed(defender_class, defender_weapon)
 
     return attacker_spd >= defender_spd + DOUBLE_SPEED_DIFFERENCE
 
@@ -240,12 +249,16 @@ def calculate_round(attacker_class, attacker_weapon,
     # Check doubling
     attacker_doubles = can_double(
         attacker_class,
-        defender_class
+        attacker_weapon,
+        defender_class,
+        defender_weapon
     )
 
     defender_doubles = can_double(
         defender_class,
-        attacker_class
+        defender_weapon,
+        attacker_class,
+        attacker_weapon
     )
 
     # Number of hits
