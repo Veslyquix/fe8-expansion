@@ -40574,3 +40574,6 @@ Nomad Trooper[.][X]
 ## MSG_CLASS_NOMAD_TROOPER_DESC
 Veteran nomads who have added the[LF]
 sword to their bow. Equip: Swords, Bows.[X]
+
+## MSG_PURCHASE_GENERIC_DEPLOY_SELECT
+Select where to deploy the new unit.[X]

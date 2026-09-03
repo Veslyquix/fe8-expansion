@@ -9,8 +9,11 @@
 #include "constants/terrains.h"
 #include "constants/msg.h"
 
+#include "bb.h"
 #include "bm.h"
 #include "banim_data.h"
+#include "bmtarget.h"
+#include "uiselecttarget.h"
 #include "bmidoten.h"
 #include "bmlib.h"
 #include "hardware.h"
@@ -38,6 +41,7 @@
 #include "soundwrapper.h"
 #include "uiutils.h"
 #include "opinfo.h"
+#include "playerphase.h" // HideMoveRangeGraphics
 #include "helpbox.h"
 #include "statscreen.h"
 #include "power.h"
@@ -418,29 +422,77 @@ static bool TryFortSpawnPosition(int baseX, int baseY, int* xOut, int* yOut)
     return true;
 }
 
-static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition* def, int factionId, int baseX, int baseY)
+/* Is (x, y) somewhere def's class could actually be deployed to -- on the
+ * map, unoccupied, and passable terrain for that class? Shared by the
+ * player's tile-targeting routine and by the menu's own availability check
+ * so a purchase option is never selectable with nowhere to put the unit. */
+static bool IsPurchaseGenericDeployTile(const struct PurchaseGenericDefinition* def, int x, int y)
+{
+    const struct ClassData* class;
+    const s8* movCost;
+
+    if (x < 0 || y < 0 || x >= gBmMapSize.x || y >= gBmMapSize.y)
+        return false;
+
+    if (gBmMapUnit[y][x] != 0)
+        return false;
+
+    if (gBmMapHidden[y][x] & HIDDEN_BIT_UNIT)
+        return false;
+
+    class = GetClassData(def->classId);
+    movCost = class->pMovCostTable[0];
+
+    return movCost[gBmMapTerrain[y][x]] >= 0;
+}
+
+/* Builds the target list the player cycles through when deploying from a
+ * Camp/Tent: the four orthogonally adjacent tiles only (no diagonals), each
+ * walkable by the class being bought and free of other units. Returns the
+ * number of targets added. */
+static int MakePurchaseGenericDeployTargetList(const struct PurchaseGenericDefinition* def, int baseX, int baseY)
+{
+    static const s8 offsets[][2] =
+    {
+        { 0, -1 }, // N
+        { 1, 0 },  // E
+        { 0, 1 },  // S
+        { -1, 0 }, // W
+    };
+
+    int i;
+    int count = 0;
+
+    InitTargets(baseX, baseY);
+
+    for (i = 0; i < (int)(sizeof(offsets) / sizeof(offsets[0])); ++i)
+    {
+        int x = baseX + offsets[i][0];
+        int y = baseY + offsets[i][1];
+
+        if (!IsPurchaseGenericDeployTile(def, x, y))
+            continue;
+
+        AddTarget(x, y, 0, 0);
+        ++count;
+    }
+
+    return count;
+}
+
+/* Spawns def's unit at an already-decided (x, y) and charges the faction for
+ * it. Callers are responsible for having picked a legal tile -- either via
+ * FindSpawnPositionFrom/TryFortSpawnPosition (AI and Fort), or via the
+ * player's own tile-targeting routine (Camp/Tent, see
+ * StartPurchaseGenericDeploySelection). */
+static bool SpawnPurchasedGenericAt(
+    const struct PurchaseGenericDefinition* def, int factionId, int x, int y, bool spawnedOnFort)
 {
     struct UnitDefinition uDef;
     struct Unit* unit;
-    int x, y;
-    bool spawnedOnFort = false;
-    bool isFort = GetPurchaseBaseKindAt(baseX, baseY) == PURCHASE_BASE_KIND_FORT;
 
     if (GetFactionChapterGoldAmount(factionId) < def->cost)
         return false;
-
-    /* Fort only ever spawns the unit onto its own tile -- unlike Camp/Tent,
-     * it never spills over onto an adjacent tile, even if the fort tile
-     * itself is occupied (in which case the purchase simply fails this
-     * turn rather than spawning next to it). */
-    if (isFort)
-        spawnedOnFort = TryFortSpawnPosition(baseX, baseY, &x, &y);
-
-    if (!spawnedOnFort)
-    {
-        if (isFort || !FindSpawnPositionFrom(baseX, baseY, def->classId, &x, &y))
-            return false;
-    }
 
     BuildGenericUnitDefinition(def, factionId, x, y, &uDef);
 
@@ -468,6 +520,31 @@ static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition
     return true;
 }
 
+static bool PurchaseGenericUnitForFaction(const struct PurchaseGenericDefinition* def, int factionId, int baseX, int baseY)
+{
+    int x, y;
+    bool spawnedOnFort = false;
+    bool isFort = GetPurchaseBaseKindAt(baseX, baseY) == PURCHASE_BASE_KIND_FORT;
+
+    if (GetFactionChapterGoldAmount(factionId) < def->cost)
+        return false;
+
+    /* Fort only ever spawns the unit onto its own tile -- unlike Camp/Tent,
+     * it never spills over onto an adjacent tile, even if the fort tile
+     * itself is occupied (in which case the purchase simply fails this
+     * turn rather than spawning next to it). */
+    if (isFort)
+        spawnedOnFort = TryFortSpawnPosition(baseX, baseY, &x, &y);
+
+    if (!spawnedOnFort)
+    {
+        if (isFort || !FindSpawnPositionFrom(baseX, baseY, def->classId, &x, &y))
+            return false;
+    }
+
+    return SpawnPurchasedGenericAt(def, factionId, x, y, spawnedOnFort);
+}
+
 static const char* GetPurchaseGenericClassName(const struct PurchaseGenericDefinition* def)
 {
     const struct ClassData* class;
@@ -489,17 +566,28 @@ static const char* GetPurchaseGenericClassName(const struct PurchaseGenericDefin
     return def->name;
 }
 
-static u8 GetPurchaseGenericOptionAvailability(const struct PurchaseGenericDefinition* def)
+/* Does this base have anywhere to actually put the unit? Must agree with what
+ * the deploy path will accept, or the menu would offer an option that then
+ * fails (or, worse for Camp/Tent, opens a tile-picker with no tiles). */
+static bool HasPurchaseGenericDeploySpace(const struct PurchaseGenericDefinition* def)
 {
     int x, y;
 
+    if (GetPurchaseBaseKindAt(sPurchaseGenericBaseX, sPurchaseGenericBaseY) == PURCHASE_BASE_KIND_FORT)
+        return TryFortSpawnPosition(sPurchaseGenericBaseX, sPurchaseGenericBaseY, &x, &y);
+
+    return MakePurchaseGenericDeployTargetList(def, sPurchaseGenericBaseX, sPurchaseGenericBaseY) != 0;
+}
+
+static u8 GetPurchaseGenericOptionAvailability(const struct PurchaseGenericDefinition* def)
+{
     if (def == NULL)
         return MENU_NOTSHOWN;
 
     if (GetFactionChapterGoldAmount(sPurchaseGenericFactionId) < def->cost)
         return MENU_DISABLED;
 
-    if (!FindSpawnPositionFrom(sPurchaseGenericBaseX, sPurchaseGenericBaseY, def->classId, &x, &y))
+    if (!HasPurchaseGenericDeploySpace(def))
         return MENU_DISABLED;
 
     return MENU_ENABLED;
@@ -1026,6 +1114,81 @@ static int PurchaseGenericMenuItemDraw(struct MenuProc* menu, struct MenuItemPro
     return 0;
 }
 
+/* The purchase the player is placing right now. Only meaningful between
+ * StartPurchaseGenericDeploySelection and the target selection ending (either
+ * way) -- the tile-selection proc has no per-instance storage of its own, and
+ * only one deploy selection can ever be open at a time. */
+static const struct PurchaseGenericDefinition* sPurchaseGenericPendingDef = NULL;
+
+static void PurchaseGenericDeploySelect_OnInit(ProcPtr proc)
+{
+    StartSubtitleHelp(proc, GetStringFromIndex(MSG_PURCHASE_GENERIC_DEPLOY_SELECT));
+}
+
+static u8 PurchaseGenericDeploySelect_OnSelect(ProcPtr proc, struct SelectTarget* target)
+{
+    (void)proc;
+
+    if (sPurchaseGenericPendingDef != NULL)
+    {
+        /* Gold is only charged here, on A -- never when the menu option was
+         * picked, so backing out of tile selection with B costs nothing. */
+        SpawnPurchasedGenericAt(
+            sPurchaseGenericPendingDef, sPurchaseGenericFactionId, target->x, target->y, false);
+    }
+
+    sPurchaseGenericPendingDef = NULL;
+
+    return TARGETSELECTION_ACTION_END | TARGETSELECTION_ACTION_SE_6A | TARGETSELECTION_ACTION_CLEARBGS;
+}
+
+static u8 PurchaseGenericDeploySelect_OnCancel(ProcPtr proc, struct SelectTarget* target)
+{
+    (void)target;
+
+    sPurchaseGenericPendingDef = NULL;
+
+    /* Ends the selection (and with it the subtitle help) before reopening the
+     * purchase menu, so the menu isn't immediately cleared out from under
+     * itself by this proc's own onEnd -- same ordering as vanilla's
+     * GenericSelection_BackToUM. No gold has been spent at this point. */
+    EndTargetSelection(proc);
+
+    HideMoveRangeGraphics();
+
+    PurchaseGenerics_TryStartTileMenu(sPurchaseGenericBaseX, sPurchaseGenericBaseY);
+
+    return TARGETSELECTION_ACTION_SE_6B;
+}
+
+static void PurchaseGenericDeploySelect_OnEnd(ProcPtr proc)
+{
+    (void)proc;
+
+    ClearBg0Bg1();
+}
+
+static const struct SelectInfo sSelectInfo_PurchaseGenericDeploy =
+{
+    .onInit = PurchaseGenericDeploySelect_OnInit,
+    .onEnd = PurchaseGenericDeploySelect_OnEnd,
+    .onSelect = PurchaseGenericDeploySelect_OnSelect,
+    .onCancel = PurchaseGenericDeploySelect_OnCancel,
+};
+
+static bool StartPurchaseGenericDeploySelection(const struct PurchaseGenericDefinition* def)
+{
+    if (MakePurchaseGenericDeployTargetList(def, sPurchaseGenericBaseX, sPurchaseGenericBaseY) == 0)
+        return false;
+
+    sPurchaseGenericPendingDef = def;
+
+    ClearPurchaseGenericDetails();
+    NewTargetSelection(&sSelectInfo_PurchaseGenericDeploy);
+
+    return true;
+}
+
 static u8 PurchaseGenericMenuItemSelect(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {
     const struct PurchaseGenericDefinition* def = GetPurchaseGenericForSlot(menuItem->itemNumber);
@@ -1036,10 +1199,22 @@ static u8 PurchaseGenericMenuItemSelect(struct MenuProc* menu, struct MenuItemPr
         return MENU_ACT_SND6B;
     }
 
-    if (!PurchaseGenericUnitForFaction(def, sPurchaseGenericFactionId, sPurchaseGenericBaseX, sPurchaseGenericBaseY))
-        return MENU_ACT_SND6B;
+    /* Fort deploys onto the fort's own tile and nowhere else, so there's
+     * nothing for the player to choose -- buy immediately, as before.
+     * Camp/Tent spill onto an adjacent tile, so hand off to the tile-picker
+     * and let the player say which one (and charge only once they confirm). */
+    if (GetPurchaseBaseKindAt(sPurchaseGenericBaseX, sPurchaseGenericBaseY) == PURCHASE_BASE_KIND_FORT)
+    {
+        if (!PurchaseGenericUnitForFaction(def, sPurchaseGenericFactionId, sPurchaseGenericBaseX, sPurchaseGenericBaseY))
+            return MENU_ACT_SND6B;
 
-    ClearPurchaseGenericDetails();
+        ClearPurchaseGenericDetails();
+
+        return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+    }
+
+    if (!StartPurchaseGenericDeploySelection(def))
+        return MENU_ACT_SND6B;
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
