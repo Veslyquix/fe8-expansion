@@ -1222,25 +1222,33 @@ static void CoScreen_LoadAffinityBonusIcons(void)
 
 /* Draws [type icon][sign icon][magnitude digit] at (x, y) in the
  * gUiTmScratchA page-region coordinate space (same space DrawCoInfoBar's
- * bars use). movBon takes priority if a class somehow has both set (no
- * current CO does) -- only one row is free per class without further
- * restructuring CO_AFFINITY_ROW_STEP, so only one bonus type can be shown
- * per class for now. Draws nothing if both are 0. */
-static void CoScreen_DrawAffinityBonusIcon(int x, int y, const struct CoClassAffinity* affinity)
+ * bars use). Reads through GetCoClassMovBonus/GetCoClassRangeBonus (not
+ * the plain affinity->movBon/rangeBon fields) so this reflects
+ * movBonPow/movBonSup/rangeBonPow/rangeBonSup while coId's power/super
+ * happens to be active, same as CoScreen_DrawPageAffinity's bars above
+ * using GetEffectiveClassAffinityRating instead of the plain rating.
+ * movBon takes priority if a class somehow has both set (no current CO
+ * does) -- only one row is free per class without further restructuring
+ * CO_AFFINITY_ROW_STEP, so only one bonus type can be shown per class for
+ * now. Draws nothing if both are 0. */
+static void CoScreen_DrawAffinityBonusIcon(int x, int y, int coId, int classId)
 {
     int bon;
     int typeIcon;
     int signIcon;
     int digitIcon;
 
-    if (affinity->movBon != 0) {
-        bon = affinity->movBon;
+    bon = GetCoClassMovBonus(coId, classId);
+    if (bon != 0) {
         typeIcon = CO_BONUS_ICON_FOOT;
-    } else if (affinity->rangeBon != 0) {
-        bon = affinity->rangeBon;
-        typeIcon = CO_BONUS_ICON_ARROW;
     } else {
-        return;
+        bon = GetCoClassRangeBonus(coId, classId);
+
+        if (bon != 0) {
+            typeIcon = CO_BONUS_ICON_ARROW;
+        } else {
+            return;
+        }
     }
 
     signIcon = (bon > 0) ? CO_BONUS_ICON_PLUS : CO_BONUS_ICON_MINUS;
@@ -1398,7 +1406,7 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
         DrawCoInfoBar(i, CO_AFFINITY_BAR_TILE_X, y, 30,
             GetEffectiveClassAffinityRating(co, gCoScreen.coId, co->affinities[i].classId), 30);
 #if FE8_AW2_ASSETS
-        CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X - 2, y + 2, &co->affinities[i]);
+        CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X - 2, y + 2, gCoScreen.coId, co->affinities[i].classId);
 #endif
         y += CO_AFFINITY_ROW_STEP;
     }
@@ -1408,7 +1416,7 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
         DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30,
             GetEffectiveClassAffinityRating(co, gCoScreen.coId, co->affinities[i+offset].classId), 30);
 #if FE8_AW2_ASSETS
-        CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X + 9 - 2, y + 2, &co->affinities[i+offset]);
+        CoScreen_DrawAffinityBonusIcon(CO_AFFINITY_BAR_TILE_X + 9 - 2, y + 2, gCoScreen.coId, co->affinities[i+offset].classId);
 #endif
         y += CO_AFFINITY_ROW_STEP;
     }
