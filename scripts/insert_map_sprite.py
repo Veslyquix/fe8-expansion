@@ -174,63 +174,77 @@ def _block_content_x_range(img, tile_val, sheet_width_px=32, tile_px=8):
 
 
 def align_motion_block_to_own_art(block, name, template_img_path, new_img_path):
-    """Corrects each frame's OAM X offset so the NEW class's own art lands
-    at the same on-screen position the TEMPLATE's art does for that frame,
+    """Applies ONE uniform X correction to every frame's OAM offset, sized
+    to how far off the new class's own art sits from the template's,
     instead of leaving the template's cloned (donor-art-tuned) X offsets
     in place unchanged.
 
     Why this exists: the motion table's frame layout/timing IS a genuine
-    fixed template shared across same-UNIT_ICON_SIZE classes, but a few
-    individual frames (typically the trailing "settle" frames, seen for
-    both Archer and Thief) carry a small hand-tuned per-class X nudge
-    compensating for exactly where that donor's artist happened to draw
-    the character within the frame's 32px-wide block. A new class's art
-    only coincidentally shares a donor's placement in most frames (whole
-    sprite sheets are often traced/adapted from one specific donor, e.g.
-    LynLord's from Eirika_Lord) -- but not always in every single frame.
-    Blindly cloning the donor's OAM bytes wholesale silently carries over
-    THAT donor's nudges, which is wrong for any frame where the new art's
-    own placement doesn't match the donor's. Confirmed via a real bug:
-    LynLord's frames 0-15 pixel-matched Eirika_Lord's art exactly (fine to
-    clone as-is), but frames 16-18 sat ~4px further right in LynLord's own
-    sheet -- cloning Archer's (or even Eirika_Lord's) OAM X for those 3
-    frames put LynLord's sprite visibly off during that animation.
+    fixed template shared across same-UNIT_ICON_SIZE classes, and (as it
+    turns out) so is the OAM X offset itself -- every frame in a given
+    class's own table uses the SAME X value (confirmed: Eirika_Lord's
+    table is one constant X=-16 across all 19 frames; Archer's is one
+    constant X=-16 too except for 3 frames carrying a shared +2 nudge, not
+    3 independently-tuned ones). A walk cycle's frame-to-frame motion is
+    what makes it read as smooth, so the offset must stay CONSTANT across
+    frames -- computing it per-frame independently (an earlier version of
+    this function did exactly that) "centers" each frame in isolation but
+    breaks that constancy, producing a visible side-to-side wobble instead
+    of a clean walk cycle. Confirmed via a real bug: LynLord's frames 0-15
+    pixel-matched Eirika_Lord's art exactly, so cloning Eirika_Lord's
+    table verbatim (one constant offset) looked correct; a per-frame
+    "fix" for the 3 frames that measured slightly off individually instead
+    introduced the wobble this function now avoids by construction.
 
-    Returns (corrected_block, corrections) where corrections is a list of
-    (frame_num, delta_px) for every frame this actually changed -- print
-    these so a human can sanity-check the result once, rather than
-    trusting silent pixel math forever.
+    The single correction is the MEDIAN of each usable frame's own
+    bbox-center delta (robust against one or two frames' natural pose-
+    width variance skewing a mean) -- if that comes out to 0, the donor's
+    offset is already correct and the block is returned unchanged.
+
+    Returns (corrected_block, delta_px) -- delta_px is None if no frames
+    had usable bbox data to measure from (block returned unchanged).
     """
     template_img = Image.open(template_img_path)
     new_img = Image.open(new_img_path)
 
-    corrections = []
+    deltas = []
+    for m in _FRAME_RE.finditer(block):
+        whole, frame_name, frame_num, y, attr1_s, attr2, tile_s = m.groups()
+        if frame_name != name:
+            continue
+        tile_val = int(tile_s, 16)
+        tmpl_range = _block_content_x_range(template_img, tile_val)
+        new_range = _block_content_x_range(new_img, tile_val)
+        if tmpl_range is None or new_range is None:
+            continue
+        tmpl_center = (tmpl_range[0] + tmpl_range[1]) / 2
+        new_center = (new_range[0] + new_range[1]) / 2
+        deltas.append(tmpl_center - new_center)
+
+    if not deltas:
+        return block, None
+
+    deltas.sort()
+    mid = len(deltas) // 2
+    median = deltas[mid] if len(deltas) % 2 else (deltas[mid - 1] + deltas[mid]) / 2
+    delta = round(median)
+    if delta == 0:
+        return block, 0
 
     def _replace(m):
         whole, frame_name, frame_num, y, attr1_s, attr2, tile_s = m.groups()
         if frame_name != name:
             return whole
-        tile_val = int(tile_s, 16)
-        tmpl_range = _block_content_x_range(template_img, tile_val)
-        new_range = _block_content_x_range(new_img, tile_val)
-        if tmpl_range is None or new_range is None:
-            return whole
-        tmpl_center = (tmpl_range[0] + tmpl_range[1]) / 2
-        new_center = (new_range[0] + new_range[1]) / 2
-        delta = round(tmpl_center - new_center)
-        if delta == 0:
-            return whole
         attr1 = int(attr1_s, 16)
         x = _signed9(attr1)
         new_attr1 = _pack_x9(attr1, x + delta)
-        corrections.append((int(frame_num), delta))
         return whole.replace(
             f"{attr1_s}, {attr2} @ OAM Data #0",
             f"0x{new_attr1:04X}, {attr2} @ OAM Data #0",
         )
 
     corrected = _FRAME_RE.sub(_replace, block)
-    return corrected, corrections
+    return corrected, delta
 
 
 def main():
@@ -262,32 +276,29 @@ def main():
     idx = next_wait_index()
     motion_block = clone_motion_block(args.motion_template, args.name)
 
-    # Re-derive each frame's OAM X offset from where THIS class's own art
+    # Re-derive ONE uniform OAM X offset from where THIS class's own art
     # actually sits, instead of trusting the donor's cloned bytes verbatim
-    # -- see align_motion_block_to_own_art's docstring for why (a real bug:
-    # LynLord's frames 16-18 sat ~4px right of Eirika_Lord's, which her
-    # cloned motion table didn't account for).
+    # -- see align_motion_block_to_own_art's docstring for why it must be a
+    # single value applied to every frame, not a per-frame correction (a
+    # per-frame version of this caused a real, confirmed wobble bug).
     template_move_png = REPO / "graphics" / "unit_icon" / "move" / f"unit_icon_move_{args.motion_template}_sheet.png"
-    corrections = []
+    delta = None
     if template_move_png.exists():
-        motion_block, corrections = align_motion_block_to_own_art(
+        motion_block, delta = align_motion_block_to_own_art(
             motion_block, args.name, template_move_png, move_dst)
     else:
         print(f"warning: {template_move_png.relative_to(REPO)} not found on disk -- "
-              f"skipping per-frame alignment correction, motion block is an "
-              f"UNCHECKED clone of {args.motion_template!r}'s own OAM offsets",
-              file=sys.stderr)
+              f"skipping alignment correction, motion block is an UNCHECKED clone "
+              f"of {args.motion_template!r}'s own OAM offsets", file=sys.stderr)
 
-    if corrections:
-        print(f"note: adjusted {len(corrections)} frame(s)' OAM X offset (bbox-center "
-              f"alignment against {args.name}'s own art instead of "
-              f"{args.motion_template!r}'s) -- (frame, delta_px): {corrections}. "
-              f"This is a best-effort SUGGESTION, not a guaranteed-correct value --  "
+    if delta:
+        print(f"note: shifted every frame's OAM X offset by {delta:+d}px (bbox-center "
+              f"median across all frames, {args.name}'s own art vs "
+              f"{args.motion_template!r}'s). This is a best-effort SUGGESTION -- "
               f"bbox-center comparison is thrown off when the new class's art is "
               f"legitimately a different width than the template's (different horse "
-              f"breed, hair, cape, ...), producing a nonzero 'correction' for frames "
-              f"that don't actually need one. Load both PNGs side by side and eyeball "
-              f"the flagged frames before trusting this over the template's own value.",
+              f"breed, hair, cape, ...). Load both PNGs side by side and eyeball a "
+              f"couple frames before trusting this over the template's own value.",
               file=sys.stderr)
 
     print(f"""

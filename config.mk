@@ -379,6 +379,15 @@ GROUP_AI ?= 1
 # that must never leave their tile, even if provoked or lured.
 NULL_BOSSAI_MOV ?= 1
 
+# --- Optional RngRandomizer --------------------------------------------------
+# Spins the battle RNG once per frame during the player's own turn (while
+# a battle is in progress, or a unit's movement range is being shown), so
+# the exact roll a battle produces depends on real elapsed frames -- a
+# reset-and-replay with identical inputs no longer reproduces the same
+# result. Ported from TR143's "RNG Randomizer" GBA ASM hack
+# (https://feuniverse.us/t/gba-rng-randomizer/3175). See src/rng_randomizer.c.
+RNG_RANDOMIZER ?= 1
+
 
 # --- Optional PromoteCommand ------------------------------------------------------
 # Adds a "Promote" command to the unit menu for units at level 20+ who

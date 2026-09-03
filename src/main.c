@@ -4,6 +4,7 @@
 #include "hardware.h"
 #include "proc.h"
 #include "rng.h"
+#include "rng_randomizer.h"
 #include "mu.h"
 #include "soundwrapper.h"
 #include "gamecontrol.h"
@@ -36,6 +37,11 @@ void AgbMain(void)
 
     /* maybe WAITCNT will not reset after SW_RST? */
     sw_rst = (REG_WAITCNT != 0);
+
+#if FE8_RNG_RANDOMIZER
+    RngRandomizer_OnBoot();
+#endif
+
     SetSoftwareResetFlag(sw_rst);
     if (sw_rst == TRUE)
         RegisterRamReset(~2);

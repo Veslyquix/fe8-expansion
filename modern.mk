@@ -231,6 +231,9 @@ endif
 ifeq ($(NULL_BOSSAI_MOV),1)
 MODERN_DEFINE_FLAGS += -DFE8_NULL_BOSSAI_MOV=1
 endif
+ifeq ($(RNG_RANDOMIZER),1)
+MODERN_DEFINE_FLAGS += -DFE8_RNG_RANDOMIZER=1
+endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
 endif
@@ -1506,8 +1509,8 @@ MODERN_ELF_MANIFEST := $(MODERN_ELF_LINK_DIR)/manifest.txt
 MODERN_ELF_OBJECTS_LST := $(MODERN_ELF_LINK_DIR)/objects.lst
 MODERN_ELF_LINK_SETTINGS := $(MODERN_ELF_LINK_DIR)/settings.txt
 MODERN_ELF_LINK_PREP := $(MODERN_ELF_LINK_DIR)/prepare.stamp
-MODERN_ELF := $(MODERN_OUTPUT_DIR)/fireemblem8.elf
-MODERN_MAP := $(MODERN_OUTPUT_DIR)/fireemblem8.map
+MODERN_ELF := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.elf
+MODERN_MAP := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.map
 MODERN_ELF_BANIM_SYM := $(BANIM_OBJECT).sym.o
 
 # Clean linker script (issue #4/#16) — replaces the transitional generator.
@@ -1626,6 +1629,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--danger-radius "$(DANGER_RADIUS)" \
 		--group-ai "$(GROUP_AI)" \
 		--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
+		--rng-randomizer "$(RNG_RANDOMIZER)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 		--range-rework "$(RANGE_REWORK)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1728,6 +1732,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--danger-radius "$(DANGER_RADIUS)" \
 	--group-ai "$(GROUP_AI)" \
 	--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
+	--rng-randomizer "$(RNG_RANDOMIZER)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 	--range-rework "$(RANGE_REWORK)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1834,6 +1839,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DANGER_RADIUS=$(DANGER_RADIUS) \
 	-DFE8_GROUP_AI=$(GROUP_AI) \
 	-DFE8_NULL_BOSSAI_MOV=$(NULL_BOSSAI_MOV) \
+	-DFE8_RNG_RANDOMIZER=$(RNG_RANDOMIZER) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
 	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
@@ -2030,6 +2036,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'danger_radius=$(DANGER_RADIUS)'; \
 		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
 		printf '%s\n' 'null_bossai_mov=$(NULL_BOSSAI_MOV)'; \
+		printf '%s\n' 'rng_randomizer=$(RNG_RANDOMIZER)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
 		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
@@ -2435,7 +2442,7 @@ expansion-modern-elf: expansion-modern-mgfembp expansion-modern-all \
 # identity with the legacy build.
 # ---------------------------------------------------------------------------
 
-MODERN_ROM := $(MODERN_OUTPUT_DIR)/fireemblem8.gba
+MODERN_ROM := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.gba
 MODERN_ROM_HEADER_VERIFIER := scripts/modernize/verify_rom_header.py
 MODERN_ROM_HEADER_FINALIZER := scripts/modernize/finalize_rom_header.py
 MODERN_BOOT_SCENARIO := tools/gba-playtest/scenarios/boot.json
@@ -2546,7 +2553,7 @@ $(MODERN_IPS): $(MODERN_ROM) $(BASEROM) $(MODERN_IPS_GENERATOR)
 expansion-modern-ips: expansion-modern-rom $(MODERN_IPS)
 	@printf 'Modern IPS patch ready: %s\n' "$(MODERN_IPS)"
 
-# fireemblem8.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
+# AdvanfeWarblem.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
 # file): built from src/febuilder_pointers.c's gFebuilderPointers[] array
 # (#if FE8_FEBUILDER_POINTERS) -- see scripts/gen_custom_pointer_txt.py.
 MODERN_CUSTOM_POINTER_TXT := $(MODERN_ROM:.gba=.custom_pointer.txt)
