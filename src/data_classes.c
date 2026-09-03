@@ -3986,7 +3986,7 @@ CONST_DATA struct ClassData gClassData[] = {
 		},
 		.pBattleAnimDef = AnimConf_75,
 		.pMovCostTable = {
-			TerrainTable_MovCost_CommonT1Normal,
+			TerrainTable_MovCost_SoldierT1Normal,
 			TerrainTable_MovCost_CommonT1Rain,
 			TerrainTable_MovCost_CommonT1Snow,
 		},

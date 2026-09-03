@@ -520,6 +520,8 @@ extern u16 Pal_EkrPopup[];
 extern u16 Tsa_EkrPopup[];
 // extern ??? gCharacterData
 
+extern CONST_DATA s8 TerrainTable_MovCost_SoldierT1Normal[];
+
 extern CONST_DATA s8 TerrainTable_MovCost_CommonT2Normal[];
 extern CONST_DATA s8 TerrainTable_MovCost_CommonT1Normal[];
 extern CONST_DATA s8 TerrainTable_MovCost_ArmorNormal[];
