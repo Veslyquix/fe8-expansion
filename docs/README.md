@@ -19,6 +19,8 @@ the authoritative technical documentation and are checked by CI.
 | Author game content (characters/classes/items/etc.) | [`generated_data_tutorial.md`](generated_data_tutorial.md) |
 | Enable/extend starter content, mechanics, or Threat Range QoL | [`starter_features.md`](starter_features.md) |
 | Author expansion-localized UI text/locales | [`localization.md`](localization.md) |
+| Add custom BGM / instrument maps | [`custom_bgm.md`](custom_bgm.md) |
+| Author or convert a chapter map layout (.tmx/.mar) | [`map_authoring.md`](map_authoring.md) |
 | Generate or test localized full-game message catalogs | [`game_localization_catalog.md`](game_localization_catalog.md) |
 | Contribute code/docs and know the review process | [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`project-governance.md`](project-governance.md) |
 | Come from the old decomp-base/agbcc workflow | [`migration-from-decomp.md`](migration-from-decomp.md) |
@@ -64,6 +66,7 @@ numbers mark merged (closed) contracts only:
 | Debug-tools extension (issue #11) | Action-registration API (`include/expansion_debugtools.h`), `FE8_EXPANSION_DEBUGTOOLS_ENABLED` | [`debugtools.md`](debugtools.md) |
 | Starter features (issue #6) | Four default-off flags; `include/expansion_mechanics.h`; `include/expansion_starter_content.h`; danger-overlay menu | [`starter_features.md`](starter_features.md) |
 | Localization (issue #18) | `ExpansionLocaleId`/`ExpansionMsgId`, `texts/expansion/`, prefs + selector/settings APIs | [`localization.md`](localization.md), [`save_format.md`](save_format.md) |
+| Custom BGM (`NIMAP2`) | NIMAP2 instrument map + percussion drumfix voicegroups, `sound/songs/bgm/`, `scripts/sound/` | [`custom_bgm.md`](custom_bgm.md) |
 | Runtime test harness (issue #13) | JSON scenario format + fingerprints, `GBA_PLAYTEST_HOST_ONLY` | [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md) |
 | Upstream-port review tooling | `python3 -m scripts.upstream_port {scan,drift,verify,update-state}` | [`upstream-porting.md`](upstream-porting.md) |
 | Proc/runtime core | `include/proc.h` (`struct Proc`, `struct ProcCmd[]`) | [`architecture.md`](architecture.md) |
@@ -109,6 +112,7 @@ and
 | [`generated_data.md`](generated_data.md) | Current, reference | Full generated-data design reference (issue #5) |
 | [`generated_data_tutorial.md`](generated_data_tutorial.md) | Current, tutorial | Contributor-facing generated-data walkthrough |
 | [`starter_features.md`](starter_features.md) | Current | Four opt-in flags, typed mechanics/content API, QoL and matrices (issue #6) |
+| [`random_bgm.md`](random_bgm.md) | Current | `RandBgm`/`ContinueBgmBattle` map-BGM flags: seeded selection, hook points, save-compat |
 | [`localization.md`](localization.md) | Current | Stable locale/message IDs, authoring, prefs/UI, budgets and matrices (issue #18) |
 | [`text_drawing_guide.md`](text_drawing_guide.md) | Current | `struct Text`/VRAM text-drawing schema: texts.txt → GetStringFromIndex → InitText → ... → PutText, plus number-glyph preallocation and multi-line strings |
 | [`game_localization_catalog.md`](game_localization_catalog.md) | Current | Full-game FE8U-indexed CJK catalog generation, runtime bounds, and synthetic link gate |

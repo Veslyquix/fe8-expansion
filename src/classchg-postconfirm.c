@@ -26,7 +26,11 @@ void ClassChgExecPromotionReal(struct ProcClassChgPostConfirm *proc)
     struct ProcPromoMain *parent = proc->proc_parent;
     struct ProcPromoHandler *gparent = parent->proc_parent;
 
+#if FE8_PURCHASE_GENERICS
+    struct Unit *unit = parent->unit ? parent->unit : GetUnitFromCharId(parent->pid);
+#else
     struct Unit *unit = GetUnitFromCharId(parent->pid);
+#endif
 
     if (unit == NULL) {
         Proc_End(proc);

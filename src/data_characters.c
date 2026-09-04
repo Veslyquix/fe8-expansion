@@ -10,24 +10,24 @@
 CONST_DATA struct CharacterData gCharacterData[] = {
     [CHARACTER_EIRIKA - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_HANNAH,
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_WAKWI,
 #else
         .nameTextId = 0x212,
 #endif
         .descTextId = 0x26e,
         .number = CHARACTER_EIRIKA,
-        .defaultClass = CLASS_EIRIKA_LORD,
+        .defaultClass = CLASS_LYN_LORD,
         .portraitId = 0x2,
-        .affinity = UNIT_AFFIN_LIGHT,
+        .affinity = UNIT_AFFIN_WIND,
         .sort_order = 0x1,
         .baseLevel = 1,
 
-        .baseHP  = 0,
+        .baseHP  = 6,
         .basePow = 0,
         .baseSkl = 0,
         .baseSpd = 0,
-        .baseDef = 0,
-        .baseRes = 0,
+        .baseDef = 2,
+        .baseRes = 2,
         .baseLck = 5,
         .baseCon = 0,
 
@@ -36,19 +36,19 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         },
 
         .growthHP  = 70,
-        .growthPow = 40,
-        .growthSkl = 60,
-        .growthSpd = 60,
-        .growthDef = 30,
-        .growthRes = 30,
-        .growthLck = 60,
+        .growthPow = 45,
+        .growthSkl = 50,
+        .growthSpd = 50,
+        .growthDef = 35,
+        .growthRes = 35,
+        .growthLck = 50,
         .attributes = CA_FEMALE,
         .pSupportData = &SupportData_Eirika,
         .visit_group = 0x7,
     },
     [CHARACTER_SETH - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS,
+        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE,
 #else
         .nameTextId = 0x213,
 #endif
@@ -56,22 +56,21 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .number = CHARACTER_SETH,
         .defaultClass = CLASS_PALADIN,
         .portraitId = 0x4,
-        .affinity = UNIT_AFFIN_ANIMA,
+        .affinity = UNIT_AFFIN_WIND,
         .sort_order = 0x3,
         .baseLevel = 1,
 
         .baseHP  = 7,
-        .basePow = 7,
-        .baseSkl = 9,
-        .baseSpd = 5,
-        .baseDef = 3,
-        .baseRes = 5,
-        .baseLck = 13,
+        .basePow = 0,
+        .baseSkl = 0,
+        .baseSpd = 0,
+        .baseDef = 2,
+        .baseRes = 2,
+        .baseLck = 5,
         .baseCon = 0,
 
         .baseRanks = {
-            [ITYPE_SWORD] = WPN_EXP_A,
-            [ITYPE_LANCE] = WPN_EXP_A,
+            [ITYPE_BOW] = WPN_EXP_E,
         },
 
         .growthHP  = 90,
@@ -6674,9 +6673,9 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .basePow = 0,
         .baseSkl = 0,
         .baseSpd = 0,
-        .baseDef = 2,
+        .baseDef = 0,
         .baseRes = 0,
-        .baseLck = 0,
+        .baseLck = 5,
         .baseCon = 0,
 
         .growthHP  = 85,

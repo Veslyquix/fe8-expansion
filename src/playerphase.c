@@ -19,7 +19,6 @@
 #include "hardware.h"
 #include "bmphase.h"
 #include "expansion_danger_overlay.h"
-#include "alpha_sprite_arrow.h"
 #include "bmmind.h"
 #include "bmtrap.h"
 #include "minimap.h"
@@ -31,6 +30,7 @@
 #include "expansion_debugtools.h"
 #include "expansion_itemtest.h"
 #include "purchase_generics.h"
+#include "dangerradius.h"
 
 #include "playerphase.h"
 
@@ -388,6 +388,14 @@ void PlayerPhase_MainIdle(ProcPtr proc)
                         ShowUnitSprite(unit);
                     }
 
+                    /* UnitMapUiFramePal (src/player_interface.c) shares BG
+                     * palette bank 1 with the unit-burst UI under
+                     * FE8_AW2_ASSETS, so hovering an enemy just before
+                     * opening this menu (ApplyUnitMapUiFramePal(FACTION_RED,
+                     * ...) from the burst display) leaves it tinted red.
+                     * Reload the player's own tint before the menu draws. */
+                    ReloadPlayerUnitMapUiFramePal();
+
                     StartOrphanMenuAdjusted(&gMapMenuDef, gBmSt.cursorTarget.x - gBmSt.camera.x, 1, 0x17);
                     Eventinfo_CondFalse_2();
 
@@ -435,6 +443,18 @@ else_stmt:
 
                 return;
             }
+#if FE8_DANGER_RADIUS
+            /* Hook.asm/DetermineDR.asm: Select toggles the danger radius
+             * overlay for the unit under the cursor (or all enemies, when
+             * not hovering one -- see DangerRadius_Determine). Unavailable
+             * during Fog of War (see include/dangerradius.h). */
+            else if ((gKeyStatusPtr->newKeys & SELECT_BUTTON) && (gPlaySt.chapterVisionRange == 0))
+            {
+                struct Unit * unit = GetUnit(gBmMapUnit[gBmSt.playerCursor.y][gBmSt.playerCursor.x]);
+
+                DangerRadius_Determine(unit);
+            }
+#endif
         }
     }
 
@@ -812,6 +832,14 @@ void PlayerPhase_BackToMove(ProcPtr proc)
 
     RefreshEntityBmMaps();
     RenderBmMap();
+
+#if FE8_DANGER_RADIUS
+    /* ActionCancelDR.asm: recalc Danger Radius after cancelling a move,
+     * when FOW is off and DR is active. */
+    if ((gPlaySt.chapterVisionRange == 0) && (DangerRadius_GetActiveCount() > 0))
+        DangerRadius_Refresh();
+#endif
+
     RefreshUnitSprites();
 
     if (!(gActiveUnit->state & US_HAS_MOVED))
@@ -1024,6 +1052,13 @@ void PlayerPhase_FinishAction(ProcPtr proc)
 
         RefreshEntityBmMaps();
         RenderBmMap();
+
+#if FE8_DANGER_RADIUS
+        /* ActionCommitDR.asm: recalc Danger Radius after committing to an
+         * action (FOW-off path only -- DR is unavailable during FOW). */
+        if (DangerRadius_GetActiveCount() > 0)
+            DangerRadius_Refresh();
+#endif
     }
 
     SetCursorMapPosition(gActiveUnit->xPos, gActiveUnit->yPos);
@@ -1092,6 +1127,27 @@ void PlayerPhase_ApplyUnitMovement(ProcPtr proc)
     gActiveUnit->yPos = gActionData.yMove;
 
     UnitFinalizeMovement(gActiveUnit);
+
+#if FE8_DANGER_RADIUS
+    /* UpdateDRMove.asm: recalc Danger Radius mid-action (before
+     * committing), when FOW is off and DR is active. gActiveUnit is
+     * normally absent from gBmMapUnit here -- removed at UnitBeginAction,
+     * and not re-added until the move actually commits (RefreshUnitsOnBmMap,
+     * via RefreshEntityBmMaps in PlayerPhase_FinishAction) -- so without
+     * this, enemies' attack ranges get computed as if the player's unit
+     * wasn't standing on the tile they're considering moving to. Temporarily
+     * re-add it at its (already-updated, see above) new position so an
+     * enemy's range correctly treats that tile as blocked -- letting the
+     * overlay show whether moving there would shield an ally standing
+     * behind it -- then remove it again since the move isn't committed
+     * yet and every other system still expects it absent until it is. */
+    if ((gPlaySt.chapterVisionRange == 0) && (DangerRadius_GetActiveCount() > 0))
+    {
+        gBmMapUnit[gActiveUnit->yPos][gActiveUnit->xPos] = gActiveUnit->index;
+        DangerRadius_Refresh();
+        gBmMapUnit[gActiveUnit->yPos][gActiveUnit->xPos] = 0;
+    }
+#endif
 
     if ((!(gActiveUnit->state & US_HAS_MOVED) && (gActionData.unitActionType == 0)) && (gBmSt.taken_action == 0))
     {
@@ -1207,11 +1263,7 @@ bool CanMoveActiveUnitTo(int x, int y)
 //! FE8U = 0x0801D624
 void PlayerPhase_DisplayUnitMovement(void)
 {
-#if FE8_ALPHA_SPRITE_ARROW
-    GenerateBestMovementScript(gBmSt.playerCursor.x, gBmSt.playerCursor.y, gWorkingMovementScript);
-#else
     GetMovementScriptFromPath();
-#endif
     UnitApplyWorkingMovementScript(gActiveUnit, gActiveUnit->xPos, gActiveUnit->yPos);
     SetAutoMuMoveScript(gWorkingMovementScript);
 

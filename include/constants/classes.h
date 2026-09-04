@@ -140,6 +140,16 @@ enum {
     CLASS_CAMP                = 0x80,
     CLASS_TENT_STRUCTURE      = 0x81,
 
+    // New classes (2026-09 FE-Repo pack import) -- appended after the
+    // last vanilla+expansion slot above; must match their position in
+    // src/data/classes.json's array exactly (classId == array index + 1,
+    // see src/unit_icon_move_data.c/gMuInfoTable's own comment on this).
+    CLASS_LYN_LORD            = 0x82,
+    CLASS_NOMAD               = 0x83,
+    CLASS_NOMAD_F             = 0x84,
+    CLASS_NOMAD_TROOPER       = 0x85,
+    CLASS_NOMAD_TROOPER_F     = 0x86,
+
     // Hiding the game's misery
     CLASS_OBSTACLE = CLASS_EPHRAIM_LORD,
 };

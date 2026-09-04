@@ -142,7 +142,9 @@ void MakeEnemyThreatTargetList(struct Unit * unit)
     int ix;
     int iy;
 
+#if !FE8_RANGE_REWORK
     int reach = GetUnitWeaponReachBits(unit, -1);
+#endif
 
     BmMapFill(gBmMapOther, 0);
 
@@ -153,7 +155,11 @@ void MakeEnemyThreatTargetList(struct Unit * unit)
         if (!UNIT_IS_VALID(unit2))
             continue;
 
+#if FE8_RANGE_REWORK
+        GenerateUnitReachRangeAt(unit, unit2->xPos, unit2->yPos, -1, TRUE);
+#else
         GenerateUnitStandingReachRange(unit2, reach);
+#endif
 
         gActionData.xOther = unit2->xPos;
         gActionData.yOther = unit2->yPos;

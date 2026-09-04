@@ -3,85 +3,149 @@
 #include "functions.h"
 #include "variables.h"
 
+
+
 /* These should related to status-bar gfx for stat-screen */
 #if FE8_CO_POWERS
-enum statBarTileRows {
-    SB_bonusOutlineTop,
-    SB_outlineTop,
-    SB_highlight,
-    SB_fill,
-    // SB_fill2,
-    SB_outlineBottom,
-    SB_bonusOutlineShadow,
+enum statBarCoTileRows {
+    CSB_BLANK1,
+    CSB_BLANK2,
+    CSB_bonusOutlineTop,
+    CSB_outlineTop,
+    CSB_highlight,
+    CSB_fill,
+    CSB_outlineBottom,
+    CSB_bonusOutlineShadow,
 };
 #define OUTLINE_COL_ID 4 // 4 
 #define SHADOW_COL_ID 4 // 4 
-void DrawStatBarCappedCol(u8 *buf, int bufWidth, int col)
+void DrawCoStatBarCappedCol(u8 *buf, int bufWidth, int col)
 {
-    buf[SB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_outlineTop * bufWidth + col] = 13;
-    buf[SB_highlight * bufWidth + col] = 13;
-    buf[SB_fill * bufWidth + col] = 12;
-    // buf[SB_fill2 * bufWidth + col] = 12;
+    buf[CSB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_outlineTop * bufWidth + col] = 13;
+    buf[CSB_highlight * bufWidth + col] = 13;
+    buf[CSB_fill * bufWidth + col] = 12;
+    // buf[CSB_fill2 * bufWidth + col] = 12;
 }
-void DrawStatBarMinusCol(u8 *buf, int bufWidth, int col)
+void DrawCoStatBarMinusCol(u8 *buf, int bufWidth, int col)
 {
-    // buf[SB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
-    // buf[SB_outlineTop * bufWidth + col] = 10;
-    // buf[SB_highlight * bufWidth + col] = 11;
-    // buf[SB_fill * bufWidth + col] = 11;
+    // buf[CSB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    // buf[CSB_outlineTop * bufWidth + col] = 10;
+    // buf[CSB_highlight * bufWidth + col] = 11;
+    // buf[CSB_fill * bufWidth + col] = 11;
     
-    buf[SB_bonusOutlineTop * bufWidth + col] = 0;
-    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_highlight * bufWidth + col] = 10;
-    buf[SB_fill * bufWidth + col] = 11;
-    // buf[SB_fill2 * bufWidth + col] = 10;
+    buf[CSB_bonusOutlineTop * bufWidth + col] = 0;
+    buf[CSB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_highlight * bufWidth + col] = 10;
+    buf[CSB_fill * bufWidth + col] = 11;
+    // buf[CSB_fill2 * bufWidth + col] = 10;
 }
-
-
-void DrawStatBarUnfilledCol(u8 *buf, int bufWidth, int col)
+void DrawCoStatBarShadow(u8 *buf, int bufWidth, int col)
 {
-    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_highlight * bufWidth + col] = 14;
-    buf[SB_fill * bufWidth + col] = 3;
-    // buf[SB_fill2 * bufWidth + col] = 3;
-    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+    buf[CSB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
 }
 
-void DrawStatBarFilledCol(u8 *buf, int bufWidth, int col)
+void DrawCoStatBarLeftBorder(u8 *buf, int bufWidth, int col)
 {
-    buf[SB_highlight * bufWidth + col] = 1;
-    buf[SB_fill * bufWidth + col] = 5;
-    // buf[SB_fill2 * bufWidth + col] = 5;
+    buf[CSB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
 }
 
-void DrawStatBarRightBorderMinus(u8 *buf, int bufWidth, int col)
+void DrawCoStatBarRightBorder(u8 *buf, int bufWidth, int col)
 {
-    buf[SB_outlineTop * bufWidth + col] = 0;
-    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
-    // buf[SB_fill2 * bufWidth + col] = 4;
-    buf[SB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+    buf[CSB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
 }
 
-void DrawStatBarLeftBorderPlus(u8 *buf, int bufWidth, int col)
+void DrawCoStatBarUnfilledCol(u8 *buf, int bufWidth, int col)
 {
-    buf[SB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_highlight * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_fill * bufWidth + col] = OUTLINE_COL_ID;
-    // buf[SB_fill2 * bufWidth + col] = OUTLINE_COL_ID;
-    buf[SB_outlineBottom * bufWidth + col] =OUTLINE_COL_ID;
+    buf[CSB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_highlight * bufWidth + col] = 14;
+    buf[CSB_fill * bufWidth + col] = 3;
+    // buf[CSB_fill2 * bufWidth + col] = 3;
+    buf[CSB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
 }
 
-#else 
+void DrawCoStatBarFilledCol(u8 *buf, int bufWidth, int col)
+{
+    buf[CSB_highlight * bufWidth + col] = 1;
+    buf[CSB_fill * bufWidth + col] = 5;
+    // buf[CSB_fill2 * bufWidth + col] = 5;
+}
+
+void DrawCoStatBarRightBorderMinus(u8 *buf, int bufWidth, int col)
+{
+    buf[CSB_outlineTop * bufWidth + col] = 0;
+    buf[CSB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    // buf[CSB_fill2 * bufWidth + col] = 4;
+    buf[CSB_outlineBottom * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_bonusOutlineShadow * bufWidth + col] = SHADOW_COL_ID;
+}
+
+void DrawCoStatBarLeftBorderPlus(u8 *buf, int bufWidth, int col)
+{
+    buf[CSB_bonusOutlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_outlineTop * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_highlight * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_fill * bufWidth + col] = OUTLINE_COL_ID;
+    // buf[CSB_fill2 * bufWidth + col] = OUTLINE_COL_ID;
+    buf[CSB_outlineBottom * bufWidth + col] =OUTLINE_COL_ID;
+}
+
+void DrawCoStatBar(
+    int tile, int padding, int bufWidth, int barWidth, int progressLength, int cappedLength)
+{
+    int i, j, val, val1;
+    u8 *buf = gGenericBuffer;
+    CpuFastFill(0, buf, 0x40 * bufWidth);
+
+    for (i = 1; i < barWidth + 1; i++)
+        DrawCoStatBarUnfilledCol(buf, 8 * bufWidth, i + ({padding + 1;}));
+
+    DrawCoStatBarLeftBorder(buf, 8 * bufWidth, padding + 1);
+    DrawCoStatBarRightBorder(buf, 8 * bufWidth, padding + barWidth + 2);
+    DrawCoStatBarShadow(buf, 8 * bufWidth, padding + barWidth + 3);
+
+    for (i = 0; i < progressLength; i++)
+        DrawCoStatBarFilledCol(buf, 8 * bufWidth, i + ({padding + 2;}));
+
+    for (i = 0; i < cappedLength; i++)
+        DrawCoStatBarCappedCol(buf, 8 * bufWidth, i + progressLength + padding + 2);
+
+    ApplyBitmap(buf, (void*)(32 * tile + VRAM), bufWidth, 1);
+}
+
+// bufWidth: The width of the allocated buffer canvas
+// barWidth: The width of the bar itself (in tiles)
+// progressLength: The length of the "progress" of the bar (the yellow part)
+// cappedLength: Same as above, controls the part that flashes green when stat capped
+void DrawCoStatBarGfx(
+    int tile, int bufWidth, u16* buf, int tileBase,
+    int barWidth, int progressLength, int cappedLength)
+{
+    DrawCoStatBar(tile, 2, bufWidth, barWidth, progressLength, cappedLength);
+    PutAppliedBitmap(buf, tileBase + (tile & 0x3FF), bufWidth, 1);
+}
+
+
+#endif 
+
+
 enum statBarTileRows {
-    SB_bonusOutlineTop,
+    SB_outlineTop,
     SB_highlight,
     SB_fill,
-    SB_bonusOutlineBottom,
+    SB_outlineBottom,
     SB_bonusOutlineShadow,
 };
 
@@ -106,7 +170,7 @@ void DrawStatBarFilledCol(u8 *buf, int bufWidth, int col)
     buf[SB_fill * bufWidth + col] = 5;
 }
 
-#endif 
+
 
 void UnusedDrawOutline(u8 *buf, int bufWidth, int col)
 {
@@ -205,22 +269,22 @@ void DrawStatBarCo(
     CpuFastFill(0, buf, 0x40 * bufWidth);
 
     for (i = 1; i < barWidth + 1; i++)
-        DrawStatBarUnfilledCol(buf, 8 * bufWidth, i + (padding + 1));
+        DrawCoStatBarUnfilledCol(buf, 8 * bufWidth, i + (padding + 1));
 
     
     if (progressLength > base) { 
-    DrawStatBarLeftBorderPlus(buf, 8 * bufWidth, padding + 1);
-    DrawStatBarRightBorder(buf, 8 * bufWidth, padding + barWidth + 2);
+    DrawCoStatBarLeftBorderPlus(buf, 8 * bufWidth, padding + 1);
+    DrawCoStatBarRightBorder(buf, 8 * bufWidth, padding + barWidth + 2);
     } 
     else { 
-    DrawStatBarLeftBorder(buf, 8 * bufWidth, padding + 1);
-    DrawStatBarRightBorderMinus(buf, 8 * bufWidth, padding + barWidth + 2);
+    DrawCoStatBarLeftBorder(buf, 8 * bufWidth, padding + 1);
+    DrawCoStatBarRightBorderMinus(buf, 8 * bufWidth, padding + barWidth + 2);
     } 
     
-    DrawStatBarShadow(buf, 8 * bufWidth, padding + barWidth + 3);
+    DrawCoStatBarShadow(buf, 8 * bufWidth, padding + barWidth + 3);
 
     for (i = 0; i < barWidth; i++)
-        DrawStatBarFilledCol(buf, 8 * bufWidth, i + (padding + 2));
+        DrawCoStatBarFilledCol(buf, 8 * bufWidth, i + (padding + 2));
 
     if (progressLength > base)
     {
@@ -230,7 +294,7 @@ void DrawStatBarCo(
             bonus = barWidth;
 
         for (i = 0; i < bonus; i++)
-            DrawStatBarCappedCol(buf, 8 * bufWidth, i + (padding + 2));
+            DrawCoStatBarCappedCol(buf, 8 * bufWidth, i + (padding + 2));
     }
     else if (progressLength < base)
     {
@@ -240,7 +304,7 @@ void DrawStatBarCo(
             shortfall = barWidth;
 
         for (i = 0; i < shortfall; i++)
-            DrawStatBarMinusCol(buf, 8 * bufWidth, (barWidth - 1 - i) + (padding + 2));
+            DrawCoStatBarMinusCol(buf, 8 * bufWidth, (barWidth - 1 - i) + (padding + 2));
     }
 
     ApplyBitmap(buf, (void*)(32 * tile + VRAM), bufWidth, 1);

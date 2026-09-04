@@ -36,6 +36,10 @@ void MapAddInRange(int x, int y, int range, int value);
 void MapSetInRange(int x, int y, int range, int value);
 void GenerateUnitCompleteAttackRange(struct Unit * unit);
 void GenerateUnitStandingReachRange(struct Unit * unit, int reach);
+#if FE8_RANGE_REWORK
+void GenerateUnitReachRangeAt(struct Unit * unit, int x, int y, int itemSlot, s8 isWeaponDomain);
+void GenerateUnitStandingReachRangeForSlot(struct Unit * unit, int itemSlot, s8 isWeaponDomain);
+#endif
 void GenerateUnitCompleteStaffRange(struct Unit * unit);
 void GenerateDangerZoneRange(s8 boolDisplayStaffRange);
 void GenerateMagicSealMap(int value);

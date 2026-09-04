@@ -112,5 +112,12 @@ UnitIconWait unit_icon_wait_table[] = {
 	{0, UNIT_ICON_SIZE_16x16, unit_icon_wait_Fallen_Peer_sheet}, // 106
 	{2, UNIT_ICON_SIZE_32x32, unit_icon_wait_Camp_sheet}, // 107
 	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_TentStructure_sheet}, // 108
-	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Flag_sheet} // 109
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Flag_sheet}, // 109
+
+	// New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad Trooper(_F).
+	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_LynLord_sheet}, // 110
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Nomad_sheet}, // 111
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Nomad_F_sheet}, // 112
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Nomad_Trooper_sheet}, // 113
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Nomad_Trooper_F_sheet} // 114
 };

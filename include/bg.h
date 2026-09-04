@@ -135,6 +135,9 @@ extern unsigned char bg_Blank_palette[];
 extern unsigned char frlgUiFrame_tiles[];
 extern unsigned short frlgUiFrame_map[];
 extern unsigned short frlgUiFrame_palette[];
+extern unsigned char bg_CoStatusScreen_tiles[];
+extern unsigned char bg_CoStatusScreen_map[];
+extern unsigned short bg_CoStatusScreen_palette[];
 #endif
 
 #if FE8_MULTIPALETTE_BG

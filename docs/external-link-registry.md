@@ -68,6 +68,7 @@ repo) instead of one registry line per pinned link.
 - host:devkitpro.org | laqieer | third-party-reference | devkitPro toolchain install docs.
 - host:egghead.io | laqieer | third-party-reference | First-PR tutorial series linked from CONTRIBUTING.md.
 - host:feuniverse.us | laqieer | third-party-reference | FEUniverse forum reference (online decompiler discussion).
+- host:www.mapeditor.org | laqieer | third-party-reference | Tiled map editor, referenced by docs/map_authoring.md as the tool custom .tmx chapter maps are authored in.
 - host:gcc.gnu.org | laqieer | third-party-reference | Upstream GCC documentation/feature pages.
 - host:ghidra-sre.org | laqieer | third-party-reference | Ghidra tool homepage.
 - host:www.libpng.org | laqieer | third-party-reference | libpng project homepage (build dependency).

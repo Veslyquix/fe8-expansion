@@ -237,11 +237,18 @@ s8 ActionRescue(ProcPtr proc) {
  * src/bmmenu.c -- both are already-verified same-class generics by the
  * time this runs, see TryAddUnitToMergeTargetList, src/bmtarget.c): each
  * combat stat becomes whichever unit's was higher, HP is summed, and any
- * HP past the new (also higher-of-the-two) max is converted to gold, 10%
- * of that max per gold increment, priced off whatever this class would
- * cost to (re)purchase (GetPurchaseGenericPrice, src/purchase_generics.c;
- * a class with no purchase listing converts no gold, since there'd be no
- * price to convert it at). Items of a kind subject already carries have
+ * HP past the new (also higher-of-the-two) max is converted to gold
+ * proportionally -- overflow/combinedMaxHp of this class's (re)purchase
+ * price (GetPurchaseGenericPrice, src/purchase_generics.c; a class with no
+ * purchase listing converts no gold, since there'd be no price to convert
+ * it at), so a full duplicate merged into an already-full-HP subject (all
+ * of target's HP overflows) converts at exactly one unit's purchase price,
+ * not a multiple of it. (Previously chunked overflow into 10%-of-max
+ * buckets and paid the *full* price per bucket -- both lossy for any max
+ * HP not a clean multiple of 10, and up to 10x too generous even when it
+ * was clean; e.g. two full-HP 15-max-HP/1500g generics merging paid out
+ * 22500 instead of the 1500 a single absorbed duplicate is worth.) Items
+ * of a kind subject already carries have
  * their durability joined onto subject's copy instead of taking a second
  * inventory slot -- capped at that item's own max uses, since durability
  * past max is worthless (an unbreakable item, GetItemMaxUses() == 0xFF,
@@ -268,14 +275,10 @@ s8 ActionMerge(ProcPtr proc) {
     subject->lck = subject->lck > target->lck ? subject->lck : target->lck;
 
     if (overflow > 0) {
-        int tenPercent = combinedMaxHp / 10;
+        int price = GetPurchaseGenericPrice(subject->pClassData->number);
 
-        if (tenPercent > 0) {
-            int price = GetPurchaseGenericPrice(subject->pClassData->number);
-
-            if (price > 0)
-                AddFactionChapterGoldAmount(UNIT_FACTION(subject) >> 6, (overflow / tenPercent) * price);
-        }
+        if (price > 0)
+            AddFactionChapterGoldAmount(UNIT_FACTION(subject) >> 6, (overflow * price) / combinedMaxHp);
 
         subject->curHP = combinedMaxHp;
     } else {
@@ -758,7 +761,16 @@ void BATTLE_HandleCombatDeaths(struct CombatActionProc* proc) {
 
 //! FE8U = 0x080328B0
 void RestoreMapSongBgm(void) {
-    int bgmIdx = GetCurrentMapMusicIndex();
+#if FE8_CONTINUE_BGM_BATTLE
+    /* ContinueBgmBattle: never force a BGM restart here. This function has
+     * no callers anywhere in this codebase's decompiled src/ as of this
+     * writing (see docs/random_bgm.md for what was checked), so this is
+     * currently a defensive no-op rather than an observable behavior
+     * change -- it guarantees map BGM keeps playing through combat even if
+     * this function later gains a caller. */
+    return;
+#else
+    int bgmIdx = GetBGMTrack();
     int curBgm = GetCurrentBgmSong();
 
 #if FE8_VESLY_DEBUGGER
@@ -771,6 +783,7 @@ void RestoreMapSongBgm(void) {
     }
 
     return;
+#endif
 }
 
 //! FE8U = 0x080328D0

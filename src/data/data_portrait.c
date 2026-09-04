@@ -492,6 +492,14 @@ u8 __attribute__((aligned(4))) portrait_Francis_palette[] = INCBIN_U8("graphics/
 u8 __attribute__((aligned(4))) portrait_Francis_mouth[] = INCBIN_U8("graphics/portrait/portrait_Francis_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Francis_chibi[] = INCBIN_U8("graphics/portrait/portrait_Francis_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Francis_tileset[] = INCBIN_U8("graphics/portrait/portrait_Francis_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Wakwi_palette[] = INCBIN_U8("graphics/portrait/portrait_Wakwi_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Wakwi_mouth[] = INCBIN_U8("graphics/portrait/portrait_Wakwi_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Wakwi_chibi[] = INCBIN_U8("graphics/portrait/portrait_Wakwi_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Wakwi_tileset[] = INCBIN_U8("graphics/portrait/portrait_Wakwi_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Ishkode_palette[] = INCBIN_U8("graphics/portrait/portrait_Ishkode_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Ishkode_mouth[] = INCBIN_U8("graphics/portrait/portrait_Ishkode_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Ishkode_chibi[] = INCBIN_U8("graphics/portrait/portrait_Ishkode_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Ishkode_tileset[] = INCBIN_U8("graphics/portrait/portrait_Ishkode_tileset.4bpp.fk");
 u8 __attribute__((aligned(4))) portrait_Frederick_palette[] = INCBIN_U8("graphics/portrait/portrait_Frederick_palette.agbpal");
 u8 __attribute__((aligned(4))) portrait_Frederick_mouth[] = INCBIN_U8("graphics/portrait/portrait_Frederick_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Frederick_chibi[] = INCBIN_U8("graphics/portrait/portrait_Frederick_chibi.4bpp.lz");
@@ -504,6 +512,16 @@ u8 __attribute__((aligned(4))) portrait_Liz_palette[] = INCBIN_U8("graphics/port
 u8 __attribute__((aligned(4))) portrait_Liz_mouth[] = INCBIN_U8("graphics/portrait/portrait_Liz_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Liz_chibi[] = INCBIN_U8("graphics/portrait/portrait_Liz_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Liz_tileset[] = INCBIN_U8("graphics/portrait/portrait_Liz_tileset.4bpp.fk");
+/* Replaces CHARACTER_ONEILL's own portrait (portrait_data.c slot 47,
+ * portrait_O_Neill_* below) -- characters.json's "portrait" field is
+ * 1-indexed against this 0-indexed array, so ONEILL's "portrait": 48
+ * means array slot 47, not 48 (that's Breguet, above -- unrelated, left
+ * untouched). Art by Eden (see src/Credits.c), same insert_portrait.py
+ * workflow as Wakwi/Ishkode above. */
+u8 __attribute__((aligned(4))) portrait_Kargan_palette[] = INCBIN_U8("graphics/portrait/portrait_Kargan_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Kargan_mouth[] = INCBIN_U8("graphics/portrait/portrait_Kargan_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Kargan_chibi[] = INCBIN_U8("graphics/portrait/portrait_Kargan_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Kargan_tileset[] = INCBIN_U8("graphics/portrait/portrait_Kargan_tileset.4bpp.fk");
 #endif
 
 u8 __attribute__((aligned(4))) portrait_Mystery_1_palette[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_palette.agbpal");

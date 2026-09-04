@@ -18814,3 +18814,887 @@ unit_icon_move_Fallen_Peer_anim_4: @ +$142
 	.2byte 0, (-1) @ loop back to start
 
 	.align 2, 0
+
+@ New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad Trooper(_F).
+@ Move-cycle timing blocks cloned wholesale from same-size-class templates
+@ (LynLord<-Archer, Nomad*<-Cavalier, both UNIT_ICON_SIZE-matched) -- see
+@ scripts/insert_map_sprite.py's docstring for why this is safe (motion
+@ tables are a fixed per-size-class template, not unique art-derived timing;
+@ cross-checked Cavalier==Paladin and Myrmidon==Archer byte-identical).
+	.global unit_icon_move_LynLord_sheet
+unit_icon_move_LynLord_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_LynLord_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_LynLord_motion
+unit_icon_move_LynLord_motion:
+	.2byte (unit_icon_move_LynLord_frame_list - unit_icon_move_LynLord_motion), (unit_icon_move_LynLord_anim_list - unit_icon_move_LynLord_motion) @ header
+
+unit_icon_move_LynLord_frame_list: @ +$4
+	.2byte (unit_icon_move_LynLord_frame_0 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_1 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_2 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_3 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_4 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_5 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_6 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_7 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_8 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_9 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_10 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_11 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_12 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_13 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_14 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_15 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_16 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_17 - unit_icon_move_LynLord_frame_list)
+	.2byte (unit_icon_move_LynLord_frame_18 - unit_icon_move_LynLord_frame_list)
+
+unit_icon_move_LynLord_anim_list: @ +$2A
+	.2byte (unit_icon_move_LynLord_anim_0 - unit_icon_move_LynLord_anim_list)
+	.2byte (unit_icon_move_LynLord_anim_1 - unit_icon_move_LynLord_anim_list)
+	.2byte (unit_icon_move_LynLord_anim_2 - unit_icon_move_LynLord_anim_list)
+	.2byte (unit_icon_move_LynLord_anim_3 - unit_icon_move_LynLord_anim_list)
+	.2byte (unit_icon_move_LynLord_anim_4 - unit_icon_move_LynLord_anim_list)
+
+unit_icon_move_LynLord_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- uniform X=-16, same as every
+	@ other frame in this table (and identical to Eirika_Lord's own, whose
+	@ art LynLord's is a direct reskin of). A per-frame bbox-fitted offset
+	@ was tried here and reverted: it "centered" each frame in isolation,
+	@ but a walk cycle needs a CONSTANT offset across all its frames --
+	@ per-frame correction broke that, causing a visible side-to-side
+	@ wobble instead of smooth motion. See
+	@ reference_adding_classes_banims_mapsprites.md.
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- see frame_16's comment
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- see frame_16's comment
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_LynLord_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynLord_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynLord_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynLord_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynLord_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_sheet
+unit_icon_move_Nomad_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Nomad_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_motion
+unit_icon_move_Nomad_motion:
+	.2byte (unit_icon_move_Nomad_frame_list - unit_icon_move_Nomad_motion), (unit_icon_move_Nomad_anim_list - unit_icon_move_Nomad_motion) @ header
+
+unit_icon_move_Nomad_frame_list: @ +$4
+	.2byte (unit_icon_move_Nomad_frame_0 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_1 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_2 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_3 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_4 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_5 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_6 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_7 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_8 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_9 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_10 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_11 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_12 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_13 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_14 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_15 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_16 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_17 - unit_icon_move_Nomad_frame_list)
+	.2byte (unit_icon_move_Nomad_frame_18 - unit_icon_move_Nomad_frame_list)
+
+unit_icon_move_Nomad_anim_list: @ +$2A
+	.2byte (unit_icon_move_Nomad_anim_0 - unit_icon_move_Nomad_anim_list)
+	.2byte (unit_icon_move_Nomad_anim_1 - unit_icon_move_Nomad_anim_list)
+	.2byte (unit_icon_move_Nomad_anim_2 - unit_icon_move_Nomad_anim_list)
+	.2byte (unit_icon_move_Nomad_anim_3 - unit_icon_move_Nomad_anim_list)
+	.2byte (unit_icon_move_Nomad_anim_4 - unit_icon_move_Nomad_anim_list)
+
+unit_icon_move_Nomad_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_F_sheet
+unit_icon_move_Nomad_F_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Nomad_F_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_F_motion
+unit_icon_move_Nomad_F_motion:
+	.2byte (unit_icon_move_Nomad_F_frame_list - unit_icon_move_Nomad_F_motion), (unit_icon_move_Nomad_F_anim_list - unit_icon_move_Nomad_F_motion) @ header
+
+unit_icon_move_Nomad_F_frame_list: @ +$4
+	.2byte (unit_icon_move_Nomad_F_frame_0 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_1 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_2 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_3 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_4 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_5 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_6 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_7 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_8 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_9 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_10 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_11 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_12 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_13 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_14 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_15 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_16 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_17 - unit_icon_move_Nomad_F_frame_list)
+	.2byte (unit_icon_move_Nomad_F_frame_18 - unit_icon_move_Nomad_F_frame_list)
+
+unit_icon_move_Nomad_F_anim_list: @ +$2A
+	.2byte (unit_icon_move_Nomad_F_anim_0 - unit_icon_move_Nomad_F_anim_list)
+	.2byte (unit_icon_move_Nomad_F_anim_1 - unit_icon_move_Nomad_F_anim_list)
+	.2byte (unit_icon_move_Nomad_F_anim_2 - unit_icon_move_Nomad_F_anim_list)
+	.2byte (unit_icon_move_Nomad_F_anim_3 - unit_icon_move_Nomad_F_anim_list)
+	.2byte (unit_icon_move_Nomad_F_anim_4 - unit_icon_move_Nomad_F_anim_list)
+
+unit_icon_move_Nomad_F_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_F_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_F_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_F_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_F_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_F_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_Trooper_sheet
+unit_icon_move_Nomad_Trooper_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Nomad_Trooper_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_Trooper_motion
+unit_icon_move_Nomad_Trooper_motion:
+	.2byte (unit_icon_move_Nomad_Trooper_frame_list - unit_icon_move_Nomad_Trooper_motion), (unit_icon_move_Nomad_Trooper_anim_list - unit_icon_move_Nomad_Trooper_motion) @ header
+
+unit_icon_move_Nomad_Trooper_frame_list: @ +$4
+	.2byte (unit_icon_move_Nomad_Trooper_frame_0 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_1 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_2 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_3 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_4 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_5 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_6 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_7 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_8 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_9 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_10 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_11 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_12 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_13 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_14 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_15 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_16 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_17 - unit_icon_move_Nomad_Trooper_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_frame_18 - unit_icon_move_Nomad_Trooper_frame_list)
+
+unit_icon_move_Nomad_Trooper_anim_list: @ +$2A
+	.2byte (unit_icon_move_Nomad_Trooper_anim_0 - unit_icon_move_Nomad_Trooper_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_anim_1 - unit_icon_move_Nomad_Trooper_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_anim_2 - unit_icon_move_Nomad_Trooper_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_anim_3 - unit_icon_move_Nomad_Trooper_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_anim_4 - unit_icon_move_Nomad_Trooper_anim_list)
+
+unit_icon_move_Nomad_Trooper_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_Trooper_F_sheet
+unit_icon_move_Nomad_Trooper_F_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Nomad_Trooper_F_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Nomad_Trooper_F_motion
+unit_icon_move_Nomad_Trooper_F_motion:
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_list - unit_icon_move_Nomad_Trooper_F_motion), (unit_icon_move_Nomad_Trooper_F_anim_list - unit_icon_move_Nomad_Trooper_F_motion) @ header
+
+unit_icon_move_Nomad_Trooper_F_frame_list: @ +$4
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_0 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_1 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_2 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_3 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_4 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_5 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_6 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_7 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_8 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_9 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_10 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_11 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_12 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_13 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_14 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_15 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_16 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_17 - unit_icon_move_Nomad_Trooper_F_frame_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_frame_18 - unit_icon_move_Nomad_Trooper_F_frame_list)
+
+unit_icon_move_Nomad_Trooper_F_anim_list: @ +$2A
+	.2byte (unit_icon_move_Nomad_Trooper_F_anim_0 - unit_icon_move_Nomad_Trooper_F_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_anim_1 - unit_icon_move_Nomad_Trooper_F_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_anim_2 - unit_icon_move_Nomad_Trooper_F_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_anim_3 - unit_icon_move_Nomad_Trooper_F_anim_list)
+	.2byte (unit_icon_move_Nomad_Trooper_F_anim_4 - unit_icon_move_Nomad_Trooper_F_anim_list)
+
+unit_icon_move_Nomad_Trooper_F_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Nomad_Trooper_F_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_F_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_F_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_F_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Nomad_Trooper_F_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+

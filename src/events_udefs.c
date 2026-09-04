@@ -11,24 +11,6 @@
 #include "events/prologue-eventudefs.h"
 #include "events/ch1-eventudefs.h"
 
-/* Issue #5 Batch 3a: the Chapter 2 REDA/UnitDefinition prefix block below
- * (through the matching #endif, immediately before Chapter 3's own data)
- * is canonically generated from src/data/ch2_units.json -- see
- * scripts/generated_data/units/ and docs/generated_data.md's "units"
- * schema section. build/generated/data/data_ch2_units.o is linked in its
- * place (ldscript.txt links it immediately before src/events_udefs.o's
- * own (.data), so this excluded block leaves zero address gap). The
- * block itself is deliberately left in place, verbatim, rather than
- * deleted: generated-data-check's round-trip parser
- * (scripts/generated_data/units/parser.py) reads this exact source text
- * (plain regex/brace-depth parsing, never the compiler) to keep proving
- * the generated table byte-for-byte identical in meaning to it. Never
- * hand-edit the block below -- edit src/data/ch2_units.json and
- * regenerate instead. */
-#define GENERATED_DATA_UNITS_CH2_LINKED 1
-
-#if !GENERATED_DATA_UNITS_CH2_LINKED
-
 CONST_DATA struct REDA REDA_Event_Ch2Ally_EIRIKA[] = {
     {
         .x = 2,
@@ -461,8 +443,6 @@ CONST_DATA struct UnitDefinition UnitDef_Ch2Enemy_2[] = {
     },
     { 0 },
 };
-
-#endif /* !GENERATED_DATA_UNITS_CH2_LINKED */
 
 /* Issue #5 Batch 3a: the excluded Ch2 block above is not actually a
  * binary-layout prefix of this translation unit's .data -- the

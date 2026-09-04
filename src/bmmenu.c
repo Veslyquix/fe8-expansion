@@ -9,6 +9,7 @@
 #include "playerphase.h"
 #include "player_interface.h"
 #include "uichapterstatus.h"
+#include "uichapterstatus_generics.h"
 #include "uiselecttarget.h"
 #include "bmunit.h"
 #include "bmtarget.h"
@@ -148,9 +149,13 @@ u8 MapMenu_IsStatusCommandAvailable(void) {
 }
 
 u8 MapMenu_StatusCommand(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+#if FE8_PURCHASE_GENERICS
+    return FactionStatus_MenuCommand(menu, menuItem);
+#else
     StartChapterStatusScreen(NULL);
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+#endif
 }
 
 u8 MapMenu_IsGuideCommandAvailable(const struct MenuItemDef* def, int number) {
@@ -573,8 +578,12 @@ int DisplayUnitStandingAttackRange(struct MenuProc* menu, struct MenuItemProc* m
     if (gActiveUnit->state & US_IN_BALLISTA) {
         MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, 1, 10);
     } else {
+#if FE8_RANGE_REWORK
+        GenerateUnitStandingReachRangeForSlot(gActiveUnit, -1, TRUE);
+#else
         int reach = GetUnitWeaponReachBits(gActiveUnit, -1);
         GenerateUnitStandingReachRange(gActiveUnit, reach);
+#endif
     }
 
     DisplayMoveRangeGraphics(3);
@@ -641,15 +650,19 @@ int WeaponSelectMenu_Draw(struct MenuProc* menu, struct MenuItemProc* menuItem) 
 
 int WeaponSelectMenu_SwitchIn(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
-    int reach;
-
     UpdateMenuItemPanel(menuItem->itemNumber);
 
     BmMapFill(gBmMapMovement, -1);
     BmMapFill(gBmMapRange, 0);
 
-    reach = GetUnitWeaponReachBits(gActiveUnit, menuItem->itemNumber);
-    GenerateUnitStandingReachRange(gActiveUnit, reach);
+#if FE8_RANGE_REWORK
+    GenerateUnitStandingReachRangeForSlot(gActiveUnit, menuItem->itemNumber, TRUE);
+#else
+    {
+        int reach = GetUnitWeaponReachBits(gActiveUnit, menuItem->itemNumber);
+        GenerateUnitStandingReachRange(gActiveUnit, reach);
+    }
+#endif
 
     DisplayMoveRangeGraphics(2);
 
@@ -966,9 +979,9 @@ u8 ItemCommandUsability(const struct MenuItemDef* def, int number) {
         return MENU_NOTSHOWN;
     }
 
-    if (!CanUnitTradeOrSupply(gActiveUnit)) {
-        return MENU_NOTSHOWN;
-    }
+    // if (!CanUnitTradeOrSupply(gActiveUnit)) {
+        // return MENU_NOTSHOWN;
+    // }
 
     if (gActiveUnit->items[0] == 0) {
         return MENU_NOTSHOWN;
@@ -1333,7 +1346,11 @@ int FillBallistaRange(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 
     UpdateMenuItemPanel(item);
 
+#if FE8_RANGE_REWORK
+    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetUnitItemEffectiveMinRange(gActiveUnit, item), GetUnitItemEffectiveMaxRange(gActiveUnit, item));
+#else
     MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
 
     DisplayMoveRangeGraphics(2);
 
@@ -1396,12 +1413,17 @@ u8 StaffCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem) {
 }
 
 int StaffCommandRange(struct MenuProc* menu, struct MenuItemProc* menuItem) {
-    int reach = GetUnitItemUseReachBits(gActiveUnit, -1);
-
     BmMapFill(gBmMapMovement, -1);
     BmMapFill(gBmMapRange, 0);
 
-    GenerateUnitStandingReachRange(gActiveUnit, reach);
+#if FE8_RANGE_REWORK
+    GenerateUnitStandingReachRangeForSlot(gActiveUnit, -1, FALSE);
+#else
+    {
+        int reach = GetUnitItemUseReachBits(gActiveUnit, -1);
+        GenerateUnitStandingReachRange(gActiveUnit, reach);
+    }
+#endif
 
     DisplayMoveRangeGraphics(5);
 
@@ -1447,14 +1469,19 @@ int StaffItemSelect_TextDraw(struct MenuProc* menu, struct MenuItemProc* menuIte
 }
 
 int StaffItemSelect_OnHover(struct MenuProc* menu, struct MenuItemProc* menuItem) {
-    int reach = GetUnitItemUseReachBits(gActiveUnit, menuItem->itemNumber);
-
     UpdateMenuItemPanel(menuItem->itemNumber);
 
     BmMapFill(gBmMapMovement, -1);
     BmMapFill(gBmMapRange, 0);
 
-    GenerateUnitStandingReachRange(gActiveUnit, reach);
+#if FE8_RANGE_REWORK
+    GenerateUnitStandingReachRangeForSlot(gActiveUnit, menuItem->itemNumber, FALSE);
+#else
+    {
+        int reach = GetUnitItemUseReachBits(gActiveUnit, menuItem->itemNumber);
+        GenerateUnitStandingReachRange(gActiveUnit, reach);
+    }
+#endif
 
     DisplayMoveRangeGraphics(4);
 

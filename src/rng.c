@@ -1,5 +1,6 @@
 #include "global.h"
 #include "rng.h"
+#include "rng_randomizer.h"
 
 static u16 gRNSeeds[3];
 static int gLCGRNValue;
@@ -57,6 +58,10 @@ void LoadRNState(const u16* seeds) {
     gRNSeeds[0] = *seeds++;
     gRNSeeds[1] = *seeds++;
     gRNSeeds[2] = *seeds++;
+
+#if FE8_RNG_RANDOMIZER
+    RngRandomizer_OnLoadRNState();
+#endif
 }
 
 void StoreRNState(u16* seeds) {

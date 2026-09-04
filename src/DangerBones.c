@@ -349,7 +349,11 @@ void GenerateDangerBones(DangerBonesProc * proc) // do 1 valid unit per frame to
         if ((unit->ai3And4 & 0x2000) || (unit->ai1 == 3))
         { // boss ai: never move
 #ifndef FE8
+#if FE8_RANGE_REWORK
+            GenerateUnitStandingReachRangeForSlot(unit, -1, TRUE);
+#else
             GenerateUnitStandingReachRange(unit, GetUnitWeaponReachBits(unit, -1));
+#endif
 #else
             GenerateUnitCompleteAttackRange(unit);
 #endif
@@ -462,7 +466,11 @@ void GenerateDangerBonesRangeAll(int i) // Causes noticable lag if done for 0x80
         if ((unit->ai3And4 & 0x2000) || (unit->ai1 == 3))
         { // boss ai: never move
 #ifndef FE8
+#if FE8_RANGE_REWORK
+            GenerateUnitStandingReachRangeForSlot(unit, -1, TRUE);
+#else
             GenerateUnitStandingReachRange(unit, GetUnitWeaponReachBits(unit, -1));
+#endif
 #else
             GenerateUnitCompleteAttackRange(unit);
 #endif

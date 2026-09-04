@@ -336,9 +336,15 @@ s8 AiReachesByBirdsEyeDistance(struct Unit* unit, struct Unit* other, u16 item) 
 
     int distance = RECT_DISTANCE(unit->xPos, unit->yPos, other->xPos, other->yPos);
 
+#if FE8_RANGE_REWORK
+    if (distance <= UNIT_MOV(unit) + GetUnitItemEffectiveMaxRange(unit, item)) {
+        return 1;
+    }
+#else
     if (distance <= UNIT_MOV(unit) + GetItemMaxRange(item)) {
         return 1;
     }
+#endif
 
     return 0;
 }
@@ -348,9 +354,15 @@ s8 AiCouldReachByBirdsEyeDistance(struct Unit* unit, struct Unit* other, u16 ite
 
     int distance = RECT_DISTANCE(unit->xPos, unit->yPos, other->xPos, other->yPos);
 
+#if FE8_RANGE_REWORK
+    if (distance <= UNIT_MOV(unit) + UNIT_MOV(other) + GetUnitItemEffectiveMaxRange(unit, item)) {
+        return 1;
+    }
+#else
     if (distance <= UNIT_MOV(unit) + UNIT_MOV(other) + GetItemMaxRange(item)) {
         return 1;
     }
+#endif
 
     return 0;
 }
@@ -801,7 +813,11 @@ void FillMovementAndRangeMapForItem(struct Unit* unit, u16 item) {
                 continue;
             }
 
+#if FE8_RANGE_REWORK
+            MapAddInBoundedRange(ix, iy, GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+#else
             MapAddInBoundedRange(ix, iy, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
         }
     }
 
@@ -847,7 +863,11 @@ void AiMakeMoveRangeItemRangeMaps(struct Unit* unit, u16 item) {
                 continue;
             }
 
+#if FE8_RANGE_REWORK
+            MapAddInBoundedRange(ix, iy, GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+#else
             MapAddInBoundedRange(ix, iy, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
         }
     }
 
@@ -1391,9 +1411,15 @@ void SetupUnitHealStaffAIFlags(struct Unit* unit, u16 item) {
 
     int flags = 0;
 
+#if FE8_RANGE_REWORK
+    if ((GetItemAttributes(item) & IA_WEAPON) && (GetUnitItemEffectiveMaxRange(unit, item) > 1)) {
+        flags = AI_UNIT_FLAG_6;
+    }
+#else
     if ((GetItemAttributes(item) & IA_WEAPON) && (GetItemMaxRange(item) > 1)) {
         flags = AI_UNIT_FLAG_6;
     }
+#endif
 
     switch (GetItemUseEffect(item)) {
         case 0x01:

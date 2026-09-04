@@ -68,6 +68,7 @@ Markdown library, so it stays stdlib-parseable and diff-friendly.
 - docs/generated_data.md | laqieer | current | Full generated-data platform design/reference (issue #5)
 - docs/generated_data_tutorial.md | laqieer | current | Contributor-facing generated-data authoring walkthrough
 - docs/starter_features.md | laqieer | current | Four default-off starter flags, typed mechanics/content API, QoL, and runtime matrices (issue #6)
+- docs/map_authoring.md | laqieer | current | Chapter map layout authoring: .tmx (Tiled) vs .mar (FEBuilder), the tile-value transform, and format conversion
 - docs/localization.md | laqieer | current | Stable locale/message IDs, catalog authoring, prefs/UI, budgets, and runtime matrices (issue #18)
 - docs/game_localization_catalog.md | laqieer | current | Full-game FE8U-indexed CJK catalog generation, bounded runtime, and synthetic link gate
 - docs/game_locale_sources.md | laqieer | current | Maintainer reference for pinned FE8J/FE8CN imports, verified FE8U mappings, fallbacks, and regeneration gates

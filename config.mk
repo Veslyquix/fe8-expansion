@@ -212,8 +212,25 @@ TITLE_256_COLORS ?= 1
 TEXT_CHAPTER_NAMES ?= 1
 
 # --- Optional Credits ----------------------------------------------------------
-# Scrolling end-credits sequence using text instead of images. 
+# Scrolling end-credits sequence using text instead of images.
 CREDITS ?= 0
+
+# --- Optional RandBgm ---------------------------------------------------------
+# Map BGM selection becomes seeded-random instead of vanilla's fixed
+# per-chapter table lookup: each time map BGM would (re)start, a random song
+# sharing the vanilla pick's music-player/priority pair is chosen instead,
+# deterministically from the current save's playthrough identifier plus
+# chapter/turn/phase (not the live combat RNG, so this never perturbs, or is
+# perturbed by, actual combat rolls). Off by default: vanilla-equivalent
+# unless explicitly enabled. See docs/random_bgm.md.
+RAND_BGM ?= 1
+
+# --- Optional ContinueBgmBattle ------------------------------------------------
+# Entering a battle animation keeps the current map BGM playing instead of
+# swapping to a distinct battle theme. See docs/random_bgm.md for what this
+# does (and does not) change in this codebase, since vanilla FE8's own combat
+# does not swap BGM in the first place.
+CONTINUE_BGM_BATTLE ?= 1
 
 
 
@@ -298,6 +315,13 @@ MMB ?= 1
 # depends on.
 EXTEND_DESC_BOX ?= 1
 
+# --- Optional ExtendDialogueBox -----------------------------------------------
+# Sizes event/conversation dialogue boxes dynamically (1-4 lines) instead of
+# always 2, based on the longest run of lines between [A] waits in the
+# current speaker's text. A box that ends up 4 lines tall shifts down one
+# tile so it doesn't grow off the top of the screen.
+EXTEND_DIALOGUE_BOX ?= 1
+
 # --- Optional DisplayObtainableItem ------------------------------------------
 # Draws a small icon over enemy units carrying a droppable or stealable.
 DISPLAY_OBTAINABLE_ITEM ?= 1
@@ -306,12 +330,30 @@ DISPLAY_OBTAINABLE_ITEM ?= 1
 # Draws a partial-fill HP bar over each visible unit, plus a small icon
 # over enemies the selected unit could hit for bonus effectiveness, land a
 # high crit on, or start a support/talk event with. Requires
-# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet 
+# DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet
 HP_BARS ?= 1
 
+# --- Optional DangerRadius -----------------------------------------------------
+# Ports the "Danger Radius" fog-of-war-aware enemy attack range overlay
+# (original hack by Huichelaar). Requires DISPLAY_OBTAINABLE_ITEM=1 -- shares
+# its icon sheet.
+DANGER_RADIUS ?= 1
+
+# --- Optional RangeRework ---------------------------------------------------
+# Weapon attack range is computed from each carried weapon's own min/max
+# range directly (GetUnitItemEffectiveMinRange/MaxRange, src/bmitem.c)
+# instead of the vanilla-profile-only reach-bits switch, so a non-vanilla
+# range (e.g. 2-4) actually works instead of silently reaching nothing.
+# Also lets a CO's class-affinity rangeBon (struct CoClassAffinity,
+# src/power.c) actually shift max range, not just display it -- never
+# below the weapon's own minimum, capped at 15 (the nibble's own max).
+# Does not yet extend the coarse reach-bits system menus/R-button range
+# text/staff AI still use for display (see GetItemReachBits, src/bmitem.c).
+RANGE_REWORK ?= 1
+
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
-# Displays a ghost of the unit at the tip of the blue arrow when selecting 
-# where to move the unit to. 
+# Displays a ghost of the unit at the tip of the blue arrow when selecting
+# where to move the unit to.
 ALPHA_SPRITE_ARROW ?= 1
 
 
@@ -326,8 +368,25 @@ DEBUFFS_STACK ?= 0
 
 
 # --- Optional GroupAI ----------------------------------------------------------
-# Attack one member of a tagged group and the rest immediately aggro. 
+# Attack one member of a tagged group and the rest immediately aggro.
 GROUP_AI ?= 1
+
+# --- Optional NullBossAiMov -------------------------------------------------
+# A unit whose ai4 (the FEBuilder AI4 byte, i.e. the high byte of
+# ai_config -- see AI_UNIT_CONFIG_FLAG_STAY in include/cp_common.h) is
+# exactly 0x20 ("AI Stay", no group id) has its effective movement stat
+# (UNIT_MOV, include/bmunit.h) forced to 0. Typically hand-set on bosses
+# that must never leave their tile, even if provoked or lured.
+NULL_BOSSAI_MOV ?= 1
+
+# --- Optional RngRandomizer --------------------------------------------------
+# Spins the battle RNG once per frame during the player's own turn (while
+# a battle is in progress, or a unit's movement range is being shown), so
+# the exact roll a battle produces depends on real elapsed frames -- a
+# reset-and-replay with identical inputs no longer reproduces the same
+# result. Ported from TR143's "RNG Randomizer" GBA ASM hack
+# (https://feuniverse.us/t/gba-rng-randomizer/3175). See src/rng_randomizer.c.
+RNG_RANDOMIZER ?= 1
 
 
 # --- Optional PromoteCommand ------------------------------------------------------
@@ -368,7 +427,7 @@ FEBUILDER_POINTERS ?= 1
 # strip, a taller "big stars" variant, and "POWER"/"SUPER" label graphics,
 # plus a debug font -- as LZ77-compressed OBJ tile graphics. See src/aw2_gfx.c.
 AW2_ASSETS ?= 1
-# NOTE that AW2_COMINI_PAL_ID will need to be changed later, as it uses bg pal 15 (which fog also uses)
+
 
 # --- Optional battle animation fast-forward ---------------------------------
 # Ported from a standalone Lyn-hooked ASM patch (asm/AnimsFastForward on
@@ -378,7 +437,36 @@ AW2_ASSETS ?= 1
 # whatever the current battle animation setting would have shown (full anims
 # force off, off/map-anims forces full) for just that fight. See
 # src/anims_fast_forward.c.
-ANIMS_FAST_FORWARD ?= 1
+## speedup 
+ANIMS_FAST_FORWARD ?= 1 
+
+# --- Optional custom BGM (NIMAP2) -------------------------------------------
+# Swaps in the community "native instrument map, revision 2" so custom music
+# written against General MIDI instrument numbers plays with the intended
+# timbres, and appends custom songs to the end of gSongTable:
+#
+#   * voicegroup000 -- vanilla fills only 23 of its 128 slots (the other 105
+#     are dummy square waves); NIMAP2 replaces the whole group with a
+#     GM-shaped instrument map. Every custom song's _grp points here.
+#   * voicegroups 079/080/081/083/084 -- the "drumfix". Purely additive: all
+#     44 entries it writes land on slots that were dummy square waves in
+#     vanilla, so GM drum-track note numbers hit real percussion samples
+#     while every percussion voice vanilla actually plays is left untouched.
+#   * sound/songs/bgm/*.s -- the custom songs themselves, appended to
+#     gSongTable after vanilla's 1000 entries (see include/constants/songs.h).
+#
+# Modern lane only: the archival legacy lane keeps vanilla's voicegroups and
+# song table so it stays byte-matching, exactly as every other feature flag
+# leaves it alone. See docs/custom_bgm.md and scripts/sound/.
+#
+# TRADEOFF: replacing voicegroup000 is NOT vanilla-neutral. song001
+# (agbfe3_bgm_opening, the title theme) is the one vanilla song that uses
+# voicegroup000, and NIMAP2 changes every one of the 11 voice slots it plays
+# -- mostly swapped strings/brass samples, but slot 126 goes from a
+# percussion keysplit (voicegroup083) to a pitched sample, which is audible.
+# Set NIMAP2=0 to keep vanilla's opening intact, or give the custom songs
+# their own voicegroup instead (see docs/custom_bgm.md).
+NIMAP2 ?= 1
 
 
 

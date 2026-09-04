@@ -12,6 +12,12 @@
 u8 __attribute__((aligned(4))) frlgUiFrame_tiles[] = INCBIN_U8("graphics/bg/frlgUiFrame.4bpp.lz");
 u16 __attribute__((aligned(4))) frlgUiFrame_map[] = INCBIN_U16("graphics/bg/frlgUiFrame.fetsa.bin");
 u16 __attribute__((aligned(4))) frlgUiFrame_palette[] = INCBIN_U16("graphics/bg/frlgUiFrame.gbapal");
+
+/* CO screen (src/power.c) BG2 static backdrop, contributed by PatrickHoang
+ * -- see graphics/bg/bg_CoStatusScreen.png. */
+u8 __attribute__((aligned(4))) bg_CoStatusScreen_tiles[] = INCBIN_U8("graphics/bg/bg_CoStatusScreen.feimg2.bin.lz");
+u8 __attribute__((aligned(4))) bg_CoStatusScreen_map[] = INCBIN_U8("graphics/bg/bg_CoStatusScreen.fetsa2.bin");
+u16 __attribute__((aligned(4))) bg_CoStatusScreen_palette[] = INCBIN_U16("graphics/bg/bg_CoStatusScreen.gbapal");
 #endif
 
 u8 __attribute__((aligned(4))) bg_House_tiles[] = INCBIN_U8("graphics/bg/bg_House.feimg2.bin.lz");

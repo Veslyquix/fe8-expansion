@@ -236,6 +236,23 @@ struct BattleAnim banim_data[] = {
     {"newpeghx1", &banim_newpegasus_handaxe_modes_bin, &banim_newpegasus_handaxe_script_o, &banim_newpegasus_handaxe_oam_bin, &banim_newpegasus_handaxe_oam_bin, &banim_newpegasus_handaxe_agbpal}, // 0xE5 pegasus handaxe
     {"newpegmg1", &banim_newpegasus_magic_modes_bin, &banim_newpegasus_magic_script_o, &banim_newpegasus_magic_oam_bin, &banim_newpegasus_magic_oam_bin, &banim_newpegasus_magic_agbpal}, // 0xE6 pegasus magic
     {"newpegun1", &banim_newpegasus_unarmed_modes_bin, &banim_newpegasus_unarmed_script_o, &banim_newpegasus_unarmed_oam_bin, &banim_newpegasus_unarmed_oam_bin, &banim_newpegasus_unarmed_agbpal}, // 0xE7 pegasus unarmed
+    {"newdambw1", &banim_newderarcm_bow_modes_bin, &banim_newderarcm_bow_script_o, &banim_newderarcm_bow_oam_bin, &banim_newderarcm_bow_oam_bin, &banim_newderarcm_bow_agbpal}, // 0xE8 derarcm bow
+    {"newdamun1", &banim_newderarcm_unarmed_modes_bin, &banim_newderarcm_unarmed_script_o, &banim_newderarcm_unarmed_oam_bin, &banim_newderarcm_unarmed_oam_bin, &banim_newderarcm_unarmed_agbpal}, // 0xE9 derarcm unarmed
+    {"newdafbw1", &banim_newderarcf_bow_modes_bin, &banim_newderarcf_bow_script_o, &banim_newderarcf_bow_oam_bin, &banim_newderarcf_bow_oam_bin, &banim_newderarcf_bow_agbpal}, // 0xEA derarcf bow
+    {"newdafun1", &banim_newderarcf_unarmed_modes_bin, &banim_newderarcf_unarmed_script_o, &banim_newderarcf_unarmed_oam_bin, &banim_newderarcf_unarmed_oam_bin, &banim_newderarcf_unarmed_agbpal}, // 0xEB derarcf unarmed
+    {"newgmfmg1", &banim_newgaidenmage_framefix_magic_modes_bin, &banim_newgaidenmage_framefix_magic_script_o, &banim_newgaidenmage_framefix_magic_oam_bin, &banim_newgaidenmage_framefix_magic_oam_bin, &banim_newgaidenmage_framefix_magic_agbpal}, // 0xEC gaidenmage_framefix magic
+    {"newgmpmg1", &banim_newgaidenmage_ponytail_magic_modes_bin, &banim_newgaidenmage_ponytail_magic_script_o, &banim_newgaidenmage_ponytail_magic_oam_bin, &banim_newgaidenmage_ponytail_magic_oam_bin, &banim_newgaidenmage_ponytail_magic_agbpal}, // 0xED gaidenmage_ponytail magic
+    {"newlynsw1", &banim_newlynlord_sword_modes_bin, &banim_newlynlord_sword_script_o, &banim_newlynlord_sword_oam_bin, &banim_newlynlord_sword_oam_bin, &banim_newlynlord_sword_agbpal}, // 0xEE lynlord sword
+    {"newnombw1", &banim_newnomadm_bow_modes_bin, &banim_newnomadm_bow_script_o, &banim_newnomadm_bow_oam_bin, &banim_newnomadm_bow_oam_bin, &banim_newnomadm_bow_agbpal}, // 0xEF nomadm bow
+    {"newnomun1", &banim_newnomadm_unarmed_modes_bin, &banim_newnomadm_unarmed_script_o, &banim_newnomadm_unarmed_oam_bin, &banim_newnomadm_unarmed_oam_bin, &banim_newnomadm_unarmed_agbpal}, // 0xF0 nomadm unarmed
+    {"newnofbw1", &banim_newnomadf_bow_modes_bin, &banim_newnomadf_bow_script_o, &banim_newnomadf_bow_oam_bin, &banim_newnomadf_bow_oam_bin, &banim_newnomadf_bow_agbpal}, // 0xF1 nomadf bow
+    {"newnofun1", &banim_newnomadf_unarmed_modes_bin, &banim_newnomadf_unarmed_script_o, &banim_newnomadf_unarmed_oam_bin, &banim_newnomadf_unarmed_oam_bin, &banim_newnomadf_unarmed_agbpal}, // 0xF2 nomadf unarmed
+    {"newntmsw1", &banim_newnomtrpm_sword_modes_bin, &banim_newnomtrpm_sword_script_o, &banim_newnomtrpm_sword_oam_bin, &banim_newnomtrpm_sword_oam_bin, &banim_newnomtrpm_sword_agbpal}, // 0xF3 nomtrpm sword
+    {"newntmbw1", &banim_newnomtrpm_bow_modes_bin, &banim_newnomtrpm_bow_script_o, &banim_newnomtrpm_bow_oam_bin, &banim_newnomtrpm_bow_oam_bin, &banim_newnomtrpm_bow_agbpal}, // 0xF4 nomtrpm bow
+    {"newntmun1", &banim_newnomtrpm_unarmed_modes_bin, &banim_newnomtrpm_unarmed_script_o, &banim_newnomtrpm_unarmed_oam_bin, &banim_newnomtrpm_unarmed_oam_bin, &banim_newnomtrpm_unarmed_agbpal}, // 0xF5 nomtrpm unarmed
+    {"newntfsw1", &banim_newnomtrpf_sword_modes_bin, &banim_newnomtrpf_sword_script_o, &banim_newnomtrpf_sword_oam_bin, &banim_newnomtrpf_sword_oam_bin, &banim_newnomtrpf_sword_agbpal}, // 0xF6 nomtrpf sword
+    {"newntfbw1", &banim_newnomtrpf_bow_modes_bin, &banim_newnomtrpf_bow_script_o, &banim_newnomtrpf_bow_oam_bin, &banim_newnomtrpf_bow_oam_bin, &banim_newnomtrpf_bow_agbpal}, // 0xF7 nomtrpf bow
+    {"newntfun1", &banim_newnomtrpf_unarmed_modes_bin, &banim_newnomtrpf_unarmed_script_o, &banim_newnomtrpf_unarmed_oam_bin, &banim_newnomtrpf_unarmed_oam_bin, &banim_newnomtrpf_unarmed_agbpal}, // 0xF8 nomtrpf unarmed
 };
 __attribute__((section(".data.banim_array_len")))
 long long banim_number = sizeof(banim_data) / sizeof(banim_data[0]);

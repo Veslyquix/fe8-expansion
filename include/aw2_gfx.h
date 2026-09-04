@@ -6,7 +6,7 @@
 /* BG palette bank the CO-mini goal-window replacement draws with (see
  * src/aw2_gfx.c) -- exposed here so other files (src/player_interface.c's
  * palette-cycle call) don't need their own copy of the constant. */
-#define AW2_COMINI_PAL_ID 15 // 3 is mmb. This will need to be changed later because it conflicts with fog. 
+#define AW2_COMINI_PAL_ID 3 // now 1 is mmb. 
 
 /* Loads all 5 Advance Wars 2 UI graphics (star/rank icons, POWER/SUPER
  * labels, debug font) into OBJ VRAM, back to back starting at 0x6013000. */
@@ -20,10 +20,34 @@ void LoadAw2Gfx(void);
 void LoadAw2CoMiniGfx(void);
 void DrawAw2CoMini(u16* dst);
 
+/* AI-phase-only OBJ sprite version of the same panel -- BG1 doesn't
+ * reliably show during AI/CP phase, so that phase draws this as a single
+ * 64x32 OBJ instead (see the big comment in src/aw2_gfx.c). Call
+ * LoadAw2CoMiniObjGfx once (GoalDisplay_Init, alongside LoadAw2CoMiniGfx)
+ * and DrawAw2CoMiniObjSprite once a frame while it should be visible,
+ * same as DrawAw2PowerBannerSprite below. Player phase is unaffected and
+ * still goes through DrawAw2CoMini above. */
+void LoadAw2CoMiniObjGfx(void);
+void DrawAw2CoMiniObjSprite(int x, int y);
+
+/* Gold amount overlaid on the OBJ panel above -- LoadAw2CoMiniObjGfx already
+ * calls LoadAw2GoldDigitsObjGfx, so that's only exposed for symmetry; call
+ * DrawAw2GoldDigitsObjSprite once a frame right after DrawAw2CoMiniObjSprite
+ * (same layer, so the digits land on top -- see its comment in
+ * src/aw2_gfx.c) with the amount to show, right-aligned at (rightX, y). */
+void LoadAw2GoldDigitsObjGfx(void);
+void DrawAw2GoldDigitsObjSprite(int rightX, int y, int gold);
+
 /* Cycles the CO-mini panel's color 11 between orange and yellow, one step
  * per call -- call once a frame (see GoalDisplay_Loop_Display,
  * src/player_interface.c) for the whole 32-frame back-and-forth. */
 void UpdateAw2CoMiniPaletteCycle(void);
+
+/* Same cycle, for the AI-phase OBJ copy -- call once a frame from
+ * AiGoalDisplay_Loop (src/player_interface.c) instead of
+ * UpdateAw2CoMiniPaletteCycle, which only touches the BG palette bank the
+ * OBJ copy doesn't use. */
+void UpdateAw2CoMiniObjPaletteCycle(void);
 
 /* The currently active phase faction's (gPlaySt.faction) CO gauge in
  * half-star units (3 == one and a half stars filled). OverlapStars merges

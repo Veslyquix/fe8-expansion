@@ -131,7 +131,7 @@ generated-data-ch2-check:
 # layout headers, hand data-source tables read for live counts, etc.)
 # and each table's top-level generated symbol name(s) are wildly
 # table-specific and cannot be derived generically.
-GENERATED_DATA_LINKED_HAND_SOURCES := src/data_classes.c src/data_items.c src/data_supports.c
+GENERATED_DATA_LINKED_HAND_SOURCES :=
 
 # Table name for each entry above, same order. Derived from the
 # `src/data_<table>.c` naming convention shared by every currently-linked
@@ -2738,3 +2738,20 @@ generated-data-active-heal-check:
 	$(MAKE) --no-print-directory $$C >/dev/null; \
 	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap header state was not restored" >&2; exit 1; }; \
 	echo PASS: generated-data-active-heal-check
+
+# ---------------------------------------------------------------------------
+# Unlink Chapter-2 / mechanics partial-file tables from the default build
+# ---------------------------------------------------------------------------
+# units/traps/shops/eventlists/terrainstats/movecost/weapontriangle are no
+# longer substituted for their hand-written src/ code (their #if guards were
+# removed from the hand files themselves, so those files unconditionally
+# compile their own data again). Force their generated objects out of both
+# ALL_OBJECTS (Makefile) and the modern object cohort (modern.mk) so nothing
+# links the generated copy alongside the now-unconditional hand copy.
+GENERATED_DATA_CH2_UNITS_OBJECT :=
+GENERATED_DATA_CH2_TRAPS_OBJECT :=
+GENERATED_DATA_CH2_SHOPS_OBJECT :=
+GENERATED_DATA_CH2_EVENTLISTS_OBJECT :=
+GENERATED_DATA_TERRAINSTATS_OBJECT :=
+GENERATED_DATA_MOVECOST_OBJECT :=
+GENERATED_DATA_WEAPONTRIANGLE_OBJECT :=

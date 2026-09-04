@@ -25,6 +25,12 @@ bool AiTryCapturePurchaseBase(struct Unit* unit);
  * converts to. */
 int GetPurchaseGenericPrice(int classId);
 
+/* Read-only preview of the per-turn income factionId currently earns from
+ * its owned TRAP_PURCHASE_BASE traps -- same formula as the internal
+ * (static) GrantIncomeForFaction, but doesn't mutate any gold total. Used
+ * by the faction status screen (uichapterstatus_generics.c). */
+int GetFactionIncomePreview(int factionId);
+
 #endif
 
 #endif // GUARD_PURCHASE_GENERICS_H

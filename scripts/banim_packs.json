@@ -1,0 +1,152 @@
+{
+  "soldier": {
+    "credit": "[Soldier-Custom] FE10-Style [M] by Flasuban",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "sld"
+  },
+  "brigand": {
+    "credit": "[Brigand-Reskin] Fully-Clothed [M] by Flasuban",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "brg"
+  },
+  "fighter": {
+    "credit": "[Fighter-Variant] FE9 Repal [M] by Glenwing",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "fig"
+  },
+  "knight": {
+    "credit": "[Knight-Variant] Generic [M] by SALVAGED",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "knt"
+  },
+  "merc": {
+    "credit": "[Mercenary-Reskin] Armored SALVAGED Style [M]",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "mrc"
+  },
+  "archer": {
+    "credit": "[Archer-Reskin] FE5-Style [M] by Pushwall",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "arc"
+  },
+  "cavalier": {
+    "credit": "[Cavalier-Variant] [M] Generic by SALVAGED v2",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "cav"
+  },
+  "pegasus": {
+    "credit": "[Peg T1 Base] [F] Repal v2 + Weapons by Flasuban",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "peg"
+  },
+  "derarcm": {
+    "credit": "[Archer-Variant] Der's Improved [M]",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "dam"
+  },
+  "derarcf": {
+    "credit": "[Archer-Variant] Der's Improved [F]",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "daf"
+  },
+  "gaidenmage_framefix": {
+    "credit": "[Mage-Custom] Gaiden-Style Frame Fix [F] by Gamma",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "gmf"
+  },
+  "gaidenmage_ponytail": {
+    "credit": "[Mage-Custom] Gaiden-Style Ponytail [F] by Gamma",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "gmp"
+  },
+  "lynlord": {
+    "credit": "[FE7 Lyn-Reskin] T1 Long Hair [F] by Merpin",
+    "weapons": [
+      "Sword"
+    ],
+    "class_tag": "lyn"
+  },
+  "nomadm": {
+    "credit": "[Nomad-Base] [M] Vanilla Repal",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "nom"
+  },
+  "nomadf": {
+    "credit": "[Nomad-Base] [F] Vanilla Repal",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "nof"
+  },
+  "nomtrpm": {
+    "credit": "[Nomad Trooper Reskin][M] FE6 Style by Levin64",
+    "weapons": [
+      "Sword",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "ntm"
+  },
+  "nomtrpf": {
+    "credit": "[Nomad Trooper Reskin] [F] FE6 Style by Levin64",
+    "weapons": [
+      "Sword",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "ntf"
+  }
+}

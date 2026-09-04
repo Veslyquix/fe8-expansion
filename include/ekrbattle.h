@@ -755,6 +755,13 @@ extern CONST_DATA struct BattleAnimDef AnimConf_98[];
 extern CONST_DATA struct BattleAnimDef AnimConf_99[];
 extern CONST_DATA struct BattleAnimDef AnimConf_100[];
 
+// New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad Trooper(_F).
+extern CONST_DATA struct BattleAnimDef AnimConf_101[];
+extern CONST_DATA struct BattleAnimDef AnimConf_102[];
+extern CONST_DATA struct BattleAnimDef AnimConf_103[];
+extern CONST_DATA struct BattleAnimDef AnimConf_104[];
+extern CONST_DATA struct BattleAnimDef AnimConf_105[];
+
 extern struct BattleAnimDef * gUnitSpecificBanimConfigs[];
 
 void SetBanimLinkArenaFlag(int unk);

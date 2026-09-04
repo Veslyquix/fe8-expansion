@@ -11,6 +11,9 @@
 
 #include "bmitem.h"
 #include "id_space.h"
+#if FE8_RANGE_REWORK && FE8_CO_POWERS
+#include "power.h"
+#endif
 
 /* Issue #6 bundled content example. The header declares its narrow, typed
  * accessor ONLY under FE8_EXPANSION_STARTER_CONTENT (default 0, and never
@@ -240,6 +243,61 @@ inline int GetItemMaxRange(int item) {
 inline int GetItemEncodedRange(int item) {
     return GetItemData(ITEM_INDEX(item))->encodedRange;
 }
+
+#if FE8_RANGE_REWORK
+/* An encoded max range of 0 (e.g. status staves) means "mag/2" -- vanilla
+ * (GetUnitStaffReachBits/GetUnitItemUseReachBits above) always treats
+ * that as min 1, max GetUnitMagBy2Range(unit), ignoring whatever the
+ * encoded min nibble says. ITEM_NIGHTMARE is hardcoded to the same mag/2
+ * behavior regardless of its own encoded range (see GetUnitStaffReachBits).
+ * The new getters below match that exactly rather than trying to also
+ * generalize a custom min for these -- unlike a weapon's fixed nibble-
+ * encoded range, this repo has no vanilla data that ever combines mag/2
+ * with a non-1 minimum, so there's nothing to preserve. */
+static s8 IsItemMagBy2Range(int item) {
+    return (GetItemMaxRange(item) == 0) || (GetItemIndex(item) == ITEM_NIGHTMARE);
+}
+
+/* See declaration comment (include/bmitem.h). */
+int GetUnitItemEffectiveMinRange(struct Unit* unit, int item) {
+    if (IsItemMagBy2Range(item))
+        return 1;
+
+    return GetItemMinRange(item);
+}
+
+int GetUnitItemEffectiveMaxRange(struct Unit* unit, int item) {
+    int maxRange;
+    int minRange;
+    int bonus = 0;
+
+    if (IsItemMagBy2Range(item))
+        maxRange = GetUnitMagBy2Range(unit);
+    else
+        maxRange = GetItemMaxRange(item);
+
+    minRange = GetUnitItemEffectiveMinRange(unit, item);
+
+#if FE8_CO_POWERS
+    bonus += GetCoClassRangeBonus(gPlaySt.commanderId[UNIT_FACTION(unit) >> 6], UNIT_CLASS_ID(unit));
+#endif
+
+    /* Future unit-specific skill hook: bonus += GetUnitSkillRangeBonus(unit); */
+
+    if (bonus == 0)
+        return maxRange;
+
+    maxRange += bonus;
+
+    if (maxRange < minRange)
+        maxRange = minRange; // never below the weapon's own minimum
+
+    if (maxRange > 15)
+        maxRange = 15; // nibble-encoded range caps at 15
+
+    return maxRange;
+}
+#endif
 
 inline int GetItemRequiredExp(int item) {
     return GetItemData(ITEM_INDEX(item))->weaponRank;
@@ -574,9 +632,17 @@ int GetUnitEquippedWeaponSlot(struct Unit* unit) {
     return -1;
 }
 
-s8 IsItemCoveringRange(int item, int range) {
-    int min = GetItemMinRange(item);
-    int max = GetItemMaxRange(item);
+s8 IsItemCoveringRange(struct Unit* unit, int item, int range) {
+    int min;
+    int max;
+
+#if FE8_RANGE_REWORK
+    min = GetUnitItemEffectiveMinRange(unit, item);
+    max = GetUnitItemEffectiveMaxRange(unit, item);
+#else
+    min = GetItemMinRange(item);
+    max = GetItemMaxRange(item);
+#endif
 
     if ((min <= range) && (range <= max))
         return TRUE;
@@ -662,6 +728,33 @@ s8 IsUnitEffectiveAgainst(struct Unit* actor, struct Unit* target) {
         return TRUE;
 }
 
+#if FE8_RANGE_REWORK
+/* Scratch buffer for a dynamically-composed "min-max" range string (see
+ * GetItemDisplayRangeString's default case below) -- long enough for two
+ * 2-digit numbers (range caps at 15), a '-', and the NUL. Static/reused
+ * exactly like GetItemDisplayRangeString's vanilla cases return pointers
+ * into the (also static) string table via GetStringFromIndex -- the
+ * caller always draws it immediately (see src/helpbox.c, src/statscreen.c),
+ * never holds onto the pointer past that. */
+static char sRangeDisplayBuf[8];
+
+/* Writes n (1-15, never more than 2 digits) as decimal ASCII at buf,
+ * returning the position just past what it wrote -- same digit
+ * composition Text_DrawNumber (src/fontgrp.c) already uses ('0' + n % 10)
+ * for real in-game number glyphs, just building a plain char buffer here
+ * instead of drawing directly. No sprintf/vsprintf: those are debug-tools-
+ * only in this codebase (src/debugtools_*.c) and not a valid way to
+ * produce text this engine's font system renders correctly. */
+static char* AppendDecimal(char* buf, int n) {
+    if (n >= 10)
+        *buf++ = '0' + (n / 10);
+
+    *buf++ = '0' + (n % 10);
+
+    return buf;
+}
+#endif
+
 char* GetItemDisplayRangeString(int item) {
     int rangeTextIdLookup[10] = {
         // TODO: TEXT ID CONSTANTS
@@ -698,8 +791,33 @@ char* GetItemDisplayRangeString(int item) {
     case 0xFF: // total
         return GetStringFromIndex(rangeTextIdLookup[8]);
 
-    default: // bad
-        return GetStringFromIndex(rangeTextIdLookup[9]);
+    default:
+#if FE8_RANGE_REWORK
+        /* A non-vanilla range (this item's own base encoded range, not
+         * any unit/CO-adjusted effective range -- this is a "what does
+         * this weapon fundamentally do" reference display, same as every
+         * other stat GetItemDisplayRangeString's callers show alongside
+         * it) -- compose "min-max" (or just "min" if they're equal, e.g.
+         * a reworked 3-3) directly instead of vanilla's undefined "--". */
+        {
+            int minRange = GetItemMinRange(item);
+            int maxRange = GetItemMaxRange(item);
+            char* buf = sRangeDisplayBuf;
+
+            buf = AppendDecimal(buf, minRange);
+
+            if (maxRange != minRange) {
+                *buf++ = '-';
+                buf = AppendDecimal(buf, maxRange);
+            }
+
+            *buf = '\0';
+
+            return sRangeDisplayBuf;
+        }
+#else
+        return GetStringFromIndex(rangeTextIdLookup[9]); // bad
+#endif
 
     } // switch (GetItemEncodedRange(item))
 }

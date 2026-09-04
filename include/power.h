@@ -3,6 +3,17 @@
 
 #if FE8_CO_POWERS
 
+/* CO ids -- also the index into sCoDefinitions (src/power.c). Public so
+ * event scripts (e.g. src/events/prologue-eventscript.h) can name a CO
+ * when setting up a faction's commander via SetFactionCo. */
+enum {
+    CO_WAKWI,
+    CO_ISHKODE,
+    CO_FRANCIS,
+    CO_KARGAN,
+    CO_COUNT,
+};
+
 struct MenuProc;
 struct MenuItemProc;
 
@@ -60,7 +71,25 @@ void CoGauge_OnPowerUsed(int faction);
  * parent must be the caller's own proc, so the roll-call/effect proc this
  * starts (when it does) blocks the caller until it fully finishes. */
 struct Proc;
-void CoPowers_OnAiPhaseStart(struct Proc* parent);
+int CoPowers_OnAiPhaseStart(struct Proc* parent);
+
+/* Marks faction's CO power/super as no longer active (see the *Pow/*Sup
+ * fields of struct CoClassAffinity, src/power.c, and AdjustStatForCo/
+ * GetCoClassMovBonus/GetCoClassRangeBonus/GetCoClassCritBonus below) -- a
+ * power lasts until its own faction's *next* turn (Advance Wars rules), so
+ * call this once right as that faction's own phase starts again. Currently
+ * called from BmMain_ChangePhase (src/bm.c), right after SwitchPhases(),
+ * for whichever faction's phase is starting. Safe to call even if that
+ * faction had no power active. */
+void CoPowers_OnPhaseStart(int faction);
+
+/* Sets which CO (a CO_* id above) is faction's commander --
+ * gPlaySt.commanderId[faction >> 6] (see include/types.h; faction is a
+ * raw FACTION_BLUE/GREEN/RED/PURPLE byte, not a FACTION_ID_*, same
+ * convention as CoGauge_Get/_Set above). Called from event setup code
+ * (e.g. ASMC in an EventListScr) to assign each side's commander before
+ * the map starts -- see src/events/prologue-eventscript.h. */
+void SetFactionCo(int faction, int coId);
 
 /* Small read-only accessors onto the CO definition table (src/power.c),
  * for UI code (the CO screen, the VeslyDebugger CO editor) that needs a
@@ -75,6 +104,59 @@ const char* CoScreen_GetCoName(int coId);
  * than the normal power costs. */
 int CoScreen_GetCoPowerStars(int coId);
 int CoScreen_GetCoSuperPowerStars(int coId);
+
+/* A CO's class affinity (struct CoClassAffinity, sFrancisAffinities etc.)
+ * scales a class's power the same way a weapon's Pow bonus does: this
+ * returns the delta to add to baseValue (POW only -- other stats are
+ * unaffected), not the adjusted total, so callers use it exactly like
+ * GetItemPowBonus (src/bmunit.c's GetUnitPower, purchase_generics.c's
+ * class-preview stat). A rating != CO_AFFINITY_NEUTRAL_RATING (30) always
+ * moves the stat by at least 1 point, even when proportional scaling would
+ * round to no change; the result is never allowed to bring the stat below
+ * 0. While coId's power/super is active (see CoPowers_OnPhaseEnd above),
+ * ratingPow/ratingSup are added on top of rating first -- unlike the
+ * *Bon fields below, these stack rather than replace. An out-of-range
+ * coId falls back to CO_FRANCIS, same as every other lookup through
+ * GetCoDefinition. */
+int AdjustStatForCo(int coId, int classId, int baseValue);
+
+/* A CO's class-affinity movBon (struct CoClassAffinity) for classId, or 0
+ * if coId has no explicit entry for that class. Like GetCoClassRangeBonus/
+ * GetCoClassCritBonus below, this is the raw signed shift already -- not
+ * proportionally scaled against a base value the way AdjustStatForCo's
+ * rating is, since a movement shift is a flat +/-N. See GetUnitMovement
+ * (src/bmunit.c) for how this actually gets applied. Unconditional on
+ * FE8_CO_POWERS alone (not FE8_RANGE_REWORK) -- movement isn't a
+ * range-mechanic fix, just another CO-driven stat adjustment alongside
+ * AdjustStatForCo's POW. An out-of-range coId falls back the same way
+ * GetCoDefinition always does.
+ *
+ * While coId's power/super is active, this returns movBonPow/movBonSup
+ * INSTEAD of movBon -- unlike AdjustStatForCo's rating, a flat +/-N shift
+ * doesn't have a sensible "stack both" reading, so the Pow/Sup value
+ * replaces the plain one rather than adding to it. */
+int GetCoClassMovBonus(int coId, int classId);
+
+#if FE8_RANGE_REWORK
+/* A CO's class-affinity rangeBon (struct CoClassAffinity) for classId, or
+ * 0 if coId has no explicit entry for that class. Unlike AdjustStatForCo's
+ * rating, this is the raw signed shift already -- not proportionally
+ * scaled against a base value, since a range shift is a flat +/-N, not a
+ * stat-growth-style percentage. See GetUnitItemEffectiveMaxRange
+ * (src/bmitem.c) for how this actually gets applied to a weapon's max
+ * range. An out-of-range coId falls back the same way GetCoDefinition
+ * always does. Replaced (not added to) by rangeBonPow/rangeBonSup while
+ * coId's power/super is active -- same rule as GetCoClassMovBonus. */
+int GetCoClassRangeBonus(int coId, int classId);
+#endif
+
+/* A CO's class-affinity critBon (struct CoClassAffinity) for classId, or 0
+ * if coId has no explicit entry for that class -- same raw-flat-shift,
+ * Pow/Sup-replaces-not-adds convention as GetCoClassMovBonus. Applied to
+ * battle crit rate in ComputeBattleUnitCritRate (src/bmbattle.c).
+ * Unconditional on FE8_CO_POWERS alone, same as movBon (crit isn't a
+ * range mechanic either). */
+int GetCoClassCritBonus(int coId, int classId);
 
 #endif // FE8_CO_POWERS
 

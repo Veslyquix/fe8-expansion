@@ -1,6 +1,7 @@
 
 
 #include "gbafe.h"
+#include "fontgrp.h"
 #include "power.h"
 #define FE8
 #define PUREFUNC __attribute__((pure))
@@ -24,13 +25,7 @@ int Mod(int a, int b) PUREFUNC;
 #define _u46 ai_counter
 #define actorCount_maybe actorCount
 #define u62 mapAnimKind
-#define GetBGMTrack GetCurrentMapMusicIndex
-#define EventCallGameOverExt Debugger_EventCallGameOverExt
-#define GameControl_CallEraseSaveEventWithKeyCombo Debugger_GameControl_CallEraseSaveEventWithKeyCombo
-#define PhaseIntroInitText Debugger_PhaseIntroInitText
 #define StartMapSongBgm Debugger_StartMapSongBgm
-#define ComputeBattleUnitEffectiveStats Debugger_ComputeBattleUnitEffectiveStats
-#define BmMain_StartPhase Debugger_BmMain_StartPhase
 static inline void sub_802C334(void) {}
 static inline void DeleteBattleAnimInfoThing(void) {}
 #endif
@@ -235,12 +230,6 @@ int VeslyDebugger_TryApplyBootMode(ProcPtr aproc)
     }
 }
 
-static void EventCallGameOverExt(ProcPtr proc)
-{
-    Proc_StartBlocking(ProcScr_BmGameOver, proc);
-    SetBootType(4); // title screen after game over
-}
-
 void sub_8009C5C_edit(struct GameCtrlProc * proc)
 {
     // if (proc->nextAction == GAME_ACTION_5)
@@ -258,66 +247,9 @@ void sub_8009C5C_edit(struct GameCtrlProc * proc)
     ReadGameSave(ReadLastGameSaveId()); // added
 }
 
-#define LGAMECTRL_EXEC_BM_EXT 6 // Directly goto bmmap
-
 // StartupDebugMenu_WorldMapEffect
 // StartupDebugMenu_ChapterSelectEffect
 
-static void GameControl_CallEraseSaveEventWithKeyCombo(ProcPtr aproc)
-{
-    struct GameCtrlProc * proc = (void *)aproc;
-    if (gKeyStatusPtr->heldKeys == (L_BUTTON | DPAD_RIGHT | SELECT_BUTTON))
-    {
-        Proc_Goto(proc, LGAMECTRL_ERASE_SAVE);
-    }
-    else
-    {
-        int var = GetBootType();
-        switch (var)
-        {
-            case 1:
-            {
-                // GmDataInit();
-                proc->unk_2E = 20;
-                sub_8009C5C_edit(proc);
-                Proc_Goto(proc, LGAMECTRL_EXEC_BM);
-                break;
-            }
-            // case 2:
-            // {
-            // // GmDataInit();
-            // proc->unk_2E = 20;
-            // sub_8009C5C_edit(proc);
-            // Proc_Goto(proc, LGAMECTRL_EXEC_BM_EXT);
-            // break;
-            // } // Directly goto bmmap / skirmish
-            case 2:
-            {
-                if (IsValidSuspendSave(SAVE_ID_SUSPEND))
-                {
-                    ReadSuspendSave(3);
-                    // SetNextGameActionId(GAME_ACTION_4);
-                    Proc_Goto(proc, 8);
-                    break;
-                }
-            } // Resume ch
-            case 3:
-            {
-                if (IsValidSuspendSave(SAVE_ID_SUSPEND))
-                {
-                    ReadSuspendSave(3);
-                    // SetNextGameActionId(GAME_ACTION_4);
-                    Proc_Goto(proc, 8);
-                    break;
-                }
-            } // Resume ch once
-            default:
-        }
-    }
-
-    // 8 = resume
-    //
-}
 void BackPressSFX(void)
 {
     int id;
@@ -3954,36 +3886,6 @@ void sub_80328B0(void)
 
     return;
 }
-struct PhaseIntroSubProc
-{
-    PROC_HEADER;
-    /* 29 */ u8 _pad_29[0x4C - 0x29];
-    /* 4C */ s16 timer;
-    /* 4E */ s16 stat_index;
-};
-static void PhaseIntroInitText(struct PhaseIntroSubProc * proc)
-{
-    int override = GetDebuggerBgmOverride();
-    int bgmIdx = GetBGMTrack();
-    int curBgm = GetCurrentBgmSong();
-    if ((curBgm != bgmIdx) && (override != curBgm))
-    {                        // 80034DC, 8002F68
-        Sound_FadeOutBGM(4); // 80035EC, 8003064
-    }
-
-#ifdef FE8
-    PlaySoundEffect(0x73); // 803DD98, 8036D08
-#endif
-#ifdef FE7
-    PlaySoundEffect(0x393); // 803DD98, 8036D08
-#endif
-#ifdef FE6
-    PlaySoundEffect(0x73); // 73 as well apparently
-#endif
-
-    proc->timer = 15;
-}
-
 static void StartMapSongBgm(void)
 {
     int override = GetDebuggerBgmOverride();
@@ -4060,14 +3962,14 @@ enum
 // practice, see power.c's CO_GAUGE_MAX) and chapter gold is normally u32,
 // but proc->tmp[] here is s16 (see DebuggerProc), so editable gold is
 // capped well below its real u32 range. Fine for a debug tool.
-#define CoGoldEditMax 32000
+#define CoGoldEditMax 65535
 #define CoGaugeEditMax 9999
 // CO_GAUGE_PER_STAR: include/power.h -- shared with src/aw2_gfx.c, was a
 // separate CoGaugeStep define here before.
 #define CoGaugeHeartMax 10
 
-static const char * const sCoFactionNames[4] = { "Blue", "Green", "Red", "Purple" };
-static const int sCoFactionIds[4] = { FACTION_ID_BLUE, FACTION_ID_GREEN, FACTION_ID_RED, FACTION_ID_PURPLE };
+static const char * const sCoFactionNames[4] = { "Blue", "Red", "Green", "Purple" };
+static const int sCoFactionIds[4] = { FACTION_ID_BLUE, FACTION_ID_RED, FACTION_ID_GREEN, FACTION_ID_PURPLE };
 static const char * const sCoRowLabels[CoRowCount] = { "Team", "Gold", "Commander", "Gauge" };
 
 // proc->tmp layout: [0] = faction index being edited (0-3, see
@@ -4100,9 +4002,15 @@ void RedrawCoMenu(DebuggerProc * proc)
 
     BG_Fill(gBG0TilemapBuffer, 0);
     BG_EnableSyncByMask(BG0_SYNC_BIT);
+    ResetText(); 
+    
     ResetIconGraphics();
-
+    // PreallocateCommonGlyphs(); 
+    PreallocateNumberGlyphs(TEXT_COLOR_SYSTEM_BLUE); 
     struct Text * th = gStatScreen.text;
+    for (i = 0; i < (CoRowCount+2); ++i)
+        InitText(&th[i], CoLabelWidth);
+
 
     for (i = 0; i < CoRowCount; ++i)
     {
@@ -4113,19 +4021,21 @@ void RedrawCoMenu(DebuggerProc * proc)
         Text_DrawString(&th[i], sCoRowLabels[i]);
         PutText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(3, Y_HAND + (i * 2)));
     }
-
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Team * 2)),
-        TEXT_COLOR_SYSTEM_BLUE, sCoFactionNames[faction]);
-
-    PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Gold * 2)),
-        TEXT_COLOR_SYSTEM_BLUE, GetCoFactionField(proc, CoField_Gold));
-
-    PutString(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Commander * 2)),
-        TEXT_COLOR_SYSTEM_BLUE, CoScreen_GetCoName(GetCoFactionField(proc, CoField_CoId)));
+    
+    // void PutDrawText(struct Text* text, u16* dest, int colorId, int x, int tileWidth, const char* string);
+    PutDrawText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Team * 2)), TEXT_COLOR_SYSTEM_BLUE, 0, CoLabelWidth, sCoFactionNames[faction]);
+    // PutString(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Team * 2)),
+        // TEXT_COLOR_SYSTEM_BLUE, );
+    i++; 
+    PutDrawText(&th[i], gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX, Y_HAND + (CoRow_Commander * 2)), TEXT_COLOR_SYSTEM_BLUE, 0, CoLabelWidth, CoScreen_GetCoName(GetCoFactionField(proc, CoField_CoId)));
+    i++;
 
     for (i = 0; i < hearts; ++i)
         PutSpecialChar(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX + i, Y_HAND + (CoRow_Gauge * 2)),
             TEXT_COLOR_SYSTEM_BLUE, TEXT_SPECIAL_HEART);
+
+    PutNumber(gBG0TilemapBuffer + TILEMAP_INDEX(CoValueX+4, Y_HAND + (CoRow_Gold * 2)),
+        TEXT_COLOR_SYSTEM_BLUE, GetCoFactionField(proc, CoField_Gold));
 
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 }
@@ -4155,10 +4065,9 @@ void EditCoInit(DebuggerProc * proc)
     h = (CoRowCount * 2) + 2;
 
     DrawUiFrame(BG_GetMapBuffer(1), x, y, w, h, TILEREF(0, 0), 0);
+    StartGreenText(proc);
 
-    struct Text * th = gStatScreen.text;
-    for (f = 0; f < CoRowCount; ++f)
-        InitText(&th[f], CoLabelWidth);
+
 
     RedrawCoMenu(proc);
 }
@@ -4177,10 +4086,10 @@ static void SaveCoState(DebuggerProc * proc)
 
 void EditCoIdle(DebuggerProc * proc)
 {
-    u16 keys = gKeyStatusPtr->repeatedKeys;
-    u16 newKeys = gKeyStatusPtr->newKeys;
+    u16 keys = gKeyStatusPtr->newKeys | gKeyStatusPtr->repeatedKeys;
+    
 
-    if (newKeys & (A_BUTTON | START_BUTTON))
+    if (keys & (A_BUTTON | START_BUTTON))
     {
         // A/Start: commit proc->tmp[] to gPlaySt/chapter gold and exit.
         SaveCoState(proc);
@@ -4189,10 +4098,11 @@ void EditCoIdle(DebuggerProc * proc)
         return;
     }
 
-    if (newKeys & B_BUTTON)
+    if (keys & B_BUTTON)
     {
         // B: discard -- proc->tmp[] is thrown away with the proc, nothing
         // in gPlaySt/chapter gold was ever touched.
+        // EndGreenText();
         Proc_Goto(proc, RestartLabel);
         BackPressSFX();
         return;
@@ -4204,7 +4114,7 @@ void EditCoIdle(DebuggerProc * proc)
         // EditStatsIdle/EditWExpIdle above).
         int max_digits = GetMaxDigits(CoGoldEditMax, 0);
 
-        DisplayVertUiHand(CoValueX * 8 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
+        DisplayVertUiHand(CoValueX * 8 - 4 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
         {
@@ -4255,14 +4165,14 @@ void EditCoIdle(DebuggerProc * proc)
 
     DisplayUiHand(CoValueX * 8 - (CoLabelWidth * 8) + 4, (Y_HAND + (proc->id * 2)) * 8);
 
-    if (newKeys & DPAD_UP)
+    if (keys & DPAD_UP)
     {
         proc->id = (proc->id + CoRowCount - 1) % CoRowCount;
         RedrawCoMenu(proc);
         return;
     }
 
-    if (newKeys & DPAD_DOWN)
+    if (keys & DPAD_DOWN)
     {
         proc->id = (proc->id + 1) % CoRowCount;
         RedrawCoMenu(proc);
@@ -4272,12 +4182,12 @@ void EditCoIdle(DebuggerProc * proc)
     switch (proc->id)
     {
     case CoRow_Team:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             proc->tmp[CoTmp_Faction] = (proc->tmp[CoTmp_Faction] + 1) % 4;
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             proc->tmp[CoTmp_Faction] = (proc->tmp[CoTmp_Faction] + 3) % 4;
             RedrawCoMenu(proc);
@@ -4285,13 +4195,13 @@ void EditCoIdle(DebuggerProc * proc)
         break;
 
     case CoRow_Gold:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             proc->digit = 1;
             proc->editing = true;
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             proc->digit = 0;
             proc->editing = true;
@@ -4300,13 +4210,13 @@ void EditCoIdle(DebuggerProc * proc)
         break;
 
     case CoRow_Commander:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             int value = (GetCoFactionField(proc, CoField_CoId) + 1) % CoScreen_GetCoCount();
             SetCoFactionField(proc, CoField_CoId, value);
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             int value = (GetCoFactionField(proc, CoField_CoId) + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
             SetCoFactionField(proc, CoField_CoId, value);
@@ -4315,7 +4225,7 @@ void EditCoIdle(DebuggerProc * proc)
         break;
 
     case CoRow_Gauge:
-        if (newKeys & DPAD_RIGHT)
+        if (keys & DPAD_RIGHT)
         {
             int value = GetCoFactionField(proc, CoField_Gauge) + CO_GAUGE_PER_STAR;
 
@@ -4325,7 +4235,7 @@ void EditCoIdle(DebuggerProc * proc)
             SetCoFactionField(proc, CoField_Gauge, value);
             RedrawCoMenu(proc);
         }
-        else if (newKeys & DPAD_LEFT)
+        else if (keys & DPAD_LEFT)
         {
             int value = GetCoFactionField(proc, CoField_Gauge) - CO_GAUGE_PER_STAR;
 
@@ -6150,50 +6060,7 @@ u8 PageIncrementNow(struct MenuProc * menu, struct MenuItemProc * menuItem)
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
 }
 
-static void ComputeBattleUnitEffectiveStats(struct BattleUnit * attacker, struct BattleUnit * defender)
-{
-    ComputeBattleUnitEffectiveHitRate(attacker, defender);
-    ComputeBattleUnitEffectiveCritRate(attacker, defender);
-    ComputeBattleUnitSilencerRate(attacker, defender);
-    ComputeBattleUnitSpecialWeaponStats(attacker, defender);
-    DebuggerProc * proc;
-    proc = Proc_Find(DebuggerProcCmdIdler);
-    if (!proc)
-    {
-        return;
-    }
 #define MaxStat 99
-    if (proc->godMode)
-    {
-        struct BattleUnit * bunitA = attacker;
-        struct BattleUnit * bunitB = defender;
-        if (UNIT_FACTION(&attacker->unit) == FACTION_RED)
-        {
-            bunitA = defender;
-            bunitB = attacker;
-        }
-        bunitA->battleAttack = bunitB->unit.maxHP;
-        bunitA->battleDefense = MaxStat;
-        bunitA->battleSpeed = MaxStat;
-        bunitA->battleHitRate = MaxStat * 2;
-        bunitA->battleAvoidRate = MaxStat;
-        bunitA->battleEffectiveHitRate = 100;
-        bunitA->battleCritRate = MaxStat * 2;
-        bunitA->battleDodgeRate = 100;
-        bunitA->battleEffectiveCritRate = 100;
-
-        bunitB->hpInitial = 1;
-        bunitB->battleAttack = 0;
-        bunitB->battleDefense = 0;
-        bunitB->battleSpeed = 0;
-        bunitB->battleHitRate = 0;
-        bunitB->battleAvoidRate = 0;
-        bunitB->battleEffectiveHitRate = 0;
-        bunitB->battleCritRate = 0;
-        bunitB->battleDodgeRate = 0;
-        bunitB->battleEffectiveCritRate = 0;
-    }
-}
 
 void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit * defender)
 {
@@ -6923,41 +6790,6 @@ void InitProc(DebuggerProc * proc)
     }
 }
 
-//! FE8U = 0x08015450
-static void BmMain_StartPhase(ProcPtr proc)
-{
-    int phaseControl = gPlaySt.faction;
-    if (gPlaySt.faction == FACTION_RED)
-    {
-        if (gPlaySt.config.debugControlRed)
-        {
-            phaseControl = FACTION_BLUE;
-        }
-    }
-    if (gPlaySt.faction == FACTION_GREEN)
-    {
-        if (gPlaySt.config.debugControlGreen)
-        {
-            phaseControl = FACTION_BLUE;
-        }
-    }
-    switch (phaseControl)
-    {
-        case FACTION_BLUE:
-            Proc_StartBlocking(gProcScr_PlayerPhase, proc);
-            break;
-
-        case FACTION_RED:
-            Proc_StartBlocking(gProcScr_CpPhase, proc);
-            break;
-
-        case FACTION_GREEN:
-            Proc_StartBlocking(gProcScr_CpPhase, proc);
-            break;
-    }
-
-    Proc_Break(proc);
-}
 void DebuggerStartNameFace(DebuggerProc * proc);
 void RestartDebuggerMenu(DebuggerProc * proc)
 {
@@ -7857,11 +7689,25 @@ void DebuggerStartFace(int id, int side)
     const struct FaceData * info = GetPortraitData(id);
     if (info->img == 0 && info->imgCard)
     {
-        // class card, so handled differently.
+        /* class card, so handled differently. The card's 10x9=90 tiles
+         * used to be decompressed to CHR 0x240 -- only 0x40 (64) tiles
+         * above GfxViewerInit's own font base (VRAM+0x4000 = CHR 0x200,
+         * see InitTextFont there), which grows upward as the menu's
+         * labels/class name/weapon name/hex values allocate more glyphs.
+         * Once that growth passed 0x240 it silently overwrote the card
+         * portrait's tiles with font glyph data (or vice versa,
+         * depending on draw order) -- hence "doesn't display correctly".
+         * CHR 0x10 (VRAM 0x06000200) was tried next, but that falls
+         * inside 0x6000000-0x6001000 (CHR 0x00-0x7F), which menu tiles
+         * occupy most of the time -- a different, worse conflict. CHR
+         * 0x180 (VRAM 0x06003000) clears both: above the menu-tile range,
+         * and with 0x80 (128) tiles of headroom below the font base
+         * (double the 0x40-tile margin 0x240 had), so 0x180-0x1D9 (the
+         * card's 90 tiles) stays clear even as the font grows. */
         DrawUiFrame(
             BG_GetMapBuffer(1),                        // back BG
             (side * 15), 6, 12, 11, TILEREF(0, 0), 2); // white bg style
-        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x240, 0xB);
+        PutFace80x72_Core(gBG0TilemapBuffer + TILEMAP_INDEX((side * 15) + 1, 7), id, 0x180, 0x5);
         BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
         return;
@@ -7941,13 +7787,13 @@ void DebuggerUpdateMMS(int id, struct Unit * unit)
         const struct ClassData * classData = unit->pClassData;
         unit->pClassData = GetClassData(id);
 
-        struct MuProc * muProc1 = MU_CreateForUI(unit, 48, 144); // StartUiMu
+        struct MuProc * muProc1 = MU_CreateForUI(unit, 48, 158); // StartUiMu
         MU_SetFacing(muProc1, 0 + facing);
-        struct MuProc * muProc2 = MU_CreateForUI(unit, 88, 144); // StartUiMu
+        struct MuProc * muProc2 = MU_CreateForUI(unit, 88, 158); // StartUiMu
         MU_SetFacing(muProc2, 1 + facing);
-        struct MuProc * muProc3 = MU_CreateForUI(unit, 128, 144); // StartUiMu
+        struct MuProc * muProc3 = MU_CreateForUI(unit, 128, 158); // StartUiMu
         MU_SetFacing(muProc3, 2 + facing);
-        struct MuProc * muProc4 = MU_CreateForUI(unit, 168, 144); // StartUiMu
+        struct MuProc * muProc4 = MU_CreateForUI(unit, 168, 158); // StartUiMu
         MU_SetFacing(muProc4, 3 + facing);
         unit->pClassData = classData;
     }
@@ -8000,7 +7846,7 @@ void RedrawGfxFromIDs(int id, DebuggerProc * proc)
     if (id && (GetClassData(id) != 0) && CanDisplaySMS(GetClassData(id)->SMSId))
     {
         // SMS_SomethingGmapUnit(id, 1, 16);
-        PutUnitSpriteForClassId(0, 8, 128, 0xC800, id);
+        PutUnitSpriteForClassId(0, 8, 142, 0xC800, id);
     }
     // UseUnitSprite(12);
 }

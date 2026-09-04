@@ -302,9 +302,24 @@ else_stmt:
 }
 
 //! FE8U = 0x0803D880
+/* "Reversed" here means the flood fill originates at the TARGET (`unit`)
+ * rather than the attacker, so gBmMapRange ends up marking every tile
+ * gActiveUnit could attack `unit` FROM -- every caller passes the
+ * candidate target as `unit` and gActiveUnit's own weapon as `item` (see
+ * AiAttemptOffensiveAction etc., src/cp_battle.c). The range itself is
+ * still gActiveUnit's own (its class, its CO's bonus, not the target's),
+ * so GetUnitItemEffectiveMinRange/MaxRange take gActiveUnit explicitly
+ * rather than the `unit` parameter -- passing `unit` here would compute
+ * the bonus off the TARGET's class instead of the attacker wielding the
+ * weapon, which happened to silently produce a plausible-looking (but
+ * wrong) range whenever the target's class had no bonus of its own. */
 void AiFillReversedAttackRangeMap(struct Unit* unit, u16 item) {
     BmMapFill(gBmMapRange, 0);
+#if FE8_RANGE_REWORK
+    MapAddInBoundedRange(unit->xPos, unit->yPos, GetUnitItemEffectiveMinRange(gActiveUnit, item), GetUnitItemEffectiveMaxRange(gActiveUnit, item));
+#else
     MapAddInBoundedRange(unit->xPos, unit->yPos, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
 
     return;
 }
@@ -328,7 +343,11 @@ void AiFloodMovementAndRange(struct Unit* unit, u16 move, u16 item) {
                 continue;
             }
 
+#if FE8_RANGE_REWORK
+            MapAddInBoundedRange(ix, iy, GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+#else
             MapAddInBoundedRange(ix, iy, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
         }
     }
 
@@ -855,9 +874,15 @@ int AiGetInRangeCombatPositionScoreComponent(int x, int y, struct Unit* unit) {
         return 0;
     }
 
+#if FE8_RANGE_REWORK
+    if ((dist > GetUnitItemEffectiveMaxRange(unit, item)) || (dist < GetUnitItemEffectiveMinRange(unit, item))) {
+        return 50;
+    }
+#else
     if ((dist > GetItemMaxRange(item)) || (dist < GetItemMinRange(item))) {
         return 50;
     }
+#endif
 
     return 0;
 }

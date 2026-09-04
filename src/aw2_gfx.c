@@ -26,6 +26,9 @@ extern const u8 aw2debugFont_tiles[];
 extern const u16 aw2debugFont_palette[];
 extern const u8 aw2uiCoMini_tiles[];
 extern const u16 aw2uiCoMini_palette[];
+// per-faction indices 2-4 recolor values live on ApplyAw2CoMiniObjFactionPalette, below
+extern const u8 gAw2GoldDigits_tiles[];
+extern const u16 gAw2GoldDigits_palette[];
 
 /* Dimensions in tiles (8x8px each), matching each PNG's actual size. */
 #define AW2_STARS_W     3  // 24x8
@@ -131,8 +134,10 @@ void LoadAw2Gfx(void)
 #define AW2_POWER_BANNER_SLOTA_TILE_W 8 // 64x32 shape: doubles to a 128x64 box,
 #define AW2_POWER_BANNER_SLOTA_TILE_H 4 // comfortably covering 128x32 (32x8 native x4)
 
-#define AW2_POWER_BANNER_SLOTB_TILE 0x200
-#define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x222
+#define AW2_POWER_BANNER_SLOTB_TILE 0x188
+// #define AW2_POWER_BANNER_SLOTB_TILE 0x200
+#define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x1AA
+// #define AW2_POWER_BANNER_SLOTB_TILE_DECOMPRESS 0x222
 #define AW2_POWER_BANNER_SLOTB_TILE_W 8 // 32x16 shape: doubles to exactly 64x32,
 #define AW2_POWER_BANNER_SLOTB_TILE_H 4 // matching 64x32 (16x8 native x4) with no slack
 
@@ -353,18 +358,23 @@ static int GetStarFill(int starIndex, int halfStars)
     return AW2_STAR_EMPTY;
 }
 
-/* Merges one star, picked out of an already-decompressed sheet, onto the
- * panel's tiles at pixel (px, py) within the panel. */
+/* Merges one star, picked out of an already-decompressed sheet, onto some
+ * panel copy's tiles at pixel (px, py) within the panel -- `base`/`stride`
+ * pick which physical copy: the BG one (GetCoMiniTileBase(), stride
+ * AW2_COMINI_W -- its tiles are one linear AW2_COMINI_W-wide block, see
+ * LoadAw2CoMiniGfx/DrawAw2CoMini) or the OBJ one (OBJ_CHR_ADDR(AW2_COMINI_
+ * OBJ_TILE_BASE), stride 0x20 -- 2D-mapped OBJ VRAM advances a fixed 0x20
+ * tiles per row regardless of the shape's own width, see the big comment
+ * above DrawAw2PowerBannerSprite). */
 static void OverlapStarAt(
-    const u8* sheet, int fill, int tileWidth, int tileHeight, int px, int py)
+    u8* base, int stride, const u8* sheet, int fill, int tileWidth, int tileHeight, int px, int py)
 {
     const u8* src = sheet + fill * tileWidth * tileHeight * CHR_SIZE;
 
-    /* The panel's tiles are one linear AW2_COMINI_W-wide block (see
-     * LoadAw2CoMiniGfx / DrawAw2CoMini), so a star running past its right
-     * edge would silently reappear at the start of the row below, and one
-     * past the bottom edge would land in whatever unrelated graphics
-     * follow the panel in VRAM. Drop it rather than corrupt either. */
+    /* A star running past the panel's right edge would silently reappear
+     * at the start of the row below, and one past the bottom edge would
+     * land in whatever unrelated graphics follow the panel in VRAM. Drop
+     * it rather than corrupt either. */
     if (px < 0 || py < 0)
         return;
 
@@ -375,15 +385,16 @@ static void OverlapStarAt(
         return;
 
     Copy2dChrTransparent(src,
-        GetCoMiniTileBase() + ((py / 8) * AW2_COMINI_W + (px / 8)) * CHR_SIZE,
-        tileWidth, tileHeight, px & 7, py & 7, AW2_COMINI_W);
+        base + ((py / 8) * stride + (px / 8)) * CHR_SIZE,
+        tileWidth, tileHeight, px & 7, py & 7, stride);
 }
 
-/* Draws the active phase faction's CO gauge onto the panel: one small star
- * per star the CO's normal power costs, then big ones for the extra charge
- * its super needs on top (Francis at 3/5 gives three small then two big),
- * each drawn empty, half or full to match the gauge. */
-void OverlapStars(void)
+/* Draws the active phase faction's CO gauge onto whichever panel copy
+ * `base`/`stride` points at (see OverlapStarAt): one small star per star
+ * the CO's normal power costs, then big ones for the extra charge its
+ * super needs on top (Francis at 3/5 gives three small then two big), each
+ * drawn empty, half or full to match the gauge. */
+static void OverlapStarsAt(u8* base, int stride)
 {
 #if FE8_CO_POWERS
     u8* smallSheet = gGenericBuffer;
@@ -403,7 +414,7 @@ void OverlapStars(void)
     x = AW2_STAR_X;
 
     for (i = 0; i < powerStars; ++i) {
-        OverlapStarAt(smallSheet, GetStarFill(i, halfStars),
+        OverlapStarAt(base, stride, smallSheet, GetStarFill(i, halfStars),
             AW2_SMALL_STAR_W, AW2_SMALL_STAR_H, x, AW2_SMALL_STAR_Y);
 
         x += AW2_SMALL_STAR_STEP;
@@ -411,12 +422,19 @@ void OverlapStars(void)
     x -= 3;
 
     for (; i < superStars; ++i) {
-        OverlapStarAt(bigSheet, GetStarFill(i, halfStars),
+        OverlapStarAt(base, stride, bigSheet, GetStarFill(i, halfStars),
             AW2_BIG_STAR_W, AW2_BIG_STAR_H, x, AW2_BIG_STAR_Y);
 
         x += AW2_BIG_STAR_STEP;
     }
 #endif
+}
+
+/* Same gauge, drawn onto the BG copy (GetCoMiniTileBase()) -- DrawAw2CoMini
+ * already calls this, so it's only for drawing the gauge again on its own. */
+void OverlapStars(void)
+{
+    OverlapStarsAt(GetCoMiniTileBase(), AW2_COMINI_W);
 }
 
 void DrawAw2CoMini(u16* dst)
@@ -434,6 +452,182 @@ void DrawAw2CoMini(u16* dst)
      * so the stars are merged onto fresh art rather than onto last frame's
      * stars. */
     OverlapStars();
+}
+
+/* --- AI-phase OBJ sprite copy of the panel (src/player_interface.c) ------
+ * BG1 doesn't reliably show during AI/CP phase (see the comment above
+ * GoalDisplay_Init, src/player_interface.c) even with dispcnt.bg1_on
+ * forced on, so that phase draws this same 8x4-tile panel as a single OBJ
+ * sprite instead of copying it into gBG0/1TilemapBuffer -- sidestepping
+ * whatever's wrong with BG1 there entirely. Player phase is untouched and
+ * still uses DrawAw2CoMini/the BG path above.
+ *
+ * This needs its own OBJ-VRAM copy of the graphic: BG and OBJ tiles are
+ * physically separate VRAM regions, so the BG copy LoadAw2CoMiniGfx made
+ * isn't reachable from here. Same for the palette -- OBJ palette IDs are a
+ * separate 0-15 hardware space from BG's, so this can't just reuse
+ * AW2_COMINI_PAL_ID either.
+ *
+ * Tile base: this repo's own static analysis of the map screen's OBJ VRAM
+ * budget (UseUnitSprite/gSMSGfxBuffer, src/bmudisp.c, and mu.c's OBCHR_MU_
+ * 180/MU_GFX_MAX_SIZE) suggested a gap around 0x290, but that didn't hold
+ * up in-game -- 0x200 (right after AW2_POWER_BANNER_SLOTB_TILE, which only
+ * a CO-power cutscene ever touches) is what's actually been tested clean
+ * on the map screen during AI phase. Reload after every battle (see
+ * StartAiPhaseGoalDisplay, src/player_interface.c) rather than trust it
+ * survives whatever OBJ VRAM a battle scene's own graphics touch. Gold
+ * digits (below) sit immediately after this panel's own 32 tiles. */
+#define AW2_COMINI_OBJ_TILE_BASE 0x200
+#define AW2_COMINI_OBJ_PAL_ID    25 // flat 0-31 (see LoadAw2Gfx) => hw OBJ slot 9; unused elsewhere
+
+/* Recolors the panel's frame accent colors (palette indices 2-4) to match
+ * whichever non-player faction is currently acting -- values sampled off
+ * each faction's own usual UI tint, same idea as UnitMapUiFramePal's own
+ * per-faction recolor (src/player_interface.c), just applied to this OBJ
+ * palette bank instead of a BG one. FACTION_PURPLE's own values aren't
+ * nailed down yet (link-arena 4th team, not reachable from a normal AI/CP
+ * phase) -- sPurpleColors is a placeholder guess (not sampled off
+ * anything real, just a plausible purple following the same
+ * mid/light/dark shape as the other two sets), replace once real values
+ * are sampled. */
+static void ApplyAw2CoMiniObjFactionPalette(int faction)
+{
+    static const u16 sEnemyColors[3] = {
+        RGB(0x1A, 0xA, 0x3), RGB(0x1D, 0x19, 0x18), RGB(0x16, 0x8, 0x2),
+    };
+    static const u16 sNpcColors[3] = {
+        RGB(0xA, 0x14, 0xC), RGB(0x18, 0x1D, 0x18), RGB(0x7, 0xF, 0x8),
+    };
+    static const u16 sPurpleColors[3] = { // TODO: placeholder, not sampled
+        RGB(0x14, 0x2, 0x18), RGB(0x1C, 0x18, 0x1D), RGB(0xC, 0x2, 0xE),
+    };
+    const u16 * colors;
+    int i;
+
+    switch (faction) {
+    case FACTION_GREEN:
+        colors = sNpcColors;
+        break;
+
+    case FACTION_PURPLE:
+        colors = sPurpleColors;
+        break;
+
+    case FACTION_RED:
+    default:
+        colors = sEnemyColors;
+        break;
+    }
+
+    for (i = 0; i < 3; ++i)
+        PAL_OBJ_COLOR(AW2_COMINI_OBJ_PAL_ID - 0x10, 2 + i) = colors[i];
+
+    EnablePaletteSync();
+}
+
+void LoadAw2CoMiniObjGfx(void)
+{
+    Decompress(aw2uiCoMini_tiles, gGenericBuffer);
+    Copy2dChr(gGenericBuffer, OBJ_CHR_ADDR(AW2_COMINI_OBJ_TILE_BASE), AW2_COMINI_W, AW2_COMINI_H);
+    ApplyPalette(aw2uiCoMini_palette, AW2_COMINI_OBJ_PAL_ID);
+    ApplyAw2CoMiniObjFactionPalette(gPlaySt.faction);
+
+    OverlapStarsAt(OBJ_CHR_ADDR(AW2_COMINI_OBJ_TILE_BASE), AW2_POWER_BANNER_TILE_ROW_STRIDE);
+
+    LoadAw2GoldDigitsObjGfx();
+}
+
+/* One call per frame, like any other OBJ sprite (see PutSprite, ctc.h) --
+ * gObject_64x32 covers the whole 8x4-tile panel (64x32px) in a single OAM
+ * entry, so no manual tiling is needed the way SUPER's banner sprite did.
+ * Draw this before DrawAw2GoldDigitsObjSprite (same PutSprite layer) so the
+ * digits land on top of the panel rather than under it -- PutSprite/
+ * PushSpriteLayerObjects (src/ctc.c) push a layer's most-recently-added
+ * sprite to the lowest OAM index, and GBA gives same-priority ties to the
+ * lower index, so "called later" already means "drawn on top" here. */
+void DrawAw2CoMiniObjSprite(int x, int y)
+{
+    PutSprite(3, x, y, gObject_64x32,
+        OAM2_CHR(AW2_COMINI_OBJ_TILE_BASE) | OAM2_PAL(AW2_COMINI_OBJ_PAL_ID));
+}
+
+/* Same color-11 cycle as UpdateAw2CoMiniPaletteCycle above, but for this
+ * OBJ copy -- AW2_COMINI_OBJ_PAL_ID is a separate hardware OBJ palette
+ * bank from AW2_COMINI_PAL_ID's BG one (PAL_OBJ_COLOR vs. PAL_BG_COLOR,
+ * include/hardware.h), so writing the BG bank never touched it. Defined
+ * down here rather than next to UpdateAw2CoMiniPaletteCycle since AW2_
+ * COMINI_OBJ_PAL_ID isn't in scope up there. Own timer, since player and
+ * AI phase cycle independently.
+ *
+ * AW2_COMINI_OBJ_PAL_ID is a *flat* 0-31 id (the convention this file's
+ * ApplyPalette calls use -- BG 0-15, OBJ 16-31, already offset), but
+ * PAL_OBJ_COLOR (include/hardware.h) takes a plain 0-15 OBJ-relative id
+ * and adds its own +0x10 -- passing the flat id straight through double-
+ * offsets it (25 + 0x10 = 41, off the end of gPaletteBuffer's 32 banks),
+ * which is why this was landing 0x536 bytes in instead of the real
+ * AW2_COMINI_OBJ_PAL_ID color 11 slot. Subtract the 0x10 back out here. */
+void UpdateAw2CoMiniObjPaletteCycle(void)
+{
+    static u8 sTimer = 0;
+
+    PAL_OBJ_COLOR(AW2_COMINI_OBJ_PAL_ID - 0x10, AW2_COMINI_CYCLE_COLOR) =
+        sAw2CominiCycleColors[sTimer / AW2_COMINI_CYCLE_STEP_FRAMES];
+    EnablePaletteSync();
+
+    sTimer = (sTimer + 1) % AW2_COMINI_CYCLE_FRAMES;
+}
+
+/* --- AI-phase gold digits, drawn over the panel above -----------------
+ * The BG version (DrawGoalDisplayWindow, #if FE8_PURCHASE_GENERICS) draws
+ * the gold amount on a separate BG layer above the frame's own, so the two
+ * don't fight over pixels; there's no such second layer here (this is a
+ * single opaque OBJ), so the digits have to be drawn as their own sprites
+ * layered on top of the panel instead -- see DrawAw2CoMiniObjSprite's own
+ * comment for how the ordering is guaranteed.
+ *
+ * Reuses src/draw_mapanim.c's own digit glyph sheet/layout (DrawMapAnim_
+ * PutDigit) rather than inventing a new one: NumbersFromSaveScreen.dmp is
+ * an uncompressed 12-tile dump (2 rows of 6, digits 0-5 then 6-9 with 2
+ * spares), included independently here since that file's own copy is
+ * gated behind FE8_DRAW_MAP_ANIMS (see src/data/data_aw2.c). Own OBJ tile
+ * slot and palette, immediately after the panel's own 32 tiles -- separate
+ * from FE8_DRAW_MAP_ANIMS's copy at DRAW_MAP_ANIM_OBJCHR_NUMBERS so the two
+ * features can't stomp each other if both happen to be on. */
+#define AW2_GOLD_DIGITS_OBJ_TILE_BASE 0x208 //(AW2_COMINI_OBJ_TILE_BASE + AW2_COMINI_W * AW2_COMINI_H)
+#define AW2_GOLD_DIGITS_OBJ_PAL_ID    26 // flat 0-31 (see LoadAw2Gfx) => hw OBJ slot 10; unused elsewhere
+
+void LoadAw2GoldDigitsObjGfx(void)
+{
+    CpuFastCopy(gAw2GoldDigits_tiles, OBJ_CHR_ADDR(AW2_GOLD_DIGITS_OBJ_TILE_BASE), 6 * 2 * CHR_SIZE);
+    ApplyPalette(gAw2GoldDigits_palette, AW2_GOLD_DIGITS_OBJ_PAL_ID);
+}
+
+static void PutAw2GoldDigit(int x, int y, int digit)
+{
+    int chr = AW2_GOLD_DIGITS_OBJ_TILE_BASE;
+
+    if (digit > 5) {
+        chr += 6; // see DrawMapAnim_PutDigit, src/draw_mapanim.c
+        digit -= 6;
+    }
+
+    PutSprite(3, x, y, gObject_8x8, OAM2_CHR(chr + digit) | OAM2_PAL(AW2_GOLD_DIGITS_OBJ_PAL_ID));
+}
+
+/* Right-aligned at (rightX, y): the ones digit lands at rightX, with each
+ * more significant digit stepping 8px further left. */
+void DrawAw2GoldDigitsObjSprite(int rightX, int y, int gold)
+{
+    int x = rightX;
+
+    if (gold < 0)
+        gold = 0;
+
+    do {
+        PutAw2GoldDigit(x, y, gold % 10);
+        gold /= 10;
+        x -= 8;
+    } while (gold > 0);
 }
 
 #endif

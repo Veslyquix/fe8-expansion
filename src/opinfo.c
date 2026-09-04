@@ -2153,17 +2153,24 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
     [0x07] = { 0x711, 0x1D, CLASS_FIGHTER, 0, 0x18, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
 #endif
     [0x08] = { 0x6FD, 0x5D, CLASS_THIEF, 0, 0x88, 0, 0, 0, 0, 0, 0x1C, 0x1C, 0, sClassReelScr_Opinfo_0 },
-    /* FE8_NEW_ANIMS: archer bow -> banim_data[0xDA], and paletteId forced to
-     * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
-     * overwrite the animation's own palette with the vanilla per-character
-     * palette, which is indexed for the vanilla sprite and lands on the wrong
-     * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
+    /* FE8_NEW_ANIMS: archer bow -> banim_data[0xE8] (derarcm, Der's
+     * Improved), and paletteId forced to -1. A non -1 paletteId makes
+     * InitMainMiniAnim (src/banim-ekrmainmini.c) overwrite the animation's
+     * own palette with the vanilla per-character palette, which is indexed
+     * for the vanilla sprite and lands on the wrong pixels of a custom one.
+     * -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x09] = { 0x703, 0xFF, CLASS_ARCHER, 0, 0xDA, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+    [0x09] = { 0x703, 0xFF, CLASS_ARCHER, 0, 0xE8, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
 #else
     [0x09] = { 0x703, 0, CLASS_ARCHER, 0, 0x27, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
 #endif
+    /* FE8_NEW_ANIMS: mage_f magic -> banim_data[0xED] (gaidenmage_ponytail),
+     * and paletteId forced to -1 for the same reason as archer above. */
+#if FE8_NEW_ANIMS
+    [0x0A] = { 0x709, 0xFF, CLASS_MAGE_F, 0, 0xED, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
+#else
     [0x0A] = { 0x709, 0x2E, CLASS_MAGE_F, 0, 0x6B, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
+#endif
     [0x0B] = { 0x719, 0x36, CLASS_MONK, 0, 0x7C, 0x04, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_7 },
     [0x0C] = { 0x725, 0xFF, CLASS_REVENANT, 0x01, 0x9F, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_2 },
     [0x0D] = { 0x726, 0xFF, CLASS_ENTOUMBED, 0x01, 0xA0, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_2 },

@@ -46,9 +46,9 @@ PROHIBITED_ROOT_ARTIFACTS = {"fireemblem8.map", "fireemblem8_relocs.map", "objec
 # Existing tracked source assets are narrowly allowed only under known roots.
 RESTRICTED_EXTENSIONS = {
     ".png", ".bin", ".agbpal", ".mid", ".pal", ".aif", ".mar", ".pcm",
-    ".tmap", ".tsa",
+    ".tmap", ".tsa", ".tmx",
 }
-GRAPHICS_SOURCE_EXTENSIONS = {".png", ".agbpal", ".pal", ".mar", ".tmap", ".tsa"}
+GRAPHICS_SOURCE_EXTENSIONS = {".png", ".agbpal", ".pal", ".mar", ".tmap", ".tsa", ".tmx"}
 SOUND_SOURCE_EXTENSIONS = {".aif", ".mid", ".pcm"}
 
 Entry = namedtuple("Entry", "mode oid path stage")
@@ -172,6 +172,8 @@ def _is_allowed_source_asset(lower_path, filename, ext):
         )
     if lower_path.startswith("graphics/") and ext in GRAPHICS_SOURCE_EXTENSIONS:
         return True
+    if ext == ".tmx" and lower_path.startswith("scripts/map_gen/chunks/"):
+        return True  # FE8_MAPGEN chunk source (scripts/mapgen_build_chunks.py)
     if lower_path.startswith("preview/") and ext == ".png":
         return True
     if lower_path.startswith("sound/") and ext in SOUND_SOURCE_EXTENSIONS:

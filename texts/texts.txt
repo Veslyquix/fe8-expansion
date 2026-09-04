@@ -40302,11 +40302,68 @@ Erase All Save Data[.][X]
 Erase all save data?[.][LF]
 This cannot be undone.[X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_HANNAH
-Hannah[X]
+## MSG_CUSTOM_CAMPAIGN_NAME_WAKWI
+Wakwi[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_FRANCIS
-Francis[.][X]
+## MSG_CO_WAKWI_NAME
+Wakwi[.][X]
+
+## MSG_CO_WAKWI_TITLE
+The Unyielding Blade[.][X]
+
+## MSG_CO_WAKWI_INFO
+A fearless leader who stands[LF]
+at the heart of every battle,[LF]
+inspiring allies to strike true.[LF]
+ [LF]
+Passive: her units have[LF]
++10 critical hit rate.[.][X]
+
+## MSG_CO_WAKWI_POWER_NAME
+Keen Edge[.][X]
+
+## MSG_CO_WAKWI_POWER_DESC
+Wakwi's units gain +30[LF]
+critical hit rate.[.][X]
+
+## MSG_CO_WAKWI_SUPER_NAME
+Deadly Edge[.][X]
+
+## MSG_CO_WAKWI_SUPER_DESC
+Wakwi's units gain +100[LF]
+critical hit rate.[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE
+Ishkode[.][X]
+
+## MSG_CO_ISHKODE_NAME
+Ishkode[.][X]
+
+## MSG_CO_ISHKODE_TITLE
+The Hunter's Eye[.][X]
+
+## MSG_CO_ISHKODE_INFO
+A young leader who treads[LF]
+carefully into battle,[LF]
+guiding his allies from afar.[LF]
+ [LF]
+Passive: his bow wielders[LF]
+have +1 range.[X]
+
+## MSG_CO_ISHKODE_POWER_NAME
+Keen Eye[.][X]
+
+## MSG_CO_ISHKODE_POWER_DESC
+Bow wielders gain[LF]
++1 range and 20% power.[.][X]
+
+## MSG_CO_ISHKODE_SUPER_NAME
+Eagle Eye[.][X]
+
+## MSG_CO_ISHKODE_SUPER_DESC
+Bow wielders gain[LF]
++2 range and 40% power.[.][X]
+
 
 ## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
 Frederick[.][X]
@@ -40344,43 +40401,46 @@ from the front and never[LF]
 leaves a unit behind.[.][X]
 
 ## MSG_CO_FRANCIS_POWER_NAME
-Barrage[.][X]
+Rekindle[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
 All of Francis's preferred[LF]
 units heal 10 HP.[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
-War Council[.][X]
+Resurgance[.][X]
 
 ## MSG_CO_FRANCIS_SUPER_DESC
 All of Francis's units are[LF]
 fully healed and deal[LF]
 more damage.[.][X]
 
-## MSG_CO_ONEILL_NAME
-O'Neill[.][X]
+## MSG_CO_KARGAN_NAME
+Kargan[.][X]
 
-## MSG_CO_ONEILL_TITLE
+## MSG_CO_KARGAN_TITLE
 The Reckless Brawler[X]
 
-## MSG_CO_ONEILL_INFO
+## MSG_CO_KARGAN_INFO
 A brash commander who trusts[LF]
 raw power over careful[LF]
-planning.[.][X]
+planning.[LF]
+ [LF]
+Passive: his axe-wielders[LF]
+have +1 movement.[.][X]
 
-## MSG_CO_ONEILL_POWER_NAME
+## MSG_CO_KARGAN_POWER_NAME
 Barrage[.][X]
 
-## MSG_CO_ONEILL_POWER_DESC
-All of O'Neill's units deal[LF]
+## MSG_CO_KARGAN_POWER_DESC
+All of Kargan's units deal[LF]
 1 extra damage for the turn.[X]
 
-## MSG_CO_ONEILL_SUPER_NAME
+## MSG_CO_KARGAN_SUPER_NAME
 Brutal Barrage[X]
 
-## MSG_CO_ONEILL_SUPER_DESC
-All of O'Neill's units deal[LF]
+## MSG_CO_KARGAN_SUPER_DESC
+All of Kargan's units deal[LF]
 2 extra damage for the turn.[X]
 
 ## MSG_PURCHASE_GENERIC_PAGE
@@ -40417,13 +40477,13 @@ Res[.][X]
 Mov[.][X]
 
 ## MSG_PURCHASE_GENERIC_CAPTURE
-Capture[.][X]
+ Capture[.][X]
 
 ## MSG_UNIT_ACTION_MERGE
-Merge[.][X]
+ Merge[.][X]
 
 ## MSG_UNIT_ACTION_PROMOTE
-Promote[.][X]
+ Promote[.][X]
 
 ## MSG_MAP_MENU_CO
  CO[.][X]
@@ -40436,3 +40496,84 @@ Promote[.][X]
 
 ## MSG_EXPANSION_THREAT_RANGE
  Threat Range[.][X]
+
+## MSG_FACSTAT_TURN
+Turn[X]
+
+## MSG_FACSTAT_UNITS
+Units[.][X]
+
+## MSG_FACSTAT_LOST
+Lost[X]
+
+## MSG_FACSTAT_BASES
+Bases[.][X]
+
+## MSG_FACSTAT_INCOME
+Income[X]
+
+## MSG_FACSTAT_FUNDS
+Funds[.][X]
+
+## MSG_FACSTAT_NEUTRAL_BASES
+Neutral Bases[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION
+Nahara Valley[.][X]
+
+## MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
+[OpenMidLeft]We should have stayed[LF]
+on the eastern trail.[.][LF]
+The mountains are too quiet.[A]
+[OpenMidRight]The Naskwa have made[LF]
+every trail dangerous.[.][LF]
+We cannot keep running from them.[A]
+[OpenMidLeft]We aren't running.[.][LF]
+We are surviving.[A]
+[OpenMidRight]And for how long?[.][LF]
+Our people have abandoned[LF]
+three camps this season.[A]
+[OpenMidLeft]Until we can take our lands back.[.][A][CloseSpeechSlow]
+[OpenFarFarRight][LoadFace][FID_VillagerYoungMan]
+[OpenFarFarRight][MoveRight]
+[OpenRight]The fort[ToggleMouthMove]...[.][ToggleMouthMove][LF]
+beyond the mountains.[.][LF]
+The Naskwa are marching on it.[A]
+[OpenMidRight]How many?[.][A]
+[OpenRight]Too many.[.][LF]
+They'll begin the siege[.][LF]
+before nightfall.[A][CloseSpeechFast]
+[OpenMidLeft]Then we leave now.[.][A]
+[OpenMidRight]Our people have only[LF]
+just made camp.[.][A]
+[OpenMidLeft]And our allies may not live[.][LF]
+to see another sunrise.[A]
+[OpenMidRight]Let the Naskwa learn that we are[.][LF]
+not so easily driven from our home.[A]
+[OpenMidLeft]To the mountains, then.[.][A][X]
+
+## MSG_CLASS_LYN_LORD_NAME
+Lord[.][X]
+
+## MSG_CLASS_LYN_LORD_DESC
+A swift blade wielder skilled with[LF]
+the sword. Equip: Swords.[.][X]
+
+## MSG_CLASS_NOMAD_NAME
+Nomad[.][X]
+
+## MSG_CLASS_NOMAD_DESC
+Mounted archers who strike from afar[LF]
+and range far ahead. Equip: Bows.[.][X]
+
+## MSG_CLASS_NOMAD_TROOPER_NAME
+Nomad Trooper[.][X]
+
+## MSG_CLASS_NOMAD_TROOPER_DESC
+Veteran nomads who have added the[LF]
+sword to their bow. Equip: Swords, Bows.[X]
+
+## MSG_PURCHASE_GENERIC_DEPLOY_SELECT
+Select where to deploy the new unit.[X]

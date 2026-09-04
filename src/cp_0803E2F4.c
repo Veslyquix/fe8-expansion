@@ -387,11 +387,19 @@ s8 AiEquipGetFlags(u16 * out)
 
         if (GetItemAttributes(item) & IA_WEAPON)
         {
+#if FE8_RANGE_REWORK
+            if (GetUnitItemEffectiveMinRange(gActiveUnit, item) > 1)
+                out[i] |= 2;
+
+            if (GetUnitItemEffectiveMaxRange(gActiveUnit, item) == 1)
+                out[i] |= 1;
+#else
             if (GetItemMinRange(item) > 1)
                 out[i] |= 2;
 
             if (GetItemMaxRange(item) == 1)
                 out[i] |= 1;
+#endif
 
             perc = Div(perc = GetItemUses(item) * 100, GetItemMaxUses(item));
 
@@ -445,11 +453,19 @@ void AiEquipGetDanger(int x, int y, u16 * range_danger_out, u16 * melee_danger_o
 
         might = StoreItemAndGetUnitAttack(unit, &item);
 
+#if FE8_RANGE_REWORK
+        if (GetUnitItemEffectiveMinRange(unit, item) > 1)
+            *range_danger_out += might;
+
+        if (GetUnitItemEffectiveMaxRange(unit, item) == 1)
+            *melee_danger_out += might;
+#else
         if (GetItemMinRange(item) > 1)
             *range_danger_out += might;
 
         if (GetItemMaxRange(item) == 1)
             *melee_danger_out += might;
+#endif
 
         for (iy = gBmMapSize.y - 1; iy >= 0; iy--)
         {
@@ -660,7 +676,11 @@ s8 AiTryDoCombatInRangeFromPosition(int x, int y) {
 
     BmMapFill(gBmMapMovement, 0);
 
+#if FE8_RANGE_REWORK
+    MapAddInBoundedRange(x, y, GetUnitItemEffectiveMinRange(gActiveUnit, item), GetUnitItemEffectiveMaxRange(gActiveUnit, item));
+#else
     MapAddInBoundedRange(x, y, GetItemMinRange(item), GetItemMaxRange(item));
+#endif
 
     for (iy = gBmMapSize.y - 1; iy >= 0; iy--) {
         for (ix = gBmMapSize.x - 1; ix >= 0; ix--) {

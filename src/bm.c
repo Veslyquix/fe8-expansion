@@ -28,8 +28,9 @@
 #include "eventcall.h"
 #include "purchase_generics.h"
 #include "gamerank.h"
-#if FE8_ANIMS_FAST_FORWARD
-#include "anims_fast_forward.h"
+#include "dangerradius.h"
+#if FE8_CO_POWERS
+#include "power.h" // CoPowers_OnPhaseStart
 #endif
 
 #include "bm.h"
@@ -350,35 +351,6 @@ void OnVBlank(void)
     m4aSoundMain();
 }
 
-#if FE8_ANIMS_FAST_FORWARD
-/* Runs an extra, un-paced copy of what OnVBlank above does (proc tree 0 +
- * the graphics flush) instead of yielding to the hardware vblank wait --
- * ported from a standalone Lyn-hooked ASM patch (asm/AnimsFastForward on
- * disk)'s FastForwardBattles. Deliberately doesn't touch sound
- * (m4aSoundVSync/m4aSoundMain) or MapGen_TickBootFrames like OnVBlank
- * does: those stay paced by the real vblank interrupt alone, which still
- * fires on its own schedule underneath this -- only the proc/graphics
- * side gets the extra, unthrottled tick. */
-static void RunAnimsFastForwardTick(void)
-{
-    INTR_CHECK = INTR_FLAG_VBLANK;
-
-    IncrementGameClock();
-    Proc_Run(gProcTreeRootArray[0]);
-
-    SyncLoOam();
-
-    if (gBmSt.main_loop_ended) {
-        gBmSt.main_loop_ended = 0;
-
-        FlushLCDControl();
-        FlushBackgrounds();
-        FlushTiles();
-        SyncHiOam();
-    }
-}
-#endif
-
 //! FE8U = 0x080152F4
 void OnMain(void)
 {
@@ -407,13 +379,6 @@ void OnMain(void)
 
     gBmSt.main_loop_ended = 1;
     gBmSt.prevVCount = REG_VCOUNT;
-
-#if FE8_ANIMS_FAST_FORWARD
-    // if (ShouldSpeedupAnims()) {
-        // RunAnimsFastForwardTick();
-        // return;
-    // }
-#endif
 
     VBlankIntrWait();
 }
@@ -482,10 +447,27 @@ int CallBeginningEvents(void)
 //! FE8U = 0x08015410
 int BmMain_ChangePhase(void)
 {
+#if FE8_DANGER_RADIUS
+    /* EndDR.asm: clear Danger Radius on any phase switch while FOW is off
+     * and the ending phase is player phase (DR is unavailable whenever FOW
+     * is active -- see include/dangerradius.h). */
+    if ((gPlaySt.chapterVisionRange == 0) && (gPlaySt.faction == FACTION_BLUE))
+        DangerRadius_End();
+#endif
 
     ClearActiveFactionGrayedStates();
     RefreshUnitSprites();
     SwitchPhases();
+
+#if FE8_CO_POWERS
+    /* A CO power/super (struct CoClassAffinity's *Pow/*Sup fields,
+     * src/power.c) lasts until its own faction's *next* turn -- it stays
+     * active through every other faction's phase in between, and only
+     * clears here, right as that faction's own phase starts again.
+     * SwitchPhases() above already flipped gPlaySt.faction to the
+     * newly-starting phase's faction. */
+    CoPowers_OnPhaseStart(gPlaySt.faction);
+#endif
 
     if (RunPhaseSwitchEvents() == true)
         return false;
@@ -522,6 +504,17 @@ void BmMain_StartPhase(ProcPtr proc)
 
 #if FE8_PURCHASE_GENERICS
     PurchaseGenerics_OnNewPhase();
+#endif
+
+#if FE8_DANGER_RADIUS
+    /* Auto-activate Danger Radius for every enemy as soon as player phase
+     * begins (not part of the original hack, which only ever activated it
+     * manually via Select -- see include/dangerradius.h). Gated on the real
+     * gPlaySt.faction, not phaseControl, since debug-controlling an enemy
+     * phase as blue isn't genuinely player phase for Danger Radius's
+     * purposes. */
+    if ((gPlaySt.faction == FACTION_BLUE) && (gPlaySt.chapterVisionRange == 0))
+        DangerRadius_ActivateAllAtPhaseStart();
 #endif
 
     switch (phaseControl) {
@@ -1328,6 +1321,106 @@ int GetCurrentMapMusicIndex(void) {
     }
 }
 
+#if FE8_RAND_BGM
+
+/* Vanilla's gSongTable has exactly 1000 entries (IDs 0x000-0x3E7); see
+ * include/constants/songs.h. If a future flag appends custom songs past
+ * that (the way NIMAP2 does in later revisions of this codebase), widen
+ * this bound under its own #if so randomized picks can reach them too --
+ * see docs/random_bgm.md. */
+#define RANDBGM_SONG_COUNT 1000
+
+/* Pure, stateless hash step: the exact same recurrence rng.c's
+ * AdvanceGetLCGRNValue() uses, applied to a caller-supplied value instead
+ * of the shared gLCGRNValue global. gLCGRNValue is continuously advanced
+ * every frame by cosmetic FX elsewhere in the engine (weather particles in
+ * src/bmio.c, face animation in src/face.c, sparkle trails in
+ * src/emitstarfx.c, ...), so reseeding/advancing THAT global here to pick a
+ * song would perturb those effects. This also deliberately avoids
+ * NextRN()/gRNSeeds, the live combat RNG stream, so map BGM selection can
+ * never perturb -- or be perturbed by -- actual combat rolls. */
+static u32 RandBgmAdvanceHash(u32 value) {
+    u32 rn = (value * 4 + 2);
+    rn *= (value * 4 + 3);
+    return rn >> 2;
+}
+
+static u32 RandBgmMixByte(u32 hash, u8 byte) {
+    return RandBgmAdvanceHash(hash ^ byte);
+}
+
+/* Deterministic within a playthrough, without adding any new save data:
+ * gPlaySt.playthroughIdentifier is an existing per-save byte, assigned once
+ * at new-game start (see src/bmsave.c), reused here as-is. */
+static u32 RandBgmSessionSeed(void) {
+    return (u32)gPlaySt.playthroughIdentifier * 0x9E3779B1u;
+}
+
+static bool RandBgmEligible(int index) {
+    /* Same music-player/priority pair vanilla map BGM uses (see e.g.
+     * song004_agbfe3_bgm_wmap_01 in sound/song_table.s); this also
+     * naturally excludes the table's dummy/empty slots, which are all
+     * ms=0, me=0. */
+    return gSongTable[index].ms == 1 && gSongTable[index].me == 1;
+}
+
+/* Seeded-random map BGM pick: chooses uniformly among every song sharing
+ * the vanilla map-BGM priority pair, deterministically from the current
+ * save's playthrough identifier plus chapter/turn/phase. See
+ * docs/random_bgm.md. */
+int GetBGMTrack(void) {
+    u32 hash;
+    u32 pick;
+    int eligibleCount;
+    int i;
+    int vanillaPick = GetCurrentMapMusicIndex();
+
+    /* The victory jingle is a scripted cue, not generic map BGM -- always
+     * honor it instead of randomizing it away. */
+    if (vanillaPick == SONG_GRASP_AT_VICTORY) {
+        return vanillaPick;
+    }
+
+    hash = RandBgmSessionSeed();
+    hash = RandBgmMixByte(hash, 1);
+    hash = RandBgmMixByte(hash, 2);
+    hash = RandBgmMixByte(hash, (u8)gPlaySt.chapterIndex);
+    hash = RandBgmMixByte(hash, (u8)gPlaySt.chapterTurnNumber);
+    hash = RandBgmMixByte(hash, gPlaySt.faction);
+
+    eligibleCount = 0;
+    for (i = 0; i < RANDBGM_SONG_COUNT; i++) {
+        if (RandBgmEligible(i)) {
+            eligibleCount++;
+        }
+    }
+
+    if (eligibleCount == 0) {
+        return vanillaPick;
+    }
+
+    pick = hash % eligibleCount;
+
+    for (i = 0; i < RANDBGM_SONG_COUNT; i++) {
+        if (RandBgmEligible(i)) {
+            if (pick == 0) {
+                return i;
+            }
+            pick--;
+        }
+    }
+
+    return vanillaPick;
+}
+
+#else
+
+int GetBGMTrack(void) {
+    return GetCurrentMapMusicIndex();
+}
+
+#endif
+
 //! FE8U = 0x080160D0
 void StartMapSongBgm(void) {
 #if FE8_VESLY_DEBUGGER
@@ -1339,7 +1432,7 @@ void StartMapSongBgm(void) {
     }
 #endif
 
-    StartBgm(GetCurrentMapMusicIndex(), NULL);
+    StartBgm(GetBGMTrack(), NULL);
     return;
 }
 

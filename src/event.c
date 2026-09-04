@@ -105,11 +105,27 @@ void EventEngine_OnUpdate(struct EventEngineProc * proc)
         evFunc = (evCode < 0x80) ? gEventLoCmdTable[evCode] : gEventHiCmdTable[evCode - 0x80];
 
         switch (evFunc(proc)) {
+#if FE8_FIX_BUGS
+        /* Vanilla groups EVC_ERROR with the non-advancing codes below, so a
+         * command that fails re-runs forever: the `break` leaves the switch,
+         * not the enclosing while (TRUE), and pEventCurrent never moves. Any
+         * of the ~33 EVC_ERROR sites in src/eventscr.c hard-freezes the game
+         * that way -- most easily hit by a command naming a unit that isn't
+         * on the map, e.g. CUMO_CHAR/MOVE/etc. on a character that was DISA'd
+         * or never loaded (Event3B_DisplayCursor's EVSUBCMD_CURSOR_UNIT
+         * returns EVC_ERROR when GetUnitStructFromEventParameter gives NULL).
+         * Skipping just the failed command lets the rest of the event script
+         * run, which is what those scripts expect -- aborting the whole event
+         * instead would strand whatever state it still had to set up. */
+        case EVC_ERROR:
+#endif
         case EVC_ADVANCE_CONTINUE:
             proc->pEventCurrent += ((*proc->pEventCurrent) >> 4)&0xF;
         case EVC_STOP_CONTINUE:
         case EVC_UNK4:
+#if !FE8_FIX_BUGS
         case EVC_ERROR:
+#endif
             break;
         
         case EVC_ADVANCE_YIELD:

@@ -16,6 +16,9 @@
 #include "ekrtriangle.h"
 #include "eventinfo.h"
 #include "constants/songs.h"
+#if FE8_ANIMS_FAST_FORWARD
+#include "anims_fast_forward.h"
+#endif
 
 /* ekr */
 EWRAM_OVERLAY(banim) struct Anim * gAnims[4] = {NULL};
@@ -217,6 +220,40 @@ void InBattleMainRoutine(void)
 
     gBmSt.main_loop_ended = true;
     gBmSt.prevVCount = REG_VCOUNT;
+
+#if FE8_ANIMS_FAST_FORWARD
+    /* FE8U = 0x0804FEC8, replacing the vanilla VBlankIntrWait() below with
+     * an extra, un-paced proc/graphics tick while a fast-forward key is
+     * held -- ported from a standalone Lyn-hooked ASM patch
+     * (asm/AnimsFastForward on disk)'s FastForwardBattles, which hooks
+     * this exact spot in InBattleMainRoutine (not bm.c's OnMain, the map's
+     * main loop -- that would speed up the whole game, not just battle
+     * animations). Deliberately doesn't touch sound (m4aSoundVSync/
+     * m4aSoundMain) or MapGen_TickBootFrames like OnMain's own vblank
+     * handler does: those stay paced by the real vblank interrupt alone,
+     * which still fires on its own schedule underneath this -- only the
+     * proc/graphics side gets the extra, unthrottled tick. */
+    if (ShouldSpeedupAnims()) {
+        INTR_CHECK = INTR_FLAG_VBLANK;
+
+        IncrementGameClock();
+        Proc_Run(gProcTreeRootArray[0]);
+
+        SyncLoOam();
+
+        if (gBmSt.main_loop_ended) {
+            gBmSt.main_loop_ended = 0;
+
+            FlushLCDControl();
+            FlushBackgrounds();
+            FlushTiles();
+            SyncHiOam();
+        }
+
+        return;
+    }
+#endif
+
     VBlankIntrWait();
 }
 

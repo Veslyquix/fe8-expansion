@@ -12,9 +12,29 @@ Generally sourced from the community
 | `CLASS_FIGHTER` | [Fighter-Variant] FE9 Repal [M] by Glenwing | Original FE9 Fighter by MK404. Repalette by Glenwing. |
 | `CLASS_KNIGHT` | [Knight-Variant] Generic [M] by SALVAGED | Animations by SALVAGED. Axe (Magic Axe) variant by Itanc. |
 | `CLASS_MERCENARY` | [Mercenary-Reskin] Armored SALVAGED Style [M] | Animation by Alusq, Maiser6. Recolor/Repalette by RRSKAI. Head from Team SALVAGE's Mercenary. Reskin by UltraFenix. |
-| `CLASS_ARCHER` | [Archer-Reskin] FE5-Style [M] by Pushwall | Animation by Pushwall. |
+| *(unused -- see below)* | [Archer-Reskin] FE5-Style [M] by Pushwall | Animation by Pushwall. |
 | `CLASS_CAVALIER` | [Cavalier-Variant] [M] Generic by SALVAGED v2 | Cavalier custom by SALVAGED. Upgraded version of the original SALVAGED cavalier; no female equivalent currently exists. |
 | `CLASS_PEGASUS_KNIGHT` | [Peg T1 Base] [F] Repal v2 + Weapons by Flasuban | Sword/Lance/Axe/Handaxe/Unarmed/Repalette by Flasuban. Unarmed palette fix by UltraFenix. Magic by UltraFenix, using Light Mage by Leo_link and L95 as a base. UltraFenix fixed a pixel mistake in all animations. |
+| `CLASS_ARCHER` | [Archer-Variant] Der's Improved [M] | Original animation by IS. Archer Variant by Flasuban and DerTheVaporeon. |
+| `CLASS_ARCHER_F` | [Archer-Variant] Der's Improved [F] | Original animation by IS. Archer Variant by Flasuban and DerTheVaporeon. |
+| `CLASS_MAGE` | [Mage-Custom] Gaiden-Style Frame Fix [F] by Gamma | HyperGammaSpaces, Teraspark, Obsidian_Daddy, Devisian_Nights. Frame fixes (misplaced eye) by Raulster/Alice. |
+| `CLASS_MAGE_F` | [Mage-Custom] Gaiden-Style Ponytail [F] by Gamma | HyperGammaSpaces, Teraspark, Obsidian_Daddy, Devisian_Nights. Frame fixes (misplaced eye) and ponytail by Raulster/Alice. |
+| `CLASS_LYN_LORD` | [FE7 Lyn-Reskin] T1 Long Hair [F] | Frames by Blazt. Formatted by Seliost1. |
+| `CLASS_NOMAD`, `CLASS_NOMAD_F` | [Nomad-Base] [M]/[F] Vanilla Repal | Repalette by Pikmin1211 and Maiser6. |
+| `CLASS_NOMAD_TROOPER` | [Nomad Trooper Reskin][M] FE6 Style by Levin64 | FE6 Nomad Trooper improved by Levin64. |
+| `CLASS_NOMAD_TROOPER_F` | [Nomad Trooper Reskin] [F] FE6 Style by Levin64 | FE6 Nomad Trooper improved by Levin64. Female variant reskin by Fuyu. |
+
+Pushwall's FE5-style Archer (the animation `CLASS_ARCHER` used before) is
+still imported as an available `banim_data[]` entry (see
+`scripts/banim_packs.json`) but is no longer assigned to any class.
+
+## Map Sprites
+
+| Class | Credits |
+| --- | --- |
+| `CLASS_LYN_LORD` | Merpin |
+| `CLASS_NOMAD`, `CLASS_NOMAD_F` | IS, MeatOfJustice, UltraFenix |
+| `CLASS_NOMAD_TROOPER`, `CLASS_NOMAD_TROOPER_F` | IS |
 
 ## Map Tilesets (`NEW_TILESETS`)
 
@@ -34,7 +54,44 @@ Generally sourced from the community
 | Frederick | `{Nickt} Frederick.png` | Nickt |
 | Fox | `{Nickt} Fox.png` | Nickt |
 | Liz | `Flyer Girl Liz[F2E].png` | RandomWizard (tagged **F2E**, "Free to Edit") |
+| Ishkode | `{Eden} Ishkode.png` | Eden |
+| Wakwi | `{Eden} Wakwi.png` | Eden |
+| Kargan (replaces O'Neill) | `{Eden} Kargan[F2E].png` | Eden |
 
+Hannah and Francis are no longer used by `src/portrait_data.c` (replaced by
+Wakwi and Ishkode respectively) but remain credited/linked, not removed.
+
+
+## CO Screen Graphics (`CO_POWERS`)
+
+| Asset | File | Artist |
+| --- | --- | --- |
+| CO info screen backdrop | `graphics/bg/bg_CoStatusScreen.png` | PatrickHoang |
+
+## Custom BGM (`NIMAP2`)
+
+Sound data sourced from the [Fire Emblem: Sacred Rewritten
+Randomizer](https://github.com/Vesly-FE/SRR) BGM pack (`bgm/`). Re-expressed as
+decomp voicegroup/song assembly by `scripts/sound/gen_nimap2.py` and
+`scripts/sound/import_bgm.py`; see [docs/custom_bgm.md](docs/custom_bgm.md).
+
+### Instrument maps
+
+| Component | Credits |
+| --- | --- |
+| NIMAP2 native instrument map (`voicegroup000`) | Community FE-hacking patch, distributed with the SRR BGM pack. No individual attribution is recorded upstream. |
+| Percussion drumfix (`voicegroup079`/`080`/`081`/`083`/`084`) | As above. The pack's companion FE7 16-track/12-sound fix is credited upstream to Agro/Brendor; the FE8 drumfix data itself carries no separate attribution. |
+
+### Songs
+
+| Song ID | Track | Arranger |
+| --- | --- | --- |
+| `SONG_BGM_GS_VENUS_LIGHTHOUSE` | Golden Sun — Venus Lighthouse | AReliableChair |
+| `SONG_BGM_POKEMON_GS_GOLDENROD_CITY` | Pokémon Gold/Silver — Goldenrod City | AReliableChair |
+
+Original compositions remain the property of their respective rights holders
+(Camelot/Nintendo for *Golden Sun*; Game Freak/Nintendo for *Pokémon
+Gold/Silver*); only the GBA arrangements are credited above.
 
 ## Ported Code Patches
 
@@ -60,6 +117,9 @@ Generally sourced from the community
 | `PROMOTE_COMMAND` | Vesly |
 | `TURN_AUTOSAVE` | Vesly |
 | `TEXT_CHAPTER_NAMES` | circleseverywhere, hypergammaspaces |
+| `ANIMS_FAST_FORWARD` | Vesly |
+| `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
+| `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
 
 
 

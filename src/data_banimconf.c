@@ -489,11 +489,11 @@ CONST_DATA struct BattleAnimDef AnimConf_23[] = {
  * NOTE: .index is ONE-BASED -- GetBattleAnimationId (src/banim-ekrcmd.c)
  * returns idx - 1, so banim_data[] slot == .index - 1. Ranged axes match on
  * exact item id (wtype < 0x100, first pass) rather than weapon type. */
-CONST_DATA struct BattleAnimDef AnimConf_24[] = {
+CONST_DATA struct BattleAnimDef AnimConf_24[] = { // CLASS_ARCHER
     {
         .wtype = 0x0100 | ITYPE_BOW,
 #if FE8_NEW_ANIMS
-        .index = 0x00DB,
+        .index = 0x00E9, // derarcm bow -- [Archer-Variant] Der's Improved [M]
 #else
         .index = 0x0026,
 #endif
@@ -501,7 +501,7 @@ CONST_DATA struct BattleAnimDef AnimConf_24[] = {
     {
         .wtype = 0x0100 | ITYPE_ITEM,
 #if FE8_NEW_ANIMS
-        .index = 0x00DC,
+        .index = 0x00EA, // derarcm unarmed
 #else
         .index = 0x0027,
 #endif
@@ -521,14 +521,22 @@ CONST_DATA struct BattleAnimDef AnimConf_24[] = {
     { 0 }
 };
 
-CONST_DATA struct BattleAnimDef AnimConf_25[] = {
+CONST_DATA struct BattleAnimDef AnimConf_25[] = { // CLASS_ARCHER_F
     {
         .wtype = 0x0100 | ITYPE_BOW,
+#if FE8_NEW_ANIMS
+        .index = 0x00EB, // derarcf bow -- [Archer-Variant] Der's Improved [F]
+#else
         .index = 0x0028,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00EC, // derarcf unarmed
+#else
         .index = 0x0029,
+#endif
     },
     {
         .wtype = ITEM_BALLISTA_REGULAR,
@@ -705,42 +713,74 @@ CONST_DATA struct BattleAnimDef AnimConf_35[] = {
     { 0 }
 };
 
-CONST_DATA struct BattleAnimDef AnimConf_36[] = {
+CONST_DATA struct BattleAnimDef AnimConf_36[] = { // CLASS_MAGE
     {
         .wtype = 0x0100 | ITYPE_ANIMA,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED, // gaidenmage_framefix magic -- [Mage-Custom] Gaiden-Style Frame Fix [F] by Gamma
+#else
         .index = 0x006B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_LIGHT,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED,
+#else
         .index = 0x006B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_DARK,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED,
+#else
         .index = 0x006B,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00ED,
+#else
         .index = 0x006B,
+#endif
     },
     { 0 }
 };
 
-CONST_DATA struct BattleAnimDef AnimConf_37[] = {
+CONST_DATA struct BattleAnimDef AnimConf_37[] = { // CLASS_MAGE_F
     {
         .wtype = 0x0100 | ITYPE_ANIMA,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE, // gaidenmage_ponytail magic -- [Mage-Custom] Gaiden-Style Ponytail [F] by Gamma
+#else
         .index = 0x006C,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_LIGHT,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE,
+#else
         .index = 0x006C,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_DARK,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE,
+#else
         .index = 0x006C,
+#endif
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+#if FE8_NEW_ANIMS
+        .index = 0x00EE,
+#else
         .index = 0x006C,
+#endif
     },
     { 0 }
 };
@@ -2076,6 +2116,133 @@ CONST_DATA struct BattleAnimDef AnimConf_100[] = {
     {
         .wtype = 0x0100 | ITYPE_ITEM,
         .index = 0x0095,
+    },
+    { 0 }
+};
+
+/* New classes (2026-09 FE-Repo pack import): LynLord, Nomad(_F), Nomad
+ * Trooper(_F) -- see scripts/banim_packs.json / src/banim_data.c slots
+ * 0xEE-0xF8. Unlike AnimConf_24 (Archer)/_36 (Mage) above, which the
+ * import left untouched on purpose (their existing custom/vanilla anims
+ * stay wired), these ARE the new classes' only anim, so .index isn't
+ * #if FE8_NEW_ANIMS-gated the way Archer's is -- these classes don't
+ * exist without FE8_NEW_ANIMS's animation data to draw them with in the
+ * first place. ITYPE_ITEM (unarmed) reuses the weapon's own index where
+ * no dedicated unarmed animation was provided (LynLord, both Mage packs
+ * had no "Unarmed" subfolder in their source pack) -- same convention
+ * vanilla AnimConf_36 (Mage) already uses for all 4 of its wtypes. */
+CONST_DATA struct BattleAnimDef AnimConf_101[] = { // LynLord
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00EF,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00EF,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_102[] = { // Nomad
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F0,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F1,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_103[] = { // Nomad_F
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F2,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F3,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_104[] = { // Nomad Trooper
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00F4,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F6,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_105[] = { // Nomad Trooper_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00F7,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x00F8,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00F9,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
     },
     { 0 }
 };

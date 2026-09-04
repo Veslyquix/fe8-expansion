@@ -241,9 +241,12 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
 CONST_DATA struct MenuItemDef gMapMenuItems[] = {
 #if FE8_CO_POWERS
     {"", MSG_MAP_MENU_CO, 0, 0, 0, MenuAlwaysEnabled, 0, CoScreen_MenuCommand, 0, 0, 0},
-#endif
+    {"　状況", 0x690, 0x6E0, 0, 0x6f, MenuAlwaysEnabled, 0, MapMenu_StatusCommand, 0, 0, 0}, // Status >
+    {"　部隊", 0x69A, 0x6DF, 0, 0x6e, MenuAlwaysEnabled, 0, MapMenu_UnitCommand, 0, 0, 0}, // Unit >
+#else 
     {"　部隊", 0x69A, 0x6DF, 0, 0x6e, MenuAlwaysEnabled, 0, MapMenu_UnitCommand, 0, 0, 0}, // Unit >
     {"　状況", 0x690, 0x6E0, 0, 0x6f, MenuAlwaysEnabled, 0, MapMenu_StatusCommand, 0, 0, 0}, // Status >
+#endif
     {"　辞書", 0x69C, 0x6E5, 4, 0x74, MapMenu_IsGuideCommandAvailable, MapMenu_GuideCommandDraw, MapMenu_GuideCommand}, // Guide
     {"　戦績", 0x69E, 0x6E3, 0, 0x70, MapMenu_IsRecordsCommandAvailable, 0, MapMenu_RecordsCommand, 0, 0, 0}, // Records
     {"　設定", 0x69B, 0x6E1, 0, 0x71, MenuAlwaysEnabled, 0, MapMenu_OptionsCommand, 0, 0, 0}, // Options

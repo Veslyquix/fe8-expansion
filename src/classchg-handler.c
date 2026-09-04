@@ -153,7 +153,16 @@ u32 PromoHandler_SetupAndStartUI(struct ProcPromoHandler *proc)
     } else if (proc->bmtype == PROMO_HANDLER_TYPE_BM) {
         proc->bmtype = PROMO_HANDLER_TYPE_BM;
         proc->sel_en = 1;
+#if FE8_PURCHASE_GENERICS
+        /* GetUnitFromCharId returns the first unit matching this char ID,
+         * which is wrong when generic units share a char ID (see
+         * PURCHASE_GENERICS) -- proc->unit was already set to the exact
+         * unit this promotion was started for (see StartBmPromotion/
+         * StartPrepScreenPromotion), so use that instead. */
+        unit = proc->unit ? proc->unit : GetUnitFromCharId(proc->pid);
+#else
         unit = GetUnitFromCharId(proc->pid);
+#endif
         classNumber = unit->pClassData->number;
 
         /* If no class to promote, end the handler proc */
@@ -175,7 +184,11 @@ u32 PromoHandler_SetupAndStartUI(struct ProcPromoHandler *proc)
     } else if (proc->bmtype == PROMO_HANDLER_TYPE_PREP) {
         proc->bmtype = PROMO_HANDLER_TYPE_PREP;
         proc->sel_en = 1;
+#if FE8_PURCHASE_GENERICS
+        unit = proc->unit ? proc->unit : GetUnitFromCharId(proc->pid);
+#else
         unit = GetUnitFromCharId(proc->pid);
+#endif
         classNumber = unit->pClassData->number;
         if (!gPromoJidLut[classNumber][0] && !gPromoJidLut[classNumber][1]) {
             BMapDispResume();

@@ -478,7 +478,10 @@ extern unsigned char portrait_Eirika_chibi[];
 extern unsigned char portrait_Eirika_tileset[];
 
 #if FE8_CUSTOM_CAMPAIGN
-/* CUSTOM_CAMPAIGN portrait replacements -- see src/portrait_data.c. */
+/* CUSTOM_CAMPAIGN portrait replacements -- see src/portrait_data.c. Hannah
+ * and Francis are kept declared/linked even though slots 1-3 now use
+ * Wakwi/Ishkode instead -- nothing currently references them, but they
+ * were not removed (see src/portrait_data.c). */
 extern unsigned short portrait_Hannah_palette[];
 extern unsigned char portrait_Hannah_mouth[];
 extern unsigned char portrait_Hannah_chibi[];
@@ -487,6 +490,14 @@ extern unsigned short portrait_Francis_palette[];
 extern unsigned char portrait_Francis_mouth[];
 extern unsigned char portrait_Francis_chibi[];
 extern unsigned char portrait_Francis_tileset[];
+extern unsigned short portrait_Wakwi_palette[];
+extern unsigned char portrait_Wakwi_mouth[];
+extern unsigned char portrait_Wakwi_chibi[];
+extern unsigned char portrait_Wakwi_tileset[];
+extern unsigned short portrait_Ishkode_palette[];
+extern unsigned char portrait_Ishkode_mouth[];
+extern unsigned char portrait_Ishkode_chibi[];
+extern unsigned char portrait_Ishkode_tileset[];
 extern unsigned short portrait_Frederick_palette[];
 extern unsigned char portrait_Frederick_mouth[];
 extern unsigned char portrait_Frederick_chibi[];
@@ -499,6 +510,10 @@ extern unsigned short portrait_Liz_palette[];
 extern unsigned char portrait_Liz_mouth[];
 extern unsigned char portrait_Liz_chibi[];
 extern unsigned char portrait_Liz_tileset[];
+extern unsigned short portrait_Kargan_palette[];
+extern unsigned char portrait_Kargan_mouth[];
+extern unsigned char portrait_Kargan_chibi[];
+extern unsigned char portrait_Kargan_tileset[];
 #endif
 
 extern unsigned short portrait_Mystery_1_palette[];

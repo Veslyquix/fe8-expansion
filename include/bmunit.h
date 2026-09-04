@@ -274,7 +274,9 @@ enum
     // = (1 << 28),
     // = (1 << 29),
     // = (1 << 30),
-    // = (1 << 31),
+    // Whether this unit's attack range is currently shown by the Danger
+    // Radius overlay (see FE8_DANGER_RADIUS, src/dangerradius.c).
+    US_SHOWRANGE = (1 << 31),
 
     // Helpers
     US_UNAVAILABLE = (US_DEAD | US_NOT_DEPLOYED | US_BIT16),
@@ -517,12 +519,19 @@ void UnitRemoveItem(struct Unit* unit, int slot);
 #define UNIT_CON(aUnit) (UNIT_CON_BASE(aUnit) + (aUnit)->conBonus)
 #ifdef DEBUFFS_EXIST
 #define UNIT_MOV(aUnit) GetUnitMovement(aUnit)
+#elif FE8_NULL_BOSSAI_MOV
+// ai4 (the high byte of ai_config, see cp_common.h) of 0x20 is the
+// FEBuilder "AI Stay" flag with no group id -- typically hand-set on
+// bosses that should never leave their tile, even if provoked.
+#define UNIT_MOV(aUnit) \
+    ((((aUnit)->ai_config >> 8 & 0xFF) == 0x20) ? 0 : ((aUnit)->movBonus + UNIT_MOV_BASE(aUnit)))
 #else
 #define UNIT_MOV(aUnit) ((aUnit)->movBonus + UNIT_MOV_BASE(aUnit))
 #endif
 
 #define UNIT_IS_GORGON_EGG(aUnit) (((aUnit)->pClassData->number == CLASS_GORGONEGG) || ((aUnit)->pClassData->number == CLASS_GORGONEGG2))
 #define UNIT_IS_PHANTOM(aUnit) ((aUnit)->pClassData->number == CLASS_PHANTOM)
+int UnitIsTemporary(struct Unit* unit); 
 
 #define UNIT_ARENA_LEVEL(aUnit) (((aUnit)->state >> 17) & 0x7)
 

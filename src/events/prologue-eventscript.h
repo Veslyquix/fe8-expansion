@@ -13,38 +13,41 @@
 #include "constants/items.h"
 #include "constants/songs.h"
 #include "constants/chapters.h"
+#include "constants/msg.h"
+#include "power.h"
 
 #if FE8_CUSTOM_CAMPAIGN
 
+
+
 CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
-    // {
-        // .charIndex = CHARACTER_SETH,
-        // .classIndex = CLASS_PALADIN,
-        // .allegiance = FACTION_ID_BLUE,
-        // .level = 1,
-        // .xPosition = 3,
-        // .yPosition = 5,
-        // .items = {
-            // ITEM_SWORD_STEEL,
-            // ITEM_LANCE_SILVER,
-            // ITEM_VULNERARY,
-        // },
-    // },
     {
-        .charIndex = CHARACTER_EIRIKA,
-        .classIndex = CLASS_SOLDIER,
+        .charIndex = CHARACTER_SETH,
+        .classIndex = CLASS_NOMAD,
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
-        .xPosition = 2,
+        .xPosition = 6,
+        .yPosition = 0,
+        .items = {
+            ITEM_BOW_IRON,
+            ITEM_VULNERARY,
+        },
+    },
+    {
+        .charIndex = CHARACTER_EIRIKA,
+        .classIndex = CLASS_LYN_LORD, //CLASS_MYRMIDON_F
+        .allegiance = FACTION_ID_BLUE,
+        .level = 1,
+        .xPosition = 1,
         .yPosition = 2,
         .items = {
-            ITEM_LANCE_IRON,
+            ITEM_SWORD_IRON,
             ITEM_VULNERARY,
         },
     },
     { 0 },
 };
-
+// #define DEBUG_TESTING 
 // 0x88B3C50
 CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
     // {
@@ -71,53 +74,163 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         },
         .ai = {0x0, 0x3, 0x0, 0x1},
     },
+#if DEBUG_TESTING
     {
         .charIndex = 0x80,
         .classIndex = CLASS_SOLDIER,
         .allegiance = FACTION_ID_RED,
-        .level = 2,
-        .xPosition = 17,
-        .yPosition = 14,
+        .level = 1,
+        .xPosition = 0,
+        .yPosition = 3,
         .items = {
             ITEM_LANCE_IRON,
         },
         .ai = {0x0, 3, 0x2, 0x1},
     },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_MAGE,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 1,
+        .yPosition = 3,
+        .items = {
+            ITEM_ANIMA_FIRE,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_ARCHER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 2,
+        .yPosition = 3,
+        .items = {
+            ITEM_BOW_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_CAVALIER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 3,
+        .yPosition = 3,
+        .items = {
+            ITEM_SWORD_IRON,
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_ARMOR_KNIGHT,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 2,
+        .items = {
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_FIGHTER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 1,
+        .items = {
+            ITEM_AXE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_MERCENARY,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 0,
+        .items = {
+            ITEM_SWORD_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+#endif 
+
     { 0 },
 };
 
-/* Custom-campaign prologue intro: Eirika and Seth are placed with the exact
- * same UnitDefinition (position/level/items/starting HP) as the stock
- * beginning scene, and Eirika still receives the Rapier and O'Neill's
- * squad still spawns (both needed for the chapter to actually be playable
- * and winnable via DefeatBoss), but the Renais-throne-room cutscene and
- * every dialogue box are skipped -- the player gets control immediately. */
+/* Custom-campaign prologue intro: Wakwi (Eirika's slot) and Ishkode
+ * (Seth's slot) are placed with the same starting position/level/items as
+ * the stock beginning scene's Eirika/Seth, Wakwi still receives the Rapier
+ * and O'Neill's squad still spawns (both needed for the chapter to
+ * actually be playable and winnable via DefeatBoss) -- but instead of the
+ * Renais-throne-room cutscene, this plays the custom campaign's own
+ * opening: Wakwi and Ishkode, spiritual leaders of the Akiya (a nomadic
+ * Sacae people fighting to reclaim their lands from the Naskwa), have
+ * just made a temporary camp when a wounded scout arrives warning that an
+ * allied fort is about to be besieged -- see
+ * MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING (texts/texts.txt). */
+/* ASMC callback for setting a faction's CO from event slots, so a script
+ * can drive SetFactionCo (src/power.c) with SVAL instead of a one-off C
+ * function hardcoding the faction/CO pair -- SVAL(EVT_SLOT_1, faction)
+ * SVAL(EVT_SLOT_2, coId) ASMC(SetFactionCoFromSlots), once per faction.
+ * EVT_SLOT_1/2 are free at the very start of a fresh event (see
+ * include/event.h) -- reusing them here is safe as long as this runs
+ * before anything else in the same script needs those two slots. */
+static void SetFactionCoFromSlots(void)
+{
+    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
+}
+
 CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
-    ENUT(0x8)
+    /* Blue plays as Ishkode, the Naskwa (Red) play as O'Neill -- see
+     * CoScreen_KeyListener's SCROLL_ALL_COS gate (src/power.c): without
+     * this, the CO screen has nothing to scroll to (neither faction's
+     * commanderId ever gets set, so IsCoInUse never matches anything). */
+    SVAL(EVT_SLOT_1, FACTION_BLUE)
+    SVAL(EVT_SLOT_2, CO_ISHKODE)
+    ASMC(SetFactionCoFromSlots)
+
+    SVAL(EVT_SLOT_1, FACTION_RED)
+    SVAL(EVT_SLOT_2, CO_KARGAN)
+    ASMC(SetFactionCoFromSlots)
     LOAD1(1, UnitDef_PrologueAllies)
+    ENUN 
+    FADU(16)
+
+    MUSI
+    BROWNBOXTEXT(MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION, 8, 8)
+    MUNO
+
+    ENUT(0x7)
+    ENUT(0x8)
+
+    FlashCursor(CHARACTER_EIRIKA, 20)
+    MOVE(4, CHARACTER_SETH, 10, 0)
+    MOVE(1, CHARACTER_EIRIKA, 1, 3)
+    ENUN
+    MOVE(3, CHARACTER_SETH, 5, 1)
+
+    
+    // MOVE(3, CHARACTER_EIRIKA, 3, 1)
+    MOVE(3, CHARACTER_EIRIKA, 4, 1)
     ENUN
 
+    FlashCursor(CHARACTER_EIRIKA, 60)
+    Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
+    MOVE(0, CHARACTER_SETH, 1, 2)
+    ENUN
+    DISA(CHARACTER_SETH)
+    // FlashCursor(CHARACTER_SETH, 20)
+    
     LOAD1(1, UnitDef_PrologueEnemies)
     ENUN
-    
-    // MUSI
-    // Text_BG(BG_KH_224, 0x90D)
-    // MUNO
-    
-    /* 
-    // test FE8_MULTIPALETTE_BG - seems to work 
-    // (no$gba has weird sprite blending quirks, so check on mgba) 
-    MUSI
-    SetBackground(BG_ALTAR_NIGHT_256)   
-    EvtTextStartType2                    
-    TEXTSHOW(0xc22)
-    TEXTEND
-    MUNO
-    FADI(4)
-    REMA
-    CLEAN
-    */ 
-
     NoFade
     ENDA
 };

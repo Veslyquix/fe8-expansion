@@ -3,6 +3,7 @@
 #include "bm.h"
 #include "ctc.h"
 #include "hardware.h"
+#include "rng_randomizer.h"
 
 #ifdef MODERN
 #define UI_FRAME_SCRATCH_END SECTION("ewram_data.ui_frame_scratch_end")
@@ -301,6 +302,10 @@ void SetMainUpdateRoutine(void (*func)(void))
 
 void ExecMainUpdate(void)
 {
+#if FE8_RNG_RANDOMIZER
+    RngRandomizer_OnMainUpdate();
+#endif
+
     if (gMainCallback != NULL)
         gMainCallback();
 }

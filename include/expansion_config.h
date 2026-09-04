@@ -341,6 +341,12 @@
 #define FE8_EXTEND_DESC_BOX 0
 #endif
 
+/* Dynamic (1-4 line) event/conversation dialogue box sizing (src/scene.c),
+ * instead of the vanilla fixed 2 lines. */
+#ifndef FE8_EXTEND_DIALOGUE_BOX
+#define FE8_EXTEND_DIALOGUE_BOX 0
+#endif
+
 /* PutSprite/PutSpriteExt (src/ctc.c) sprite-pool overflow bounds check. */
 #ifndef FE8_OVERFLOW_SAFETY_CHECKS
 #define FE8_OVERFLOW_SAFETY_CHECKS 1
@@ -410,6 +416,14 @@
 #define FE8_HP_BARS 0
 #endif
 
+/* Modern-build port of the "Danger Radius" fog-of-war-aware enemy attack
+ * range overlay (original hack by Huichelaar; see src/dangerradius.c).
+ * Requires FE8_DISPLAY_OBTAINABLE_ITEM=1 -- shares its icon sheet
+ * (validated below). */
+#ifndef FE8_DANGER_RADIUS
+#define FE8_DANGER_RADIUS 0
+#endif
+
 /* Group AI (ported from Pokemblem's GroupAI patch): attacking (or being
  * attacked by) a group-tagged enemy wakes the rest of its group to Charge
  * and queues them to act again this enemy phase (see src/group_ai.c). */
@@ -422,6 +436,17 @@
  * (see src/alpha_sprite_arrow.c). */
 #ifndef FE8_ALPHA_SPRITE_ARROW
 #define FE8_ALPHA_SPRITE_ARROW 0
+#endif
+
+/* Weapon attack range computed from each carried weapon's own min/max
+ * range (GetUnitItemEffectiveMinRange/MaxRange, src/bmitem.c) instead of
+ * the vanilla-profile-only reach-bits switch in
+ * GenerateUnitCompleteAttackRange (src/bmidoten.c), so a non-vanilla
+ * range (e.g. 2-4) actually works. Also lets a CO's class-affinity
+ * rangeBon (struct CoClassAffinity, src/power.c) shift max range for
+ * real, not just display it. */
+#ifndef FE8_RANGE_REWORK
+#define FE8_RANGE_REWORK 0
 #endif
 
 /* Consolidates every vanilla per-action suspend-save write down to one,
@@ -493,10 +518,25 @@
 #define FE8_ANIMS_FAST_FORWARD 0
 #endif
 
-/* Swaps in graphics/map/layout/NewPrologueMap.mar for the prologue chapter's
- * map, and replaces the prologue's scripted beginning-of-chapter events with
- * a version that still loads Eirika and Seth the same way but skips the
- * Renais-throne-room cutscene and dialogue (see src/data/data_8B363C.c and
+/* Custom BGM support: the NIMAP2 General-MIDI instrument map (voicegroup000)
+ * plus the percussion "drumfix" (voicegroups 079/080/081/083/084), and the
+ * custom songs in sound/songs/bgm/ appended to gSongTable past vanilla's 1000
+ * entries. Pure sound data -- no C code is compiled in or out by this flag,
+ * beyond the custom song IDs in include/constants/songs.h; it is defined so
+ * the config fingerprint and the generated build metadata record it like
+ * every other feature flag. Note the voicegroup000 swap also changes how
+ * vanilla's title theme (song001) sounds -- see config.mk's NIMAP2 block and
+ * docs/custom_bgm.md. */
+#ifndef FE8_NIMAP2
+#define FE8_NIMAP2 0
+#endif
+
+/* Swaps in graphics/map/layout/NewPrologueMap.tmx (see scripts/tmx_to_map.py
+ * and docs/map_authoring.md -- this map is authored directly in Tiled, not
+ * FEBuilder's own .mar format) for the prologue chapter's map, and replaces
+ * the prologue's scripted beginning-of-chapter events with a version that
+ * still loads Eirika and Seth the same way but skips the Renais-throne-room
+ * cutscene and dialogue (see src/data/data_8B363C.c and
  * src/events/prologue-eventscript.h). */
 #ifndef FE8_CUSTOM_CAMPAIGN
 #define FE8_CUSTOM_CAMPAIGN 0
@@ -514,6 +554,34 @@
 /* Scrolling end-credits sequence (see src/Credits.c). */
 #ifndef FE8_CREDITS
 #define FE8_CREDITS 0
+#endif
+
+/* Map BGM selection becomes seeded-random instead of vanilla's fixed
+ * per-chapter table lookup: GetBGMTrack() (src/bm.c, next to
+ * GetCurrentMapMusicIndex(), which it wraps and falls back to when this
+ * flag is off) picks a random song matching the current pick's vanilla
+ * music-player/priority pair (gSongTable[].ms/.me), deterministically from
+ * gPlaySt.playthroughIdentifier (an existing per-save byte -- no new save
+ * data) plus the current chapter/turn/phase. Uses a private, stateless hash
+ * chain, never NextRN()/gRNSeeds (the live combat RNG stream) and never the
+ * shared cosmetic-FX gLCGRNValue LCG, so map BGM selection can never
+ * perturb, or be perturbed by, combat rolls or weather/face/sparkle FX. See
+ * docs/random_bgm.md. */
+#ifndef FE8_RAND_BGM
+#define FE8_RAND_BGM 0
+#endif
+
+/* Entering a battle animation no longer swaps to a distinct battle theme --
+ * the current map BGM keeps playing through combat. In this codebase's own
+ * decompiled FE8 sources, ordinary combat does not already trigger a BGM
+ * swap (unlike the FE6/7-oriented source this was ported from); the one
+ * spot that COULD force a restart is src/bmmind.c's RestoreMapSongBgm(),
+ * which currently has no callers anywhere in src/. This flag makes that
+ * function an explicit no-op, so map BGM is guaranteed to keep playing
+ * through combat even if/when RestoreMapSongBgm() gains a caller. See
+ * docs/random_bgm.md. */
+#ifndef FE8_CONTINUE_BGM_BATTLE
+#define FE8_CONTINUE_BGM_BATTLE 0
 #endif
 
 /* Defence in depth: the same relationships expansion_config.py rejects at
@@ -575,6 +643,10 @@
 #error "FE8_EXTEND_DESC_BOX must be 0 or 1"
 #endif
 
+#if (FE8_EXTEND_DIALOGUE_BOX != 0) && (FE8_EXTEND_DIALOGUE_BOX != 1)
+#error "FE8_EXTEND_DIALOGUE_BOX must be 0 or 1"
+#endif
+
 #if (FE8_OVERFLOW_SAFETY_CHECKS != 0) && (FE8_OVERFLOW_SAFETY_CHECKS != 1)
 #error "FE8_OVERFLOW_SAFETY_CHECKS must be 0 or 1"
 #endif
@@ -623,12 +695,24 @@
 #error "FE8_HP_BARS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
 #endif
 
+#if (FE8_DANGER_RADIUS != 0) && (FE8_DANGER_RADIUS != 1)
+#error "FE8_DANGER_RADIUS must be 0 or 1"
+#endif
+
+#if FE8_DANGER_RADIUS && !FE8_DISPLAY_OBTAINABLE_ITEM
+#error "FE8_DANGER_RADIUS=1 requires FE8_DISPLAY_OBTAINABLE_ITEM=1"
+#endif
+
 #if (FE8_GROUP_AI != 0) && (FE8_GROUP_AI != 1)
 #error "FE8_GROUP_AI must be 0 or 1"
 #endif
 
 #if (FE8_ALPHA_SPRITE_ARROW != 0) && (FE8_ALPHA_SPRITE_ARROW != 1)
 #error "FE8_ALPHA_SPRITE_ARROW must be 0 or 1"
+#endif
+
+#if (FE8_RANGE_REWORK != 0) && (FE8_RANGE_REWORK != 1)
+#error "FE8_RANGE_REWORK must be 0 or 1"
 #endif
 
 #if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)
@@ -667,6 +751,10 @@
 #error "FE8_ANIMS_FAST_FORWARD must be 0 or 1"
 #endif
 
+#if (FE8_NIMAP2 != 0) && (FE8_NIMAP2 != 1)
+#error "FE8_NIMAP2 must be 0 or 1"
+#endif
+
 #if (FE8_CUSTOM_CAMPAIGN != 0) && (FE8_CUSTOM_CAMPAIGN != 1)
 #error "FE8_CUSTOM_CAMPAIGN must be 0 or 1"
 #endif
@@ -677,6 +765,14 @@
 
 #if (FE8_CREDITS != 0) && (FE8_CREDITS != 1)
 #error "FE8_CREDITS must be 0 or 1"
+#endif
+
+#if (FE8_RAND_BGM != 0) && (FE8_RAND_BGM != 1)
+#error "FE8_RAND_BGM must be 0 or 1"
+#endif
+
+#if (FE8_CONTINUE_BGM_BATTLE != 0) && (FE8_CONTINUE_BGM_BATTLE != 1)
+#error "FE8_CONTINUE_BGM_BATTLE must be 0 or 1"
 #endif
 
 #endif /* GUARD_EXPANSION_CONFIG_H */

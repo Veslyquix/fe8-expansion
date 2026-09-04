@@ -857,57 +857,89 @@ static const signed char emptyString[] = "  ";
 static const signed char emptyStringLong[] = "  " NL "  " NL "  " NL "  " NL "  " NL "  " NL "  " NL "  ";
 static const signed char theEnd[] = "  T h e   E n d";
 
-static const signed char header1[] = "Patches";
+/* Custom-campaign OC portraits (FE8_CUSTOM_CAMPAIGN). Kept in sync with
+ * CREDITS.md's "Custom Campaign Portraits" table -- update both when
+ * adding/changing a custom-campaign portrait. Hannah/Francis are credited
+ * even though src/portrait_data.c no longer uses them (see that file). */
+static const signed char header1[] = "Custom Campaign Portraits";
 static const signed char body1[] =
-    " Casual Mode: Circles, 7743" NL
-    " Danger Zone: Circles" NL
-    " Unlock Mode Select: Doesnt" NL
-    " Tutorial Disabler: 7743" NL
-    " Fix REDAs: 7743" NL
-    " BattleStatsAnimsOff: Tequila" NL
-    " HP Bars: Circles, Tequila" NL
-    " Show Heal Amount: Tequila" NL
-    " Hard Mode Unlock: 7743" NL
-    " Skip Intro: Gryz";
+    " Hannah portrait by Nickt" NL
+    " Francis portrait by Nickt" NL
+    " Frederick portrait by Nickt" NL
+    " Fox portrait by Nickt" NL
+    " Liz portrait by RandomWizard" NL
+    " Ishkode portrait by Eden" NL
+    " Wakwi portrait by Eden" NL
+    " Kargan (replaces O'Neill) portrait by Eden";
 
-static const signed char header2[] = "Animations";
+/* Kept in sync with CREDITS.md's "Map Tilesets" table. */
+static const signed char header2[] = "Map Tilesets";
 static const signed char body2[] =
-    " Alm_T1 animation by Nuramon, HyperGammaSpaces" NL
-    " Alm_T2 animation by Nuramon" NL
-    " Ike_Lord animation by xxx_Drama" NL
-    " Ike_Ranger animation by Mikey, Khrene, Khardros" NL
-    " Leif_Lord animation by Obsidian_Daddy, Jj09" NL
-    " Marth_Slash animation by Caim Van Fang, Seliost1" NL
-    " Seliph animation by Obsidian, Zoramine, Eretein" NL
-    " T1_Lancer animation by Memae, Skitty, BwdYeti, MOJ" NL
-    " Trueblade animation by Dinar87, RobertFPY" NL
-    " Katarina_Fencer animation by GabrielKnight, 7743" NL
-    " Dragoon animation by MercLord, NYZGamer, Maiser6";
+    " Prologue tileset by WAve, RandomWizard, Beast";
 
-static const signed char header3[] = "Class Sprites";
+/* Song arrangements only -- see CREDITS.md's "Custom BGM" section for the
+ * instrument-map attribution (no per-song artist there) and the original
+ * compositions' rights holders. */
+static const signed char header3[] = "Custom BGM";
 static const signed char body3[] =
-    " Alm sprites by Norikins" NL
-    " AngelSMS by Unknown" NL
-    " ArcanistSMS by Norikins" NL
-    " BaronSMS by Topazlight, Nuramon, Its_Just_Jay" NL
-    " BlackDragonSMS by L95" NL
-    " CantorSMS by Ryn" NL
-    " BoxerSMS by ShadowAllyX" NL
-    " BrighidSMS by Shin19" NL
-    " Cantor2SMS by Norikins" NL
-    " ChickenSMS by Pikmin1211";
+    " Venus Lighthouse arrangement by AReliableChair" NL
+    " Goldenrod City arrangement by AReliableChair";
 
-static const signed char header4[] = "Portraits";
+/* Kept in sync with CREDITS.md's "CO Screen Graphics" table. */
+static const signed char header5[] = "CO Screen Graphics";
+static const signed char body5[] =
+    " CO info screen backdrop by PatrickHoang";
+
+/* Kept in sync with CREDITS.md's "Battle Animations" table -- only the
+ * packs wired to the new/changed classes (Archer, Archer_F, Mage,
+ * Mage_F, LynLord, Nomad(_F), Nomad Trooper(_F)); Pushwall's original
+ * Archer pack is no longer assigned to any class (see that table's own
+ * note), so isn't credited here. The other 7 original NEW_ANIMS packs
+ * (Soldier, Brigand, Fighter, Knight, Mercenary, Cavalier, Pegasus)
+ * predate this in-game credits section and are documented in
+ * CREDITS.md only. */
+static const signed char header6[] = "Battle Animations";
+static const signed char body6[] =
+    " Archer anim by IS, Flasuban," NL
+    "  DerTheVaporeon" NL
+    " Mage anim by HyperGammaSpaces," NL
+    "  Teraspark, Obsidian_Daddy," NL
+    "  Devisian_Nights, Raulster/Alice" NL
+    " LynLord anim by Blazt, Seliost1" NL
+    " Nomad anim by Pikmin1211, Maiser6" NL
+    " Nomad Trooper anim by Levin64, Fuyu";
+
+/* Kept in sync with CREDITS.md's "Map Sprites" table. */
+static const signed char header7[] = "Map Sprites";
+static const signed char body7[] =
+    " LynLord map sprite by Merpin" NL
+    " Nomad map sprite by IS," NL
+    "  MeatOfJustice, UltraFenix" NL
+    " Nomad Trooper map sprite by IS";
+
+/* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
+static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
-    " Marth portrait by Lenh" NL
-    " Jagen portrait by Thorn" NL
-    " Caeda portrait by Nickt, Blueyguy" NL
-    " Cain portrait by Xenith, Nickt, Blaze" NL
-    " Abel portrait by LuminescentBlade" NL
-    " Draug portrait by Thorn" NL
-    " Gordin portrait by Thorn" NL
-    " Wrys portrait by Thorn" NL
-    " Ogma portrait by Thorn";
+    " Debugger, Purchase Generics, Mapgen, Credits," NL
+    " Danger Bones, Select View Growths by Vesly" NL
+    " Battle Stats No Anims by Tequila, Vesly, Alusq" NL
+    " Draw Map Anims by Vesly, Viktor Hahn" NL
+    " Battle Animation Numbers by Huichelaar" NL
+    " Multipalette BG by Huichelaar" NL
+    " MMB by Zane" NL
+    " Extend Desc Box by Vesly" NL
+    " Display Obtainable Item by Mkol, Huichelaar, Vesly" NL
+    " HP Bars by circleseverywhere, Tequila," NL
+    "  hypergammaspaces, Alusq" NL
+    " Alpha Sprite Arrow by JesterWizard" NL
+    " Debuffs, Promote Command, Turn Autosave," NL
+    "  Anims Fast Forward by Vesly" NL
+    " Group AI by Vesly, PhantomSentine" NL
+    " Text Chapter Names by circleseverywhere," NL
+    "  hypergammaspaces" NL
+    " NIMAP2 patch: community; repo integration by Vesly" NL
+    " Rand Bgm / Continue Bgm Battle: ported from SRR;" NL
+    "  repo integration by Vesly";
 
 enum
 {
@@ -926,9 +958,22 @@ enum
 };
 
 struct CreditsStruct CONST_DATA gCreditsData[] = {
+#if FE8_CUSTOM_CAMPAIGN
     { header1, body1, LyonStoneCG, CG_Type, 0, 0 },
+#endif
+#if FE8_NEW_TILESETS
     { header2, body2, SubstituteRandomBG, BG_Type, 0, 0 },
+#endif
+#if FE8_NIMAP2
     { header3, body3, DemonKingCG, CG_Type, 0x80, 0 },
+#endif
+#if FE8_CO_POWERS
+    { header5, body5, SubstituteRandomBG, BG_Type, 0, 0 },
+#endif
+#if FE8_NEW_ANIMS
+    { header6, body6, SubstituteRandomBG, BG_Type, 0, 0 },
+    { header7, body7, SubstituteRandomBG, BG_Type, 0, 0 },
+#endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },
     { theEnd, emptyString, BlackBG, BG_Type, 0, 0 },

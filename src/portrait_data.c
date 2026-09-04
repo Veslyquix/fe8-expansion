@@ -12,9 +12,16 @@ struct FaceData CONST_DATA portrait_data[] =
 	 * template's mouth/eye reference crops) -- these 5 all converged on
 	 * the same tile offsets since all 5 replacement portraits share the
 	 * same standardized template proportions. */
-	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 1
-	{portrait_Hannah_tileset, portrait_Hannah_chibi, portrait_Hannah_palette, portrait_Hannah_mouth, 0, 3, 5, 3, 3, FACE_BLINK_CLOSED}, // 2
-	{portrait_Francis_tileset, portrait_Francis_chibi, portrait_Francis_palette, portrait_Francis_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
+	/* Slots 1-3 (originally Eirika/Seth's slots, then Hannah/Francis) now
+	 * use Wakwi/Ishkode (art by Eden, see src/Credits.c) -- Hannah and
+	 * Francis are no longer used by anything but are kept linked (see
+	 * include/portrait_pointer.h) rather than removed. Wakwi/Ishkode's
+	 * own xMouth/yMouth/xEye/yEye did NOT converge on the same 3/5/3/3
+	 * offsets as the other replacements -- insert_portrait.py detected
+	 * Wakwi at 3/6/3/4 and Ishkode at 3/5/3/3 (matching by coincidence). */
+	{portrait_Wakwi_tileset, portrait_Wakwi_chibi, portrait_Wakwi_palette, portrait_Wakwi_mouth, 0, 3, 6, 3, 4, FACE_BLINK_NORMAL}, // 1
+	{portrait_Wakwi_tileset, portrait_Wakwi_chibi, portrait_Wakwi_palette, portrait_Wakwi_mouth, 0, 3, 6, 3, 4, FACE_BLINK_CLOSED}, // 2
+	{portrait_Ishkode_tileset, portrait_Ishkode_chibi, portrait_Ishkode_palette, portrait_Ishkode_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
 	{portrait_Frederick_tileset, portrait_Frederick_chibi, portrait_Frederick_palette, portrait_Frederick_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 4
 	{portrait_Fox_tileset, portrait_Fox_chibi, portrait_Fox_palette, portrait_Fox_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 5
 	{portrait_Moulder_tileset, portrait_Moulder_chibi, portrait_Moulder_palette, portrait_Moulder_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 6
@@ -67,7 +74,17 @@ struct FaceData CONST_DATA portrait_data[] =
 	{portrait_Eirika_tileset, portrait_Eirika_chibi, portrait_Eirika_flashback_palette, portrait_Eirika_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 44
 	{portrait_Ephraim_tileset, portrait_Ephraim_chibi, portrait_Ephraim_flashback_palette, portrait_Ephraim_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 45
 	{portrait_Knoll_tileset, portrait_Knoll_chibi, portrait_Knoll_flashback_palette, portrait_Knoll_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 46
+#if FE8_CUSTOM_CAMPAIGN
+	/* CHARACTER_ONEILL (characters.json) has "portrait": 48, which is
+	 * 1-indexed against this 0-indexed array -- slot 47, i.e. this one,
+	 * his own named portrait (not slot 48/Breguet, which is unrelated).
+	 * Replaced with Kargan, art by Eden (src/Credits.c), same
+	 * insert_portrait.py workflow as Wakwi/Ishkode above -- own detected
+	 * xMouth/yMouth/xEyes/yEyes rather than reusing O_Neill's. */
+	{portrait_Kargan_tileset, portrait_Kargan_chibi, portrait_Kargan_palette, portrait_Kargan_mouth, 0, 2, 5, 2, 3, FACE_BLINK_NORMAL}, // 47
+#else
 	{portrait_O_Neill_tileset, portrait_O_Neill_chibi, portrait_O_Neill_palette, portrait_O_Neill_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 47
+#endif
 	{portrait_Breguet_tileset, portrait_Breguet_chibi, portrait_Breguet_palette, portrait_Breguet_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 48
 	{portrait_Bone_tileset, portrait_Bone_chibi, portrait_Bone_palette, portrait_Bone_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 49
 	{portrait_Bazba_tileset, portrait_Bazba_chibi, portrait_Bazba_palette, portrait_Bazba_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 50

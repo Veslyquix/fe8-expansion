@@ -55,6 +55,7 @@ Key correctness notes learned the hard way:
 * `.index` in struct BattleAnimDef is ONE-BASED: GetBattleAnimationId
   (src/banim-ekrcmd.c) returns `idx - 1`. banim_data[] slot == .index - 1.
 """
+import json
 import os
 import pathlib
 import re
@@ -65,35 +66,22 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC_DIR = REPO / "banim" / "src"
 AAA_DIR = REPO / "tools" / "aaa"
+PACKS_JSON = REPO / "scripts" / "banim_packs.json"
 
-PACK_CREDIT = {
-    "soldier":  '[Soldier-Custom] FE10-Style [M] by Flasuban',
-    "brigand":  '[Brigand-Reskin] Fully-Clothed [M] by Flasuban',
-    "fighter":  '[Fighter-Variant] FE9 Repal [M] by Glenwing',
-    "knight":   '[Knight-Variant] Generic [M] by SALVAGED',
-    "merc":     '[Mercenary-Reskin] Armored SALVAGED Style [M]',
-    "archer":   '[Archer-Reskin] FE5-Style [M] by Pushwall',
-    "cavalier": '[Cavalier-Variant] [M] Generic by SALVAGED v2',
-    "pegasus":  '[Peg T1 Base] [F] Repal v2 + Weapons by Flasuban',
-}
-
-# Order here fixes banim_data[] slot assignment; soldier occupies 0xC9..0xCB.
-PACK_WEAPONS = [
-    ("soldier",  ["Sword", "Lance", "Unarmed"]),
-    ("brigand",  ["Axe", "Handaxe", "Unarmed"]),
-    ("fighter",  ["Axe", "Handaxe", "Unarmed"]),
-    ("knight",   ["Sword", "Lance", "Axe", "Handaxe", "Bow", "Unarmed"]),
-    ("merc",     ["Sword", "Unarmed"]),
-    ("archer",   ["Bow", "Unarmed"]),
-    ("cavalier", ["Sword", "Lance", "Axe", "Handaxe", "Bow", "Unarmed"]),
-    ("pegasus",  ["Sword", "Lance", "Axe", "Handaxe", "Magic", "Unarmed"]),
-]
+# scripts/banim_packs.json: {tag: {"credit": str, "weapons": [str, ...],
+# "class_tag": str}}, one entry per pack, in the exact order banim_data[]
+# slots should be assigned -- JSON object order is preserved on load, so
+# appending a new pack (scripts/banim_import_pack.py does this
+# automatically) only ever adds slots after the existing ones. soldier
+# (the first pack) occupies 0xC9..0xCB.
+_packs = json.loads(PACKS_JSON.read_text())
+PACK_CREDIT = {tag: p["credit"] for tag, p in _packs.items()}
+PACK_WEAPONS = [(tag, p["weapons"]) for tag, p in _packs.items()]
+CLASS_TAG = {tag: p["class_tag"] for tag, p in _packs.items()}
 
 FIRST_SLOT = 0xC9  # first free banim_data[] slot after the 201 vanilla entries
 
 # struct BattleAnim::abbr is char[12] -> <= 11 chars.
-CLASS_TAG  = {"soldier": "sld", "brigand": "brg", "fighter": "fig", "knight": "knt",
-              "merc": "mrc", "archer": "arc", "cavalier": "cav", "pegasus": "peg"}
 WEAPON_TAG = {"Sword": "sw", "Lance": "ln", "Axe": "ax", "Handaxe": "hx",
               "Bow": "bw", "Magic": "mg", "Unarmed": "un"}
 

@@ -187,18 +187,29 @@ int GetBanimPalette(int banim_id, enum ekr_battle_unit_position pos)
 
     jid = bu->unit.pClassData->number;
     switch (jid) {
+#if !FE8_NEW_ANIMS
+    // Vanilla Archer/Archer_F have multiple bow-animation variants that all
+    // need to share one canonical palette source, hardcoded here to a fixed
+    // banim_data[] slot regardless of which variant is actually playing.
+    // Under FE8_NEW_ANIMS, Archer/Archer_F instead play a single custom pack
+    // (Der's Improved) whose own agbpal already matches every weapon in it --
+    // remapping the palette source here would pull colors from the old
+    // vanilla archer slots instead, so this override is skipped entirely and
+    // banim_id (the animation actually playing) is used as its own palette
+    // source, same as every other class.
     case CLASS_ARCHER:
         return 0x25;
-    
+
     case CLASS_ARCHER_F:
         return 0x27;
-    
+#endif
+
     case CLASS_SNIPER:
         return 0x29;
-    
+
     case CLASS_SNIPER_F:
         return 0x2B;
-    
+
     default:
         return banim_id;
     }

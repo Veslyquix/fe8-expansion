@@ -60,6 +60,7 @@ void PutUnitMapUiWindow(struct PlayerInterfaceProc * proc);
 #endif
 void PutTerrainDisplayWindow(struct PlayerInterfaceProc * proc);
 void ApplyUnitMapUiFramePal(int faction, int palId);
+void ReloadPlayerUnitMapUiFramePal(void);
 int GetCursorScreenSideX(void);
 int GetCursorScreenSideXAlt(void);
 void ClearUnitMapUiStatus(struct PlayerInterfaceProc * proc, u16 * buffer, struct Unit * unit);

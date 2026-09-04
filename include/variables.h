@@ -520,6 +520,8 @@ extern u16 Pal_EkrPopup[];
 extern u16 Tsa_EkrPopup[];
 // extern ??? gCharacterData
 
+extern CONST_DATA s8 TerrainTable_MovCost_SoldierT1Normal[];
+
 extern CONST_DATA s8 TerrainTable_MovCost_CommonT2Normal[];
 extern CONST_DATA s8 TerrainTable_MovCost_CommonT1Normal[];
 extern CONST_DATA s8 TerrainTable_MovCost_ArmorNormal[];
@@ -552,6 +554,7 @@ extern CONST_DATA s8 TerrainTable_MovCost_HorseT2Rain[];
 extern CONST_DATA s8 TerrainTable_MovCost_AnimalT1Rain[];
 extern CONST_DATA s8 TerrainTable_MovCost_AnimalT2Rain[];
 extern CONST_DATA s8 TerrainTable_MovCost_FlyRain[];
+extern CONST_DATA s8 TerrainTable_MovCost_SoldierT1Rain[];
 extern CONST_DATA s8 Unk_TerrainTable_1[];
 extern CONST_DATA s8 TerrainTable_MovCost_CommonT2Snow[];
 extern CONST_DATA s8 TerrainTable_MovCost_CommonT1Snow[];
@@ -568,6 +571,7 @@ extern CONST_DATA s8 TerrainTable_MovCost_HorseT2Snow[];
 extern CONST_DATA s8 TerrainTable_MovCost_AnimalT1Snow[];
 extern CONST_DATA s8 TerrainTable_MovCost_AnimalT2Snow[];
 extern CONST_DATA s8 TerrainTable_MovCost_FlySnow[];
+extern CONST_DATA s8 TerrainTable_MovCost_SoldierT1Snow[];
 extern CONST_DATA s8 Unk_TerrainTable_2[];
 extern CONST_DATA s8 TerrainTable_Avo_Common[];
 extern CONST_DATA s8 TerrainTable_Def_Common[];

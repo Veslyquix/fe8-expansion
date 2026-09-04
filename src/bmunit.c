@@ -27,6 +27,8 @@
 #include "debuffs.h"
 #include "turn_autosave.h"
 #include "gamerank.h"
+#include "power.h"
+#include "dangerradius.h"
 
 #if FE8_DISPLAY_OBTAINABLE_ITEM
 void SetupCacheForStealableItems(void);
@@ -235,6 +237,9 @@ void InitUnits(void) {
 
 void ClearUnit(struct Unit* unit) {
     u8 id = unit->index;
+#if FE8_DANGER_RADIUS
+    DangerRadius_UnitRemoved(unit);
+#endif
     CpuFill16(0, unit, sizeof(struct Unit));
     unit->index = id;
 }
@@ -288,6 +293,9 @@ inline int GetUnitCurrentHp(struct Unit* unit) {
 
 inline int GetUnitPower(struct Unit* unit) {
     int result = unit->pow + GetItemPowBonus((u16) GetUnitEquippedWeapon(unit));
+#if FE8_CO_POWERS
+    result += AdjustStatForCo(gPlaySt.commanderId[UNIT_FACTION(unit) >> 6], UNIT_CLASS_ID(unit), unit->pow);
+#endif
 #ifdef DEBUFFS_EXIST
     result = UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_POW, result);
 #endif
@@ -350,7 +358,23 @@ inline int GetUnitLuck(struct Unit* unit) {
 
 #ifdef DEBUFFS_EXIST
 int GetUnitMovement(struct Unit* unit) {
-    return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, unit->movBonus + UNIT_MOV_BASE(unit));
+    int result = unit->movBonus + UNIT_MOV_BASE(unit);
+#if FE8_CO_POWERS
+    result += GetCoClassMovBonus(gPlaySt.commanderId[UNIT_FACTION(unit) >> 6], UNIT_CLASS_ID(unit));
+
+    if (result < 0)
+        result = 0;
+    if (result > UNIT_MOV_MAX(unit))
+        result = UNIT_MOV_MAX(unit);
+#endif
+#if FE8_NULL_BOSSAI_MOV
+    // ai4 (the high byte of ai_config, see cp_common.h) of 0x20 is the
+    // FEBuilder "AI Stay" flag with no group id -- typically hand-set on
+    // bosses that should never leave their tile, even if provoked.
+    if ((unit->ai_config >> 8 & 0xFF) == 0x20)
+        result = 0;
+#endif
+    return UnitApplyDebuffToStat(unit, UNIT_DEBUFF_STAT_MOV, result);
 }
 #endif
 
@@ -1050,6 +1074,15 @@ inline char* GetUnitRescueName(struct Unit* unit) {
     return GetStringFromIndex(GetUnit(unit->rescue)->pCharacterData->nameTextId);
 }
 
+
+int UnitIsTemporary(struct Unit* unit) { 
+#if FE8_PURCHASE_GENERICS
+    if (unit->pCharacterData->number == CHARACTER_CITIZEN)
+        return true;
+#endif
+    return UNIT_IS_PHANTOM(unit); 
+} 
+
 void UnitKill(struct Unit* unit) {
     if (UNIT_FACTION(unit) == FACTION_BLUE) {
         if (UNIT_IS_PHANTOM(unit))
@@ -1065,6 +1098,9 @@ void UnitKill(struct Unit* unit) {
 #if FE8_GAME_RANK
         if (UNIT_FACTION(unit) == FACTION_RED)
             GameRank_OnEnemyUnitKilled();
+#endif
+#if FE8_DANGER_RADIUS
+        DangerRadius_UnitRemoved(unit);
 #endif
         unit->pCharacterData = NULL;
     }
@@ -1580,7 +1616,7 @@ void ClearTemporaryUnits(void) {
         UnitClearStatModifiers(unit);
 #endif
 
-        if (UNIT_IS_PHANTOM(unit))
+        if (UnitIsTemporary(unit))
             ClearUnit(unit);
     }
 

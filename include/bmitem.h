@@ -183,7 +183,7 @@ void DrawItemStatScreenLine(struct Text* text, int item, int nameColor, u16* map
 u16 GetItemAfterUse(int item);
 u16 GetUnitEquippedWeapon(struct Unit* unit);
 int GetUnitEquippedWeaponSlot(struct Unit* unit);
-s8 IsItemCoveringRange(int item, int range);
+s8 IsItemCoveringRange(struct Unit* unit, int item, int range);
 void EquipUnitItemSlot(struct Unit* unit, int itemSlot);
 s8 IsItemEffectiveAgainst(u16 item, struct Unit* unit);
 s8 IsUnitEffectiveAgainst(struct Unit* actor, struct Unit* target);
@@ -225,6 +225,19 @@ int GetItemCost(int item);
 int GetItemMinRange(int item);
 int GetItemMaxRange(int item);
 int GetItemEncodedRange(int item);
+#if FE8_RANGE_REWORK
+/* Effective min/max range for item, as used by unit (and, if
+ * FE8_CO_POWERS, unit's CO's class-affinity rangeBon -- see
+ * GetCoClassRangeBonus, src/power.c) -- min range is currently never
+ * adjusted (reserved parameter for a future per-unit skill hook), but max
+ * range shifts by the CO's rangeBon, clamped so it never drops below the
+ * weapon's own min range (a 2-2 bow's -1 CO bonus keeps it 2-2, not 2-1)
+ * and never exceeds 15 (the nibble-encoded range's own max). See
+ * GenerateUnitCompleteAttackRange (src/bmidoten.c) for the actual
+ * consumer. */
+int GetUnitItemEffectiveMinRange(struct Unit* unit, int item);
+int GetUnitItemEffectiveMaxRange(struct Unit* unit, int item);
+#endif
 int GetItemRequiredExp(int item);
 const u8* GetItemEffectiveness(int item);
 const struct ItemStatBonuses* GetItemStatBonuses(int item);

@@ -64,6 +64,7 @@ void MakePromotionScreen(struct ProcPromoHandler *proc, u8 pid, u8 terrain)
     proc->promo_main = child;
     child->pid = pid;
     child->terrain = terrain;
+    child->unit = proc->unit;
 }
 
 struct ProcPromoMain *Make6C_PromotionMain(ProcPtr proc)

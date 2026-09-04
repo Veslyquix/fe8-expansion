@@ -1,8 +1,10 @@
 #include "global.h"
 
 #include "constants/terrains.h"
+#include "constants/items.h"
 
 #include "bmitem.h"
+#include "bmitemuse.h"
 #include "bmmap.h"
 #include "bmphase.h"
 #include "bmunit.h"
@@ -550,6 +552,39 @@ void GenerateUnitCompleteAttackRange(struct Unit* unit)
             } \
         }
 
+#if FE8_RANGE_REWORK
+    /* Per-weapon min/max instead of the vanilla-profile-only reach-bits
+     * switch below (kept, unused, for the flag-off build) -- so a
+     * non-vanilla range (e.g. 2-4) actually gets painted instead of
+     * silently matching no case and reaching nothing. Ranges are computed
+     * once per carried weapon (not per tile) since neither a weapon's own
+     * min/max nor its CO bonus depend on (ix, iy) -- MapAddInBoundedRange
+     * itself is still called once per weapon per reachable tile, same
+     * union-via-accumulation approach the old switch's multi-call cases
+     * (e.g. REACH_RANGE1 | REACH_RANGE3) already used for "covers more
+     * than one contiguous band". */
+    {
+        int wi, witem;
+        int minRanges[UNIT_ITEM_COUNT];
+        int maxRanges[UNIT_ITEM_COUNT];
+        int usableCount = 0;
+
+        for (wi = 0; (wi < UNIT_ITEM_COUNT) && (witem = unit->items[wi]); ++wi)
+        {
+            if (!CanUnitUseWeapon(unit, witem))
+                continue;
+
+            minRanges[usableCount] = GetUnitItemEffectiveMinRange(unit, witem);
+            maxRanges[usableCount] = GetUnitItemEffectiveMaxRange(unit, witem);
+            usableCount++;
+        }
+
+        FOR_EACH_IN_MOVEMENT_RANGE({
+            for (wi = 0; wi < usableCount; ++wi)
+                MapAddInBoundedRange(ix, iy, minRanges[wi], maxRanges[wi]);
+        })
+    }
+#else
     switch (GetUnitWeaponReachBits(unit, -1))
     {
 
@@ -633,6 +668,7 @@ void GenerateUnitCompleteAttackRange(struct Unit* unit)
         break;
 
     } // switch (GetUnitWeaponReachBits(unit, -1))
+#endif // FE8_RANGE_REWORK
 
     if (UNIT_CATTRIBUTES(unit) & CA_BALLISTAE)
     {
@@ -641,8 +677,13 @@ void GenerateUnitCompleteAttackRange(struct Unit* unit)
 
             if (item)
             {
+#if FE8_RANGE_REWORK
+                MapAddInBoundedRange(ix, iy,
+                    GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+#else
                 MapAddInBoundedRange(ix, iy,
                     GetItemMinRange(item), GetItemMaxRange(item));
+#endif
             }
         })
     }
@@ -713,12 +754,69 @@ void GenerateUnitStandingReachRange(struct Unit* unit, int reach)
     } // switch (reach)
 }
 
+#if FE8_RANGE_REWORK
+/* Paints reachable tiles at (x, y) for a single item slot (itemSlot >= 0,
+ * no usability check -- matching GetItemReachBits' own single-slot
+ * behavior) or the union of every usable weapon (isWeaponDomain true) or
+ * usable item (false) unit carries (itemSlot < 0), using per-item
+ * effective min/max instead of the coarse reach-bits system. (x, y) is
+ * independent of unit's own position, so a caller can ask "what would
+ * unit threaten if standing at this OTHER tile" -- see
+ * MakeEnemyThreatTargetList (src/bmcommanddbg.c), which asks this once
+ * per enemy position using the debug-selected unit's own weapons (range
+ * is symmetric, so "is enemy within unit's threat range from unit's real
+ * position" and "is unit's position within unit's threat range painted
+ * from the enemy's position" are the same question). */
+void GenerateUnitReachRangeAt(struct Unit* unit, int x, int y, int itemSlot, s8 isWeaponDomain)
+{
+    if (itemSlot >= 0)
+    {
+        int item = unit->items[itemSlot];
+
+        if (item == ITEM_NONE)
+            return;
+
+        MapAddInBoundedRange(x, y,
+            GetUnitItemEffectiveMinRange(unit, item),
+            GetUnitItemEffectiveMaxRange(unit, item));
+
+        return;
+    }
+
+    {
+        int i, item;
+
+        for (i = 0; (i < UNIT_ITEM_COUNT) && (item = unit->items[i]); ++i)
+        {
+            if (isWeaponDomain ? !CanUnitUseWeapon(unit, item) : !CanUnitUseItem(unit, item))
+                continue;
+
+            MapAddInBoundedRange(x, y,
+                GetUnitItemEffectiveMinRange(unit, item),
+                GetUnitItemEffectiveMaxRange(unit, item));
+        }
+    }
+}
+
+/* Thin wrapper over GenerateUnitReachRangeAt: standing reach at unit's own
+ * position. Used by the weapon-select/staff-select menu pairs
+ * (DisplayUnitStandingAttackRange/WeaponSelectMenu_SwitchIn and
+ * StaffCommandRange/StaffItemSelect_OnHover, src/bmmenu.c) and
+ * DangerBones.c's boss-AI ("never moves") case. */
+void GenerateUnitStandingReachRangeForSlot(struct Unit* unit, int itemSlot, s8 isWeaponDomain)
+{
+    GenerateUnitReachRangeAt(unit, unit->xPos, unit->yPos, itemSlot, isWeaponDomain);
+}
+#endif
+
 void GenerateUnitCompleteStaffRange(struct Unit* unit)
 {
     int ix, iy;
 
+#if !FE8_RANGE_REWORK
     int reach = GetUnitStaffReachBits(unit);
     int magBy2Range = GetUnitMagBy2Range(unit);
+#endif
 
     #define FOR_EACH_IN_MOVEMENT_RANGE(block) \
         for (iy = gBmMapSize.y - 1; iy >= 0; --iy) \
@@ -735,6 +833,32 @@ void GenerateUnitCompleteStaffRange(struct Unit* unit)
             } \
         }
 
+#if FE8_RANGE_REWORK
+    /* Per-staff min/max instead of the vanilla-profile-only reach-bits
+     * switch below (kept, unused, for the flag-off build) -- see
+     * GenerateUnitCompleteAttackRange above for the same technique. */
+    {
+        int wi, witem;
+        int minRanges[UNIT_ITEM_COUNT];
+        int maxRanges[UNIT_ITEM_COUNT];
+        int usableCount = 0;
+
+        for (wi = 0; (wi < UNIT_ITEM_COUNT) && (witem = unit->items[wi]); ++wi)
+        {
+            if (!CanUnitUseStaff(unit, witem))
+                continue;
+
+            minRanges[usableCount] = GetUnitItemEffectiveMinRange(unit, witem);
+            maxRanges[usableCount] = GetUnitItemEffectiveMaxRange(unit, witem);
+            usableCount++;
+        }
+
+        FOR_EACH_IN_MOVEMENT_RANGE({
+            for (wi = 0; wi < usableCount; ++wi)
+                MapAddInBoundedRange(ix, iy, minRanges[wi], maxRanges[wi]);
+        })
+    }
+#else
     switch (reach)
     {
 
@@ -763,6 +887,7 @@ void GenerateUnitCompleteStaffRange(struct Unit* unit)
         break;
 
     } // switch (reach)
+#endif // FE8_RANGE_REWORK
 
     #undef FOR_EACH_IN_MOVEMENT_RANGE
 }

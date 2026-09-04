@@ -20,27 +20,9 @@ CONST_DATA u8 TrapData_Event_Ch1[] = {
     TRAP_NONE
 };
 
-/* Issue #5 Batch 3b: the Chapter 2 normal-mode trap block below (through
- * the matching #endif) is canonically generated from
- * src/data/ch2_traps.json -- see scripts/generated_data/traps/ and
- * docs/generated_data.md's "traps" schema section.
- * build/generated/data/data_ch2_traps.o(.data) is linked in its place
- * (ldscript.txt places it immediately after this file's own (.data), so
- * this excluded block leaves zero address gap). The block itself is
- * deliberately left in place, verbatim, rather than deleted:
- * generated-data-check's round-trip parser (scripts/generated_data/traps/
- * parser.py) reads this exact source text to keep proving the generated
- * table byte-for-byte identical in meaning to it. Never hand-edit the
- * block below -- edit src/data/ch2_traps.json and regenerate instead.
- * TrapData_Event_Ch2Hard (Chapter 2 hard-mode, later in this file) is
- * generated from the same JSON/object and is guarded the same way. */
-#define GENERATED_DATA_TRAPS_CH2_LINKED 1
-
-#if !GENERATED_DATA_TRAPS_CH2_LINKED
 CONST_DATA u8 TrapData_Event_Ch2[] = {
     TRAP_NONE
 };
-#endif /* !GENERATED_DATA_TRAPS_CH2_LINKED */
 
 /* The excluded block above is not actually a binary-layout prefix of
  * this translation unit's .data -- Prologue/Prologue_0/Ch1_0/Ch1 (above)
@@ -1902,18 +1884,10 @@ CONST_DATA u8 TrapData_Event_Ch1Hard[] = {
     /* type */ TRAP_NONE
 };
 
-/* Issue #5 Batch 3b: TrapData_Event_Ch2Hard (hard-mode counterpart of
- * TrapData_Event_Ch2, guarded near the top of this file) is generated
- * from the same src/data/ch2_traps.json / build/generated/data/
- * data_ch2_traps.o. Reuses the guard macro defined above (already 1) --
- * do not redefine it here. Hand text preserved verbatim for the
- * round-trip parser; never hand-edit -- regenerate instead. */
-#if !GENERATED_DATA_TRAPS_CH2_LINKED
 // 0x89EDE9D
 CONST_DATA u8 TrapData_Event_Ch2Hard[] = {
     /* type */ TRAP_NONE
 };
-#endif /* !GENERATED_DATA_TRAPS_CH2_LINKED */
 
 /* Same reasoning as the .data.trapch2mid redirect above: everything from
  * here (TrapData_Event_Ch3Hard) to end-of-file must stay glued together,

@@ -189,6 +189,9 @@ endif
 ifeq ($(EXTEND_DESC_BOX),1)
 MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DESC_BOX=1
 endif
+ifeq ($(EXTEND_DIALOGUE_BOX),1)
+MODERN_DEFINE_FLAGS += -DFE8_EXTEND_DIALOGUE_BOX=1
+endif
 ifeq ($(OVERFLOW_SAFETY_CHECKS),0)
 MODERN_DEFINE_FLAGS += -DFE8_OVERFLOW_SAFETY_CHECKS=0
 endif
@@ -219,11 +222,23 @@ endif
 ifeq ($(HP_BARS),1)
 MODERN_DEFINE_FLAGS += -DFE8_HP_BARS=1
 endif
+ifeq ($(DANGER_RADIUS),1)
+MODERN_DEFINE_FLAGS += -DFE8_DANGER_RADIUS=1
+endif
 ifeq ($(GROUP_AI),1)
 MODERN_DEFINE_FLAGS += -DFE8_GROUP_AI=1
 endif
+ifeq ($(NULL_BOSSAI_MOV),1)
+MODERN_DEFINE_FLAGS += -DFE8_NULL_BOSSAI_MOV=1
+endif
+ifeq ($(RNG_RANDOMIZER),1)
+MODERN_DEFINE_FLAGS += -DFE8_RNG_RANDOMIZER=1
+endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
+endif
+ifeq ($(RANGE_REWORK),1)
+MODERN_DEFINE_FLAGS += -DFE8_RANGE_REWORK=1
 endif
 ifeq ($(TURN_AUTOSAVE),1)
 MODERN_DEFINE_FLAGS += -DFE8_TURN_AUTOSAVE=1
@@ -239,6 +254,12 @@ MODERN_DEFINE_FLAGS += -DFE8_FIX_BUGS=1
 endif
 ifeq ($(CREDITS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CREDITS=1
+endif
+ifeq ($(RAND_BGM),1)
+MODERN_DEFINE_FLAGS += -DFE8_RAND_BGM=1
+endif
+ifeq ($(CONTINUE_BGM_BATTLE),1)
+MODERN_DEFINE_FLAGS += -DFE8_CONTINUE_BGM_BATTLE=1
 endif
 ifeq ($(CUSTOM_CAMPAIGN),1)
 MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_CAMPAIGN=1
@@ -260,6 +281,9 @@ MODERN_DEFINE_FLAGS += -DFE8_AW2_ASSETS=1
 endif
 ifeq ($(ANIMS_FAST_FORWARD),1)
 MODERN_DEFINE_FLAGS += -DFE8_ANIMS_FAST_FORWARD=1
+endif
+ifeq ($(NIMAP2),1)
+MODERN_DEFINE_FLAGS += -DFE8_NIMAP2=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
@@ -361,11 +385,18 @@ MODERN_COHORT_ASM_SOURCES ?= \
 	asm/arm.s \
 	asm/arm_call.s
 
+# Hand-written assembly cannot see MODERN_DEFINE_FLAGS (it is not preprocessed
+# by cpp), so feature flags an .s file needs come through as GAS symbols
+# instead. Only NIMAP2 needs one today -- sound/song_table.s appends its custom
+# song entries under `.if FE8_NIMAP2`, and self-defaults the symbol to 0 when
+# it is absent, which is exactly how the archival legacy lane (plain `as`, no
+# defsym) keeps assembling the vanilla table.
 MODERN_ASFLAGS := \
 	$(MODERN_DRIVER_FLAGS) \
 	$(MODERN_ARCH_FLAGS) \
 	$(MODERN_INCLUDE_FLAGS) \
-	$(MODERN_ABI_FLAGS)
+	$(MODERN_ABI_FLAGS) \
+	-Wa,--defsym,FE8_NIMAP2=$(if $(filter 1,$(NIMAP2)),1,0)
 
 MODERN_COHORT_C_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_COHORT_SOURCES:.c=.o))
 MODERN_COHORT_ASM_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_COHORT_ASM_SOURCES:.s=.o))
@@ -1417,6 +1448,36 @@ endif
 
 # Link-only assembly objects not in expansion-modern-all.
 MODERN_ELF_EXTRA_ASM_SOURCES := src/rom_header.s src/crt0.s src/m4a_1.s
+
+# --- Custom BGM / NIMAP2 (config.mk NIMAP2) ---------------------------------
+# Modern-lane-only, exactly like every other feature flag: the archival legacy
+# lane keeps vanilla's voicegroups and song table (its own ldscript names each
+# vanilla voicegroup object explicitly), so `make legacy` stays byte-matching
+# whatever NIMAP2 is set to.
+#
+# Each sound/voicegroups/<name>_nimap2.s defines the *same* symbol as its
+# vanilla counterpart (only the filename differs), so exactly one of each pair
+# may be linked -- the vanilla objects are dropped from MODERN_ELF_LEGACY_ASM
+# below. sound/song_table.s moves to the modern-built list too: it grows the
+# custom entries under a `.if FE8_NIMAP2` guard, and only the modern assembler
+# is handed that symbol (see MODERN_NIMAP2_ASFLAGS).
+MODERN_NIMAP2_VOICEGROUPS := \
+	voicegroup000 voicegroup079 voicegroup080 \
+	voicegroup081 voicegroup083 voicegroup084
+
+MODERN_NIMAP2_VANILLA_OBJECTS := \
+	$(addprefix sound/voicegroups/,$(addsuffix .o,$(MODERN_NIMAP2_VOICEGROUPS)))
+
+ifeq ($(NIMAP2),1)
+MODERN_NIMAP2_SOURCES := \
+	$(addprefix sound/voicegroups/,$(addsuffix _nimap2.s,$(MODERN_NIMAP2_VOICEGROUPS))) \
+	$(sort $(wildcard sound/songs/bgm/*.s))
+MODERN_ELF_EXTRA_ASM_SOURCES += $(MODERN_NIMAP2_SOURCES) sound/song_table.s
+MODERN_ELF_NIMAP2_DROPPED := $(MODERN_NIMAP2_VANILLA_OBJECTS)
+else
+MODERN_NIMAP2_SOURCES :=
+MODERN_ELF_NIMAP2_DROPPED :=
+endif
 MODERN_ELF_EXTRA_ASM_OBJECTS := \
 	$(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ELF_EXTRA_ASM_SOURCES:.s=.o))
 
@@ -1438,6 +1499,7 @@ MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 MODERN_ELF_LEGACY_ASM := $(filter-out \
 	$(C_OBJECTS) $(DATA_SRC_C_OBJECTS) \
 	$(MODERN_ELF_FE6SIO) $(BANIM_OBJECT) \
+	$(MODERN_ELF_NIMAP2_DROPPED) \
 	$(MODERN_ELF_REPLACED_ASM), \
 	$(ASM_OBJECTS))
 MODERN_ELF_LEGACY_MIDI := $(MID_OBJECTS)
@@ -1447,8 +1509,8 @@ MODERN_ELF_MANIFEST := $(MODERN_ELF_LINK_DIR)/manifest.txt
 MODERN_ELF_OBJECTS_LST := $(MODERN_ELF_LINK_DIR)/objects.lst
 MODERN_ELF_LINK_SETTINGS := $(MODERN_ELF_LINK_DIR)/settings.txt
 MODERN_ELF_LINK_PREP := $(MODERN_ELF_LINK_DIR)/prepare.stamp
-MODERN_ELF := $(MODERN_OUTPUT_DIR)/fireemblem8.elf
-MODERN_MAP := $(MODERN_OUTPUT_DIR)/fireemblem8.map
+MODERN_ELF := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.elf
+MODERN_MAP := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.map
 MODERN_ELF_BANIM_SYM := $(BANIM_OBJECT).sym.o
 
 # Clean linker script (issue #4/#16) — replaces the transitional generator.
@@ -1556,6 +1618,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--purchase-generics "$(PURCHASE_GENERICS)" \
 		--mmb "$(MMB)" \
 		--extend-desc-box "$(EXTEND_DESC_BOX)" \
+		--extend-dialogue-box "$(EXTEND_DIALOGUE_BOX)" \
 		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
@@ -1563,13 +1626,19 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 		--hp-bars "$(HP_BARS)" \
+		--danger-radius "$(DANGER_RADIUS)" \
 		--group-ai "$(GROUP_AI)" \
+		--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
+		--rng-randomizer "$(RNG_RANDOMIZER)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+		--range-rework "$(RANGE_REWORK)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
 		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 		--promote-command "$(PROMOTE_COMMAND)" \
 		--fix-bugs "$(FIX_BUGS)" \
 		--credits "$(CREDITS)" \
+		--rand-bgm "$(RAND_BGM)" \
+		--continue-bgm-battle "$(CONTINUE_BGM_BATTLE)" \
 		--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 		--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
@@ -1584,6 +1653,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 		--aw2-assets "$(AW2_ASSETS)" \
 		--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
+		--nimap2 "$(NIMAP2)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1651,6 +1721,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--purchase-generics "$(PURCHASE_GENERICS)" \
 	--mmb "$(MMB)" \
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
+	--extend-dialogue-box "$(EXTEND_DIALOGUE_BOX)" \
 	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 	--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
@@ -1658,13 +1729,19 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
+	--danger-radius "$(DANGER_RADIUS)" \
 	--group-ai "$(GROUP_AI)" \
+	--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
+	--rng-randomizer "$(RNG_RANDOMIZER)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
+	--range-rework "$(RANGE_REWORK)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
 	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 	--promote-command "$(PROMOTE_COMMAND)" \
 	--fix-bugs "$(FIX_BUGS)" \
 	--credits "$(CREDITS)" \
+	--rand-bgm "$(RAND_BGM)" \
+	--continue-bgm-battle "$(CONTINUE_BGM_BATTLE)" \
 	--custom-campaign "$(CUSTOM_CAMPAIGN)" \
 	--skip-opening "$(SKIP_OPENING)" \
 	--game-rank "$(GAME_RANK)" \
@@ -1672,6 +1749,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--febuilder-pointers "$(FEBUILDER_POINTERS)" \
 	--aw2-assets "$(AW2_ASSETS)" \
 	--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
+	--nimap2 "$(NIMAP2)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1747,6 +1825,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_MAPGEN=$(MAPGEN) \
 	-DFE8_MMB=$(MMB) \
 	-DFE8_EXTEND_DESC_BOX=$(EXTEND_DESC_BOX) \
+	-DFE8_EXTEND_DIALOGUE_BOX=$(EXTEND_DIALOGUE_BOX) \
 	-DFE8_OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS) \
 	-DFE8_DISPLAY_OBTAINABLE_ITEM=$(DISPLAY_OBTAINABLE_ITEM) \
 	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
@@ -1757,18 +1836,25 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
 	-DFE8_BATTLE_ANIMATION_NUMBERS=$(BATTLE_ANIMATION_NUMBERS) \
 	-DFE8_HP_BARS=$(HP_BARS) \
+	-DFE8_DANGER_RADIUS=$(DANGER_RADIUS) \
 	-DFE8_GROUP_AI=$(GROUP_AI) \
+	-DFE8_NULL_BOSSAI_MOV=$(NULL_BOSSAI_MOV) \
+	-DFE8_RNG_RANDOMIZER=$(RNG_RANDOMIZER) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
+	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS) \
+	-DFE8_RAND_BGM=$(RAND_BGM) \
+	-DFE8_CONTINUE_BGM_BATTLE=$(CONTINUE_BGM_BATTLE) \
 	-DFE8_GAME_RANK=$(GAME_RANK) \
 	-DFE8_CO_POWERS=$(CO_POWERS) \
 	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS) \
 	-DFE8_AW2_ASSETS=$(AW2_ASSETS) \
-	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD)
+	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD) \
+	-DFE8_NIMAP2=$(NIMAP2)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1937,6 +2023,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'purchase_generics=$(PURCHASE_GENERICS)'; \
 		printf '%s\n' 'mmb=$(MMB)'; \
 		printf '%s\n' 'extend_desc_box=$(EXTEND_DESC_BOX)'; \
+		printf '%s\n' 'extend_dialogue_box=$(EXTEND_DIALOGUE_BOX)'; \
 		printf '%s\n' 'overflow_safety_checks=$(OVERFLOW_SAFETY_CHECKS)'; \
 		printf '%s\n' 'display_obtainable_item=$(DISPLAY_OBTAINABLE_ITEM)'; \
 		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \
@@ -1946,13 +2033,19 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \
 		printf '%s\n' 'hp_bars=$(HP_BARS)'; \
+		printf '%s\n' 'danger_radius=$(DANGER_RADIUS)'; \
 		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
+		printf '%s\n' 'null_bossai_mov=$(NULL_BOSSAI_MOV)'; \
+		printf '%s\n' 'rng_randomizer=$(RNG_RANDOMIZER)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
+		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
 		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
 		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \
 		printf '%s\n' 'fix_bugs=$(FIX_BUGS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
+		printf '%s\n' 'rand_bgm=$(RAND_BGM)'; \
+		printf '%s\n' 'continue_bgm_battle=$(CONTINUE_BGM_BATTLE)'; \
 		printf '%s\n' 'custom_campaign=$(CUSTOM_CAMPAIGN)'; \
 		printf '%s\n' 'skip_opening=$(SKIP_OPENING)'; \
 		printf '%s\n' 'game_rank=$(GAME_RANK)'; \
@@ -1960,6 +2053,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'febuilder_pointers=$(FEBUILDER_POINTERS)'; \
 		printf '%s\n' 'aw2_assets=$(AW2_ASSETS)'; \
 		printf '%s\n' 'anims_fast_forward=$(ANIMS_FAST_FORWARD)'; \
+		printf '%s\n' 'nimap2=$(NIMAP2)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -2348,7 +2442,7 @@ expansion-modern-elf: expansion-modern-mgfembp expansion-modern-all \
 # identity with the legacy build.
 # ---------------------------------------------------------------------------
 
-MODERN_ROM := $(MODERN_OUTPUT_DIR)/fireemblem8.gba
+MODERN_ROM := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.gba
 MODERN_ROM_HEADER_VERIFIER := scripts/modernize/verify_rom_header.py
 MODERN_ROM_HEADER_FINALIZER := scripts/modernize/finalize_rom_header.py
 MODERN_BOOT_SCENARIO := tools/gba-playtest/scenarios/boot.json
@@ -2459,7 +2553,7 @@ $(MODERN_IPS): $(MODERN_ROM) $(BASEROM) $(MODERN_IPS_GENERATOR)
 expansion-modern-ips: expansion-modern-rom $(MODERN_IPS)
 	@printf 'Modern IPS patch ready: %s\n' "$(MODERN_IPS)"
 
-# fireemblem8.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
+# AdvanfeWarblem.custom_pointer.txt (FEBuilderGBA's per-ROM pointer-override
 # file): built from src/febuilder_pointers.c's gFebuilderPointers[] array
 # (#if FE8_FEBUILDER_POINTERS) -- see scripts/gen_custom_pointer_txt.py.
 MODERN_CUSTOM_POINTER_TXT := $(MODERN_ROM:.gba=.custom_pointer.txt)
@@ -2494,7 +2588,8 @@ _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-rom
 	@mkdir -p "$(WIN_SYNC_DIR)"
-	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/"
+	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp"
+	mv -f "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp" "$(WIN_SYNC_DIR)/$(notdir $(MODERN_ROM))"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	+$(MAKE) expansion-modern-sym \
 		$(if $(filter 1,$(WITH_UPS)),$(if $(wildcard $(BASEROM)),expansion-modern-ups)) \

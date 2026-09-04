@@ -125,6 +125,8 @@ CONFIG_MK_FEATURE_KEYS = (
     "SELECT_VIEW_GROWTHS",
     "CUSTOM_CAMPAIGN",
     "SKIP_OPENING",
+    "RAND_BGM",
+    "CONTINUE_BGM_BATTLE",
 )
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*?)\s*$")
@@ -397,14 +399,17 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            starter_content=0, vesly_debugger=0, danger_bones=0,
                            new_anims=0, new_tilesets=0,
                            purchase_generics=0, mmb=0, extend_desc_box=0,
+                           extend_dialogue_box=0,
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
                            select_view_growths=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           draw_map_anims=0, hp_bars=0, group_ai=0, alpha_sprite_arrow=0, turn_autosave=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, null_bossai_mov=0, rng_randomizer=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
+                           nimap2=0,
+                           rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -424,6 +429,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     generics = validate_feature_flag("PURCHASE_GENERICS", purchase_generics)
     mmb_flag = validate_feature_flag("MMB", mmb)
     desc_box = validate_feature_flag("EXTEND_DESC_BOX", extend_desc_box)
+    dialogue_box = validate_feature_flag("EXTEND_DIALOGUE_BOX", extend_dialogue_box)
     overflow_checks = validate_feature_flag("OVERFLOW_SAFETY_CHECKS", overflow_safety_checks)
     obtainable_item = validate_feature_flag("DISPLAY_OBTAINABLE_ITEM", display_obtainable_item)
     debuffs = validate_feature_flag("DEBUFFS_EXIST", debuffs_exist)
@@ -434,7 +440,10 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
     bars = validate_feature_flag("HP_BARS", hp_bars)
     group_ai_flag = validate_feature_flag("GROUP_AI", group_ai)
+    null_bossai_mov_flag = validate_feature_flag("NULL_BOSSAI_MOV", null_bossai_mov)
+    rng_randomizer_flag = validate_feature_flag("RNG_RANDOMIZER", rng_randomizer)
     alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
+    range_rework_flag = validate_feature_flag("RANGE_REWORK", range_rework)
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
     fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
@@ -447,6 +456,10 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     febuilder_pointers_flag = validate_feature_flag("FEBUILDER_POINTERS", febuilder_pointers)
     aw2_assets_flag = validate_feature_flag("AW2_ASSETS", aw2_assets)
     anims_fast_forward_flag = validate_feature_flag("ANIMS_FAST_FORWARD", anims_fast_forward)
+    nimap2_flag = validate_feature_flag("NIMAP2", nimap2)
+    rand_bgm_flag = validate_feature_flag("RAND_BGM", rand_bgm)
+    continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
+    danger_radius_flag = validate_feature_flag("DANGER_RADIUS", danger_radius)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -480,12 +493,19 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "warning-icon tiles it draws live in the icon sheet that flag "
             "loads"
         )
+    if danger_radius_flag and not obtainable_item:
+        raise ConfigError(
+            "DANGER_RADIUS=1 requires DISPLAY_OBTAINABLE_ITEM=1: the danger "
+            "radius overlay's icons live in the icon sheet that flag loads"
+        )
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
             select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
+            range_rework_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
-            anims_fast_forward_flag)
+            anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
+            dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -698,6 +718,7 @@ class ExpansionIdentity:
     purchase_generics: int = 0
     mmb: int = 0
     extend_desc_box: int = 0
+    extend_dialogue_box: int = 0
     overflow_safety_checks: int = 1
     display_obtainable_item: int = 0
     debuffs_exist: int = 0
@@ -708,7 +729,10 @@ class ExpansionIdentity:
     draw_map_anims: int = 0
     hp_bars: int = 0
     group_ai: int = 0
+    null_bossai_mov: int = 0
+    rng_randomizer: int = 0
     alpha_sprite_arrow: int = 0
+    range_rework: int = 0
     turn_autosave: int = 0
     fort_units_start_greyed_out: int = 0
     promote_command: int = 0
@@ -721,6 +745,10 @@ class ExpansionIdentity:
     febuilder_pointers: int = 0
     aw2_assets: int = 0
     anims_fast_forward: int = 0
+    nimap2: int = 0
+    rand_bgm: int = 0
+    continue_bgm_battle: int = 0
+    danger_radius: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -776,6 +804,7 @@ class ExpansionIdentity:
                 "purchase_generics": self.purchase_generics,
                 "mmb": self.mmb,
                 "extend_desc_box": self.extend_desc_box,
+                "extend_dialogue_box": self.extend_dialogue_box,
                 "overflow_safety_checks": self.overflow_safety_checks,
                 "display_obtainable_item": self.display_obtainable_item,
                 "debuffs_exist": self.debuffs_exist,
@@ -786,7 +815,10 @@ class ExpansionIdentity:
                 "draw_map_anims": self.draw_map_anims,
                 "hp_bars": self.hp_bars,
                 "group_ai": self.group_ai,
+                "null_bossai_mov": self.null_bossai_mov,
+                "rng_randomizer": self.rng_randomizer,
                 "alpha_sprite_arrow": self.alpha_sprite_arrow,
+                "range_rework": self.range_rework,
                 "turn_autosave": self.turn_autosave,
                 "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "promote_command": self.promote_command,
@@ -799,6 +831,10 @@ class ExpansionIdentity:
                 "febuilder_pointers": self.febuilder_pointers,
                 "aw2_assets": self.aw2_assets,
                 "anims_fast_forward": self.anims_fast_forward,
+                "nimap2": self.nimap2,
+                "rand_bgm": self.rand_bgm,
+                "continue_bgm_battle": self.continue_bgm_battle,
+                "danger_radius": self.danger_radius,
             },
         }
 
@@ -842,6 +878,7 @@ def load_identity(
     purchase_generics=None,
     mmb=None,
     extend_desc_box=None,
+    extend_dialogue_box=None,
     overflow_safety_checks=None,
     display_obtainable_item=None,
     debuffs_exist=None,
@@ -852,7 +889,10 @@ def load_identity(
     draw_map_anims=None,
     hp_bars=None,
     group_ai=None,
+    null_bossai_mov=None,
+    rng_randomizer=None,
     alpha_sprite_arrow=None,
+    range_rework=None,
     turn_autosave=None,
     fort_units_start_greyed_out=None,
     promote_command=None,
@@ -865,6 +905,10 @@ def load_identity(
     febuilder_pointers=None,
     aw2_assets=None,
     anims_fast_forward=None,
+    nimap2=None,
+    rand_bgm=None,
+    continue_bgm_battle=None,
+    danger_radius=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -925,10 +969,14 @@ def load_identity(
      resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
      resolved_select_growths, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
-     resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow, resolved_autosave,
+     resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow,
+     resolved_range_rework, resolved_autosave,
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
-     resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward) = validate_feature_flags(
+     resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
+     resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
+     resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
+     resolved_rng_randomizer) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -962,6 +1010,9 @@ def load_identity(
         extend_desc_box
         if extend_desc_box not in (None, "")
         else cfg.get("EXTEND_DESC_BOX", "0"),
+        extend_dialogue_box
+        if extend_dialogue_box not in (None, "")
+        else cfg.get("EXTEND_DIALOGUE_BOX", "0"),
         overflow_safety_checks
         if overflow_safety_checks not in (None, "")
         else cfg.get("OVERFLOW_SAFETY_CHECKS", "1"),
@@ -992,9 +1043,18 @@ def load_identity(
         group_ai
         if group_ai not in (None, "")
         else cfg.get("GROUP_AI", "0"),
+        null_bossai_mov
+        if null_bossai_mov not in (None, "")
+        else cfg.get("NULL_BOSSAI_MOV", "0"),
+        rng_randomizer
+        if rng_randomizer not in (None, "")
+        else cfg.get("RNG_RANDOMIZER", "0"),
         alpha_sprite_arrow
         if alpha_sprite_arrow not in (None, "")
         else cfg.get("ALPHA_SPRITE_ARROW", "0"),
+        range_rework
+        if range_rework not in (None, "")
+        else cfg.get("RANGE_REWORK", "0"),
         turn_autosave
         if turn_autosave not in (None, "")
         else cfg.get("TURN_AUTOSAVE", "0"),
@@ -1031,6 +1091,18 @@ def load_identity(
         anims_fast_forward
         if anims_fast_forward not in (None, "")
         else cfg.get("ANIMS_FAST_FORWARD", "0"),
+        nimap2
+        if nimap2 not in (None, "")
+        else cfg.get("NIMAP2", "0"),
+        rand_bgm
+        if rand_bgm not in (None, "")
+        else cfg.get("RAND_BGM", "0"),
+        continue_bgm_battle
+        if continue_bgm_battle not in (None, "")
+        else cfg.get("CONTINUE_BGM_BATTLE", "0"),
+        danger_radius
+        if danger_radius not in (None, "")
+        else cfg.get("DANGER_RADIUS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1071,6 +1143,7 @@ def load_identity(
         purchase_generics=resolved_generics,
         mmb=resolved_mmb,
         extend_desc_box=resolved_desc_box,
+        extend_dialogue_box=resolved_dialogue_box,
         overflow_safety_checks=resolved_overflow_checks,
         display_obtainable_item=resolved_obtainable_item,
         debuffs_exist=resolved_debuffs,
@@ -1081,7 +1154,10 @@ def load_identity(
         draw_map_anims=resolved_draw_map_anims,
         hp_bars=resolved_hp_bars,
         group_ai=resolved_group_ai,
+        null_bossai_mov=resolved_null_bossai_mov,
+        rng_randomizer=resolved_rng_randomizer,
         alpha_sprite_arrow=resolved_alpha_sprite_arrow,
+        range_rework=resolved_range_rework,
         turn_autosave=resolved_autosave,
         fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         promote_command=resolved_promote_command,
@@ -1094,6 +1170,10 @@ def load_identity(
         febuilder_pointers=resolved_febuilder_pointers,
         aw2_assets=resolved_aw2_assets,
         anims_fast_forward=resolved_anims_fast_forward,
+        nimap2=resolved_nimap2,
+        rand_bgm=resolved_rand_bgm,
+        continue_bgm_battle=resolved_continue_bgm_battle,
+        danger_radius=resolved_danger_radius,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1237,6 +1317,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override EXTEND_DESC_BOX (0 or 1)",
     )
     parser.add_argument(
+        "--extend-dialogue-box",
+        default=None,
+        help="override EXTEND_DIALOGUE_BOX (0 or 1)",
+    )
+    parser.add_argument(
         "--overflow-safety-checks",
         default=None,
         help="override OVERFLOW_SAFETY_CHECKS (0 or 1)",
@@ -1287,9 +1372,24 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override GROUP_AI (0 or 1)",
     )
     parser.add_argument(
+        "--null-bossai-mov",
+        default=None,
+        help="override NULL_BOSSAI_MOV (0 or 1)",
+    )
+    parser.add_argument(
+        "--rng-randomizer",
+        default=None,
+        help="override RNG_RANDOMIZER (0 or 1)",
+    )
+    parser.add_argument(
         "--alpha-sprite-arrow",
         default=None,
         help="override ALPHA_SPRITE_ARROW (0 or 1)",
+    )
+    parser.add_argument(
+        "--range-rework",
+        default=None,
+        help="override RANGE_REWORK (0 or 1)",
     )
     parser.add_argument(
         "--turn-autosave",
@@ -1320,6 +1420,26 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--anims-fast-forward",
         default=None,
         help="override ANIMS_FAST_FORWARD (0 or 1)",
+    )
+    parser.add_argument(
+        "--nimap2",
+        default=None,
+        help="override NIMAP2 (0 or 1)",
+    )
+    parser.add_argument(
+        "--rand-bgm",
+        default=None,
+        help="override RAND_BGM (0 or 1)",
+    )
+    parser.add_argument(
+        "--continue-bgm-battle",
+        default=None,
+        help="override CONTINUE_BGM_BATTLE (0 or 1)",
+    )
+    parser.add_argument(
+        "--danger-radius",
+        default=None,
+        help="override DANGER_RADIUS (0 or 1)",
     )
     parser.add_argument(
         "--fort-units-start-greyed-out",
@@ -1428,6 +1548,7 @@ def main(argv=None) -> int:
             purchase_generics=args.purchase_generics,
             mmb=args.mmb,
             extend_desc_box=args.extend_desc_box,
+            extend_dialogue_box=args.extend_dialogue_box,
             overflow_safety_checks=args.overflow_safety_checks,
             display_obtainable_item=args.display_obtainable_item,
             debuffs_exist=args.debuffs_exist,
@@ -1438,7 +1559,10 @@ def main(argv=None) -> int:
             draw_map_anims=args.draw_map_anims,
             hp_bars=args.hp_bars,
             group_ai=args.group_ai,
+            null_bossai_mov=args.null_bossai_mov,
+            rng_randomizer=args.rng_randomizer,
             alpha_sprite_arrow=args.alpha_sprite_arrow,
+            range_rework=args.range_rework,
             turn_autosave=args.turn_autosave,
             fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             promote_command=args.promote_command,
@@ -1451,6 +1575,10 @@ def main(argv=None) -> int:
             febuilder_pointers=args.febuilder_pointers,
             aw2_assets=args.aw2_assets,
             anims_fast_forward=args.anims_fast_forward,
+            nimap2=args.nimap2,
+            rand_bgm=args.rand_bgm,
+            continue_bgm_battle=args.continue_bgm_battle,
+            danger_radius=args.danger_radius,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:
