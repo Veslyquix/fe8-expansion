@@ -110,7 +110,7 @@ struct ModeSelectScratch
     u8 blendAmount;    // gUnk_ModeSelect_02000001 in the FE7 source
 };
 
-#define sModeSelectScratch (*(struct ModeSelectScratch*)gUiTmScratchA)
+#define sModeSelectScratch (*(struct ModeSelectScratch*)gUiTmScratchC)
 
 static struct AnimBuffer* ModeSelectGetAnimBuf(int slot)
 {
@@ -821,6 +821,7 @@ static void ModeSelect_Init(struct ModeSelectProc* proc)
     LoadUiSpinningArrowGfx(0, 0xd20, 9);
     SetUiSpinningArrowPositions(30, 61, 68, 61);
     SetUiSpinningArrowConfig(3);
+    
 
     InitTextFont(&sModeSelectScratch.text.font, (void*)0x600E000, 0x100, 0xe);
 
@@ -839,7 +840,6 @@ static void ModeSelect_Init(struct ModeSelectProc* proc)
     PutModeSelectDifficultyText(proc);
     ModeSelectSpriteDraw_SetSpin(proc->unk_43[proc->unk_41], proc->unk_42);
     ModeSelectSpriteDraw_SetAngle(proc->unk_30);
-
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
     proc->unk_2c = 0;
@@ -851,7 +851,6 @@ static void ModeSelect_Init(struct ModeSelectProc* proc)
     SetWOutLayers(0, 0, 0, 0, 0);
 
     LoadModeSelectChapterGfx(proc->unk_49[proc->unk_41]);
-
     // clang-format off
     SetObjAffine(
         0,
