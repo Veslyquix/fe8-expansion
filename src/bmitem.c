@@ -822,6 +822,26 @@ char* GetItemDisplayRangeString(int item) {
     } // switch (GetItemEncodedRange(item))
 }
 
+#if FE8_RANGE_REWORK
+char* GetItemEffDisplayRangeString(int item, struct Unit* unit) {
+    int min = GetUnitItemEffectiveMinRange(unit, item);
+    int max = GetUnitItemEffectiveMaxRange(unit, item);
+    char* buf = sRangeDisplayBuf;
+
+    buf = AppendDecimal(buf, min);
+
+    if (max != min) {
+        *buf++ = '-';
+        buf = AppendDecimal(buf, max);
+    }
+
+    *buf = '\0';
+
+    return sRangeDisplayBuf;
+        
+}
+#endif 
+
 int GetWeaponLevelFromExp(int wexp) {
     if (wexp < WPN_EXP_E)
         return WPN_LEVEL_0;

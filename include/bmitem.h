@@ -188,6 +188,10 @@ void EquipUnitItemSlot(struct Unit* unit, int itemSlot);
 s8 IsItemEffectiveAgainst(u16 item, struct Unit* unit);
 s8 IsUnitEffectiveAgainst(struct Unit* actor, struct Unit* target);
 char* GetItemDisplayRangeString(int item);
+#if FE8_RANGE_REWORK
+char* GetItemEffDisplayRangeString(int item, struct Unit* unit);
+#endif 
+
 int GetWeaponLevelFromExp(int wexp);
 char* GetItemDisplayRankString(int item);
 int GetDisplayRankStringFromExp(int wexp);
