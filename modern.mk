@@ -240,6 +240,9 @@ endif
 ifeq ($(CUSTOM_FORMULAS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_FORMULAS=1
 endif
+ifeq ($(MODE_SELECT),1)
+MODERN_DEFINE_FLAGS += -DFE8_MODE_SELECT=1
+endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
 endif
@@ -1638,6 +1641,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--rng-randomizer "$(RNG_RANDOMIZER)" \
 		--l-cycle "$(L_CYCLE)" \
 		--custom-formulas "$(CUSTOM_FORMULAS)" \
+		--mode-select "$(MODE_SELECT)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 		--range-rework "$(RANGE_REWORK)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1743,6 +1747,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--rng-randomizer "$(RNG_RANDOMIZER)" \
 	--l-cycle "$(L_CYCLE)" \
 	--custom-formulas "$(CUSTOM_FORMULAS)" \
+	--mode-select "$(MODE_SELECT)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 	--range-rework "$(RANGE_REWORK)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
@@ -1852,6 +1857,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_RNG_RANDOMIZER=$(RNG_RANDOMIZER) \
 	-DFE8_L_CYCLE=$(L_CYCLE) \
 	-DFE8_CUSTOM_FORMULAS=$(CUSTOM_FORMULAS) \
+	-DFE8_MODE_SELECT=$(MODE_SELECT) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
 	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
@@ -2051,6 +2057,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'rng_randomizer=$(RNG_RANDOMIZER)'; \
 		printf '%s\n' 'l_cycle=$(L_CYCLE)'; \
 		printf '%s\n' 'custom_formulas=$(CUSTOM_FORMULAS)'; \
+		printf '%s\n' 'mode_select=$(MODE_SELECT)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
 		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \

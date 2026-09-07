@@ -407,6 +407,14 @@ L_CYCLE ?= 1
 # sWeaponTriangleRules, as a starting point for battle-formula tweaks.
 CUSTOM_FORMULAS ?= 1
 
+# --- Optional ModeSelect -------------------------------------------------------
+# Replaces the New Game difficulty menu with a full "Mode Select" screen
+# (ported from the classic FE7 hack): a spinning Eirika/Ephraim/Lyon
+# carousel plus chapter-range and difficulty pickers, wired in at the same
+# save-menu step vanilla's plain difficulty select uses. See
+# src/modeselect.c and src/savemenu.c's PL_SAVEMENU_DIFFICULTY_SEL step.
+MODE_SELECT ?= 1
+
 
 # --- Optional PromoteCommand ------------------------------------------------------
 # Adds a "Promote" command to the unit menu for units at level 20+ who
