@@ -344,10 +344,6 @@ static int FindSpawnPositionFrom(int baseX, int baseY, int classId, int* xOut, i
         { 1, 0 },
         { 0, 1 },
         { -1, 0 },
-        { 1, -1 },
-        { 1, 1 },
-        { -1, 1 },
-        { -1, -1 },
     };
 
     const struct ClassData* class = GetClassData(classId);
@@ -1805,14 +1801,26 @@ int GetFactionIncomePreview(int factionId)
 
 static const struct PurchaseGenericDefinition* GetAiPriorityPurchase(int factionId)
 {
-    if (CountFactionUnitsByClass(factionId, CLASS_SOLDIER) < 3)
-        return GetPurchaseGenericByClass(CLASS_SOLDIER);
+    if (gPlaySt.chapterTurnNumber < 4) { 
+        if (CountFactionUnitsByClass(factionId, CLASS_SOLDIER) < 3)
+            return GetPurchaseGenericByClass(CLASS_SOLDIER);
 
-    if (CountFactionUnitsByClass(factionId, CLASS_ARMOR_KNIGHT) < 2)
-        return GetPurchaseGenericByClass(CLASS_ARMOR_KNIGHT);
+        if (CountFactionUnitsByClass(factionId, CLASS_ARMOR_KNIGHT) < 2)
+            return GetPurchaseGenericByClass(CLASS_ARMOR_KNIGHT);
+    } 
 
     return sPurchaseGenericDefinitions + NextRN_N(GetPurchaseGenericCount());
 }
+
+
+void TryPurchaseGenericUnitForFaction(int count, int factionId, int baseX, int baseY) { 
+    const struct PurchaseGenericDefinition* def; 
+    for (int i = 0; i < count; ++i) { 
+        def = GetAiPriorityPurchase(factionId);
+        if (def != NULL)
+            PurchaseGenericUnitForFaction(def, factionId, baseX, baseY);
+    } 
+} 
 
 static void RunAiPurchasesForFaction(int factionId)
 {
@@ -1821,7 +1829,6 @@ static void RunAiPurchasesForFaction(int factionId)
     for (i = 0; i < TRAP_MAX_COUNT; ++i)
     {
         struct Trap* trap = GetTrap(i);
-        const struct PurchaseGenericDefinition* def;
 
         if (trap->type == TRAP_NONE)
             break;
@@ -1838,21 +1845,26 @@ static void RunAiPurchasesForFaction(int factionId)
          * must not spawn units from them either. */
         switch (GetPurchaseBaseTrapKind(trap))
         {
-        case PURCHASE_BASE_KIND_FORT:
+        
         case PURCHASE_BASE_KIND_CAMP:
+        {
+            TryPurchaseGenericUnitForFaction(4, factionId, trap->xPos, trap->yPos); // 4 adjacents 
+            break; 
+        }
+        case PURCHASE_BASE_KIND_FORT:
         case PURCHASE_BASE_KIND_TENT:
+        {
+            TryPurchaseGenericUnitForFaction(1, factionId, trap->xPos, trap->yPos);
             break;
-
+        }
         default:
             continue;
-        }
-
-        def = GetAiPriorityPurchase(factionId);
-
-        if (def != NULL)
-            PurchaseGenericUnitForFaction(def, factionId, trap->xPos, trap->yPos);
+        } 
     }
 }
+
+
+
 
 static void RunAiCapturesForFaction(int factionId)
 {
