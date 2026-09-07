@@ -40,6 +40,30 @@
 void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit * defender);
 #endif
 
+#if !FE8_CUSTOM_FORMULAS
+static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
+    { ITYPE_SWORD, ITYPE_LANCE, -15, -1 },
+    { ITYPE_SWORD, ITYPE_AXE,   +15, +1 },
+
+    { ITYPE_LANCE, ITYPE_AXE,   -15, -1 },
+    { ITYPE_LANCE, ITYPE_SWORD, +15, +1 },
+
+    { ITYPE_AXE,   ITYPE_SWORD, -15, -1 },
+    { ITYPE_AXE,   ITYPE_LANCE, +15, +1 },
+
+    { ITYPE_ANIMA, ITYPE_DARK,  -15, -1 },
+    { ITYPE_ANIMA, ITYPE_LIGHT, +15, +1 },
+
+    { ITYPE_LIGHT, ITYPE_ANIMA, -15, -1 },
+    { ITYPE_LIGHT, ITYPE_DARK,  +15, +1 },
+
+    { ITYPE_DARK,  ITYPE_LIGHT, -15, -1 },
+    { ITYPE_DARK,  ITYPE_ANIMA, +15, +1 },
+
+    { -1 },
+};
+#endif 
+#if FE8_CUSTOM_FORMULAS
 static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
     { ITYPE_SWORD, ITYPE_LANCE, -25, -3 },
     { ITYPE_SWORD, ITYPE_AXE,   +25, +3 },
@@ -61,6 +85,7 @@ static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
 
     { -1 },
 };
+#endif
 
 #undef CONST_DATA
 #define CONST_DATA SECTION(".data.bmbattletail")
@@ -603,11 +628,20 @@ void ComputeBattleUnitSpeed(struct BattleUnit* bu) {
 }
 
 void ComputeBattleUnitHitRate(struct BattleUnit* bu) {
-    bu->battleHitRate = (bu->unit.skl * 2) + GetItemHit(bu->weapon) + (bu->unit.lck / 2) + bu->wTriangleHitBonus;
+    #if !FE8_CUSTOM_FORMULAS
+    bu->battleHitRate = (bu->unit.skl * 2) + GetItemHit(bu->weapon) + (bu->unit.lck / 2) + bu->wTriangleHitBonus; // vanilla 
+    #else 
+    bu->battleHitRate = (bu->unit.skl * 3) + GetItemHit(bu->weapon) + (bu->unit.lck / 2) + bu->wTriangleHitBonus; 
+    #endif 
 }
 
 void ComputeBattleUnitAvoidRate(struct BattleUnit* bu) {
-    bu->battleAvoidRate = (bu->battleSpeed * 2) + bu->terrainAvoid + (bu->unit.lck);
+    
+    #if !FE8_CUSTOM_FORMULAS
+    bu->battleAvoidRate = (bu->battleSpeed * 2) + bu->terrainAvoid + (bu->unit.lck); // vanilla 
+    #else 
+    bu->battleAvoidRate = (bu->battleSpeed) + bu->terrainAvoid + (bu->unit.lck);
+    #endif 
 
     if (bu->battleAvoidRate < 0)
         bu->battleAvoidRate = 0;

@@ -388,6 +388,25 @@ NULL_BOSSAI_MOV ?= 1
 # (https://feuniverse.us/t/gba-rng-randomizer/3175). See src/rng_randomizer.c.
 RNG_RANDOMIZER ?= 1
 
+# --- Optional LCycle ----------------------------------------------------------
+# Extends the map-phase L button (TrySwitchViewedUnit, src/playerphase.c)
+# beyond player units: pressing L while the cursor is on an enemy cycles to
+# the next enemy, and on an NPC cycles to the next NPC. With
+# PURCHASE_GENERICS also on, pressing L on the last player unit instead
+# jumps to the faction's next deploy point (Fort/Camp/Tent), pressing L on a
+# deploy point cycles to the next one of the same kind and owner (or the
+# first player unit if none), pressing L on an uncontrolled base cycles to
+# the next uncontrolled base (any kind, houses included), and pressing L on
+# an enemy-controlled base cycles to the next enemy-controlled base (any
+# kind).
+L_CYCLE ?= 1
+
+# --- Optional CustomFormulas --------------------------------------------------
+# Swaps in an editable copy of the vanilla weapon-triangle rule table
+# (sCustomWeaponTriangleRules, src/bmbattle.c) in place of the vanilla
+# sWeaponTriangleRules, as a starting point for battle-formula tweaks.
+CUSTOM_FORMULAS ?= 1
+
 
 # --- Optional PromoteCommand ------------------------------------------------------
 # Adds a "Promote" command to the unit menu for units at level 20+ who

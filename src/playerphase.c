@@ -1598,9 +1598,285 @@ bool TrySetCursorOn(int unitId)
     return true;
 }
 
+#if FE8_L_CYCLE
+/* Forward-only half of the ring search: the next selectable unit of
+ * `faction` strictly after currentUnitId (or from the start of the
+ * faction's id block, if currentUnitId doesn't belong to it). Never wraps
+ * -- *searchStartOut is set to the (already-incremented) search origin so a
+ * caller can wrap manually via TryWrapViewedUnitInFaction, or substitute
+ * something else (a deploy point) for what the wrap would have found. */
+static bool TryAdvanceViewedUnitInFaction(int currentUnitId, int faction, int* searchStartOut)
+{
+    int i;
+    int searchStart = ((currentUnitId & 0xC0) == faction) ? currentUnitId : faction;
+
+    searchStart++;
+
+    if (searchStartOut != NULL)
+        *searchStartOut = searchStart;
+
+    for (i = searchStart; i < faction + 0x3F; ++i)
+    {
+        if (TrySetCursorOn(i))
+            return true;
+    }
+
+    return false;
+}
+
+/* Wrap-around half: the first selectable unit of `faction`, up to and
+ * including searchStart (the same bound TryAdvanceViewedUnitInFaction
+ * started from, reproducing the original vanilla wrap range). */
+static bool TryWrapViewedUnitInFaction(int faction, int searchStart)
+{
+    int i;
+
+    for (i = faction + 1; i <= searchStart; ++i)
+    {
+        if (TrySetCursorOn(i))
+            return true;
+    }
+
+    return false;
+}
+
+/* Plain full-ring cycle within one faction -- what vanilla always did for
+ * Blue, generalized to any faction. Used as-is for Red/Green/Purple (only
+ * the player has deploy points to hand off to) and as the final fallback
+ * once Blue's own deploy-point hand-off has nothing left to offer. */
+static bool TryCycleViewedUnitInFaction(int currentUnitId, int faction)
+{
+    int searchStart;
+
+    if (TryAdvanceViewedUnitInFaction(currentUnitId, faction, &searchStart))
+        return true;
+
+    return TryWrapViewedUnitInFaction(faction, searchStart);
+}
+
+#if FE8_PURCHASE_GENERICS
+enum
+{
+    PB_KIND_ANY    = 0,  // no kind restriction
+    PB_KIND_DEPLOY = -1, // any of the deploy-capable kinds (see IsPurchaseBaseDeployTrapKind)
+};
+
+/* Mirrors the deploy-capable kind check in PurchaseGenerics_TryStartTileMenu
+ * (src/purchase_generics.c) -- Fort/Camp/Tent are the only trap kinds a unit
+ * can actually be deployed from; House/Gate/Throne/Village only capture and
+ * generate income (see CanUsePurchaseBaseNow's switch there). Duplicated
+ * rather than shared: that file already duplicates this same switch twice
+ * for the same reason (no existing shared predicate to call instead). */
+static bool IsPurchaseBaseDeployTrapKind(int kind)
+{
+    switch (kind)
+    {
+    case PURCHASE_BASE_KIND_FORT:
+    case PURCHASE_BASE_KIND_CAMP:
+    case PURCHASE_BASE_KIND_TENT:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+/* Finds the next purchase-base trap after fromTrapIndex (wrapping back to
+ * index 0), owned by `owner`, and matching `kindFilter` (PB_KIND_ANY for no
+ * restriction, PB_KIND_DEPLOY for any deploy-capable kind, or an exact
+ * PURCHASE_BASE_KIND_* value). fromTrapIndex = -1 searches from the very
+ * first trap. Returns the trap's index, or -1 if nothing matches. Traps are
+ * always packed contiguously with no holes (see RemoveTrap), so stopping at
+ * the first TRAP_NONE is a complete scan -- same assumption every other
+ * trap-list walk in this codebase already makes. */
+static int FindNextPurchaseBaseTrapIndex(int fromTrapIndex, int owner, int kindFilter)
+{
+    int i;
+
+    for (i = fromTrapIndex + 1; i < TRAP_MAX_COUNT; ++i)
+    {
+        struct Trap* trap = GetTrap(i);
+
+        if (trap->type == TRAP_NONE)
+            break;
+
+        if (trap->type != TRAP_PURCHASE_BASE)
+            continue;
+
+        if (GetPurchaseBaseTrapOwner(trap) != owner)
+            continue;
+
+        if (kindFilter == PB_KIND_DEPLOY)
+        {
+            if (!IsPurchaseBaseDeployTrapKind(GetPurchaseBaseTrapKind(trap)))
+                continue;
+        }
+        else if (kindFilter != PB_KIND_ANY && GetPurchaseBaseTrapKind(trap) != kindFilter)
+        {
+            continue;
+        }
+
+        return i;
+    }
+
+    for (i = 0; i <= fromTrapIndex && i < TRAP_MAX_COUNT; ++i)
+    {
+        struct Trap* trap = GetTrap(i);
+
+        if (trap->type == TRAP_NONE)
+            break;
+
+        if (trap->type != TRAP_PURCHASE_BASE)
+            continue;
+
+        if (GetPurchaseBaseTrapOwner(trap) != owner)
+            continue;
+
+        if (kindFilter == PB_KIND_DEPLOY)
+        {
+            if (!IsPurchaseBaseDeployTrapKind(GetPurchaseBaseTrapKind(trap)))
+                continue;
+        }
+        else if (kindFilter != PB_KIND_ANY && GetPurchaseBaseTrapKind(trap) != kindFilter)
+        {
+            continue;
+        }
+
+        return i;
+    }
+
+    return -1;
+}
+
+/* Moves the viewed cursor (and camera) onto a raw map position -- the same
+ * proc lookup and calls TrySetCursorOn ends with, but for a trap's tile
+ * rather than a unit's. */
+static void MoveViewedCursorTo(int x, int y)
+{
+    ProcPtr proc = Proc_Find(gProcScr_PlayerPhase);
+
+    if (!proc)
+        proc = Proc_Find(gProcScr_SALLYCURSOR);
+
+    EnsureCameraOntoPosition(proc, x, y);
+    SetCursorMapPosition(x, y);
+}
+
+/* L pressed while standing on a purchase-base trap (x, y). Handles the
+ * three non-unit cases from the spec:
+ *   - uncontrolled (owner == neutral): cycle to the next uncontrolled base,
+ *     of ANY kind -- this is deliberately not kind-restricted, since
+ *     capturing works the same regardless of kind, and it's specifically
+ *     what lets L reach a house from an uncontrolled base (see the
+ *     non-deploy owned case below, which never does).
+ *   - enemy-controlled (owner == Red): cycle to the next enemy-controlled
+ *     base, likewise any kind.
+ *   - owned (Blue/Green/Purple) deploy point (Fort/Camp/Tent): cycle among
+ *     ALL deploy-capable kinds owned by the same faction as a single group
+ *     -- Camp cycles to Fort cycles to Tent, not just to another Camp.
+ *     Running out of matches falls back to the player's first unit instead
+ *     of doing nothing -- deploy points are the one kind a plain "stay put"
+ *     would be actively unhelpful for.
+ *   - owned (Blue/Green/Purple) non-deploy kind (e.g. a Blue-owned House):
+ *     cycle to the next base of the SAME kind and owner -- not covered by
+ *     the spec, kept kind-restricted as the safest default.
+ * Returns false only when there's no purchase-base trap at (x, y) at all,
+ * so the caller can fall through to the ordinary unit-cycle behavior;
+ * every other outcome (including "nothing else to cycle to") is handled
+ * here and returns true, since standing on a trap always means the trap
+ * governs what L does.
+ */
+static bool TryCycleViewedPurchaseBaseTrap(int x, int y)
+{
+    struct Trap* trap = GetPurchaseBaseTrapAt(x, y);
+    int fromIndex, owner, kind, nextIndex;
+
+    if (trap == NULL)
+        return false;
+
+    fromIndex = TRAP_INDEX(trap);
+    owner = GetPurchaseBaseTrapOwner(trap);
+    kind = GetPurchaseBaseTrapKind(trap);
+
+    if (owner == PURCHASE_BASE_OWNER_NEUTRAL)
+        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, PURCHASE_BASE_OWNER_NEUTRAL, PB_KIND_ANY);
+    else if (owner == FACTION_ID_RED)
+        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, FACTION_ID_RED, PB_KIND_ANY);
+    else if (IsPurchaseBaseDeployTrapKind(kind))
+        /* Deploy points cycle together as one group regardless of specific
+         * kind -- Camp -> Fort -> Tent -> ... -- not restricted to the
+         * kind currently stood on. */
+        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, owner, PB_KIND_DEPLOY);
+    else
+        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, owner, kind);
+
+    if (nextIndex >= 0)
+    {
+        struct Trap* next = GetTrap(nextIndex);
+
+        MoveViewedCursorTo(next->xPos, next->yPos);
+        return true;
+    }
+
+    if (owner == FACTION_ID_BLUE && IsPurchaseBaseDeployTrapKind(kind))
+        TryCycleViewedUnitInFaction(0, FACTION_BLUE);
+
+    return true;
+}
+#endif // FE8_PURCHASE_GENERICS
+#endif // FE8_L_CYCLE
+
 //! FE8U = 0x0801DB4C
 void TrySwitchViewedUnit(int x, int y)
 {
+#if FE8_L_CYCLE
+    int unitId = gBmMapUnit[y][x];
+
+    if (unitId != 0)
+    {
+        int faction = unitId & 0xC0;
+
+#if FE8_PURCHASE_GENERICS
+        if (faction == FACTION_BLUE)
+        {
+            int searchStart;
+            int trapIndex;
+
+            if (TryAdvanceViewedUnitInFaction(unitId, FACTION_BLUE, &searchStart))
+                return;
+
+            /* Ran off the end of the player's units -- offer up their
+             * deploy points before wrapping back to the first unit. */
+            trapIndex = FindNextPurchaseBaseTrapIndex(-1, FACTION_ID_BLUE, PB_KIND_DEPLOY);
+
+            if (trapIndex >= 0)
+            {
+                struct Trap* trap = GetTrap(trapIndex);
+
+                MoveViewedCursorTo(trap->xPos, trap->yPos);
+                return;
+            }
+
+            TryWrapViewedUnitInFaction(FACTION_BLUE, searchStart);
+            return;
+        }
+#endif
+
+        // Enemy cycles to the next enemy, NPC to the next NPC -- own
+        // faction only, no deploy-point hand-off (only the player deploys).
+        TryCycleViewedUnitInFaction(unitId, faction);
+        return;
+    }
+
+#if FE8_PURCHASE_GENERICS
+    if (TryCycleViewedPurchaseBaseTrap(x, y))
+        return;
+#endif
+
+    // Empty tile, nothing to cycle from -- same vanilla behavior as
+    // FE8_L_CYCLE disabled: start the player's unit cycle from scratch.
+    TryCycleViewedUnitInFaction(0, FACTION_BLUE);
+#else
     int i;
 
     int unitId = gBmMapUnit[y][x];
@@ -1627,6 +1903,7 @@ void TrySwitchViewedUnit(int x, int y)
             return;
         }
     }
+#endif
 
     return;
 }
