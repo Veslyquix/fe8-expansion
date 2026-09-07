@@ -28,17 +28,6 @@ static void DrawSpriteTextGlyphBitmap(
     struct Text *text, const u32 *bitmap, int width);
 #endif
 
-struct Struct02026E30
-{
-    u32 tileDataOffset;
-    s16 bg;
-    u16 tileIndex;
-    u32 unk8;
-    u32 unkC;
-    u32 unk10;
-    char unk14[256][32];
-};
-
 struct SpecialCharSt {
     s8 color;
     s8 id;

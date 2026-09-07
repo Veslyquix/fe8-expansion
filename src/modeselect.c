@@ -18,6 +18,7 @@
 #include "mu.h"
 #include "bmsave.h"
 #include "sysutil.h"
+#include "statscreen.h"
 #include "modeselect.h"
 
 #include "constants/faces.h"
@@ -45,27 +46,31 @@
  * of vanilla's NewNewGameDifficultySelect.
  *
  * RAM: the spinning carousel needs 3 concurrent "EkrUnitMainMini" mini-
- * animation slots (struct AnimBuffer, include/ekrbattle.h). Rather than
- * allocate new large scratch buffers, this reuses the same battle-
- * animation RAM every other mini-carousel screen in this repo already
- * reuses (src/classchg-sel.c, src/purchase_generics.c): the actor/target
- * battle-animation image-sheet/OAM/palette/frame-data buffers for slots 0
- * and 1, and opinfo.c's own class-display carousel buffers for slot 2 --
- * none of these are ever live at the same time as the save-menu's New Game
- * flow, so sharing them is safe. See sModeSelectImgSheetBufs and its
- * siblings below.
+ * animation slots (struct AnimBuffer, include/ekrbattle.h). The large
+ * per-slot buffers (image sheet, OAM, palette, frame data) reuse the same
+ * battle-animation RAM every other mini-carousel screen in this repo
+ * already reuses (src/classchg-sel.c, src/purchase_generics.c) for slots 0
+ * and 1, plus gFontgrp_0's debug-console scratch (include/fontgrp.h) for
+ * slot 2's image sheet -- none of these are ever live at the same time as
+ * the save-menu's New Game flow, so sharing them is safe. See
+ * sModeSelectImgSheetBufs and its siblings below.
  *
- * This file's own small proc-state (carousel slot state, text, blend
- * counters) is EWRAM_OVERLAY(gameending) rather than plain EWRAM_DATA --
- * NOT the "gamestart" tag opinfo.c's own buffers use, since that overlay's
- * free (non-fixed-address) region is already almost entirely consumed by
- * gOpInfoData/gOpInfoImgSheetBuf themselves (linker/expansion.ld pins
- * several vanilla globals at fixed offsets starting at 0x2038 into that
- * overlay, leaving barely any headroom). ending_details.c's end-of-game
- * details screen (EWRAM_OVERLAY(gameending)) has no such fixed-address
- * constraints and is just as provably non-concurrent with the save-menu's
- * New Game flow -- you can't be viewing the ending and starting a new game
- * at the same time -- so it's a safe, unconstrained home for this data.
+ * This screen's own small per-slot/UI state (3x AnimBuffer, 3x
+ * AnimMagicFxBuffer, the palette-dim cache, text/font state) lives inside
+ * gUiTmScratchA (see struct ModeSelectScratch below) rather than as new
+ * EWRAM_DATA globals, for the same reason: gUiTmScratchA is only used
+ * transiently by the pre-battle forecast popup (src/bksel.c), never during
+ * this screen's own lifetime. An earlier version of this file instead put
+ * this state in EWRAM_OVERLAY(gameending) to dodge an EWRAM budget
+ * shortfall -- that corrupted pAnimBuf->anim1/anim2 into garbage pointers
+ * (confirmed live: EkrUnitMainMiniMain crashed reading anim->pScrCurrent
+ * with anim==8) once the carousel actually ran, meaning something else
+ * genuinely writes into that overlay's address range while Mode Select is
+ * on screen, not just "temporally separate screens" as the overlay's other
+ * tags assume. gUiTmScratchA has no such risk (it isn't an EWRAM_OVERLAY
+ * tag at all, just an ordinary buffer with a well-understood, unrelated
+ * owner), and is large enough (1280 bytes) to hold all of this screen's
+ * own state with room to spare -- no feature-cutting trims needed.
  */
 
 #define ModeSelectBg0Tm gBG0TilemapBuffer
@@ -75,41 +80,67 @@
 struct ModeSelectTextState
 {
     struct Font font;
-    struct Text text[7];
+    // text[3] in the FE7 source is allocated (InitText) but never drawn to
+    // (no PutDrawText call anywhere references it, in either source) -- a
+    // genuinely dead slot there, so it's dropped here. Indices above it
+    // are renumbered down by one accordingly (old 4/5/6 -> 3/4/5).
+    struct Text text[6];
 };
 
-EWRAM_OVERLAY(gameending) static struct ModeSelectTextState sModeSelectText = {0};
+/* All of this screen's own small per-slot/UI state (struct AnimBuffer x3,
+ * struct AnimMagicFxBuffer x3, the palette-dim cache, and the text/font
+ * state) lives here instead of as separate new EWRAM_DATA globals --
+ * placed inside gUiTmScratchA (include/statscreen.h, 0x280 u16s = 1280
+ * bytes; used transiently by the pre-battle forecast popup, src/bksel.c,
+ * never during the save-menu New Game flow this screen runs in) rather
+ * than costing any new permanent EWRAM. This is the same "borrow a large
+ * buffer nothing else needs right now" approach as gFontgrp_0 below, for
+ * this screen's own accumulated small state instead of one single big
+ * buffer. Letting the compiler lay this out (rather than hand-picking
+ * byte offsets into gUiTmScratchA) keeps every field's alignment correct
+ * for free. Total size is a little under 500 bytes -- comfortably inside
+ * gUiTmScratchA's 1280. */
+struct ModeSelectScratch
+{
+    struct AnimBuffer animBuf[3];
+    struct AnimMagicFxBuffer magicFx[3];
+    u16 paletteCache[3 * 15]; // gUnk_0201E9F4 in the FE7 source
+    struct ModeSelectTextState text;
+    u8 blendThreshold; // gUnk_ModeSelect_02000000 in the FE7 source
+    u8 blendAmount;    // gUnk_ModeSelect_02000001 in the FE7 source
+};
 
-/* gUnk_0201E8D4 / gUnk_0201E97C in the FE7 source: fixed-address globals
- * sized for 3 concurrent carousel slots. No FE8 equivalent exists (this
- * mini-carousel machinery is otherwise only ever used one slot at a time
- * in this repo -- see opinfo.h's single gOpInfoData/gUnk_4), so these are
- * this file's own small proc-state arrays (not "graphics buffers" in the
- * RAM-reuse sense above -- each entry is under 0x30 bytes). */
-EWRAM_OVERLAY(gameending) static struct AnimBuffer sModeSelectAnimBuf[3] = {0};
-EWRAM_OVERLAY(gameending) static struct AnimMagicFxBuffer sModeSelectMagicFx[3] = {0};
+#define sModeSelectScratch (*(struct ModeSelectScratch*)gUiTmScratchA)
 
-/* gUnk_0201E9F4 in the FE7 source: per-slot cache of each carousel
- * character's un-dimmed palette (15 colours, skipping the transparent
- * index 0), used by ModeSelectPalette_ApplyBlend to re-derive a dimmed
- * copy every frame without repeatedly re-reading VRAM. */
-EWRAM_OVERLAY(gameending) static u16 sModeSelectPaletteCache[3 * 15] = {0};
+static struct AnimBuffer* ModeSelectGetAnimBuf(int slot)
+{
+    return &sModeSelectScratch.animBuf[slot];
+}
 
-// gUnk_ModeSelect_02000000 / _02000001 in the FE7 source.
-EWRAM_OVERLAY(gameending) static u8 sModeSelectBlendThreshold = 0;
-EWRAM_OVERLAY(gameending) static u8 sModeSelectBlendAmount = 0;
+static struct AnimMagicFxBuffer* ModeSelectGetMagicFx(int slot)
+{
+    return &sModeSelectScratch.magicFx[slot];
+}
 
-extern u8 gOpInfoImgSheetBuf[0x2000];
 extern u8 gUnk_0[];
 extern u8 gUnk_1[];
 extern u8 gUnk_2[];
 
 /* Slot 0/1 reuse the real battle-animation actor/target scratch (only safe
- * because Mode Select never runs during a battle); slot 2 reuses the
- * class-display carousel's own single-slot scratch (only safe because
- * Mode Select never runs during that screen either). */
+ * because Mode Select never runs during a battle). Slot 2's image sheet
+ * reuses gFontgrp_0's debug-console scrollback buffer (include/fontgrp.h,
+ * exactly 0x2000 bytes -- only ever live when a debug text console is
+ * actually open, never during normal gameplay screens) rather than
+ * opinfo.c's gOpInfoImgSheetBuf -- the same "borrow a same-sized buffer
+ * nothing else needs right now" trick FE8 SkillSys uses for its own
+ * unit-loading code. unk_20/24/28 below still borrow gUnk_0/1/2 (opinfo.c's
+ * own OAM/palette/frame-data scratch, EWRAM_OVERLAY(gamestart)): no
+ * same-size alternative exists for those, and per ModeSelectGetAnimBuf's
+ * own comment, the corruption this carousel actually hit was in this
+ * file's own state structs (an EWRAM_OVERLAY(gameending) mistake, now
+ * plain EWRAM_DATA), not in anything borrowed from opinfo.c. */
 static void* const sModeSelectImgSheetBufs[3] = {
-    gBanimLeftImgSheetBuf, gBanimRightImgSheetBuf, gOpInfoImgSheetBuf,
+    gBanimLeftImgSheetBuf, gBanimRightImgSheetBuf, gFontgrp_0.unk14,
 };
 static void* const sModeSelectPaletteBufs[3] = {
     gBanimPaletteLeft, gBanimPaletteRight, gUnk_1,
@@ -201,42 +232,45 @@ static void InitModeSelectAnims(int count, u8* lordIndices)
 
     for (i = 0; i < count; i++)
     {
-        sModeSelectAnimBuf[i].xPos = 320;
-        sModeSelectAnimBuf[i].yPos = 88;
-        sModeSelectAnimBuf[i].animId = sModeSelectBanimIds[lordIndices[i]];
-        sModeSelectAnimBuf[i].roundType = 6;
-        sModeSelectAnimBuf[i].genericPalId = 0;
-        sModeSelectAnimBuf[i].state2 = 1;
-        sModeSelectAnimBuf[i].oam2Tile = (i * 0x2000 + 0x2000) >> 5;
-        sModeSelectAnimBuf[i].oam2Pal = i + 0xd;
+        struct AnimBuffer* animBuf = ModeSelectGetAnimBuf(i);
+        struct AnimMagicFxBuffer* magicFx = ModeSelectGetMagicFx(i);
 
-        sModeSelectAnimBuf[i].pImgSheetBuf = sModeSelectImgSheetBufs[i];
-        sModeSelectAnimBuf[i].unk_24 = sModeSelectOamBufs[i];
-        sModeSelectAnimBuf[i].unk_20 = sModeSelectPaletteBufs[i];
-        sModeSelectAnimBuf[i].unk_28 = sModeSelectFrameDataBufs[i];
+        animBuf->xPos = 320;
+        animBuf->yPos = 88;
+        animBuf->animId = sModeSelectBanimIds[lordIndices[i]];
+        animBuf->roundType = 6;
+        animBuf->genericPalId = 0;
+        animBuf->state2 = 1;
+        animBuf->oam2Tile = (i * 0x2000 + 0x2000) >> 5;
+        animBuf->oam2Pal = i + 0xd;
 
-        sModeSelectAnimBuf[i].charPalId = 0xffff;
+        animBuf->pImgSheetBuf = sModeSelectImgSheetBufs[i];
+        animBuf->unk_24 = sModeSelectOamBufs[i];
+        animBuf->unk_20 = sModeSelectPaletteBufs[i];
+        animBuf->unk_28 = sModeSelectFrameDataBufs[i];
 
-        sModeSelectAnimBuf[i].unk_30 = &sModeSelectMagicFx[i];
+        animBuf->charPalId = 0xffff;
 
-        sModeSelectMagicFx[i].magicFuncIdx = 0;
-        sModeSelectMagicFx[i].xOffsetBg = 0;
-        sModeSelectMagicFx[i].yOffsetBg = 0;
-        sModeSelectMagicFx[i].xOffsetObj = 0;
-        sModeSelectMagicFx[i].yOffsetObj = 0;
-        sModeSelectMagicFx[i].objChr = 0;
-        sModeSelectMagicFx[i].objPalId = 0;
-        sModeSelectMagicFx[i].bgChr = 0;
-        sModeSelectMagicFx[i].bgPalId = 0;
-        sModeSelectMagicFx[i].bg = 0;
+        animBuf->unk_30 = magicFx;
 
-        sModeSelectMagicFx[i].bgTmBuf = NULL;
-        sModeSelectMagicFx[i].bgImgBuf = NULL;
-        sModeSelectMagicFx[i].bgTsaBuf = NULL;
-        sModeSelectMagicFx[i].objImgBuf = NULL;
-        sModeSelectMagicFx[i].resetCallback = NULL;
+        magicFx->magicFuncIdx = 0;
+        magicFx->xOffsetBg = 0;
+        magicFx->yOffsetBg = 0;
+        magicFx->xOffsetObj = 0;
+        magicFx->yOffsetObj = 0;
+        magicFx->objChr = 0;
+        magicFx->objPalId = 0;
+        magicFx->bgChr = 0;
+        magicFx->bgPalId = 0;
+        magicFx->bg = 0;
 
-        NewEkrUnitMainMini(&sModeSelectAnimBuf[i]);
+        magicFx->bgTmBuf = NULL;
+        magicFx->bgImgBuf = NULL;
+        magicFx->bgTsaBuf = NULL;
+        magicFx->objImgBuf = NULL;
+        magicFx->resetCallback = NULL;
+
+        NewEkrUnitMainMini(animBuf);
     }
 }
 
@@ -246,7 +280,7 @@ static void EndModeSelectAnims(s32 count)
     int i;
 
     for (i = 0; i < count; i++)
-        EndEkrUnitMainMini(&sModeSelectAnimBuf[i]);
+        EndEkrUnitMainMini(ModeSelectGetAnimBuf(i));
 }
 
 const char StrModeSelect_MainCharacter[] = "Main character:";
@@ -255,11 +289,11 @@ const char StrModeSelect_Weapon[] = "Weapon:";
 // FE7U: 0x080A75F0
 static void PutModeSelectLabelText(void)
 {
-    ClearText(&sModeSelectText.text[5]);
-    ClearText(&sModeSelectText.text[6]);
+    ClearText(&sModeSelectScratch.text.text[4]);
+    ClearText(&sModeSelectScratch.text.text[5]);
 
-    PutDrawText(&sModeSelectText.text[5], ModeSelectClawTm + TILEMAP_INDEX(14, 6), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrModeSelect_MainCharacter);
-    PutDrawText(&sModeSelectText.text[6], ModeSelectClawTm + TILEMAP_INDEX(14, 10), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrModeSelect_Weapon);
+    PutDrawText(&sModeSelectScratch.text.text[4], ModeSelectClawTm + TILEMAP_INDEX(14, 6), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrModeSelect_MainCharacter);
+    PutDrawText(&sModeSelectScratch.text.text[5], ModeSelectClawTm + TILEMAP_INDEX(14, 10), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrModeSelect_Weapon);
 
     BG_EnableSyncByMask(BG1_SYNC_BIT);
 }
@@ -277,12 +311,11 @@ static const char* const sModeSelectWeaponText[] = {
 // FE7U: 0x080A7668
 static void PutModeSelectCharacterText(s32 index)
 {
-    ClearText(&sModeSelectText.text[2]);
-    ClearText(&sModeSelectText.text[3]);
-    ClearText(&sModeSelectText.text[4]);
+    ClearText(&sModeSelectScratch.text.text[2]);
+    ClearText(&sModeSelectScratch.text.text[3]);
 
-    PutDrawText(&sModeSelectText.text[2], ModeSelectClawTm + TILEMAP_INDEX(14, 8), TEXT_COLOR_SYSTEM_BLUE, 0, 0, GetStringFromIndex(sModeSelectLordText[index][0]));
-    PutDrawText(&sModeSelectText.text[4], ModeSelectClawTm + TILEMAP_INDEX(19, 10), TEXT_COLOR_SYSTEM_BLUE, 0, 0, sModeSelectWeaponText[index]);
+    PutDrawText(&sModeSelectScratch.text.text[2], ModeSelectClawTm + TILEMAP_INDEX(14, 8), TEXT_COLOR_SYSTEM_BLUE, 0, 0, GetStringFromIndex(sModeSelectLordText[index][0]));
+    PutDrawText(&sModeSelectScratch.text.text[3], ModeSelectClawTm + TILEMAP_INDEX(19, 10), TEXT_COLOR_SYSTEM_BLUE, 0, 0, sModeSelectWeaponText[index]);
 
     BG_EnableSyncByMask(BG1_SYNC_BIT);
 }
@@ -292,10 +325,10 @@ static void PutModeSelectDifficultyText(struct ModeSelectProc* proc)
 {
     int chosen = proc->unk_43[proc->unk_41];
 
-    ClearText(&sModeSelectText.text[0]);
-    ClearText(&sModeSelectText.text[1]);
+    ClearText(&sModeSelectScratch.text.text[0]);
+    ClearText(&sModeSelectScratch.text.text[1]);
 
-    PutDrawText(&sModeSelectText.text[0], ModeSelectClawTm + TILEMAP_INDEX(15, 12), chosen == 0 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_GRAY, 0, 0, GetStringFromIndex(0x053E));
+    PutDrawText(&sModeSelectScratch.text.text[0], ModeSelectClawTm + TILEMAP_INDEX(15, 12), chosen == 0 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_GRAY, 0, 0, GetStringFromIndex(0x053E));
 
     BG_EnableSyncByMask(BG1_SYNC_BIT);
 
@@ -317,7 +350,7 @@ static void PutModeSelectDifficultyText(struct ModeSelectProc* proc)
             break;
     }
 
-    PutDrawText(&sModeSelectText.text[1], ModeSelectClawTm + TILEMAP_INDEX(15, 14), chosen == 1 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_GRAY, 0, 0, GetStringFromIndex(0x053F));
+    PutDrawText(&sModeSelectScratch.text.text[1], ModeSelectClawTm + TILEMAP_INDEX(15, 14), chosen == 1 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_GRAY, 0, 0, GetStringFromIndex(0x053F));
 }
 
 static const int sModeSelectFaceIds[3] = {
@@ -372,7 +405,7 @@ static void ModeSelectPalette_CacheUndimmed(s32 palId)
     u16* src = gPaletteBuffer + (palId + 0xd) * 0x10 + 0x101;
 
     for (i = 0; i < 0xf; i++)
-        sModeSelectPaletteCache[i + palId * 0xf] = *src++;
+        sModeSelectScratch.paletteCache[i + palId * 0xf] = *src++;
 }
 
 // FE7U: 0x080A7890
@@ -384,13 +417,13 @@ static void ModeSelectPalette_ApplyBlend(s32 palId, s32 amount)
     if (amount > 0x40)
         amount = 0x40;
 
-    amount = amount + (sModeSelectBlendAmount - 10) * 2;
+    amount = amount + (sModeSelectScratch.blendAmount - 10) * 2;
 
     for (i = 0; i < 0xf; i++)
     {
         s32 accum = 0;
         s32 r, g, b;
-        u16 base = sModeSelectPaletteCache[i + palId * 0xf];
+        u16 base = sModeSelectScratch.paletteCache[i + palId * 0xf];
 
         r = (amount * (base & RED_MASK)) >> 6;
         accum += (r < 0) ? 0 : (r <= RED_MASK ? (r & RED_MASK) : RED_MASK);
@@ -493,7 +526,7 @@ static void ModeSelectSpriteDraw_Loop(struct ModeSelectSpriteDrawProc* proc)
             s32 x = (proc->unk_34 << 12) + SIN(angle) * 70;
             s32 y = (((proc->unk_38 << 12) + COS(angle) * 28) >> 12) - 16;
 
-            SetMainMiniAnimPos(&sModeSelectAnimBuf[i], x >> 12, y);
+            SetMainMiniAnimPos(ModeSelectGetAnimBuf(i), x >> 12, y);
             ModeSelectPalette_ApplyGlow(i, (proc->unk_3e >> 4) + i * proc->unk_44);
         }
     }
@@ -502,7 +535,7 @@ static void ModeSelectSpriteDraw_Loop(struct ModeSelectSpriteDrawProc* proc)
     BgAffinScaling(BG_2, 0x280, 0x100);
     BgAffinAnchoring(BG_2, proc->unk_34, proc->unk_38, 76, 76);
 
-    sModeSelectBlendAmount = InterpolateCubicSpline(8, 8, 16, 16, proc->unk_48);
+    sModeSelectScratch.blendAmount = InterpolateCubicSpline(8, 8, 16, 16, proc->unk_48);
 
     if (proc->unk_4c == 0)
     {
@@ -563,7 +596,7 @@ static void ModeSelectSpriteDraw_SetCenter(s32 x, s32 y)
         proc->unk_34 = x;
         proc->unk_38 = y;
     }
-    sModeSelectBlendThreshold = y - 60;
+    sModeSelectScratch.blendThreshold = y - 60;
 }
 
 static void ModeSelectSpriteDraw_SetAngle(u16 angle)
@@ -600,17 +633,17 @@ static void ModeSelectBg_UpdateSpellCircleBlend(void)
     if (vcount & 1)
         return;
 
-    if (vcount < sModeSelectBlendThreshold)
+    if (vcount < sModeSelectScratch.blendThreshold)
     {
         REG_BLDCNT = 0xc1;
-        REG_BLDY = (sModeSelectBlendThreshold != 0)
-            ? (sModeSelectBlendThreshold - vcount) * 0x10 / sModeSelectBlendThreshold
+        REG_BLDY = (sModeSelectScratch.blendThreshold != 0)
+            ? (sModeSelectScratch.blendThreshold - vcount) * 0x10 / sModeSelectScratch.blendThreshold
             : 0;
     }
     else
     {
         REG_BLDCNT = 0x144;
-        REG_BLDALPHA = sModeSelectBlendAmount | 0x1000;
+        REG_BLDALPHA = sModeSelectScratch.blendAmount | 0x1000;
     }
 }
 
@@ -648,8 +681,8 @@ static void ModeSelect_InitBgs(void)
 
     SetDispEnable(0, 0, 0, 0, 0);
 
-    sModeSelectBlendAmount = 10;
-    sModeSelectBlendThreshold = 100;
+    sModeSelectScratch.blendAmount = 10;
+    sModeSelectScratch.blendThreshold = 100;
 
     SetPrimaryHBlankHandler(ModeSelectBg_UpdateSpellCircleBlend);
 
@@ -714,7 +747,7 @@ static void ModeSelect_Init(struct ModeSelectProc* proc)
     Proc_BlockEachMarked(PROC_MARK_SAVEDRAW);
     Proc_BlockEachMarked(PROC_MARK_D);
 
-    sModeSelectBlendThreshold = 100;
+    sModeSelectScratch.blendThreshold = 100;
 
     SetupFaceGfxData((struct FaceVramEntry*)sModeSelectFaceConfig);
 
@@ -789,15 +822,14 @@ static void ModeSelect_Init(struct ModeSelectProc* proc)
     SetUiSpinningArrowPositions(30, 61, 68, 61);
     SetUiSpinningArrowConfig(3);
 
-    InitTextFont(&sModeSelectText.font, (void*)0x600E000, 0x100, 0xe);
+    InitTextFont(&sModeSelectScratch.text.font, (void*)0x600E000, 0x100, 0xe);
 
-    InitText(&sModeSelectText.text[0], 5);
-    InitText(&sModeSelectText.text[1], 9);
-    InitText(&sModeSelectText.text[2], 5);
-    InitText(&sModeSelectText.text[3], 8);
-    InitText(&sModeSelectText.text[4], 4);
-    InitText(&sModeSelectText.text[5], 10);
-    InitText(&sModeSelectText.text[6], 5);
+    InitText(&sModeSelectScratch.text.text[0], 5);
+    InitText(&sModeSelectScratch.text.text[1], 9);
+    InitText(&sModeSelectScratch.text.text[2], 5);
+    InitText(&sModeSelectScratch.text.text[3], 4);
+    InitText(&sModeSelectScratch.text.text[4], 10);
+    InitText(&sModeSelectScratch.text.text[5], 5);
 
     proc->unk_30 = proc->unk_41 * ModeSelectSpriteDraw_GetSlotAngleStep() * 0x10;
 
@@ -866,7 +898,7 @@ static void ModeSelect_StopSpinAndResetTimer(struct ModeSelectProc* proc)
     s32 i;
 
     for (i = 0; i < proc->unk_4c; i++)
-        ModeSelectAnim_Pause(&sModeSelectAnimBuf[i]);
+        ModeSelectAnim_Pause(ModeSelectGetAnimBuf(i));
 
     proc->unk_50 = 0;
 }
@@ -942,8 +974,8 @@ static void ModeSelect_Loop_KeyHandler(struct ModeSelectProc* proc)
         PlaySoundEffect(0x6a);
         Proc_Goto(proc, 3);
 
-        sModeSelectAnimBuf[proc->unk_41].roundType = 0;
-        RestartMainMiniAnim(&sModeSelectAnimBuf[proc->unk_41]);
+        ModeSelectGetAnimBuf(proc->unk_41)->roundType = 0;
+        RestartMainMiniAnim(ModeSelectGetAnimBuf(proc->unk_41));
 
         if (proc->unk_42 & 1)
         {
@@ -981,14 +1013,14 @@ static void ModeSelect_Loop_KeyHandler(struct ModeSelectProc* proc)
 
     if ((proc->unk_50 & 0x1ff) == 0x20)
     {
-        sModeSelectAnimBuf[proc->unk_41].roundType = 2;
-        RestartMainMiniAnim(&sModeSelectAnimBuf[proc->unk_41]);
+        ModeSelectGetAnimBuf(proc->unk_41)->roundType = 2;
+        RestartMainMiniAnim(ModeSelectGetAnimBuf(proc->unk_41));
     }
 
     if ((proc->unk_50 & 0x1ff) != 0x80)
         return;
 
-    ModeSelectAnim_Pause(&sModeSelectAnimBuf[proc->unk_41]);
+    ModeSelectAnim_Pause(ModeSelectGetAnimBuf(proc->unk_41));
 }
 
 // FE7U: 0x080A8424
