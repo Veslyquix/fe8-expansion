@@ -20,6 +20,7 @@
 #include "sysutil.h"
 #include "helpbox.h"
 #include "savemenu.h"
+#include "modeselect.h"
 #include "uisupport.h"
 #include "gba_sprites.h"
 #include "save_format.h"
@@ -1561,7 +1562,11 @@ PROC_LABEL(PL_SAVEMENU_DIFFICULTY_SEL),
     PROC_CALL_ARG(NewFadeOut, 8),
     PROC_WHILE(FadeOutExists),
     PROC_CALL(DisableAllGfx),
+#if FE8_MODE_SELECT
+    PROC_CALL(StartModeSelect),
+#else
     PROC_CALL(NewNewGameDifficultySelect),
+#endif
     PROC_YIELD,
     PROC_CALL(SaveMenu_ReloadScreenFormDifficulty),
     PROC_CALL(SaveMenu_ResetLcdFormDifficulty),

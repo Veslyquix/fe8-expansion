@@ -159,6 +159,7 @@ struct OpInfoGaugeDrawProc {
 };
 
 extern struct AnimBuffer gOpInfoData;
+extern u8 gOpInfoImgSheetBuf[0x2000];
 extern struct AnimMagicFxBuffer gUnk_4;
 extern struct BanimUnkStructComm gUnk_Opinfo_0;
 
