@@ -68,11 +68,11 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
         .allegiance = FACTION_ID_RED,
         .level = 1,
         .xPosition = 18,
-        .yPosition = 11,
+        .yPosition = 10,
         .items = {
             ITEM_LANCE_IRON,
         },
-        .ai = {0x0, 0x3, 0x0, 0x1},
+        .ai = {0x0, 0x0, 0x0, 0x1},
     },
 #if DEBUG_TESTING
     {
