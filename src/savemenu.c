@@ -1569,6 +1569,11 @@ PROC_LABEL(PL_SAVEMENU_DIFFICULTY_SEL),
 #endif
     PROC_YIELD,
     PROC_CALL(SaveMenu_ReloadScreenFormDifficulty),
+#if FE8_MODE_SELECT
+    // The reload above syncs BG0/BG1 only; Mode Select's exit path also needs
+    // BG2 (fog) and BG3 (mural) flushed. See ModeSelect_SyncSaveMenuBgs.
+    PROC_CALL(ModeSelect_SyncSaveMenuBgs),
+#endif
     PROC_CALL(SaveMenu_ResetLcdFormDifficulty),
     PROC_CALL_ARG(NewFadeIn, 8),
     PROC_WHILE(FadeInExists),

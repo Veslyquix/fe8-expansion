@@ -1261,4 +1261,23 @@ void StartModeSelect(ProcPtr parent)
     proc->unk_42 = 1;
 }
 
+/* Flush the BG2 (fog) and BG3 (mural) tilemaps after returning to the save menu.
+ *
+ * SaveMenu_ReloadScreenFormDifficulty rewrites all four tilemap buffers but ends
+ * with BG_EnableSyncByMask(3) -- BG0 and BG1 only -- whereas SaveMenu_InitScreen
+ * syncs all four. On the vanilla difficulty-select path that asymmetry is
+ * harmless, because nothing there ever disturbs BG2/BG3 VRAM and the fog and
+ * mural simply stay resident. Mode Select breaks that assumption: ModeSelect_End
+ * calls SaveMenu_Init to restore gBgConfig_SaveMenu, and SetupBackgrounds
+ * BG_Fills every map buffer to 0 -- so without this, the cleared BG2/BG3 maps
+ * are what reach VRAM and the fog and mural are missing.
+ *
+ * Runs from ProcScr_SaveMenu immediately after the reload (see
+ * PL_SAVEMENU_DIFFICULTY_SEL in src/savemenu.c), since the buffers must already
+ * hold the redrawn maps when the sync bits are set. */
+void ModeSelect_SyncSaveMenuBgs(ProcPtr proc)
+{
+    BG_EnableSyncByMask(BG2_SYNC_BIT | BG3_SYNC_BIT);
+}
+
 #endif // FE8_MODE_SELECT

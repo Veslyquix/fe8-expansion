@@ -9,6 +9,7 @@
  * src/savemenu.c's PL_SAVEMENU_DIFFICULTY_SEL step in place of vanilla's
  * NewNewGameDifficultySelect. See src/modeselect.c. */
 void StartModeSelect(ProcPtr parent);
+void ModeSelect_SyncSaveMenuBgs(ProcPtr proc);
 #endif
 
 #endif // GUARD_MODESELECT_H
