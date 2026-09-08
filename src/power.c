@@ -548,8 +548,13 @@ enum CoPowerTargetGroup {
 
 
 struct CoDefinition {
-    u16 nameMsg;
-    int faceId;
+    /* The real character this CO is. Every CO has one. Their display name
+     * and portrait come from it (GetCharacterData()->nameTextId /
+     * ->portraitId) rather than being duplicated here, and the CO select
+     * screen (src/coSelect.c) uses it to find the CO's unit on the map so
+     * it can show that unit's actual class in the carousel, falling back to
+     * ->defaultClass when the unit isn't deployed. */
+    u16 charId;
     u16 titleMsg; // shown on the info page (e.g. their epithet)
     u16 infoMsg; // single texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
     u16 powerNameMsg;
@@ -664,8 +669,7 @@ static const struct CoClassAffinity sKarganAffinities[] = {
 static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     
     [CO_WAKWI] = {
-        .nameMsg = MSG_CO_WAKWI_NAME,
-        .faceId = 2,
+        .charId = CHARACTER_EIRIKA, // Wakwi (see src/data_characters.c)
         .titleMsg = MSG_CO_WAKWI_TITLE,
         .infoMsg = MSG_CO_WAKWI_INFO,
         .powerNameMsg = MSG_CO_WAKWI_POWER_NAME,
@@ -680,8 +684,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
     },
     [CO_ISHKODE] = {
-        .nameMsg = MSG_CO_ISHKODE_NAME,
-        .faceId = 4,
+        .charId = CHARACTER_SETH, // Ishkode (see src/data_characters.c)
         .titleMsg = MSG_CO_ISHKODE_TITLE,
         .infoMsg = MSG_CO_ISHKODE_INFO,
         .powerNameMsg = MSG_CO_ISHKODE_POWER_NAME,
@@ -696,8 +699,11 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
     },
     [CO_FRANCIS] = {
-        .nameMsg = MSG_CO_FRANCIS_NAME,
-        .faceId = 4,
+        /* TODO: provisional. Francis has no character of his own yet -- his
+         * old faceId was a copy of Ishkode's placeholder, so this points at
+         * the same character. Replace with Francis's real CHARACTER_* once
+         * one exists; until then his name and portrait are Ishkode's. */
+        .charId = CHARACTER_SETH,
         .titleMsg = MSG_CO_FRANCIS_TITLE,
         .infoMsg = MSG_CO_FRANCIS_INFO,
         .powerNameMsg = MSG_CO_FRANCIS_POWER_NAME,
@@ -712,8 +718,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .affinityCount = ARRAY_COUNT(sFrancisAffinities),
     },
     [CO_KARGAN] = {
-        .nameMsg = MSG_CO_KARGAN_NAME,
-        .faceId = 0x30,
+        .charId = CHARACTER_ONEILL, // Kargan replaces O'Neill (portrait 0x30)
         .titleMsg = MSG_CO_KARGAN_TITLE,
         .infoMsg = MSG_CO_KARGAN_INFO,
         .powerNameMsg = MSG_CO_KARGAN_POWER_NAME,
@@ -1009,7 +1014,28 @@ static int FindNextUsedCoId(int coId, int direction)
 
 const char* CoScreen_GetCoName(int coId)
 {
-    return GetStringFromIndex(GetCoDefinition(coId)->nameMsg);
+    return GetStringFromIndex(GetCharacterData(GetCoDefinition(coId)->charId)->nameTextId);
+}
+
+/* sCoDefinitions is static, so the CO select screen (src/coSelect.c) reads a
+ * CO's character through here rather than reaching into the table. */
+int Co_GetCharId(int coId)
+{
+    return GetCoDefinition(coId)->charId;
+}
+
+/* Class to animate for a CO in the select carousel: the class their real unit
+ * is currently using if that unit is on the map (so a promoted or reclassed CO
+ * animates as what they actually are), otherwise the character's default. */
+int Co_GetDisplayClassId(int coId)
+{
+    int charId = GetCoDefinition(coId)->charId;
+    struct Unit* unit = GetUnitFromCharId(charId);
+
+    if (unit != NULL && unit->pClassData != NULL)
+        return UNIT_CLASS_ID(unit);
+
+    return GetCharacterData(charId)->defaultClass;
 }
 
 int CoScreen_GetCoPowerStars(int coId)
@@ -1330,7 +1356,8 @@ static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
 static void CoScreen_DrawHeader(void)
 {
     const struct CoDefinition* co = GetCoDefinition(gCoScreen.coId);
-    int fid = co->faceId;
+    const struct CharacterData* character = GetCharacterData(co->charId);
+    int fid = character->portraitId;
 
     PutFace80x72(NULL, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X, 1), fid, 0x280, 11);
 
@@ -1341,7 +1368,7 @@ static void CoScreen_DrawHeader(void)
 
     EnablePaletteSync();
     CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X + 2, 10),
-        CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_WHITE, co->nameMsg); // CoScreen_GetCoName
+        CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_WHITE, character->nameTextId); // CoScreen_GetCoName
 }
 
 /* Everything below draws into the gUiTmScratchA/C page-region scratch

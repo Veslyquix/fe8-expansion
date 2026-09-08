@@ -6,6 +6,7 @@
 #include "event.h"
 #include "eventinfo.h"
 #include "eventcall.h"
+#include "coSelect.h"
 #include "EAstdlib.h"
 #include "constants/characters.h"
 #include "constants/classes.h"
@@ -200,6 +201,16 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     SVAL(EVT_SLOT_1, FACTION_RED)
     SVAL(EVT_SLOT_2, CO_KARGAN)
     ASMC(SetFactionCoFromSlots)
+
+#if FE8_CO_POWERS
+    /* Let the player pick Blue's commander for themselves, overriding the
+     * CO_ISHKODE default set above. EVT_SLOT_1 is the enabled-CO bitfield
+     * (0 = every CO), EVT_SLOT_3 the faction being set. See src/coSelect.c. */
+    SVAL(EVT_SLOT_1, 0)
+    SVAL(EVT_SLOT_3, FACTION_BLUE)
+    ASMC(StartCoSelect)
+#endif
+
     LOAD1(1, UnitDef_PrologueAllies)
     ENUN 
     FADU(16)

@@ -66,6 +66,20 @@ SECTIONS
     } > ewram AT> ewram
     __ewram_overlay_modeselect_size = __ewram_overlay_modeselect_end - __ewram_start;
 
+    /* CO select (FE8_CO_POWERS, src/coSelect.c). Same reasoning as
+       ewram_overlay_modeselect above -- its three carousel slots each need a
+       full set of battle-animation scratch buffers and so need a tag of their
+       own. Separate from modeselect's tag because data within one tag is
+       concatenated rather than aliased, and these two screens never run at the
+       same time (one is on the title save menu, the other on the battle map),
+       so they should share the address range rather than stack on it. */
+    ewram_overlay_coselect __ewram_start (NOLOAD) : ALIGN(4)
+    {
+        *(ewram_overlay_coselect)
+        __ewram_overlay_coselect_end = .;
+    } > ewram AT> ewram
+    __ewram_overlay_coselect_size = __ewram_overlay_coselect_end - __ewram_start;
+
     ewram_overlay_bmstart __ewram_start (NOLOAD) : ALIGN(4)
     {
         *(ewram_overlay_bmstart)
@@ -172,7 +186,7 @@ SECTIONS
         MAX(
             MAX(
                 MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
-                __ewram_overlay_modeselect_size
+                MAX(__ewram_overlay_modeselect_size, __ewram_overlay_coselect_size)
             ),
             MAX(__ewram_overlay_sio_size, __ewram_overlay_worldmap_size)
         )
@@ -368,6 +382,7 @@ SECTIONS
     ASSERT(SIZEOF(ewram_overlay_gamestart) <= 256K, "ewram_overlay_gamestart exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_banim) <= 256K, "ewram_overlay_banim exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_modeselect) <= 256K, "ewram_overlay_modeselect exceeds EWRAM")
+    ASSERT(SIZEOF(ewram_overlay_coselect) <= 256K, "ewram_overlay_coselect exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_sio) <= 256K, "ewram_overlay_sio exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_worldmap) <= 256K, "ewram_overlay_worldmap exceeds EWRAM")
 

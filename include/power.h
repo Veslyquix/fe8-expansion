@@ -97,6 +97,13 @@ void SetFactionCo(int faction, int coId);
 int CoScreen_GetCoCount(void);
 const char* CoScreen_GetCoName(int coId);
 
+/* struct CoDefinition accessors for the CO select screen (src/coSelect.c),
+ * which cannot see the static sCoDefinitions table directly.
+ * Co_GetDisplayClassId returns the CO's real unit's current class if that unit
+ * is on the map, else the character's defaultClass. */
+int Co_GetCharId(int coId);
+int Co_GetDisplayClassId(int coId);
+
 /* CO gauge stars each of a CO's two powers costs. The mini CO gauge
  * (src/aw2_gfx.c) draws CoScreen_GetCoPowerStars small stars followed by
  * the (super - normal) big ones that top it up to the super power.
