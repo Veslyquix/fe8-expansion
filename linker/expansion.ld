@@ -52,6 +52,20 @@ SECTIONS
     } > ewram AT> ewram
     __ewram_overlay_gameending_size = __ewram_overlay_gameending_end - __ewram_start;
 
+    /* Mode Select (FE8_MODE_SELECT). Its three carousel slots each need a
+       full set of battle-animation scratch buffers, so it cannot borrow the
+       banim/gamestart buffers piecemeal — those two tags share one address
+       range, and their individual buffers alias each other. It gets its own
+       tag instead, disjoint by construction, reusing the same physical EWRAM
+       as the other overlays (no battle animation or opening cinematic is
+       running while the save menu's New Game flow is open). */
+    ewram_overlay_modeselect __ewram_start (NOLOAD) : ALIGN(4)
+    {
+        *(ewram_overlay_modeselect)
+        __ewram_overlay_modeselect_end = .;
+    } > ewram AT> ewram
+    __ewram_overlay_modeselect_size = __ewram_overlay_modeselect_end - __ewram_start;
+
     ewram_overlay_bmstart __ewram_start (NOLOAD) : ALIGN(4)
     {
         *(ewram_overlay_bmstart)
@@ -156,7 +170,10 @@ SECTIONS
             MAX(__ewram_overlay_bmstart_size, __ewram_overlay_gamestartsave_size)
         ),
         MAX(
-            MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
+            MAX(
+                MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
+                __ewram_overlay_modeselect_size
+            ),
             MAX(__ewram_overlay_sio_size, __ewram_overlay_worldmap_size)
         )
     );
@@ -350,6 +367,7 @@ SECTIONS
     ASSERT(SIZEOF(ewram_overlay_gamestartsave) <= 256K, "ewram_overlay_gamestartsave exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_gamestart) <= 256K, "ewram_overlay_gamestart exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_banim) <= 256K, "ewram_overlay_banim exceeds EWRAM")
+    ASSERT(SIZEOF(ewram_overlay_modeselect) <= 256K, "ewram_overlay_modeselect exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_sio) <= 256K, "ewram_overlay_sio exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_worldmap) <= 256K, "ewram_overlay_worldmap exceeds EWRAM")
 

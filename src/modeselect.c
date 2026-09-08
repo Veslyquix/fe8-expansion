@@ -87,21 +87,49 @@ struct ModeSelectTextState
     struct Text text[6];
 };
 
-/* All of this screen's own small per-slot/UI state (struct AnimBuffer x3,
- * struct AnimMagicFxBuffer x3, the palette-dim cache, and the text/font
- * state) lives here instead of as separate new EWRAM_DATA globals --
- * placed inside gUiTmScratchA (include/statscreen.h, 0x280 u16s = 1280
- * bytes; used transiently by the pre-battle forecast popup, src/bksel.c,
- * never during the save-menu New Game flow this screen runs in) rather
- * than costing any new permanent EWRAM. This is the same "borrow a large
- * buffer nothing else needs right now" approach as gFontgrp_0 below, for
- * this screen's own accumulated small state instead of one single big
- * buffer. Letting the compiler lay this out (rather than hand-picking
- * byte offsets into gUiTmScratchA) keeps every field's alignment correct
- * for free. Total size is a little under 500 bytes -- comfortably inside
- * gUiTmScratchA's 1280. */
+/* Per-slot battle-animation scratch buffer sizes. These come from the FE7
+ * source's own hardcoded per-slot address strides (0x020000F4/0x020060F4/
+ * 0x020168F4/0x02016AD4 and friends), and they match this repo's own banim
+ * buffers exactly -- with one caveat on the image sheet: the decomp declares
+ * gBanimLeftImgSheetBuf as [0x1000], but RegisterAISSheetGraphics
+ * (src/banim-ekrmain.c) decompresses and DMAs a full 0x2000 into it. Vanilla
+ * gets away with that because gEkrKakudaiSomeBufLeft[0x1000] sits immediately
+ * after it; the sheet is really one 0x2000 buffer split across two names.
+ * Size the real thing correctly here rather than inheriting that overflow. */
+#define MODESELECT_IMGSHEET_SIZE 0x2000
+#define MODESELECT_OAM_SIZE      0x5800
+#define MODESELECT_PALETTE_SIZE  0x00A0
+#define MODESELECT_FRAMEDATA_SIZE 0x2A00
+
+/* All of this screen's state -- the three carousel slots' animation scratch
+ * plus this file's own small per-slot/UI state -- lives in one dedicated
+ * EWRAM overlay (linker/expansion.ld's ewram_overlay_modeselect).
+ *
+ * The earlier attempt here borrowed individual buffers from the banim and
+ * gamestart overlays (gBanimLeftImgSheetBuf/gBanimOaml/gBanimScrLeft for
+ * slots 0-1, gUnk_0/gUnk_1/gUnk_2 for slot 2) and put this struct in
+ * gUiTmScratchA/C. That cannot work: every ewram_overlay_* tag starts at
+ * __ewram_start, so the banim and gamestart buffers are *the same physical
+ * memory* as each other, and gUiTmScratch{A,B,C} land inside gBanimScr*.
+ * Slot 2's OAM buffer overlapped slot 1's image sheet and both palettes,
+ * and slot 0's frame data overlapped this very struct -- which is what
+ * produced the corrupted/upside-down third lord, the bad OAM ("oops obj
+ * xsiz"), and the earlier AnimBuffer pointer corruption.
+ *
+ * A dedicated tag is disjoint by construction and still costs no new EWRAM:
+ * overlays alias each other by design, and this one is smaller than the
+ * gamestart overlay it shares an address range with. Nothing here is live
+ * outside this screen -- no battle animation and no opening cinematic runs
+ * while the save menu's New Game flow is open. (Note this screen replaces
+ * the vanilla difficulty select, which uses EWRAM_OVERLAY(0) -- so overlay
+ * 0 specifically is NOT free here, and is deliberately not used.) */
 struct ModeSelectScratch
 {
+    u8 imgSheet[3][MODESELECT_IMGSHEET_SIZE];
+    u8 oam[3][MODESELECT_OAM_SIZE];
+    u8 frameData[3][MODESELECT_FRAMEDATA_SIZE];
+    u8 palette[3][MODESELECT_PALETTE_SIZE];
+
     struct AnimBuffer animBuf[3];
     struct AnimMagicFxBuffer magicFx[3];
     u16 paletteCache[3 * 15]; // gUnk_0201E9F4 in the FE7 source
@@ -110,7 +138,7 @@ struct ModeSelectScratch
     u8 blendAmount;    // gUnk_ModeSelect_02000001 in the FE7 source
 };
 
-#define sModeSelectScratch (*(struct ModeSelectScratch*)gUiTmScratchC)
+EWRAM_OVERLAY(modeselect) struct ModeSelectScratch sModeSelectScratch = {0};
 
 static struct AnimBuffer* ModeSelectGetAnimBuf(int slot)
 {
@@ -121,36 +149,6 @@ static struct AnimMagicFxBuffer* ModeSelectGetMagicFx(int slot)
 {
     return &sModeSelectScratch.magicFx[slot];
 }
-
-extern u8 gUnk_0[];
-extern u8 gUnk_1[];
-extern u8 gUnk_2[];
-
-/* Slot 0/1 reuse the real battle-animation actor/target scratch (only safe
- * because Mode Select never runs during a battle). Slot 2's image sheet
- * reuses gFontgrp_0's debug-console scrollback buffer (include/fontgrp.h,
- * exactly 0x2000 bytes -- only ever live when a debug text console is
- * actually open, never during normal gameplay screens) rather than
- * opinfo.c's gOpInfoImgSheetBuf -- the same "borrow a same-sized buffer
- * nothing else needs right now" trick FE8 SkillSys uses for its own
- * unit-loading code. unk_20/24/28 below still borrow gUnk_0/1/2 (opinfo.c's
- * own OAM/palette/frame-data scratch, EWRAM_OVERLAY(gamestart)): no
- * same-size alternative exists for those, and per ModeSelectGetAnimBuf's
- * own comment, the corruption this carousel actually hit was in this
- * file's own state structs (an EWRAM_OVERLAY(gameending) mistake, now
- * plain EWRAM_DATA), not in anything borrowed from opinfo.c. */
-static void* const sModeSelectImgSheetBufs[3] = {
-    gBanimLeftImgSheetBuf, gBanimRightImgSheetBuf, gFontgrp_0.unk14,
-};
-static void* const sModeSelectPaletteBufs[3] = {
-    gBanimPaletteLeft, gBanimPaletteRight, gUnk_1,
-};
-static void* const sModeSelectOamBufs[3] = {
-    gBanimOaml, gBanimOamr2, gUnk_0,
-};
-static void* const sModeSelectFrameDataBufs[3] = {
-    gBanimScrLeft, gBanimScrRight, gUnk_2,
-};
 
 struct ModeSelectProc
 {
@@ -244,10 +242,10 @@ static void InitModeSelectAnims(int count, u8* lordIndices)
         animBuf->oam2Tile = (i * 0x2000 + 0x2000) >> 5;
         animBuf->oam2Pal = i + 0xd;
 
-        animBuf->pImgSheetBuf = sModeSelectImgSheetBufs[i];
-        animBuf->unk_24 = sModeSelectOamBufs[i];
-        animBuf->unk_20 = sModeSelectPaletteBufs[i];
-        animBuf->unk_28 = sModeSelectFrameDataBufs[i];
+        animBuf->pImgSheetBuf = sModeSelectScratch.imgSheet[i];
+        animBuf->unk_24 = sModeSelectScratch.oam[i];
+        animBuf->unk_20 = sModeSelectScratch.palette[i];
+        animBuf->unk_28 = sModeSelectScratch.frameData[i];
 
         animBuf->charPalId = 0xffff;
 
@@ -550,25 +548,45 @@ static void ModeSelectSpriteDraw_Loop(struct ModeSelectSpriteDrawProc* proc)
             proc->unk_4c = 0;
     }
 
-    proc->unk_3e += proc->unk_4d;
+    // unk_4d is the chosen difficulty (0 = Normal, 1 = Hard); it only picks
+    // which row the hand cursor sits on. It is NOT a spin speed — feeding it
+    // into unk_3e made the carousel rotate whenever Hard was selected.
+    if (proc->unk_4e & 2)
+        DisplayFrozenUiHandExt(108, (proc->unk_4d & 1) * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+    else
+        DisplayUiHandExt(108, proc->unk_4d * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+
+    PutSpriteExt(0xd, 0, 8, Sprite_ModeSelect_Mode, OAM2_PAL(11));
+    PutSpriteExt(0xd, 20, 28, Sprite_ModeSelect_Select, OAM2_PAL(11));
+    PutSpriteExt(0xd, 40, 64, Sprite_ModeSelect_Change, OAM2_PAL(11));
+
+    if ((proc->unk_2c >> 2 & 1) == 0)
+        PutSpriteExt(0xd, 8, 130, Sprite_ModeSelect_PressStart, OAM2_PAL(11));
 
     if (proc->unk_2c != 0)
-        proc->unk_2c--;
+        proc->unk_2c++;
+
+    PutSpriteExt(0xd, 108, 24, Sprite_ModeSelect_ChapterRange, OAM2_PAL(10));
+
+    proc->unk_30++;
 }
 
 static const struct ProcCmd sProc_ModeSelectSpriteDraw[] = {
     PROC_NAME("ModeSelectSpriteDraw"),
     PROC_CALL(ModeSelectSpriteDraw_Init),
+    PROC_YIELD,
     PROC_REPEAT(ModeSelectSpriteDraw_Loop),
     PROC_END,
 };
 const struct ProcCmd* const ProcScr_ModeSelectSpriteDraw = sProc_ModeSelectSpriteDraw;
 
+// Starts the "Press Start" blink timer (unk_2c counts up from 1; bit 2 of it
+// gates whether the sprite is drawn each frame).
 static void ModeSelectSpriteDraw_SetActive(bool active)
 {
     struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
     if (proc != NULL)
-        proc->unk_2c = active;
+        proc->unk_2c = 1;
 }
 
 static void ModeSelectSpriteDraw_SetGlowing(bool glowing)
@@ -693,14 +711,12 @@ static void ModeSelect_InitBgs(void)
     CallARM_FillTileRect(ModeSelectBg0Tm, Tsa_0840FA00, 0);
 
     Decompress(Img_0840FEB4, (void*)(GetBackgroundTileDataOffset(BG_3) + 0x6000000));
-    // TODO(needs emulator/visual verification): the FE7 source calls this
-    // BG3 tilemap through a lower-level 4-arg primitive
-    // (dest, tsaData, base=0, linebits=5) than CallARM_FillTileRect's own
-    // single packed 3rd argument; this repo's decomp doesn't have that
-    // primitive under its own name, so the packed form here is a
-    // best-effort mapping (base 0 contributes nothing, so linebits=5 is
-    // passed through directly) rather than a confirmed-correct one.
-    CallARM_FillTileRect(ModeSelectBg3Tm, Tsa_08411F34, 5);
+    // The FE7 source's `sub_800154C(gBg3Tm, Tsa_08411F34, 0, 5)` is this
+    // repo's BlitU8TileMapData (FE8U 0x0800154C) — the 8-bit affine-map
+    // blit, NOT CallARM_FillTileRect. BG2/BG3 here are affine layers
+    // (dispcnt.mode = 1), so their maps are one byte per tile; using the
+    // 16-bit tilemap fill instead produces garbage on BG2.
+    BlitU8TileMapData(ModeSelectBg3Tm, Tsa_08411F34, 0, 5);
 
     BG_EnableSyncByMask(BG3_SYNC_BIT);
 }
