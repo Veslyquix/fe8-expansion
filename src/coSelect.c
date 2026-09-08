@@ -87,10 +87,36 @@ struct CoSelectTextState
  * gets away with that because gEkrKakudaiSomeBufLeft[0x1000] sits immediately
  * after it; the sheet is really one 0x2000 buffer split across two names.
  * Size the real thing correctly here rather than inheriting that overflow. */
-/* Concurrent battle animations. Three fits the carousel's look (one always
- * off-screen) and costs about 97KB of the shared overlay window; more COs than
- * this are handled by sliding the window, not by adding slots. */
-#define CO_SELECT_SLOTS 3
+/* Concurrent battle animations. Only two are ever visible at once (one is
+ * always rotating off-screen), so two slots is all this needs -- and dropping
+ * the third frees its OBJ VRAM block (0x06016000 onwards) for the chapter
+ * title below, as well as ~32KB of the overlay. More COs than slots are
+ * handled by sliding the window, not by adding slots. */
+#define CO_SELECT_SLOTS 2
+
+/* Chapter title graphics, in the OBJ VRAM freed by the third animation slot.
+ * PutChapterTitleGfx takes a tile index and writes 0x800 bytes (32x2 tiles) to
+ * VRAM + chr * 0x20, so 0xBC0 lands at 0x06017800 and runs to 0x06018000, the
+ * top of OBJ VRAM. It also stores chr & 0x3FF as gChapterTitleFxSt.chr_str,
+ * which is 0x3C0 here -- the OBJ tile number the sprite table below uses. */
+#define COSELECT_CHAPTER_TITLE_CHR 0xBC0
+#define COSELECT_CHAPTER_TITLE_OBJ_CHR 0x3C0
+
+/* Where the title is drawn. The banner sits at BG1 tilemap (12, 1), and BG1 is
+ * scrolled by (8, -8) (see BG_SetPosition in CoSelect_Init), so that tile shows
+ * at screen (12*8 - 8, 1*8 + 8).
+ *
+ * Note the title block is 192px wide with the text centred inside it (see
+ * CHAPTER_TITLE_TEXT_WIDTH, src/chapter_title.c), so starting it at x=88 runs
+ * past the right edge of a 240px screen; x=24 is what bonusclaim.c uses to
+ * centre the same block. Adjust to taste -- this is the only place to change. */
+#define COSELECT_CHAPTER_TITLE_X 88
+#define COSELECT_CHAPTER_TITLE_Y 16
+
+/* Frame of the 30-frame rotation at which a deferred slot reload happens --
+ * far enough in that the outgoing animation has left the screen, early enough
+ * that the incoming one is ready before it rotates back into view. */
+#define COSELECT_SLOT_RELOAD_FRAME 15
 
 #define COSELECT_IMGSHEET_SIZE 0x2000
 #define COSELECT_OAM_SIZE      0x5800
@@ -477,6 +503,40 @@ static void CoSelectPalette_CyclePressStart(s32 timer)
     EnablePaletteSync();
 }
 
+/* The chapter title, as six 32x16 sprites stepping four tiles at a time --
+ * the same shape as the save menu's own title sprite (gSprite_SavemenuData_20,
+ * src/savemenu_data.c). The 4-tile step relies on OBJ VRAM being in 2D mapping
+ * mode, which is this engine's default (obj1dMap stays 0; see src/aw2_gfx.c's
+ * note): a 32x16 sprite then takes four tiles from one row and four from the
+ * next row of the 32-tile-wide OBJ grid, which is exactly how
+ * PutChapterTitleGfx lays the 32x2 block out. */
+static const u16 Sprite_CoSelect_ChapterTitle[] = {
+    6,
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16,                OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x00) + OAM2_LAYER(2),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(32),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x04) + OAM2_LAYER(2),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(64),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x08) + OAM2_LAYER(2),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(96),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x0C) + OAM2_LAYER(2),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(128),  OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x10) + OAM2_LAYER(2),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(160),  OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x14) + OAM2_LAYER(2),
+};
+
+/* Load the current chapter's title into the OBJ VRAM freed by the third
+ * animation slot, and put its palette in OBJ palettes 8/9 (both free on this
+ * screen: the animations take 0xD-0xF, the face 0xC, and the frame art 0xA/0xB).
+ *
+ * This works whether or not TEXT_CHAPTER_NAMES is on -- PutChapterTitleGfx
+ * renders the name as text when it is and decompresses the pre-drawn banner
+ * graphic when it isn't, so no gating is needed here. Modelled on
+ * BonusClaim's use of the same three calls (src/bonusclaim.c). */
+static void CoSelect_LoadChapterTitle(void)
+{
+    ApplyChapterTitlePal(1, 0x18);
+    ApplyChapterTitlePal(0, 0x19);
+    EnablePaletteSync();
+
+    PutChapterTitleGfx(COSELECT_CHAPTER_TITLE_CHR, GetChapterTitleExtra(&gPlaySt));
+}
+
 // FE7U: 0x080A79A4
 static void CoSelectSpriteDraw_Loop(struct CoSelectSpriteDrawProc* proc)
 {
@@ -516,14 +576,17 @@ static void CoSelectSpriteDraw_Loop(struct CoSelectSpriteDrawProc* proc)
 
     // handRow only picks which row the hand cursor sits on -- it is not a
     // spin speed.
-    if (proc->handFlags & 2)
-        DisplayFrozenUiHandExt(108, (proc->handRow & 1) * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
-    else
-        DisplayUiHandExt(108, proc->handRow * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+    // if (proc->handFlags & 2)
+        // DisplayFrozenUiHandExt(108, (proc->handRow & 1) * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+    // else
+        // DisplayUiHandExt(108, proc->handRow * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
 
     PutSpriteExt(0xd, 0, 8, Sprite_CoSelect_Mode, OAM2_PAL(11));
     PutSpriteExt(0xd, 20, 28, Sprite_CoSelect_Select, OAM2_PAL(11));
     PutSpriteExt(0xd, 40, 64, Sprite_CoSelect_Change, OAM2_PAL(11));
+
+    PutSpriteExt(0xd, COSELECT_CHAPTER_TITLE_X, COSELECT_CHAPTER_TITLE_Y,
+        Sprite_CoSelect_ChapterTitle, OAM2_PAL(9));
 
     if ((proc->blinkTimer >> 2 & 1) == 0)
         PutSpriteExt(0xd, 8, 130, Sprite_CoSelect_PressStart, OAM2_PAL(11));
@@ -743,6 +806,8 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 
     Decompress(Img_CoSelectObjFrame, (void*)0x6010000);
     ApplyPalette(Pal_0841625C, 0x1A);
+
+    CoSelect_LoadChapterTitle();
 
     ResetClassReelSpell();
     NewEfxAnimeDrvProc();
@@ -1076,13 +1141,22 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
     if (proc->rotTimer == 20)
         PutCoSelectCharacterText(proc->coList[proc->coIndex]);
 
+    /* Deferred slot reload -- see CoSelect_Step. By this point the slot being
+     * swapped has rotated off-screen, and it still has half the rotation left
+     * to be loaded before it comes back into view. */
+    if (proc->rotTimer == COSELECT_SLOT_RELOAD_FRAME && proc->syncPending)
+    {
+        proc->syncPending = FALSE;
+        CoSelect_SyncSlots(proc);
+    }
+
     if (proc->rotTimer == 30)
     {
         angle = proc->angleTarget & 0xfff;
         proc->angle = proc->angleTarget & 0xfff;
 
-        /* Deferred slot reload -- see CoSelect_Step. The slot it swaps has
-         * reached the back of the carousel by now, so this is not visible. */
+        /* Safety net: if the frame above was somehow missed, never leave a
+         * slot holding the wrong CO once the carousel has settled. */
         if (proc->syncPending)
         {
             proc->syncPending = FALSE;
