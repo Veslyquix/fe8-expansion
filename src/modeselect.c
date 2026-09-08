@@ -120,9 +120,14 @@ struct ModeSelectTextState
  * overlays alias each other by design, and this one is smaller than the
  * gamestart overlay it shares an address range with. Nothing here is live
  * outside this screen -- no battle animation and no opening cinematic runs
- * while the save menu's New Game flow is open. (Note this screen replaces
- * the vanilla difficulty select, which uses EWRAM_OVERLAY(0) -- so overlay
- * 0 specifically is NOT free here, and is deliberately not used.) */
+ * while the save menu's New Game flow is open.
+ *
+ * A dedicated tag only guarantees the three slots don't collide with *each
+ * other*. It guarantees nothing about other tags: since every tag starts at
+ * __ewram_start, this struct necessarily sits on top of overlay 0, banim,
+ * gamestart and the rest. Anything in another overlay that must survive this
+ * screen has to be re-created on the way out -- see ModeSelect_End, which
+ * reloads the save-slot metadata (EWRAM_OVERLAY(0)) this struct overwrites. */
 struct ModeSelectScratch
 {
     u8 imgSheet[3][MODESELECT_IMGSHEET_SIZE];
@@ -1031,24 +1036,30 @@ static void ModeSelect_Loop_KeyHandler(struct ModeSelectProc* proc)
         ModeSelectGetAnimBuf(proc->unk_41)->roundType = 0;
         RestartMainMiniAnim(ModeSelectGetAnimBuf(proc->unk_41));
 
-        if (proc->unk_42 & 1)
-        {
-            if (proc->unk_41 == 0)
-                gPlaySt.chapterModeIndex = 2;
+        /* Record the chosen difficulty.
+         *
+         * The FE7 source splits here on unk_42 bit 0, which StartModeSelect always
+         * sets: that branch writes gPlaySt directly, while its save-menu branch
+         * (dead in this port) calls SaveMenu_SetDifficultyChoice. Both are folded
+         * into the single call below, because writing gPlaySt cannot work on FE8:
+         * SaveMenuWriteNewGame -> WriteNewGameSave -> InitPlayConfig (src/bmio.c)
+         * begins with CpuFill16(0, &gPlaySt, sizeof(gPlaySt)) and then rebuilds
+         * the state from proc->difficulty, so anything staged in gPlaySt here is
+         * discarded. Left as-is, proc->difficulty was never set at all and every
+         * new game came out Easy.
+         *
+         * SaveMenu_SetDifficultyChoice's first argument is that difficulty choice:
+         * 0 = Easy/tutorial, 1 = Normal, 2 = Difficult, 3 = cancelled. unk_43 is
+         * this slot's selection (0 = Normal, 1 = Hard) and Mode Select offers no
+         * Easy row -- only two fit on screen -- so it maps onto 1 and 2. Note the
+         * FE7 source's other branch passes its *lord* index as this argument,
+         * because in FE7 it chose Lyn/Eliwood/Hector mode; the lord index has no
+         * FE8 meaning here, since the Eirika/Ephraim split is decided in chapter 8
+         * rather than at new-game time. */
+        SaveMenu_SetDifficultyChoice(proc->unk_43[proc->unk_41] + 1, 0);
 
-            if (proc->unk_41 == 1)
-                gPlaySt.chapterModeIndex = 3;
-
-            if (proc->unk_43[proc->unk_41] != 0)
-                gPlaySt.chapterStateBits |= PLAY_FLAG_HARD;
-            else
-                gPlaySt.chapterStateBits &= ~PLAY_FLAG_HARD;
-        }
-        else
-        {
-            SaveMenu_SetDifficultyChoice(proc->unk_49[proc->unk_41], proc->unk_43[proc->unk_41]);
+        if (!(proc->unk_42 & 1))
             ModeSelectSpriteDraw_SetSpin(proc->unk_43[proc->unk_41], proc->unk_42 | 2);
-        }
 
         ModeSelectSpriteDraw_SetActive(1);
         return;
@@ -1208,6 +1219,36 @@ static void ModeSelect_End(struct ModeSelectProc* proc)
         SaveMenu_Init();
         gLCDControlBuffer.bg2cnt.screenSize = 0;
         gLCDControlBuffer.bg2cnt.areaOverflowMode = 0;
+
+        /* Re-read every save slot's metadata, because this screen destroyed it.
+         *
+         * gPlayStChapterBits / gPlayStChapterMode / gPlayStOptionBits
+         * (src/difficultymenu.c) are EWRAM_OVERLAY(0), which lands at
+         * 0x0200462C -- inside this screen's own ewram_overlay_modeselect
+         * buffers. Overlay tags do not partition EWRAM, they alias it: every
+         * ewram_overlay_* section starts at __ewram_start, so putting Mode
+         * Select in its own tag is precisely what makes it collide with
+         * overlay 0. (Data within a *single* tag is concatenated and safe,
+         * which is why the vanilla difficulty menu -- also EWRAM_OVERLAY(0) --
+         * coexists with these arrays without trouble.)
+         *
+         * SaveMenuInitSlotPalette derives each slot's difficulty colour from
+         * exactly these three arrays, so without this the save slots come back
+         * with colours computed from whatever battle-animation graphics landed
+         * on top of them. SaveMenu_ReloadScreenFormDifficulty calls
+         * SaveMenuInitSlotPalette but never reloads the data behind it, so this
+         * has to happen here, before the reload runs. This is the same loop
+         * SaveMenu_InitScreen uses on normal save-menu entry. */
+        {
+            struct SaveMenuProc* saveMenuProc = proc->proc_parent;
+            int slot;
+
+            if (saveMenuProc != NULL)
+            {
+                for (slot = 0; slot < 4; slot++)
+                    SaveMenuInitSaveSlotData(slot, saveMenuProc);
+            }
+        }
     }
 }
 
