@@ -934,6 +934,7 @@ static const signed char body4[] =
     " Alpha Sprite Arrow by JesterWizard" NL
     " Debuffs, Promote Command, Turn Autosave," NL
     "  Anims Fast Forward by Vesly" NL
+    " Mode Select by Eebit, JesterWizard" NL
     " Group AI by Vesly, PhantomSentine" NL
     " Text Chapter Names by circleseverywhere," NL
     "  hypergammaspaces" NL

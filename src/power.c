@@ -2103,9 +2103,33 @@ CONST_DATA struct ProcCmd gProcScr_CoBgOffsetCtrl[] = {
     PROC_END,
 };
 
+/* Which CO the screen opens on, stored as coId + 1 so that 0 means "unset" --
+ * i.e. the player faction's current commander, which is what the map menu's CO
+ * entry wants. The CO select carousel (src/coSelect.c) sets it so R opens the
+ * CO you are looking at rather than the one you already have. Consumed and
+ * cleared by CoScreen_Setup, so it never leaks into a later, unrelated opening.
+ *
+ * The +1 is not cosmetic: a static initialiser cannot be relied on here. The
+ * ewram_data section is NOLOAD (linker/expansion.ld), so EWRAM_DATA variables
+ * are never copied from ROM, and a plain static with a non-zero initialiser
+ * gets placed in ROM outright -- writes to it are silently discarded. An
+ * earlier version of this used `= -1` as the sentinel and so was stuck on the
+ * fallback forever, which made R always open the same CO. Zero-initialised is
+ * the only initial value that actually holds. */
+static int sCoScreenNextCo;
+
+void CoScreen_SetNextCo(int coId)
+{
+    sCoScreenNextCo = coId + 1;
+}
+
 static void CoScreen_Setup(ProcPtr proc)
 {
-    gCoScreen.coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
+    gCoScreen.coId = sCoScreenNextCo != 0
+        ? sCoScreenNextCo - 1
+        : gPlaySt.commanderId[FACTION_BLUE >> 6];
+
+    sCoScreenNextCo = 0;
 
     gStatScreen.page = CO_SCREEN_PAGE_INFO;
     gStatScreen.pageAmt = CO_SCREEN_PAGE_COUNT;
@@ -2291,6 +2315,45 @@ CONST_DATA struct ProcCmd gProcScr_CoScreen[] = {
 
     PROC_END,
 };
+
+/* Same screen, for callers that own the display themselves and will redraw it
+ * when this returns -- currently the CO select carousel (src/coSelect.c),
+ * which R opens this from and B comes back to.
+ *
+ * Identical to gProcScr_CoScreen except for the tail: RefreshBMapGraphics and
+ * StartFastFadeFromBlack are dropped, so the screen is handed back still faded
+ * out instead of flashing the map in before the caller redraws over it.
+ * BMapDispSuspend/Resume stay paired so the map's own state is left as this
+ * screen found it. */
+CONST_DATA struct ProcCmd gProcScr_CoScreenFromSelect[] = {
+    PROC_NAME("COSCREEN_SEL"),
+    PROC_CALL(CoInfo_BlackenScreen),
+    PROC_CALL(BMapDispSuspend),
+    PROC_CALL(LockGame),
+
+    PROC_SLEEP(2),
+    PROC_CALL(CoScreen_Setup),
+    PROC_SLEEP(0),
+
+    PROC_REPEAT(CoScreen_KeyListener),
+
+    PROC_CALL_ARG(NewFadeOut, 16),
+    PROC_WHILE(FadeOutExists),
+
+    PROC_CALL(CoScreen_Teardown),
+    PROC_SLEEP(0),
+    PROC_CALL(BMapDispResume),
+    PROC_CALL(UnlockGame),
+
+    PROC_END,
+};
+
+/* Open the CO info page on a specific CO, blocking `parent` until B closes it. */
+void StartCoScreenForCo(ProcPtr parent, int coId)
+{
+    CoScreen_SetNextCo(coId);
+    Proc_StartBlocking(gProcScr_CoScreenFromSelect, parent);
+}
 
 u8 CoScreen_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {

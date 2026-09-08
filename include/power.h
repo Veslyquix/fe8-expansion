@@ -41,6 +41,12 @@ u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number);
  * open at the same time as the unit stat screen. See src/power.c. */
 u8 CoScreen_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
 
+/* Open the CO info page on a specific CO, blocking `parent` until B closes it.
+ * Unlike the map-menu entry above, this hands the screen back still faded out
+ * and does not redraw the map, so the caller must put its own display back --
+ * see src/coSelect.c, where R opens this and B returns to the carousel. */
+void StartCoScreenForCo(ProcPtr parent, int coId);
+
 /* CO gauge points one star (struct CoDefinition's powerStars/
  * superPowerStars, and the CO gauge stat screen/mini-gauge UI) is worth.
  * The one place this belongs, shared by src/aw2_gfx.c (which star of the

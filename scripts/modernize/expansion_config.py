@@ -124,6 +124,10 @@ CONFIG_MK_FEATURE_KEYS = (
     "DEBUFFS_STACK",
     "SELECT_VIEW_GROWTHS",
     "CUSTOM_CAMPAIGN",
+    # Read from config.mk so the CUSTOM_CAMPAIGN dependency below compares two
+    # values from the same source. Real builds always pass --co-powers, so this
+    # only affects the fallback when no override is given.
+    "CO_POWERS",
     "SKIP_OPENING",
     "RAND_BGM",
     "CONTINUE_BGM_BATTLE",
@@ -476,6 +480,13 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "the bundled content item's mechanic is registered through the "
             "mechanics hook registry, which is not linked when "
             "EXPANSION_MECHANICS_HOOKS=0"
+        )
+    if campaign and not co_powers_flag:
+        raise ConfigError(
+            "CUSTOM_CAMPAIGN=1 requires CO_POWERS=1: the campaign's own event "
+            "scripts assign each faction's commander (SetFactionCo, CO_* ids -- "
+            "see src/events/prologue-eventscript.h), and none of that exists "
+            "when CO_POWERS=0"
         )
     if content and cap < ITEM_ID_EXPANSION_FIRST:
         raise ConfigError(

@@ -413,7 +413,9 @@ CUSTOM_FORMULAS ?= 1
 # carousel plus chapter-range and difficulty pickers, wired in at the same
 # save-menu step vanilla's plain difficulty select uses. See
 # src/modeselect.c and src/savemenu.c's PL_SAVEMENU_DIFFICULTY_SEL step.
-MODE_SELECT ?= 1
+# WARNING: Cursor will auto go to the chosen Lord each turn. 
+# If your game has no Ephraim/Lyon, for example, it'll go off-screen if they're the current main character. 
+MODE_SELECT ?= 0 
 
 
 # --- Optional PromoteCommand ------------------------------------------------------

@@ -1,6 +1,6 @@
 #include "global.h"
 
-#if FE8_MODE_SELECT
+#if FE8_MODE_SELECT || FE8_CO_POWERS
 
 /* FE7 "Mode Select" assets, converted from the installer's dumped
  * Img_, Pal_, and Tsa_ .bin files via scripts/modeselect_bin_to_source.py
@@ -21,8 +21,10 @@ const u16 __attribute__((aligned(4))) Pal_084138F0[] = INCBIN_U16("graphics/mode
 const u8 __attribute__((aligned(4))) Img_08415594[] = INCBIN_U8("graphics/modeselect/ModeSelectClawMenu.4bpp.lz");
 const u16 __attribute__((aligned(4))) Pal_08415AA0[] = INCBIN_U16("graphics/modeselect/ModeSelectClawMenu.gbapal");
 
-// Small OBJ decoration loaded straight into OBJ VRAM (not BG-tiled) + its palette.
-const u8 __attribute__((aligned(4))) Img_08414940[] = INCBIN_U8("graphics/modeselect/ModeSelectObjFrame.4bpp.lz");
+/* OBJ palette 0xA. Shared -- CO select applies it too, even though its own
+ * sprite sheet (src/data/const_data_coselect.c) is authored against OBJ
+ * palette 0xB. The sheet this palette is named after is Mode Select's own and
+ * lives in the MODE_SELECT-only block below. */
 const u16 __attribute__((aligned(4))) Pal_0841625C[] = INCBIN_U16("graphics/modeselect/ModeSelectObjFrame.gbapal");
 
 /* The claw menu's own tilemap (BG1) -- LZ77-compressed in the original
@@ -47,6 +49,12 @@ const u8 __attribute__((aligned(4))) Tsa_084150E0_Full[] = INCBIN_U8("graphics/m
  * LoadModeSelectChapterGfx in src/modeselect.c). */
 const u16 __attribute__((aligned(4))) Pal_084150C0[] = INCBIN_U16("graphics/modeselect/ModeSelectChapterPal.gbapal");
 
+#if FE8_MODE_SELECT
+/* Mode Select only. CO select uses its own OBJ sheet
+ * (src/data/const_data_coselect.c) and has no chapter-range display, so
+ * neither of these is referenced when MODE_SELECT is off. */
+const u8 __attribute__((aligned(4))) Img_08414940[] = INCBIN_U8("graphics/modeselect/ModeSelectObjFrame.4bpp.lz");
+
 const u8 __attribute__((aligned(4))) Img_08415BE8[] = INCBIN_U8("graphics/modeselect/ModeSelectChapter0TopLeft.4bpp.lz");
 const u8 __attribute__((aligned(4))) Img_08415CB0[] = INCBIN_U8("graphics/modeselect/ModeSelectChapter0BottomLeft.4bpp.lz");
 const u8 __attribute__((aligned(4))) Img_08415DC4[] = INCBIN_U8("graphics/modeselect/ModeSelectChapter0TopRight.4bpp.lz");
@@ -61,5 +69,6 @@ const u8 __attribute__((aligned(4))) Img_08416058[] = INCBIN_U8("graphics/modese
 const u8 __attribute__((aligned(4))) Img_08416118[] = INCBIN_U8("graphics/modeselect/ModeSelectChapter2BottomLeft.4bpp.lz");
 const u8 __attribute__((aligned(4))) Img_084161F4[] = INCBIN_U8("graphics/modeselect/ModeSelectChapter2TopRight.4bpp.lz");
 const u8 __attribute__((aligned(4))) Img_08416220[] = INCBIN_U8("graphics/modeselect/ModeSelectChapter2BottomRight.4bpp.lz");
-
 #endif // FE8_MODE_SELECT
+
+#endif // FE8_MODE_SELECT || FE8_CO_POWERS

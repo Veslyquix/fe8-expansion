@@ -168,6 +168,7 @@ struct CoSelectProc
     /* 49 */ u8 slotCo[CO_SELECT_SLOTS]; // CO id currently loaded in each anim slot
     /* 4C */ u8 slotCount; // live anim slots, min(coCount, CO_SELECT_SLOTS)
     /* 4D */ u8 coIndex; // coList index of the selected CO
+    /* 4E */ u8 rebuilding; // set while re-entering from the CO info page
     /* 50 */ s32 idleTimer; // frames since the last input, drives the idle anim replay
 };
 
@@ -748,49 +749,55 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     proc->spriteProc = Proc_Start(sProc_CoSelectSpriteDraw, proc);
     CoSelectSpriteDraw_SetCenter(0, 0x70);
 
-    proc->curSlot = 0;
-    proc->slotCount = 0;
-    proc->coCount = 0;
-
-    /* Enabled COs come from gEventSlot[1] as a bitfield (bit N = CO id N), with
-     * 0 meaning "all of them" so a script can just omit the SVAL. Anything the
-     * mask selects beyond CO_COUNT is ignored. */
+    /* On a rebuild (returning from the CO info page) the CO list and the
+     * selection are already set up and must be preserved -- only the
+     * graphics below need recreating. */
+    if (!proc->rebuilding)
     {
-        u32 mask = gEventSlots[EVT_SLOT_1];
+        proc->curSlot = 0;
+        proc->slotCount = 0;
+        proc->coCount = 0;
 
-        if (mask == 0)
-            mask = ~0u;
-
-        for (i = 0; i < CO_COUNT; i++)
+        /* Enabled COs come from gEventSlot[1] as a bitfield (bit N = CO id N), with
+         * 0 meaning "all of them" so a script can just omit the SVAL. Anything the
+         * mask selects beyond CO_COUNT is ignored. */
         {
-            if (mask & (1u << i))
+            u32 mask = gEventSlots[EVT_SLOT_1];
+
+            if (mask == 0)
+                mask = ~0u;
+
+            for (i = 0; i < CO_COUNT; i++)
             {
-                proc->coList[proc->coCount] = i;
-                proc->coCount++;
+                if (mask & (1u << i))
+                {
+                    proc->coList[proc->coCount] = i;
+                    proc->coCount++;
+                }
             }
         }
+
+        /* An empty mask would leave the carousel with nothing to draw and no valid
+         * selection, so fall back to the first CO rather than running empty. */
+        if (proc->coCount == 0)
+        {
+            proc->coList[0] = 0;
+            proc->coCount = 1;
+        }
+
+        proc->faction = gEventSlots[EVT_SLOT_3];
+
+        /* The anim slots are a window over coList: as many as there are COs, capped
+         * at CO_SELECT_SLOTS. With more COs than slots the window slides (see
+         * CoSelect_SyncSlots) instead of the carousel growing. */
+        proc->slotCount = proc->coCount < CO_SELECT_SLOTS ? proc->coCount : CO_SELECT_SLOTS;
+        proc->coIndex = 0;
+
+        /* curSlot 0 holds coList[0], each slot after it the next CO along -- the
+         * same invariant CoSelect_SyncSlots maintains from here on. */
+        for (i = 0; i < proc->slotCount; i++)
+            proc->slotCo[i] = proc->coList[i % proc->coCount];
     }
-
-    /* An empty mask would leave the carousel with nothing to draw and no valid
-     * selection, so fall back to the first CO rather than running empty. */
-    if (proc->coCount == 0)
-    {
-        proc->coList[0] = 0;
-        proc->coCount = 1;
-    }
-
-    proc->faction = gEventSlots[EVT_SLOT_3];
-
-    /* The anim slots are a window over coList: as many as there are COs, capped
-     * at CO_SELECT_SLOTS. With more COs than slots the window slides (see
-     * CoSelect_SyncSlots) instead of the carousel growing. */
-    proc->slotCount = proc->coCount < CO_SELECT_SLOTS ? proc->coCount : CO_SELECT_SLOTS;
-    proc->coIndex = 0;
-
-    /* curSlot 0 holds coList[0], each slot after it the next CO along -- the
-     * same invariant CoSelect_SyncSlots maintains from here on. */
-    for (i = 0; i < proc->slotCount; i++)
-        proc->slotCo[i] = proc->coList[i % proc->coCount];
 
     CoSelectSpriteDraw_SetSlotCount(proc->slotCount);
     InitCoSelectAnims(proc);
@@ -815,7 +822,17 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     InitText(&sCoSelectScratch.text.text[4], 10);
     InitText(&sCoSelectScratch.text.text[5], 5);
 
-    proc->angle = proc->curSlot * CoSelectSpriteDraw_GetSlotAngleStep() * 0x10;
+    /* Resting angle for whichever slot is at the front. This has to use the
+     * same formula CoSelect_RotateLeft/Right target and CoSelect_Loop_Rotate
+     * settles on, or the carousel ends up parked between slots.
+     *
+     * The FE7 original wrote `curSlot * angleStep * 0x10` here, which happens
+     * to agree only when curSlot is 0 -- always true there, because Init only
+     * ever ran on a fresh screen. It is not true on the rebuild coming back
+     * from the CO info page, which restores a non-zero curSlot: that left the
+     * wrong CO facing front (so the class animation belonged to a different
+     * CO) and made the next rotation compute a huge delta and spin wildly. */
+    proc->angle = ((0x100 - CoSelectSpriteDraw_GetSlotAngleStep() * proc->curSlot) << 4) & 0xfff;
 
     proc->faceProc = StartCoSelectFace(proc->coList[proc->coIndex]);
     PutCoSelectLabelText();
@@ -932,7 +949,10 @@ static void CoSelect_Step(struct CoSelectProc* proc, int dir)
 // FE7U: 0x080A817C
 static void CoSelect_Loop_KeyHandler(struct CoSelectProc* proc)
 {
-    if (gKeyStatusPtr->heldKeys & (DPAD_LEFT | L_BUTTON))
+    /* L is deliberately not a rotate any more: R opens the CO info page, so
+     * leaving L on rotation would make the two shoulder buttons do unrelated
+     * things. Rotation is the d-pad. */
+    if (gKeyStatusPtr->heldKeys & DPAD_LEFT)
     {
         Proc_Goto(proc, 1);
         SetUiSpinningArrowFastMaybe(0);
@@ -941,7 +961,14 @@ static void CoSelect_Loop_KeyHandler(struct CoSelectProc* proc)
         return;
     }
 
-    if (gKeyStatusPtr->heldKeys & (DPAD_RIGHT | R_BUTTON))
+    if (gKeyStatusPtr->newKeys & R_BUTTON)
+    {
+        PlaySoundEffect(0x6a);
+        Proc_Goto(proc, 5);
+        return;
+    }
+
+    if (gKeyStatusPtr->heldKeys & DPAD_RIGHT)
     {
         Proc_Goto(proc, 2);
         SetUiSpinningArrowFastMaybe(1);
@@ -1106,6 +1133,49 @@ static void RefreshTrapsAndTerrain(void)
 }
 */
 
+/* Tear the carousel down so the CO info page can have the screen.
+ *
+ * This is not optional politeness: gCoScreen, gStatScreen and gUiTmScratchA/B/C
+ * (src/power.c, src/statscreen.c) all live inside ewram_overlay_coselect --
+ * every ewram_overlay_* section starts at __ewram_start, so the CO screen's
+ * own state physically overlaps this screen's animation buffers. The
+ * animations cannot survive it and are rebuilt from scratch on the way back
+ * rather than restored. */
+static void CoSelect_TeardownForCoInfo(struct CoSelectProc* proc)
+{
+    EndCoSelectAnims(proc->slotCount);
+    EndEfxAnimeDrvProc();
+    EndFaceById(0);
+    EndUiSpinningArrows();
+
+    if (proc->spriteProc != NULL)
+    {
+        Proc_End(proc->spriteProc);
+        proc->spriteProc = NULL;
+    }
+
+    SetPrimaryHBlankHandler(NULL);
+    SetWinEnable(0, 0, 0);
+}
+
+/* R: open the highlighted CO's info page, blocking until B closes it. */
+static void CoSelect_StartCoInfo(struct CoSelectProc* proc)
+{
+    StartCoScreenForCo(proc, proc->coList[proc->coIndex]);
+}
+
+/* Mark the CoSelect_Init that follows as a rebuild, so it recreates the
+ * graphics without rebuilding the CO list or resetting the selection. */
+static void CoSelect_MarkRebuilding(struct CoSelectProc* proc)
+{
+    proc->rebuilding = TRUE;
+}
+
+static void CoSelect_ClearRebuilding(struct CoSelectProc* proc)
+{
+    proc->rebuilding = FALSE;
+}
+
 // clang-format off
 
 // FE7U: 0x08CE4930
@@ -1137,6 +1207,25 @@ PROC_LABEL(2),
     PROC_CALL(CoSelect_RotateRight),
     PROC_REPEAT(CoSelect_Loop_RotateCarousel),
 
+    PROC_GOTO(0),
+
+PROC_LABEL(5),
+    /* R -> CO info page, B -> back here. The CO screen shares EWRAM with this
+     * screen (see CoSelect_TeardownForCoInfo), so the carousel is torn down
+     * and rebuilt around it rather than left standing underneath. */
+    PROC_CALL(CoSelect_TeardownForCoInfo),
+    PROC_CALL(CoSelect_StartCoInfo),
+    PROC_YIELD,
+
+    PROC_CALL(DisableAllGfx),
+    PROC_YIELD,
+    PROC_CALL(CoSelect_MarkRebuilding),
+    PROC_CALL(CoSelect_InitGfxMaybe),
+    PROC_YIELD,
+    PROC_CALL(CoSelect_Init),
+    PROC_CALL(CoSelect_ClearRebuilding),
+    PROC_YIELD,
+    PROC_REPEAT(CoSelect_TransitionSplitOpen),
     PROC_GOTO(0),
 
 PROC_LABEL(3),
