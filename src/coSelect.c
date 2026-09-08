@@ -48,7 +48,7 @@
  *
  * Only CO_SELECT_SLOTS battle animations are ever loaded at once. With more
  * enabled COs than that, the slots are a sliding window over the CO list and
- * scrolling re-loads one slot in place; see CoSelect_SlideWindow.
+ * scrolling re-loads one slot in place; see CoSelect_SyncSlots.
  *
  * RAM: like Mode Select, all three slots' animation scratch plus this file's
  * own state live in one dedicated EWRAM overlay. That is not optional --
@@ -154,39 +154,38 @@ static struct AnimMagicFxBuffer* CoSelectGetMagicFx(int slot)
 struct CoSelectProc
 {
     /* 00 */ PROC_HEADER;
-    /* 2C */ s32 unk_2c;
-    /* 30 */ u16 unk_30;
-    /* 32 */ u16 unk_32;
-    /* 34 */ s32 unk_34;
-    /* 38 */ void* unk_38; // ProcPtr; ProcScr_CoSelectSpriteDraw instance
-    /* 3C */ struct FaceProc* unk_3c;
-    /* 40 */ u8 faction; // faction whose CO is being set (gEventSlot[3])
-    /* 41 */ u8 unk_41; // currently-highlighted carousel slot (0..slotCount-1)
-    /* 42 */ u8 unk_42; // bit0: entry flag, always set (see StartCoSelect)
+    /* 2C */ s32 rotTimer; // frames into the current rotation (see CoSelect_Loop_Rotate)
+    /* 30 */ u16 angle; // carousel angle now
+    /* 32 */ u16 angleTarget; // carousel angle the current rotation is heading for
+    /* 34 */ s32 rotDir; // +1 rotating left, -1 rotating right
+    /* 38 */ void* spriteProc; // ProcPtr; ProcScr_CoSelectSpriteDraw instance
+    /* 3C */ struct FaceProc* faceProc;
+    /* 40 */ u8 faction; // faction whose CO is being set (gEventSlots[EVT_SLOT_3])
+    /* 41 */ u8 curSlot; // carousel slot at the front, holding the selected CO
+    /* 42 */ u8 flags; // bit0: entry flag, always set (see StartCoSelect)
     /* 43 */ u8 coCount; // number of enabled COs in coList
     /* 44 */ u8 coList[CO_COUNT]; // enabled CO ids, in ascending id order
     /* 49 */ u8 slotCo[CO_SELECT_SLOTS]; // CO id currently loaded in each anim slot
-    /* 4C */ u8 unk_4c; // number of live anim slots (min(coCount, CO_SELECT_SLOTS))
-    /* 4D */ u8 windowBase; // coList index shown by slot 0 (see CoSelect_SlideWindow)
-    /* 50 */ s32 unk_50;
+    /* 4C */ u8 slotCount; // live anim slots, min(coCount, CO_SELECT_SLOTS)
+    /* 4D */ u8 coIndex; // coList index of the selected CO
+    /* 50 */ s32 idleTimer; // frames since the last input, drives the idle anim replay
 };
 
 struct CoSelectSpriteDrawProc
 {
     /* 00 */ PROC_HEADER;
-    /* 2C */ s32 unk_2c;
-    /* 30 */ s32 unk_30;
-    /* 34 */ s32 unk_34;
-
-    /* 38 */ s32 unk_38;
-    /* 3C */ u8 unk_3c;
-    /* 3E */ u16 unk_3e;
-    /* 40 */ s32 unk_40;
-    /* 44 */ s32 unk_44;
-    /* 48 */ s32 unk_48;
-    /* 4C */ u8 unk_4c;
-    /* 4D */ u8 unk_4d;
-    /* 4E */ u8 unk_4e;
+    /* 2C */ s32 blinkTimer; // counts up once confirmed; blinks the "Press Start" sprite
+    /* 30 */ s32 palTimer; // drives the OBJ pal 0xB colour cycle
+    /* 34 */ s32 centerX; // carousel centre
+    /* 38 */ s32 centerY;
+    /* 3C */ u8 glowing; // whether to position/glow the slot animations at all
+    /* 3E */ u16 angle; // carousel rotation
+    /* 40 */ s32 slotCount;
+    /* 44 */ s32 angleStep; // angle between adjacent slots (0x100 / slotCount)
+    /* 48 */ s32 blendPhase; // ramps up and down, feeding the spell-circle blend
+    /* 4C */ u8 blendDir; // 0 ramping up, 1 ramping down
+    /* 4D */ u8 handRow; // hand cursor row
+    /* 4E */ u8 handFlags; // bit1: freeze the hand cursor
 };
 
 /* fe7u_func_0809E9FC in the FE7 source: real behavior (unlock hard modes
@@ -224,7 +223,7 @@ static int CoSelect_GetBanimId(int coId)
 /* Load one carousel slot with one CO's battle animation. Split out of the
  * original's init-everything loop because the slots are a sliding window: with
  * more enabled COs than slots, scrolling re-loads a single slot in place
- * rather than rebuilding the whole carousel (see CoSelect_SlideWindow). */
+ * rather than rebuilding the whole carousel (see CoSelect_SyncSlots). */
 static void InitCoSelectAnimSlot(int i, int coId)
 {
     {
@@ -274,7 +273,7 @@ static void InitCoSelectAnims(struct CoSelectProc* proc)
 {
     int i;
 
-    for (i = 0; i < proc->unk_4c; i++)
+    for (i = 0; i < proc->slotCount; i++)
         InitCoSelectAnimSlot(i, proc->slotCo[i]);
 }
 
@@ -385,17 +384,17 @@ static void CoSelectPalette_ApplyGlow(s32 palId, s32 signedByte)
 // FE7U: 0x080A796C
 static void CoSelectSpriteDraw_Init(struct CoSelectSpriteDrawProc* proc)
 {
-    proc->unk_30 = 0;
-    proc->unk_3e = 0;
-    proc->unk_3c = 0;
-    proc->unk_34 = DISPLAY_WIDTH / 2;
-    proc->unk_38 = DISPLAY_HEIGHT;
-    proc->unk_40 = 0;
-    proc->unk_44 = 0;
-    proc->unk_48 = 0;
-    proc->unk_4c = 0;
-    proc->unk_2c = 0;
-    proc->unk_4e = 0;
+    proc->palTimer = 0;
+    proc->angle = 0;
+    proc->glowing = 0;
+    proc->centerX = DISPLAY_WIDTH / 2;
+    proc->centerY = DISPLAY_HEIGHT;
+    proc->slotCount = 0;
+    proc->angleStep = 0;
+    proc->blendPhase = 0;
+    proc->blendDir = 0;
+    proc->blinkTimer = 0;
+    proc->handFlags = 0;
 }
 
 // clang-format off
@@ -481,58 +480,57 @@ static void CoSelectSpriteDraw_Loop(struct CoSelectSpriteDrawProc* proc)
 {
     s32 i;
 
-    if (proc->unk_3c != 0)
+    if (proc->glowing != 0)
     {
-        for (i = 0; i < proc->unk_40; i++)
+        for (i = 0; i < proc->slotCount; i++)
         {
-            s32 angle = (proc->unk_3e >> 4) + i * proc->unk_44 + 40;
-            s32 x = (proc->unk_34 << 12) + SIN(angle) * 70;
-            s32 y = (((proc->unk_38 << 12) + COS(angle) * 28) >> 12) - 16;
+            s32 angle = (proc->angle >> 4) + i * proc->angleStep + 40;
+            s32 x = (proc->centerX << 12) + SIN(angle) * 70;
+            s32 y = (((proc->centerY << 12) + COS(angle) * 28) >> 12) - 16;
 
             SetMainMiniAnimPos(CoSelectGetAnimBuf(i), x >> 12, y);
-            CoSelectPalette_ApplyGlow(i, (proc->unk_3e >> 4) + i * proc->unk_44);
+            CoSelectPalette_ApplyGlow(i, (proc->angle >> 4) + i * proc->angleStep);
         }
     }
 
-    BgAffinRotScaling(BG_2, proc->unk_3e, 0, 0, 0x160, 0x160);
+    BgAffinRotScaling(BG_2, proc->angle, 0, 0, 0x160, 0x160);
     BgAffinScaling(BG_2, 0x280, 0x100);
-    BgAffinAnchoring(BG_2, proc->unk_34, proc->unk_38, 76, 76);
+    BgAffinAnchoring(BG_2, proc->centerX, proc->centerY, 76, 76);
 
-    sCoSelectScratch.blendAmount = InterpolateCubicSpline(8, 8, 16, 16, proc->unk_48);
+    sCoSelectScratch.blendAmount = InterpolateCubicSpline(8, 8, 16, 16, proc->blendPhase);
 
-    if (proc->unk_4c == 0)
+    if (proc->blendDir == 0)
     {
-        proc->unk_48 += 8;
-        if (proc->unk_48 >= 0x400)
-            proc->unk_4c = 1;
+        proc->blendPhase += 8;
+        if (proc->blendPhase >= 0x400)
+            proc->blendDir = 1;
     }
     else
     {
-        proc->unk_48 -= 8;
-        if (proc->unk_48 <= 0)
-            proc->unk_4c = 0;
+        proc->blendPhase -= 8;
+        if (proc->blendPhase <= 0)
+            proc->blendDir = 0;
     }
 
-    // unk_4d is the chosen difficulty (0 = Normal, 1 = Hard); it only picks
-    // which row the hand cursor sits on. It is NOT a spin speed — feeding it
-    // into unk_3e made the carousel rotate whenever Hard was selected.
-    if (proc->unk_4e & 2)
-        DisplayFrozenUiHandExt(108, (proc->unk_4d & 1) * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+    // handRow only picks which row the hand cursor sits on -- it is not a
+    // spin speed.
+    if (proc->handFlags & 2)
+        DisplayFrozenUiHandExt(108, (proc->handRow & 1) * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
     else
-        DisplayUiHandExt(108, proc->unk_4d * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+        DisplayUiHandExt(108, proc->handRow * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
 
     PutSpriteExt(0xd, 0, 8, Sprite_CoSelect_Mode, OAM2_PAL(11));
     PutSpriteExt(0xd, 20, 28, Sprite_CoSelect_Select, OAM2_PAL(11));
     PutSpriteExt(0xd, 40, 64, Sprite_CoSelect_Change, OAM2_PAL(11));
 
-    if ((proc->unk_2c >> 2 & 1) == 0)
+    if ((proc->blinkTimer >> 2 & 1) == 0)
         PutSpriteExt(0xd, 8, 130, Sprite_CoSelect_PressStart, OAM2_PAL(11));
 
-    if (proc->unk_2c != 0)
-        proc->unk_2c++;
+    if (proc->blinkTimer != 0)
+        proc->blinkTimer++;
 
-    CoSelectPalette_CyclePressStart(proc->unk_30);
-    proc->unk_30++;
+    CoSelectPalette_CyclePressStart(proc->palTimer);
+    proc->palTimer++;
 }
 
 static const struct ProcCmd sProc_CoSelectSpriteDraw[] = {
@@ -544,20 +542,20 @@ static const struct ProcCmd sProc_CoSelectSpriteDraw[] = {
 };
 const struct ProcCmd* const ProcScr_CoSelectSpriteDraw = sProc_CoSelectSpriteDraw;
 
-// Starts the "Press Start" blink timer (unk_2c counts up from 1; bit 2 of it
-// gates whether the sprite is drawn each frame).
+// Starts the "Press Start" blink timer (blinkTimer counts up from 1; bit 2 of
+// it gates whether the sprite is drawn each frame).
 static void CoSelectSpriteDraw_SetActive(bool active)
 {
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
     if (proc != NULL)
-        proc->unk_2c = 1;
+        proc->blinkTimer = 1;
 }
 
 static void CoSelectSpriteDraw_SetGlowing(bool glowing)
 {
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
     if (proc != NULL)
-        proc->unk_3c = glowing;
+        proc->glowing = glowing;
 }
 
 static void CoSelectSpriteDraw_SetSlotCount(s32 count)
@@ -565,8 +563,8 @@ static void CoSelectSpriteDraw_SetSlotCount(s32 count)
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
     if (proc != NULL)
     {
-        proc->unk_40 = count;
-        proc->unk_44 = 0x100 / count;
+        proc->slotCount = count;
+        proc->angleStep = 0x100 / count;
     }
 }
 
@@ -575,8 +573,8 @@ static void CoSelectSpriteDraw_SetCenter(s32 x, s32 y)
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
     if (proc != NULL)
     {
-        proc->unk_34 = x;
-        proc->unk_38 = y;
+        proc->centerX = x;
+        proc->centerY = y;
     }
     sCoSelectScratch.blendThreshold = y - 60;
 }
@@ -585,7 +583,7 @@ static void CoSelectSpriteDraw_SetAngle(u16 angle)
 {
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
     if (proc != NULL)
-        proc->unk_3e = angle;
+        proc->angle = angle;
 }
 
 static void CoSelectSpriteDraw_SetSpin(u8 direction, u8 speed)
@@ -593,15 +591,15 @@ static void CoSelectSpriteDraw_SetSpin(u8 direction, u8 speed)
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
     if (proc != NULL)
     {
-        proc->unk_4d = direction;
-        proc->unk_4e = speed;
+        proc->handRow = direction;
+        proc->handFlags = speed;
     }
 }
 
 static s32 CoSelectSpriteDraw_GetSlotAngleStep(void)
 {
     struct CoSelectSpriteDrawProc* proc = Proc_Find(ProcScr_CoSelectSpriteDraw);
-    return proc->unk_44;
+    return proc->angleStep;
 }
 
 // Blend effect on the outer spell-circle background (HBlank handler).
@@ -644,7 +642,7 @@ extern u8 Tsa_0840FA00[];
 extern u8 Tsa_08411F34[];
 
 // FE7U: 0x080A4E58 -- sets up the outer spinning spell-circle background,
-// always run when entering via StartCoSelect (unk_42 & 1 is always set).
+// always run when entering via StartCoSelect (flags & 1 is always set).
 static void CoSelect_InitBgs(void)
 {
     SetupBackgrounds((u16*)sCoSelectBgConfig);
@@ -688,7 +686,7 @@ static void CoSelect_InitBgs(void)
 // FE7U: 0x080A7C6C
 static void CoSelect_InitGfxMaybe(struct CoSelectProc* proc)
 {
-    if (proc->unk_42 & 1)
+    if (proc->flags & 1)
         CoSelect_InitBgs();
 }
 
@@ -747,11 +745,11 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     ResetClassReelSpell();
     NewEfxAnimeDrvProc();
 
-    proc->unk_38 = Proc_Start(sProc_CoSelectSpriteDraw, proc);
+    proc->spriteProc = Proc_Start(sProc_CoSelectSpriteDraw, proc);
     CoSelectSpriteDraw_SetCenter(0, 0x70);
 
-    proc->unk_41 = 0;
-    proc->unk_4c = 0;
+    proc->curSlot = 0;
+    proc->slotCount = 0;
     proc->coCount = 0;
 
     /* Enabled COs come from gEventSlot[1] as a bitfield (bit N = CO id N), with
@@ -785,16 +783,19 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 
     /* The anim slots are a window over coList: as many as there are COs, capped
      * at CO_SELECT_SLOTS. With more COs than slots the window slides (see
-     * CoSelect_SlideWindow) instead of the carousel growing. */
-    proc->unk_4c = proc->coCount < CO_SELECT_SLOTS ? proc->coCount : CO_SELECT_SLOTS;
+     * CoSelect_SyncSlots) instead of the carousel growing. */
+    proc->slotCount = proc->coCount < CO_SELECT_SLOTS ? proc->coCount : CO_SELECT_SLOTS;
+    proc->coIndex = 0;
 
-    for (i = 0; i < proc->unk_4c; i++)
-        proc->slotCo[i] = proc->coList[i];
+    /* curSlot 0 holds coList[0], each slot after it the next CO along -- the
+     * same invariant CoSelect_SyncSlots maintains from here on. */
+    for (i = 0; i < proc->slotCount; i++)
+        proc->slotCo[i] = proc->coList[i % proc->coCount];
 
-    CoSelectSpriteDraw_SetSlotCount(proc->unk_4c);
+    CoSelectSpriteDraw_SetSlotCount(proc->slotCount);
     InitCoSelectAnims(proc);
 
-    for (i = 0; i < proc->unk_4c; i++)
+    for (i = 0; i < proc->slotCount; i++)
         CoSelectPalette_CacheUndimmed(i);
 
     CoSelectSpriteDraw_SetGlowing(true);
@@ -814,17 +815,17 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     InitText(&sCoSelectScratch.text.text[4], 10);
     InitText(&sCoSelectScratch.text.text[5], 5);
 
-    proc->unk_30 = proc->unk_41 * CoSelectSpriteDraw_GetSlotAngleStep() * 0x10;
+    proc->angle = proc->curSlot * CoSelectSpriteDraw_GetSlotAngleStep() * 0x10;
 
-    proc->unk_3c = StartCoSelectFace(proc->slotCo[proc->unk_41]);
+    proc->faceProc = StartCoSelectFace(proc->coList[proc->coIndex]);
     PutCoSelectLabelText();
-    PutCoSelectCharacterText(proc->slotCo[proc->unk_41]);
-    CoSelectSpriteDraw_SetSpin(0, proc->unk_42);
-    CoSelectSpriteDraw_SetAngle(proc->unk_30);
+    PutCoSelectCharacterText(proc->coList[proc->coIndex]);
+    CoSelectSpriteDraw_SetSpin(0, proc->flags);
+    CoSelectSpriteDraw_SetAngle(proc->angle);
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
 
-    proc->unk_2c = 0;
-    proc->unk_50 = 0;
+    proc->rotTimer = 0;
+    proc->idleTimer = 0;
 
     SetWinEnable(1, 0, 0);
     SetWin0Layers(1, 1, 1, 1, 1);
@@ -846,7 +847,7 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 static void CoSelect_TransitionSplitOpen(struct CoSelectProc* proc)
 {
     s32 tmp;
-    s32 step = ++proc->unk_2c;
+    s32 step = ++proc->rotTimer;
 
     SetDispEnable(1, 1, 1, 1, 1);
 
@@ -862,7 +863,7 @@ static void CoSelect_TransitionSplitOpen(struct CoSelectProc* proc)
 static void CoSelect_TransitionSplitClose(struct CoSelectProc* proc)
 {
     s32 tmp;
-    s32 step = ++proc->unk_2c;
+    s32 step = ++proc->rotTimer;
 
     tmp = 0x48 - (((0x10 - step) * 0x48) * (0x10 - step) / 256);
 
@@ -876,45 +877,56 @@ static void CoSelect_StopSpinAndResetTimer(struct CoSelectProc* proc)
 {
     s32 i;
 
-    for (i = 0; i < proc->unk_4c; i++)
+    for (i = 0; i < proc->slotCount; i++)
         CoSelectAnim_Pause(CoSelectGetAnimBuf(i));
 
-    proc->unk_50 = 0;
+    proc->idleTimer = 0;
 }
 
-/* Which entry of coList a carousel slot is showing. The window's first slot
- * holds windowBase; slots run forward from there, wrapping around coList. */
-static int CoSelect_SlotCoListIndex(struct CoSelectProc* proc, int slot)
+/* Keep every carousel slot holding the right CO for where it currently sits.
+ *
+ * The invariant: the slot at the front (curSlot) holds coList[coIndex], and
+ * each slot one step further around the carousel holds the next CO in the
+ * list. Written out, slot s is `offset` steps around from the front, so it
+ * wants coList[(coIndex + offset) % coCount].
+ *
+ * Rotating changes curSlot and coIndex together by the same +-1, which leaves
+ * every slot's wanted CO unchanged except the single one whose offset wraps
+ * around the end of the carousel -- so this reloads exactly one animation per
+ * press when there are more COs than slots, and none at all when the whole CO
+ * list fits on the carousel. Callers just rotate and then call this; there is
+ * no separate window to keep in step.
+ *
+ * (The previous version tracked a window base and only reloaded when curSlot
+ * wrapped, which meant most presses just moved between the three already-loaded
+ * COs instead of advancing through the list -- hence the nonsense orderings.) */
+static void CoSelect_SyncSlots(struct CoSelectProc* proc)
 {
-    return (proc->windowBase + slot) % proc->coCount;
+    int s;
+
+    for (s = 0; s < proc->slotCount; s++)
+    {
+        int offset = (s - proc->curSlot + proc->slotCount) % proc->slotCount;
+        int coId = proc->coList[(proc->coIndex + offset) % proc->coCount];
+
+        if (proc->slotCo[s] == coId)
+            continue;
+
+        EndEkrUnitMainMini(CoSelectGetAnimBuf(s));
+        proc->slotCo[s] = coId;
+        InitCoSelectAnimSlot(s, coId);
+        CoSelectPalette_CacheUndimmed(s);
+    }
 }
 
-/* Slide the window one step so `slot` becomes the selection. Only meaningful
- * when there are more COs than slots: the slot rotating out of view is
- * re-loaded in place with the CO coming into view, which is one battle-anim
- * re-init per press rather than a full carousel rebuild. */
-static void CoSelect_SlideWindow(struct CoSelectProc* proc, int dir)
+/* Advance the selection by one CO and rotate the carousel one slot to match.
+ * dir is +1 for "left" (the next CO in the list) and -1 for "right". */
+static void CoSelect_Step(struct CoSelectProc* proc, int dir)
 {
-    int slot;
-    int coId;
+    proc->coIndex = (proc->coIndex + dir + proc->coCount) % proc->coCount;
+    proc->curSlot = (proc->curSlot + dir + proc->slotCount) % proc->slotCount;
 
-    if (proc->coCount <= proc->unk_4c)
-        return;
-
-    proc->windowBase = (proc->windowBase + dir + proc->coCount) % proc->coCount;
-
-    /* Moving forward, the slot that just left the back of the window is the one
-     * now at its front, and vice versa. */
-    slot = dir > 0 ? (proc->unk_4c - 1) : 0;
-    coId = proc->coList[CoSelect_SlotCoListIndex(proc, slot)];
-
-    if (proc->slotCo[slot] == coId)
-        return;
-
-    EndEkrUnitMainMini(CoSelectGetAnimBuf(slot));
-    proc->slotCo[slot] = coId;
-    InitCoSelectAnimSlot(slot, coId);
-    CoSelectPalette_CacheUndimmed(slot);
+    CoSelect_SyncSlots(proc);
 }
 
 // FE7U: 0x080A817C
@@ -940,81 +952,65 @@ static void CoSelect_Loop_KeyHandler(struct CoSelectProc* proc)
 
     if (gKeyStatusPtr->newKeys & (START_BUTTON | A_BUTTON))
     {
-        proc->unk_2c = 0;
+        proc->rotTimer = 0;
 
         PlaySoundEffect(0x6a);
         Proc_Goto(proc, 3);
 
-        CoSelectGetAnimBuf(proc->unk_41)->roundType = 0;
-        RestartMainMiniAnim(CoSelectGetAnimBuf(proc->unk_41));
+        CoSelectGetAnimBuf(proc->curSlot)->roundType = 0;
+        RestartMainMiniAnim(CoSelectGetAnimBuf(proc->curSlot));
 
         /* Commit the highlighted CO to the faction the caller asked for. */
-        SetFactionCo(proc->faction, proc->slotCo[proc->unk_41]);
+        SetFactionCo(proc->faction, proc->coList[proc->coIndex]);
 
         CoSelectSpriteDraw_SetActive(1);
         return;
     }
 
-    proc->unk_50++;
+    proc->idleTimer++;
 
-    if ((proc->unk_50 & 0x1ff) == 0x20)
+    if ((proc->idleTimer & 0x1ff) == 0x20)
     {
-        CoSelectGetAnimBuf(proc->unk_41)->roundType = 2;
-        RestartMainMiniAnim(CoSelectGetAnimBuf(proc->unk_41));
+        CoSelectGetAnimBuf(proc->curSlot)->roundType = 2;
+        RestartMainMiniAnim(CoSelectGetAnimBuf(proc->curSlot));
     }
 
-    if ((proc->unk_50 & 0x1ff) != 0x80)
+    if ((proc->idleTimer & 0x1ff) != 0x80)
         return;
 
-    CoSelectAnim_Pause(CoSelectGetAnimBuf(proc->unk_41));
+    CoSelectAnim_Pause(CoSelectGetAnimBuf(proc->curSlot));
 }
 
 // FE7U: 0x080A8424
 static void CoSelect_RotateRight(struct CoSelectProc* proc)
 {
-    proc->unk_34 = -1;
-    proc->unk_2c = 0;
+    proc->rotDir = -1;
+    proc->rotTimer = 0;
 
-    StartFaceFadeOut(proc->unk_3c);
+    StartFaceFadeOut(proc->faceProc);
 
-    if (proc->unk_41 == 0)
-    {
-        CoSelect_SlideWindow(proc, -1);
-        proc->unk_41 = proc->unk_4c - 1;
-    }
-    else
-    {
-        proc->unk_41--;
-    }
+    CoSelect_Step(proc, -1);
 
-    proc->unk_32 = (0x100 - CoSelectSpriteDraw_GetSlotAngleStep() * proc->unk_41) << 4;
+    proc->angleTarget = (0x100 - CoSelectSpriteDraw_GetSlotAngleStep() * proc->curSlot) << 4;
 
-    if (proc->unk_32 < proc->unk_30)
-        proc->unk_32 += 0x1000;
+    if (proc->angleTarget < proc->angle)
+        proc->angleTarget += 0x1000;
 }
 
 // FE7U: 0x080A848C
 static void CoSelect_RotateLeft(struct CoSelectProc* proc)
 {
-    proc->unk_34 = 1;
-    proc->unk_2c = 0;
+    proc->rotDir = 1;
+    proc->rotTimer = 0;
 
-    StartFaceFadeOut(proc->unk_3c);
+    StartFaceFadeOut(proc->faceProc);
 
-    if (proc->unk_41 < proc->unk_4c - 1)
-    {
-        proc->unk_41++;
-    }
-    else
-    {
-        CoSelect_SlideWindow(proc, 1);
-        proc->unk_41 = 0;
-    }
+    CoSelect_Step(proc, +1);
 
-    proc->unk_32 = (0x100 - CoSelectSpriteDraw_GetSlotAngleStep() * proc->unk_41) << 4;
+    proc->angleTarget = (0x100 - CoSelectSpriteDraw_GetSlotAngleStep() * proc->curSlot) << 4;
 
-    if (proc->unk_32 > proc->unk_30)
-        proc->unk_30 += 0x1000;
+    if (proc->angleTarget > proc->angle)
+        proc->angle += 0x1000;
 }
 
 // FE7U: 0x080A84F8
@@ -1023,23 +1019,23 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
     s32 a, b, c;
     u16 angle;
 
-    a = (proc->unk_32 - proc->unk_30) * proc->unk_34;
-    proc->unk_2c++;
+    a = (proc->angleTarget - proc->angle) * proc->rotDir;
+    proc->rotTimer++;
 
     b = a >> 2;
-    c = b * (0x1e - proc->unk_2c) * (0x1e - proc->unk_2c) / 900;
-    angle = proc->unk_30 + proc->unk_34 * 4 * (b - c);
+    c = b * (0x1e - proc->rotTimer) * (0x1e - proc->rotTimer) / 900;
+    angle = proc->angle + proc->rotDir * 4 * (b - c);
 
-    if (proc->unk_2c == 14)
-        proc->unk_3c = StartCoSelectFace(proc->slotCo[proc->unk_41]);
+    if (proc->rotTimer == 14)
+        proc->faceProc = StartCoSelectFace(proc->coList[proc->coIndex]);
 
-    if (proc->unk_2c == 20)
-        PutCoSelectCharacterText(proc->slotCo[proc->unk_41]);
+    if (proc->rotTimer == 20)
+        PutCoSelectCharacterText(proc->coList[proc->coIndex]);
 
-    if (proc->unk_2c == 30)
+    if (proc->rotTimer == 30)
     {
-        angle = proc->unk_32 & 0xfff;
-        proc->unk_30 = proc->unk_32 & 0xfff;
+        angle = proc->angleTarget & 0xfff;
+        proc->angle = proc->angleTarget & 0xfff;
         Proc_Break(proc);
     }
 
@@ -1059,7 +1055,7 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
 // FE7U: 0x080A8624
 static void CoSelect_End(struct CoSelectProc* proc)
 {
-    EndCoSelectAnims(proc->unk_4c);
+    EndCoSelectAnims(proc->slotCount);
     EndEfxAnimeDrvProc();
     EndFaceById(0);
 
@@ -1085,10 +1081,30 @@ static void CoSelect_End(struct CoSelectProc* proc)
     BMapDispResume();
     UnlockGame();
     RefreshEntityBmMaps();
+    
+    
+    // InitBmBgLayers();
+    // UnpackChapterMapGraphics(gPlaySt.chapterIndex);
+    
+    RefreshBMapGraphics();
+    
+    
     RenderBmMap();
     RefreshUnitSprites();
     BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT | BG2_SYNC_BIT | BG3_SYNC_BIT);
 }
+
+/* 
+static void RefreshTrapsAndTerrain(void)
+{
+    ApplyEnabledMapChanges();
+    RefreshTerrainBmMap();
+    RefreshAllLightRunes();
+    UpdateRoofedUnits();
+    RefreshUnitSprites();
+    RenderBmMap();
+}
+*/
 
 // clang-format off
 
@@ -1145,7 +1161,7 @@ PROC_LABEL(4),
 void StartCoSelect(ProcPtr parent)
 {
     struct CoSelectProc* proc = Proc_StartBlocking(sProc_CoSelect, parent);
-    proc->unk_42 = 1;
+    proc->flags = 1;
 }
 
 #endif // FE8_CO_POWERS
