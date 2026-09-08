@@ -760,14 +760,16 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 
         /* Enabled COs come from gEventSlot[1] as a bitfield (bit N = CO id N), with
          * 0 meaning "all of them" so a script can just omit the SVAL. Anything the
-         * mask selects beyond CO_COUNT is ignored. */
+         * mask selects beyond CO_COUNT is ignored, and CO_NONE is skipped
+         * outright -- it is the "faction has no commander" marker, not a CO, and
+         * its sCoDefinitions entry is blank (no character, no animation). */
         {
             u32 mask = gEventSlots[EVT_SLOT_1];
 
             if (mask == 0)
                 mask = ~0u;
 
-            for (i = 0; i < CO_COUNT; i++)
+            for (i = CO_NONE + 1; i < CO_COUNT; i++)
             {
                 if (mask & (1u << i))
                 {
@@ -778,10 +780,10 @@ static void CoSelect_Init(struct CoSelectProc* proc)
         }
 
         /* An empty mask would leave the carousel with nothing to draw and no valid
-         * selection, so fall back to the first CO rather than running empty. */
+         * selection, so fall back to the first real CO rather than running empty. */
         if (proc->coCount == 0)
         {
-            proc->coList[0] = 0;
+            proc->coList[0] = CO_NONE + 1;
             proc->coCount = 1;
         }
 

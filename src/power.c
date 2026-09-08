@@ -406,7 +406,15 @@ static void CoPowers_Anim(struct CoPowersProc* proc)
 u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number)
 {
     int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
-    int needed = CoScreen_GetCoPowerStars(coId) * CO_GAUGE_PER_STAR;
+    int needed;
+
+    /* No commander, no powers. CO_NONE's blank definition has powerStars 0,
+     * which would otherwise read as "costs nothing" and leave both entries
+     * permanently selectable. */
+    if (coId == CO_NONE)
+        return MENU_DISABLED;
+
+    needed = CoScreen_GetCoPowerStars(coId) * CO_GAUGE_PER_STAR;
 
     if (CoGauge_Get(FACTION_BLUE) < needed)
         return MENU_DISABLED;
@@ -420,7 +428,12 @@ u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number)
 u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number)
 {
     int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
-    int needed = CoScreen_GetCoSuperPowerStars(coId) * CO_GAUGE_PER_STAR;
+    int needed;
+
+    if (coId == CO_NONE)
+        return MENU_DISABLED;
+
+    needed = CoScreen_GetCoSuperPowerStars(coId) * CO_GAUGE_PER_STAR;
 
     if (CoGauge_Get(FACTION_BLUE) < needed)
         return MENU_DISABLED;
@@ -913,7 +926,12 @@ int GetCoClassCritBonus(int coId, int classId)
  * silently -- see gProcScr_CoPowers below. */
 static bool8 CoPower_AppliesToClass(int coId, bool8 isSuper, int classId)
 {
-    const struct CoDefinition* co = GetCoDefinition(coId);
+    const struct CoDefinition* co;
+
+    if (coId == CO_NONE)
+        return FALSE;
+
+    co = GetCoDefinition(coId);
     int rating = GetClassAffinityRating(co, classId);
     int group = isSuper ? co->superPowerTargetGroup : co->powerTargetGroup;
 
@@ -971,6 +989,40 @@ int CoScreen_GetCoCount(void)
     return CO_COUNT;
 }
 
+#ifdef SCROLL_ALL_COS
+/* Step coId by direction through the real COs only. CO_NONE is index 0 and is
+ * the "no commander" marker rather than a CO, so the cycle is [1, CO_COUNT). */
+static int StepCoIdSkippingNone(int coId, int direction)
+{
+    int count = CoScreen_GetCoCount() - 1; // excluding CO_NONE
+
+    if (count < 1)
+        return CO_NONE;
+
+    if (coId < 1)
+        coId = 1;
+
+    return ((coId - 1 + direction + count) % count) + 1;
+}
+#endif // SCROLL_ALL_COS
+
+/* A CO safe to display when the caller has none of its own: the first one some
+ * faction is using, else simply the first real CO. Never returns CO_NONE
+ * unless there are no COs defined at all. */
+static int FirstDisplayableCoId(void)
+{
+    int count = CoScreen_GetCoCount();
+    int coId;
+
+    for (coId = CO_NONE + 1; coId < count; ++coId) {
+        if (gPlaySt.commanderId[0] == coId || gPlaySt.commanderId[1] == coId ||
+            gPlaySt.commanderId[2] == coId || gPlaySt.commanderId[3] == coId)
+            return coId;
+    }
+
+    return count > CO_NONE + 1 ? CO_NONE + 1 : CO_NONE;
+}
+
 #ifndef SCROLL_ALL_COS
 /* Is coId the commander of any faction right now? gPlaySt.commanderId[]
  * has one entry per faction (Blue/Green/Red/Purple, see include/types.h),
@@ -978,6 +1030,13 @@ int CoScreen_GetCoCount(void)
 static bool8 IsCoInUse(int coId)
 {
     int i;
+
+    /* CO_NONE is the "this faction has no commander" marker, not a CO. Without
+     * this, every unused faction's commanderId (0) would make CO_NONE look
+     * "in use" and FindNextUsedCoId would happily scroll the CO screen onto
+     * the blank sCoDefinitions[0] entry. */
+    if (coId == CO_NONE)
+        return FALSE;
 
     for (i = 0; i < 4; ++i) {
         if (gPlaySt.commanderId[i] == coId)
@@ -1008,8 +1067,14 @@ static int FindNextUsedCoId(int coId, int direction)
 }
 #endif
 
+static const char StrCoNone[] = "---";
+
 const char* CoScreen_GetCoName(int coId)
 {
+    /* CO_NONE has no character behind it, so there is no name to look up. */
+    if (coId == CO_NONE)
+        return StrCoNone;
+
     return GetStringFromIndex(GetCharacterData(GetCoDefinition(coId)->charId)->nameTextId);
 }
 
@@ -1132,10 +1197,19 @@ int CoPowers_OnAiPhaseStart(struct Proc* parent)
 {
     int faction = gPlaySt.faction;
     int coId = gPlaySt.commanderId[faction >> 6];
-    const struct CoDefinition* co = GetCoDefinition(coId);
-    int halfStars = CoGauge_Get(faction) / (CO_GAUGE_PER_STAR / 2);
+    const struct CoDefinition* co;
+    int halfStars;
     bool8 isSuper;
     struct CoPowersProc* proc;
+
+    /* A faction with no commander never uses a power. CO_NONE's blank
+     * definition has powerStars/superPowerStars 0, so the gauge test below
+     * would otherwise be satisfied on turn one and every turn after. */
+    if (coId == CO_NONE)
+        return 1;
+
+    co = GetCoDefinition(coId);
+    halfStars = CoGauge_Get(faction) / (CO_GAUGE_PER_STAR / 2);
 
     if (halfStars >= co->superPowerStars * 2)
         isSuper = TRUE;
@@ -2131,6 +2205,14 @@ static void CoScreen_Setup(ProcPtr proc)
 
     sCoScreenNextCo = 0;
 
+    /* Never open on CO_NONE: its sCoDefinitions entry is blank, so the header
+     * would look up character 0 and the pages would draw from empty text ids.
+     * Fall forward to a CO some faction is actually using; if none is (only
+     * possible with every commanderId unset), leave it as-is rather than
+     * looping -- FindNextUsedCoId already returns its input in that case. */
+    if (gCoScreen.coId == CO_NONE)
+        gCoScreen.coId = FirstDisplayableCoId();
+
     gStatScreen.page = CO_SCREEN_PAGE_INFO;
     gStatScreen.pageAmt = CO_SCREEN_PAGE_COUNT;
     gStatScreen.pageSlideKey = 0;
@@ -2245,14 +2327,14 @@ static void CoScreen_KeyListener(ProcPtr proc)
         CoStartSlide(DPAD_RIGHT, proc);
     } else if (keys & DPAD_UP) {
 #ifdef SCROLL_ALL_COS
-        gCoScreen.coId = (gCoScreen.coId + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
+        gCoScreen.coId = StepCoIdSkippingNone(gCoScreen.coId, -1);
 #else
         gCoScreen.coId = FindNextUsedCoId(gCoScreen.coId, -1);
 #endif
         CoStartCommanderFade(-1, proc);
     } else if (keys & DPAD_DOWN) {
 #ifdef SCROLL_ALL_COS
-        gCoScreen.coId = (gCoScreen.coId + 1) % CoScreen_GetCoCount();
+        gCoScreen.coId = StepCoIdSkippingNone(gCoScreen.coId, +1);
 #else
         gCoScreen.coId = FindNextUsedCoId(gCoScreen.coId, +1);
 #endif
