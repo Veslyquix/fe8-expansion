@@ -144,9 +144,8 @@ void GmapRm_StartUpdateDirect(struct ProcGmapRm * proc)
 
     BG_SetPosition(BG_1, 0, 0);
 #if FE8_CUSTOM_CAMPAIGN
-    Decompress(Img_EventGmap, (void *)BG_VRAM);
+    Decompress(Img_EventGmap, gBG1TilemapBuffer);
     ApplyPalettes(Pal_EventGmap, 5, 4);
-    CpuFastCopy((void *)BG_VRAM, gBG1TilemapBuffer, 0x5000);
 #else
     Decompress(Img_EventGmap, (void *)BG_VRAM);
     ApplyPalettes(Pal_EventGmap, 5, 4);

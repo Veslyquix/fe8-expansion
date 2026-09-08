@@ -418,7 +418,9 @@ s8 GmapMuEntry1Exists(void)
 //! FE8U = 0x080BFD28
 void LoadWorldmapMinimap(void)
 {
+#if !FE8_CUSTOM_CAMPAIGN
     ApplyPalette(gPal_WorldmapMinimap_0, 2);
+#endif
     EnablePaletteSync();
 
     Decompress(gImg_WorldmapMinimap_0, (void *)0x06004C00);
