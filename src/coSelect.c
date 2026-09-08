@@ -21,6 +21,7 @@
 #include "bmmap.h"
 #include "bmudisp.h"
 #include "event.h"
+#include "class_preview.h"
 #include "power.h"
 #include "coSelect.h"
 #include "bmio.h" 
@@ -207,29 +208,17 @@ static void CoSelectAnim_Pause(struct AnimBuffer* pAnimBuf)
 
 /* Battle animation for a CO, from the class Co_GetDisplayClassId picks (their
  * real unit's current class if that unit is on the map, else the character's
- * default). Mirrors the engine's own lookup: walk the class's BattleAnimDef
- * list for its SPECIAL_BANIM_WTYPE ("no weapon") entry, falling back to the
- * first entry, and note the stored index is 1-based. */
+ * default). */
  
-// int GetDebuggerDefaultPreviewWeapon(int classId); 
 static int CoSelect_GetBanimId(int coId)
 {
-    const struct ClassData* class = GetClassData(Co_GetDisplayClassId(coId));
-    const struct BattleAnimDef* animDef;
-    int i;
+    int classId = Co_GetDisplayClassId(coId);
 
-    if (class == NULL || class->pBattleAnimDef == NULL)
-        return 0;
-
-    animDef = class->pBattleAnimDef;
-    
-    return animDef[0].index - 1; 
-
-    // for (i = 0; animDef[i].index != 0; i++)
-        // if (animDef[i].wtype == SPECIAL_BANIM_WTYPE)
-            // return animDef[i].index - 1;
-
-    // return animDef[0].index != 0 ? animDef[0].index - 1 : 0;
+    /* Pass a representative weapon rather than nothing: a class's
+     * SPECIAL_BANIM_WTYPE ("unarmed") entry is usually its dodge-only
+     * animation, not the combat animation you want to show off in a picker.
+     * See include/class_preview.h. */
+    return GetClassPreviewBanimId(classId, GetClassPreviewWeapon(classId));
 }
 
 /* Load one carousel slot with one CO's battle animation. Split out of the
@@ -711,7 +700,10 @@ static const struct FaceVramEntry sCoSelectFaceConfig[] = {
 };
 
 extern u16 Pal_084150C0[];
-extern u8 Img_08414940[];
+/* CO select's own OBJ sheet (src/data/const_data_coselect.c), replacing Mode
+ * Select's Img_08414940 -- same 128-tile layout and same OBJ palette 0xB, just
+ * "CO" wording on the label sprites. */
+extern u8 Img_CoSelectObjFrame[];
 extern u8 Tsa_084150E0_Full[];
 
 extern u16 Pal_08415AA0[];
@@ -749,7 +741,7 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     CoSelectBg_ApplyCompressedTsa(CoSelectClawTm, Tsa_08415AC0, 0xf000);
     ApplyPalette(Pal_084150C0, 0x1B);
 
-    Decompress(Img_08414940, (void*)0x6010000);
+    Decompress(Img_CoSelectObjFrame, (void*)0x6010000);
     ApplyPalette(Pal_0841625C, 0x1A);
 
     ResetClassReelSpell();
