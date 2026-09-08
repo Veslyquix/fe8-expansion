@@ -1053,10 +1053,14 @@ static void ModeSelect_Loop_KeyHandler(struct ModeSelectProc* proc)
          * this slot's selection (0 = Normal, 1 = Hard) and Mode Select offers no
          * Easy row -- only two fit on screen -- so it maps onto 1 and 2. Note the
          * FE7 source's other branch passes its *lord* index as this argument,
-         * because in FE7 it chose Lyn/Eliwood/Hector mode; the lord index has no
-         * FE8 meaning here, since the Eirika/Ephraim split is decided in chapter 8
-         * rather than at new-game time. */
-        SaveMenu_SetDifficultyChoice(proc->unk_43[proc->unk_41] + 1, 0);
+         * because in FE7 it chose Lyn/Eliwood/Hector mode.
+         *
+         * The chosen lord goes in the second argument instead, which lands in the
+         * save menu's unk_3d -- a field the vanilla code writes (always 0) but
+         * never reads, and which FE7 used for exactly this. SaveMenuWriteNewGame
+         * picks it up from there as the new game's chapterModeIndex. */
+        SaveMenu_SetDifficultyChoice(
+            proc->unk_43[proc->unk_41] + 1, proc->unk_49[proc->unk_41]);
 
         if (!(proc->unk_42 & 1))
             ModeSelectSpriteDraw_SetSpin(proc->unk_43[proc->unk_41], proc->unk_42 | 2);

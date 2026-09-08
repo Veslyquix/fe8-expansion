@@ -537,7 +537,26 @@ void SaveMenuWriteNewGame(struct SaveMenuProc * proc)
         break;
     }
 
+#if FE8_MODE_SELECT
+    /* Persist Mode Select's lord choice as the new game's chapterModeIndex.
+     *
+     * ModeSelect_Loop_KeyHandler stashes the lord index (0 Eirika, 1 Ephraim,
+     * 2 Lyon) in unk_3d via SaveMenu_SetDifficultyChoice's second argument;
+     * WriteNewGameSave stores its mode argument into gPlaySt.chapterModeIndex,
+     * which is written to the save and read back as gPlayStChapterMode.
+     *
+     * The +1 matters: WriteNewGameSave treats mode 0 as "keep the current
+     * chapterModeIndex" rather than as a value, so the lord indices are shifted
+     * to 1/2/3. That also makes Eirika land on 1, the mode a vanilla new game
+     * already uses, so only Ephraim and Lyon differ from stock behaviour.
+     *
+     * unk_3d is 0 on any path that did not come through Mode Select (it is set
+     * in SaveMenu_InitScreen and by difficultymenu.c), which yields mode 1 --
+     * the vanilla value. */
+    WriteNewGameSave(proc->sus_slot, isDifficult, proc->unk_3d + 1, isTutorial);
+#else
     WriteNewGameSave(proc->sus_slot, isDifficult, 1, isTutorial);
+#endif
 }
 
 //! FE8U = 0x080A9290
