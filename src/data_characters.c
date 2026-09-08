@@ -10,7 +10,7 @@
 CONST_DATA struct CharacterData gCharacterData[] = {
     [CHARACTER_EIRIKA - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_WAKWI,
+        .nameTextId = MSG_NAME_WAKWI,
 #else
         .nameTextId = 0x212,
 #endif
@@ -48,13 +48,13 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_SETH - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE,
+        .nameTextId = MSG_NAME_ISHKODE,
 #else
         .nameTextId = 0x213,
 #endif
         .descTextId = 0x26f,
         .number = CHARACTER_SETH,
-        .defaultClass = CLASS_PALADIN,
+        .defaultClass = CLASS_NOMAD,
         .portraitId = 0x4,
         .affinity = UNIT_AFFIN_WIND,
         .sort_order = 0x3,
@@ -85,7 +85,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_GILLIAM - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK,
+        .nameTextId = MSG_NAME_FREDERICK,
 #else
         .nameTextId = 0x214,
 #endif
@@ -122,7 +122,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_FRANZ - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_FOX,
+        .nameTextId = MSG_NAME_FOX,
 #else
         .nameTextId = 0x215,
 #endif
@@ -193,7 +193,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_VANESSA - 1] = {
 #if FE8_CUSTOM_CAMPAIGN
-        .nameTextId = MSG_CUSTOM_CAMPAIGN_NAME_LIZ,
+        .nameTextId = MSG_NAME_LIZ,
 #else
         .nameTextId = 0x217,
 #endif
@@ -3092,7 +3092,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .growthLck = 25,
     },
     [CHARACTER_ONEILL - 1] = {
+#if FE8_CUSTOM_CAMPAIGN
+        .nameTextId = MSG_NAME_KARGAN,
+#else
         .nameTextId = 0x249,
+#endif 
         .descTextId = 0x2a3,
         .number = CHARACTER_ONEILL,
         .defaultClass = CLASS_FIGHTER,

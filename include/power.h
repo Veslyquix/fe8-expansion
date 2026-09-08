@@ -109,6 +109,7 @@ const char* CoScreen_GetCoName(int coId);
  * Co_GetDisplayClassId returns the CO's real unit's current class if that unit
  * is on the map, else the character's defaultClass. */
 int Co_GetCharId(int coId);
+int Co_GetBriefMsg(int coId);
 int Co_GetDisplayClassId(int coId);
 
 /* CO gauge stars each of a CO's two powers costs. The mini CO gauge

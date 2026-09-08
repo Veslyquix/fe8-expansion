@@ -40302,11 +40302,11 @@ Erase All Save Data[.][X]
 Erase all save data?[.][LF]
 This cannot be undone.[X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_WAKWI
+## MSG_NAME_WAKWI
 Wakwi[.][X]
 
-## MSG_CO_WAKWI_NAME
-Wakwi[.][X]
+## MSG_CO_WAKWI_BRIEF
+Criticals[.][X]
 
 ## MSG_CO_WAKWI_TITLE
 The Unyielding Blade[.][X]
@@ -40333,11 +40333,11 @@ Deadly Edge[.][X]
 Wakwi's units gain +100[LF]
 critical hit rate.[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE
+## MSG_NAME_ISHKODE
 Ishkode[.][X]
 
-## MSG_CO_ISHKODE_NAME
-Ishkode[.][X]
+## MSG_CO_ISHKODE_BRIEF
+Ranged[X]
 
 ## MSG_CO_ISHKODE_TITLE
 The Hunter's Eye[.][X]
@@ -40365,13 +40365,16 @@ Bow wielders gain[LF]
 +2 range and 40% power.[.][X]
 
 
-## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
+## MSG_NAME_FREDERICK
 Frederick[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_FOX
+## MSG_CO_FRANCIS_BRIEF
+Armor[.][X]
+
+## MSG_NAME_FOX
 Fox[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_LIZ
+## MSG_NAME_LIZ
 Liz[.][X]
 
 ## MSG_TERRAIN_CAMP
@@ -40389,8 +40392,6 @@ Super CO Power[X]
 ## MSG_CO_LABEL_AFFINITY
 Class Affinity[X]
 
-## MSG_CO_FRANCIS_NAME
-Francis[.][X]
 
 ## MSG_CO_FRANCIS_TITLE
 The Steadfast Commander[.][X]
@@ -40415,8 +40416,11 @@ All of Francis's units are[LF]
 fully healed and deal[LF]
 more damage.[.][X]
 
-## MSG_CO_KARGAN_NAME
+## MSG_NAME_KARGAN
 Kargan[.][X]
+
+## MSG_CO_KARGAN_BRIEF
+Axes[X]
 
 ## MSG_CO_KARGAN_TITLE
 The Reckless Brawler[X]
@@ -40520,6 +40524,9 @@ Neutral Bases[.][X]
 
 ## MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION
 Nahara Valley[.][X]
+
+## MSG_PROLOGUE_TITLE
+The First Stand[.][X]
 
 ## MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING
 [OpenMidLeft][LoadFace][FID_Wakwi]

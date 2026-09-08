@@ -94,6 +94,15 @@ struct CoSelectTextState
  * handled by sliding the window, not by adding slots. */
 #define CO_SELECT_SLOTS 2
 
+/* Carousel positions, which is a separate thing from the buffer count above.
+ * The positions are spaced 0x100 / CO_SELECT_POSITIONS apart, so this alone
+ * decides the shape of the ring: three keeps the original layout (the selected
+ * CO at the front, a second one visible up beside "Change", and a third slot
+ * off the left of the screen). Only two positions are ever on screen at once,
+ * which is what lets two buffers cover three positions -- see
+ * CoSelect_HandOffBuffer. */
+#define CO_SELECT_POSITIONS 3
+
 /* Chapter title graphics, in the OBJ VRAM freed by the third animation slot.
  * PutChapterTitleGfx takes a tile index and writes 0x800 bytes (32x2 tiles) to
  * VRAM + chr * 0x20, so 0xBC0 lands at 0x06017800 and runs to 0x06018000, the
@@ -110,13 +119,53 @@ struct CoSelectTextState
  * CHAPTER_TITLE_TEXT_WIDTH, src/chapter_title.c), so starting it at x=88 runs
  * past the right edge of a 240px screen; x=24 is what bonusclaim.c uses to
  * centre the same block. Adjust to taste -- this is the only place to change. */
-#define COSELECT_CHAPTER_TITLE_X 88
-#define COSELECT_CHAPTER_TITLE_Y 16
+#define COSELECT_CHAPTER_TITLE_X 64
+#define COSELECT_CHAPTER_TITLE_Y 25
 
-/* Frame of the 30-frame rotation at which a deferred slot reload happens --
- * far enough in that the outgoing animation has left the screen, early enough
- * that the incoming one is ready before it rotates back into view. */
-#define COSELECT_SLOT_RELOAD_FRAME 15
+/* OBJ palette for the chapter title. 0xF is free only because this screen now
+ * runs two animations rather than three -- they take 0xD onwards
+ * (animBuf->oam2Pal = buffer + 0xD). Not 9: LoadUiSpinningArrowGfx claims that
+ * one for the arrows (ApplyPalette(..., palId + 0x10), src/spinning_arrow.c)
+ * and runs after this in CoSelect_Init, so a title there would have had its
+ * palette overwritten. The rest are spoken for: 0xA/0xB frame art, 0xC faces. */
+#define COSELECT_CHAPTER_TITLE_PAL 0xF
+
+/* A second copy of the system icon sheet, in the OBJ VRAM freed by the third
+ * animation buffer.
+ *
+ * LoadObjUIGfx (src/bm.c) normally puts this sheet at 0x06010000, where nearly
+ * everything expects to find it -- but CoSelect_Init decompresses its own frame
+ * sheet over that address immediately afterwards, so by the time anything
+ * draws, the icons are gone. Loading it again here keeps them available without
+ * disturbing the frame.
+ *
+ * Copy2dChr lays the sheet into the 32-tile-wide OBJ grid four rows deep, so
+ * this occupies 0x06016000-0x06017000, clear of the chapter title above it.
+ * 0x06016000 is OBJ tile 0x300, and R: Info is tile 0x0B into the sheet.
+ * Palettes are LoadObjUIGfx's own gPal_MiscUiGraphics, at OBJ 0/1. */
+#define COSELECT_SYS_ICON_ADDR ((void*)0x06016000)
+#define COSELECT_SYS_ICON_CHR 0x300
+/* "R: Info" is two sprites side by side, a 32x16 followed by an 8x16 -- 40px
+ * wide in total. In the 32-tile-wide 2D OBJ grid the 32x16 takes tiles
+ * +0x00..+0x03 of its row (and +0x20..+0x23 of the next), so the 8x16 that
+ * follows it starts four tiles further along. */
+#define COSELECT_SYS_ICON_RINFO_CHR (COSELECT_SYS_ICON_CHR + 0x0B)
+#define COSELECT_SYS_ICON_RINFO_CHR2 (COSELECT_SYS_ICON_RINFO_CHR + 0x04)
+#define COSELECT_SYS_ICON_PAL 0
+#define COSELECT_SYS_ICON_X 184
+#define COSELECT_SYS_ICON_Y 57
+
+/* Frame of the 30-frame rotation at which the buffer hand-off happens -- far
+ * enough in that the outgoing animation has left the screen, early enough that
+ * the incoming one is ready before it rotates into view.
+ *
+ * Separate per direction because the two are not symmetric: rotating left, the
+ * buffer being reused is the one that was at the front and is travelling to the
+ * back, so the swap has to wait until it is gone. Rotating right, it is the one
+ * coming from the back to the front, so it wants loading as early as the
+ * outgoing position allows. Tune independently. */
+#define COSELECT_SLOT_RELOAD_FRAME_LEFT 15
+#define COSELECT_SLOT_RELOAD_FRAME_RIGHT 6
 
 #define COSELECT_IMGSHEET_SIZE 0x2000
 #define COSELECT_OAM_SIZE      0x5800
@@ -157,6 +206,11 @@ struct CoSelectScratch
     u8 frameData[CO_SELECT_SLOTS][COSELECT_FRAMEDATA_SIZE];
     u8 palette[CO_SELECT_SLOTS][COSELECT_PALETTE_SIZE];
 
+    /* Which animation buffer each carousel position is currently using, or -1
+     * for the position that has none (the one off-screen). Lives here rather
+     * than on the proc so the sprite-draw proc can read it while drawing. */
+    s8 posBuf[CO_SELECT_POSITIONS];
+
     struct AnimBuffer animBuf[CO_SELECT_SLOTS];
     struct AnimMagicFxBuffer magicFx[CO_SELECT_SLOTS];
     u16 paletteCache[CO_SELECT_SLOTS * 15]; // gUnk_0201E9F4 in the FE7 source
@@ -187,15 +241,15 @@ struct CoSelectProc
     /* 38 */ void* spriteProc; // ProcPtr; ProcScr_CoSelectSpriteDraw instance
     /* 3C */ struct FaceProc* faceProc;
     /* 40 */ u8 faction; // faction whose CO is being set (gEventSlots[EVT_SLOT_3])
-    /* 41 */ u8 curSlot; // carousel slot at the front, holding the selected CO
+    /* 41 */ u8 curSlot; // carousel position at the front, holding the selected CO
     /* 42 */ u8 flags; // bit0: entry flag, always set (see StartCoSelect)
     /* 43 */ u8 coCount; // number of enabled COs in coList
     /* 44 */ u8 coList[CO_COUNT]; // enabled CO ids, in ascending id order
-    /* 49 */ u8 slotCo[CO_SELECT_SLOTS]; // CO id currently loaded in each anim slot
-    /* 4C */ u8 slotCount; // live anim slots, min(coCount, CO_SELECT_SLOTS)
+    /* 49 */ u8 bufCo[CO_SELECT_SLOTS]; // CO id currently loaded in each anim buffer
+    /* 4C */ u8 posCount; // live carousel positions, min(coCount, CO_SELECT_POSITIONS)
     /* 4D */ u8 coIndex; // coList index of the selected CO
     /* 4E */ u8 rebuilding; // set while re-entering from the CO info page
-    /* 4F */ u8 syncPending; // reload a slot once the rotation has hidden it
+    /* 4F */ u8 syncPending; // hand a buffer over once the rotation has hidden it
     /* 50 */ s32 idleTimer; // frames since the last input, drives the idle anim replay
 };
 
@@ -297,12 +351,26 @@ static void InitCoSelectAnimSlot(int i, int coId)
     }
 }
 
+/* Give the two on-screen positions a buffer each, load them, and mark the
+ * remaining position (the off-screen one) as having none. */
 static void InitCoSelectAnims(struct CoSelectProc* proc)
 {
-    int i;
+    int pos;
+    int buf = 0;
 
-    for (i = 0; i < proc->slotCount; i++)
-        InitCoSelectAnimSlot(i, proc->slotCo[i]);
+    for (pos = 0; pos < CO_SELECT_POSITIONS; pos++)
+        sCoSelectScratch.posBuf[pos] = -1;
+
+    for (pos = 0; pos < proc->posCount && buf < CO_SELECT_SLOTS; pos++)
+    {
+        int coId = proc->coList[(proc->coIndex + pos) % proc->coCount];
+        int slot = (proc->curSlot + pos) % proc->posCount;
+
+        sCoSelectScratch.posBuf[slot] = buf;
+        proc->bufCo[buf] = coId;
+        InitCoSelectAnimSlot(buf, coId);
+        buf++;
+    }
 }
 
 // FE7U: 0x080A75CC
@@ -315,7 +383,7 @@ static void EndCoSelectAnims(s32 count)
 }
 
 const char StrCoSelect_Commander[] = "Commander:";
-const char StrCoSelect_Class[] = "Class:";
+const char StrCoSelect_Affinity[] = "Affinity:";
 
 // FE7U: 0x080A75F0
 static void PutCoSelectLabelText(void)
@@ -324,7 +392,7 @@ static void PutCoSelectLabelText(void)
     ClearText(&sCoSelectScratch.text.text[5]);
 
     PutDrawText(&sCoSelectScratch.text.text[4], CoSelectClawTm + TILEMAP_INDEX(14, 6), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrCoSelect_Commander);
-    PutDrawText(&sCoSelectScratch.text.text[5], CoSelectClawTm + TILEMAP_INDEX(14, 10), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrCoSelect_Class);
+    PutDrawText(&sCoSelectScratch.text.text[5], CoSelectClawTm + TILEMAP_INDEX(14, 10), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrCoSelect_Affinity);
 
     BG_EnableSyncByMask(BG1_SYNC_BIT);
 }
@@ -334,7 +402,8 @@ static void PutCoSelectLabelText(void)
 static void PutCoSelectCharacterText(s32 coId)
 {
     const struct CharacterData* character = GetCharacterData(Co_GetCharId(coId));
-    const struct ClassData* class = GetClassData(Co_GetDisplayClassId(coId));
+    
+    int briefMsg = Co_GetBriefMsg(coId);
 
     ClearText(&sCoSelectScratch.text.text[2]);
     ClearText(&sCoSelectScratch.text.text[3]);
@@ -342,9 +411,9 @@ static void PutCoSelectCharacterText(s32 coId)
     PutDrawText(&sCoSelectScratch.text.text[2], CoSelectClawTm + TILEMAP_INDEX(14, 8),
         TEXT_COLOR_SYSTEM_BLUE, 0, 0, GetStringFromIndex(character->nameTextId));
 
-    if (class != NULL)
-        PutDrawText(&sCoSelectScratch.text.text[3], CoSelectClawTm + TILEMAP_INDEX(19, 10),
-            TEXT_COLOR_SYSTEM_BLUE, 0, 0, GetStringFromIndex(class->nameTextId));
+    if (briefMsg)
+        PutDrawText(&sCoSelectScratch.text.text[3], CoSelectClawTm + TILEMAP_INDEX(14, 12),
+            TEXT_COLOR_SYSTEM_BLUE, 0, 0, GetStringFromIndex(briefMsg));
 
     BG_EnableSyncByMask(BG1_SYNC_BIT);
 }
@@ -509,15 +578,19 @@ static void CoSelectPalette_CyclePressStart(s32 timer)
  * mode, which is this engine's default (obj1dMap stays 0; see src/aw2_gfx.c's
  * note): a 32x16 sprite then takes four tiles from one row and four from the
  * next row of the 32-tile-wide OBJ grid, which is exactly how
- * PutChapterTitleGfx lays the 32x2 block out. */
+ * PutChapterTitleGfx lays the 32x2 block out.
+ *
+ * Layer 0, not 2: BG1 (the claw frame this sits inside) is priority 0 on this
+ * screen, and an OBJ only draws in front of a BG of equal priority -- at
+ * layer 2 the title was hidden behind the frame. */
 static const u16 Sprite_CoSelect_ChapterTitle[] = {
     6,
-    OAM0_SHAPE_32x16, OAM1_SIZE_32x16,                OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x00) + OAM2_LAYER(2),
-    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(32),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x04) + OAM2_LAYER(2),
-    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(64),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x08) + OAM2_LAYER(2),
-    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(96),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x0C) + OAM2_LAYER(2),
-    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(128),  OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x10) + OAM2_LAYER(2),
-    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(160),  OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x14) + OAM2_LAYER(2),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16,                OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x00) + OAM2_LAYER(0),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(32),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x04) + OAM2_LAYER(0),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(64),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x08) + OAM2_LAYER(0),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(96),   OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x0C) + OAM2_LAYER(0),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(128),  OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x10) + OAM2_LAYER(0),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(160),  OAM2_CHR(COSELECT_CHAPTER_TITLE_OBJ_CHR + 0x14) + OAM2_LAYER(0),
 };
 
 /* Load the current chapter's title into the OBJ VRAM freed by the third
@@ -530,11 +603,34 @@ static const u16 Sprite_CoSelect_ChapterTitle[] = {
  * BonusClaim's use of the same three calls (src/bonusclaim.c). */
 static void CoSelect_LoadChapterTitle(void)
 {
-    ApplyChapterTitlePal(1, 0x18);
-    ApplyChapterTitlePal(0, 0x19);
+    ApplyChapterTitlePal(0, 0x10 + COSELECT_CHAPTER_TITLE_PAL);
     EnablePaletteSync();
 
     PutChapterTitleGfx(COSELECT_CHAPTER_TITLE_CHR, GetChapterTitleExtra(&gPlaySt));
+}
+
+/* Reload the system icon sheet somewhere this screen won't overwrite it --
+ * same source and layout as LoadObjUIGfx (src/bm.c), just a different
+ * destination. The palettes are the ones LoadObjUIGfx already applied. */
+static void CoSelect_LoadSystemIcons(void)
+{
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    /* Declared locally, as src/bm.c's LoadObjUIGfx does -- it has no header. */
+    extern u8 gGfx_ObtainableItemIcons[];
+#endif
+
+#if FE8_DISPLAY_OBTAINABLE_ITEM
+    /* The obtainable-item sheet is 24 tiles wide, not the vanilla 18 -- keep
+     * Copy2dChr's row width matching the source, as LoadObjUIGfx does. */
+    Decompress(gGfx_ObtainableItemIcons, gGenericBuffer);
+    Copy2dChr(gGenericBuffer, COSELECT_SYS_ICON_ADDR, 0x18, 4);
+#else
+    Decompress(gGfx_MiscUiGraphics, gGenericBuffer);
+    Copy2dChr(gGenericBuffer, COSELECT_SYS_ICON_ADDR, 0x12, 4);
+#endif
+
+    ApplyPalettes(gPal_MiscUiGraphics, 0x10, 2);
+    EnablePaletteSync();
 }
 
 // FE7U: 0x080A79A4
@@ -544,14 +640,22 @@ static void CoSelectSpriteDraw_Loop(struct CoSelectSpriteDrawProc* proc)
 
     if (proc->glowing != 0)
     {
+        /* i is a carousel position, not a buffer: the position with no buffer
+         * (the one off-screen) simply isn't drawn. Palettes are per-buffer, so
+         * the glow is applied by buffer index while the placement uses the
+         * position's own angle. */
         for (i = 0; i < proc->slotCount; i++)
         {
             s32 angle = (proc->angle >> 4) + i * proc->angleStep + 40;
             s32 x = (proc->centerX << 12) + SIN(angle) * 70;
             s32 y = (((proc->centerY << 12) + COS(angle) * 28) >> 12) - 16;
+            int buf = sCoSelectScratch.posBuf[i];
 
-            SetMainMiniAnimPos(CoSelectGetAnimBuf(i), x >> 12, y);
-            CoSelectPalette_ApplyGlow(i, (proc->angle >> 4) + i * proc->angleStep);
+            if (buf < 0)
+                continue;
+
+            SetMainMiniAnimPos(CoSelectGetAnimBuf(buf), x >> 12, y);
+            CoSelectPalette_ApplyGlow(buf, (proc->angle >> 4) + i * proc->angleStep);
         }
     }
 
@@ -586,7 +690,13 @@ static void CoSelectSpriteDraw_Loop(struct CoSelectSpriteDrawProc* proc)
     PutSpriteExt(0xd, 40, 64, Sprite_CoSelect_Change, OAM2_PAL(11));
 
     PutSpriteExt(0xd, COSELECT_CHAPTER_TITLE_X, COSELECT_CHAPTER_TITLE_Y,
-        Sprite_CoSelect_ChapterTitle, OAM2_PAL(9));
+        Sprite_CoSelect_ChapterTitle, OAM2_PAL(COSELECT_CHAPTER_TITLE_PAL));
+
+    /* "R: Info" -- R opens the highlighted CO's info page. */
+    PutSprite(0xd, COSELECT_SYS_ICON_X, COSELECT_SYS_ICON_Y, gObject_32x16,
+        OAM2_CHR(COSELECT_SYS_ICON_RINFO_CHR) + OAM2_PAL(COSELECT_SYS_ICON_PAL) + OAM2_LAYER(0));
+    PutSprite(0xd, COSELECT_SYS_ICON_X + 32, COSELECT_SYS_ICON_Y, gObject_8x16,
+        OAM2_CHR(COSELECT_SYS_ICON_RINFO_CHR2) + OAM2_PAL(COSELECT_SYS_ICON_PAL) + OAM2_LAYER(0));
 
     if ((proc->blinkTimer >> 2 & 1) == 0)
         PutSpriteExt(0xd, 8, 130, Sprite_CoSelect_PressStart, OAM2_PAL(11));
@@ -808,6 +918,7 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     ApplyPalette(Pal_0841625C, 0x1A);
 
     CoSelect_LoadChapterTitle();
+    CoSelect_LoadSystemIcons();
 
     ResetClassReelSpell();
     NewEfxAnimeDrvProc();
@@ -821,7 +932,7 @@ static void CoSelect_Init(struct CoSelectProc* proc)
     if (!proc->rebuilding)
     {
         proc->curSlot = 0;
-        proc->slotCount = 0;
+        proc->posCount = 0;
         proc->coCount = 0;
 
         /* Enabled COs come from gEventSlot[1] as a bitfield (bit N = CO id N), with
@@ -855,22 +966,19 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 
         proc->faction = gEventSlots[EVT_SLOT_3];
 
-        /* The anim slots are a window over coList: as many as there are COs, capped
-         * at CO_SELECT_SLOTS. With more COs than slots the window slides (see
-         * CoSelect_SyncSlots) instead of the carousel growing. */
-        proc->slotCount = proc->coCount < CO_SELECT_SLOTS ? proc->coCount : CO_SELECT_SLOTS;
+        /* Carousel positions, capped at CO_SELECT_POSITIONS -- this is what sets
+         * the ring's spacing. The animation buffers are a separate, smaller
+         * budget handed around between positions (see CoSelect_HandOffBuffer). */
+        proc->posCount = proc->coCount < CO_SELECT_POSITIONS
+            ? proc->coCount
+            : CO_SELECT_POSITIONS;
         proc->coIndex = 0;
-
-        /* curSlot 0 holds coList[0], each slot after it the next CO along -- the
-         * same invariant CoSelect_SyncSlots maintains from here on. */
-        for (i = 0; i < proc->slotCount; i++)
-            proc->slotCo[i] = proc->coList[i % proc->coCount];
     }
 
-    CoSelectSpriteDraw_SetSlotCount(proc->slotCount);
+    CoSelectSpriteDraw_SetSlotCount(proc->posCount);
     InitCoSelectAnims(proc);
 
-    for (i = 0; i < proc->slotCount; i++)
+    for (i = 0; i < CO_SELECT_SLOTS; i++)
         CoSelectPalette_CacheUndimmed(i);
 
     CoSelectSpriteDraw_SetGlowing(true);
@@ -883,12 +991,12 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 
     InitTextFont(&sCoSelectScratch.text.font, (void*)0x600E000, 0x100, 0xe);
 
-    InitText(&sCoSelectScratch.text.text[0], 5);
+    InitText(&sCoSelectScratch.text.text[0], 8);
     InitText(&sCoSelectScratch.text.text[1], 9);
-    InitText(&sCoSelectScratch.text.text[2], 5);
-    InitText(&sCoSelectScratch.text.text[3], 4);
+    InitText(&sCoSelectScratch.text.text[2], 8);
+    InitText(&sCoSelectScratch.text.text[3], 8);
     InitText(&sCoSelectScratch.text.text[4], 10);
-    InitText(&sCoSelectScratch.text.text[5], 5);
+    InitText(&sCoSelectScratch.text.text[5], 8);
 
     /* Resting angle for whichever slot is at the front. This has to use the
      * same formula CoSelect_RotateLeft/Right target and CoSelect_Loop_Rotate
@@ -963,69 +1071,95 @@ static void CoSelect_StopSpinAndResetTimer(struct CoSelectProc* proc)
 {
     s32 i;
 
-    for (i = 0; i < proc->slotCount; i++)
+    for (i = 0; i < CO_SELECT_SLOTS; i++)
         CoSelectAnim_Pause(CoSelectGetAnimBuf(i));
 
     proc->idleTimer = 0;
 }
 
-/* Keep every carousel slot holding the right CO for where it currently sits.
- *
- * The invariant: the slot at the front (curSlot) holds coList[coIndex], and
- * each slot one step further around the carousel holds the next CO in the
- * list. Written out, slot s is `offset` steps around from the front, so it
- * wants coList[(coIndex + offset) % coCount].
- *
- * Rotating changes curSlot and coIndex together by the same +-1, which leaves
- * every slot's wanted CO unchanged except the single one whose offset wraps
- * around the end of the carousel -- so this reloads exactly one animation per
- * press when there are more COs than slots, and none at all when the whole CO
- * list fits on the carousel. Callers just rotate and then call this; there is
- * no separate window to keep in step.
- *
- * (The previous version tracked a window base and only reloaded when curSlot
- * wrapped, which meant most presses just moved between the three already-loaded
- * COs instead of advancing through the list -- hence the nonsense orderings.) */
-static void CoSelect_SyncSlots(struct CoSelectProc* proc)
+/* The animation buffer showing the selected CO, i.e. the one at the front
+ * position. curSlot is a carousel position, not a buffer index, so it has to
+ * go through the position->buffer map. Never NULL in practice: the front
+ * position always has a buffer. */
+static struct AnimBuffer* CoSelectGetFrontAnimBuf(struct CoSelectProc* proc)
 {
-    int s;
+    int buf = sCoSelectScratch.posBuf[proc->curSlot];
 
-    for (s = 0; s < proc->slotCount; s++)
-    {
-        int offset = (s - proc->curSlot + proc->slotCount) % proc->slotCount;
-        int coId = proc->coList[(proc->coIndex + offset) % proc->coCount];
-
-        if (proc->slotCo[s] == coId)
-            continue;
-
-        EndEkrUnitMainMini(CoSelectGetAnimBuf(s));
-        proc->slotCo[s] = coId;
-        InitCoSelectAnimSlot(s, coId);
-        CoSelectPalette_CacheUndimmed(s);
-    }
+    return CoSelectGetAnimBuf(buf < 0 ? 0 : buf);
 }
 
-/* Advance the selection by one CO and rotate the carousel one slot to match.
+/* The CO that belongs at carousel position p: the front position shows the
+ * selected CO, and each position further round the ring shows the next CO in
+ * the list. */
+static int CoSelect_CoForPosition(struct CoSelectProc* proc, int pos)
+{
+    int offset = (pos - proc->curSlot + proc->posCount) % proc->posCount;
+
+    return proc->coList[(proc->coIndex + offset) % proc->coCount];
+}
+
+/* Load an animation buffer with a CO, replacing whatever it held. */
+static void CoSelect_LoadBuffer(struct CoSelectProc* proc, int buf, int coId)
+{
+    if (proc->bufCo[buf] == coId)
+        return;
+
+    EndEkrUnitMainMini(CoSelectGetAnimBuf(buf));
+    proc->bufCo[buf] = coId;
+    InitCoSelectAnimSlot(buf, coId);
+    CoSelectPalette_CacheUndimmed(buf);
+}
+
+/* Move the buffer from the position that has just rotated off-screen onto the
+ * position rotating on, and load the CO that position needs.
+ *
+ * There are three carousel positions but only two animation buffers, which
+ * works because only two positions are ever on screen at once. Whichever
+ * direction the ring turns, exactly one position leaves the screen and one
+ * arrives, so the leaving position's buffer is handed straight to the arriving
+ * one. Relative to the already-updated curSlot the leaving position is always
+ * the one behind the front; the arriving one is the new front when rotating
+ * right, or the far side of the ring when rotating left.
+ *
+ * Only needed when there are more positions than buffers -- with two or fewer
+ * COs every position keeps its own buffer permanently. */
+static void CoSelect_HandOffBuffer(struct CoSelectProc* proc, int dir)
+{
+    int leaving;
+    int arriving;
+    int buf;
+
+    if (proc->posCount <= CO_SELECT_SLOTS)
+        return;
+
+    leaving  = (proc->curSlot + proc->posCount - 1) % proc->posCount;
+    arriving = dir > 0 ? (proc->curSlot + 1) % proc->posCount : proc->curSlot;
+
+    buf = sCoSelectScratch.posBuf[leaving];
+
+    if (buf < 0)
+        return;
+
+    sCoSelectScratch.posBuf[leaving] = -1;
+    sCoSelectScratch.posBuf[arriving] = buf;
+
+    CoSelect_LoadBuffer(proc, buf, CoSelect_CoForPosition(proc, arriving));
+}
+
+/* Advance the selection by one CO and rotate the carousel one position.
  * dir is +1 for "left" (the next CO in the list) and -1 for "right".
  *
- * Timing of the reload matters, and it is not symmetric. CoSelect_SyncSlots
- * changes exactly one slot: the one whose offset wraps. Going right (-1) that
- * is the slot at the back, which the rotation then brings into view, so it has
- * to be reloaded *before* the spin starts -- as it is here. Going left (+1) it
- * is the slot currently at the front, the one being looked at: reloading that
- * immediately swapped its animation in place before it had rotated away (a
- * knight becoming a paladin on the spot). That case is deferred to the end of
- * the rotation, by which point the slot has travelled round to the hidden back
- * position and the swap happens out of sight. */
+ * The buffer hand-off is deliberately not done here: at this instant both
+ * visible positions are still on screen, so swapping either one's animation
+ * now would change a CO in place in front of the player. It waits until
+ * COSELECT_SLOT_RELOAD_FRAME_LEFT/_RIGHT, by which point the leaving position
+ * has gone. */
 static void CoSelect_Step(struct CoSelectProc* proc, int dir)
 {
     proc->coIndex = (proc->coIndex + dir + proc->coCount) % proc->coCount;
-    proc->curSlot = (proc->curSlot + dir + proc->slotCount) % proc->slotCount;
+    proc->curSlot = (proc->curSlot + dir + proc->posCount) % proc->posCount;
 
-    if (dir > 0)
-        proc->syncPending = TRUE;
-    else
-        CoSelect_SyncSlots(proc);
+    proc->syncPending = TRUE;
 }
 
 // FE7U: 0x080A817C
@@ -1066,8 +1200,8 @@ static void CoSelect_Loop_KeyHandler(struct CoSelectProc* proc)
         PlaySoundEffect(0x6a);
         Proc_Goto(proc, 3);
 
-        CoSelectGetAnimBuf(proc->curSlot)->roundType = 0;
-        RestartMainMiniAnim(CoSelectGetAnimBuf(proc->curSlot));
+        CoSelectGetFrontAnimBuf(proc)->roundType = 0;
+        RestartMainMiniAnim(CoSelectGetFrontAnimBuf(proc));
 
         /* Commit the highlighted CO to the faction the caller asked for. */
         SetFactionCo(proc->faction, proc->coList[proc->coIndex]);
@@ -1080,14 +1214,14 @@ static void CoSelect_Loop_KeyHandler(struct CoSelectProc* proc)
 
     if ((proc->idleTimer & 0x1ff) == 0x20)
     {
-        CoSelectGetAnimBuf(proc->curSlot)->roundType = 2;
-        RestartMainMiniAnim(CoSelectGetAnimBuf(proc->curSlot));
+        CoSelectGetFrontAnimBuf(proc)->roundType = 2;
+        RestartMainMiniAnim(CoSelectGetFrontAnimBuf(proc));
     }
 
     if ((proc->idleTimer & 0x1ff) != 0x80)
         return;
 
-    CoSelectAnim_Pause(CoSelectGetAnimBuf(proc->curSlot));
+    CoSelectAnim_Pause(CoSelectGetFrontAnimBuf(proc));
 }
 
 // FE7U: 0x080A8424
@@ -1141,13 +1275,16 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
     if (proc->rotTimer == 20)
         PutCoSelectCharacterText(proc->coList[proc->coIndex]);
 
-    /* Deferred slot reload -- see CoSelect_Step. By this point the slot being
-     * swapped has rotated off-screen, and it still has half the rotation left
-     * to be loaded before it comes back into view. */
-    if (proc->rotTimer == COSELECT_SLOT_RELOAD_FRAME && proc->syncPending)
+    /* Buffer hand-off -- see CoSelect_HandOffBuffer. By this point the leaving
+     * position has rotated off-screen, and the arriving one still has the rest
+     * of the rotation before it is visible. rotDir is +1 rotating left. */
+    if (proc->syncPending &&
+        proc->rotTimer == (proc->rotDir > 0
+            ? COSELECT_SLOT_RELOAD_FRAME_LEFT
+            : COSELECT_SLOT_RELOAD_FRAME_RIGHT))
     {
         proc->syncPending = FALSE;
-        CoSelect_SyncSlots(proc);
+        CoSelect_HandOffBuffer(proc, proc->rotDir);
     }
 
     if (proc->rotTimer == 30)
@@ -1155,12 +1292,12 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
         angle = proc->angleTarget & 0xfff;
         proc->angle = proc->angleTarget & 0xfff;
 
-        /* Safety net: if the frame above was somehow missed, never leave a
-         * slot holding the wrong CO once the carousel has settled. */
+        /* Safety net: if the frame above was somehow missed, never leave the
+         * carousel settled with a position holding the wrong CO. */
         if (proc->syncPending)
         {
             proc->syncPending = FALSE;
-            CoSelect_SyncSlots(proc);
+            CoSelect_HandOffBuffer(proc, proc->rotDir);
         }
 
         Proc_Break(proc);
@@ -1182,7 +1319,7 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
 // FE7U: 0x080A8624
 static void CoSelect_End(struct CoSelectProc* proc)
 {
-    EndCoSelectAnims(proc->slotCount);
+    EndCoSelectAnims(CO_SELECT_SLOTS);
     EndEfxAnimeDrvProc();
     EndFaceById(0);
 
@@ -1243,7 +1380,7 @@ static void RefreshTrapsAndTerrain(void)
  * rather than restored. */
 static void CoSelect_TeardownForCoInfo(struct CoSelectProc* proc)
 {
-    EndCoSelectAnims(proc->slotCount);
+    EndCoSelectAnims(CO_SELECT_SLOTS);
     EndEfxAnimeDrvProc();
     EndFaceById(0);
     EndUiSpinningArrows();

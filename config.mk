@@ -208,7 +208,7 @@ TITLE_256_COLORS ?= 1
 # Draws the actual chapter title text instead of a pre-rendered graphic
 # banner, so any chapter name reads correctly without needing a hand-drawn
 # banner per chapter. 
-# Note: vanilla text names for chapters are like this: TXT00 L00
+# Note: vanilla text names for chapters are like this: TXT00 L00 gChapterDataTable in src/data/chapter_settings.h 
 TEXT_CHAPTER_NAMES ?= 1
 
 # --- Optional Credits ----------------------------------------------------------

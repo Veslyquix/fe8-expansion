@@ -569,6 +569,7 @@ struct CoDefinition {
      * ->defaultClass when the unit isn't deployed. */
     u16 charId;
     u16 titleMsg; // shown on the info page (e.g. their epithet)
+    u16 briefMsg; 
     u16 infoMsg; // single texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
     u16 powerNameMsg;
     u16 powerDescMsg; // single texts.txt entry, [LF]-separated
@@ -684,6 +685,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     [CO_WAKWI] = {
         .charId = CHARACTER_EIRIKA, // Wakwi (see src/data_characters.c)
         .titleMsg = MSG_CO_WAKWI_TITLE,
+        .briefMsg = MSG_CO_WAKWI_BRIEF,
         .infoMsg = MSG_CO_WAKWI_INFO,
         .powerNameMsg = MSG_CO_WAKWI_POWER_NAME,
         .powerDescMsg = MSG_CO_WAKWI_POWER_DESC,
@@ -699,6 +701,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     [CO_ISHKODE] = {
         .charId = CHARACTER_SETH, // Ishkode (see src/data_characters.c)
         .titleMsg = MSG_CO_ISHKODE_TITLE,
+        .briefMsg = MSG_CO_ISHKODE_BRIEF,
         .infoMsg = MSG_CO_ISHKODE_INFO,
         .powerNameMsg = MSG_CO_ISHKODE_POWER_NAME,
         .powerDescMsg = MSG_CO_ISHKODE_POWER_DESC,
@@ -714,6 +717,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     [CO_FRANCIS] = {
         .charId = CHARACTER_GILLIAM,
         .titleMsg = MSG_CO_FRANCIS_TITLE,
+        .briefMsg = MSG_CO_FRANCIS_BRIEF,
         .infoMsg = MSG_CO_FRANCIS_INFO,
         .powerNameMsg = MSG_CO_FRANCIS_POWER_NAME,
         .powerDescMsg = MSG_CO_FRANCIS_POWER_DESC,
@@ -729,6 +733,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
     [CO_KARGAN] = {
         .charId = CHARACTER_ONEILL, // Kargan replaces O'Neill for now (portrait 0x30)
         .titleMsg = MSG_CO_KARGAN_TITLE,
+        .briefMsg = MSG_CO_KARGAN_BRIEF,
         .infoMsg = MSG_CO_KARGAN_INFO,
         .powerNameMsg = MSG_CO_KARGAN_POWER_NAME,
         .powerDescMsg = MSG_CO_KARGAN_POWER_DESC,
@@ -1085,6 +1090,10 @@ int Co_GetCharId(int coId)
     return GetCoDefinition(coId)->charId;
 }
 
+int Co_GetBriefMsg(int coId) 
+{
+    return GetCoDefinition(coId)->briefMsg; 
+}
 /* Class to animate for a CO in the select carousel: the class their real unit
  * is currently using if that unit is on the map (so a promoted or reclassed CO
  * animates as what they actually are), otherwise the character's default. */
