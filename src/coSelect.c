@@ -169,6 +169,7 @@ struct CoSelectProc
     /* 4C */ u8 slotCount; // live anim slots, min(coCount, CO_SELECT_SLOTS)
     /* 4D */ u8 coIndex; // coList index of the selected CO
     /* 4E */ u8 rebuilding; // set while re-entering from the CO info page
+    /* 4F */ u8 syncPending; // reload a slot once the rotation has hidden it
     /* 50 */ s32 idleTimer; // frames since the last input, drives the idle anim replay
 };
 
@@ -845,6 +846,7 @@ static void CoSelect_Init(struct CoSelectProc* proc)
 
     proc->rotTimer = 0;
     proc->idleTimer = 0;
+    proc->syncPending = FALSE;
 
     SetWinEnable(1, 0, 0);
     SetWin0Layers(1, 1, 1, 1, 1);
@@ -939,13 +941,26 @@ static void CoSelect_SyncSlots(struct CoSelectProc* proc)
 }
 
 /* Advance the selection by one CO and rotate the carousel one slot to match.
- * dir is +1 for "left" (the next CO in the list) and -1 for "right". */
+ * dir is +1 for "left" (the next CO in the list) and -1 for "right".
+ *
+ * Timing of the reload matters, and it is not symmetric. CoSelect_SyncSlots
+ * changes exactly one slot: the one whose offset wraps. Going right (-1) that
+ * is the slot at the back, which the rotation then brings into view, so it has
+ * to be reloaded *before* the spin starts -- as it is here. Going left (+1) it
+ * is the slot currently at the front, the one being looked at: reloading that
+ * immediately swapped its animation in place before it had rotated away (a
+ * knight becoming a paladin on the spot). That case is deferred to the end of
+ * the rotation, by which point the slot has travelled round to the hidden back
+ * position and the swap happens out of sight. */
 static void CoSelect_Step(struct CoSelectProc* proc, int dir)
 {
     proc->coIndex = (proc->coIndex + dir + proc->coCount) % proc->coCount;
     proc->curSlot = (proc->curSlot + dir + proc->slotCount) % proc->slotCount;
 
-    CoSelect_SyncSlots(proc);
+    if (dir > 0)
+        proc->syncPending = TRUE;
+    else
+        CoSelect_SyncSlots(proc);
 }
 
 // FE7U: 0x080A817C
@@ -1065,6 +1080,15 @@ static void CoSelect_Loop_RotateCarousel(struct CoSelectProc* proc)
     {
         angle = proc->angleTarget & 0xfff;
         proc->angle = proc->angleTarget & 0xfff;
+
+        /* Deferred slot reload -- see CoSelect_Step. The slot it swaps has
+         * reached the back of the carousel by now, so this is not visible. */
+        if (proc->syncPending)
+        {
+            proc->syncPending = FALSE;
+            CoSelect_SyncSlots(proc);
+        }
+
         Proc_Break(proc);
     }
 
