@@ -8080,7 +8080,7 @@ static int ResolveDebuggerClassPaletteOverride(DebuggerProc * proc)
     return ((u32)state < GetDebuggerPaletteTableCount()) ? state : -1;
 }
 
-static int GetDebuggerDefaultPreviewWeapon(int classId)
+int GetDebuggerDefaultPreviewWeapon(int classId)
 {
     const struct ClassData * class = GetClassData(classId);
 

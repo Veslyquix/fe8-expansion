@@ -699,11 +699,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
     },
     [CO_FRANCIS] = {
-        /* TODO: provisional. Francis has no character of his own yet -- his
-         * old faceId was a copy of Ishkode's placeholder, so this points at
-         * the same character. Replace with Francis's real CHARACTER_* once
-         * one exists; until then his name and portrait are Ishkode's. */
-        .charId = CHARACTER_SETH,
+        .charId = CHARACTER_GILLIAM,
         .titleMsg = MSG_CO_FRANCIS_TITLE,
         .infoMsg = MSG_CO_FRANCIS_INFO,
         .powerNameMsg = MSG_CO_FRANCIS_POWER_NAME,
@@ -718,7 +714,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .affinityCount = ARRAY_COUNT(sFrancisAffinities),
     },
     [CO_KARGAN] = {
-        .charId = CHARACTER_ONEILL, // Kargan replaces O'Neill (portrait 0x30)
+        .charId = CHARACTER_ONEILL, // Kargan replaces O'Neill for now (portrait 0x30)
         .titleMsg = MSG_CO_KARGAN_TITLE,
         .infoMsg = MSG_CO_KARGAN_INFO,
         .powerNameMsg = MSG_CO_KARGAN_POWER_NAME,

@@ -23,6 +23,7 @@
 #include "event.h"
 #include "power.h"
 #include "coSelect.h"
+#include "bmio.h" 
 
 #include "constants/characters.h"
 #include "constants/faces.h"
@@ -209,6 +210,8 @@ static void CoSelectAnim_Pause(struct AnimBuffer* pAnimBuf)
  * default). Mirrors the engine's own lookup: walk the class's BattleAnimDef
  * list for its SPECIAL_BANIM_WTYPE ("no weapon") entry, falling back to the
  * first entry, and note the stored index is 1-based. */
+ 
+// int GetDebuggerDefaultPreviewWeapon(int classId); 
 static int CoSelect_GetBanimId(int coId)
 {
     const struct ClassData* class = GetClassData(Co_GetDisplayClassId(coId));
@@ -219,12 +222,14 @@ static int CoSelect_GetBanimId(int coId)
         return 0;
 
     animDef = class->pBattleAnimDef;
+    
+    return animDef[0].index - 1; 
 
-    for (i = 0; animDef[i].index != 0; i++)
-        if (animDef[i].wtype == SPECIAL_BANIM_WTYPE)
-            return animDef[i].index - 1;
+    // for (i = 0; animDef[i].index != 0; i++)
+        // if (animDef[i].wtype == SPECIAL_BANIM_WTYPE)
+            // return animDef[i].index - 1;
 
-    return animDef[0].index != 0 ? animDef[0].index - 1 : 0;
+    // return animDef[0].index != 0 ? animDef[0].index - 1 : 0;
 }
 
 /* Load one carousel slot with one CO's battle animation. Split out of the
@@ -1085,7 +1090,8 @@ static void CoSelect_End(struct CoSelectProc* proc)
     SetWinEnable(0, 0, 0);
     SetWOutLayers(1, 1, 1, 1, 1);
     SetBlendConfig(0, 0, 0, 0);
-
+    BMapDispResume();
+    UnlockGame();
     RefreshEntityBmMaps();
     RenderBmMap();
     RefreshUnitSprites();
@@ -1099,6 +1105,8 @@ static const struct ProcCmd sProc_CoSelect[] =
 {
     PROC_CALL(DisableAllGfx),
     PROC_YIELD,
+    PROC_CALL(LockGame),
+    PROC_CALL(BMapDispSuspend),
 
     PROC_CALL(CoSelect_InitGfxMaybe),
     PROC_YIELD,
