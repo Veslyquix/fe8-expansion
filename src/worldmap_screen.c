@@ -15,6 +15,7 @@ extern u8 gUnk_61;
 extern u8 gWorldmapGmap_0[];  // FEB: worldmap_big_image Length:76800
 extern u16 gWorldmapGmap_2[]; // FEB: worldmap_big_palette Length:128
 extern u16 gWorldmapGmap_3[]; // FEB: worldmap_big_palettemap Length:673
+extern u16 gPal_WorldmapGmap_0[];
 
 //! FE8U = 0x080BA424
 void GMapScreen_OnWorldmapEventUpdate(void)
@@ -51,14 +52,12 @@ u32 GMapScreen_FillBg3TileIndices(void)
 void GMapScreen_LoadTileGfx(struct GmScreenProc * proc)
 {
     int i;
-
     for (i = 0; i < 0x20; i++)
     {
         CpuFastCopy(proc->unk_3c + (i * 0x780), (void*)(0x06008000 + (i * 0x400)), 0x400);
     }
 
     GMapScreen_FillBg3TileIndices();
-
     BG_EnableSyncByMask(BG3_SYNC_BIT);
 
     return;
@@ -67,6 +66,10 @@ void GMapScreen_LoadTileGfx(struct GmScreenProc * proc)
 //! FE8U = 0x080BA4D0
 void GMapScreen_ApplyTilePalettes(struct GmScreenProc * proc)
 {
+#if FE8_CUSTOM_CAMPAIGN
+    return;
+#endif
+
     int x;
     int y;
     u8 * r5;
@@ -281,8 +284,12 @@ void MapScreen_Init(struct GmScreenProc * proc)
 
     proc->unk_40 = BG_GetMapBuffer(BG_3);
 
+// #if FE8_CUSTOM_CAMPAIGN
+    // proc->unk_44 = NULL;
+// #else
     Decompress(gWorldmapGmap_3, gUnk_3);
     proc->unk_44 = gUnk_3;
+// #endif
     proc->unk_2c = 0;
     proc->unk_2b = 0;
     proc->unk_2e = 0;
@@ -292,7 +299,11 @@ void MapScreen_Init(struct GmScreenProc * proc)
     proc->unk_32 = 0;
     proc->unk_31 = 0;
 
+#if FE8_CUSTOM_CAMPAIGN
+    ApplyPalettes(gPal_WorldmapGmap_0, 9, 4);
+#else
     ApplyPalettes(gWorldmapGmap_2, 9, 4);
+#endif
     EnablePaletteSync();
 
     BG_Fill(gBG3TilemapBuffer, 0);

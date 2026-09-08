@@ -143,10 +143,16 @@ void GmapRm_StartUpdateDirect(struct ProcGmapRm * proc)
     GM_SCREEN->gmroute->flags &= ~GM_ROUTE_FLAG_2;
 
     BG_SetPosition(BG_1, 0, 0);
+#if FE8_CUSTOM_CAMPAIGN
+    Decompress(Img_EventGmap, (void *)BG_VRAM);
+    ApplyPalettes(Pal_EventGmap, 5, 4);
+    CpuFastCopy((void *)BG_VRAM, gBG1TilemapBuffer, 0x5000);
+#else
     Decompress(Img_EventGmap, (void *)BG_VRAM);
     ApplyPalettes(Pal_EventGmap, 5, 4);
     Decompress(Tsa_EventGmap, gGenericBuffer);
     CallARM_FillTileRect(gBG1TilemapBuffer, gGenericBuffer, 0x5000);
+#endif
     BG_EnableSyncByMask(BG1_SYNC_BIT);
 
     Proc_Start(ProcScr_GmapRmUpdateDirect, proc);

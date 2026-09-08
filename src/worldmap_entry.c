@@ -422,8 +422,12 @@ void LoadWorldmapMinimap(void)
     EnablePaletteSync();
 
     Decompress(gImg_WorldmapMinimap_0, (void *)0x06004C00);
+#if FE8_CUSTOM_CAMPAIGN
+    CpuFastCopy((void *)0x06004C00, gBG0TilemapBuffer, 0x2260);
+#else
     Decompress(gTsa_WorldmapMinimap_0, gGenericBuffer);
     CallARM_FillTileRect(gBG0TilemapBuffer, gGenericBuffer, 0x2260);
+#endif
 
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 
