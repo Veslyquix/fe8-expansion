@@ -511,6 +511,44 @@ static const u16 Sprite_ModeSelect_ChapterRange[] = {
 
 // clang-format on
 
+extern u16 Pal_084150C0[];
+
+/* Palette cycling for the "Press Start" sprite (OBJ palette 0xB, colour 13).
+ *
+ * FE7U: 0x080A73F8. Both FE8ModeSelect.c and Jester's fork leave this as an
+ * empty stub, so it was ported here from the FE7 ROM's own Thumb code rather
+ * than from either C source. It crossfades between colours 12 and 13 of
+ * Pal_084150C0 (the same palette ApplyPalette loads into slot 0x1B) on a
+ * 64-step triangle wave: rising over 0-31, falling over 32-63. Both halves
+ * use weights summing to 32, hence the >> 5. */
+static void ModeSelectPalette_CyclePressStart(s32 timer)
+{
+    s32 t = timer & 0x3f;
+    s32 wA, wB;
+    u16 a = Pal_084150C0[12];
+    u16 b = Pal_084150C0[13];
+    s32 color;
+
+    if (t <= 31)
+    {
+        wA = 32 - t;
+        wB = t;
+    }
+    else
+    {
+        wA = t - 32;
+        wB = 64 - t;
+    }
+
+    color = ((((a & RED_MASK) * wA + (b & RED_MASK) * wB) >> 5) & RED_MASK);
+    color += ((((a & GREEN_MASK) * wA + (b & GREEN_MASK) * wB) >> 5) & GREEN_MASK);
+    color += ((((a & BLUE_MASK) * wA + (b & BLUE_MASK) * wB) >> 5) & BLUE_MASK);
+
+    gPaletteBuffer[0x100 + 0xb * 0x10 + 0xd] = color;
+
+    EnablePaletteSync();
+}
+
 // FE7U: 0x080A79A4
 static void ModeSelectSpriteDraw_Loop(struct ModeSelectSpriteDrawProc* proc)
 {
@@ -568,6 +606,7 @@ static void ModeSelectSpriteDraw_Loop(struct ModeSelectSpriteDrawProc* proc)
 
     PutSpriteExt(0xd, 108, 24, Sprite_ModeSelect_ChapterRange, OAM2_PAL(10));
 
+    ModeSelectPalette_CyclePressStart(proc->unk_30);
     proc->unk_30++;
 }
 
@@ -1132,21 +1171,44 @@ static void ModeSelect_End(struct ModeSelectProc* proc)
     /* Jester's fix (adapted): ModeSelect_Init blocks the save-menu's own
      * draw process (PROC_MARK_SAVEDRAW/PROC_MARK_D) so it doesn't render
      * underneath the carousel; it must be unblocked again here or the save
-     * screen stays frozen/black after returning. Unlike the original FE7
-     * hack, this repo's own PL_SAVEMENU_DIFFICULTY_SEL step already runs
-     * SaveMenu_ReloadScreenFormDifficulty immediately after this proc ends
-     * (src/savemenu.c) -- that call already fully rebuilds BG0-3, fonts,
-     * and palettes from scratch for BOTH the plain-difficulty-select and
-     * Mode Select paths, so re-running SaveMenu_Init/InitScreen/
-     * LoadExtraMenuGraphics here (as the original fix does) would just be
-     * redundant double-work, not a second bug fix. */
+     * screen stays frozen/black after returning. */
     Proc_UnblockEachMarked(PROC_MARK_SAVEDRAW);
     Proc_UnblockEachMarked(PROC_MARK_D);
 
     if (!(proc->unk_42 & 1))
+    {
         StartBgmVolumeChange(0x100, 0xc0, 0x10, 0);
+    }
     else
+    {
         SetPrimaryHBlankHandler(NULL);
+
+        /* Restore the save menu's own background configuration. ModeSelect_Init
+         * replaced it wholesale (SetupBackgrounds(sModeSelectBgConfig), plus
+         * dispcnt.mode = 1 and the affine BG2 settings), and nothing on the way
+         * back out puts it right: this repo's SaveMenu_ResetLcdFormDifficulty
+         * only touches the window registers, and SaveMenu_ReloadScreenFormDifficulty
+         * -- which the PL_SAVEMENU_DIFFICULTY_SEL script runs immediately after
+         * this proc ends -- redraws the screen's *contents* but never calls
+         * SetupBackgrounds. Left alone, BG1 keeps Mode Select's char base
+         * (0x0600C000 instead of 0x06000000) and the save-slot screen draws
+         * corrupted.
+         *
+         * SaveMenu_Init is the same call Jester's fork uses here and is what the
+         * normal save-menu entry path runs; it restores gBgConfig_SaveMenu, the
+         * BG priorities, dispcnt.mode and the blend setup. It must happen here
+         * rather than after, because SaveMenu_ReloadScreenFormDifficulty
+         * decompresses into GetBackgroundTileDataOffset(3) and so needs the
+         * correct bases already in place. The screenSize/areaOverflowMode fields
+         * are reset explicitly since only Mode Select's affine BG2 sets them and
+         * SaveMenu_Init does not clear them. Jester additionally re-runs
+         * SaveMenu_InitScreen/SaveMenu_LoadExtraMenuGraphics, which would be
+         * redundant here -- SaveMenu_ReloadScreenFormDifficulty already covers
+         * that content redraw on this repo's path. */
+        SaveMenu_Init();
+        gLCDControlBuffer.bg2cnt.screenSize = 0;
+        gLCDControlBuffer.bg2cnt.areaOverflowMode = 0;
+    }
 }
 
 // clang-format off
