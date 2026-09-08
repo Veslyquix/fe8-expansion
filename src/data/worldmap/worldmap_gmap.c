@@ -1,6 +1,10 @@
 #include "global.h"
 
+#if FE8_CUSTOM_CAMPAIGN
+u8 gWorldmapGmap_0[] = INCBIN_U8("graphics/misc/WorldMapAshor.4bpp");
+#else
 u8 gWorldmapGmap_0[] = INCBIN_U8("graphics/misc/gUnknown_08A83364.4bpp");
+#endif
 
 u16 gWorldmapGmap_1[] = INCBIN_U16("graphics/misc/gUnknown_08A95F64.4bpp");
 
@@ -18,4 +22,8 @@ u16 gPal_GMapPI_ShopIcons[] = INCBIN_U16("graphics/misc/gPal_GMapPI_ShopIcons.gb
 
 u8 gGfx_GMapPI_ShopIcons[] = INCBIN_U8("graphics/misc/gGfx_GMapPI_ShopIcons.4bpp.lz");
 
+#if FE8_CUSTOM_CAMPAIGN
+u16 gPal_WorldmapGmap_0[] = INCBIN_U16("graphics/misc/WorldMapAshor.gbapal");
+#else
 u16 gPal_WorldmapGmap_0[] = INCBIN_U16("graphics/misc/gPal_08A97ACC.gbapal");
+#endif

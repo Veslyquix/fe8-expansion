@@ -11,29 +11,29 @@
 #include "constants/characters.h"
 
 CONST_DATA EventListScr EventListScr_Ch1_Turn[] = {
-    TURN(0x0, EventScr_Ch1_Turn1Player, 1, 1, FACTION_BLUE)
-    TURN(0x0, EventScr_Ch1_Turn1Enemy, 1, 1, FACTION_RED)
-    TURN(0x0, EventScr_Ch1_Turn_AllyReinforceArrive, 2, 2, FACTION_BLUE)
-    TURN(EVFLAG_TMP(11), EventScr_Ch1_Turn_EnemyReinforceArrive, 1, 255, FACTION_BLUE)
+    // TURN(0x0, EventScr_Ch1_Turn1Player, 1, 1, FACTION_BLUE)
+    // TURN(0x0, EventScr_Ch1_Turn1Enemy, 1, 1, FACTION_RED)
+    // TURN(0x0, EventScr_Ch1_Turn_AllyReinforceArrive, 2, 2, FACTION_BLUE)
+    // TURN(EVFLAG_TMP(11), EventScr_Ch1_Turn_EnemyReinforceArrive, 1, 255, FACTION_BLUE)
     END_MAIN
 };
 
 CONST_DATA EventListScr EventListScr_Ch1_Character[] = {
-    CharacterEventBothWays(0x8, EventScr_Ch1_Talk_SethFranz, CHARACTER_SETH, CHARACTER_FRANZ)
-    CharacterEventBothWays(0x9, EventScr_Ch1_Talk_EirikaFranz, CHARACTER_EIRIKA, CHARACTER_FRANZ)
+    // CharacterEventBothWays(0x8, EventScr_Ch1_Talk_SethFranz, CHARACTER_SETH, CHARACTER_FRANZ)
+    // CharacterEventBothWays(0x9, EventScr_Ch1_Talk_EirikaFranz, CHARACTER_EIRIKA, CHARACTER_FRANZ)
     END_MAIN
 };
 
 CONST_DATA EventListScr EventListScr_Ch1_Location[] = {
-    House(0x0, EventScr_Ch1_Loca_Visit1, 13, 6)
-    House(0x0, EventScr_Ch1_Loca_Visit2, 10, 4)
-    Seize(2, 2)
+    // House(0x0, EventScr_Ch1_Loca_Visit1, 13, 6)
+    // House(0x0, EventScr_Ch1_Loca_Visit2, 10, 4)
+    // Seize(2, 2)
     END_MAIN
 };
 
 CONST_DATA EventListScr EventListScr_Ch1_Misc[] = {
-    AFEV(EVFLAG_TMP(7), EventScr_Ch1_Misc_DefeatBoss, EVFLAG_DEFEAT_BOSS)
-    AREA(EVFLAG_TMP(10), EventScr_Ch1_Misc_Area, 0, 0, 7, 9)
+    // AFEV(EVFLAG_TMP(7), EventScr_Ch1_Misc_DefeatBoss, EVFLAG_DEFEAT_BOSS)
+    // AREA(EVFLAG_TMP(10), EventScr_Ch1_Misc_Area, 0, 0, 7, 9)
     CauseGameOverIfLordDies
     END_MAIN
 };
