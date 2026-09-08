@@ -21,6 +21,7 @@
 #define DRAW_MAP_ANIM_TILE_HEIGHT 8
 #define DRAW_MAP_ANIM_MIN_FRAMES 28
 #define DRAW_MAP_ANIM_NUMBERS_FLAG 0xEE
+#define DRAW_MAP_ANIM_HEAL_FRAMES 48
 
 struct DrawMapAnimProc
 {
@@ -120,7 +121,17 @@ static const struct DrawMapAnimFrame * DrawMapAnim_GetFrameForTime(
     return NULL;
 }
 
-static void DrawMapAnim_LoadNumbers(void)
+// Recolour of the save-screen number glyphs used for healing amounts. Only
+// the three colours the glyphs actually use are meaningful; the rest of the
+// palette stays transparent/black, matching the original ASM dump.
+static CONST_DATA u16 DrawMapAnimNumbersPal_Blue[16] = {
+    0x520E, 0x1CA4, 0x7FE9, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000,
+};
+
+static void DrawMapAnim_LoadNumbers(const u16 * pal)
 {
     CpuFastCopy(
         gDrawMapAnimNumbersImg,
@@ -128,9 +139,11 @@ static void DrawMapAnim_LoadNumbers(void)
         6 * 2 * CHR_SIZE);
 
     CopyToPaletteBuffer(
-        gDrawMapAnimNumbersPal,
+        pal,
         DRAW_MAP_ANIM_OBJPAL_NUMBERS * 0x20,
         0x20);
+
+    EnablePaletteSync();
 }
 
 static void DrawMapAnim_PutDigit(int x, int y, int digit)
@@ -175,25 +188,15 @@ static int DrawMapAnim_GetDisplayDamage(void)
     return damage;
 }
 
-static void DrawMapAnim_PutDamageNumber(struct DrawMapAnimProc * proc)
+// Shared by the damage numbers (over the target of an attack) and the heal
+// numbers (over the target of a staff/vulnerary/fort). `elapsed` drives the
+// same rise-and-wiggle motion in both cases.
+static void DrawMapAnim_PutNumber(struct Unit * unit, int elapsed, int value)
 {
-    struct Unit * unit;
-    int elapsed;
     int height;
     int xWiggle;
     int x;
     int y;
-    int damage;
-
-    if (CheckFlag(DRAW_MAP_ANIM_NUMBERS_FLAG))
-        return;
-
-    damage = DrawMapAnim_GetDisplayDamage();
-    if (damage == 0)
-        return;
-
-    unit = gManimSt.actor[proc->targetActorId].unit;
-    elapsed = GetGameClock() - proc->startClock;
 
     height = elapsed >> 1;
     if (height > 12)
@@ -206,10 +209,27 @@ static void DrawMapAnim_PutDamageNumber(struct DrawMapAnimProc * proc)
     x = unit->xPos * 16 - gBmSt.camera.x + 4 - xWiggle;
     y = unit->yPos * 16 - gBmSt.camera.y - height;
 
-    if (damage >= 10)
-        DrawMapAnim_PutDigit(x, y, damage / 10);
+    if (value >= 10)
+        DrawMapAnim_PutDigit(x, y, value / 10);
 
-    DrawMapAnim_PutDigit(x + 8, y, damage % 10);
+    DrawMapAnim_PutDigit(x + 8, y, value % 10);
+}
+
+static void DrawMapAnim_PutDamageNumber(struct DrawMapAnimProc * proc)
+{
+    int damage;
+
+    if (CheckFlag(DRAW_MAP_ANIM_NUMBERS_FLAG))
+        return;
+
+    damage = DrawMapAnim_GetDisplayDamage();
+    if (damage == 0)
+        return;
+
+    DrawMapAnim_PutNumber(
+        gManimSt.actor[proc->targetActorId].unit,
+        GetGameClock() - proc->startClock,
+        damage);
 }
 
 static void DrawMapAnim_LoadFrameGfx(const struct DrawMapAnimFrame * frame)
@@ -249,7 +269,7 @@ static void DrawMapAnim_Init(struct DrawMapAnimProc * proc)
     proc->targetActorId = DrawMapAnim_GetTargetActorId();
     proc->loadedFrame = 0xFF;
 
-    DrawMapAnim_LoadNumbers();
+    DrawMapAnim_LoadNumbers(gDrawMapAnimNumbersPal);
 }
 
 static void DrawMapAnim_Loop(struct DrawMapAnimProc * proc)
@@ -307,6 +327,66 @@ CONST_DATA struct ProcCmd ProcScr_DrawMapAnimSprite[] = {
     PROC_CALL(DrawMapAnim_Cleanup),
     PROC_END
 };
+
+struct DrawMapAnimHealProc
+{
+    PROC_HEADER;
+
+    /* 2C */ struct Unit * unit;
+    /* 30 */ u32 startClock;
+    /* 34 */ u8 amount;
+    /* 35 */ u8 _pad35[0x38 - 0x35];
+};
+
+static void DrawMapAnimHeal_Init(struct DrawMapAnimHealProc * proc)
+{
+    proc->startClock = GetGameClock();
+    DrawMapAnim_LoadNumbers(DrawMapAnimNumbersPal_Blue);
+}
+
+static void DrawMapAnimHeal_Loop(struct DrawMapAnimHealProc * proc)
+{
+    int elapsed = GetGameClock() - proc->startClock;
+
+    DrawMapAnim_PutNumber(proc->unit, elapsed, proc->amount);
+
+    if (elapsed >= DRAW_MAP_ANIM_HEAL_FRAMES)
+        Proc_Break(proc);
+}
+
+CONST_DATA struct ProcCmd ProcScr_DrawMapAnimHealNumber[] = {
+    PROC_CALL(DrawMapAnimHeal_Init),
+    PROC_REPEAT(DrawMapAnimHeal_Loop),
+    PROC_END
+};
+
+// Called from NewMapAnimEffectAnimator, the single entry point every healing
+// map effect funnels through (staves, vulnerary/elixir, forts via
+// BeginUnitHealAnim). Healing is recorded as a negative hpChange.
+void DrawMapAnim_StartHealNumber(struct Unit * unit)
+{
+    struct DrawMapAnimHealProc * proc;
+    int amount;
+
+    if (unit == NULL)
+        return;
+
+    if (CheckFlag(DRAW_MAP_ANIM_NUMBERS_FLAG))
+        return;
+
+    amount = -gManimSt.hitDamage;
+
+    if (amount <= 0)
+        return;
+
+    if (amount > 99)
+        amount = 99;
+
+    proc = Proc_Start(ProcScr_DrawMapAnimHealNumber, PROC_TREE_3);
+
+    proc->unit = unit;
+    proc->amount = amount;
+}
 
 void DrawMapAnim_RoundCleanup(ProcPtr proc)
 {
