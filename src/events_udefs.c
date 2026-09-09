@@ -305,31 +305,31 @@ CONST_DATA struct UnitDefinition UnitDef_Ch2Enemy_0[] = {
 
 // 0x88B43D0
 CONST_DATA struct UnitDefinition UnitDef_LordSplitAlly[] = {
-    {
-        .charIndex = CHARACTER_VANESSA,
-        .classIndex = CLASS_PEGASUS_KNIGHT,
-        .allegiance = FACTION_ID_BLUE,
-        .level = 1,
-        .xPosition = 0,
-        .yPosition = 0,
-        .items = {
-            ITEM_LANCE_SLIM,
-            ITEM_LANCE_JAVELIN,
-            ITEM_VULNERARY,
-        },
-    },
-    {
-        .charIndex = CHARACTER_MOULDER,
-        .classIndex = CLASS_PRIEST,
-        .allegiance = FACTION_ID_BLUE,
-        .level = 3,
-        .xPosition = 0,
-        .yPosition = 0,
-        .items = {
-            ITEM_STAFF_HEAL,
-            ITEM_VULNERARY,
-        },
-    },
+    // {
+        // .charIndex = CHARACTER_VANESSA,
+        // .classIndex = CLASS_PEGASUS_KNIGHT,
+        // .allegiance = FACTION_ID_BLUE,
+        // .level = 1,
+        // .xPosition = 0,
+        // .yPosition = 0,
+        // .items = {
+            // ITEM_LANCE_SLIM,
+            // ITEM_LANCE_JAVELIN,
+            // ITEM_VULNERARY,
+        // },
+    // },
+    // {
+        // .charIndex = CHARACTER_MOULDER,
+        // .classIndex = CLASS_PRIEST,
+        // .allegiance = FACTION_ID_BLUE,
+        // .level = 3,
+        // .xPosition = 0,
+        // .yPosition = 0,
+        // .items = {
+            // ITEM_STAFF_HEAL,
+            // ITEM_VULNERARY,
+        // },
+    // },
     { 0 },
 };
 

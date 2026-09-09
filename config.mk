@@ -298,7 +298,7 @@ DRAW_MAP_ANIMS ?= 1
 BATTLE_ANIMATION_NUMBERS ?= 1
 
 # --- Optional multipalette conversation backgrounds --------------------------
-# Adds 224/256-colour (8bpp) conversation-background images alongside the
+# Adds 192/224/256-colour (8bpp) conversation-background images alongside the
 # vanilla 16-colour ones in gConvoBackgroundData. A 224-colour image leaves
 # two palette banks (32 colours) free for text/chatbubble UI.
 MULTIPALETTE_BG ?= 1

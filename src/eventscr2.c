@@ -178,31 +178,37 @@ bool IsMultipaletteConvoBgActive(void)
  * Ported from FE8U_256ColBG (SRR_FEGBA/gfx/BGs): a 256-colour image claims
  * the whole BG palette; a 224-colour image leaves banks 2-3 (32 colours)
  * untouched for text/chatbubble UI; the new 192-colour mode leaves banks
- * 2-5 (64 colours) untouched for UI that needs more room (e.g. several
- * portraits' worth of palette). Banks 0-1 always hold the image's first 32
- * colours; the rest resume right after the reserved gap. See
+ * 0-4 (64 colours) untouched for got item / gold popups. See
  * scripts/convo_bg_to_source.py for the matching pixel/palette encoding. */
 bool LoadMultipaletteConvoBg(int bgIndex, int bg)
 {
     const struct gfx_set * set = &gConvoBackgroundData[bgIndex];
-    int gap;
-    int bankStart;
-    int bankCount;
+    int bankStart = 0;
+    int bankCount = 0;
     void * charBase;
     u16 * tilemapBuffer;
     int row, col;
+    bankStart = 4; 
+    bankCount = 12; 
 
-    if (set->tsa == CONVOBG_MULTIPALETTE_256)
-        gap = 0;
-    else if (set->tsa == CONVOBG_MULTIPALETTE_224)
-        gap = 32;
-    else if (set->tsa == CONVOBG_MULTIPALETTE_192)
-        gap = 64;
+    if (set->tsa == CONVOBG_MULTIPALETTE_256) { 
+        bankStart = 0; 
+        bankCount = 16; 
+    }
+    else if (set->tsa == CONVOBG_MULTIPALETTE_224) { 
+
+        ApplyPalettes(set->pal, 0, 2); // 
+    } 
+    else if (set->tsa == CONVOBG_MULTIPALETTE_192) { 
+    // continue; 
+    }
     else
     {
         sMultipaletteConvoBgActive = FALSE;
         return FALSE;
     }
+
+    ApplyPalettes((u16 *)set->pal + 32, bankStart, bankCount);
 
     sMultipaletteConvoBgActive = TRUE;
 
@@ -237,11 +243,7 @@ bool LoadMultipaletteConvoBg(int bgIndex, int bg)
         for (col = 0; col < 32; col++)
             tilemapBuffer[row * 32 + col] = 0x100 + row * 32 + col;
 
-    ApplyPalettes(set->pal, 0, 2);
 
-    bankStart = 2 + gap / 16;
-    bankCount = (224 - gap) / 16;
-    ApplyPalettes((u16 *)set->pal + 32, bankStart, bankCount);
 
     return TRUE;
 }
