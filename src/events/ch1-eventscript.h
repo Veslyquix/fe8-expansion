@@ -10,6 +10,11 @@
 #include "constants/songs.h"
 
 CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
+#if FE8_CO_POWERS
+    SVAL(EVT_SLOT_1, 0) // All COs right now. 
+    SVAL(EVT_SLOT_3, FACTION_BLUE)
+    ASMC(StartCoSelect)
+#endif
     MUSI
     Text_BG(BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192, MSG_CUSTOM_CAMPAIGN_CH1A_START)
     MUNO
@@ -28,11 +33,7 @@ CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
 
 
 
-#if FE8_CO_POWERS
-    SVAL(EVT_SLOT_1, 0) // All COs right now. 
-    SVAL(EVT_SLOT_3, FACTION_BLUE)
-    ASMC(StartCoSelect)
-#endif
+
     /**
      * Temporary flag(11) is used for triggering event: EventScr_Ch1_Turn_EnemyReinforceArrive,
      * this flag will be unset by event: EventScr_Ch1_Misc_Area
@@ -84,22 +85,16 @@ CONST_DATA EventListScr EventScr_Ch1_Misc_DefeatBoss[] = {
 
 CONST_DATA EventListScr EventScr_Ch1_EndingScene[] = {
     MUSC(SONG_VICTORY)
-    SetBackground(BG_INTERIOR_BLACK)
-
-    CHECK_ALIVE(CHARACTER_GILLIAM)
-    BEQ(0x0, EVT_SLOT_C, EVT_SLOT_0)
-
-    TEXTSHOW(0x937)
+    // MUSI
+    // Text_BG(BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192, MSG_CUSTOM_CAMPAIGN_CH1A_END)
+    // MUNO
+    MUSI
+    SetBackground(BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192)
+    TEXTSHOW(MSG_CUSTOM_CAMPAIGN_CH1A_END)
     TEXTEND
-    GOTO(0x1)
-
-LABEL(0x0)
-    TEXTSHOW(0x938)
-    TEXTEND
-
-LABEL(0x1)
+    FADI(16)
     REMA
-
+    MUNO
     FADI(16)
     ENUT(0xBA)
     ENUT(0xCF)
@@ -111,7 +106,7 @@ LABEL(0x1)
     ENUT(0xC8)
     ENUT(0xDD)
 
-    REVEAL(CHARACTER_SETH)
+    // REVEAL(CHARACTER_SETH)
     MoveToChapter(0x38)
     ENDA
 };

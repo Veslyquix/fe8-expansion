@@ -497,11 +497,14 @@ LABEL(0x0)
 
 CONST_DATA EventListScr EventScr_Prologue_EndingScene[] = {
     MUSC(SONG_VICTORY)
-    SetBackground(BG_PLAIN_2)
-    TEXTSHOW(0x918)
+    
+    MUSI
+    SetBackground(BG_ALEXANDER_LAWRIE_HILLSIDE_192)
+    TEXTSHOW(MSG_CUSTOM_CAMPAIGN_PROLOGUE_ENDING)
     TEXTEND
     FADI(16)
     REMA
+    MUNO
 
     ENUT(0xE0)
     ENUT(0xE1)

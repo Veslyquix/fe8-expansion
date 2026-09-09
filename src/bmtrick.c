@@ -503,8 +503,8 @@ void InitSuperFieldsPreOwnedBaseMarkers(void)
     return;
 #endif
 
-    if (gPlaySt.chapterIndex != CHAPTER_L_PROLOGUE)
-        return;
+    // if (gPlaySt.chapterIndex != CHAPTER_L_PROLOGUE)
+        // return;
 
     for (iy = gBmMapSize.y - 1; iy >= 0; --iy)
     {
