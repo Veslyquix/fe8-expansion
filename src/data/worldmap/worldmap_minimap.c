@@ -31,7 +31,7 @@ u8 gWorldmapMinimap_13[] = INCBIN_U8("graphics/misc/gWorldmapMinimap_13.tsa.bin"
 u8 gGfx_GMapPI_LevelNums[] = INCBIN_U8("graphics/misc/gGfx_GMapPI_LevelNums.4bpp.lz");
 
 u16 gPal_GMapPI_LevelNums[] = INCBIN_U16("graphics/misc/gPal_GMapPI_LevelNums.gbapal");
-
+ 
 #if FE8_CUSTOM_CAMPAIGN
 u8 Img_EventGmap[] = INCBIN_U8("graphics/misc/WorldMapAshorSmall.4bpp.lz");
 
@@ -46,14 +46,8 @@ u8 Tsa_EventGmap[] = INCBIN_U8("graphics/misc/Tsa_EventGmap.tsa.bin.lz");
 u16 Pal_EventGmap[] = INCBIN_U16("graphics/misc/Pal_EventGmap.gbapal");
 #endif
 
-#if FE8_CUSTOM_CAMPAIGN
-u8 gImg_WorldmapMinimap_0[] = INCBIN_U8("graphics/misc/WorldMiniMapAshor.4bpp.lz");
-
-u16 gPal_WorldmapMinimap_0[] = INCBIN_U16("graphics/misc/WorldMiniMapAshor.gbapal");
-#else
 u8 gImg_WorldmapMinimap_0[] = INCBIN_U8("graphics/misc/gImg_08A9E544.4bpp.lz");
 
 u16 gPal_WorldmapMinimap_0[] = INCBIN_U16("graphics/misc/gPal_08A9E5BC.gbapal");
-#endif
 
 u8 gTsa_WorldmapMinimap_0[] = INCBIN_U8("graphics/misc/gTsa_WorldmapMinimap_0.tsa.bin.lz");

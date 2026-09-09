@@ -21,8 +21,8 @@ CONST_DATA EventScr EventScrWM_Prologue_Beginning[] = {
             /* Skip the "The continent of Magvel..." narration when first
              * arriving at the prologue on New Game. Other chapters' world-
              * map beginning events are unaffected. */
-    SKIPWN
-    ENDA
+    // SKIPWN
+    // ENDA
 #endif
     MUSCFAST(SONG_SILENT)
     STAL(32)

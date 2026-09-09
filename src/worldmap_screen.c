@@ -454,7 +454,11 @@ void GMapScreen_Loop(struct GmScreenProc * proc)
 
     if (proc->unk_2a & 4)
     {
+#if FE8_CUSTOM_CAMPAIGN
+        ApplyPalettes(gPal_WorldmapGmap_0, 9, 4);
+#else
         ApplyPalettes(gWorldmapGmap_2, 9, 4);
+#endif
         proc->unk_2a &= ~4;
     }
 

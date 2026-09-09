@@ -262,7 +262,7 @@ VESLY_DEBUGGER ?= 1
 # Nintendo/Intelligent Systems logos, and no attract-mode opening demo. On
 # New Game, also skips the world-map "continent of Magvel" narration and the
 # "In an age long past..." opening text crawl. 
-SKIP_OPENING ?= 0
+SKIP_OPENING ?= 1
 
 
 
