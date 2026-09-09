@@ -145,6 +145,12 @@ extern unsigned char bg_AltarNight256_tiles[];
 extern unsigned short bg_AltarNight256_palette[];
 extern unsigned char bg_kh_tiles[];
 extern unsigned short bg_kh_palette[];
+extern unsigned char bg_AlexanderLawrieHillside_tiles[];
+extern unsigned short bg_AlexanderLawrieHillside_palette[];
+extern unsigned char bg_GustaveDoreMountainsDusk_tiles[];
+extern unsigned short bg_GustaveDoreMountainsDusk_palette[];
+extern unsigned char bg_TobiasSpenceRiverForest_tiles[];
+extern unsigned short bg_TobiasSpenceRiverForest_palette[];
 extern unsigned char Img_CgTextBubbleSprite[];
 
 /* struct gfx_set.tsa sentinel values -- see LoadMultipaletteConvoBg,

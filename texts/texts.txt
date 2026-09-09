@@ -40606,7 +40606,7 @@ To the west.[A]
 [OpenMidLeft]They're moving north.[LF]
 Toward our people.[A]
 [OpenMidRight]Then we have to warn them.[A]
-[OpenMidLeft]No.[A]
+[OpenMidLeft]No. [A]
 [OpenMidLeft]We stop them here.[A]
 [OpenMidRight]In this rain?[A]
 [OpenMidLeft]We've spent too long giving ground.[LF]
@@ -40636,7 +40636,7 @@ Mounted archers who strike from afar[LF]
 and range far ahead. Equip: Bows.[.][X]
 
 ## MSG_CLASS_NOMAD_TROOPER_NAME
-Nomad Trooper[.][X]
+Nomad Trpr[.][X]
 
 ## MSG_CLASS_NOMAD_TROOPER_DESC
 Veteran nomads who have added the[LF]
@@ -40644,3 +40644,14 @@ sword to their bow. Equip: Swords, Bows.[X]
 
 ## MSG_PURCHASE_GENERIC_DEPLOY_SELECT
 Select where to deploy the new unit.[X]
+
+
+## MSG_MKATTI_NAME
+Mani Katti[X]
+
+## MSG_MKATTI_DESC
+A sword infused with power.[.][X]
+
+
+## MSG_WM_INTRO
+The continent of Ashor.[A][X]

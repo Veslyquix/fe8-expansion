@@ -7,6 +7,7 @@
 #include "bmitem.h"
 #include "ekrbattle.h"
 #include "constants/classes.h"
+#include "constants/msg.h" 
 
 CONST_DATA struct ClassData gClassData[] = {
 	[CLASS_EPHRAIM_LORD - 1] = {
@@ -6352,8 +6353,8 @@ CONST_DATA struct ClassData gClassData[] = {
 		.pTerrainResistanceLookup = TerrainTable_Res_Common,
 	},
 	[CLASS_LYN_LORD - 1] = {
-		.nameTextId = 3479,
-		.descTextId = 3480,
+		.nameTextId = MSG_CLASS_LYN_LORD_NAME,
+		.descTextId = MSG_CLASS_LYN_LORD_DESC,
 		.number = CLASS_LYN_LORD,
 		.promotion = CLASS_SWORDMASTER,
 		.SMSId = 110,
@@ -6387,6 +6388,7 @@ CONST_DATA struct ClassData gClassData[] = {
 		.promotionSpd = 0,
 		.promotionDef = 0,
 		.promotionRes = 0,
+		.attributes = CA_LORD | CA_LOCK_6,
 		.baseRanks = {
 			[ITYPE_SWORD] = WPN_EXP_D,
 		},
@@ -6401,8 +6403,8 @@ CONST_DATA struct ClassData gClassData[] = {
 		.pTerrainResistanceLookup = TerrainTable_Res_Common,
 	},
 	[CLASS_NOMAD - 1] = {
-		.nameTextId = 3481,
-		.descTextId = 3482,
+		.nameTextId = MSG_CLASS_NOMAD_NAME,
+		.descTextId = MSG_CLASS_NOMAD_DESC,
 		.number = CLASS_NOMAD,
 		.promotion = CLASS_NOMAD_TROOPER,
 		.SMSId = 111,
@@ -6451,8 +6453,8 @@ CONST_DATA struct ClassData gClassData[] = {
 		.pTerrainResistanceLookup = TerrainTable_Res_Common,
 	},
 	[CLASS_NOMAD_F - 1] = {
-		.nameTextId = 3481,
-		.descTextId = 3482,
+		.nameTextId = MSG_CLASS_NOMAD_NAME,
+		.descTextId = MSG_CLASS_NOMAD_DESC,
 		.number = CLASS_NOMAD_F,
 		.promotion = CLASS_NOMAD_TROOPER_F,
 		.SMSId = 112,
@@ -6501,8 +6503,8 @@ CONST_DATA struct ClassData gClassData[] = {
 		.pTerrainResistanceLookup = TerrainTable_Res_Common,
 	},
 	[CLASS_NOMAD_TROOPER - 1] = {
-		.nameTextId = 3483,
-		.descTextId = 3484,
+		.nameTextId = MSG_CLASS_NOMAD_TROOPER_NAME,
+		.descTextId = MSG_CLASS_NOMAD_TROOPER_DESC,
 		.number = CLASS_NOMAD_TROOPER,
 		.promotion = CLASS_NOMAD,
 		.SMSId = 113,
@@ -6552,8 +6554,8 @@ CONST_DATA struct ClassData gClassData[] = {
 		.pTerrainResistanceLookup = TerrainTable_Res_Common,
 	},
 	[CLASS_NOMAD_TROOPER_F - 1] = {
-		.nameTextId = 3483,
-		.descTextId = 3484,
+		.nameTextId = MSG_CLASS_NOMAD_TROOPER_NAME,
+		.descTextId = MSG_CLASS_NOMAD_TROOPER_DESC,
 		.number = CLASS_NOMAD_TROOPER_F,
 		.promotion = CLASS_NOMAD_F,
 		.SMSId = 114,

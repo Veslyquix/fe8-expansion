@@ -570,7 +570,12 @@ static bool IsCgImg256Col(int id)
 
 static bool IsBgImg256Col(int id)
 {
-    return (int)gConvoBackgroundData[id].tsa <= 1;
+    /* <= 2, not <= 1: covers all three multipalette sentinels
+     * (CONVOBG_MULTIPALETTE_256/224/192, include/bg.h) -- none of them
+     * support the ordinary cross-fade-via-palette-darkening path below,
+     * same reason as the original 256/224 check. Missing 192 here would
+     * silently pass its background image through canFadeBetweenImgs. */
+    return (int)gConvoBackgroundData[id].tsa <= 2;
 }
 
 int IsImg256Col(int type, int id)
@@ -917,6 +922,22 @@ static const signed char body7[] =
     "  MeatOfJustice, UltraFenix" NL
     " Nomad Trooper map sprite by IS";
 
+/* Kept in sync with CREDITS.md's "Conversation Backgrounds" table --
+ * public-domain paintings used as the new 192-colour multipalette test
+ * backgrounds (FE8_MULTIPALETTE_BG, added alongside CONVOBG_MULTIPALETTE_192
+ * itself; see scripts/convo_bg_to_source.py). */
+static const signed char header8[] = "Conversation Backgrounds";
+static const signed char body8[] =
+    " Hillside painting by Alexander Lawrie";
+static const signed char header9[] = "Conversation Backgrounds";
+static const signed char body9[] =
+    " Mountains at Dusk painting" NL
+    "  by Gustave Dore";
+static const signed char header10[] = "Conversation Backgrounds";
+static const signed char body10[] =
+    " River Forest Landscape painting" NL
+    "  by Tobias Everet Spence";
+
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
@@ -974,6 +995,11 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
 #if FE8_NEW_ANIMS
     { header6, body6, SubstituteRandomBG, BG_Type, 0, 0 },
     { header7, body7, SubstituteRandomBG, BG_Type, 0, 0 },
+#endif
+#if FE8_MULTIPALETTE_BG
+    { header8, body8, BG_ALEXANDER_LAWRIE_HILLSIDE_192, BG_Type, 0, 0 },
+    { header9, body9, BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192, BG_Type, 0, 0 },
+    { header10, body10, BG_TOBIAS_SPENCE_RIVER_FOREST_192, BG_Type, 0, 0 },
 #endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },

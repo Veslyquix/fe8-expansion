@@ -1,6 +1,7 @@
 #include "global.h"
 #include "bmitem.h"
 #include "constants/items.h"
+#include "constants/msg.h"
 
 CONST_DATA struct ItemData gItemData[] = {
 	[ITEM_NONE] = {
@@ -155,11 +156,11 @@ CONST_DATA struct ItemData gItemData[] = {
 		.weaponExp = 2,
 	},
 	[ITEM_SWORD_MKATTI] = {
-		.nameTextId = 0x403,
-		.descTextId = 0x4ab,
+		.nameTextId = MSG_MKATTI_NAME,
+		.descTextId = MSG_MKATTI_DESC,
 		.number = ITEM_SWORD_MKATTI,
 		.weaponType = ITYPE_SWORD,
-		.attributes = IA_WEAPON | IA_UNSELLABLE | IA_LOCK_6,
+		.attributes = IA_WEAPON | IA_UNSELLABLE | IA_UNBREAKABLE | IA_LOCK_6,
 		.pEffectiveness = ItemEffectiveness_ArmorAndHorse,
 		.maxUses = 45,
 		.might = 8,

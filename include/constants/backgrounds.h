@@ -69,6 +69,14 @@ enum {
      * with it by accident (BG_RANDOM itself is deliberately never moved). */
     BG_ALTAR_NIGHT_256          = 0x38,
     BG_KH_224            = 0x39,
+
+    /* 192-colour test backgrounds (CONVOBG_MULTIPALETTE_192, added
+     * alongside the new 192-colour mode itself -- see
+     * scripts/convo_bg_to_source.py and LoadMultipaletteConvoBg,
+     * src/eventscr2.c). */
+    BG_ALEXANDER_LAWRIE_HILLSIDE_192 = 0x3A,
+    BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192 = 0x3B,
+    BG_TOBIAS_SPENCE_RIVER_FOREST_192 = 0x3C,
 #endif
 };
 

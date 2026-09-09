@@ -68,6 +68,17 @@ Wakwi and Ishkode respectively) but remain credited/linked, not removed.
 | --- | --- | --- |
 | CO info screen backdrop | `graphics/bg/bg_CoStatusScreen.png` | PatrickHoang |
 
+## Conversation Backgrounds (`MULTIPALETTE_BG`)
+
+Public-domain paintings, converted to the 192-colour multipalette format
+(`scripts/convo_bg_to_source.py`) as test/demo backgrounds for that mode.
+
+| Asset | File | Artist |
+| --- | --- | --- |
+| Hillside | `graphics/convo_bg/AlexanderLawrieHillside.png` | Alexander Lawrie |
+| Mountains at Dusk | `graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.png` | Gustave Doré |
+| River Forest Landscape | `graphics/convo_bg/tobias-everet-spence-river-forest-landscape.png` | Tobias Everet Spence |
+
 ## Custom BGM (`NIMAP2`)
 
 Sound data sourced from the [Fire Emblem: Sacred Rewritten

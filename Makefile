@@ -506,6 +506,16 @@ include release.mk
 # contiguous indices 0-13 and clobber that reserved gap.
 graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal &: graphics/convo_bg/kh.png scripts/convo_bg_to_source.py
 	$(PYTHON) scripts/convo_bg_to_source.py 224 $< graphics/convo_bg/kh.8bpp graphics/convo_bg/kh.gbapal
+
+# 192-colour convo BGs (CONVOBG_MULTIPALETTE_192): reserve BG palettes 0-3
+# entirely (got item / gold popup UI) instead of 224's 2-3 -- see
+# scripts/convo_bg_to_source.py and LoadMultipaletteConvoBg (src/eventscr2.c).
+graphics/convo_bg/AlexanderLawrieHillside.8bpp graphics/convo_bg/AlexanderLawrieHillside.gbapal &: graphics/convo_bg/AlexanderLawrieHillside.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/AlexanderLawrieHillside.8bpp graphics/convo_bg/AlexanderLawrieHillside.gbapal
+graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.8bpp graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.gbapal &: graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.8bpp graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.gbapal
+graphics/convo_bg/tobias-everet-spence-river-forest-landscape.8bpp graphics/convo_bg/tobias-everet-spence-river-forest-landscape.gbapal &: graphics/convo_bg/tobias-everet-spence-river-forest-landscape.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/tobias-everet-spence-river-forest-landscape.8bpp graphics/convo_bg/tobias-everet-spence-river-forest-landscape.gbapal
 # frlgUiFrame (src/power.c's CO screen BG3 diagonal-scrolling background):
 # the source PNG holds exactly one repeat unit (a 32x32px / 4x4-tile block);
 # repeating_bg_tsa.py dedupes it to its unique 8x8 tiles and tiles the

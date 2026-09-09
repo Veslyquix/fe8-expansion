@@ -151,6 +151,9 @@ struct CONST_DATA gfx_set gConvoBackgroundData[] = {
 	 * tsa pointer is always a ROM/RAM address far larger than these. */
 	{bg_AltarNight256_tiles, CONVOBG_MULTIPALETTE_256, bg_AltarNight256_palette}, // 0x38
 	{bg_kh_tiles, CONVOBG_MULTIPALETTE_224, bg_kh_palette}, // 0x39
+	{bg_AlexanderLawrieHillside_tiles, CONVOBG_MULTIPALETTE_192, bg_AlexanderLawrieHillside_palette}, // 0x3A
+	{bg_GustaveDoreMountainsDusk_tiles, CONVOBG_MULTIPALETTE_192, bg_GustaveDoreMountainsDusk_palette}, // 0x3B
+	{bg_TobiasSpenceRiverForest_tiles, CONVOBG_MULTIPALETTE_192, bg_TobiasSpenceRiverForest_palette}, // 0x3C
 #endif
 };
 

@@ -42,7 +42,7 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
         .xPosition = 1,
         .yPosition = 2,
         .items = {
-            ITEM_SWORD_IRON,
+            ITEM_SWORD_MKATTI,
             ITEM_VULNERARY,
         },
     },
@@ -166,34 +166,12 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
     { 0 },
 };
 
-/* Custom-campaign prologue intro: Wakwi (Eirika's slot) and Ishkode
- * (Seth's slot) are placed with the same starting position/level/items as
- * the stock beginning scene's Eirika/Seth, Wakwi still receives the Rapier
- * and O'Neill's squad still spawns (both needed for the chapter to
- * actually be playable and winnable via DefeatBoss) -- but instead of the
- * Renais-throne-room cutscene, this plays the custom campaign's own
- * opening: Wakwi and Ishkode, spiritual leaders of the Akiya (a nomadic
- * Sacae people fighting to reclaim their lands from the Naskwa), have
- * just made a temporary camp when a wounded scout arrives warning that an
- * allied fort is about to be besieged -- see
- * MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING (texts/texts.txt). */
-/* ASMC callback for setting a faction's CO from event slots, so a script
- * can drive SetFactionCo (src/power.c) with SVAL instead of a one-off C
- * function hardcoding the faction/CO pair -- SVAL(EVT_SLOT_1, faction)
- * SVAL(EVT_SLOT_2, coId) ASMC(SetFactionCoFromSlots), once per faction.
- * EVT_SLOT_1/2 are free at the very start of a fresh event (see
- * include/event.h) -- reusing them here is safe as long as this runs
- * before anything else in the same script needs those two slots. */
 static void SetFactionCoFromSlots(void)
 {
     SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
 }
 
 CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
-    /* Blue plays as Ishkode, the Naskwa (Red) play as O'Neill -- see
-     * CoScreen_KeyListener's SCROLL_ALL_COS gate (src/power.c): without
-     * this, the CO screen has nothing to scroll to (neither faction's
-     * commanderId ever gets set, so IsCoInUse never matches anything). */
     SVAL(EVT_SLOT_1, FACTION_BLUE)
     SVAL(EVT_SLOT_2, CO_ISHKODE)
     ASMC(SetFactionCoFromSlots)
@@ -203,10 +181,7 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     ASMC(SetFactionCoFromSlots)
 
 #if FE8_CO_POWERS
-    /* Let the player pick Blue's commander for themselves, overriding the
-     * CO_ISHKODE default set above. EVT_SLOT_1 is the enabled-CO bitfield
-     * (0 = every CO), EVT_SLOT_3 the faction being set. See src/coSelect.c. */
-    SVAL(EVT_SLOT_1, 0)
+    SVAL(EVT_SLOT_1, 0) // All COs right now. 
     SVAL(EVT_SLOT_3, FACTION_BLUE)
     ASMC(StartCoSelect)
 #endif
@@ -234,11 +209,25 @@ CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
     ENUN
 
     FlashCursor(CHARACTER_EIRIKA, 60)
-    Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
+    
+    MUSI
+    Text_BG(BG_ALEXANDER_LAWRIE_HILLSIDE_192, MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
+    MUNO
+    
+    /* Color distortion test - working fine with 192 col BGs. 
+    SetBackground(BG_TOBIAS_SPENCE_RIVER_FOREST_192)
+    SVAL(EVT_SLOT_3, ITEM_SWORD_RAPIER)
+    GIVEITEMTO(CHARACTER_EIRIKA)
+    FADI(16)
+    CLEAN 
+    */ 
+
+    
+    // Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
+    FlashCursor(CHARACTER_SETH, 20)
     MOVE(0, CHARACTER_SETH, 1, 2)
     ENUN
     DISA(CHARACTER_SETH)
-    // FlashCursor(CHARACTER_SETH, 20)
     
     LOAD1(1, UnitDef_PrologueEnemies)
     ENUN

@@ -1179,7 +1179,9 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
                 attacker->unit.curHP = 0;
 
 #if FE8_CO_POWERS
-            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+            if (gBattleStats.config & BATTLE_CONFIG_REAL) { 
+                CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+            }
 #endif
         } else {
             if (gBattleStats.damage > defender->unit.curHP)
@@ -1191,8 +1193,10 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
                 defender->unit.curHP = 0;
 
 #if FE8_CO_POWERS
-            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
-            CoGauge_OnDamage(UNIT_FACTION(&defender->unit), gBattleStats.damage);
+            if (gBattleStats.config & BATTLE_CONFIG_REAL) { 
+                CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+                CoGauge_OnDamage(UNIT_FACTION(&defender->unit), gBattleStats.damage);
+            } 
 #endif
         }
 

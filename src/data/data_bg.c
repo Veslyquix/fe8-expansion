@@ -163,5 +163,11 @@ u8 __attribute__((aligned(4))) bg_AltarNight256_tiles[] = INCBIN_U8("graphics/co
 u16 __attribute__((aligned(4))) bg_AltarNight256_palette[] = INCBIN_U16("graphics/convo_bg/convo_bg_altar_night_256.gbapal");
 u8 __attribute__((aligned(4))) bg_kh_tiles[] = INCBIN_U8("graphics/convo_bg/kh.8bpp.lz");
 u16 __attribute__((aligned(4))) bg_kh_palette[] = INCBIN_U16("graphics/convo_bg/kh.gbapal");
+u8 __attribute__((aligned(4))) bg_AlexanderLawrieHillside_tiles[] = INCBIN_U8("graphics/convo_bg/AlexanderLawrieHillside.8bpp.lz");
+u16 __attribute__((aligned(4))) bg_AlexanderLawrieHillside_palette[] = INCBIN_U16("graphics/convo_bg/AlexanderLawrieHillside.gbapal");
+u8 __attribute__((aligned(4))) bg_GustaveDoreMountainsDusk_tiles[] = INCBIN_U8("graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.8bpp.lz");
+u16 __attribute__((aligned(4))) bg_GustaveDoreMountainsDusk_palette[] = INCBIN_U16("graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.gbapal");
+u8 __attribute__((aligned(4))) bg_TobiasSpenceRiverForest_tiles[] = INCBIN_U8("graphics/convo_bg/tobias-everet-spence-river-forest-landscape.8bpp.lz");
+u16 __attribute__((aligned(4))) bg_TobiasSpenceRiverForest_palette[] = INCBIN_U16("graphics/convo_bg/tobias-everet-spence-river-forest-landscape.gbapal");
 u8 __attribute__((aligned(4))) Img_CgTextBubbleSprite[] = INCBIN_U8("graphics/convo_bg/BubbleSprite.dmp");
 #endif

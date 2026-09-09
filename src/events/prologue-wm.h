@@ -11,6 +11,7 @@
 #include "constants/classes.h"
 #include "constants/worldmap.h"
 #include "constants/songs.h"
+#include "constants/msg.h"
 
 CONST_DATA EventScr EventScrWM_Prologue_Beginning[] = {
     EVBIT_MODIFY(0x1)
@@ -21,8 +22,27 @@ CONST_DATA EventScr EventScrWM_Prologue_Beginning[] = {
             /* Skip the "The continent of Magvel..." narration when first
              * arriving at the prologue on New Game. Other chapters' world-
              * map beginning events are unaffected. */
-    // SKIPWN
-    // ENDA
+    MUSCFAST(SONG_SILENT)
+    STAL(32)
+    MUSC(SONG_THE_BEGINNING)
+    WM_SHOWDRAWNMAP(0, 0, 0x10)
+    STAL(2)
+    WM_FADEOUT(0)
+    WM_TEXTDECORATE // WaitFade
+    EVBIT_MODIFY(0x0)
+    WM_SHOWPORTRAIT(0, 0x2, 0x02BC, 0)
+    STAL(60)
+    
+    WM_SHOWTEXTWINDOW(40, 0x0001)
+    WM_WAITFORTEXT
+    WM_TEXTSTART
+    WM_TEXT(MSG_WM_INTRO, 0)
+
+    // wait for talk locked
+    TEXTEND
+             
+    SKIPWN
+    ENDA
 #endif
     MUSCFAST(SONG_SILENT)
     STAL(32)

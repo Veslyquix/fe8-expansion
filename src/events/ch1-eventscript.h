@@ -10,102 +10,34 @@
 #include "constants/songs.h"
 
 CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
-    MUSC(SONG_TENSION)
-
+    MUSI
+    Text_BG(BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192, MSG_CUSTOM_CAMPAIGN_CH1A_START)
+    MUNO
+    
+    SVAL(EVT_SLOT_1, FACTION_RED)
+    SVAL(EVT_SLOT_2, CO_KARGAN)
+    ASMC(SetFactionCoFromSlots)
+    
     LOAD1(1, UnitDef_Event_Ch1Enemy)
     ENUN
-
-    STAL2(60)
-    CUMO_AT(2, 2)
-    STAL(60)
-    CURE
-
-    Text_BG(BG_INTERIOR_BLACK, 0x929)
-
-    LOAD1(1, UnitDef_Event_Ch1NPC)
-    ENUN
-
-    SVAL(EVT_SLOT_B, 0)
-    DISA(CHAR_EVT_POSITION_AT_SLOTB)
-
-    FlashCursor(CHARACTER_BREGUET, 60)
-    Text_BG(BG_GRASS_PLAINS, 0x92A)
-
-    MOVE(0, CHARACTER_BREGUET, 2, 3)
-    ENUN
-
-    /* Force set battle-quotes flag to make the following script-battle not to show battle quote */
-    ENUT(EVFLAG_BATTLE_QUOTES)
-
-    StartBattle
-    CriticalHit(0, 20)
-    NormalDamage(1, 0)
-    EndAttack
-    FIGHT(CHARACTER_BREGUET, CHARACTER_FRELIAN, 0, 0)
-
-    /* Clear battle Quotes flag */
-    ENUF(EVFLAG_BATTLE_QUOTES)
-
-    SVAL(EVT_SLOT_B, 0x00020002)
-    KILL(CHAR_EVT_POSITION_AT_SLOTB)
-    DISA_IF(CHAR_EVT_POSITION_AT_SLOTB)
-
-    FlashCursor(CHARACTER_BREGUET, 60)
-
-    TEXTSHOW(0x92B)
-    TEXTEND
-    REMA
-
-    SVAL(EVT_SLOT_2, EventScr_Ch1Tut_GuideWTA)
-    CALL(EventScr_CallOnTutorialMode)
-
-    MOVE(0, CHARACTER_BREGUET, 2, 2)
-
-    SVAL(EVT_SLOT_B, _EvtParams2(1, 6))
-    MOVE(24, CHAR_EVT_POSITION_AT_SLOTB, 1, 3)
-
-    SVAL(EVT_SLOT_B, _EvtParams2(3, 6))
-    MOVE(24, CHAR_EVT_POSITION_AT_SLOTB, 3, 3)
-
-    SVAL(EVT_SLOT_B, _EvtParams2(1, 8))
-    MOVE(24, CHAR_EVT_POSITION_AT_SLOTB, 9, 5)
-
-    SVAL(EVT_SLOT_B, _EvtParams2(2, 7))
-    MOVE(24, CHAR_EVT_POSITION_AT_SLOTB, 8, 3)
-
-    SVAL(EVT_SLOT_B, _EvtParams2(3, 8))
-    MOVE(24, CHAR_EVT_POSITION_AT_SLOTB, 4, 7)
-
-    SVAL(EVT_SLOT_B, _EvtParams2(2, 9))
-    MOVE(24, CHAR_EVT_POSITION_AT_SLOTB, 2, 8)
-    ENUN
-
-    STAL2(60)
-    CUMO_AT(2, 2)
-    STAL(60)
-    CURE
-
-    Text_BG(BG_INTERIOR_BLACK, 0x92C)
-    REMA
 
     LOAD2(1, UnitDef_Event_Ch1Ally)
     ENUN
 
-    FlashCursor(CHARACTER_EIRIKA, 60)
+    // FlashCursor(CHARACTER_EIRIKA, 60)
 
-    Text(0x92D)
 
-    SVAL(EVT_SLOT_2, CHARACTER_SETH)
-    CALL(EventScr_MoveUnitS2ToLeader)
 
-    SVAL(EVT_SLOT_2, EventScr_Ch1Tut_OnBeginning)
-    CALL(EventScr_CallOnTutorialMode)
-
+#if FE8_CO_POWERS
+    SVAL(EVT_SLOT_1, 0) // All COs right now. 
+    SVAL(EVT_SLOT_3, FACTION_BLUE)
+    ASMC(StartCoSelect)
+#endif
     /**
      * Temporary flag(11) is used for triggering event: EventScr_Ch1_Turn_EnemyReinforceArrive,
      * this flag will be unset by event: EventScr_Ch1_Misc_Area
      */
-    ENUT(EVFLAG_TMP(11))
+    // ENUT(EVFLAG_TMP(11))
 
     NoFade
     ENDA
