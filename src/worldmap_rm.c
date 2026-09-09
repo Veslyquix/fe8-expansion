@@ -138,13 +138,50 @@ void GmapRm_InitNop(void)
     return;
 }
 
+#if FE8_CUSTOM_CAMPAIGN 
+
+void VeslyFillTileIndices(int bg, int palId, u16 chr)
+{
+    int iy;
+    int ix;
+    u16 * bgBuf;
+
+    bgBuf = BG_GetMapBuffer(bg);
+    for (iy = 0; iy < 0x20; iy++)
+    {
+        for (ix = 0; ix < 0x20; ix++)
+        {
+            *bgBuf = ((chr) | (palId << 12));
+            chr++;
+            bgBuf++;
+        }
+    }
+}
+
+void VeslyLoadTileGfx(int tileWidth, int tileHeight, u8* src, int chr, int bg, int palId)
+{
+    u8* dst = (void*)BG_VRAM + (chr << 5); 
+    int i;
+    for (i = 0; i < tileHeight; i++)
+    {
+        CpuFastCopy(src + i * (tileWidth << 5), (void*)(dst + i * (tileWidth << 5)), tileWidth << 5);
+    }
+    VeslyFillTileIndices(bg, palId, chr);
+    BG_EnableSyncByMask(1 << bg);
+}
+
+
+#endif 
+
+
 void GmapRm_StartUpdateDirect(struct ProcGmapRm * proc)
 {
     GM_SCREEN->gmroute->flags &= ~GM_ROUTE_FLAG_2;
 
     BG_SetPosition(BG_1, 0, 0);
 #if FE8_CUSTOM_CAMPAIGN
-    Decompress(Img_EventGmap, gBG1TilemapBuffer);
+    Decompress(Img_EventGmap, (void*)BG_VRAM + 0x20);
+    VeslyFillTileIndices(1, 5, 1);
     ApplyPalettes(Pal_EventGmap, 5, 4);
 #else
     Decompress(Img_EventGmap, (void *)BG_VRAM);
