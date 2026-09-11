@@ -290,21 +290,30 @@ SECTIONS
 
         /* === PINNED: banim regions (never shift) === */
         FILL(0xFF);
-        . = 0xC00000;
+        /* Was 0xC00000: the 2026-09 convo_bg import (21 new full-screen
+         * 8bpp paintings, src/data/data_bg.c) pushed __floating_end past
+         * the old 0xC00000 pinned-banim start -- the 16M ROM budget was
+         * already within a few KB of full (see reports/linker-budget),
+         * so there was no slack left to reclaim by reshuffling alone.
+         * Moved the whole pinned banim block +0x500000 (5MB) now that
+         * MODERN_ROM_SIZE defaults to 32M (see modern.mk), giving the
+         * floating region real headroom instead of just enough for
+         * today's content. */
+        . = 0x1100000;
         *banim_data.o(.data)
         *banim_data.o(.data.banim_array_len)
         *banim_data.o(.data.banim_array)
 
         FILL(0x00);
-        . = 0xC02000;
+        . = 0x1102000;
         banim/data_banim.o(.data)
 
         FILL(0xFF);
-        /* Was 0xEE0000: banim/data_banim.o (the FE8_NEW_ANIMS custom
-         * animation table, .index 0xC9 on) grew past the old 0xC02000-
-         * 0xEE0000 budget (~2.86MB) once the 2026-09 pack import added 17
-         * more animations on top of the existing 31 -- see
-         * scripts/banim_event_to_source.py's module docstring for why
+        /* Was 0xEE0000, then 0xF40000 (both +0x500000 below): banim/data_banim.o
+         * (the FE8_NEW_ANIMS custom animation table, .index 0xC9 on) grew
+         * past the old 0xC02000-0xEE0000 budget (~2.86MB) once the 2026-09
+         * pack import added 17 more animations on top of the existing 31 --
+         * see scripts/banim_event_to_source.py's module docstring for why
          * only rtl OAM is stored per entry (that's what got this far in
          * the first place). Bumped the whole banim_terrain/banim_pal
          * region by +0x60000 (384K) to cover that plus headroom for
@@ -313,17 +322,17 @@ SECTIONS
          * addresses as a literal (only *_start/*_size linker symbols and
          * the offline scripts/dump_*.py tools, which anchor against the
          * ORIGINAL vanilla ROM, not this one) before moving it. */
-        . = 0xF40000;
+        . = 0x1440000;
         *banim_terrain_data.o(.data)
         *banim_terrain_data.o(.data.banim_terrain_head)
         *banim_terrain_data.o(.data.banim_terrain_ptr_table)
 
         FILL(0x00);
-        . = 0xF40C00;
+        . = 0x1440C00;
         *data_banim_terrain.o(.data)
 
         FILL(0xFF);
-        _banim_pal_start = 0xF58000;
+        _banim_pal_start = 0x1458000;
         . = _banim_pal_start;
         *banim_pal_chara.o(.data)
         *banim_pal_chara.o(.data.banim_pal_head)
@@ -336,9 +345,9 @@ SECTIONS
         _banim_pal_size = . - _banim_pal_start;
 
         FILL(0xFF);
-        . = 0xFE0000;
+        . = 0x14E0000;
         *data_FE0000.o(.data)
-        . = 0xFFF000;
+        . = 0x14FF000;
         *data_FFF000.o(.data)
     } > rom = 0xFF
 
@@ -374,7 +383,7 @@ SECTIONS
         "gMainCallback overlaps the buffered UI-frame scratch region")
     ASSERT(ADDR(ewram_data) >= __ewram_start + __ewram_overlay_peak_size,
         "Persistent EWRAM overlaps an overlay")
-    ASSERT(__floating_end <= 0x08C00000, "Floating ROM content overlaps pinned banim region at 0x08C00000")
+    ASSERT(__floating_end <= 0x09100000, "Floating ROM content overlaps pinned banim region at 0x09100000")
     ASSERT(SIZEOF(ewram_overlay_0) <= 256K, "ewram_overlay_0 exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_gameending) <= 256K, "ewram_overlay_gameending exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_bmstart) <= 256K, "ewram_overlay_bmstart exceeds EWRAM")

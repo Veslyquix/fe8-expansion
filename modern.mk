@@ -1533,11 +1533,11 @@ $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 # ROM size configuration: 16M or 32M. Production profiles enabling ja or
 # zh-Hans are validated (scripts/modernize/expansion_config.py) as 32M-only;
 # the upper locale bank carries their full-game catalog and localized font
-# data. Default is 16M: the current config.mk default flag set (including
-# FE8_MAPGEN) fits comfortably under the 16M ceiling with room to spare;
-# opt into MODERN_ROM_SIZE=32M for CJK locales or once real headroom is
-# needed.
-MODERN_ROM_SIZE ?= 16M
+# data. Default was 16M until the FE8_MAPGEN chunk table (and the
+# pre-existing near-full 16M budget, see reports/linker-budget) made that
+# no longer enough room to build with; now defaults to 32M, with 16M kept
+# as an explicit opt-in (MODERN_ROM_SIZE=16M) for anyone who still fits.
+MODERN_ROM_SIZE ?= 32M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000

@@ -79,6 +79,27 @@ Public-domain paintings, converted to the 192-colour multipalette format
 | Hillside | `graphics/convo_bg/AlexanderLawrieHillside.png` | Alexander Lawrie |
 | Mountains at Dusk | `graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.png` | Gustave Doré |
 | River Forest Landscape | `graphics/convo_bg/tobias-everet-spence-river-forest-landscape.png` | Tobias Everet Spence |
+| A Tornado in the Wilderness | `graphics/convo_bg/sep_a-tornado-in-the-wilderness-1835_Thomas_Cole.png` | Thomas Cole |
+| Aquaduct | `graphics/convo_bg/sep_Aquaduct_Thomas_Cole.png` | Thomas Cole |
+| Aurora Borealis | `graphics/convo_bg/sep_aurora-borealis-Frederic_Edwin_Church.png` | Frederic Edwin Church |
+| Distant View of Niagara Falls | `graphics/convo_bg/sep_distant-view-of-niagara-falls-1830_Thomas_Cole.png` | Thomas Cole |
+| Expulsion from the Garden of Eden | `graphics/convo_bg/sep_expulsion-from-the-garden-of-eden-1828_Thomas_Cole.png` | Thomas Cole |
+| Expulsion, Moon and Firelight | `graphics/convo_bg/sep_expulsion-moon-and-firelight_thomas_cole.png` | Thomas Cole |
+| Interior of the Colosseum, Rome | `graphics/convo_bg/sep_interior-of-the-colosseum-rome-1832_Thomas_Cole.png` | Thomas Cole |
+| Lake with Dead Trees | `graphics/convo_bg/sep_lake-with-dead-trees-catskill-Thomas_Cole.png` | Thomas Cole |
+| Mount Aetna from Taormina | `graphics/convo_bg/sep_mount-aetna-from-taormina-1843_Thomas_Cole.png` | Thomas Cole |
+| Mountain Sunrise | `graphics/convo_bg/sep_mountain-sunrise-Thomas_Cole.png` | Thomas Cole |
+| Parthenon | `graphics/convo_bg/sep_parthenon-Frederic_Edwin_Church.png` | Frederic Edwin Church |
+| Romantic Landscape with Ruined Tower | `graphics/convo_bg/sep_romantic-landscape-with-ruined-tower_Thomas_Cole.png` | Thomas Cole |
+| The Arabian Desert | `graphics/convo_bg/sep_the-arabian-desert-Frederic_Edwin_Church.png` | Frederic Edwin Church |
+| The Cascatelli, Tivoli | `graphics/convo_bg/sep_the-cascatelli-tivoli_Thomas_Cole.png` | Thomas Cole |
+| The Garden of Eden | `graphics/convo_bg/sep_the-garden-of-eden_Thomas_Cole.png` | Thomas Cole |
+| The Notch of the White Mountains | `graphics/convo_bg/sep_the-notch-of-the-white-mountains-crawford-notch-Thomas_Cole.png` | Thomas Cole |
+| The Past | `graphics/convo_bg/sep_the-past-thomas_cole.png` | Thomas Cole |
+| The Subsiding of the Waters of the Deluge | `graphics/convo_bg/sep_the-subsiding-of-the-waters-of-the-deluge_Thomas_Cole.png` | Thomas Cole |
+| Scene from The Last of the Mohicans | `graphics/convo_bg/sep_thomas-cole-scene-from-the-last-of-the-mohicans.png` | Thomas Cole |
+| Twilight Mount | `graphics/convo_bg/sep_TwilightMount_Frederic_Edwin_Church.png` | Frederic Edwin Church |
+| White Mountain Landscape, Mount Washington | `graphics/convo_bg/sep_white-mountain-landscape-mount-washington-Martin_Johnson_Heade.png` | Martin Johnson Heade |
 
 ## Custom BGM (`NIMAP2`)
 

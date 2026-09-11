@@ -938,6 +938,18 @@ static const signed char header10[] = "Conversation Backgrounds";
 static const signed char body10[] =
     " River Forest Landscape painting" NL
     "  by Tobias Everet Spence";
+static const signed char header11[] = "Conversation Backgrounds";
+static const signed char body11[] =
+    " Sep BG paintings by" NL
+    "  Thomas Cole";
+static const signed char header12[] = "Conversation Backgrounds";
+static const signed char body12[] =
+    " Sep BG paintings by" NL
+    "  Frederic Edwin Church";
+static const signed char header13[] = "Conversation Backgrounds";
+static const signed char body13[] =
+    " White Mountain Landscape" NL
+    "  by Martin Johnson Heade";
 
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
@@ -974,7 +986,7 @@ enum
 enum
 {
     /* RandomBG (0x37) from the original patch is out of range for
-     * gConvoBackgroundData (54 entries) -- substituted with a fixed,
+     * gConvoBackgroundData -- substituted with a fixed,
      * valid background here; see this file's header comment. */
     BurningBG = 0x2B,
     BlackBG = 0x35,
@@ -1002,6 +1014,9 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
     { header8, body8, BG_ALEXANDER_LAWRIE_HILLSIDE_192, BG_Type, 0, 0 },
     { header9, body9, BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192, BG_Type, 0, 0 },
     { header10, body10, BG_TOBIAS_SPENCE_RIVER_FOREST_192, BG_Type, 0, 0 },
+    { header11, body11, BG_SEP_AQUADUCT_THOMAS_COLE_192, BG_Type, 0, 0 },
+    { header12, body12, BG_SEP_AURORA_BOREALIS_FREDERIC_EDWIN_CHURCH_192, BG_Type, 0, 0 },
+    { header13, body13, BG_SEP_WHITE_MOUNTAIN_LANDSCAPE_MOUNT_WASHINGTON_MARTIN_JOHNSON_HEADE_192, BG_Type, 0, 0 },
 #endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },

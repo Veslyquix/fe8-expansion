@@ -516,6 +516,49 @@ graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.8bpp graphics/convo_bg/Gust
 	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.8bpp graphics/convo_bg/GustaveDoreStreaminMountainsatDusk.gbapal
 graphics/convo_bg/tobias-everet-spence-river-forest-landscape.8bpp graphics/convo_bg/tobias-everet-spence-river-forest-landscape.gbapal &: graphics/convo_bg/tobias-everet-spence-river-forest-landscape.png scripts/convo_bg_to_source.py
 	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/tobias-everet-spence-river-forest-landscape.8bpp graphics/convo_bg/tobias-everet-spence-river-forest-landscape.gbapal
+graphics/convo_bg/sep_a-tornado-in-the-wilderness-1835_Thomas_Cole.8bpp graphics/convo_bg/sep_a-tornado-in-the-wilderness-1835_Thomas_Cole.gbapal &: graphics/convo_bg/sep_a-tornado-in-the-wilderness-1835_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_a-tornado-in-the-wilderness-1835_Thomas_Cole.8bpp graphics/convo_bg/sep_a-tornado-in-the-wilderness-1835_Thomas_Cole.gbapal
+graphics/convo_bg/sep_Aquaduct_Thomas_Cole.8bpp graphics/convo_bg/sep_Aquaduct_Thomas_Cole.gbapal &: graphics/convo_bg/sep_Aquaduct_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_Aquaduct_Thomas_Cole.8bpp graphics/convo_bg/sep_Aquaduct_Thomas_Cole.gbapal
+graphics/convo_bg/sep_aurora-borealis-Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_aurora-borealis-Frederic_Edwin_Church.gbapal &: graphics/convo_bg/sep_aurora-borealis-Frederic_Edwin_Church.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_aurora-borealis-Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_aurora-borealis-Frederic_Edwin_Church.gbapal
+graphics/convo_bg/sep_distant-view-of-niagara-falls-1830_Thomas_Cole.8bpp graphics/convo_bg/sep_distant-view-of-niagara-falls-1830_Thomas_Cole.gbapal &: graphics/convo_bg/sep_distant-view-of-niagara-falls-1830_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_distant-view-of-niagara-falls-1830_Thomas_Cole.8bpp graphics/convo_bg/sep_distant-view-of-niagara-falls-1830_Thomas_Cole.gbapal
+graphics/convo_bg/sep_expulsion-from-the-garden-of-eden-1828_Thomas_Cole.8bpp graphics/convo_bg/sep_expulsion-from-the-garden-of-eden-1828_Thomas_Cole.gbapal &: graphics/convo_bg/sep_expulsion-from-the-garden-of-eden-1828_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_expulsion-from-the-garden-of-eden-1828_Thomas_Cole.8bpp graphics/convo_bg/sep_expulsion-from-the-garden-of-eden-1828_Thomas_Cole.gbapal
+graphics/convo_bg/sep_expulsion-moon-and-firelight_thomas_cole.8bpp graphics/convo_bg/sep_expulsion-moon-and-firelight_thomas_cole.gbapal &: graphics/convo_bg/sep_expulsion-moon-and-firelight_thomas_cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_expulsion-moon-and-firelight_thomas_cole.8bpp graphics/convo_bg/sep_expulsion-moon-and-firelight_thomas_cole.gbapal
+graphics/convo_bg/sep_interior-of-the-colosseum-rome-1832_Thomas_Cole.8bpp graphics/convo_bg/sep_interior-of-the-colosseum-rome-1832_Thomas_Cole.gbapal &: graphics/convo_bg/sep_interior-of-the-colosseum-rome-1832_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_interior-of-the-colosseum-rome-1832_Thomas_Cole.8bpp graphics/convo_bg/sep_interior-of-the-colosseum-rome-1832_Thomas_Cole.gbapal
+graphics/convo_bg/sep_lake-with-dead-trees-catskill-Thomas_Cole.8bpp graphics/convo_bg/sep_lake-with-dead-trees-catskill-Thomas_Cole.gbapal &: graphics/convo_bg/sep_lake-with-dead-trees-catskill-Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_lake-with-dead-trees-catskill-Thomas_Cole.8bpp graphics/convo_bg/sep_lake-with-dead-trees-catskill-Thomas_Cole.gbapal
+graphics/convo_bg/sep_mount-aetna-from-taormina-1843_Thomas_Cole.8bpp graphics/convo_bg/sep_mount-aetna-from-taormina-1843_Thomas_Cole.gbapal &: graphics/convo_bg/sep_mount-aetna-from-taormina-1843_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_mount-aetna-from-taormina-1843_Thomas_Cole.8bpp graphics/convo_bg/sep_mount-aetna-from-taormina-1843_Thomas_Cole.gbapal
+graphics/convo_bg/sep_mountain-sunrise-Thomas_Cole.8bpp graphics/convo_bg/sep_mountain-sunrise-Thomas_Cole.gbapal &: graphics/convo_bg/sep_mountain-sunrise-Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_mountain-sunrise-Thomas_Cole.8bpp graphics/convo_bg/sep_mountain-sunrise-Thomas_Cole.gbapal
+graphics/convo_bg/sep_parthenon-Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_parthenon-Frederic_Edwin_Church.gbapal &: graphics/convo_bg/sep_parthenon-Frederic_Edwin_Church.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_parthenon-Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_parthenon-Frederic_Edwin_Church.gbapal
+graphics/convo_bg/sep_romantic-landscape-with-ruined-tower_Thomas_Cole.8bpp graphics/convo_bg/sep_romantic-landscape-with-ruined-tower_Thomas_Cole.gbapal &: graphics/convo_bg/sep_romantic-landscape-with-ruined-tower_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_romantic-landscape-with-ruined-tower_Thomas_Cole.8bpp graphics/convo_bg/sep_romantic-landscape-with-ruined-tower_Thomas_Cole.gbapal
+graphics/convo_bg/sep_the-arabian-desert-Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_the-arabian-desert-Frederic_Edwin_Church.gbapal &: graphics/convo_bg/sep_the-arabian-desert-Frederic_Edwin_Church.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_the-arabian-desert-Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_the-arabian-desert-Frederic_Edwin_Church.gbapal
+graphics/convo_bg/sep_the-cascatelli-tivoli_Thomas_Cole.8bpp graphics/convo_bg/sep_the-cascatelli-tivoli_Thomas_Cole.gbapal &: graphics/convo_bg/sep_the-cascatelli-tivoli_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_the-cascatelli-tivoli_Thomas_Cole.8bpp graphics/convo_bg/sep_the-cascatelli-tivoli_Thomas_Cole.gbapal
+graphics/convo_bg/sep_the-garden-of-eden_Thomas_Cole.8bpp graphics/convo_bg/sep_the-garden-of-eden_Thomas_Cole.gbapal &: graphics/convo_bg/sep_the-garden-of-eden_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_the-garden-of-eden_Thomas_Cole.8bpp graphics/convo_bg/sep_the-garden-of-eden_Thomas_Cole.gbapal
+graphics/convo_bg/sep_the-notch-of-the-white-mountains-crawford-notch-Thomas_Cole.8bpp graphics/convo_bg/sep_the-notch-of-the-white-mountains-crawford-notch-Thomas_Cole.gbapal &: graphics/convo_bg/sep_the-notch-of-the-white-mountains-crawford-notch-Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_the-notch-of-the-white-mountains-crawford-notch-Thomas_Cole.8bpp graphics/convo_bg/sep_the-notch-of-the-white-mountains-crawford-notch-Thomas_Cole.gbapal
+graphics/convo_bg/sep_the-past-thomas_cole.8bpp graphics/convo_bg/sep_the-past-thomas_cole.gbapal &: graphics/convo_bg/sep_the-past-thomas_cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_the-past-thomas_cole.8bpp graphics/convo_bg/sep_the-past-thomas_cole.gbapal
+graphics/convo_bg/sep_the-subsiding-of-the-waters-of-the-deluge_Thomas_Cole.8bpp graphics/convo_bg/sep_the-subsiding-of-the-waters-of-the-deluge_Thomas_Cole.gbapal &: graphics/convo_bg/sep_the-subsiding-of-the-waters-of-the-deluge_Thomas_Cole.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_the-subsiding-of-the-waters-of-the-deluge_Thomas_Cole.8bpp graphics/convo_bg/sep_the-subsiding-of-the-waters-of-the-deluge_Thomas_Cole.gbapal
+graphics/convo_bg/sep_thomas-cole-scene-from-the-last-of-the-mohicans.8bpp graphics/convo_bg/sep_thomas-cole-scene-from-the-last-of-the-mohicans.gbapal &: graphics/convo_bg/sep_thomas-cole-scene-from-the-last-of-the-mohicans.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_thomas-cole-scene-from-the-last-of-the-mohicans.8bpp graphics/convo_bg/sep_thomas-cole-scene-from-the-last-of-the-mohicans.gbapal
+graphics/convo_bg/sep_TwilightMount_Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_TwilightMount_Frederic_Edwin_Church.gbapal &: graphics/convo_bg/sep_TwilightMount_Frederic_Edwin_Church.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_TwilightMount_Frederic_Edwin_Church.8bpp graphics/convo_bg/sep_TwilightMount_Frederic_Edwin_Church.gbapal
+graphics/convo_bg/sep_white-mountain-landscape-mount-washington-Martin_Johnson_Heade.8bpp graphics/convo_bg/sep_white-mountain-landscape-mount-washington-Martin_Johnson_Heade.gbapal &: graphics/convo_bg/sep_white-mountain-landscape-mount-washington-Martin_Johnson_Heade.png scripts/convo_bg_to_source.py
+	$(PYTHON) scripts/convo_bg_to_source.py 192 $< graphics/convo_bg/sep_white-mountain-landscape-mount-washington-Martin_Johnson_Heade.8bpp graphics/convo_bg/sep_white-mountain-landscape-mount-washington-Martin_Johnson_Heade.gbapal
+
 # frlgUiFrame (src/power.c's CO screen BG3 diagonal-scrolling background):
 # the source PNG holds exactly one repeat unit (a 32x32px / 4x4-tile block);
 # repeating_bg_tsa.py dedupes it to its unique 8x8 tiles and tiles the

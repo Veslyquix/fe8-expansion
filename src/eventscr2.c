@@ -154,6 +154,27 @@ struct CONST_DATA gfx_set gConvoBackgroundData[] = {
 	{bg_AlexanderLawrieHillside_tiles, CONVOBG_MULTIPALETTE_192, bg_AlexanderLawrieHillside_palette}, // 0x3A
 	{bg_GustaveDoreMountainsDusk_tiles, CONVOBG_MULTIPALETTE_192, bg_GustaveDoreMountainsDusk_palette}, // 0x3B
 	{bg_TobiasSpenceRiverForest_tiles, CONVOBG_MULTIPALETTE_192, bg_TobiasSpenceRiverForest_palette}, // 0x3C
+	{bg_sep_a_tornado_in_the_wilderness_1835_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_a_tornado_in_the_wilderness_1835_Thomas_Cole_palette}, // 0x3D
+	{bg_sep_Aquaduct_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_Aquaduct_Thomas_Cole_palette}, // 0x3E
+	{bg_sep_aurora_borealis_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_aurora_borealis_Frederic_Edwin_Church_palette}, // 0x3F
+	{bg_sep_distant_view_of_niagara_falls_1830_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_distant_view_of_niagara_falls_1830_Thomas_Cole_palette}, // 0x40
+	{bg_sep_expulsion_from_the_garden_of_eden_1828_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_expulsion_from_the_garden_of_eden_1828_Thomas_Cole_palette}, // 0x41
+	{bg_sep_expulsion_moon_and_firelight_thomas_cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_expulsion_moon_and_firelight_thomas_cole_palette}, // 0x42
+	{bg_sep_interior_of_the_colosseum_rome_1832_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_interior_of_the_colosseum_rome_1832_Thomas_Cole_palette}, // 0x43
+	{bg_sep_lake_with_dead_trees_catskill_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_lake_with_dead_trees_catskill_Thomas_Cole_palette}, // 0x44
+	{bg_sep_mount_aetna_from_taormina_1843_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_mount_aetna_from_taormina_1843_Thomas_Cole_palette}, // 0x45
+	{bg_sep_mountain_sunrise_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_mountain_sunrise_Thomas_Cole_palette}, // 0x46
+	{bg_sep_parthenon_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_parthenon_Frederic_Edwin_Church_palette}, // 0x47
+	{bg_sep_romantic_landscape_with_ruined_tower_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_romantic_landscape_with_ruined_tower_Thomas_Cole_palette}, // 0x48
+	{bg_sep_the_arabian_desert_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_arabian_desert_Frederic_Edwin_Church_palette}, // 0x49
+	{bg_sep_the_cascatelli_tivoli_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_cascatelli_tivoli_Thomas_Cole_palette}, // 0x4A
+	{bg_sep_the_garden_of_eden_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_garden_of_eden_Thomas_Cole_palette}, // 0x4B
+	{bg_sep_the_notch_of_the_white_mountains_crawford_notch_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_notch_of_the_white_mountains_crawford_notch_Thomas_Cole_palette}, // 0x4C
+	{bg_sep_the_past_thomas_cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_past_thomas_cole_palette}, // 0x4D
+	{bg_sep_the_subsiding_of_the_waters_of_the_deluge_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_subsiding_of_the_waters_of_the_deluge_Thomas_Cole_palette}, // 0x4E
+	{bg_sep_thomas_cole_scene_from_the_last_of_the_mohicans_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_thomas_cole_scene_from_the_last_of_the_mohicans_palette}, // 0x4F
+	{bg_sep_TwilightMount_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_TwilightMount_Frederic_Edwin_Church_palette}, // 0x50
+	{bg_sep_white_mountain_landscape_mount_washington_Martin_Johnson_Heade_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_white_mountain_landscape_mount_washington_Martin_Johnson_Heade_palette}, // 0x51
 #endif
 };
 
