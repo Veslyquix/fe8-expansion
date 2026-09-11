@@ -1506,11 +1506,37 @@ MODERN_ELF_REPLACED_ASM := \
 
 MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 
+# Modern-lane battle-animation data blob. banim/data_banim.o ($(BANIM_OBJECT),
+# Makefile) is a fully pre-linked binary blob (arm_compressing_linker.py
+# -Tdata, not a relocatable object) whose internal pointers between
+# animation sheets/OAM/palettes are baked as absolute addresses at
+# COMPILE time against a fixed base (-b) -- wherever the final link
+# actually places its bytes MUST match that base exactly, or every
+# pointer inside it is wrong (silent corruption -> crash on the first
+# battle animation played). The archival lane's object is pinned to
+# vanilla's own 0x8c02000 (ldscript.txt) and can never move: that's a
+# byte-matching requirement. The modern lane used to reuse that same
+# object at that same address, back when its floating .data still fit
+# under it -- the 2026-09 convo_bg import (21 new full-screen paintings)
+# pushed floating .data past 0x8c02000, so modern needs its OWN copy
+# pre-linked against a base beyond that, kept in lockstep with the
+# `. = __banim_data_base_abs - __text_start;` pin for banim/data_banim.modern.o(.data) in
+# linker/expansion.ld via the --defsym below. Headroom above the
+# natural floating end (~0x8c86f60 as of the same 2026-09 build) is
+# deliberately small: this address must be re-picked (and this object
+# rebuilt) whenever floating .data grows enough to reach it, so a
+# little slack avoids needing that on every small change, but there's
+# no value in reserving megabytes nothing will ever use.
+MODERN_BANIM_DATA_BASE := 0x08ca0000
+MODERN_BANIM_OBJECT := banim/data_banim.modern.o
+$(MODERN_BANIM_OBJECT): $(shell ./scripts/arm_compressing_linker.py -t linker_script_banim.txt -m)
+	./scripts/arm_compressing_linker.py -o $@ -t linker_script_banim.txt -b $(MODERN_BANIM_DATA_BASE) -l $(LD) --objcopy $(OBJCOPY) -c ./scripts/compressor.py
+
 # Non-C assembled objects from the legacy pipeline (sound, data asm, midi).
 # Filter out every C object, every modern-replaced assembly, and prebuilts.
 MODERN_ELF_LEGACY_ASM := $(filter-out \
 	$(C_OBJECTS) $(DATA_SRC_C_OBJECTS) \
-	$(MODERN_ELF_FE6SIO) $(BANIM_OBJECT) \
+	$(MODERN_ELF_FE6SIO) $(MODERN_BANIM_OBJECT) \
 	$(MODERN_ELF_NIMAP2_DROPPED) \
 	$(MODERN_ELF_REPLACED_ASM), \
 	$(ASM_OBJECTS))
@@ -1523,7 +1549,7 @@ MODERN_ELF_LINK_SETTINGS := $(MODERN_ELF_LINK_DIR)/settings.txt
 MODERN_ELF_LINK_PREP := $(MODERN_ELF_LINK_DIR)/prepare.stamp
 MODERN_ELF := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.elf
 MODERN_MAP := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.map
-MODERN_ELF_BANIM_SYM := $(BANIM_OBJECT).sym.o
+MODERN_ELF_BANIM_SYM := $(MODERN_BANIM_OBJECT).sym.o
 
 # Clean linker script (issue #4/#16) — replaces the transitional generator.
 MODERN_CLEAN_LDSCRIPT := linker/expansion.ld
@@ -2333,7 +2359,7 @@ $(MODERN_ELF_OBJECTS_LST): $(MODERN_ALL_OBJECTS) $(MODERN_ELF_EXTRA_ASM_OBJECTS)
 		$(MODERN_ELF_FE6SIO) \
 		$(MODERN_ELF_LEGACY_ASM) \
 		$(MODERN_ELF_LEGACY_MIDI) \
-		$(BANIM_OBJECT)) > "$@"
+		$(MODERN_BANIM_OBJECT)) > "$@"
 
 # Link-affecting command-line settings are a content-addressed prerequisite.
 # The FORCE recipe runs every invocation, but preserves this file's timestamp
@@ -2346,6 +2372,7 @@ $(MODERN_ELF_LINK_SETTINGS): FORCE_MODERN_ELF_LINK_SETTINGS
 	@{ \
 		printf '%s\n' 'rom_size=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'text_shift=$(MODERN_TEXT_SHIFT)'; \
+		printf '%s\n' 'banim_data_base=$(MODERN_BANIM_DATA_BASE)'; \
 		printf '%s\n' 'ld=$(MODERN_LD)'; \
 		printf '%s\n' 'ldscript=$(MODERN_CLEAN_LDSCRIPT)'; \
 	} > "$@.tmp"
@@ -2367,20 +2394,20 @@ expansion-modern-legacy-ready:
 
 # Link preparation: FE6 SIO build output, banim via scheduler, legacy
 # freshness, sidecar recovery, then the clean static linker inputs.
-# $(BANIM_OBJECT) is a normal prerequisite so the main scheduler builds it
-# once with no recursive-make race.
+# $(MODERN_BANIM_OBJECT) is a normal prerequisite so the main scheduler
+# builds it once with no recursive-make race.
 $(MODERN_ELF_LINK_PREP): $(MODERN_ELF_FE6SIO) \
-		$(MODERN_ELF_OBJECTS_LST) $(BANIM_OBJECT) \
+		$(MODERN_ELF_OBJECTS_LST) $(MODERN_BANIM_OBJECT) \
 		$(MODERN_ELF_LEGACY_ASM) $(MODERN_ELF_LEGACY_MIDI) \
 		$(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM)
 	+$(MAKE) NODEP=0 $(MODERN_ELF_LEGACY_ASM) $(MODERN_ELF_LEGACY_MIDI)
 	@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
 		printf '%s\n' \
 			"Sidecar missing; forcing banim rebuild..." >&2; \
-		rm -f "$(BANIM_OBJECT)" "$(MODERN_ELF_BANIM_SYM)"; \
+		rm -f "$(MODERN_BANIM_OBJECT)" "$(MODERN_ELF_BANIM_SYM)"; \
 	fi
 	+@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
-		$(MAKE) "$(BANIM_OBJECT)"; \
+		$(MAKE) "$(MODERN_BANIM_OBJECT)"; \
 	fi
 	@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
 		printf '%s\n' \
@@ -2448,6 +2475,7 @@ $(MODERN_ELF): $(MODERN_ELF_LINK_PREP) $(MODERN_ELF_LINK_SETTINGS) \
 		--orphan-handling=error \
 		--defsym=__rom_size=$(MODERN_ROM_SIZE_BYTES) \
 		--defsym=__text_shift=$(MODERN_TEXT_SHIFT) \
+		--defsym=__banim_data_base_abs=$(MODERN_BANIM_DATA_BASE) \
 		--defsym=__end__=end \
 		-T "$(MODERN_CLEAN_LDSCRIPT)" \
 		-Map "$(MODERN_MAP)" \
@@ -3485,6 +3513,7 @@ $(MODERN_RELOCS_ELF): $(MODERN_ELF) $(MODERN_ELF_OBJECTS_LST) \
 	LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	TEXT_SHIFT=0 \
+	BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	"$(MODERN_RELINK_SCRIPT)" "$@"
 
 expansion-modern-relocs: $(MODERN_RELOCS_ELF)
@@ -3514,6 +3543,7 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" \
 	SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
 	SHIFTCHECK_TITLE_EXPECTED="$(MODERN_TITLE_FINGERPRINT)" \
+	SHIFTCHECK_BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
 
 
@@ -3832,6 +3862,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" \
 	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-debug.json" \
 	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-debug.json" \
@@ -3842,6 +3873,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" \
 	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
 	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \

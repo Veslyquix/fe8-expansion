@@ -32,10 +32,14 @@ LD=$(shiftcheck_resolve_tool \
         exit 1
     }
 OBJECTS_LST=${OBJECTS_LST:-$repo_root/build/expansion-modern/debug/aapcs/link/objects.lst}
-BANIM_SYM=${BANIM_SYM:-$repo_root/banim/data_banim.o.sym.o}
+BANIM_SYM=${BANIM_SYM:-$repo_root/banim/data_banim.modern.o.sym.o}
 LDSCRIPT=${LDSCRIPT:-$repo_root/linker/expansion.ld}
 ROM_SIZE_BYTES=${ROM_SIZE_BYTES:-0x01000000}
 TEXT_SHIFT=${TEXT_SHIFT:-0}
+# Must match modern.mk's MODERN_BANIM_DATA_BASE, which banim/data_banim.modern.o
+# (see BANIM_SYM above) is pre-linked against -- see linker/expansion.ld's
+# __banim_data_base_abs placement for why this can't just be any value.
+BANIM_DATA_BASE=${BANIM_DATA_BASE:-0x08ca0000}
 
 for path in "$OBJECTS_LST" "$BANIM_SYM" "$LDSCRIPT"; do
     if [ ! -f "$path" ]; then
@@ -61,6 +65,7 @@ exec "$LD" \
     --orphan-handling=error \
     --defsym=__rom_size="$ROM_SIZE_BYTES" \
     --defsym=__text_shift="$TEXT_SHIFT" \
+    --defsym=__banim_data_base_abs="$BANIM_DATA_BASE" \
     -T "$LDSCRIPT" \
     -Map "$map_out" \
     @"$OBJECTS_LST" \
