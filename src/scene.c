@@ -864,6 +864,30 @@ int TalkInterpret(ProcPtr proc) {
 
         case CHFE_L_NL: // [NL]
             // _080072AE
+#if FE8_EXTEND_DIALOGUE_BOX
+            /* The [LF]/[NL2] required right after an [A] for a
+             * same-speaker continuation (no [Open...] before it -- see
+             * GetStrTalkLineCount's doc comment for why sizing doesn't
+             * count this one as a line) doesn't push one more line onto
+             * whatever's already on screen: it starts the box over at
+             * line 0, since the box is already sized for the tallest
+             * single [A]-delimited segment and doesn't need vanilla's
+             * continuous scroll between segments (without this,
+             * lineActive keeps climbing across every segment in the
+             * bubble -- 2 + 3 = 5 for a 3-line box -- and overflows into
+             * a mid-segment scroll, which is what was hiding the 3rd/4th
+             * lines). str[-1] is exactly the token this same
+             * TalkInterpret loop consumed last call (one token per
+             * call), so no extra persistent state is needed to detect
+             * this -- notably, none in .bss, which is pinned to an
+             * exact-size budget in IWRAM (linker/iwram.ld) and has no
+             * slack for it. */
+            if (sTalkState->str[-1] == CHFE_L_A) {
+                ClearPutTalkText();
+                sTalkState->str++;
+                return 2;
+            }
+#endif
             if (sTalkState->putLines == 1 || sTalkState->lineActive == 1) {
                 sTalkState->lineActive++;
             }
