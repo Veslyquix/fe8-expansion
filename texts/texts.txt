@@ -40368,8 +40368,6 @@ Bow wielders gain[LF]
 ## MSG_NAME_FREDERICK
 Frederick[.][X]
 
-## MSG_CO_FRANCIS_BRIEF
-Armor[.][X]
 
 ## MSG_NAME_FOX
 Fox[.][X]
@@ -40393,8 +40391,37 @@ Super CO Power[X]
 Class Affinity[X]
 
 
+## MSG_CO_ASIN_TITLE
+The Wise Elder[.][X]
+
+## MSG_CO_ASIN_BRIEF
+Healing[.][X]
+
+## MSG_CO_ASIN_INFO
+A wise elder who guides his people[LF]
+through hardship, tending to the[LF]
+wounded with skill and patience.[.][X]
+
+## MSG_CO_ASIN_POWER_NAME
+Rekindle[.][X]
+
+## MSG_CO_ASIN_POWER_DESC
+All of Asin's[LF]
+units heal 10 HP.[.][X]
+
+## MSG_CO_ASIN_SUPER_NAME
+Resurgence[.][X]
+
+## MSG_CO_ASIN_SUPER_DESC
+All of Asin's units are[LF]
+fully healed and deal[LF]
+more damage.[.][X]
+
 ## MSG_CO_FRANCIS_TITLE
 The Steadfast Commander[.][X]
+
+## MSG_CO_FRANCIS_BRIEF
+Armor[.][X]
 
 ## MSG_CO_FRANCIS_INFO
 A stalwart tactician who leads[LF]
@@ -40402,19 +40429,20 @@ from the front and never[LF]
 leaves a unit behind.[.][X]
 
 ## MSG_CO_FRANCIS_POWER_NAME
-Rekindle[.][X]
+March On[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
 All of Francis's preferred[LF]
-units heal 10 HP.[.][X]
+units gain +1 mov and deal[LF]
+more damage.[X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
-Resurgance[.][X]
+Forward, Troops![X]
 
 ## MSG_CO_FRANCIS_SUPER_DESC
-All of Francis's units are[LF]
-fully healed and deal[LF]
-more damage.[.][X]
+All of Francis's preferred[LF]
+units gain +2 mov and deal[LF]
+even more damage.[.][X]
 
 ## MSG_NAME_KARGAN
 Kargan[.][X]
@@ -40603,12 +40631,28 @@ Toward our people.[A]
 [OpenMidLeft]We've spent too long giving ground.[LF]
 This time, we make them come no farther.[A][X]
 
+
+## MSG_CC_CH1A_REINFORCEMENT
+[OpenMidLeft][LoadFace][FID_Asin]I warned them not to linger.[....][LF]
+And now the Naskwa are here.[A][LF]
+Wakwi... Ishkode.[LF]
+Hurry back.[.....][LF]
+Your people need you.[A][X]
+
+
+
+
+ 
+
 ## MSG_CUSTOM_CAMPAIGN_CH1A_END
 [OpenMidLeft][LoadFace][FID_Wakwi]
 [OpenMidRight][LoadFace][FID_Ishkode]
 [OpenMidLeft]They're retreating.[A]
 [OpenMidRight]Then we've bought our people some time.[A]
 [OpenMidLeft]We should regroup at home.[A][X]
+
+
+
 
 
 

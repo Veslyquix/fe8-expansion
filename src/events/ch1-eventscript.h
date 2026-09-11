@@ -9,6 +9,50 @@
 #include "constants/backgrounds.h"
 #include "constants/songs.h"
 
+
+CONST_DATA struct REDA REDA_Ch1Ally_Asin[] = {
+    {
+        .x = 3,
+        .y = 2,
+    },
+};
+CONST_DATA struct REDA REDA_Ch1Ally_Archer[] = {
+    {
+        .x = 3,
+        .y = 1,
+    },
+};
+CONST_DATA struct UnitDefinition UnitDef_Event_Ch1Asin[] = {
+    {
+        .charIndex = CHARACTER_MOULDER,
+        .classIndex = CLASS_PRIEST,
+        .allegiance = FACTION_ID_GREEN,
+        .level = 1,
+        .xPosition = 5,
+        .yPosition = 0,
+        .redaCount = 1,
+        .redas = REDA_Ch1Ally_Asin,
+        .items = {
+            ITEM_STAFF_NOSTAL,
+            ITEM_VULNERARY,
+        },
+    },
+    {
+        .charIndex = CHARACTER_CITIZEN,
+        .classIndex = CLASS_ARCHER,
+        .allegiance = FACTION_ID_GREEN,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 0,
+        .redaCount = 1,
+        .redas = REDA_Ch1Ally_Archer,
+        .items = {
+            ITEM_BOW_IRON,
+        },
+    },
+    { 0 },
+};
+
 CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
 #if FE8_CO_POWERS
     SVAL(EVT_SLOT_1, 0) // All COs right now. 
@@ -28,6 +72,7 @@ CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
 
     LOAD2(1, UnitDef_Event_Ch1Ally)
     ENUN
+
 
     // FlashCursor(CHARACTER_EIRIKA, 60)
 
@@ -63,13 +108,10 @@ CONST_DATA EventListScr EventScr_Ch1_Turn1Enemy[] = {
 
 CONST_DATA EventListScr EventScr_Ch1_Turn_AllyReinforceArrive[] = {
     MUSC(SONG_54)
-    LOAD1(1, UnitDef_Event_Ch1AllyReinforce)
+    LOAD1(1, UnitDef_Event_Ch1Asin)
     ENUN
-    FlashCursor(CHARACTER_FRANZ, 60)
-    Text(0x931)
-
-    SVAL(EVT_SLOT_2, EventScr_Ch1Tut_GilliamBattle)
-    CALL(EventScr_CallOnTutorialMode)
+    FlashCursor(CHARACTER_MOULDER, 60)
+    Text(MSG_CC_CH1A_REINFORCEMENT)
 
     NoFade
     ENDA

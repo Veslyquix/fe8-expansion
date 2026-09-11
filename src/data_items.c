@@ -2763,16 +2763,16 @@ CONST_DATA struct ItemData gItemData[] = {
 		.useDescTextId = MSG_USEDESC_NOSTAL,
 		.number = ITEM_STAFF_NOSTAL,
 		.weaponType = ITYPE_STAFF,
-		.attributes = IA_STAFF,
+		.attributes = IA_STAFF|IA_UNBREAKABLE,
 		.maxUses = 15,
 		.hit = 100,
 		.weight = 5,
 		.encodedRange = 0x1A, // always 1-10, never mag/2 like Physic
 		.costPerUse = 250,
-		.weaponRank = WPN_EXP_B,
+		.weaponRank = WPN_EXP_E,
 		.iconId = 0xdf, // item_icon_staff_nostal -- see src/data/data_item_icon.c
 		.useEffectId = 4,
-		.weaponExp = 3,
+		.weaponExp = 2,
 	},
 #else
 	[ITEM_UNK_BC] = {

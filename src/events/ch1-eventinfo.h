@@ -13,7 +13,7 @@
 CONST_DATA EventListScr EventListScr_Ch1_Turn[] = {
     // TURN(0x0, EventScr_Ch1_Turn1Player, 1, 1, FACTION_BLUE)
     // TURN(0x0, EventScr_Ch1_Turn1Enemy, 1, 1, FACTION_RED)
-    // TURN(0x0, EventScr_Ch1_Turn_AllyReinforceArrive, 2, 2, FACTION_BLUE)
+    TURN(0x0, EventScr_Ch1_Turn_AllyReinforceArrive, 2, 2, FACTION_RED)
     // TURN(EVFLAG_TMP(11), EventScr_Ch1_Turn_EnemyReinforceArrive, 1, 255, FACTION_BLUE)
     END_MAIN
 };
