@@ -953,6 +953,7 @@ static const signed char body4[] =
     " HP Bars by circleseverywhere, Tequila," NL
     "  hypergammaspaces, Alusq" NL
     " Alpha Sprite Arrow by JesterWizard" NL
+    " Show Heal Amount by Tequila" NL
     " Debuffs, Promote Command, Turn Autosave," NL
     "  Anims Fast Forward by Vesly" NL
     " Mode Select by Eebit, JesterWizard" NL

@@ -8,6 +8,7 @@
 #include "uiutils.h"
 #include "hardware.h"
 #include "bmitem.h"
+#include "bmmind.h"
 
 #include "unitinfowindow.h"
 
@@ -193,6 +194,52 @@ void DrawUnitHpText(struct Text* text, struct Unit* unit) {
 
     return;
 }
+
+#if FE8_SHOW_HEAL_AMOUNT
+/* Ported from FEBuilderGBA's "Show Heal Amount" patch (config/patch2/FE8U/
+ * "Show Heal Amount", author Tequila; see CREDITS.md). Replaces the usual
+ * "HP xx/yy" line with a projected-heal preview for the unit currently
+ * selected as a healing target: their current HP, an arrow (message 0x53A --
+ * the same "->" DrawUnitResChangeText already uses for its own before/after
+ * preview, reused rather than adding a new text entry the way the original
+ * patch's own hook did), and the HP they'll have once healed. The heal
+ * amount comes from the healer (gActiveUnit) and the item slot they're
+ * currently using (gActionData.itemSlotIndex) -- not gActiveUnit->items[0],
+ * which the original patch's own comment flagged as merely an untested
+ * assumption ("so far, this seems to be the case"); this project already
+ * tracks the real selected slot for exactly this purpose (see e.g.
+ * DoItemUse's callers, src/bmmenu.c). Once the projected HP reaches the
+ * target's max, it's capped at max and drawn in palette 4 instead of 2 (the
+ * same "will be maxed out" recolor the original patch used). */
+void DrawUnitHealAmountText(struct Text* text, struct Unit* target) {
+    int currentHp;
+    int maxHp;
+    int healAmount;
+    int newHp;
+    int palette;
+
+    ClearText(text);
+
+    Text_InsertDrawString(text, 0, 3, GetStringFromIndex(0x4E9)); // TODO: msgid "HP"
+    Text_InsertDrawString(text, 0x24, 3, GetStringFromIndex(0x53A));
+
+    currentHp = GetUnitCurrentHp(target);
+    Text_InsertDrawNumberOrBlank(text, 0x1C, 2, currentHp);
+
+    maxHp = GetUnitMaxHp(target);
+    healAmount = GetUnitItemHealAmount(gActiveUnit, gActiveUnit->items[gActionData.itemSlotIndex]);
+    newHp = currentHp + healAmount;
+
+    palette = 2;
+    if (newHp >= maxHp) {
+        palette = 4;
+        newHp = maxHp;
+    }
+    Text_InsertDrawNumberOrBlank(text, 0x38, palette, newHp);
+
+    return;
+}
+#endif
 
 //! FE8U = 0x08034A5C
 void DrawUnitConText(struct Text* text, struct Unit* unit) {
@@ -418,6 +465,27 @@ void RefreshUnitHpInfoWindow(struct Unit* unit) {
 
     return;
 }
+
+#if FE8_SHOW_HEAL_AMOUNT
+/* HealMapSelect_SwitchIn's (src/bmmenu.c) own copy of RefreshUnitHpInfoWindow
+ * above, differing only in which text a target's window line shows -- see
+ * DrawUnitHealAmountText's own comment. Every other RefreshUnitHpInfoWindow
+ * caller (talk/support/rescue/refresh/warp target selection) is untouched,
+ * matching the original patch: it hooked only the one call site inside
+ * HealMapSelect_SwitchIn, not the shared function itself. */
+void RefreshUnitHealAmountInfoWindow(struct Unit* unit) {
+
+    int y = 0;
+    int x = GetUnitInfoWindowX(unit, 10);
+
+    struct UnitInfoWindowProc* proc = UnitInfoWindow_DrawBase(0, unit, x, 0, 10, 1);
+
+    DrawUnitHealAmountText(proc->lines + 0, unit);
+    PutText(proc->lines + 0, gBG0TilemapBuffer + TILEMAP_INDEX(x + 1, y + 3));
+
+    return;
+}
+#endif
 
 //! FE8U = 0x08034FFC
 void StartUnitHpStatusInfoWindow(ProcPtr parent) {

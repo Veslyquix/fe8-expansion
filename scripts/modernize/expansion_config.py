@@ -414,6 +414,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
                            nimap2=0,
                            rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
+                           show_heal_amount=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -467,6 +468,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     rand_bgm_flag = validate_feature_flag("RAND_BGM", rand_bgm)
     continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
     danger_radius_flag = validate_feature_flag("DANGER_RADIUS", danger_radius)
+    heal_amount_flag = validate_feature_flag("SHOW_HEAL_AMOUNT", show_heal_amount)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -520,7 +522,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
             anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
             dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag, l_cycle_flag,
-            custom_formulas_flag, mode_select_flag)
+            custom_formulas_flag, mode_select_flag, heal_amount_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -767,6 +769,7 @@ class ExpansionIdentity:
     rand_bgm: int = 0
     continue_bgm_battle: int = 0
     danger_radius: int = 0
+    show_heal_amount: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -856,6 +859,7 @@ class ExpansionIdentity:
                 "rand_bgm": self.rand_bgm,
                 "continue_bgm_battle": self.continue_bgm_battle,
                 "danger_radius": self.danger_radius,
+                "show_heal_amount": self.show_heal_amount,
             },
         }
 
@@ -933,6 +937,7 @@ def load_identity(
     rand_bgm=None,
     continue_bgm_battle=None,
     danger_radius=None,
+    show_heal_amount=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -1001,7 +1006,7 @@ def load_identity(
      resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
      resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
      resolved_rng_randomizer, resolved_l_cycle, resolved_custom_formulas,
-     resolved_mode_select) = validate_feature_flags(
+     resolved_mode_select, resolved_show_heal_amount) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1137,6 +1142,9 @@ def load_identity(
         danger_radius
         if danger_radius not in (None, "")
         else cfg.get("DANGER_RADIUS", "0"),
+        show_heal_amount
+        if show_heal_amount not in (None, "")
+        else cfg.get("SHOW_HEAL_AMOUNT", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1211,6 +1219,7 @@ def load_identity(
         rand_bgm=resolved_rand_bgm,
         continue_bgm_battle=resolved_continue_bgm_battle,
         danger_radius=resolved_danger_radius,
+        show_heal_amount=resolved_show_heal_amount,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1524,6 +1533,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override SKIP_OPENING (0 or 1)",
     )
     parser.add_argument(
+        "--show-heal-amount",
+        default=None,
+        help="override SHOW_HEAL_AMOUNT (0 or 1)",
+    )
+    parser.add_argument(
         "--item-id-cap",
         default=None,
         help=(
@@ -1634,6 +1648,7 @@ def main(argv=None) -> int:
             rand_bgm=args.rand_bgm,
             continue_bgm_battle=args.continue_bgm_battle,
             danger_radius=args.danger_radius,
+            show_heal_amount=args.show_heal_amount,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

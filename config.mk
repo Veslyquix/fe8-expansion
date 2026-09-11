@@ -356,6 +356,18 @@ RANGE_REWORK ?= 1
 # where to move the unit to.
 ALPHA_SPRITE_ARROW ?= 1
 
+# --- Optional ShowHealAmount ------------------------------------------------
+# Ported from FEBuilderGBA's "Show Heal Amount" patch. While selecting a
+# target for a healing staff/item on the map, the unit info window's usual
+# "HP xx/yy" line is replaced with a projected-heal preview: the target's
+# current HP, an arrow, and the HP they'll have after the heal (capped and
+# recolored once it reaches their max) -- see RefreshUnitHealAmountInfoWindow,
+# src/unitinfowindow.c, and its one caller, HealMapSelect_SwitchIn
+# (src/bmmenu.c). Only that one caller is affected; every other
+# RefreshUnitHpInfoWindow caller (talk/support/rescue/etc. target selection)
+# keeps showing the plain HP line.
+SHOW_HEAL_AMOUNT ?= 1
+
 
 
 

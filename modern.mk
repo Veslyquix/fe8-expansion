@@ -246,6 +246,9 @@ endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
 endif
+ifeq ($(SHOW_HEAL_AMOUNT),1)
+MODERN_DEFINE_FLAGS += -DFE8_SHOW_HEAL_AMOUNT=1
+endif
 ifeq ($(RANGE_REWORK),1)
 MODERN_DEFINE_FLAGS += -DFE8_RANGE_REWORK=1
 endif
@@ -1666,6 +1669,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--aw2-assets "$(AW2_ASSETS)" \
 		--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
 		--nimap2 "$(NIMAP2)" \
+		--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1765,6 +1769,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--aw2-assets "$(AW2_ASSETS)" \
 	--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
 	--nimap2 "$(NIMAP2)" \
+	--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1859,6 +1864,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_CUSTOM_FORMULAS=$(CUSTOM_FORMULAS) \
 	-DFE8_MODE_SELECT=$(MODE_SELECT) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
+	-DFE8_SHOW_HEAL_AMOUNT=$(SHOW_HEAL_AMOUNT) \
 	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
@@ -2075,6 +2081,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'aw2_assets=$(AW2_ASSETS)'; \
 		printf '%s\n' 'anims_fast_forward=$(ANIMS_FAST_FORWARD)'; \
 		printf '%s\n' 'nimap2=$(NIMAP2)'; \
+		printf '%s\n' 'show_heal_amount=$(SHOW_HEAL_AMOUNT)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \

@@ -2138,7 +2138,11 @@ u8 HealMapSelect_SwitchIn(ProcPtr proc, struct SelectTarget* target) {
 
     ChangeActiveUnitFacing(target->x, target->y);
 
+#if FE8_SHOW_HEAL_AMOUNT
+    RefreshUnitHealAmountInfoWindow(GetUnit(target->uid));
+#else
     RefreshUnitHpInfoWindow(GetUnit(target->uid));
+#endif
 
     // return 0; // BUG?
 }

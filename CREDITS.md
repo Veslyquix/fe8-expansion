@@ -123,6 +123,7 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `DISPLAY_OBTAINABLE_ITEM` | Mkol, Huichelaar, Vesly |
 | `HP_BARS` | circleseverywhere, Tequila, hypergammaspaces, Alusq |
 | `ALPHA_SPRITE_ARROW` | JesterWizard |
+| `SHOW_HEAL_AMOUNT` | Tequila |
 | `DEBUFFS` | Vesly |
 | `GROUP_AI` | Vesly, PhantomSentine |
 | `PROMOTE_COMMAND` | Vesly |
