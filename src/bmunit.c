@@ -1352,7 +1352,13 @@ int GetUnitAid(struct Unit* unit) {
 
 int GetUnitMagBy2Range(struct Unit* unit) {
     if (unit->pCharacterData->number == CHARACTER_FOMORTIIS) {
-        return GetItemMaxRange(ITEM_NIGHTMARE);
+        /* Historically GetItemMaxRange(ITEM_NIGHTMARE) (its old encoded max
+         * nibble, 3) -- not read live off Nightmare's own item data any
+         * more since FE8_RANGE_REWORK repurposes its encodedRange as the
+         * 0xFF "hits everyone" sentinel (see IsItemAllRange, src/bmitem.c),
+         * whose nibble-decoded max (15) is unrelated to this fallback's
+         * own, separate historical value. */
+        return 3;
     } else {
         int result = GetUnitPower(unit) / 2;
 

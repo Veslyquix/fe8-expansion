@@ -248,18 +248,35 @@ inline int GetItemEncodedRange(int item) {
 /* An encoded max range of 0 (e.g. status staves) means "mag/2" -- vanilla
  * (GetUnitStaffReachBits/GetUnitItemUseReachBits above) always treats
  * that as min 1, max GetUnitMagBy2Range(unit), ignoring whatever the
- * encoded min nibble says. ITEM_NIGHTMARE is hardcoded to the same mag/2
- * behavior regardless of its own encoded range (see GetUnitStaffReachBits).
- * The new getters below match that exactly rather than trying to also
- * generalize a custom min for these -- unlike a weapon's fixed nibble-
- * encoded range, this repo has no vanilla data that ever combines mag/2
- * with a non-1 minimum, so there's nothing to preserve. */
+ * encoded min nibble says. The new getters below match that exactly
+ * rather than trying to also generalize a custom min for these -- unlike
+ * a weapon's fixed nibble-encoded range, this repo has no vanilla data
+ * that ever combines mag/2 with a non-1 minimum, so there's nothing to
+ * preserve. */
 static s8 IsItemMagBy2Range(int item) {
-    return (GetItemMaxRange(item) == 0) || (GetItemIndex(item) == ITEM_NIGHTMARE);
+    return GetItemMaxRange(item) == 0;
+}
+
+/* A raw encoded range of 0xFF means "hits everyone on the map" (Latona,
+ * Nightmare) -- see GetItemDisplayRangeString's own 0xFF case above,
+ * where vanilla already shows this as "Total". Neither item's own target
+ * list goes through GetUnitItemEffectiveMinRange/MaxRange or
+ * MakeTargetListInRange at all (MakeTargetListForLatona/
+ * MakeTargetListForFuckingNightmare, src/bmtarget.c, loop every unit on
+ * the map unconditionally), so these getters only matter for other
+ * generic callers of this pair -- IsItemCoveringRange and
+ * GetItemEffDisplayRangeString below -- which is why min/max are just
+ * "the widest possible range" (0/99) rather than something derived from
+ * the 0xFF byte's own (meaningless, if nibble-decoded) 15/15. */
+static s8 IsItemAllRange(int item) {
+    return GetItemEncodedRange(item) == 0xFF;
 }
 
 /* See declaration comment (include/bmitem.h). */
 int GetUnitItemEffectiveMinRange(struct Unit* unit, int item) {
+    if (IsItemAllRange(item))
+        return 0;
+
     if (IsItemMagBy2Range(item))
         return 1;
 
@@ -270,6 +287,9 @@ int GetUnitItemEffectiveMaxRange(struct Unit* unit, int item) {
     int maxRange;
     int minRange;
     int bonus = 0;
+
+    if (IsItemAllRange(item))
+        return 99;
 
     if (IsItemMagBy2Range(item))
         maxRange = GetUnitMagBy2Range(unit);
@@ -824,9 +844,20 @@ char* GetItemDisplayRangeString(int item) {
 
 #if FE8_RANGE_REWORK
 char* GetItemEffDisplayRangeString(int item, struct Unit* unit) {
-    int min = GetUnitItemEffectiveMinRange(unit, item);
-    int max = GetUnitItemEffectiveMaxRange(unit, item);
-    char* buf = sRangeDisplayBuf;
+    int min;
+    int max;
+    char* buf;
+
+    /* Matches GetItemDisplayRangeString's own 0xFF case above ("Total") --
+     * without this, min/max's 0/99 "widest possible range" sentinel values
+     * (see IsItemAllRange's comment) would print the nonsensical "0-99"
+     * instead. */
+    if (GetItemEncodedRange(item) == 0xFF)
+        return GetStringFromIndex(0x52A);
+
+    min = GetUnitItemEffectiveMinRange(unit, item);
+    max = GetUnitItemEffectiveMaxRange(unit, item);
+    buf = sRangeDisplayBuf;
 
     buf = AppendDecimal(buf, min);
 

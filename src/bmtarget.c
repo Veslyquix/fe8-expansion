@@ -13,6 +13,7 @@
 #include "bmsave.h"
 #include "eventinfo.h"
 #include "debuffs.h"
+#include "bmmind.h" // gActionData.itemSlotIndex -- see MakeTargetListInRange's staff callers
 
 #include "constants/classes.h"
 #include "constants/terrains.h"
@@ -127,31 +128,6 @@ void ForEachPosAtSinglePosition(int x, int y, void(*func)(int x, int y)) {
     return;
 }
 
-void ForEachPosIn12Range(int x, int y, void(*func)(int x, int y)) {
-    InitTargets(x, y);
-
-    MapAddInRange(x, y, 2, 1);
-    MapAddInRange(x, y, 0, -1);
-
-    ForEachPosInRange(func);
-
-    return;
-}
-
-void ForEachUnitInMagBy2Range(void(*func)(struct Unit* unit)) {
-    int x = gSubjectUnit->xPos;
-    int y = gSubjectUnit->yPos;
-
-    InitTargets(x, y);
-
-    MapAddInRange(x, y, GetUnitMagBy2Range(gSubjectUnit), 1);
-    MapAddInRange(x, y, 0, -1);
-
-    ForEachUnitInRange(func);
-
-    return;
-}
-
 void TryAddTrapsToTargetList(void) {
     struct Trap* trap;
 
@@ -202,10 +178,21 @@ void AddUnitToTargetListIfNotAllied(struct Unit* unit) {
     return;
 }
 
-void MakeTargetListForWeapon(struct Unit* unit, int item) {
-
+/* Shared by MakeTargetListForWeapon and every staff MakeTargetListForXxx
+ * below (MakeTargetListForFuckingNightmare/Latona excepted -- they target
+ * everyone unconditionally, not a min/max ring): computes item's effective
+ * min/max range (its own encoded range, the mag/2 and "hits everyone"
+ * sentinels, and any CO_POWERS class-affinity bonus -- see
+ * GetUnitItemEffectiveMinRange/MaxRange above) and walks every unit inside
+ * it, applying addFunc to each. This is what lets a staff's range come from
+ * its own item data (and pick up range bonuses) instead of each caller
+ * hardcoding its own ForEachAdjacentUnit/ForEachUnitInMagBy2Range/literal
+ * MapAddInRange call. */
+void MakeTargetListInRange(struct Unit* unit, int item, void(*addFunc)(struct Unit* unit)) {
     int x = unit->xPos;
     int y = unit->yPos;
+    int minRange;
+    int maxRange;
 
     gSubjectUnit = unit;
 
@@ -214,12 +201,52 @@ void MakeTargetListForWeapon(struct Unit* unit, int item) {
     BmMapFill(gBmMapRange, 0);
 
 #if FE8_RANGE_REWORK
-    MapAddInBoundedRange(x, y, GetUnitItemEffectiveMinRange(unit, item), GetUnitItemEffectiveMaxRange(unit, item));
+    minRange = GetUnitItemEffectiveMinRange(unit, item);
+    maxRange = GetUnitItemEffectiveMaxRange(unit, item);
 #else
-    MapAddInBoundedRange(x, y, GetItemMinRange(item), GetItemMaxRange(item));
+    minRange = GetItemMinRange(item);
+    maxRange = GetItemMaxRange(item);
 #endif
 
-    ForEachUnitInRange(AddUnitToTargetListIfNotAllied);
+    MapAddInBoundedRange(x, y, minRange, maxRange);
+
+    ForEachUnitInRange(addFunc);
+
+    return;
+}
+
+/* Position-predicate counterpart of MakeTargetListInRange, for
+ * MakeTargetListForUnlock -- door tiles, not units, need checking (see
+ * TryAddClosedDoorToTargetList). */
+void MakeTargetListPositionsInRange(struct Unit* unit, int item, void(*addFunc)(int x, int y)) {
+    int x = unit->xPos;
+    int y = unit->yPos;
+    int minRange;
+    int maxRange;
+
+    gSubjectUnit = unit;
+
+    InitTargets(x, y);
+
+    BmMapFill(gBmMapRange, 0);
+
+#if FE8_RANGE_REWORK
+    minRange = GetUnitItemEffectiveMinRange(unit, item);
+    maxRange = GetUnitItemEffectiveMaxRange(unit, item);
+#else
+    minRange = GetItemMinRange(item);
+    maxRange = GetItemMaxRange(item);
+#endif
+
+    MapAddInBoundedRange(x, y, minRange, maxRange);
+
+    ForEachPosInRange(addFunc);
+
+    return;
+}
+
+void MakeTargetListForWeapon(struct Unit* unit, int item) {
+    MakeTargetListInRange(unit, item, AddUnitToTargetListIfNotAllied);
 
     TryAddTrapsToTargetList();
 
@@ -1098,31 +1125,16 @@ void TryAddUnitToHealTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForAdjacentHeal(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachAdjacentUnit(x, y, TryAddUnitToHealTargetList);
+    /* HEAL/MEND/RECOVER (encodedRange 0x11) -- see DoItemUse, src/bmitemuse.c. */
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToHealTargetList);
 
     return;
 }
 
 void MakeTargetListForRangedHeal(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    InitTargets(x, y);
-
-    BmMapFill(gBmMapRange, 0);
-
-    MapAddInRange(x, y, GetUnitMagBy2Range(gSubjectUnit), 1);
-
-    ForEachUnitInRange(TryAddUnitToHealTargetList);
+    /* PHYSIC/FORTIFY (encodedRange 0x10, mag/2) -- see DoItemUse,
+     * src/bmitemuse.c, and ExecFortify, src/bmusemind.c. */
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToHealTargetList);
 
     return;
 }
@@ -1186,14 +1198,7 @@ void TryAddUnitToRestoreTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForRestore(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachAdjacentUnit(x, y, TryAddUnitToRestoreTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToRestoreTargetList);
 
     return;
 }
@@ -1218,14 +1223,7 @@ void TryAddUnitToBarrierTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForBarrier(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachAdjacentUnit(x, y, TryAddUnitToBarrierTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToBarrierTargetList);
 
     return;
 }
@@ -1242,11 +1240,7 @@ void TryAddUnitToRescueStaffTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForRescueStaff(struct Unit* unit) {
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachUnitInMagBy2Range(TryAddUnitToRescueStaffTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToRescueStaffTargetList);
 
     return;
 }
@@ -1297,31 +1291,19 @@ void TryAddUnitToBerserkTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForSilence(struct Unit* unit) {
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachUnitInMagBy2Range(TryAddUnitToSilenceTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToSilenceTargetList);
 
     return;
 }
 
 void MakeTargetListForSleep(struct Unit* unit) {
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachUnitInMagBy2Range(TryAddUnitToSleepTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToSleepTargetList);
 
     return;
 }
 
 void MakeTargetListForBerserk(struct Unit* unit) {
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachUnitInMagBy2Range(TryAddUnitToBerserkTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToBerserkTargetList);
 
     return;
 }
@@ -1337,27 +1319,13 @@ void TryAddUnitToWarpTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForWarp(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachAdjacentUnit(x, y, TryAddUnitToWarpTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToWarpTargetList);
 
     return;
 }
 
 void MakeTargetListForUnlock(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachPosIn12Range(x, y, TryAddClosedDoorToTargetList);
+    MakeTargetListPositionsInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddClosedDoorToTargetList);
 
     return;
 }
@@ -1380,14 +1348,7 @@ void TryAddUnitToHammerneTargetList(struct Unit* unit) {
 }
 
 void MakeTargetListForHammerne(struct Unit* unit) {
-    int x = unit->xPos;
-    int y = unit->yPos;
-
-    gSubjectUnit = unit;
-
-    BmMapFill(gBmMapRange, 0);
-
-    ForEachAdjacentUnit(x, y, TryAddUnitToHammerneTargetList);
+    MakeTargetListInRange(unit, unit->items[gActionData.itemSlotIndex], TryAddUnitToHammerneTargetList);
 
     return;
 }

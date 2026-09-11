@@ -161,6 +161,79 @@ s8 GetAiSafestAccessibleAdjacentPosition(int x, int y, struct Vec2* out) {
     return 0;
 }
 
+#if FE8_RANGE_REWORK
+/* Generalizes GetAiSafestAccessibleAdjacentPosition above to a min..maxRange
+ * diamond ring instead of a hardcoded 4-direction "1-1" adjacency check, so
+ * AiStaffHealMendRecover/AiStaffWarp/AiStaffRestore can search a
+ * data-driven item range (mag/2, a custom item range, a CO_POWERS range
+ * bonus -- see GetUnitItemEffectiveMinRange/MaxRange, src/bmitem.c) for a
+ * suitable, unit-accessible casting position near (x,y), instead of only
+ * ever considering literally-adjacent tiles.
+ *
+ * Kept as its own function rather than a modification of
+ * GetAiSafestAccessibleAdjacentPosition itself: that one is a real
+ * decompiled vanilla function (FE8U = 0x0803FAE8) the archival/legacy
+ * build still uses unmodified; this one only exists when FE8_RANGE_REWORK
+ * is on, and the two callers below pick whichever applies via #if. */
+s8 GetAiSafestAccessiblePositionInRange(int x, int y, int minRange, int maxRange, struct Vec2* out) {
+    int score;
+    int ix;
+    int iy;
+    int dx;
+    int dy;
+    int dist;
+
+    u32 bestScore = 0;
+
+    for (dy = -maxRange; dy <= maxRange; dy++) {
+        iy = y + dy;
+
+        if (iy < 0 || iy >= gBmMapSize.y) {
+            continue;
+        }
+
+        for (dx = -maxRange; dx <= maxRange; dx++) {
+            dist = ABS(dx) + ABS(dy);
+
+            if (dist < minRange || dist > maxRange) {
+                continue;
+            }
+
+            ix = x + dx;
+
+            if (ix < 0 || ix >= gBmMapSize.x) {
+                continue;
+            }
+
+            if (gBmMapMovement[iy][ix] >= MAP_MOVEMENT_MAX) {
+                continue;
+            }
+
+            if (gBmMapUnit[iy][ix] != 0 && gBmMapUnit[iy][ix] != gActiveUnitId) {
+                continue;
+            }
+
+            score = AiGetTerrainCombatPositionScoreComponent(ix, iy);
+            score += AiGetFriendZoneCombatPositionScoreComponent(ix, iy);
+            score -= gBmMapOther[iy][ix] / 8;
+            score += 0x7FFFFFFF;
+
+            if (bestScore < score) {
+                out->x = ix;
+                out->y = iy;
+                bestScore = score;
+            }
+        }
+    }
+
+    if (bestScore != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+#endif
+
 //! FE8U = 0x0803FBB8
 void AiStaffHealMendRecover(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
     int ix;
@@ -172,6 +245,13 @@ void AiStaffHealMendRecover(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
     int xDecision = -1;
     int yDecision = -1;
     int targetId = 0;
+#if FE8_RANGE_REWORK
+    /* Decided once, not per-unit in the loop below -- see
+     * GetAiSafestAccessiblePositionInRange's own comment above. */
+    int item = gActiveUnit->items[itemIdx];
+    int minRange = GetUnitItemEffectiveMinRange(gActiveUnit, item);
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, item);
+#endif
 
     AiGenerateUnitMovementMapRespectStay(gActiveUnit);
 
@@ -204,7 +284,11 @@ void AiStaffHealMendRecover(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
 
                     tmpHpPerc = Div(GetUnitCurrentHp(unit) * 100, GetUnitMaxHp(unit));
 
+#if FE8_RANGE_REWORK
+                    if (tmpHpPerc <= lowestHpPerc && GetAiSafestAccessiblePositionInRange(ix, iy, minRange, maxRange, &pos) != 0) {
+#else
                     if (tmpHpPerc <= lowestHpPerc && GetAiSafestAccessibleAdjacentPosition(ix, iy, &pos) != 0) {
+#endif
                         lowestHpPerc = tmpHpPerc;
                         xDecision = pos.x;
                         yDecision = pos.y;
@@ -231,6 +315,16 @@ void AiStaffPhysicRescue(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
     int xDecision = -1;
     int yDecision = -1;
     int targetId = 0;
+    /* Decided once, not per-unit in the loop below -- PHYSIC and RESCUE
+     * (this function's two callers, sAiStaffFuncLut above) both use
+     * encodedRange 0x10 (mag/2) today, but this stays correct for a custom
+     * item with a different range, and for a CO_POWERS range bonus (see
+     * GetUnitItemEffectiveMaxRange, src/bmitem.c). */
+#if FE8_RANGE_REWORK
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, gActiveUnit->items[itemIdx]);
+#else
+    int maxRange = GetUnitMagBy2Range(gActiveUnit);
+#endif
 
     if (gAiState.flags & AI_FLAG_BERSERKED) {
         return;
@@ -263,13 +357,13 @@ void AiStaffPhysicRescue(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
             if ((gAiState.unk7C != 0) || (unit->aiFlags & AI_UNIT_FLAG_0)) {
                 u8 tmpHpPerc;
 
-                if (AiIsWithinRectDistance(gActiveUnit->xPos, gActiveUnit->yPos, unit->xPos, unit->yPos, GetUnitMagBy2Range(gActiveUnit) + UNIT_MOV(gActiveUnit)) == 0) {
+                if (AiIsWithinRectDistance(gActiveUnit->xPos, gActiveUnit->yPos, unit->xPos, unit->yPos, maxRange + UNIT_MOV(gActiveUnit)) == 0) {
                     continue;
                 }
 
                 BmMapFill(gBmMapRange, 0);
 
-                MapAddInRange(unit->xPos, unit->yPos, GetUnitMagBy2Range(gActiveUnit), 1);
+                MapAddInRange(unit->xPos, unit->yPos, maxRange, 1);
 
                 if (GetAiBestSafeStaffTargetPosition(&pos) == 0) {
                     continue;
@@ -303,6 +397,13 @@ void AiStaffFortify(int itemIdx,  s8 (*isEnemy)(struct Unit* unit)) {
     int bestUnk = 0;
     int xDecision = 0;
     int yDecision = 0;
+    /* Decided once, not per-tile in the loop below -- see AiStaffPhysicRescue's
+     * own comment above. */
+#if FE8_RANGE_REWORK
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, gActiveUnit->items[itemIdx]);
+#else
+    int maxRange = GetUnitMagBy2Range(gActiveUnit);
+#endif
 
     if (gAiState.flags & AI_FLAG_BERSERKED) {
         return;
@@ -326,7 +427,7 @@ void AiStaffFortify(int itemIdx,  s8 (*isEnemy)(struct Unit* unit)) {
             if (gBmMapUnit[iy][ix] == 0 || gBmMapUnit[iy][ix] == gActiveUnitId) {
                 BmMapFill(gBmMapRange, 0);
 
-                MapAddInRange(ix, iy, GetUnitMagBy2Range(gActiveUnit), 1);
+                MapAddInRange(ix, iy, maxRange, 1);
 
                 tempUnk = AiCountAlliedFlaggedUnitsInRange();
 
@@ -356,6 +457,13 @@ void AiStaffWarp(int itemIdx,  s8 (*isEnemy)(struct Unit* unit)) {
     int xDecision = 0;
     int yDecision = 0;
     int targetId = 0;
+#if FE8_RANGE_REWORK
+    /* Decided once, not per-unit in the loop below -- see
+     * GetAiSafestAccessiblePositionInRange's own comment above. */
+    int item = gActiveUnit->items[itemIdx];
+    int minRange = GetUnitItemEffectiveMinRange(gActiveUnit, item);
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, item);
+#endif
 
     if (gAiState.flags & AI_FLAG_BERSERKED) {
         return;
@@ -389,7 +497,11 @@ void AiStaffWarp(int itemIdx,  s8 (*isEnemy)(struct Unit* unit)) {
                     continue;
                 }
 
+#if FE8_RANGE_REWORK
+                if (GetAiSafestAccessiblePositionInRange(ix, iy, minRange, maxRange, &out) != 0) {
+#else
                 if (GetAiSafestAccessibleAdjacentPosition(ix, iy, &out) != 0) {
+#endif
                     level = unit->level;
                     xDecision = out.x;
                     yDecision = out.y;
@@ -416,6 +528,13 @@ void AiStaffRestore(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
     int xDecision = 0;
     int yDecision = 0;
     int targetId = 0;
+#if FE8_RANGE_REWORK
+    /* Decided once, not per-unit in the loop below -- see
+     * GetAiSafestAccessiblePositionInRange's own comment above. */
+    int item = gActiveUnit->items[itemIdx];
+    int minRange = GetUnitItemEffectiveMinRange(gActiveUnit, item);
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, item);
+#endif
 
     if (gAiState.flags & AI_FLAG_BERSERKED) {
         return;
@@ -449,7 +568,11 @@ void AiStaffRestore(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
                     continue;
                 }
 
+#if FE8_RANGE_REWORK
+                if (GetAiSafestAccessiblePositionInRange(ix, iy, minRange, maxRange, &pos) != 0) {
+#else
                 if (GetAiSafestAccessibleAdjacentPosition(ix, iy, &pos) != 0) {
+#endif
                     bestLevel = unit->level;
                     xDecision = pos.x;
                     yDecision = pos.y;
@@ -520,6 +643,13 @@ void AiStaffSilence(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
     int xDecision = 0;
     int yDecision = 0;
     int targetId = 0;
+    /* Decided once, not per-unit in the loop below -- see AiStaffPhysicRescue's
+     * own comment above. */
+#if FE8_RANGE_REWORK
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, gActiveUnit->items[itemIdx]);
+#else
+    int maxRange = GetUnitMagBy2Range(gActiveUnit);
+#endif
 
     if (gAiState.flags & AI_FLAG_BERSERKED) {
         return;
@@ -549,7 +679,7 @@ void AiStaffSilence(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
                 continue;
             }
 
-            if (AiIsWithinRectDistance(gActiveUnit->xPos, gActiveUnit->yPos, unit->xPos, unit->yPos, GetUnitMagBy2Range(gActiveUnit) + UNIT_MOV(gActiveUnit)) == 0) {
+            if (AiIsWithinRectDistance(gActiveUnit->xPos, gActiveUnit->yPos, unit->xPos, unit->yPos, maxRange + UNIT_MOV(gActiveUnit)) == 0) {
                 continue;
             }
 
@@ -566,7 +696,7 @@ void AiStaffSilence(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
             if (tmp >= bestUnk) {
                 BmMapFill(gBmMapRange, 0);
 
-                MapAddInRange(unit->xPos, unit->yPos, GetUnitMagBy2Range(gActiveUnit), 1);
+                MapAddInRange(unit->xPos, unit->yPos, maxRange, 1);
 
                 if (GetAiBestSafeStaffTargetPosition(&pos) != 0) {
                     bestUnk = tmp;
@@ -595,6 +725,13 @@ void AiStaffSleepBerserk(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
     int xDecision = 0;
     int yDecision = 0;
     int targetId = 0;
+    /* Decided once, not per-unit in the loop below -- see AiStaffPhysicRescue's
+     * own comment above. */
+#if FE8_RANGE_REWORK
+    int maxRange = GetUnitItemEffectiveMaxRange(gActiveUnit, gActiveUnit->items[itemIdx]);
+#else
+    int maxRange = GetUnitMagBy2Range(gActiveUnit);
+#endif
 
     if (gAiState.flags & AI_FLAG_BERSERKED) {
         return;
@@ -619,7 +756,7 @@ void AiStaffSleepBerserk(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
                 continue;
             }
 
-            if (AiIsWithinRectDistance(gActiveUnit->xPos, gActiveUnit->yPos, unit->xPos, unit->yPos, GetUnitMagBy2Range(gActiveUnit) + UNIT_MOV(gActiveUnit)) == 0) {
+            if (AiIsWithinRectDistance(gActiveUnit->xPos, gActiveUnit->yPos, unit->xPos, unit->yPos, maxRange + UNIT_MOV(gActiveUnit)) == 0) {
                 continue;
             }
 
@@ -639,7 +776,7 @@ void AiStaffSleepBerserk(int itemIdx, s8 (*isEnemy)(struct Unit* unit)) {
 
             BmMapFill(gBmMapRange, 0);
 
-            MapAddInRange(unit->xPos, unit->yPos, GetUnitMagBy2Range(gActiveUnit), 1);
+            MapAddInRange(unit->xPos, unit->yPos, maxRange, 1);
 
             if (GetAiBestSafeStaffTargetPosition(&pos) != 0) {
                 best = unit->level;

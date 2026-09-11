@@ -2486,7 +2486,11 @@ CONST_DATA struct ItemData gItemData[] = {
 		.maxUses = 1,
 		.hit = 70,
 		.weight = 8,
+#if FE8_RANGE_REWORK
+		.encodedRange = 0xFF, // "hits everyone" sentinel -- see IsItemAllRange, src/bmitem.c
+#else
 		.encodedRange = 0x13,
+#endif
 		.iconId = 0xc7,
 	},
 	[ITEM_DEMONSTONE] = {
