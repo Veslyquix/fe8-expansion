@@ -40649,3 +40649,14 @@ The continent of Ashor.[A][X]
 
 ## MSG_NAME_ASIN
 Asin[.][X]
+
+## MSG_NAME_NOSTAL
+Nostal[X]
+
+## MSG_DESC_NOSTAL
+Restores half an ally's[LF]
+current HP from afar.[.][X]
+
+## MSG_USEDESC_NOSTAL
+Restores half their[LF]
+current HP.[.][X]

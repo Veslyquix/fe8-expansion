@@ -1060,6 +1060,27 @@ int GetUnitItemHealAmount(struct Unit* unit, int item) {
     return result;
 }
 
+/* GetUnitItemHealAmount above, for items whose heal amount doesn't depend
+ * on who's being healed (a fixed base + the healer's own power). Nostal
+ * (FE8_CUSTOM_CAMPAIGN) instead heals half of the TARGET's own current HP,
+ * which GetUnitItemHealAmount has no way to express -- it only ever sees
+ * the healer and the item, never who's on the receiving end.
+ *
+ * Callers that already have one specific target in hand (ExecStandardHeal,
+ * src/bmusemind.c; DrawUnitHealAmountText, src/unitinfowindow.c) use this
+ * instead of GetUnitItemHealAmount directly. ExecFortify (src/bmusemind.c)
+ * keeps calling GetUnitItemHealAmount unchanged -- it applies the same
+ * amount to every unit in range, so there is no single target to derive a
+ * per-target amount from. */
+int GetUnitItemHealAmountForTarget(struct Unit* unit, int item, struct Unit* target) {
+#if FE8_CUSTOM_CAMPAIGN
+    if (GetItemIndex(item) == ITEM_STAFF_NOSTAL)
+        return GetUnitCurrentHp(target) / 2;
+#endif
+
+    return GetUnitItemHealAmount(unit, item);
+}
+
 int GetUnitItemSlot(struct Unit* unit, int itemIndex) {
     int i;
 

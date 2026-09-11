@@ -31,6 +31,9 @@ const struct AiStaffLutEntry sAiStaffFuncLut[] = {
     { ITEM_STAFF_MEND,    AiStaffHealMendRecover },
     { ITEM_STAFF_RECOVER, AiStaffHealMendRecover },
     { ITEM_STAFF_PHYSIC,  AiStaffPhysicRescue },
+#if FE8_CUSTOM_CAMPAIGN
+    { ITEM_STAFF_NOSTAL,  AiStaffPhysicRescue },
+#endif
     { ITEM_STAFF_FORTIFY, AiStaffFortify },
     { ITEM_STAFF_WARP,    AiStaffWarp },
     { ITEM_STAFF_RESCUE,  AiStaffPhysicRescue },

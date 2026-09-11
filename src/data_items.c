@@ -2755,6 +2755,26 @@ CONST_DATA struct ItemData gItemData[] = {
 		.costPerUse = 40000,
 		.iconId = 0xc9,
 	},
+#if FE8_CUSTOM_CAMPAIGN
+	// Same slot as vanilla's unused ITEM_UNK_BC below -- see include/constants/items.h.
+	[ITEM_STAFF_NOSTAL] = {
+		.nameTextId = MSG_NAME_NOSTAL,
+		.descTextId = MSG_DESC_NOSTAL,
+		.useDescTextId = MSG_USEDESC_NOSTAL,
+		.number = ITEM_STAFF_NOSTAL,
+		.weaponType = ITYPE_STAFF,
+		.attributes = IA_STAFF,
+		.maxUses = 15,
+		.hit = 100,
+		.weight = 5,
+		.encodedRange = 0x1A, // always 1-10, never mag/2 like Physic
+		.costPerUse = 250,
+		.weaponRank = WPN_EXP_B,
+		.iconId = 0xdf, // item_icon_staff_nostal -- see src/data/data_item_icon.c
+		.useEffectId = 4,
+		.weaponExp = 3,
+	},
+#else
 	[ITEM_UNK_BC] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
@@ -2765,6 +2785,7 @@ CONST_DATA struct ItemData gItemData[] = {
 		.iconId = 0x0,
 		.weaponExp = 1,
 	},
+#endif
 	[ITEM_UNK_BD] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,

@@ -860,6 +860,9 @@ int EfxCheckStaffType(int weapon)
     case ITEM_STAFF_MEND:
     case ITEM_STAFF_RECOVER:
     case ITEM_STAFF_PHYSIC:
+#if FE8_CUSTOM_CAMPAIGN
+    case ITEM_STAFF_NOSTAL:
+#endif
     case ITEM_STAFF_FORTIFY:
     case ITEM_STAFF_RESTORE:
     case ITEM_STAFF_REPAIR:

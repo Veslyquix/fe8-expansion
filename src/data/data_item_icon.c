@@ -228,5 +228,11 @@ u8 item_icon_hoplon_guard[] = INCBIN_U8("graphics/item_icon/item_icon_hoplon_gua
 u8 item_icon_metiss_tome[] = INCBIN_U8("graphics/item_icon/item_icon_metiss_tome.4bpp");
 u8 item_icon_unk[] = INCBIN_U8("graphics/item_icon/item_icon_unk.4bpp");
 u8 item_icon_unused_9[] = INCBIN_U8("graphics/item_icon/item_icon_unused_9.4bpp");
+#if FE8_CUSTOM_CAMPAIGN
+// Same slot as vanilla's unused item_icon_unused_10 -- see ITEM_STAFF_NOSTAL,
+// include/constants/items.h and src/data_items.c. Art by Peerless.
+u8 item_icon_staff_nostal[] = INCBIN_U8("graphics/item_icon/item_icon_staff_nostal.4bpp");
+#else
 u8 item_icon_unused_10[] = INCBIN_U8("graphics/item_icon/item_icon_unused_10.4bpp");
+#endif
 u8 item_icon_palette[] = INCBIN_U8("graphics/item_icon/item_icon_palette.agbpal");

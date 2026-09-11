@@ -227,7 +227,7 @@ void DrawUnitHealAmountText(struct Text* text, struct Unit* target) {
     Text_InsertDrawNumberOrBlank(text, 0x1C, 2, currentHp);
 
     maxHp = GetUnitMaxHp(target);
-    healAmount = GetUnitItemHealAmount(gActiveUnit, gActiveUnit->items[gActionData.itemSlotIndex]);
+    healAmount = GetUnitItemHealAmountForTarget(gActiveUnit, gActiveUnit->items[gActionData.itemSlotIndex], target);
     newHp = currentHp + healAmount;
 
     palette = 2;

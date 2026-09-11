@@ -107,6 +107,9 @@ s8 CanUnitUseItem(struct Unit* unit, int item)
         return HasSelectTarget(unit, MakeTargetListForAdjacentHeal);
 
     case ITEM_STAFF_PHYSIC:
+#if FE8_CUSTOM_CAMPAIGN
+    case ITEM_STAFF_NOSTAL:
+#endif
         return HasSelectTarget(unit, MakeTargetListForRangedHeal);
 
     case ITEM_STAFF_FORTIFY:
@@ -305,6 +308,9 @@ void DoItemUse(struct Unit* unit, int item)
         break;
 
     case ITEM_STAFF_PHYSIC:
+#if FE8_CUSTOM_CAMPAIGN
+    case ITEM_STAFF_NOSTAL:
+#endif
         DoUseHealStaff(unit, MakeTargetListForRangedHeal);
         break;
 

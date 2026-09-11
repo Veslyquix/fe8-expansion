@@ -201,6 +201,7 @@ s8 IsItemDanceRing(int item);
 s8 IsItemDisplayUsable(struct Unit* unit, int item);
 s8 CanUnitUse_unused(struct Unit* unit, int item);
 int GetUnitItemHealAmount(struct Unit* unit, int item);
+int GetUnitItemHealAmountForTarget(struct Unit* unit, int item, struct Unit* target);
 int GetUnitItemSlot(struct Unit* unit, int itemIndex);
 s8 IsItemStealable(int item);
 s8 IsItemHammernable(int item);
