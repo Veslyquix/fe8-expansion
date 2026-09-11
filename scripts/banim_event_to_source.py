@@ -85,7 +85,8 @@ FIRST_SLOT = 0xC9  # first free banim_data[] slot after the 201 vanilla entries
 
 # struct BattleAnim::abbr is char[12] -> <= 11 chars.
 WEAPON_TAG = {"Sword": "sw", "Lance": "ln", "Axe": "ax", "Handaxe": "hx",
-              "Bow": "bw", "Magic": "mg", "Unarmed": "un"}
+              "Bow": "bw", "Staff": "st", "Magic": "mg", "Unarmed": "un",
+              "Monster": "mo", "Dragonstone": "dr", "Refresh": "rf", "Supply": "su"}
 
 def compile_with_aaa(pack, weapon, work_dir):
     """Copy the checked-in source + AAA.py into a scratch dir and compile it

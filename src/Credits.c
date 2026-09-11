@@ -878,6 +878,27 @@ static const signed char body1[] =
     " Kargan (replaces O'Neill) portrait by Eden" NL
     " Asin (replaces Moulder) portrait by Eden";
 
+
+/* Kept in sync with CREDITS.md's "Batch2 Imported Classes" section.
+ * Full per-folder class-card and map-sprite source paths are documented there. */
+static const signed char header14[] = "Batch2 Animations";
+static const signed char body14[] =
+    " Batch2 battle animations from FE-Repo" NL
+    "  and FEBuilder community packs" NL
+    " Major artists include Yellowtoad," NL
+    "  Nuramon, RedBean, Devisian_Nights," NL
+    "  Sphealnuke, SALVAGED, Huichelaar," NL
+    "  Leo_Link, Pikmin, Der, SkidMarc25," NL
+    "  and the credited folder authors";
+
+static const signed char header15[] = "Batch2 Class Art";
+static const signed char body15[] =
+    " Batch2 class cards from Repo/Class Cards" NL
+    " Batch2 map sprites from SRR_FEGBA" NL
+    "  and Repo/Map Sprites" NL
+    " See CREDITS.md for each folder's" NL
+    "  exact card and map-sprite source";
+
 /* Kept in sync with CREDITS.md's "Map Tilesets" table. */
 static const signed char header2[] = "Map Tilesets";
 static const signed char body2[] =
@@ -1009,6 +1030,8 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
 #if FE8_NEW_ANIMS
     { header6, body6, SubstituteRandomBG, BG_Type, 0, 0 },
     { header7, body7, SubstituteRandomBG, BG_Type, 0, 0 },
+    { header14, body14, SubstituteRandomBG, BG_Type, 0, 0 },
+    { header15, body15, SubstituteRandomBG, BG_Type, 0, 0 },
 #endif
 #if FE8_MULTIPALETTE_BG
     { header8, body8, BG_ALEXANDER_LAWRIE_HILLSIDE_192, BG_Type, 0, 0 },

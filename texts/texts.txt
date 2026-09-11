@@ -40723,3 +40723,457 @@ current HP from afar.[.][X]
 ## MSG_USEDESC_NOSTAL
 Restores half their[LF]
 current HP.[.][X]
+
+## MSG_CLASS_SWASHBUCKLER_F_NAME
+Swashbuckler F[X]
+
+## MSG_CLASS_SWASHBUCKLER_F_DESC
+A custom fighter-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_SWASHBUCKLER_NAME
+Swashbuckler[X]
+
+## MSG_CLASS_SWASHBUCKLER_DESC
+A custom fighter-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_LEO_BERSERKER_NAME
+Leo Berserker[.][X]
+
+## MSG_CLASS_LEO_BERSERKER_DESC
+A custom berserker-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_GRAND_MAHOUT_NAME
+GrandMahout[.][X]
+
+## MSG_CLASS_GRAND_MAHOUT_DESC
+A masterful rider with unmatched[N]
+control over mighty beasts. Commanding.[N][.][X]
+
+## MSG_CLASS_ARCANIST_NURAMON_NAME
+Arcanist Nuramon[X]
+
+## MSG_CLASS_ARCANIST_NURAMON_DESC
+A custom shaman-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_HALBERDIER_CUSTOM_NAME
+Halberdier[X]
+
+## MSG_CLASS_HALBERDIER_CUSTOM_DESC
+An expert in halberds. Balances[N]
+offense and defense seamlessly.[N][X]
+
+## MSG_CLASS_MIKO_NAME
+Miko[X]
+
+## MSG_CLASS_MIKO_DESC
+A spiritual warrior. Combines[N]
+sacred magic with martial skills.[N][X]
+
+## MSG_CLASS_WAR_CLERIC_NAME
+War Cleric[X]
+
+## MSG_CLASS_WAR_CLERIC_DESC
+A custom cleric-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_WITCH_NAME
+Witch[.][X]
+
+## MSG_CLASS_WITCH_DESC
+A mysterious sorceress who[N]
+uses dark magic to manipulate foes.[N][.][X]
+
+## MSG_CLASS_ANGEL_NAME
+Angel[.][X]
+
+## MSG_CLASS_ANGEL_DESC
+A divine figure who wields[N]
+holy magic to protect and heal.[N][.][X]
+
+## MSG_CLASS_BRIGHID_NAME
+Brighid[.][X]
+
+## MSG_CLASS_BRIGHID_DESC
+A fierce warrior with an[N]
+unyielding spirit. Fights valiantly.[N][X]
+
+## MSG_CLASS_ARCANIST_DEVISIAN_NAME
+Arcanist Devisian[.][X]
+
+## MSG_CLASS_ARCANIST_DEVISIAN_DESC
+A custom shaman-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MAGICIAN_NAME
+Magician[X]
+
+## MSG_CLASS_MAGICIAN_DESC
+A master of elemental spells.[N]
+Wields fire, thunder, and wind.[N][X]
+
+## MSG_CLASS_OCCULTIST_NAME
+Occultist[.][X]
+
+## MSG_CLASS_OCCULTIST_DESC
+A practitioner of forbidden arts.[N]
+Draws power from the shadows.[N][X]
+
+## MSG_CLASS_BLADER_F_NAME
+Blader F[X]
+
+## MSG_CLASS_BLADER_F_DESC
+A custom myrmidon f-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_HARBINGER_NAME
+Harbinger[.][X]
+
+## MSG_CLASS_HARBINGER_DESC
+A bringer of doom and destruction.[N]
+Terrifies foes with raw power.[N][X]
+
+## MSG_CLASS_HARBINGER_ALT_NAME
+Harbinger[.][X]
+
+## MSG_CLASS_HARBINGER_ALT_DESC
+A bringer of doom and destruction.[N]
+Terrifies foes with raw power.[N][X]
+
+## MSG_CLASS_HEAVY_INFANTRY_NAME
+Heavy Infantry[X]
+
+## MSG_CLASS_HEAVY_INFANTRY_DESC
+A custom ephraim master lord-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_BARON_CUSTOM_NAME
+Baron[.][X]
+
+## MSG_CLASS_BARON_CUSTOM_DESC
+A heavily armored knight.[N]
+A fortress on the battlefield.[N][.][X]
+
+## MSG_CLASS_SHIELD_GENERAL_NAME
+Shield General[X]
+
+## MSG_CLASS_SHIELD_GENERAL_DESC
+A custom general-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_BLACK_DRAGON_NAME
+BlackDragon[.][X]
+
+## MSG_CLASS_BLACK_DRAGON_DESC
+A mighty dragon with scales black as[N]
+night. Its flames scorch all in its path.[N][.][X]
+
+## MSG_CLASS_DJINN_NAME
+Djinn[.][X]
+
+## MSG_CLASS_DJINN_DESC
+A mystical being of great power.[N]
+Unpredictable and formidable.[N][.][X]
+
+## MSG_CLASS_LIVING_ARMOR_NAME
+LivingArmor[.][X]
+
+## MSG_CLASS_LIVING_ARMOR_DESC
+Enchanted armor brought to life.[N]
+Resilient and unyielding in combat.[N][.][X]
+
+## MSG_CLASS_FELLBEAST_NAME
+Fellbeast[.][X]
+
+## MSG_CLASS_FELLBEAST_DESC
+A fearsome creature of darkness with[N]
+powerful, terrifying attacks.[N][.][X]
+
+## MSG_CLASS_SAMURAI_F_NAME
+Samurai F[.][X]
+
+## MSG_CLASS_SAMURAI_F_DESC
+A custom swordmaster f-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_MASTER_NINJA_NAME
+Master Ninja[X]
+
+## MSG_CLASS_MASTER_NINJA_DESC
+A custom assassin-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_HOODED_NINJA_NAME
+Hooded Ninja[X]
+
+## MSG_CLASS_HOODED_NINJA_DESC
+A custom assassin-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MYRMIDON_FE15_F_NAME
+Myrmidon F[X]
+
+## MSG_CLASS_MYRMIDON_FE15_F_DESC
+A custom myrmidon f-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MYRMIDON_FE15_NAME
+Myrmidon[X]
+
+## MSG_CLASS_MYRMIDON_FE15_DESC
+A custom myrmidon-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_KATARINA_FENCER_NAME
+Katarina Fencer[.][X]
+
+## MSG_CLASS_KATARINA_FENCER_DESC
+A custom swordmaster f-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_THUG_NAME
+Thug[X]
+
+## MSG_CLASS_THUG_DESC
+A custom myrmidon-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_DREAD_FIGHTER_NAME
+Dread Fighter[.][X]
+
+## MSG_CLASS_DREAD_FIGHTER_DESC
+A custom swordmaster-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_FIR_SWORDMASTER_NAME
+Fir[.][X]
+
+## MSG_CLASS_FIR_SWORDMASTER_DESC
+A girl traveling around Elibe[N]
+to hone her sword skills.[X]
+
+## MSG_CLASS_TRUEBLADE_NAME
+Trueblade[.][X]
+
+## MSG_CLASS_TRUEBLADE_DESC
+An elite swordfighter. Sharp[N]
+and unmatched in technique.[N][.][X]
+
+## MSG_CLASS_RED_MAGE_NAME
+Red Mage[X]
+
+## MSG_CLASS_RED_MAGE_DESC
+A custom mage knight-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_MOLOCH_NAME
+Moloch[X]
+
+## MSG_CLASS_MOLOCH_DESC
+A custom summoner-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_TACTICIAN_CUSTOM_NAME
+Tactician[.][X]
+
+## MSG_CLASS_TACTICIAN_CUSTOM_DESC
+A master strategist skilled in[N]
+magic and commanding troops.[N][X]
+
+## MSG_CLASS_TRICKSTER_F_NAME
+Trickster F[.][X]
+
+## MSG_CLASS_TRICKSTER_F_DESC
+A custom rogue-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_TRICKSTER_NAME
+Trickster[.][X]
+
+## MSG_CLASS_TRICKSTER_DESC
+A custom rogue-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_VILLAGER_F_NAME
+Villager[X]
+
+## MSG_CLASS_VILLAGER_F_DESC
+Placeholder text[X]
+
+## MSG_CLASS_VILLAGER_NAME
+Villager[X]
+
+## MSG_CLASS_VILLAGER_DESC
+Placeholder text[X]
+
+## MSG_CLASS_LEGION_KING_NAME
+Legion King[.][X]
+
+## MSG_CLASS_LEGION_KING_DESC
+A custom general-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_ONI_CHIEFTAIN_NAME
+Oni Chieftain[.][X]
+
+## MSG_CLASS_ONI_CHIEFTAIN_DESC
+A custom warrior-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_ELFFIN_FANCY_NAME
+Elffin Fancy[X]
+
+## MSG_CLASS_ELFFIN_FANCY_DESC
+A custom bard-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MOUNTED_MARAUDER_NAME
+Mounted Marauder[X]
+
+## MSG_CLASS_MOUNTED_MARAUDER_DESC
+A custom cavalier-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MECHANIST_NAME
+Mechanist[.][X]
+
+## MSG_CLASS_MECHANIST_DESC
+A custom archer-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_DRAGOON_CUSTOM_NAME
+Dragoon[.][X]
+
+## MSG_CLASS_DRAGOON_CUSTOM_DESC
+A skilled knight who wields[N]
+lances with powerful charges.[N][X]
+
+## MSG_CLASS_LANCER_CUSTOM_NAME
+Lancer[X]
+
+## MSG_CLASS_LANCER_CUSTOM_DESC
+A custom soldier-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_MILITIA_NAME
+Militia[.][X]
+
+## MSG_CLASS_MILITIA_DESC
+A conscripted soldier. Fights[N]
+with determination and resolve.[N][X]
+
+## MSG_CLASS_SENTINEL_NAME
+Sentinel[X]
+
+## MSG_CLASS_SENTINEL_DESC
+A stalwart defender. Known[N]
+for their resilience and bravery.[N][.][X]
+
+## MSG_CLASS_T1_LANCER_NAME
+T1 Lancer[.][X]
+
+## MSG_CLASS_T1_LANCER_DESC
+A custom ephraim lord-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_GLADIATOR_NAME
+Gladiator[.][X]
+
+## MSG_CLASS_GLADIATOR_DESC
+A battle-hardened warrior.[N]
+Thrives in the arena and beyond.[N][X]
+
+## MSG_CLASS_HORN_BRIGAND_NAME
+Horn Brigand[X]
+
+## MSG_CLASS_HORN_BRIGAND_DESC
+A custom brigand-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_HORN_SOLDIER_NAME
+Horn Soldier[X]
+
+## MSG_CLASS_HORN_SOLDIER_DESC
+A custom soldier-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_HUNTER_NAME
+Hunter[X]
+
+## MSG_CLASS_HUNTER_DESC
+A tracker and marksman.[N]
+Excels in pursuing prey.[N][.][X]
+
+## MSG_CLASS_SUPPLIER_ANNA_NAME
+Supplier Anna[.][X]
+
+## MSG_CLASS_SUPPLIER_ANNA_DESC
+A custom rogue-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_SANDWORM_NAME
+Sandworm[X]
+
+## MSG_CLASS_SANDWORM_DESC
+A massive creature that burrows[N]
+beneath the earth to ambush foes.[N][X]
+
+## MSG_CLASS_CURSED_SWORD_NAME
+Cursed Sword[X]
+
+## MSG_CLASS_CURSED_SWORD_DESC
+A custom revenant-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MAGICAL_TOMES_NAME
+Magical Tomes[.][X]
+
+## MSG_CLASS_MAGICAL_TOMES_DESC
+A custom mogall-style class.[N]
+Imported from the batch2 animation set.[.][X]
+
+## MSG_CLASS_MIMIC_CHEST_NAME
+Mimic Chest[.][X]
+
+## MSG_CLASS_MIMIC_CHEST_DESC
+A custom entoumbed-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_MOSQUITO_NAME
+Mosquito[X]
+
+## MSG_CLASS_MOSQUITO_DESC
+A pestilent monster that drains[N]
+life with every attack.[N][X]
+
+## MSG_CLASS_PHANTOM_CUSTOM_NAME
+Phantom[.][X]
+
+## MSG_CLASS_PHANTOM_CUSTOM_DESC
+A custom phantom-style class.[N]
+Imported from the batch2 animation set.[X]
+
+## MSG_CLASS_SLIME_NAME
+Slime[.][X]
+
+## MSG_CLASS_SLIME_DESC
+A gelatinous monster that engulfs[N]
+and dissolves its enemies.[N][.][X]
+
+## MSG_CLASS_WARBIRD_NAME
+Warbird[.][X]
+
+## MSG_CLASS_WARBIRD_DESC
+A swift and deadly fighter.[N]
+Strikes with unmatched precision.[N][X]
+
+## MSG_CLASS_ADVENTURER_NAME
+Adventurer[X]
+
+## MSG_CLASS_ADVENTURER_DESC
+An intrepid explorer skilled[N]
+in ranged combat and survival.[N][X]
+

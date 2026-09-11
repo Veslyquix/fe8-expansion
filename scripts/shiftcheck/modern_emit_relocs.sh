@@ -39,7 +39,7 @@ TEXT_SHIFT=${TEXT_SHIFT:-0}
 # Must match modern.mk's MODERN_BANIM_DATA_BASE, which banim/data_banim.modern.o
 # (see BANIM_SYM above) is pre-linked against -- see linker/expansion.ld's
 # __banim_data_base_abs placement for why this can't just be any value.
-BANIM_DATA_BASE=${BANIM_DATA_BASE:-0x08ca0000}
+BANIM_DATA_BASE=${BANIM_DATA_BASE:-0x08cb24e4}
 
 for path in "$OBJECTS_LST" "$BANIM_SYM" "$LDSCRIPT"; do
     if [ ! -f "$path" ]; then

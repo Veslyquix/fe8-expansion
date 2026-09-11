@@ -184,12 +184,12 @@ class ModernRomBootTargetTests(unittest.TestCase):
     # -- ROM size configuration (--size wiring) --------------------------------
 
     def test_rom_rule_passes_default_32m_size_to_verifier(self):
-        """Without MODERN_ROM_SIZE, the recipe must pass --size 32M to the
-        verifier. The default was 16M until the FE8_MAPGEN chunk table (and
-        the pre-existing near-full 16M budget, see reports/linker-budget)
-        made that no longer enough room to build with; see
-        test_rom_rule_passes_16m_size_to_verifier below for the still-
-        supported explicit-opt-in-to-16M path."""
+        """Without MODERN_ROM_SIZE, the recipe must pass the ROM's own
+        actual byte count as --size, not a named size -- the built .gba is
+        no longer padded to a fixed target (see $(MODERN_ROM)'s own recipe
+        in modern.mk), so there is no fixed size to assert against besides
+        whatever objcopy actually produced (1024 bytes for this fake
+        objcopy, regardless of MODERN_ROM_SIZE)."""
         with tempfile.TemporaryDirectory() as tmp:
             fake_elf = Path(tmp, "fireemblem8.elf")
             fake_elf.write_bytes(b"\x00" * 16)
@@ -218,13 +218,14 @@ class ModernRomBootTargetTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout)
             argv_text = argv_capture.read_text()
-            self.assertIn("--size 32M", argv_text)
+            self.assertIn("--size 1024", argv_text)
             self.assertTrue(argv_text.strip().endswith(str(rom_path)))
 
     def test_rom_rule_passes_16m_size_to_verifier(self):
-        """MODERN_ROM_SIZE=16M must still flow through to the verifier's
-        --size when explicitly requested, now that it is opt-in rather than
-        the default (see test_rom_rule_passes_default_32m_size_to_verifier)."""
+        """MODERN_ROM_SIZE=16M (an explicit opt-in) must not change what
+        --size the verifier receives -- it's still just the ROM's own
+        actual byte count, since MODERN_ROM_SIZE only bounds the linker's
+        ROM region and no longer controls the built .gba's file size."""
         with tempfile.TemporaryDirectory() as tmp:
             fake_elf = Path(tmp, "fireemblem8.elf")
             fake_elf.write_bytes(b"\x00" * 16)
@@ -254,12 +255,12 @@ class ModernRomBootTargetTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout)
             argv_text = argv_capture.read_text()
-            self.assertIn("--size 16M", argv_text)
+            self.assertIn("--size 1024", argv_text)
             self.assertTrue(argv_text.strip().endswith(str(rom_path)))
 
     def test_rom_rule_passes_32m_size_to_verifier(self):
-        """MODERN_ROM_SIZE=32M must flow through to the verifier's --size,
-        proving the ROM/boot pipeline no longer hardcodes 16 MiB."""
+        """MODERN_ROM_SIZE=32M must not change what --size the verifier
+        receives either -- same reasoning as test_rom_rule_passes_16m_size_to_verifier."""
         with tempfile.TemporaryDirectory() as tmp:
             fake_elf = Path(tmp, "fireemblem8.elf")
             fake_elf.write_bytes(b"\x00" * 16)
@@ -289,13 +290,18 @@ class ModernRomBootTargetTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout)
             argv_text = argv_capture.read_text()
-            self.assertIn("--size 32M", argv_text)
+            self.assertIn("--size 1024", argv_text)
 
-    def test_rom_rule_rejects_16m_output_when_32m_requested(self):
-        """Using the real verifier: an objcopy output that is only 16 MiB
-        while MODERN_ROM_SIZE=32M was requested must be rejected and the
-        stale ROM deleted -- proving the *configured* size is enforced,
-        not a hardcoded 16 MiB constant (the bug this change fixes)."""
+    def test_rom_rule_accepts_16m_output_when_32m_requested(self):
+        """The built .gba is no longer padded to MODERN_ROM_SIZE (see
+        $(MODERN_ROM)'s own recipe in modern.mk) -- a 16 MiB objcopy output
+        under MODERN_ROM_SIZE=32M is legitimate (32M only raises the
+        linker's ceiling, it doesn't force the file up to that size), so
+        the real verifier's size check must pass for it (identity/checksum
+        still fail for this synthetic all-zero image, but not on size --
+        this replaces a prior version of this test that expected a
+        requested-vs-actual size mismatch to be rejected; that concept no
+        longer exists once there's no fixed target to compare against)."""
         with tempfile.TemporaryDirectory() as tmp:
             fake_elf = Path(tmp, "fireemblem8.elf")
             fake_elf.write_bytes(b"\x00" * 16)
@@ -317,11 +323,11 @@ class ModernRomBootTargetTests(unittest.TestCase):
                 f"MODERN_ROM={rom_path}",
             )
             self.assertNotEqual(result.returncode, 0, result.stdout)
-            self.assertIn("does not match expected", result.stdout)
+            self.assertNotIn("does not match expected", result.stdout)
             self.assertFalse(
                 rom_path.exists(),
-                "ROM padded to the wrong size must be deleted, not left "
-                "behind as a stale invalid image",
+                "a ROM that fails identity/checksum verification must be "
+                "deleted, not left behind as a stale invalid image",
             )
 
     def test_rom_rule_size_check_passes_for_genuine_32m_padded_output(self):

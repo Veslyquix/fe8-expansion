@@ -1521,15 +1521,43 @@ MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 # pushed floating .data past 0x8c02000, so modern needs its OWN copy
 # pre-linked against a base beyond that, kept in lockstep with the
 # `. = __banim_data_base_abs - __text_start;` pin for banim/data_banim.modern.o(.data) in
-# linker/expansion.ld via the --defsym below. Headroom above the
-# natural floating end (~0x8c86f60 as of the same 2026-09 build) is
-# deliberately small: this address must be re-picked (and this object
-# rebuilt) whenever floating .data grows enough to reach it, so a
-# little slack avoids needing that on every small change, but there's
-# no value in reserving megabytes nothing will ever use.
-MODERN_BANIM_DATA_BASE := 0x08ca0000
+# linker/expansion.ld via the --defsym below.
+#
+# Pinned at the exact natural end of floating .data as of the 2026-09
+# "batch2" class import (~65 new classes' stat/text/banimconf data;
+# confirmed via the real __floating_end in the linked map, not guessed),
+# with deliberately zero headroom -- every byte floating .data grows
+# from here on requires bumping this value and paying the ~10-minute
+# full recompression this object's build entails, but reserving
+# headroom "just in case" is exactly the multi-megabyte waste the
+# 2026-09 convo_bg import fix (see linker/expansion.ld) removed.
+MODERN_BANIM_DATA_BASE := 0x08cb24e4
 MODERN_BANIM_OBJECT := banim/data_banim.modern.o
-$(MODERN_BANIM_OBJECT): $(shell ./scripts/arm_compressing_linker.py -t linker_script_banim.txt -m)
+# banim/.data_banim_base.stamp: a plain shell-computed file list has no
+# way to depend on MODERN_BANIM_DATA_BASE's *value* -- only on files --
+# so without this, changing the base with no source file also touched
+# leaves the existing (now wrongly-based) $(MODERN_BANIM_OBJECT) on disk
+# looking up to date, silently linked at the NEW address while its
+# internal pointers are still baked for the OLD one (confirmed: this
+# exact bug crashed battle animations again after the base was bumped
+# for the batch2 import, since linker_script_banim.txt happened to also
+# change that same time and masked it by forcing a rebuild anyway).
+# This stamp makes the base's value itself a real, content-addressed
+# prerequisite, same idiom as $(MODERN_ELF_LINK_SETTINGS) below.
+MODERN_BANIM_DATA_BASE_STAMP := banim/.data_banim_base.stamp
+.PHONY: FORCE_MODERN_BANIM_DATA_BASE_STAMP
+FORCE_MODERN_BANIM_DATA_BASE_STAMP:
+
+$(MODERN_BANIM_DATA_BASE_STAMP): FORCE_MODERN_BANIM_DATA_BASE_STAMP
+	@mkdir -p "$(@D)"
+	@echo "$(MODERN_BANIM_DATA_BASE)" > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then \
+		mv -f "$@.tmp" "$@"; \
+	else \
+		rm -f "$@.tmp"; \
+	fi
+
+$(MODERN_BANIM_OBJECT): $(MODERN_BANIM_DATA_BASE_STAMP) $(shell ./scripts/arm_compressing_linker.py -t linker_script_banim.txt -m)
 	./scripts/arm_compressing_linker.py -o $@ -t linker_script_banim.txt -b $(MODERN_BANIM_DATA_BASE) -l $(LD) --objcopy $(OBJCOPY) -c ./scripts/compressor.py
 
 # Non-C assembled objects from the legacy pipeline (sound, data asm, midi).
@@ -1563,11 +1591,15 @@ $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 # gates 32M-only features like the locale bank -- it no longer controls
 # the built .gba's actual file size (see $(MODERN_ROM) below, which is
 # exactly as large as its real content plus a 32-byte zero tail, not
-# padded out to this ceiling). Default is 16M: the current config.mk
-# default flag set (including FE8_MAPGEN) fits comfortably under the 16M
-# ceiling with room to spare; opt into MODERN_ROM_SIZE=32M for CJK
-# locales or once real headroom is needed.
-MODERN_ROM_SIZE ?= 16M
+# padded out to this ceiling). Default was 16M until the 2026-09
+# "batch2" custom class import (~65 new classes with their own battle
+# animations/map sprites) pushed real ROM content past 16M outright
+# (confirmed via a real 32M build: ~19.5MB) -- not just the banim pin
+# (see MODERN_BANIM_DATA_BASE above), the actual total content. Default
+# is now 32M; 16M remains available as an explicit opt-in
+# (MODERN_ROM_SIZE=16M) for anyone who still fits under it, same as the
+# CJK-locale case.
+MODERN_ROM_SIZE ?= 32M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000
@@ -2609,8 +2641,15 @@ expansion-modern-ups: expansion-modern-rom $(MODERN_UPS)
 # The built ROM is no longer padded to a fixed MODERN_ROM_SIZE (see
 # $(MODERN_ROM)'s own recipe above), so eligibility is decided from its
 # real, current byte count rather than that ceiling knob -- see
-# MODERN_ROM_FITS_IPS below. Errors out (via scripts/gen_ips.py's own size
-# check) rather than silently truncating if it doesn't actually fit.
+# _sync_win_impl's own `rom_bytes` checks below, which must be real shell
+# `if` blocks run *after* expansion-modern-rom, not a Make-level
+# $(if $(shell ...)) inside that same recipe's command list: GNU Make
+# expands a whole recipe's command lines up front before running any of
+# them, so a $(shell) embedded that way sees the ROM's size from before
+# this invocation rebuilt it, not after (confirmed the hard way — it
+# tried to build an IPS patch against a >16MB ROM once). Errors out (via
+# scripts/gen_ips.py's own size check) rather than silently truncating if
+# it doesn't actually fit.
 MODERN_IPS_MAX_BYTES := 16777216
 MODERN_IPS := $(MODERN_ROM:.gba=.ips)
 MODERN_IPS_GENERATOR := scripts/gen_ips.py
@@ -2664,9 +2703,16 @@ _sync_win_impl:
 	mv -f "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp" "$(WIN_SYNC_DIR)/$(notdir $(MODERN_ROM))"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	+$(MAKE) expansion-modern-sym \
-		$(if $(filter 1,$(WITH_UPS)),$(if $(wildcard $(BASEROM)),expansion-modern-ups)) \
-		$(if $(and $(wildcard $(BASEROM)),$(shell [ "$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)" -le $(MODERN_IPS_MAX_BYTES) ] && echo yes)),expansion-modern-ips) \
 		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
+	+@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \
+		$(MAKE) expansion-modern-ups; \
+	fi
+	+@if [ -f "$(BASEROM)" ]; then \
+		rom_bytes="$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)"; \
+		if [ "$$rom_bytes" -le $(MODERN_IPS_MAX_BYTES) ]; then \
+			$(MAKE) expansion-modern-ips; \
+		fi; \
+	fi
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
 	@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \

@@ -36,6 +36,170 @@ still imported as an available `banim_data[]` entry (see
 | `CLASS_NOMAD`, `CLASS_NOMAD_F` | IS, MeatOfJustice, UltraFenix |
 | `CLASS_NOMAD_TROOPER`, `CLASS_NOMAD_TROOPER_F` | IS |
 
+
+## Batch2 Imported Classes (`FE8_NEW_ANIMS`)
+
+Battle animations imported from the batch2 FE-Repo/FEBuilder animation folders under `C:\devkitPro\feex\banims\batch2`. Folder names retain the upstream artist tags and are registered in `scripts/banim_packs.json`.
+
+### Batch2 Class Cards
+
+```text
+Class Card Credits
+==================
+
+Cards copied from C:\Users\David\Desktop\Repo\Class Cards
+Destination file name in each animation folder: Class Card.png
+
+Copied cards:
+- [Axe-Custom] Swashbuckler [F] by Yellowtoad: Infantry - (Axe) Brigs, Pirates, Zerkers\Swashbuckler (F) Axe {Nuramon, ZoramineFae, Yellowtoad}.png
+- [Axe-Custom] Swashbuckler [M] by Yellowtoad: Infantry - (Axe) Brigs, Pirates, Zerkers\Swashbuckler (M) Axe {Nuramon, ZoramineFae, Yellowtoad}.png
+- [Berserker-Custom] Leo's Berserker [M] by Leo_Link: Infantry - (Axe) Brigs, Pirates, Zerkers\Berserker (M) Axe {IS}.png
+- [CavalryCustom]_[U]_Updated_Grand_Mahout_by_Orihara_Saki_DatonDemand: Mounted - Dismounted, Monsters, Misc\Mahout {7743}.png
+- [Custom_Halb]_[M]_Halberdier_+Axes_by_TBA: Infantry - (Lnc) Soldiers, Halberdiers\Halberdier (M) Lance {TBA}.png
+- [Custom_Magi]_[F]_War_Cleric_by_SkidMarc25: Magi - Special\War Cleric (F) {Der}.png
+- [Custom_Magi]_[F]_Witch_Nuibaba_by_Nuramon: Magi - Special\Witch {Aruka, Yggdra}.png
+- [Custom_Magi]_[U]_Angel_by_Atey: Magi - Special\Angel (F) {N426}.png
+- [DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights: Magi - Special\Occultist (M) Magic {Valak}.png.png
+- [FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (F) Sword {L95}.png
+- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy: Lords - Vanilla and Custom\Harbinger (M) Magic {flasuban}.png
+- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon: Lords - Vanilla and Custom\Harbinger (M) Magic {flasuban}.png
+- [FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon: Lords - Vanilla and Custom\Heavy Infantry (M) {SamirPlayz}.png
+- [GeneralReskin]_[U]_Baron_+Weapons: Infantry - Knights, Generals, Armors\Baron (U) Lance {SamirPlayz}.png
+- [GeneralReskin]_[U]_ShieldGeneral_v2_+Cape: Infantry - Knights, Generals, Armors\General Shield (U) Cape Lance {Topazlight,SamirPlayz,}.png
+- [ManaketeCustom]_[U]_Black_Dragon_FE10Style_by_Nuramon: Monsters - Dragons and Special\Dragon (U) Magic {L95}.png
+- [MonsterCustom]_[U]_Living_Armor_by_Sphealnuke: Monsters - Dragons and Special\Living Armor (U) {Sphealnuke}.png
+- [MonsterCustom]_[U]_Wild_Fellbeast_by_Nuramon: Monsters - Dragons and Special\Wyvern Wild {Faeriefruit}.png
+- [RogueVariant]_[F]_Samurai__Iaijutsu_Rogue: Infantry - (Swd) Thieves, Rogues, Assassins\Samurai (F) {VelvetKitsune, L95, Pushwall, Nuramon}.png
+- [Sword Custom] Master Ninja [M] by Pikmin and Der: Infantry - (Swd) Thieves, Rogues, Assassins\Master Ninja (M) {Der}.png
+- [Sword Custom] Ninja - Hooded [U] by Pikmin and Der: Infantry - (Swd) Thieves, Rogues, Assassins\Ninja {Der}.png
+- [Sword FE15 Custom] Myrmidon [F] by Nuramon: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (F) Sword {L95}.png
+- [Sword FE15 Custom] Myrmidon [M] by Nuramon: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (M) Sword {IS}.png
+- [Sword_Custom]_[M]_Thug_by_MonkeyBard: Infantry - (Swd) Thieves, Rogues, Assassins\Thug (M) Sword {Rasdel}.png
+- [Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon: Infantry - (Swd) Myrms and Swordmasters\[T2][SWD] Dread Fighter (U) {Nuramon}.png
+- [T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar: Magi - Dark-Type\Moloch Sorcerer (U) T3 Style {Huichelaar}.png
+- [Tactician]_[U]_Tactician_by_SALVAGED: Magi - Special\Tactician (U) Magic {SALVAGED}.png
+- [Trickster]_F_Trickster_V_2_Ponytail: Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (F) Sword T2 {Jj09, Scraiza, Sword of HaE,SableMage}.png
+- [Trickster]_M_Trickster_V_2_by_Leo_Link: Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (M) Sword T2 {Jj09, Scraiza, Sword of HaE}.png
+- [VillagerCustom]_F_Villager_v2_by_Nuramon: Bards, Dancers, Suppliers, Misc\Villager (U) Updated {Ghast, HyperGammaSpaces}.png
+- [VillagerCustom]_M_Villager_v2_by_Nuramon: Bards, Dancers, Suppliers, Misc\Villager (U) Updated {Ghast, HyperGammaSpaces}.png
+- [ZephielReskin]_[U]_Legion_King_by_Huichelaar: Infantry - Knights, Generals, Armors\King (U) T2 Style v2 {Huichelaar, Seal, Der, Mobile21}.png
+- AxeCustom__%5BM__Oni_Chieftain_Repalette_by_Dora_Drago: Infantry - (Axe) Brigs, Pirates, Zerkers\Oni Chieftain (M) Axe {Dora Drago}.png
+- BardBase__%5BM__Elffin_Fancy_%2BMagic: Bards, Dancers, Suppliers, Misc\Fancy Bard (M) +Lyre {MeatOfJustice}.png
+- BrigandStyle_____Mounted_Marauder_by_TytheBub: Mounted - Cavs, Paladins, Rangers\Marauder (M) Axe {NoelWoodsoul}.png
+- Custom_Drag_____Dragoon_Repal_by_Pikmin: Infantry - (Lnc) Soldiers, Halberdiers\Halberdier (M) Dragoon v2 Lance {Pikmin, Uncredited}.png
+- Custom_Lance__%5BM__Lancer_by_SALVAGED: Infantry - (Lnc) Soldiers, Halberdiers\Lancer (M) Lance {SALVAGED}.png
+- Custom_Lance__%5BM__Militia_Deserter_by_Alusq: Infantry - (Lnc) Soldiers, Halberdiers\Militia (M) Deserter Lance {Rasdel}.png
+- EphraimVariant_____T1_Lancer_Fix_by_MemaeMemai: Infantry - (Lnc) Soldiers, Halberdiers\Halb-Lancer (M) {Jj09}.png
+- HectorReskin__%5BM__T1_Waleed's_Gladiator_Repal_v2_%2BSword: Infantry - (Axe) Brigs, Pirates, Zerkers\Gladiator (M) Sword {L95, Pushwall}.png
+- horn_brigand: Infantry - (Axe) Brigs, Pirates, Zerkers\Brigand (M) Axe {IS}.png
+- horn_soldier: Infantry - (Lnc) Soldiers, Halberdiers\Soldier (M) FE10-Style Lance {flasuban}.png
+- HunterM__%5BM__Hunter_by_MeatOfJustice: Infantry - (Bow) Archers and Hunters\Hunter (M) {Spud}.png
+- MiscSupplierAnna_____Repalled_%2B_Weapons_by_JonoTheRed_DatonDemand: Bards, Dancers, Suppliers, Misc\Supplier (M) Potion {N426}.png
+- MonsterCustom_____Mimic_Chest_by_Seal: Bards, Dancers, Suppliers, Misc\Chest Mimic {LaurentLacroix}.png
+- MonsterCustom_____Mosquito_by_Dutch_Introvert: Monsters - Dragons and Special\Mosquito (U) {Odd Dutch}.png
+- MonsterCustom_____Phantom_by_TBA: Monsters - Dragons and Special\Phantom (U) Axe {IS}.png
+- MonsterCustom_____Slime_by_Yellowtoad: Monsters - Dragons and Special\Slime (U) {Yellowtoad}.png
+- SniperReskin_____Adventurer_by_ltranc: Infantry - (Bow) Snipers and Ballistae\Adventurer (M) {Cygnus}.png
+
+- [Custom_DM_[M]_Arcanist_by_Nuramon: Magi - Dark-Type\Dark Mage (M) {Jj09}.png (fallback dark mage card for Arcanist)
+- [Custom_Magi]_[F]_Miko_V_2_by_RedBean: Infantry - (Bow) Snipers and Ballistae\Sniper (F) Long Hair Bow {flasuban, L95}.png
+- [CustomLord]_[F]_Halberd_Brighid_by_Sphealnuke: Infantry - (Lnc) Soldiers, Halberdiers\Halberdier (F) Lance {TBA, Yellowtoad}.png
+- [DevisianCustom]_[M]_Arcanist_by_Devisian_Nights: Magi - Dark-Type\Dark Mage (M) {Jj09}.png (fallback dark mage card for Arcanist)
+- [DevisianCustom]_[M]_Magician_v2_by_Devisian_Nights: Magi - Nature-Type\Mage (M) Hatless Magic {RobertFPY}.png (fallback mage card for Magician)
+- [MonsterCustom]_[M]_Djinn_by_Alexsplode: Monsters - Dragons and Special\Fire Imp {Alexsplode}.png (fallback fire-imp monster card for Djinn)
+- [Sword_Custom]_[F]_Katarina_Fencer_by_GabrielKnight: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (F) Sword {L95}.png
+- [SwordmasterVariant]_[F]_Fir_by_Redbean: Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) Sword {L95}.png
+- [SwordmasterVariant]_[M]_Trueblade_by_Dinar87: Infantry - (Swd) Myrms and Swordmasters\Swordmaster (M) Sword {IS}.png
+- [T3_Custom]_[M]_Red_Mage_by_Mycahel: Magi - Nature-Type\Mage (M) Fire Magic {L95}.png (fallback fire mage card for Red Mage)
+- Crossbow__%5BM__Mechanist_by_Sphealnuke: Infantry - (Bow) Archers and Hunters\Cowboy (M) Crossbow {MeatofJustice}.png (fallback for Mechanist/crossbow)
+- Custom_Lance_____Sentinel_by_Nuramon: Infantry - (Lnc) Soldiers, Halberdiers\Halberdier (M) Lance {TBA}.png
+- Monster_Custom_____Sandworm_by_Stephano: Monsters - Dragons and Special\Slime (U) {Yellowtoad}.png (fallback monster card for Sandworm)
+- MonsterCustom_____Cursed_Sword_by_SALVAGED: Monsters - Dragons and Special\Cursed Sword {Der}.png
+- MonsterCustom_____Magical_Tomes_by_N426: Monsters - Dragons and Special\Cursed Tome {N426}.png
+- MonsterCustom_____Warbird_by_Alexsplode: Monsters - Dragons and Special\Harpy (U) {Sphealnuke}.png (fallback flying monster card for Warbird)
+No suitable card found / not copied:
+```
+
+### Batch2 Map Sprites
+
+```text
+Map Sprite Credits
+==================
+
+Preferred source: C:\Users\David\Desktop\SRR_FEGBA\gfx\MapSprites
+Fallback source: C:\Users\David\Desktop\Repo\Map Sprites
+Destination file names in each animation folder: SMS.png and MMS.png
+
+Copied map sprites:
+- [Axe-Custom] Swashbuckler [F] by Yellowtoad: Repo/Map Sprites: Infantry - (Axe) Brigs, Pirates, Zerkers\Swashbuckler (F) Axe {Yellowtoad}-stand.png + Infantry - (Axe) Brigs, Pirates, Zerkers\Swashbuckler (F) Axe {Yellowtoad}-walk.png
+- [Axe-Custom] Swashbuckler [M] by Yellowtoad: Repo/Map Sprites: Infantry - (Axe) Brigs, Pirates, Zerkers\Swashbuckler (M) Axe {Yellowtoad}-stand.png + Infantry - (Axe) Brigs, Pirates, Zerkers\Swashbuckler (M) Axe {Yellowtoad}-walk.png
+- [Berserker-Custom] Leo's Berserker [M] by Leo_Link: Repo/Map Sprites: Infantry - (Axe) Brigs, Pirates, Zerkers\Berserker (M) Axe {IS}-stand.png + Infantry - (Axe) Brigs, Pirates, Zerkers\Berserker (M) Axe {IS}-walk.png
+- [CavalryCustom]_[U]_Updated_Grand_Mahout_by_Orihara_Saki_DatonDemand: SRR_FEGBA/gfx/MapSprites: SMS/GrandMahout_CamusZekeSirius_SHYUTERz_Orihara_Datstand.png + MMS/GrandMahout_CamusZekeSirius_SHYUTERz_Orihara_Datwalk.png
+- [Custom_DM_[M]_Arcanist_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Arcanist_U_Unfinished_Norikinsstand.png + MMS/Arcanist_U_Unfinished_Norikinswalk.png
+- [Custom_Halb]_[M]_Halberdier_+Axes_by_TBA: SRR_FEGBA/gfx/MapSprites: SMS/Halberdier_M_2_0_TBAstand.png + MMS/Halberdier_M_2_0_TBAwalk.png
+- [Custom_Magi]_[F]_Miko_V_2_by_RedBean: SRR_FEGBA/gfx/MapSprites: SMS/Miko_Diviner_F_Orochi_Sphealnukestand.png + MMS/Miko_Diviner_F_Orochi_Sphealnukewalk.png
+- [Custom_Magi]_[F]_War_Cleric_by_SkidMarc25: SRR_FEGBA/gfx/MapSprites: SMS/WarCleric_F_Staff_SkidMarc25stand.png + MMS/WarCleric_F_Staff_SkidMarc25walk.png
+- [Custom_Magi]_[F]_Witch_Nuibaba_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Witch_F_Aruka_Kenpuhustand.png + MMS/Witch_F_Aruka_Kenpuhuwalk.png
+- [Custom_Magi]_[U]_Angel_by_Atey: SRR_FEGBA/gfx/MapSprites: SMS/Angel_F_Unknownstand.png + MMS/Angel_F_Unknownwalk.png
+- [CustomLord]_[F]_Halberd_Brighid_by_Sphealnuke: SRR_FEGBA/gfx/MapSprites: SMS/Brighid_Hector_Axe_Shin19stand.png + MMS/Brighid_Hector_Axe_Shin19walk.png
+- [DevisianCustom]_[M]_Arcanist_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Arcanist_U_Unfinished_Norikinsstand.png + MMS/Arcanist_U_Unfinished_Norikinswalk.png
+- [DevisianCustom]_[M]_Magician_v2_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Magician_Eliwood_16x16_TyTheBubstand.png + MMS/Magician_EliwoodTyTheBubwalk.png
+- [DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Shaman_M_Occultist_Devisian_Nights_Pikminstand.png + MMS/Shaman_M_Occultist_Devisian_Nights_Pikminwalk.png
+- [FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link: SRR_FEGBA/gfx/MapSprites: SMS/Blade_Lord_F_Lyn_Sword_ISstand.png + MMS/Blade_Lord_F_Lyn_Sword_ISwalk.png (fallback Lyn blade-lord pair)
+- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy: SRR_FEGBA/gfx/MapSprites: SMS/Great_Lord_M_HectorHarbinger_SD9Kstand.png + MMS/Great_Lord_M_HectorHarbinger_SD9Kwalk.png
+- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Great_Lord_M_HectorHarbinger_SD9Kstand.png + MMS/Great_Lord_M_HectorHarbinger_SD9Kwalk.png
+- [FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/HeavyInfantry_Ephraim_Snewpingstand.png + MMS/HeavyInfantry_EphraimSnewpingwalk.png
+- [GeneralReskin]_[U]_Baron_+Weapons: SRR_FEGBA/gfx/MapSprites: SMS/Baron_U_Lance_Topazlight_Nuramon_Its_Just_Jaystand.png + MMS/Baron_U_Cape_Nuramon_Jay_Rynwalk.png
+- [GeneralReskin]_[U]_ShieldGeneral_v2_+Cape: Repo/Map Sprites: Infantry - Knights, Generals, Armors\Baron (U) +Cape and Shield Lance Centurion Helm {Nuramon, Jay, Ryn}-stand.png + Infantry - Knights, Generals, Armors\Baron (U) +Cape and Shield Lance Centurion Helm {Nuramon, Jay, Ryn}-walk.png
+- [ManaketeCustom]_[U]_Black_Dragon_FE10Style_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/BlackDragon_U_Magic_L95stand.png + MMS/BlackDragon_U_Magic_L95walk.png
+- [MonsterCustom]_[M]_Djinn_by_Alexsplode: SRR_FEGBA/gfx/MapSprites: SMS/Djinn_M_Alexsplodestand.png + MMS/Djinn_M_Alexsplodewalk.png
+- [MonsterCustom]_[U]_Living_Armor_by_Sphealnuke: SRR_FEGBA/gfx/MapSprites: SMS/LivingArmor_Red_Flame_Sphealnuke_topazlightstand.png + MMS/LivingArmor_Red_Flame_Sphealnuke_topazlightwalk.png
+- [MonsterCustom]_[U]_Wild_Fellbeast_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Fellbeast_Wyvern_Wild_U_16x16_Faeriefruitstand.png + MMS/Fellbeast_Wyvern_Wild_U_Faeriefruitwalk.png
+- [RogueVariant]_[F]_Samurai__Iaijutsu_Rogue: Repo/Map Sprites: Infantry - (Swd) Thieves, Rogues, Assassins\Samurai (Iaijutsu - Rouge) (F) Sword {GabrielKnight}-stand.png + Infantry - (Swd) Thieves, Rogues, Assassins\Samurai (Iaijutsu - Rouge) (F) Sword {GabrielKnight}-walk.png
+- [Sword Custom] Ninja - Hooded [U] by Pikmin and Der: SRR_FEGBA/gfx/MapSprites: SMS/Ninja_Derstand.png + MMS/Ninja_Derwalk.png
+- [Sword FE15 Custom] Myrmidon [F] by Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/FE15Myrmidon_U_Sword_Nuramonstand.png + MMS/FE15Myrmidon_U_Sword_Nuramonwalk.png
+- [Sword FE15 Custom] Myrmidon [M] by Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/FE15Myrmidon_U_Sword_Nuramonstand.png + MMS/FE15Myrmidon_U_Sword_Nuramonwalk.png
+- [Sword_Custom]_[F]_Katarina_Fencer_by_GabrielKnight: SRR_FEGBA/gfx/MapSprites: SMS/Fencer_Blade_LordAnnoyingAnonstand.png + MMS/Fencer_Blade_LordAnnoyingAnonwalk.png
+- [Sword_Custom]_[M]_Thug_by_MonkeyBard: Repo/Map Sprites: Infantry - (Swd) Thieves, Rogues, Assassins\Thug (M) Sword {Rasdel}-stand.png + Infantry - (Swd) Thieves, Rogues, Assassins\Thug (M) Sword {Rasdel}-walk.png
+- [Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Dread_Fighter_M_Nuramonstand.png + MMS/Dread_Fighter_M_Nuramonwalk.png
+- [SwordmasterVariant]_[F]_Fir_by_Redbean: Repo/Map Sprites: Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) {IS}-stand.png + Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) {IS}-walk.png
+- [SwordmasterVariant]_[M]_Trueblade_by_Dinar87: Repo/Map Sprites: Infantry - (Swd) Myrms and Swordmasters\Trueblade (M) {Seliost1}-stand.png + Infantry - (Swd) Myrms and Swordmasters\Trueblade (M) {Seliost1}-walk.png
+- [T3_Custom]_[M]_Red_Mage_by_Mycahel: SRR_FEGBA/gfx/MapSprites: SMS/RedMage2_Sage_Hat_TopazlightUnknownstand.png + MMS/RedMage2_Sage_Hat_TopazlightUnknownwalk.png
+- [T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar: Repo/Map Sprites: Magi - Dark-Type\Moloch Sorcerer (U) {Huichelaar}-stand.png + Magi - Dark-Type\Moloch Sorcerer (U) {Huichelaar}-walk.png
+- [Tactician]_[U]_Tactician_by_SALVAGED: SRR_FEGBA/gfx/MapSprites: SMS/Tactician_U_SALVAGEDstand.png + MMS/Tactician_U_SALVAGEDwalk.png
+- [Trickster]_F_Trickster_V_2_Ponytail: Repo/Map Sprites: Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (F) {StreetHero, Sable Mage}-stand.png + Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (F) {StreetHero, Sable Mage}-walk.png
+- [Trickster]_M_Trickster_V_2_by_Leo_Link: Repo/Map Sprites: Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (M) {StreetHero}-stand.png + Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (M) {StreetHero}-walk.png
+- [VillagerCustom]_F_Villager_v2_by_Nuramon: Repo/Map Sprites: Infantry - (Swd) Mercenaries and Heroes\Villager (F) v2 Sword {HyperGammaSpaces}-stand.png + Infantry - (Swd) Mercenaries and Heroes\Villager (F) v2 Sword {HyperGammaSpaces}-walk.png
+- [VillagerCustom]_M_Villager_v2_by_Nuramon: Repo/Map Sprites: Infantry - (Swd) Mercenaries and Heroes\Villager (M) v2 Sword {HyperGammaSpaces}-stand.png + Infantry - (Swd) Mercenaries and Heroes\Villager (M) v2 Sword {HyperGammaSpaces}-walk.png
+- [ZephielReskin]_[U]_Legion_King_by_Huichelaar: SRR_FEGBA/gfx/MapSprites: SMS/LegionKing_Lance_EN_L95_Pikmin_Der_Huichelaarstand.png + MMS/LegionKing_Lance_EN_L95_Pikmin_Der_Huichelaarwalk.png
+- AxeCustom__%5BM__Oni_Chieftain_Repalette_by_Dora_Drago: Repo/Map Sprites: Infantry - (Axe) Brigs, Pirates, Zerkers\Berserker (M) Oni Chieftain {Dora Drago}-stand.png + Infantry - (Axe) Brigs, Pirates, Zerkers\Berserker (M) Oni Chieftain {Dora Drago}-walk.png
+- BardBase__%5BM__Elffin_Fancy_%2BMagic: SRR_FEGBA/gfx/MapSprites: SMS/Bard_M_Elffin_ISstand.png + MMS/Bard_M_Elffin_ISwalk.png
+- BrigandStyle_____Mounted_Marauder_by_TytheBub: SRR_FEGBA/gfx/MapSprites: SMS/Marauder_M_Basic_Axe_Blademasterstand.png + MMS/Marauder_M_Basic_Axe_Blademasterwalk.png
+- Crossbow__%5BM__Mechanist_by_Sphealnuke: Repo/Map Sprites: Infantry - (Bow) Archers and Hunters\Cowboy (M) Crossbow {MeatofJustice}-stand.png + Infantry - (Bow) Archers and Hunters\Cowboy (M) Crossbow {MeatofJustice}-walk.png (fallback for Mechanist/crossbow)
+- Custom_Drag_____Dragoon_Repal_by_Pikmin: SRR_FEGBA/gfx/MapSprites: SMS/Dragoon_M_v2_Lance_Pikmin_Unknownstand.png + MMS/Dragoon_M_v2_Lance_Pikmin_Unknownwalk.png
+- Custom_Lance_____Sentinel_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Sentinel_Halberdier_Aruka_Kenpuhustand.png + MMS/Sentinel_Halberdier_Aruka_Kenpuhuwalk.png
+- Custom_Lance__%5BM__Lancer_by_SALVAGED: SRR_FEGBA/gfx/MapSprites: SMS/Lancer_M_Brown_Hair_SALVAGEDstand.png + MMS/Lancer_M_Brown_Hair_SALVAGEDwalk.png
+- Custom_Lance__%5BM__Militia_Deserter_by_Alusq: SRR_FEGBA/gfx/MapSprites: SMS/Militia_M_Deserter_Lance_Alusqstand.png + MMS/Militia_M_Deserter_Lance_Alusqwalk.png
+- EphraimVariant_____T1_Lancer_Fix_by_MemaeMemai: SRR_FEGBA/gfx/MapSprites: SMS/Lancer_M_Brown_Hair_SALVAGEDstand.png + MMS/Lancer_M_Brown_Hair_SALVAGEDwalk.png (fallback lancer pair)
+- HectorReskin__%5BM__T1_Waleed's_Gladiator_Repal_v2_%2BSword: SRR_FEGBA/gfx/MapSprites: SMS/Gladiator_M_Sword_Pikmin_L95_Pushwallstand.png + MMS/Gladiator_M_Sword_Pikmin_L95_Pushwallwalk.png
+- horn_brigand: Repo/Map Sprites: Infantry - (Axe) Brigs, Pirates, Zerkers\Brigand (M) Axe {IS}-stand.png + Infantry - (Axe) Brigs, Pirates, Zerkers\Brigand (M) Axe {IS}-walk.png
+- horn_soldier: Repo/Map Sprites: Infantry - (Lnc) Soldiers, Halberdiers\Soldier (M) FE10-Style Lance {flasuban}-stand.png + Infantry - (Lnc) Soldiers, Halberdiers\Soldier (M) FE10-Style Lance {flasuban}-walk.png
+- HunterM__%5BM__Hunter_by_MeatOfJustice: SRR_FEGBA/gfx/MapSprites: SMS/Hunter_M_MeatOfJusticestyle_knabepicerstand.png + MMS/Hunter_M_MeatOfJusticestyle_knabepicerwalk.png
+- MiscSupplierAnna_____Repalled_%2B_Weapons_by_JonoTheRed_DatonDemand: SRR_FEGBA/gfx/MapSprites: SMS/Supplier_v2_Anna_F_Unarmed_N426_Erukolindostand.png + MMS/Supplier_v2_Anna_F_Unarmed_N426_Erukolindowalk.png
+- Monster_Custom_____Sandworm_by_Stephano: SRR_FEGBA/gfx/MapSprites: SMS/Sandworm_Norikins_stand.png + MMS/Sandworm_Norikins_move.png
+- MonsterCustom_____Cursed_Sword_by_SALVAGED: SRR_FEGBA/gfx/MapSprites: SMS/Cursed_Sword_U_Derstand.png + MMS/Cursed_Sword_U_Derwalk.png
+- MonsterCustom_____Magical_Tomes_by_N426: SRR_FEGBA/gfx/MapSprites: SMS/Tome_U_Anima_N426stand.png + MMS/Tome_U_Anima_N426walk.png
+- MonsterCustom_____Mimic_Chest_by_Seal: Repo/Map Sprites: Monsters - Dragons and Special\Mimic (U) {Seal}-stand.png + Monsters - Dragons and Special\Mimic (U) {Seal}-walk.png
+- MonsterCustom_____Mosquito_by_Dutch_Introvert: SRR_FEGBA/gfx/MapSprites: SMS/Mosquito_U_Dutch_Introvertstand.png + MMS/Mosquito_U_Dutch_Introvertwalk.png
+- MonsterCustom_____Phantom_by_TBA: SRR_FEGBA/gfx/MapSprites: SMS/Phantom_U_IS_Pushwallstand.png + MMS/Phantom_U_ISwalk.png
+- MonsterCustom_____Slime_by_Yellowtoad: SRR_FEGBA/gfx/MapSprites: SMS/Slime_U_Yellowtoadstand.png + MMS/Slime_U_Yellowtoadwalk.png
+- MonsterCustom_____Warbird_by_Alexsplode: SRR_FEGBA/gfx/MapSprites: SMS/Warbird_F_Unknown_Alexsplodestand.png + MMS/Warbird_F_Unknown_Alexsplodewalk.png
+
+- [Sword Custom] Master Ninja [M] by Pikmin and Der: SRR_FEGBA/gfx/MapSprites: SMS/Ninja_Derstand.png + MMS/Ninja_Derwalk.png (fallback ninja pair for Master Ninja)
+- SniperReskin_____Adventurer_by_ltranc: Repo/Map Sprites: Infantry - (Bow) Snipers and Ballistae\Sniper (M) {IS}-stand.png + Infantry - (Bow) Snipers and Ballistae\Sniper (M) {IS}-walk.png (fallback sniper pair for Adventurer)
+No suitable map sprite found / not copied:
+```
+
 ## Map Tilesets (`NEW_TILESETS`)
 
 | Chapter | Tileset | Credits |
