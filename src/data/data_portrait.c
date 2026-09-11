@@ -483,6 +483,13 @@ u8 __attribute__((aligned(4))) portrait_Eirika_mouth[] = INCBIN_U8("graphics/por
 u8 __attribute__((aligned(4))) portrait_Eirika_chibi[] = INCBIN_U8("graphics/portrait/portrait_Eirika_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Eirika_tileset[] = INCBIN_U8("graphics/portrait/portrait_Eirika_tileset.4bpp.fk");
 
+
+
+u8 __attribute__((aligned(4))) portrait_Mystery_1_palette[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Mystery_1_mouth[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Mystery_1_chibi[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Mystery_1_tileset[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_tileset.4bpp.fk");
+
 #if FE8_CUSTOM_CAMPAIGN
 u8 __attribute__((aligned(4))) portrait_Hannah_palette[] = INCBIN_U8("graphics/portrait/portrait_Hannah_palette.agbpal");
 u8 __attribute__((aligned(4))) portrait_Hannah_mouth[] = INCBIN_U8("graphics/portrait/portrait_Hannah_mouth.4bpp");
@@ -512,19 +519,13 @@ u8 __attribute__((aligned(4))) portrait_Liz_palette[] = INCBIN_U8("graphics/port
 u8 __attribute__((aligned(4))) portrait_Liz_mouth[] = INCBIN_U8("graphics/portrait/portrait_Liz_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Liz_chibi[] = INCBIN_U8("graphics/portrait/portrait_Liz_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Liz_tileset[] = INCBIN_U8("graphics/portrait/portrait_Liz_tileset.4bpp.fk");
-/* Replaces CHARACTER_ONEILL's own portrait (portrait_data.c slot 47,
- * portrait_O_Neill_* below) -- characters.json's "portrait" field is
- * 1-indexed against this 0-indexed array, so ONEILL's "portrait": 48
- * means array slot 47, not 48 (that's Breguet, above -- unrelated, left
- * untouched). Art by Eden (see src/Credits.c), same insert_portrait.py
- * workflow as Wakwi/Ishkode above. */
 u8 __attribute__((aligned(4))) portrait_Kargan_palette[] = INCBIN_U8("graphics/portrait/portrait_Kargan_palette.agbpal");
 u8 __attribute__((aligned(4))) portrait_Kargan_mouth[] = INCBIN_U8("graphics/portrait/portrait_Kargan_mouth.4bpp");
 u8 __attribute__((aligned(4))) portrait_Kargan_chibi[] = INCBIN_U8("graphics/portrait/portrait_Kargan_chibi.4bpp.lz");
 u8 __attribute__((aligned(4))) portrait_Kargan_tileset[] = INCBIN_U8("graphics/portrait/portrait_Kargan_tileset.4bpp.fk");
+u8 __attribute__((aligned(4))) portrait_Asin_palette[] = INCBIN_U8("graphics/portrait/portrait_Asin_palette.agbpal");
+u8 __attribute__((aligned(4))) portrait_Asin_mouth[] = INCBIN_U8("graphics/portrait/portrait_Asin_mouth.4bpp");
+u8 __attribute__((aligned(4))) portrait_Asin_chibi[] = INCBIN_U8("graphics/portrait/portrait_Asin_chibi.4bpp.lz");
+u8 __attribute__((aligned(4))) portrait_Asin_tileset[] = INCBIN_U8("graphics/portrait/portrait_Asin_tileset.4bpp.fk");
 #endif
 
-u8 __attribute__((aligned(4))) portrait_Mystery_1_palette[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_palette.agbpal");
-u8 __attribute__((aligned(4))) portrait_Mystery_1_mouth[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_mouth.4bpp");
-u8 __attribute__((aligned(4))) portrait_Mystery_1_chibi[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_chibi.4bpp.lz");
-u8 __attribute__((aligned(4))) portrait_Mystery_1_tileset[] = INCBIN_U8("graphics/portrait/portrait_Mystery_1_tileset.4bpp.fk");

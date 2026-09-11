@@ -24,7 +24,11 @@ struct FaceData CONST_DATA portrait_data[] =
 	{portrait_Ishkode_tileset, portrait_Ishkode_chibi, portrait_Ishkode_palette, portrait_Ishkode_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 3
 	{portrait_Frederick_tileset, portrait_Frederick_chibi, portrait_Frederick_palette, portrait_Frederick_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 4
 	{portrait_Fox_tileset, portrait_Fox_chibi, portrait_Fox_palette, portrait_Fox_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 5
-	{portrait_Moulder_tileset, portrait_Moulder_chibi, portrait_Moulder_palette, portrait_Moulder_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 6
+	/* Moulder's slot now uses Asin, art by Eden (src/Credits.c), same
+	 * insert_portrait.py workflow as Wakwi/Ishkode/Frederick/Fox/Liz above --
+	 * own detected xMouth/yMouth/xEye/yEye (3/5/3/3, matching most of the
+	 * other replacements by coincidence). */
+	{portrait_Asin_tileset, portrait_Asin_chibi, portrait_Asin_palette, portrait_Asin_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 6
 	{portrait_Liz_tileset, portrait_Liz_chibi, portrait_Liz_palette, portrait_Liz_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 7
 #else
 	{portrait_Eirika_tileset, portrait_Eirika_chibi, portrait_Eirika_palette, portrait_Eirika_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 1

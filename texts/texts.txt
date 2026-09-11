@@ -40646,3 +40646,6 @@ A sword infused with power.[.][X]
 
 ## MSG_WM_INTRO
 The continent of Ashor.[A][X]
+
+## MSG_NAME_ASIN
+Asin[.][X]

@@ -22,6 +22,19 @@ enum {
     FID_SUPPLY              = 0xAB,
 
     FID_FACTION_CHIBI       = 0x7F00,
+    
+    
+#if FE8_CUSTOM_CAMPAIGN
+    FID_WAKWI              = 0x02,
+    FID_ISHKODE              = 0x04,
+    FID_FREDERICK              = 0x05,
+    FID_FOX              = 0x06,
+    FID_ASIN              = 0x07,
+    FID_LIZ              = 0x08,
+    FID_KARGAN              = 0x30,
+
+#endif 
+    
 };
 
 #endif // GUARD_CONSTANTS_FACES_H

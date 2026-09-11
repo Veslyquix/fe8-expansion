@@ -57,6 +57,7 @@ still imported as an available `banim_data[]` entry (see
 | Ishkode | `{Eden} Ishkode.png` | Eden |
 | Wakwi | `{Eden} Wakwi.png` | Eden |
 | Kargan (replaces O'Neill) | `{Eden} Kargan[F2E].png` | Eden |
+| Asin (replaces Moulder) | `{Eden} Asin.png` | Eden |
 
 Hannah and Francis are no longer used by `src/portrait_data.c` (replaced by
 Wakwi and Ishkode respectively) but remain credited/linked, not removed.

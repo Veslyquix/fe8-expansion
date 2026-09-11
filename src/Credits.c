@@ -875,7 +875,8 @@ static const signed char body1[] =
     " Liz portrait by RandomWizard" NL
     " Ishkode portrait by Eden" NL
     " Wakwi portrait by Eden" NL
-    " Kargan (replaces O'Neill) portrait by Eden";
+    " Kargan (replaces O'Neill) portrait by Eden" NL
+    " Asin (replaces Moulder) portrait by Eden";
 
 /* Kept in sync with CREDITS.md's "Map Tilesets" table. */
 static const signed char header2[] = "Map Tilesets";

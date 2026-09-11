@@ -514,6 +514,10 @@ extern unsigned short portrait_Kargan_palette[];
 extern unsigned char portrait_Kargan_mouth[];
 extern unsigned char portrait_Kargan_chibi[];
 extern unsigned char portrait_Kargan_tileset[];
+extern unsigned short portrait_Asin_palette[];
+extern unsigned char portrait_Asin_mouth[];
+extern unsigned char portrait_Asin_chibi[];
+extern unsigned char portrait_Asin_tileset[];
 #endif
 
 extern unsigned short portrait_Mystery_1_palette[];

@@ -3498,7 +3498,8 @@
 #define MSG_MKATTI_NAME 0x0DA4
 #define MSG_MKATTI_DESC 0x0DA5
 #define MSG_WM_INTRO 0x0DA6
+#define MSG_NAME_ASIN 0x0DA7
 
-#define MSG_COUNT 0x0DA7
+#define MSG_COUNT 0x0DA8
 
 #endif /* MSG_H */

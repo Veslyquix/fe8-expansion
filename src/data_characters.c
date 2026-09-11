@@ -6,18 +6,15 @@
 #include "constants/classes.h"
 #include "constants/items.h"
 #include "constants/msg.h"
+#include "constants/faces.h"
 
 CONST_DATA struct CharacterData gCharacterData[] = {
     [CHARACTER_EIRIKA - 1] = {
-#if FE8_CUSTOM_CAMPAIGN
         .nameTextId = MSG_NAME_WAKWI,
-#else
-        .nameTextId = 0x212,
-#endif
         .descTextId = 0x26e,
         .number = CHARACTER_EIRIKA,
         .defaultClass = CLASS_LYN_LORD,
-        .portraitId = 0x2,
+        .portraitId = FID_WAKWI,
         .affinity = UNIT_AFFIN_WIND,
         .sort_order = 0x1,
         .baseLevel = 1,
@@ -47,15 +44,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x7,
     },
     [CHARACTER_SETH - 1] = {
-#if FE8_CUSTOM_CAMPAIGN
         .nameTextId = MSG_NAME_ISHKODE,
-#else
-        .nameTextId = 0x213,
-#endif
         .descTextId = 0x26f,
         .number = CHARACTER_SETH,
         .defaultClass = CLASS_NOMAD,
-        .portraitId = 0x4,
+        .portraitId = FID_ISHKODE,
         .affinity = UNIT_AFFIN_WIND,
         .sort_order = 0x3,
         .baseLevel = 1,
@@ -84,15 +77,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x3,
     },
     [CHARACTER_GILLIAM - 1] = {
-#if FE8_CUSTOM_CAMPAIGN
         .nameTextId = MSG_NAME_FREDERICK,
-#else
-        .nameTextId = 0x214,
-#endif
         .descTextId = 0x270,
         .number = CHARACTER_GILLIAM,
         .defaultClass = CLASS_ARMOR_KNIGHT,
-        .portraitId = 0x5,
+        .portraitId = FID_FREDERICK,
         .affinity = UNIT_AFFIN_THUNDER,
         .sort_order = 0x7,
         .baseLevel = 4,
@@ -121,15 +110,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x4,
     },
     [CHARACTER_FRANZ - 1] = {
-#if FE8_CUSTOM_CAMPAIGN
         .nameTextId = MSG_NAME_FOX,
-#else
-        .nameTextId = 0x215,
-#endif
         .descTextId = 0x271,
         .number = CHARACTER_FRANZ,
         .defaultClass = CLASS_CAVALIER,
-        .portraitId = 0x6,
+        .portraitId = FID_FOX,
         .affinity = UNIT_AFFIN_LIGHT,
         .sort_order = 0x6,
         .baseLevel = 1,
@@ -159,11 +144,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x3,
     },
     [CHARACTER_MOULDER - 1] = {
-        .nameTextId = 0x216,
+        .nameTextId = MSG_NAME_ASIN,
         .descTextId = 0x272,
         .number = CHARACTER_MOULDER,
         .defaultClass = CLASS_PRIEST,
-        .portraitId = 0x7,
+        .portraitId = FID_ASIN,
         .affinity = UNIT_AFFIN_ANIMA,
         .sort_order = 0x8,
         .baseLevel = 3,
@@ -192,15 +177,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .visit_group = 0x4,
     },
     [CHARACTER_VANESSA - 1] = {
-#if FE8_CUSTOM_CAMPAIGN
         .nameTextId = MSG_NAME_LIZ,
-#else
-        .nameTextId = 0x217,
-#endif
         .descTextId = 0x273,
         .number = CHARACTER_VANESSA,
         .defaultClass = CLASS_PEGASUS_KNIGHT,
-        .portraitId = 0x8,
+        .portraitId = FID_LIZ,
         .affinity = UNIT_AFFIN_ANIMA,
         .sort_order = 0x9,
         .baseLevel = 1,
@@ -3092,15 +3073,11 @@ CONST_DATA struct CharacterData gCharacterData[] = {
         .growthLck = 25,
     },
     [CHARACTER_ONEILL - 1] = {
-#if FE8_CUSTOM_CAMPAIGN
         .nameTextId = MSG_NAME_KARGAN,
-#else
-        .nameTextId = 0x249,
-#endif 
         .descTextId = 0x2a3,
         .number = CHARACTER_ONEILL,
         .defaultClass = CLASS_FIGHTER,
-        .portraitId = 0x30,
+        .portraitId = FID_KARGAN,
         .affinity = UNIT_AFFIN_FIRE,
         .baseLevel = 4,
 
