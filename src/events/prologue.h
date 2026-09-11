@@ -11,6 +11,7 @@
 #include "constants/items.h"
 #include "constants/backgrounds.h"
 #include "constants/chapters.h"
+#include "constants/faces.h"
 #include "EAstdlib.h"
 #include "playerphase.h"
 #include "worldmap.h"
@@ -119,11 +120,6 @@ CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
     },
     { 0 },
 };
-
-static void SetFactionCoFromSlots(void)
-{
-    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
-}
 
 CONST_DATA EventListScr EventScr_Prologue_BeginningScene[] = {
     SVAL(EVT_SLOT_1, FACTION_BLUE)
@@ -256,8 +252,8 @@ CONST_DATA struct ChapterEventGroup PrologueEvents = {
     .traps            = TrapData_Event_Prologue,
     .extraTrapsInHard = TrapData_Event_PrologueHard,
 
-    .playerUnitsInNormal = UnitDef_Event_PrologueAlly,
-    .playerUnitsInHard   = UnitDef_Event_PrologueAlly,
+    .playerUnitsInNormal = UnitDef_PrologueAllies,
+    .playerUnitsInHard   = UnitDef_PrologueAllies,
 
     .playerUnitsChoice1InEncounter = NULL,
     .playerUnitsChoice2InEncounter = NULL,

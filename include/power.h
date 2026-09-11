@@ -81,7 +81,7 @@ void CoGauge_OnPowerUsed(int faction);
 struct Proc;
 int CoPowers_OnAiPhaseStart(struct Proc* parent);
 
-/* Marks faction's CO power/super as no longer active (see the *Pow/*Sup
+/* Marks faction's CO power/super as no longer active (see the Pow/Sup
  * fields of struct CoClassAffinity, src/power.c, and AdjustStatForCo/
  * GetCoClassMovBonus/GetCoClassRangeBonus/GetCoClassCritBonus below) -- a
  * power lasts until its own faction's *next* turn (Advance Wars rules), so
@@ -98,6 +98,17 @@ void CoPowers_OnPhaseStart(int faction);
  * (e.g. ASMC in an EventListScr) to assign each side's commander before
  * the map starts -- see src/events/prologue-eventscript.h. */
 void SetFactionCo(int faction, int coId);
+
+/* ASMC-callable wrapper around SetFactionCo, taking its args from
+ * gEventSlots[EVT_SLOT_1]/[EVT_SLOT_2] (include/event.h) instead of a
+ * normal argument list -- event scripts set those slots with SVAL just
+ * before calling this, since ASMC() only supports niladic functions. Used
+ * by multiple chapters' beginning-scene event scripts (src/events/ch1.h,
+ * prologue.h, etc.); kept here as the one shared definition instead of
+ * each chapter declaring its own `static void SetFactionCoFromSlots(void)`
+ * copy, which collides once two such headers are included from the same
+ * .c file. */
+void SetFactionCoFromSlots(void);
 
 /* Small read-only accessors onto the CO definition table (src/power.c),
  * for UI code (the CO screen, the VeslyDebugger CO editor) that needs a

@@ -1089,6 +1089,11 @@ void CoGauge_OnPowerUsed(int faction)
     CoGauge_Set(faction, 0);
 }
 
+void SetFactionCoFromSlots(void)
+{
+    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
+}
+
 void SetFactionCo(int faction, int coId)
 {
     int slot = faction >> 6;

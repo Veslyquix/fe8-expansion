@@ -40613,6 +40613,25 @@ must hurry back.[A]
 the beginning.[A][X]
 
 
+
+## MSG_CUSTOM_CAMPAIGN_CH1_OPENING
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
+[OpenMidLeft]The rain is getting heavier.[A]
+[OpenMidRight]We should reach home by dusk.[A]
+[OpenMidLeft]Wait.[A]
+[OpenMidRight]What is it?[A]
+[OpenMidLeft]Smoke.[LF]
+To the west.[A]
+[OpenMidRight]Naskwa?[A]
+[OpenMidLeft]They're moving north.[LF]
+Toward our people.[A]
+[OpenMidRight]Just as you thought.[A]
+[OpenMidLeft]We must stop them here.[A]
+[OpenMidRight]In this rain?[A]
+[OpenMidLeft]We've spent too long giving ground.[LF]
+This time, we make them come no farther.[A][X]
+
 ## MSG_CUSTOM_CAMPAIGN_CH1A_START
 [OpenMidLeft][LoadFace][FID_Wakwi]
 [OpenMidRight][LoadFace][FID_Ishkode]

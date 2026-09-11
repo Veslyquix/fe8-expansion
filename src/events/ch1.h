@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 /* Begin Ch1-eventudefs.h */
 #include "global.h"
 #include "muctrl.h"
@@ -13,6 +11,7 @@
 #include "constants/items.h"
 #include "constants/backgrounds.h"
 #include "constants/chapters.h"
+#include "constants/faces.h"
 #include "EAstdlib.h"
 #include "playerphase.h"
 #include "worldmap.h"
@@ -58,8 +57,8 @@ CONST_DATA struct UnitDefinition UnitDef_Ch1Allies[] = {
         .classIndex = CLASS_LYN_LORD, //CLASS_MYRMIDON_F
         .allegiance = FACTION_ID_BLUE,
         .level = 1,
-        .xPosition = 1,
-        .yPosition = 2,
+        .xPosition = 10,
+        .yPosition = 15,
         .items = {
             ITEM_SWORD_MKATTI,
             ITEM_VULNERARY,
@@ -142,10 +141,10 @@ CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
     SVAL(EVT_SLOT_2, CO_KARGAN)
     ASMC(SetFactionCoFromSlots)
 
-    LOAD1(1, UnitDef_Event_Ch1Enemy)
+    LOAD1(1, UnitDef_Ch1Enemies)
     ENUN
 
-    LOAD2(1, UnitDef_Event_Ch1Ally)
+    LOAD2(1, UnitDef_Ch1Allies)
     ENUN
 
 
@@ -162,80 +161,7 @@ CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
 
     NoFade
     ENDA
-};
-
-
-
-
-static void SetFactionCoFromSlots(void)
-{
-    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
-}
-
-CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
-    SVAL(EVT_SLOT_1, FACTION_BLUE)
-    SVAL(EVT_SLOT_2, CO_ISHKODE)
-    ASMC(SetFactionCoFromSlots)
-
-    SVAL(EVT_SLOT_1, FACTION_RED)
-    SVAL(EVT_SLOT_2, CO_KARGAN)
-    ASMC(SetFactionCoFromSlots)
-
-#if FE8_CO_POWERS
-    SVAL(EVT_SLOT_1, 0) // All COs right now.
-    SVAL(EVT_SLOT_3, FACTION_BLUE)
-    ASMC(StartCoSelect)
-#endif
-
-    LOAD1(1, UnitDef_Ch1Allies)
-    ENUN
-    FADU(16)
-
-    MUSI
-    BROWNBOXTEXT(MSG_CUSTOM_CAMPAIGN_Ch1_LOCATION, 8, 8)
-    MUNO
-
-    ENUT(0x7)
-    ENUT(0x8)
-
-    FlashCursor(CHARACTER_EIRIKA, 20)
-    MOVE(4, CHARACTER_SETH, 10, 0)
-    MOVE(1, CHARACTER_EIRIKA, 1, 3)
-    ENUN
-    MOVE(3, CHARACTER_SETH, 5, 1)
-
-
-    // MOVE(3, CHARACTER_EIRIKA, 3, 1)
-    MOVE(3, CHARACTER_EIRIKA, 4, 1)
-    ENUN
-
-    FlashCursor(CHARACTER_EIRIKA, 60)
-
-    MUSI
-    Text_BG(BG_ALEXANDER_LAWRIE_HILLSIDE_192, MSG_CUSTOM_CAMPAIGN_Ch1_OPENING)
-    MUNO
-
-    /* Color distortion test - working fine with 192 col BGs.
-    SetBackground(BG_TOBIAS_SPENCE_RIVER_FOREST_192)
-    SVAL(EVT_SLOT_3, ITEM_SWORD_RAPIER)
-    GIVEITEMTO(CHARACTER_EIRIKA)
-    FADI(16)
-    CLEAN
-    */
-
-
-    // Text(MSG_CUSTOM_CAMPAIGN_Ch1_OPENING)
-    FlashCursor(CHARACTER_SETH, 20)
-    MOVE(0, CHARACTER_SETH, 1, 2)
-    ENUN
-    DISA(CHARACTER_SETH)
-
-    LOAD1(1, UnitDef_Ch1Enemies)
-    ENUN
-    NoFade
-    ENDA
-};
-
+}; 
 
 CONST_DATA EventListScr EventScr_Ch1_Turn_AllyReinforceArrive[] = {
     MUSC(SONG_54)
@@ -243,14 +169,6 @@ CONST_DATA EventListScr EventScr_Ch1_Turn_AllyReinforceArrive[] = {
     ENUN
     FlashCursor(CHARACTER_MOULDER, 60)
     Text(MSG_CC_CH1A_REINFORCEMENT)
-
-    NoFade
-    ENDA
-};
-
-CONST_DATA EventListScr EventScr_Ch1_Misc_DefeatBoss[] = {
-    SVAL(EVT_SLOT_2, EventScr_Ch1Tut_GuideMsgSeize)
-    CALL(EventScr_CallOnTutorialMode)
 
     NoFade
     ENDA
@@ -345,8 +263,8 @@ CONST_DATA struct ChapterEventGroup Ch1Events = {
     .traps            = TrapData_Event_Ch1,
     .extraTrapsInHard = TrapData_Event_Ch1Hard,
 
-    .playerUnitsInNormal = UnitDef_Event_Ch1Ally,
-    .playerUnitsInHard   = UnitDef_Event_Ch1Ally,
+    .playerUnitsInNormal = UnitDef_Ch1Allies,
+    .playerUnitsInHard   = UnitDef_Ch1Allies,
 
     .playerUnitsChoice1InEncounter = NULL,
     .playerUnitsChoice2InEncounter = NULL,
