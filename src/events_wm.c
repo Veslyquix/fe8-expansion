@@ -15,13 +15,15 @@ CONST_DATA EventScr EventScr_WM_FadeCommon[] = {
     ENDA
 };
 
-#include "events/prologue-wm.h"
-#include "events/ch1-wm.h"
-#include "events/ch2-wm.h"
-#include "events/ch3-wm.h"
-#include "events/ch4-wm.h"
-#include "events/ch5-wm.h"
-#include "events/ch6-wm.h"
-#include "events/ch7-wm.h"
-#include "events/ch8-wm.h"
-#include "events/messed-eventscr-wm.h"
+#if !FE8_CUSTOM_CAMPAIGN
+#include "events/vanilla/prologue-wm.h"
+#include "events/vanilla/ch1-wm.h"
+#endif
+#include "events/vanilla/ch2-wm.h"
+#include "events/vanilla/ch3-wm.h"
+#include "events/vanilla/ch4-wm.h"
+#include "events/vanilla/ch5-wm.h"
+#include "events/vanilla/ch6-wm.h"
+#include "events/vanilla/ch7-wm.h"
+#include "events/vanilla/ch8-wm.h"
+#include "events/vanilla/messed-eventscr-wm.h"

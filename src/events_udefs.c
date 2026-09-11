@@ -8,8 +8,10 @@
 #include "constants/classes.h"
 #include "constants/items.h"
 
-#include "events/prologue-eventudefs.h"
-#include "events/ch1-eventudefs.h"
+#if !FE8_CUSTOM_CAMPAIGN
+#include "events/vanilla/prologue-eventudefs.h"
+#include "events/vanilla/ch1-eventudefs.h"
+#endif
 
 CONST_DATA struct REDA REDA_Event_Ch2Ally_EIRIKA[] = {
     {
@@ -446,7 +448,7 @@ CONST_DATA struct UnitDefinition UnitDef_Ch2Enemy_2[] = {
 
 /* Issue #5 Batch 3a: the excluded Ch2 block above is not actually a
  * binary-layout prefix of this translation unit's .data -- the
- * "events/prologue-eventudefs.h" and "events/ch1-eventudefs.h" includes
+ * "events/prologue.h" and "events/ch1.h" aggregate includes
  * above emit Prologue/Chapter-1 REDA/UnitDefinition data first, ahead of
  * Chapter 2. To let build/generated/data/data_ch2_units.o(.data) slot in
  * at the exact original Chapter-2 address (between the still-hand
