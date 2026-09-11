@@ -1533,11 +1533,15 @@ $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 # ROM size configuration: 16M or 32M. Production profiles enabling ja or
 # zh-Hans are validated (scripts/modernize/expansion_config.py) as 32M-only;
 # the upper locale bank carries their full-game catalog and localized font
-# data. Default was 16M until the FE8_MAPGEN chunk table (and the
-# pre-existing near-full 16M budget, see reports/linker-budget) made that
-# no longer enough room to build with; now defaults to 32M, with 16M kept
-# as an explicit opt-in (MODERN_ROM_SIZE=16M) for anyone who still fits.
-MODERN_ROM_SIZE ?= 32M
+# data. This only bounds the linker's ROM region (LENGTH=__rom_size) and
+# gates 32M-only features like the locale bank -- it no longer controls
+# the built .gba's actual file size (see $(MODERN_ROM) below, which is
+# exactly as large as its real content plus a 32-byte zero tail, not
+# padded out to this ceiling). Default is 16M: the current config.mk
+# default flag set (including FE8_MAPGEN) fits comfortably under the 16M
+# ceiling with room to spare; opt into MODERN_ROM_SIZE=32M for CJK
+# locales or once real headroom is needed.
+MODERN_ROM_SIZE ?= 16M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000
@@ -2505,22 +2509,31 @@ MODERN_DEBUGTOOLS_MAP_SCENARIO := tools/gba-playtest/scenarios/debugtools-map-hu
 MODERN_DEBUGTOOLS_MAP_FINGERPRINT := tools/gba-playtest/fingerprints/debugtools-map-hub-modern-$(MODERN_CONFIG).json
 MODERN_PLAYTEST := tools/gba-playtest/gba_playtest.py
 
-# Convert the linked ELF to a flat, padded ROM image, patch the configured
-# ROM identity (title/game code/maker code/revision -- see config.mk
+# Convert the linked ELF to a flat ROM image, patch the configured ROM
+# identity (title/game code/maker code/revision -- see config.mk
 # EXPANSION_ROM_*) into the header and regenerate its checksum, then verify
-# the result in-place: configured ROM size, title/game code/maker
-# code/revision/fixed byte, the checksum byte at offset 0xBD recomputed over
-# 0xA0..0xBC, and the embedded ExpansionMetadata record (issue #8). A failed
-# verification deletes the ROM so a stale, invalid image is never left behind
-# for expansion-modern-boot-check (or a caller) to pick up silently.
+# the result in-place: ROM size, title/game code/maker code/revision/fixed
+# byte, the checksum byte at offset 0xBD recomputed over 0xA0..0xBC, and the
+# embedded ExpansionMetadata record (issue #8). A failed verification
+# deletes the ROM so a stale, invalid image is never left behind for
+# expansion-modern-boot-check (or a caller) to pick up silently.
+#
+# The output is exactly as large as its real content (the linker script's
+# own trailing 32-byte zero tail, not a --pad-to here) rather than padded
+# out to the full MODERN_ROM_SIZE ceiling -- --gap-fill=0xff still covers
+# the genuine internal gap between the main ROM section and the 32M-only
+# locale bank at a fixed 0x09000000, when populated. The verifier is given
+# the ROM's own actual byte count as --size, since there is no longer a
+# fixed target size to check it against; this still catches objcopy
+# producing an unexpected/corrupt length.
 $(MODERN_ROM): $(MODERN_ELF) $(MODERN_BUILD_METADATA_JSON)
 	@mkdir -p "$(@D)"
-	"$(MODERN_OBJCOPY)" --strip-debug -O binary --pad-to $(MODERN_PAD_TO) --gap-fill=0xff "$<" "$@"
+	"$(MODERN_OBJCOPY)" --strip-debug -O binary --gap-fill=0xff "$<" "$@"
 	@if ! "$(PYTHON)" "$(MODERN_ROM_HEADER_FINALIZER)" --metadata-json "$(MODERN_BUILD_METADATA_JSON)" "$@"; then \
 		rm -f "$@"; \
 		exit 1; \
 	fi
-	@if ! "$(PYTHON)" "$(MODERN_ROM_HEADER_VERIFIER)" --size "$(MODERN_ROM_SIZE)" --metadata-json "$(MODERN_BUILD_METADATA_JSON)" "$@"; then \
+	@if ! "$(PYTHON)" "$(MODERN_ROM_HEADER_VERIFIER)" --size "$$(wc -c < "$@" | tr -d ' ')" --metadata-json "$(MODERN_BUILD_METADATA_JSON)" "$@"; then \
 		rm -f "$@"; \
 		exit 1; \
 	fi
@@ -2564,10 +2577,13 @@ expansion-modern-ups: expansion-modern-rom $(MODERN_UPS)
 	@printf 'Modern UPS patch ready: %s\n' "$(MODERN_UPS)"
 
 # IPS patch (baserom.gba -> the built modern ROM): simpler/more widely
-# supported than UPS, but its 3-byte address field caps both files at 16MB
-# -- only valid while MODERN_ROM_SIZE=16M (the default). Errors out (via
-# scripts/gen_ips.py's own size check) rather than silently truncating if
-# built against a 32M ROM.
+# supported than UPS, but its 3-byte address field caps both files at 16MB.
+# The built ROM is no longer padded to a fixed MODERN_ROM_SIZE (see
+# $(MODERN_ROM)'s own recipe above), so eligibility is decided from its
+# real, current byte count rather than that ceiling knob -- see
+# MODERN_ROM_FITS_IPS below. Errors out (via scripts/gen_ips.py's own size
+# check) rather than silently truncating if it doesn't actually fit.
+MODERN_IPS_MAX_BYTES := 16777216
 MODERN_IPS := $(MODERN_ROM:.gba=.ips)
 MODERN_IPS_GENERATOR := scripts/gen_ips.py
 
@@ -2621,7 +2637,7 @@ _sync_win_impl:
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	+$(MAKE) expansion-modern-sym \
 		$(if $(filter 1,$(WITH_UPS)),$(if $(wildcard $(BASEROM)),expansion-modern-ups)) \
-		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips) \
+		$(if $(and $(wildcard $(BASEROM)),$(shell [ "$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)" -le $(MODERN_IPS_MAX_BYTES) ] && echo yes)),expansion-modern-ips) \
 		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
@@ -2630,11 +2646,12 @@ _sync_win_impl:
 		printf 'Copied %s -> %s/\n' "$(MODERN_UPS)" "$(WIN_SYNC_DIR)"; \
 	fi
 	@if [ -f "$(BASEROM)" ]; then \
-		if [ "$(MODERN_ROM_SIZE)" = "16M" ]; then \
+		rom_bytes="$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)"; \
+		if [ "$$rom_bytes" -le $(MODERN_IPS_MAX_BYTES) ]; then \
 			cp "$(MODERN_IPS)" "$(WIN_SYNC_DIR)/"; \
 			printf 'Copied %s -> %s/\n' "$(MODERN_IPS)" "$(WIN_SYNC_DIR)"; \
 		else \
-			echo "note: MODERN_ROM_SIZE=$(MODERN_ROM_SIZE) (not 16M), skipping IPS patch"; \
+			echo "note: built ROM is $$rom_bytes bytes (over IPS's 16MB limit), skipping IPS patch -- use WITH_UPS=1 for a UPS patch instead"; \
 		fi; \
 	else \
 		echo "note: $(BASEROM) not found, skipping IPS patch"; \

@@ -6,7 +6,6 @@ import unittest
 
 from scripts.shiftcheck.verify_shifted_layout import (
     BANIM_OVERLAY_SPANS,
-    PINNED_SYMBOL_ADDRESSES,
     SAVE_PALETTE_SPANS,
     UI_FRAME_SCRATCH_SPANS,
     UNITLIST_OVERLAY_SPANS,
@@ -22,7 +21,6 @@ class VerifyShiftedLayoutTests(unittest.TestCase):
             "__shift_end": 0x08000A20,
             "ReadSramFast_Core": 0x08000A20,
             "__floating_end": 0x08B26F0C,
-            **PINNED_SYMBOL_ADDRESSES,
         }
         cursor = 0x02000088
         for start, end, size in BANIM_OVERLAY_SPANS:
@@ -77,23 +75,6 @@ class VerifyShiftedLayoutTests(unittest.TestCase):
         shifted["__floating_end"] += shift
         errors = verify_layout(base, shifted, shift)
         self.assertTrue(any("base ELF is already shifted" in error for error in errors))
-
-    def test_wrong_battle_table_pin_fails(self):
-        shift = 0x40000
-        base = self.symbols()
-        base["banim_data"] -= 0x1000
-        shifted = dict(base)
-        shifted["__shift_end"] += shift
-        shifted["ReadSramFast_Core"] += shift
-        shifted["__floating_end"] += shift
-        errors = verify_layout(base, shifted, shift)
-        self.assertTrue(
-            any(
-                "base pinned symbol banim_data" in error
-                and "expected 0x08c00008" in error
-                for error in errors
-            )
-        )
 
     def test_reordered_battle_overlay_fails(self):
         shift = 0x40000

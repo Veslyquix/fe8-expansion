@@ -288,67 +288,60 @@ SECTIONS
         *(.igot.plt)
         __floating_end = .;
 
-        /* === PINNED: banim regions (never shift) === */
-        FILL(0xFF);
-        /* Was 0xC00000: the 2026-09 convo_bg import (21 new full-screen
-         * 8bpp paintings, src/data/data_bg.c) pushed __floating_end past
-         * the old 0xC00000 pinned-banim start -- the 16M ROM budget was
-         * already within a few KB of full (see reports/linker-budget),
-         * so there was no slack left to reclaim by reshuffling alone.
-         * Moved the whole pinned banim block +0x500000 (5MB) now that
-         * MODERN_ROM_SIZE defaults to 32M (see modern.mk), giving the
-         * floating region real headroom instead of just enough for
-         * today's content. */
-        . = 0x1100000;
+        /* === BANIM regions: floating, not pinned ===
+         * Used to be anchored at fixed legacy-derived addresses
+         * (0xC00000/0xEE0000/0xEF8000, inherited from the archival decomp
+         * lane's own ldscript.txt -- see git history -- even though the
+         * modern lane has never required byte-identical layout with
+         * vanilla). Each fixed anchor left a large FILL-padded gap
+         * "for future growth" before the next one; the 2026-09 convo_bg
+         * import (21 new full-screen 8bpp paintings, src/data/data_bg.c)
+         * proved that headroom illusory -- it was multiple megabytes of
+         * 0xFF/0x00 filler that shipped in every ROM regardless of
+         * whether banim content ever grew into it, and when
+         * __floating_end finally grew past the first anchor there was no
+         * slack left to reclaim (16M ROM budget was already within a few
+         * KB of full, see reports/linker-budget).
+         *
+         * These objects are still pulled out of the generic
+         * *(.data .data.*) rule above (EXCLUDE_FILE only matches
+         * basenames, and grouping them here keeps their relative order
+         * explicit), but now they're simply placed back-to-back
+         * immediately after ordinary floating .data, so the ROM is
+         * exactly as large as its real content plus normal alignment,
+         * not a fixed reserved budget. Nothing else references these
+         * objects' addresses as a literal -- only the *_start/*_size
+         * linker symbols below (read via extern in C, e.g.
+         * include/packed_data_block.h's _banim_pal_size) and the
+         * offline scripts/dump_*.py tools, which anchor against the
+         * ORIGINAL vanilla ROM, not this one. */
         *banim_data.o(.data)
         *banim_data.o(.data.banim_array_len)
         *banim_data.o(.data.banim_array)
-
-        FILL(0x00);
-        . = 0x1102000;
         banim/data_banim.o(.data)
-
-        FILL(0xFF);
-        /* Was 0xEE0000, then 0xF40000 (both +0x500000 below): banim/data_banim.o
-         * (the FE8_NEW_ANIMS custom animation table, .index 0xC9 on) grew
-         * past the old 0xC02000-0xEE0000 budget (~2.86MB) once the 2026-09
-         * pack import added 17 more animations on top of the existing 31 --
-         * see scripts/banim_event_to_source.py's module docstring for why
-         * only rtl OAM is stored per entry (that's what got this far in
-         * the first place). Bumped the whole banim_terrain/banim_pal
-         * region by +0x60000 (384K) to cover that plus headroom for
-         * further packs, rather than just enough for exactly today's
-         * content -- verified by nothing else referencing these
-         * addresses as a literal (only *_start/*_size linker symbols and
-         * the offline scripts/dump_*.py tools, which anchor against the
-         * ORIGINAL vanilla ROM, not this one) before moving it. */
-        . = 0x1440000;
         *banim_terrain_data.o(.data)
         *banim_terrain_data.o(.data.banim_terrain_head)
         *banim_terrain_data.o(.data.banim_terrain_ptr_table)
-
-        FILL(0x00);
-        . = 0x1440C00;
         *data_banim_terrain.o(.data)
 
-        FILL(0xFF);
-        _banim_pal_start = 0x1458000;
-        . = _banim_pal_start;
+        _banim_pal_start = .;
         *banim_pal_chara.o(.data)
         *banim_pal_chara.o(.data.banim_pal_head)
         *banim_pal_chara.o(.data.banim_pal_ptr_table)
-
-        FILL(0x00);
-        . = _banim_pal_start + 0x1000;
         *data_banim_pal.o(.data)
         _banim_pal_end = .;
         _banim_pal_size = . - _banim_pal_start;
 
-        FILL(0xFF);
-        . = 0x14E0000;
         *data_FE0000.o(.data)
-        . = 0x14FF000;
         *data_FFF000.o(.data)
+
+        /* Trailing padding: 32 zero bytes, 4-aligned, instead of padding
+         * the whole ROM out to a fixed power-of-two size -- see
+         * MODERN_ROM_SIZE/MODERN_ROM in modern.mk, which no longer force
+         * the built .gba to a full 16M/32M file. */
+        . = ALIGN(4);
+        FILL(0x00);
+        . += 32;
     } > rom = 0xFF
 
     /* === UPPER ROM: locale bank (32 MiB profiles only) === */
@@ -383,7 +376,6 @@ SECTIONS
         "gMainCallback overlaps the buffered UI-frame scratch region")
     ASSERT(ADDR(ewram_data) >= __ewram_start + __ewram_overlay_peak_size,
         "Persistent EWRAM overlaps an overlay")
-    ASSERT(__floating_end <= 0x09100000, "Floating ROM content overlaps pinned banim region at 0x09100000")
     ASSERT(SIZEOF(ewram_overlay_0) <= 256K, "ewram_overlay_0 exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_gameending) <= 256K, "ewram_overlay_gameending exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_bmstart) <= 256K, "ewram_overlay_bmstart exceeds EWRAM")
