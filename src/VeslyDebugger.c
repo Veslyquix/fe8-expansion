@@ -66,6 +66,12 @@ typedef struct
     u16 lastFlag;
     int gold;
     struct Unit * unit;
+    /* DisplayVertUiHand's own smoothing state -- used to belong to a pair
+     * of file-scope statics (persistent EWRAM, never freed even though
+     * only ever meaningful while this proc is alive). Every call site
+     * already has `proc` in scope, so this just moves them here instead. */
+    int prevHandClockFrame;
+    struct Vec2 prevHandScreenPosition;
     s16 tmp[tmpSize]; // 0x6c out of 0x6c max (bumped from 15 to 19 slots for the Co editor)
 } DebuggerProc;
 
@@ -998,19 +1004,17 @@ static const u16 sSprite_VertHand[] = { 1, 0x0002, 0x4000, 0x0006 };
 static const u8 sHandVOffsetLookup[] = {
     0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1,
 };
-static int sDebuggerPrevHandClockFrame;
-static struct Vec2 sDebuggerPrevHandScreenPosition;
-static void DisplayVertUiHand(int x, int y)
+static void DisplayVertUiHand(DebuggerProc * proc, int x, int y)
 {
-    if ((int)(GetGameClock() - 1) == sDebuggerPrevHandClockFrame)
+    if ((int)(GetGameClock() - 1) == proc->prevHandClockFrame)
     {
-        x = (x + sDebuggerPrevHandScreenPosition.x) >> 1;
-        y = (y + sDebuggerPrevHandScreenPosition.y) >> 1;
+        x = (x + proc->prevHandScreenPosition.x) >> 1;
+        y = (y + proc->prevHandScreenPosition.y) >> 1;
     }
 
-    sDebuggerPrevHandScreenPosition.x = x;
-    sDebuggerPrevHandScreenPosition.y = y;
-    sDebuggerPrevHandClockFrame = GetGameClock();
+    proc->prevHandScreenPosition.x = x;
+    proc->prevHandScreenPosition.y = y;
+    proc->prevHandClockFrame = GetGameClock();
 
     y += (sHandVOffsetLookup[Mod(GetGameClock(), ARRAY_COUNT(sHandVOffsetLookup))] - 14);
     PutSprite(2, x, y, sSprite_VertHand, 0);
@@ -1066,7 +1070,7 @@ void EditStatsIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND - 1 + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND - 1 + (proc->id * 2)) * 8);
         int max = StatCapLookup[proc->id];
         int min = 0;
         int max_digits = GetMaxDigits(max, 0);
@@ -1330,7 +1334,7 @@ void EditWExpIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = 251;
         int min = 0;
         int max_digits = GetMaxDigits(max, 0);
@@ -1528,7 +1532,7 @@ void EditSupportsIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = 255;
         int min = 0;
         int max_digits = GetMaxDigits(max, 0);
@@ -1924,7 +1928,7 @@ void EditItemsIdle(DebuggerProc * proc)
     {
         if (proc->editing == 1)
         {
-            DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+            DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
             int max = GetMaxItems();
             int min = 0;
             int max_digits = GetMaxDigits(max, 1);
@@ -1999,7 +2003,7 @@ void EditItemsIdle(DebuggerProc * proc)
         }
         else
         {
-            DisplayVertUiHand(CursorLocationTable[proc->digit].x + (3 * 8), (Y_HAND + (proc->id * 2)) * 8);
+            DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + (3 * 8), (Y_HAND + (proc->id * 2)) * 8);
             int max = 255 << 8; // skill scrolls
             int min = 0 << 8;
             int max_digits = GetMaxDigits(max >> 8, 0);
@@ -2425,7 +2429,7 @@ void ChStateIdle(DebuggerProc * proc)
 
     if (proc->editing && (type >= 0))
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x + 32, (Y_HAND + (id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + 32, (Y_HAND + (id * 2)) * 8);
         int max = GetChStateMax(id);
         int min = GetChStateMin(id);
         int max_digits = GetMaxDigits(max, type);
@@ -2979,7 +2983,7 @@ void EditMiscIdle(DebuggerProc * proc)
 
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = GetMiscMax(proc->id);
         int min = GetMiscMin(proc->id);
         int type = (proc->id < 2);
@@ -3654,7 +3658,7 @@ void EditAiIdle(DebuggerProc * proc)
 
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x + (8 * 8), (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + (8 * 8), (Y_HAND + (proc->id * 2)) * 8);
         int max = GetAiMax(proc->id);
         int min = GetAiMin(proc->id);
         int type = (proc->id < AiMenuOption_Recovery);
@@ -4115,7 +4119,7 @@ void EditCoIdle(DebuggerProc * proc)
         // EditStatsIdle/EditWExpIdle above).
         int max_digits = GetMaxDigits(CoGoldEditMax, 0);
 
-        DisplayVertUiHand(CoValueX * 8 - 4 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
+        DisplayVertUiHand(proc, CoValueX * 8 - 4 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
         {
@@ -4306,7 +4310,7 @@ void EditBgmIdle(DebuggerProc * proc)
         int max_digits = GetMaxDigits(DebugBgmMax, type);
         int val = 0;
 
-        DisplayVertUiHand(
+        DisplayVertUiHand(proc, 
             CursorLocationTable[proc->digit].x + ((4 + BgmMenuXOffset) * 8), (Y_HAND + (proc->id * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
@@ -4827,7 +4831,7 @@ void EditTrapIdle(DebuggerProc * proc)
         int max_digits = GetMaxDigits(max, type);
         int val = 0;
 
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x + (6 * 8), ((Y_HAND - 1) + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + (6 * 8), ((Y_HAND - 1) + (proc->id * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
         {
@@ -5474,7 +5478,7 @@ void LoadUnitsIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = GetLoadMax(proc->id);
         int min = GetLoadMin(proc->id);
         int max_digits = GetMaxDigits(max, 1);
@@ -7609,8 +7613,15 @@ int CanDisplayCG(int id)
     return IsImgValidLZ77(data, (const u8 *)*data->img);
 }
 
-extern struct TalkState sTalkStateCore;
-struct TalkState * const pTalkState = &sTalkStateCore;
+/* The real, live talk state (src/scene.c) -- NOT a private copy. This used
+ * to declare its own `struct TalkState sTalkStateCore;`
+ * (src/vesly_debugger_data.c) and point pTalkState at THAT instead of the
+ * real one, which both wasted a whole extra sizeof(struct TalkState) of
+ * EWRAM (never freed, since ordinary globals aren't) and meant every use
+ * of pTalkState below was reading/writing a dead struct nothing else in
+ * the game ever touched, not the actual live conversation state. */
+extern struct TalkState * sTalkState;
+#define pTalkState sTalkState
 int GetMenuSide(DebuggerProc * proc)
 { // StartOrphanMenuAdjusted
     // StartSemiCenteredOrphanMenu(&gUnitActionMenuDef, gBmSt.cursorTarget.x - gBmSt.camera.x, 1, 22)
