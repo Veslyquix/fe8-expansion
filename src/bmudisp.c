@@ -356,7 +356,7 @@ u16 CONST_DATA sSprite_32x32_Window[] = {
     0x0800, 0x8000, 0x0000,
 };
 
-#define GetInfo(id) (unit_icon_wait_table[(id) & ((1<<7)-1)])
+#define GetInfo(id) (unit_icon_wait_table[(id) & (UNITSPRITE_MAX - 1)])
 
 void RequestUnitSpriteSheetSync(void)
 {
