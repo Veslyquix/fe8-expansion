@@ -319,6 +319,7 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `MODE_SELECT` | Eebit, JesterWizard. The `CO_POWERS` CO select screen (`src/coSelect.c`) is derived from the same hack. |
 | `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
 | `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
+| `MOVEARROW_HACK` | circleseverywhere |
 
 
 

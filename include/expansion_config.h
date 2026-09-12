@@ -449,6 +449,11 @@
 #define FE8_RANGE_REWORK 0
 #endif
 
+/* Treat item crit 255 as a "cannot crit" sentinel and display it as "--". */
+#ifndef FE8_CANNOT_CRIT_WEPS
+#define FE8_CANNOT_CRIT_WEPS 0
+#endif
+
 /* Consolidates every vanilla per-action suspend-save write down to one,
  * conditional write at the start of Player Phase (see src/turn_autosave.c). */
 #ifndef FE8_TURN_AUTOSAVE
@@ -715,6 +720,10 @@
 
 #if (FE8_RANGE_REWORK != 0) && (FE8_RANGE_REWORK != 1)
 #error "FE8_RANGE_REWORK must be 0 or 1"
+#endif
+
+#if (FE8_CANNOT_CRIT_WEPS != 0) && (FE8_CANNOT_CRIT_WEPS != 1)
+#error "FE8_CANNOT_CRIT_WEPS must be 0 or 1"
 #endif
 
 #if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)

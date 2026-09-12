@@ -226,6 +226,8 @@ int GetItemMight(int item);
 int GetItemHit(int item);
 int GetItemWeight(int item);
 int GetItemCrit(int item);
+int GetItemDisplayCrit(int item);
+bool ItemCannotCrit(int item);
 int GetItemCost(int item);
 int GetItemMinRange(int item);
 int GetItemMaxRange(int item);

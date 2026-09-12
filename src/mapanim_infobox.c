@@ -250,6 +250,7 @@ enum
     BSNA_TILE_CRIT = 0x45,
     BSNA_TILE_AS = 0x47,
     BSNA_TILE_ARROW = 0x4A,
+    BSNA_TILE_DASH = 0x20 + 10,
     BSNA_PAL_ITEM_ICON = 4,
 };
 
@@ -266,10 +267,15 @@ static void PutBattleStatsNumber(struct MapAnimActorState* actor, int gx, int gy
 {
     u16* dst;
 
-    if (value == 0xFF) /* not applicable */
-        return;
-
     dst = gBG0TilemapBuffer + TILEMAP_INDEX(actor->hp_info_x + gx, actor->hp_info_y + gy);
+
+    if (value == 0xFF) { /* not applicable */
+        dst[0] = TILEREF(BSNA_TILE_DASH, BM_BGPAL_BANIM_UNK5);
+        dst[-1] = TILEREF(BSNA_TILE_DASH, BM_BGPAL_BANIM_UNK5);
+        dst[-2] = 0;
+        return;
+    }
+
     MapAnim_DrawNumber(dst, value, TILEREF(32, BM_BGPAL_BANIM_UNK5), 3, 0, 0);
 }
 

@@ -225,6 +225,23 @@ inline int GetItemCrit(int item) {
     return GetItemData(ITEM_INDEX(item))->crit;
 }
 
+int GetItemDisplayCrit(int item) {
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(item))
+        return 0xFF;
+#endif
+
+    return GetItemCrit(item);
+}
+
+bool ItemCannotCrit(int item) {
+#if FE8_CANNOT_CRIT_WEPS
+    return GetItemCrit(item) == 0xFF;
+#else
+    return FALSE;
+#endif
+}
+
 inline int GetItemCost(int item) {
     if (GetItemAttributes(item) & IA_UNBREAKABLE)
         return GetItemData(ITEM_INDEX(item))->costPerUse;

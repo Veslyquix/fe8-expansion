@@ -102,7 +102,7 @@ static bool IsUnitEffectiveOrCritty(struct Unit* activeUnit, struct Unit* unit, 
         if (IsItemEffectiveAgainst(item, activeUnit) == 4)
             return true;
 
-        if (GetItemCrit(item) > HP_BAR_CRIT_WARNING_CUTOFF)
+        if (!ItemCannotCrit(item) && GetItemCrit(item) > HP_BAR_CRIT_WARNING_CUTOFF)
             *outCritty = true;
     }
 

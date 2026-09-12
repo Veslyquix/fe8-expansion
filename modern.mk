@@ -237,6 +237,9 @@ endif
 ifeq ($(L_CYCLE),1)
 MODERN_DEFINE_FLAGS += -DFE8_L_CYCLE=1
 endif
+ifeq ($(MOVEARROW_HACK),1)
+MODERN_DEFINE_FLAGS += -DFE8_MOVEARROW_HACK=1
+endif
 ifeq ($(CUSTOM_FORMULAS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_FORMULAS=1
 endif
@@ -251,6 +254,9 @@ MODERN_DEFINE_FLAGS += -DFE8_SHOW_HEAL_AMOUNT=1
 endif
 ifeq ($(RANGE_REWORK),1)
 MODERN_DEFINE_FLAGS += -DFE8_RANGE_REWORK=1
+endif
+ifeq ($(CANNOT_CRIT_WEPS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CANNOT_CRIT_WEPS=1
 endif
 ifeq ($(TURN_AUTOSAVE),1)
 MODERN_DEFINE_FLAGS += -DFE8_TURN_AUTOSAVE=1
@@ -1712,10 +1718,12 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
 		--rng-randomizer "$(RNG_RANDOMIZER)" \
 		--l-cycle "$(L_CYCLE)" \
+		--movearrow-hack "$(MOVEARROW_HACK)" \
 		--custom-formulas "$(CUSTOM_FORMULAS)" \
 		--mode-select "$(MODE_SELECT)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 		--range-rework "$(RANGE_REWORK)" \
+		--cannot-crit-weps "$(CANNOT_CRIT_WEPS)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
 		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 		--promote-command "$(PROMOTE_COMMAND)" \
@@ -1819,10 +1827,12 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
 	--rng-randomizer "$(RNG_RANDOMIZER)" \
 	--l-cycle "$(L_CYCLE)" \
+	--movearrow-hack "$(MOVEARROW_HACK)" \
 	--custom-formulas "$(CUSTOM_FORMULAS)" \
 	--mode-select "$(MODE_SELECT)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 	--range-rework "$(RANGE_REWORK)" \
+	--cannot-crit-weps "$(CANNOT_CRIT_WEPS)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
 	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
 	--promote-command "$(PROMOTE_COMMAND)" \
@@ -1930,11 +1940,13 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_NULL_BOSSAI_MOV=$(NULL_BOSSAI_MOV) \
 	-DFE8_RNG_RANDOMIZER=$(RNG_RANDOMIZER) \
 	-DFE8_L_CYCLE=$(L_CYCLE) \
+	-DFE8_MOVEARROW_HACK=$(MOVEARROW_HACK) \
 	-DFE8_CUSTOM_FORMULAS=$(CUSTOM_FORMULAS) \
 	-DFE8_MODE_SELECT=$(MODE_SELECT) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
 	-DFE8_SHOW_HEAL_AMOUNT=$(SHOW_HEAL_AMOUNT) \
 	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
+	-DFE8_CANNOT_CRIT_WEPS=$(CANNOT_CRIT_WEPS) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
@@ -2131,6 +2143,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'null_bossai_mov=$(NULL_BOSSAI_MOV)'; \
 		printf '%s\n' 'rng_randomizer=$(RNG_RANDOMIZER)'; \
 		printf '%s\n' 'l_cycle=$(L_CYCLE)'; \
+		printf '%s\n' 'movearrow_hack=$(MOVEARROW_HACK)'; \
 		printf '%s\n' 'custom_formulas=$(CUSTOM_FORMULAS)'; \
 		printf '%s\n' 'mode_select=$(MODE_SELECT)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \

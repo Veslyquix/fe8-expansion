@@ -996,7 +996,8 @@ static const signed char body4[] =
     "  hypergammaspaces" NL
     " NIMAP2 patch: community; repo integration by Vesly" NL
     " Rand Bgm / Continue Bgm Battle: ported from SRR;" NL
-    "  repo integration by Vesly";
+    "  repo integration by Vesly" NL
+    " Movearrow Hack by circleseverywhere";
 
 enum
 {

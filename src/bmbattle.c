@@ -512,6 +512,16 @@ void SetBattleUnitWeaponBallista(struct BattleUnit* bu) {
 
 void Battle_Nop(void) {} // unused
 
+#if FE8_CANNOT_CRIT_WEPS
+static void ApplyCannotCritWeaponStats(struct BattleUnit* bu)
+{
+    if (ItemCannotCrit(bu->weapon)) {
+        bu->battleCritRate = 0xFF;
+        bu->battleEffectiveCritRate = 0xFF;
+    }
+}
+#endif
+
 void ComputeBattleUnitStats(struct BattleUnit* attacker, struct BattleUnit* defender) {
     ComputeBattleUnitDefense(attacker, defender);
     ComputeBattleUnitAttack(attacker, defender);
@@ -533,6 +543,10 @@ void ComputeBattleUnitStats(struct BattleUnit* attacker, struct BattleUnit* defe
      * docs/issue-resolution-policy.md). */
     ExpansionMechanicsApplyBattleStats(attacker, defender, gBattleStats.config);
 #endif
+
+#if FE8_CANNOT_CRIT_WEPS
+    ApplyCannotCritWeaponStats(attacker);
+#endif
 }
 
 void ComputeBattleUnitEffectiveStats(struct BattleUnit* attacker, struct BattleUnit* defender) {
@@ -543,6 +557,10 @@ void ComputeBattleUnitEffectiveStats(struct BattleUnit* attacker, struct BattleU
 
 #if FE8_VESLY_DEBUGGER
     VeslyDebugger_ApplyGodMode(attacker, defender);
+#endif
+
+#if FE8_CANNOT_CRIT_WEPS
+    ApplyCannotCritWeaponStats(attacker);
 #endif
 }
 
@@ -675,6 +693,13 @@ void ComputeBattleUnitEffectiveHitRate(struct BattleUnit* attacker, struct Battl
 
 void ComputeBattleUnitEffectiveCritRate(struct BattleUnit* attacker, struct BattleUnit* defender) {
     int item, i;
+
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(attacker->weapon)) {
+        attacker->battleEffectiveCritRate = 0xFF;
+        return;
+    }
+#endif
 
     attacker->battleEffectiveCritRate = attacker->battleCritRate - defender->battleDodgeRate;
 
@@ -947,6 +972,11 @@ void BattleUpdateBattleStats(struct BattleUnit* attacker, struct BattleUnit* def
     gBattleStats.attack = attacker->battleAttack;
     gBattleStats.defense = defender->battleDefense;
     gBattleStats.hitRate = attacker->battleEffectiveHitRate;
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(attacker->weapon))
+        gBattleStats.critRate = 0;
+    else
+#endif
     gBattleStats.critRate = attacker->battleEffectiveCritRate;
     gBattleStats.silencerRate = attacker->battleSilencerRate;
 }
@@ -1137,6 +1167,11 @@ void BattleGenerateHitTriangleAttack(struct BattleUnit* attacker, struct BattleU
 
     if (!BattleCheckTriangleAttack(attacker, defender))
         return;
+
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(attacker->weapon))
+        return;
+#endif
 
     gBattleHitIterator->attributes |= BATTLE_HIT_ATTR_TATTACK;
 

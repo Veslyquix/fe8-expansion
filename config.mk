@@ -351,6 +351,11 @@ DANGER_RADIUS ?= 1
 # text/staff AI still use for display (see GetItemReachBits, src/bmitem.c).
 RANGE_REWORK ?= 1
 
+# --- Optional CannotCritWeps -------------------------------------------------
+# Treats weapon crit 255 as a "cannot crit" sentinel instead of a 255% crit
+# weapon. UI weapon/battle crit displays show "--" for those weapons.
+CANNOT_CRIT_WEPS ?= 1
+
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
 # Displays a ghost of the unit at the tip of the blue arrow when selecting
 # where to move the unit to.
@@ -412,6 +417,20 @@ RNG_RANDOMIZER ?= 1
 # an enemy-controlled base cycles to the next enemy-controlled base (any
 # kind).
 L_CYCLE ?= 1
+
+# --- Optional MoveArrowHack ---------------------------------------------------
+# Lets pressing A on a tile within a unit's move range but occupied by
+# another unit (e.g. an adjacent enemy) commit the move instead of just
+# beeping, as long as the occupied tile is inside the active unit's
+# displayed weapon/staff range (gBmMapRange) -- matching the vanilla
+# "select an enemy to attack/heal without stepping off it first" flow used
+# by e.g. staves and 1-range weapons. Also lets the path arrow extend onto
+# an in-range tile that CanMoveActiveUnitTo() disallows only because the
+# hook above is about to let you act on it, instead of freezing the arrow
+# one tile short. Ported from circleseverywhere's "Movement Arrow Fix" GBA
+# ASM hack. See src/bmpatharrowdisp.c (UpdatePathArrowWithCursor) and
+# src/playerphase.c (PlayerPhase_RangeDisplayIdle).
+MOVEARROW_HACK ?= 1
 
 # --- Optional CustomFormulas --------------------------------------------------
 # Swaps in an editable copy of the vanilla weapon-triangle rule table
@@ -508,7 +527,6 @@ ANIMS_FAST_FORWARD ?= 1
 # Set NIMAP2=0 to keep vanilla's opening intact, or give the custom songs
 # their own voicegroup instead (see docs/custom_bgm.md).
 NIMAP2 ?= 1
-
 
 
 

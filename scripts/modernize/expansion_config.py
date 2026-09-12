@@ -408,13 +408,14 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            debuffs_exist=0, debuffs_stack=0,
                            select_view_growths=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           draw_map_anims=0, hp_bars=0, group_ai=0, null_bossai_mov=0, rng_randomizer=0, l_cycle=0, custom_formulas=0, mode_select=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, null_bossai_mov=0, rng_randomizer=0, l_cycle=0, movearrow_hack=0, custom_formulas=0, mode_select=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
                            nimap2=0,
                            rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
                            show_heal_amount=0,
+                           cannot_crit_weps=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -448,10 +449,12 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     null_bossai_mov_flag = validate_feature_flag("NULL_BOSSAI_MOV", null_bossai_mov)
     rng_randomizer_flag = validate_feature_flag("RNG_RANDOMIZER", rng_randomizer)
     l_cycle_flag = validate_feature_flag("L_CYCLE", l_cycle)
+    movearrow_hack_flag = validate_feature_flag("MOVEARROW_HACK", movearrow_hack)
     custom_formulas_flag = validate_feature_flag("CUSTOM_FORMULAS", custom_formulas)
     mode_select_flag = validate_feature_flag("MODE_SELECT", mode_select)
     alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
     range_rework_flag = validate_feature_flag("RANGE_REWORK", range_rework)
+    cannot_crit_weps_flag = validate_feature_flag("CANNOT_CRIT_WEPS", cannot_crit_weps)
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
     fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
@@ -522,7 +525,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
             anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
             dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag, l_cycle_flag,
-            custom_formulas_flag, mode_select_flag, heal_amount_flag)
+            movearrow_hack_flag,
+            custom_formulas_flag, mode_select_flag, heal_amount_flag, cannot_crit_weps_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -749,10 +753,12 @@ class ExpansionIdentity:
     null_bossai_mov: int = 0
     rng_randomizer: int = 0
     l_cycle: int = 0
+    movearrow_hack: int = 0
     custom_formulas: int = 0
     mode_select: int = 0
     alpha_sprite_arrow: int = 0
     range_rework: int = 0
+    cannot_crit_weps: int = 0
     turn_autosave: int = 0
     fort_units_start_greyed_out: int = 0
     promote_command: int = 0
@@ -839,10 +845,12 @@ class ExpansionIdentity:
                 "null_bossai_mov": self.null_bossai_mov,
                 "rng_randomizer": self.rng_randomizer,
                 "l_cycle": self.l_cycle,
+                "movearrow_hack": self.movearrow_hack,
                 "custom_formulas": self.custom_formulas,
                 "mode_select": self.mode_select,
                 "alpha_sprite_arrow": self.alpha_sprite_arrow,
                 "range_rework": self.range_rework,
+                "cannot_crit_weps": self.cannot_crit_weps,
                 "turn_autosave": self.turn_autosave,
                 "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "promote_command": self.promote_command,
@@ -917,10 +925,12 @@ def load_identity(
     null_bossai_mov=None,
     rng_randomizer=None,
     l_cycle=None,
+    movearrow_hack=None,
     custom_formulas=None,
     mode_select=None,
     alpha_sprite_arrow=None,
     range_rework=None,
+    cannot_crit_weps=None,
     turn_autosave=None,
     fort_units_start_greyed_out=None,
     promote_command=None,
@@ -1005,8 +1015,8 @@ def load_identity(
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
      resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
      resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
-     resolved_rng_randomizer, resolved_l_cycle, resolved_custom_formulas,
-     resolved_mode_select, resolved_show_heal_amount) = validate_feature_flags(
+     resolved_rng_randomizer, resolved_l_cycle, resolved_movearrow_hack, resolved_custom_formulas,
+     resolved_mode_select, resolved_show_heal_amount, resolved_cannot_crit_weps) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1082,6 +1092,9 @@ def load_identity(
         l_cycle
         if l_cycle not in (None, "")
         else cfg.get("L_CYCLE", "0"),
+        movearrow_hack
+        if movearrow_hack not in (None, "")
+        else cfg.get("MOVEARROW_HACK", "0"),
         custom_formulas
         if custom_formulas not in (None, "")
         else cfg.get("CUSTOM_FORMULAS", "0"),
@@ -1145,6 +1158,9 @@ def load_identity(
         show_heal_amount
         if show_heal_amount not in (None, "")
         else cfg.get("SHOW_HEAL_AMOUNT", "0"),
+        cannot_crit_weps
+        if cannot_crit_weps not in (None, "")
+        else cfg.get("CANNOT_CRIT_WEPS", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1199,10 +1215,12 @@ def load_identity(
         null_bossai_mov=resolved_null_bossai_mov,
         rng_randomizer=resolved_rng_randomizer,
         l_cycle=resolved_l_cycle,
+        movearrow_hack=resolved_movearrow_hack,
         custom_formulas=resolved_custom_formulas,
         mode_select=resolved_mode_select,
         alpha_sprite_arrow=resolved_alpha_sprite_arrow,
         range_rework=resolved_range_rework,
+        cannot_crit_weps=resolved_cannot_crit_weps,
         turn_autosave=resolved_autosave,
         fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         promote_command=resolved_promote_command,
@@ -1433,6 +1451,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override L_CYCLE (0 or 1)",
     )
     parser.add_argument(
+        "--movearrow-hack",
+        default=None,
+        help="override MOVEARROW_HACK (0 or 1)",
+    )
+    parser.add_argument(
         "--custom-formulas",
         default=None,
         help="override CUSTOM_FORMULAS (0 or 1)",
@@ -1451,6 +1474,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--range-rework",
         default=None,
         help="override RANGE_REWORK (0 or 1)",
+    )
+    parser.add_argument(
+        "--cannot-crit-weps",
+        default=None,
+        help="override CANNOT_CRIT_WEPS (0 or 1)",
     )
     parser.add_argument(
         "--turn-autosave",
@@ -1628,10 +1656,12 @@ def main(argv=None) -> int:
             null_bossai_mov=args.null_bossai_mov,
             rng_randomizer=args.rng_randomizer,
             l_cycle=args.l_cycle,
+            movearrow_hack=args.movearrow_hack,
             custom_formulas=args.custom_formulas,
             mode_select=args.mode_select,
             alpha_sprite_arrow=args.alpha_sprite_arrow,
             range_rework=args.range_rework,
+            cannot_crit_weps=args.cannot_crit_weps,
             turn_autosave=args.turn_autosave,
             fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             promote_command=args.promote_command,

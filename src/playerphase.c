@@ -609,7 +609,7 @@ void PlayerPhase_DisplayDangerZone(void)
 
     return;
 }
-
+void UpdateVisualsForEnemiesWhoCanAttackTile(void);
 //! FE8U = 0x0801CD1C
 void PlayerPhase_RangeDisplayIdle(ProcPtr proc)
 {
@@ -697,11 +697,24 @@ else_stmt:
     switch (action)
     {
         case ACT_FAIL:
+#if FE8_MOVEARROW_HACK
+            if (gBmMapRange[gpPathArrowProc->lastY][gpPathArrowProc->lastX] != 0)
+            {
+                SetCursorMapPosition(gpPathArrowProc->lastX, gpPathArrowProc->lastY);
+#if FE8_DANGER_BONES
+                UpdateVisualsForEnemiesWhoCanAttackTile(); 
+#endif 
+                goto act_move;
+            }
+#endif
             PlaySoundEffect(SONG_6C);
 
             break;
 
         case ACT_MOVE:
+#if FE8_MOVEARROW_HACK
+act_move:
+#endif
             EnsureCameraOntoPosition(proc, gActiveUnitMoveOrigin.x, gActiveUnitMoveOrigin.y);
             HideMoveRangeGraphics();
             Proc_Break(proc);
@@ -1264,6 +1277,7 @@ bool CanMoveActiveUnitTo(int x, int y)
 
     return false;
 }
+
 
 //! FE8U = 0x0801D624
 void PlayerPhase_DisplayUnitMovement(void)
