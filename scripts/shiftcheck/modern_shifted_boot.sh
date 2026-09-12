@@ -33,7 +33,7 @@ PREFIX="${PREFIX:-arm-none-eabi-}"
 # Must match modern.mk's MODERN_BANIM_DATA_BASE, which banim/data_banim.modern.o
 # (see BANIM_SYM above) is pre-linked against -- see linker/expansion.ld's
 # __banim_data_base_abs placement for why this can't just be any value.
-BANIM_DATA_BASE="${SHIFTCHECK_BANIM_DATA_BASE:-0x08cb24e4}"
+BANIM_DATA_BASE="${SHIFTCHECK_BANIM_DATA_BASE:-0x08000a20}"
 
 # --- Tool resolution ---
 CC=$(shiftcheck_resolve_tool \

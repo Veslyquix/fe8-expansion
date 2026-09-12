@@ -258,6 +258,46 @@ SECTIONS
         KEEP(*src/crt0.o(.text))
         *asm/arm.o(.text)
 
+        /* banim/data_banim.modern.o(.data) is a fully pre-linked binary
+         * blob (arm_compressing_linker.py -Tdata, modern.mk's
+         * $(MODERN_BANIM_OBJECT) rule -- NOT a relocatable object), whose
+         * internal pointers between animation sheets/OAM/palettes are
+         * baked as absolute addresses at a fixed base
+         * (MODERN_BANIM_DATA_BASE). Wherever THIS linker places its
+         * bytes must match that base exactly, or every pointer inside it
+         * is wrong -- silent corruption, crashing on the first battle
+         * animation played (confirmed the hard way, twice: once when
+         * this was briefly left fully floating, and again when it was
+         * pinned right after the *floating* region -- every time
+         * floating .text/.rodata/.data grew even slightly, the base
+         * went stale and this object needed an expensive ~10-minute
+         * full recompression and a relink).
+         *
+         * Pinned here instead, immediately after the fixed ARM
+         * startup/interwork code (rom_header.o/crt0.o/arm.o(.text)) and
+         * *before* the floating region -- this code is just the entry
+         * point jumping into the real C runtime init and is not
+         * expected to change size, so this address is now permanently
+         * stable regardless of how large .text/.rodata/.data ever grow
+         * (they all float *after* this point now, with no upper bound).
+         * The only thing that can still move this pin is the fixed
+         * startup code itself growing, which would show up immediately
+         * as a build failure (ld's "not within region"/backwards-move
+         * errors), not a silent crash.
+         *
+         * __banim_data_base_abs (passed via --defsym, same as
+         * MODERN_BANIM_DATA_BASE in modern.mk) is a true absolute ROM
+         * address, matching what arm_compressing_linker.py's -Tdata
+         * sub-link used to produce this blob. Bare `. = X` assignments
+         * in THIS output section are relative to the section's own
+         * base (__text_start) rather than truly absolute -- confirmed
+         * empirically, not just per the GNU ld manual -- matching every
+         * other pin historically used in this file, so the absolute
+         * address has to have __text_start subtracted back out here. */
+        . = ALIGN(4);
+        . = __banim_data_base_abs - __text_start;
+        banim/data_banim.modern.o(.data)
+
         /* === SHIFT PADDING: inserts __text_shift bytes here === */
         . = ALIGN(4);
         __shift_start = .;
@@ -275,19 +315,20 @@ SECTIONS
 
         . = ALIGN(4);
         /* Outside the section list so the exclusion covers .data and
-         * .data.*. All of these are still excluded and grouped explicitly
-         * below rather than left to the generic wildcard, to preserve
-         * adjacency contracts real C code depends on via linker symbols
-         * (_banim_pal_start/_banim_pal_end/_banim_pal_size bracket
-         * exactly banim_pal_chara.o+data_banim_pal.o's data, in that
-         * order -- letting the wildcard scatter them across the ROM in
-         * whatever order objects happen to link would silently zero that
-         * computed size). banim/data_banim.modern.o additionally needs an
-         * EXACT address, not just grouping -- see the comment at its
-         * placement below for why. */
+         * .data.*. These (banim_data.o's own array table, terrain data,
+         * palettes, misc data blobs) are still excluded and grouped
+         * explicitly below rather than left to the generic wildcard, to
+         * preserve adjacency contracts real C code depends on via linker
+         * symbols (_banim_pal_start/_banim_pal_end/_banim_pal_size
+         * bracket exactly banim_pal_chara.o+data_banim_pal.o's data, in
+         * that order -- letting the wildcard scatter them across the ROM
+         * in whatever order objects happen to link would silently zero
+         * that computed size). banim/data_banim.modern.o is NOT excluded
+         * here any more -- it's placed up near the pinned startup code
+         * above instead, so it never needs to move as this floating
+         * region grows; see the comment there. */
         EXCLUDE_FILE (
             *banim_data.o
-            banim/data_banim.modern.o
             *banim_terrain_data.o
             *data_banim_terrain.o
             *banim_pal_chara.o
@@ -298,52 +339,11 @@ SECTIONS
         *(.igot.plt)
         __floating_end = .;
 
-        /* banim/data_banim.modern.o(.data) is a fully pre-linked binary
-         * blob (arm_compressing_linker.py -Tdata, modern.mk's
-         * $(MODERN_BANIM_OBJECT) rule -- NOT a relocatable object), whose
-         * internal pointers between animation sheets/OAM/palettes are
-         * baked as absolute addresses at a fixed base
-         * (MODERN_BANIM_DATA_BASE). Wherever THIS linker places its
-         * bytes must match that base exactly, or every pointer inside it
-         * is wrong -- silent corruption, crashing on the first battle
-         * animation played (confirmed the hard way: this was briefly
-         * left floating like everything else below, and it broke exactly
-         * that way).
-         *
-         * Used to be pinned at a fixed legacy-derived address (0xC02000,
-         * inherited from the archival decomp lane's own
-         * ldscript.txt/vanilla-matching requirement -- see git history --
-         * even though the modern lane has never required byte-identical
-         * layout with vanilla otherwise). The 2026-09 convo_bg import (21
-         * new full-screen 8bpp paintings, src/data/data_bg.c) grew
-         * __floating_end past that address, so the modern lane now
-         * pre-links its OWN copy of this blob against a base picked with
-         * only modest headroom above the natural floating end -- not the
-         * old multi-megabyte reserved gap, which shipped as dead FILL
-         * bytes in every ROM regardless of whether anything ever grew
-         * into it. If floating content has already grown past this
-         * base, the `.=` below fails the link outright with ld's own
-         * "not within region" error, rather than silently corrupting
-         * every animation pointer.
-         *
-         * __banim_data_base_abs (passed via --defsym, same as
-         * MODERN_BANIM_DATA_BASE in modern.mk) is a true absolute ROM
-         * address, matching what arm_compressing_linker.py's -Tdata
-         * sub-link used to produce this blob. Bare `. = X` assignments
-         * in THIS output section are relative to the section's own
-         * base (__text_start) rather than truly absolute -- confirmed
-         * empirically, not just per the GNU ld manual -- matching every
-         * other pin in this file (0xC00000, 0xC02000, etc., all written
-         * without the ROM base folded in), so the absolute address has
-         * to have __text_start subtracted back out here. */
-        . = __banim_data_base_abs - __text_start;
-        banim/data_banim.modern.o(.data)
-
-        /* Everything below is normal relocatable C (confirmed by e.g.
-         * src/banim_data.c's banim_data[] table using plain `&extern`
-         * references, not baked addresses), so unlike the blob above it
-         * needs no particular address -- just placing it immediately
-         * after, back-to-back, with no reserved gap. */
+        /* Normal relocatable C (confirmed by e.g. src/banim_data.c's
+         * banim_data[] table using plain `&extern` references, not baked
+         * addresses), so unlike the pinned blob above these need no
+         * particular address -- just grouped together, back-to-back,
+         * with no reserved gap. */
         *banim_data.o(.data)
         *banim_data.o(.data.banim_array_len)
         *banim_data.o(.data.banim_array)

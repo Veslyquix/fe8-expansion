@@ -1523,15 +1523,22 @@ MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 # `. = __banim_data_base_abs - __text_start;` pin for banim/data_banim.modern.o(.data) in
 # linker/expansion.ld via the --defsym below.
 #
-# Pinned at the exact natural end of floating .data as of the 2026-09
-# "batch2" class import (~65 new classes' stat/text/banimconf data;
-# confirmed via the real __floating_end in the linked map, not guessed),
-# with deliberately zero headroom -- every byte floating .data grows
-# from here on requires bumping this value and paying the ~10-minute
-# full recompression this object's build entails, but reserving
-# headroom "just in case" is exactly the multi-megabyte waste the
-# 2026-09 convo_bg import fix (see linker/expansion.ld) removed.
-MODERN_BANIM_DATA_BASE := 0x08cb24e4
+# Pinned at 0x08000a20 -- immediately after the fixed ARM startup/
+# interwork code (rom_header.o + crt0.o + arm.o(.text), which just jumps
+# into the real C runtime init and isn't expected to grow), *before* the
+# floating .text/.rodata/.data region in linker/expansion.ld, rather than
+# after it. Two earlier placements (fully floating, then pinned right
+# after the floating region with "deliberately zero headroom") both went
+# stale every time floating .data grew even slightly, each requiring a
+# bump here plus an expensive ~10-minute full recompression of this
+# object -- and each stale-but-undetected case crashed battle animations
+# outright (see MODERN_BANIM_DATA_BASE_STAMP below for the matching
+# Makefile dependency fix). Placing it before the floating region instead
+# means floating .text/.rodata/.data can grow without bound and never
+# touch this address again -- the only thing that still could is the
+# fixed startup code itself growing, which fails the build immediately
+# (ld's own errors) rather than silently corrupting animation pointers.
+MODERN_BANIM_DATA_BASE := 0x08000a20
 MODERN_BANIM_OBJECT := banim/data_banim.modern.o
 # banim/.data_banim_base.stamp: a plain shell-computed file list has no
 # way to depend on MODERN_BANIM_DATA_BASE's *value* -- only on files --
