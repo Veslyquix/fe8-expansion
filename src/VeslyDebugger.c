@@ -6830,13 +6830,25 @@ void RestartDebuggerMenu(DebuggerProc * proc)
     SetBlendAlpha(11, 5);
     gPlaySt.xCursor = gBmSt.playerCursor.x;
     gPlaySt.yCursor = gBmSt.playerCursor.y;
-    // MU_EndAll();
     // ShowUnitSprite(unit);
     // UnitSpriteHoverUpdate();
 
     // gBmMapUnit[gActiveUnit->yPos][gActiveUnit->xPos] = 0;
     gActiveUnit->state |= US_HIDDEN;
     HideUnitSprite(gActiveUnit);
+    /* MakeMoveunitForAnyActiveUnit only creates a new MU if MU_Exists()
+     * is false -- it reuses whatever's already running otherwise (e.g.
+     * the vanilla cursor-hover MU from src/bmudisp.c's
+     * UnitSpriteHoverUpdate). That reuse doesn't reconfigure the existing
+     * MuProc's position/jid for gActiveUnit, so if the MU that's already
+     * running belongs to a stale context (this file's own MU_EndAll()
+     * call here was commented out since the file was first ported in),
+     * the debugger's menu can end up next to a leftover MU that never
+     * gets cleared, instead of a single one tracking the current unit --
+     * the "duplicate slot" bug. Ending all MUs right before creating the
+     * debugger's own guarantees exactly one exists afterward, always
+     * configured for the unit actually being edited now. */
+    MU_EndAll();
     MakeMoveunitForAnyActiveUnit();
 
     gBmSt.gameStateBits &= ~(BM_FLAG_0 | BM_FLAG_1);

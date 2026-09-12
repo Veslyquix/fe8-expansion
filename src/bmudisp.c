@@ -356,7 +356,7 @@ u16 CONST_DATA sSprite_32x32_Window[] = {
     0x0800, 0x8000, 0x0000,
 };
 
-#define GetInfo(id) (unit_icon_wait_table[(id) & (UNITSPRITE_MAX - 1)])
+#define GetInfo(id) (unit_icon_wait_table[(id) & 0xFF])
 
 void RequestUnitSpriteSheetSync(void)
 {
@@ -478,7 +478,7 @@ int ApplyUnitSpriteImage16x16(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    id = 0;
 
     for (i = 0; i < 3; i++)
     {
@@ -498,7 +498,7 @@ int ApplyUnitSpriteUiImage16x16(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    id = 0;
 
     for (i = 0; i < 3; i++)
     {
@@ -534,7 +534,7 @@ int ApplyUnitSpriteImage16x32(int slot, u32 id)
     int i;
 
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    id = 0;
 
     for (i = 0; i < 3; i++)
     {
@@ -553,7 +553,7 @@ int ApplyUnitSpriteImage32x32(int slot, u32 id)
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
 
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    id = 0;
 
 
     for (i = 0; i < 3; i++)
@@ -1342,8 +1342,22 @@ void UnitSpriteHoverUpdate(void)
 
             if (gMapSpriteSwitchHoverTimer == 5)
             {
-                StartMu(unit);
-                HideUnitSprite(unit);
+                /* Unlike every other StartMu call site (e.g.
+                 * MakeMoveunitForActiveUnit, VeslyDebugger's
+                 * MakeMoveunitForAnyActiveUnit), this one used to call
+                 * StartMu unconditionally. StartMu always allocates a new
+                 * MuProc slot rather than reusing one, so if an MU already
+                 * exists here (e.g. the debugger's own hover preview left
+                 * one running when it closed, or this timer/cursorPrevious
+                 * ended up stale from the debugger repositioning the
+                 * cursor outside HandleMapCursorInput), this created a
+                 * second, duplicate MU for the same unit instead of no-op-
+                 * ing like it should. */
+                if (!MuExists())
+                {
+                    StartMu(unit);
+                    HideUnitSprite(unit);
+                }
                 return;
             }
         }
