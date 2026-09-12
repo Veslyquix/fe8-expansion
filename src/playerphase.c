@@ -1686,15 +1686,10 @@ static bool IsPurchaseBaseDeployTrapKind(int kind)
     }
 }
 
-/* Finds the next purchase-base trap after fromTrapIndex (wrapping back to
- * index 0), owned by `owner`, and matching `kindFilter` (PB_KIND_ANY for no
- * restriction, PB_KIND_DEPLOY for any deploy-capable kind, or an exact
- * PURCHASE_BASE_KIND_* value). fromTrapIndex = -1 searches from the very
- * first trap. Returns the trap's index, or -1 if nothing matches. Traps are
- * always packed contiguously with no holes (see RemoveTrap), so stopping at
- * the first TRAP_NONE is a complete scan -- same assumption every other
- * trap-list walk in this codebase already makes. */
-static int FindNextPurchaseBaseTrapIndex(int fromTrapIndex, int owner, int kindFilter)
+/* Forward-only purchase-base search. fromTrapIndex = -1 starts from
+ * the first trap. Use WrapNextPurchaseBaseTrapIndex when the caller
+ * intentionally wants to wrap after trying units or other hand-offs. */
+static int AdvanceNextPurchaseBaseTrapIndex(int fromTrapIndex, int owner, int kindFilter)
 {
     int i;
 
@@ -1723,6 +1718,13 @@ static int FindNextPurchaseBaseTrapIndex(int fromTrapIndex, int owner, int kindF
 
         return i;
     }
+
+    return -1;
+}
+
+static int WrapNextPurchaseBaseTrapIndex(int fromTrapIndex, int owner, int kindFilter)
+{
+    int i;
 
     for (i = 0; i <= fromTrapIndex && i < TRAP_MAX_COUNT; ++i)
     {
@@ -1794,7 +1796,7 @@ static void MoveViewedCursorTo(int x, int y)
 static bool TryCycleViewedPurchaseBaseTrap(int x, int y)
 {
     struct Trap* trap = GetPurchaseBaseTrapAt(x, y);
-    int fromIndex, owner, kind, nextIndex;
+    int fromIndex, owner, kind, kindFilter, nextIndex;
 
     if (trap == NULL)
         return false;
@@ -1804,27 +1806,36 @@ static bool TryCycleViewedPurchaseBaseTrap(int x, int y)
     kind = GetPurchaseBaseTrapKind(trap);
 
     if (owner == PURCHASE_BASE_OWNER_NEUTRAL)
-        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, PURCHASE_BASE_OWNER_NEUTRAL, PB_KIND_ANY);
+        kindFilter = PB_KIND_ANY;
     else if (owner == FACTION_ID_RED)
-        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, FACTION_ID_RED, PB_KIND_ANY);
+        kindFilter = PB_KIND_ANY;
     else if (IsPurchaseBaseDeployTrapKind(kind))
         /* Deploy points cycle together as one group regardless of specific
          * kind -- Camp -> Fort -> Tent -> ... -- not restricted to the
          * kind currently stood on. */
-        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, owner, PB_KIND_DEPLOY);
+        kindFilter = PB_KIND_DEPLOY;
     else
-        nextIndex = FindNextPurchaseBaseTrapIndex(fromIndex, owner, kind);
+        kindFilter = kind;
+
+    nextIndex = AdvanceNextPurchaseBaseTrapIndex(fromIndex, owner, kindFilter);
+
+    if (nextIndex < 0)
+    {
+        if (owner == FACTION_ID_BLUE && IsPurchaseBaseDeployTrapKind(kind))
+        {
+            if (TryCycleViewedUnitInFaction(0, FACTION_BLUE))
+                return true;
+        }
+
+        nextIndex = WrapNextPurchaseBaseTrapIndex(fromIndex, owner, kindFilter);
+    }
 
     if (nextIndex >= 0)
     {
         struct Trap* next = GetTrap(nextIndex);
 
         MoveViewedCursorTo(next->xPos, next->yPos);
-        return true;
     }
-
-    if (owner == FACTION_ID_BLUE && IsPurchaseBaseDeployTrapKind(kind))
-        TryCycleViewedUnitInFaction(0, FACTION_BLUE);
 
     return true;
 }
@@ -1852,7 +1863,7 @@ void TrySwitchViewedUnit(int x, int y)
 
             /* Ran off the end of the player's units -- offer up their
              * deploy points before wrapping back to the first unit. */
-            trapIndex = FindNextPurchaseBaseTrapIndex(-1, FACTION_ID_BLUE, PB_KIND_DEPLOY);
+            trapIndex = AdvanceNextPurchaseBaseTrapIndex(-1, FACTION_ID_BLUE, PB_KIND_DEPLOY);
 
             if (trapIndex >= 0)
             {
@@ -1862,7 +1873,18 @@ void TrySwitchViewedUnit(int x, int y)
                 return;
             }
 
-            TryWrapViewedUnitInFaction(FACTION_BLUE, searchStart);
+            if (TryWrapViewedUnitInFaction(FACTION_BLUE, searchStart))
+                return;
+
+            trapIndex = WrapNextPurchaseBaseTrapIndex(TRAP_MAX_COUNT - 1, FACTION_ID_BLUE, PB_KIND_DEPLOY);
+
+            if (trapIndex >= 0)
+            {
+                struct Trap* trap = GetTrap(trapIndex);
+
+                MoveViewedCursorTo(trap->xPos, trap->yPos);
+            }
+
             return;
         }
 #endif

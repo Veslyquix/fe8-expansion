@@ -465,6 +465,7 @@ CONST_DATA struct ProcCmd gProcScr_FactionStatusScreen[] =
     PROC_REPEAT(FactionStatus_KeyListener),
 
     PROC_CALL(FactionStatus_Teardown),
+    PROC_SLEEP(1),
 
     // PROC_CALL(BMapDispResume),
     PROC_CALL(RefreshBMapGraphics),
