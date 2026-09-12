@@ -864,30 +864,6 @@ int TalkInterpret(ProcPtr proc) {
 
         case CHFE_L_NL: // [NL]
             // _080072AE
-#if FE8_EXTEND_DIALOGUE_BOX
-            /* The [LF]/[NL2] required right after an [A] for a
-             * same-speaker continuation (no [Open...] before it -- see
-             * GetStrTalkLineCount's doc comment for why sizing doesn't
-             * count this one as a line) doesn't push one more line onto
-             * whatever's already on screen: it starts the box over at
-             * line 0, since the box is already sized for the tallest
-             * single [A]-delimited segment and doesn't need vanilla's
-             * continuous scroll between segments (without this,
-             * lineActive keeps climbing across every segment in the
-             * bubble -- 2 + 3 = 5 for a 3-line box -- and overflows into
-             * a mid-segment scroll, which is what was hiding the 3rd/4th
-             * lines). str[-1] is exactly the token this same
-             * TalkInterpret loop consumed last call (one token per
-             * call), so no extra persistent state is needed to detect
-             * this -- notably, none in .bss, which is pinned to an
-             * exact-size budget in IWRAM (linker/iwram.ld) and has no
-             * slack for it. */
-            if (sTalkState->str[-1] == CHFE_L_A) {
-                ClearPutTalkText();
-                sTalkState->str++;
-                return 2;
-            }
-#endif
             if (sTalkState->putLines == 1 || sTalkState->lineActive == 1) {
                 sTalkState->lineActive++;
             }
@@ -1552,9 +1528,15 @@ void StartTalkWaitForInputUnk(ProcPtr parent, int x, int y, int unk) {
 void TalkShiftClearAll_OnInit(struct Proc* proc) {
 
     TileMap_FillRect(
+#if FE8_EXTEND_DIALOGUE_BOX
+        gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + sTalkState->lines * 2),
+        sTalkState->activeWidth - 2,
+        sTalkState->lines * 2,
+#else
         gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + 4),
         sTalkState->activeWidth - 2,
         sTalkState->lines * 2,
+#endif
         0
     );
 
@@ -1669,9 +1651,15 @@ void TalkChoice_OnIdle(struct TalkChoiceProc* proc) {
 void TalkShiftClear_OnInit(struct Proc* proc) {
 
     TileMap_FillRect(
+#if FE8_EXTEND_DIALOGUE_BOX
+        gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + sTalkState->lines * 2),
+        sTalkState->activeWidth - 2,
+        2,
+#else
         gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + 4),
         sTalkState->activeWidth - 2,
         sTalkState->lines * 2,
+#endif
         0
     );
 
@@ -2484,16 +2472,17 @@ static int GetStrTalkLenUtf8(const char *str, s8 isBubbleOpen)
  * [LF]/[NL2] (so a run of several [A]-separated screens for the same
  * speaker each restart the count). The result is the tallest single
  * [A]-delimited screen anywhere in the upcoming bubble's text, i.e. how
- * many lines the box needs to show all of it without scrolling.
+ * many visible lines the bubble needs before the usual upward scroll
+ * handles the next line.
  *
  * A same-speaker continuation (an [A] with no [Open...] before the next
  * line) is required to be followed by exactly one [LF]/[NL2] -- that
- * token doesn't add a visible blank line, it's the mandatory separator
- * that would otherwise drive the old scroll-based box; a speaker change
- * needs no such token since opening a new face already repositions. So
- * the first [LF]/[NL2] immediately after an [A] is consumed without
- * incrementing the line count; every one after that is a real line
- * break. */
+ * token doesn't add a visible blank line to the next page, it's the
+ * mandatory separator that may drive the scroll when the current page
+ * already filled the bubble; a speaker change needs no such token since
+ * opening a new face already repositions. So the first [LF]/[NL2]
+ * immediately after an [A] is consumed without incrementing the line
+ * count; every one after that is a real line break. */
 static int GetStrTalkLineCountUtf8(const char *str, s8 isBubbleOpen)
 {
     struct TextUtf8Token token;
@@ -2647,8 +2636,8 @@ int GetStrTalkLineCount(const char* str, s8 isBubbleOpen) {
     int maxLines = 1;
     /* Same-speaker continuation after [A] (no [Open...] before the next
      * line) is required to be followed by exactly one [LF]/[NL2] -- see
-     * GetStrTalkLineCountUtf8's doc comment above for why that one token
-     * doesn't count as a real line. wasAfterA captures whether *this*
+     * GetStrTalkLineCountUtf8's doc comment above for why that token affects
+     * runtime scrolling but not the line count. wasAfterA captures whether *this*
      * token immediately follows an [A] (afterA is set there and cleared
      * at the top of every iteration, so it only ever survives across
      * exactly one token). */

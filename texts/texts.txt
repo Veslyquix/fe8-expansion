@@ -40592,6 +40592,11 @@ to see another sunrise.[A]
 not so easily driven from our home.[A]
 [OpenMidLeft]To the mountains, then.[A][X]
 
+## MSG_CUSTOM_CAMPAIGN_PROLOGUE_KARGAN
+[OpenMidRight][LoadFace][FID_KARGAN]Heheh.[LF]
+C'mon, boys.[LF]
+We got'ta job to do.[A][X]
+
 ## MSG_CUSTOM_CAMPAIGN_PROLOGUE_ENDING
 [OpenMidLeft][LoadFace][FID_Wakwi]
 [OpenMidRight][LoadFace][FID_Ishkode]
