@@ -911,10 +911,10 @@ const struct AiEscapePt* CONST_DATA gGreenAiEscapePoints[] = {
 };
 
 struct AiHealThreshold CONST_DATA gAI3HealingThresholdTable[] = {
-    { 100,  50, },
+    { 99,  50, },
     {  80,  30, },
     {  50,  10, },
-    { 100,  80, },
+    { 99,  80, },
     {   0,   0, },
 };
 

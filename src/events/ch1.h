@@ -165,9 +165,12 @@ CONST_DATA EventListScr EventScr_Ch1_BeginningScene[] = {
 
 CONST_DATA EventListScr EventScr_Ch1_Turn_AllyReinforceArrive[] = {
     MUSC(SONG_54)
+    CAMERA(5,0)
+    STAL(10)
     LOAD1(1, UnitDef_Event_Ch1Asin)
     ENUN
-    FlashCursor(CHARACTER_MOULDER, 60)
+    
+    FlashCursor(CHARACTER_MOULDER, 30)
     Text(MSG_CC_CH1A_REINFORCEMENT)
 
     NoFade
