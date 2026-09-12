@@ -46,31 +46,21 @@
  * of vanilla's NewNewGameDifficultySelect.
  *
  * RAM: the spinning carousel needs 3 concurrent "EkrUnitMainMini" mini-
- * animation slots (struct AnimBuffer, include/ekrbattle.h). The large
- * per-slot buffers (image sheet, OAM, palette, frame data) reuse the same
- * battle-animation RAM every other mini-carousel screen in this repo
- * already reuses (src/classchg-sel.c, src/purchase_generics.c) for slots 0
- * and 1, plus gFontgrp_0's debug-console scratch (include/fontgrp.h) for
- * slot 2's image sheet -- none of these are ever live at the same time as
- * the save-menu's New Game flow, so sharing them is safe. See
- * sModeSelectImgSheetBufs and its siblings below.
- *
- * This screen's own small per-slot/UI state (3x AnimBuffer, 3x
- * AnimMagicFxBuffer, the palette-dim cache, text/font state) lives inside
- * gUiTmScratchA (see struct ModeSelectScratch below) rather than as new
- * EWRAM_DATA globals, for the same reason: gUiTmScratchA is only used
- * transiently by the pre-battle forecast popup (src/bksel.c), never during
- * this screen's own lifetime. An earlier version of this file instead put
+ * animation slots (struct AnimBuffer, include/ekrbattle.h). All of this
+ * screen's state -- the three slots' large scratch buffers (image sheet,
+ * OAM, palette, frame data) and its own small per-slot/UI state (3x
+ * AnimBuffer, 3x AnimMagicFxBuffer, the palette-dim cache, text/font
+ * state) -- lives in its own dedicated EWRAM_OVERLAY(modeselect) tag (see
+ * struct ModeSelectScratch below) rather than borrowing individual buffers
+ * from other screens/overlays. An earlier version of this file instead put
  * this state in EWRAM_OVERLAY(gameending) to dodge an EWRAM budget
  * shortfall -- that corrupted pAnimBuf->anim1/anim2 into garbage pointers
  * (confirmed live: EkrUnitMainMiniMain crashed reading anim->pScrCurrent
- * with anim==8) once the carousel actually ran, meaning something else
- * genuinely writes into that overlay's address range while Mode Select is
- * on screen, not just "temporally separate screens" as the overlay's other
- * tags assume. gUiTmScratchA has no such risk (it isn't an EWRAM_OVERLAY
- * tag at all, just an ordinary buffer with a well-understood, unrelated
- * owner), and is large enough (1280 bytes) to hold all of this screen's
- * own state with room to spare -- no feature-cutting trims needed.
+ * with anim==8) once the carousel actually ran, because every
+ * EWRAM_OVERLAY tag starts at the same address and the two screens' own
+ * internal layouts didn't line up. A dedicated tag sidesteps that: see the
+ * comment on struct ModeSelectScratch for why it's still free (overlays
+ * alias each other by design).
  */
 
 #define ModeSelectBg0Tm gBG0TilemapBuffer

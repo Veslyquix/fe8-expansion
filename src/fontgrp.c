@@ -34,7 +34,11 @@ struct SpecialCharSt {
     s16 chr_position;
 };
 
-EWRAM_DATA struct Struct02026E30 gFontgrp_0 = {0};
+/* Only ever live while a debug text console is actually in use (see
+ * include/fontgrp.h) -- never during normal gameplay or any of the game's
+ * special screens -- so its memory is shared with every other
+ * EWRAM_OVERLAY tag instead of costing its own persistent EWRAM. */
+EWRAM_OVERLAY(debugconsole) struct Struct02026E30 gFontgrp_0 = {0};
 EWRAM_DATA char gNumberStr[9] = {0};
 EWRAM_DATA int gFontgrp_1 = 0;
 EWRAM_DATA int gFontgrp_2 = 0;

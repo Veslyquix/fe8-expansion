@@ -150,10 +150,9 @@ struct TextPrintProc {
 // The debug-console scrollback buffer SetupDebugFontForBG/PrintDebugStringToBG
 // use (256 lines x 32 bytes = 0x2000 bytes of the 0x2008-byte struct). Only
 // ever live when a debug text console is actually in use, never during
-// normal gameplay screens -- exposed here (rather than kept file-local to
-// fontgrp.c) so other screens can safely borrow its `unk14` scratch space
-// the same way src/modeselect.c's carousel does, instead of allocating
-// fresh EWRAM for a same-sized need.
+// normal gameplay or any special screen -- its storage (src/fontgrp.c) is
+// tagged EWRAM_OVERLAY(debugconsole), so it costs no persistent EWRAM and
+// shares memory with every other overlay-tagged screen's buffers instead.
 struct Struct02026E30
 {
     u32 tileDataOffset;

@@ -178,18 +178,28 @@ SECTIONS
     } > ewram AT> ewram
     __ewram_overlay_worldmap_size = __ewram_overlay_worldmap_end - __ewram_start;
 
+    ewram_overlay_debugconsole __ewram_start (NOLOAD) : ALIGN(4)
+    {
+        *(ewram_overlay_debugconsole)
+        __ewram_overlay_debugconsole_end = .;
+    } > ewram AT> ewram
+    __ewram_overlay_debugconsole_size = __ewram_overlay_debugconsole_end - __ewram_start;
+
     __ewram_overlay_peak_size = MAX(
         MAX(
-            MAX(__ewram_overlay_0_size, __ewram_overlay_gameending_size),
-            MAX(__ewram_overlay_bmstart_size, __ewram_overlay_gamestartsave_size)
-        ),
-        MAX(
             MAX(
-                MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
-                MAX(__ewram_overlay_modeselect_size, __ewram_overlay_coselect_size)
+                MAX(__ewram_overlay_0_size, __ewram_overlay_gameending_size),
+                MAX(__ewram_overlay_bmstart_size, __ewram_overlay_gamestartsave_size)
             ),
-            MAX(__ewram_overlay_sio_size, __ewram_overlay_worldmap_size)
-        )
+            MAX(
+                MAX(
+                    MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
+                    MAX(__ewram_overlay_modeselect_size, __ewram_overlay_coselect_size)
+                ),
+                MAX(__ewram_overlay_sio_size, __ewram_overlay_worldmap_size)
+            )
+        ),
+        __ewram_overlay_debugconsole_size
     );
     __ewram_persistent_start =
         __ewram_start + ((__ewram_overlay_peak_size + 3) & ~3);
@@ -234,8 +244,13 @@ SECTIONS
         PROVIDE(gUnk_Sio_21 = .); . += 0x28;
         PROVIDE(gUnk_Sio_22 = .); . += 0x4;
 
+        /* Event-script unit-load scratch: aliased onto sMsgString's storage
+         * (src/msg.c) rather than given its own space -- units are never
+         * loaded while a message is on screen, and sMsgString (0x1000
+         * bytes) is far larger than any gLoadUnitBuffer use needs. */
+        PROVIDE(gLoadUnitBuffer = sMsgString);
+
         . = ALIGN(4);
-        PROVIDE(gLoadUnitBuffer = .);
         PROVIDE(end = .);
     } > ewram AT> ewram
 
@@ -414,6 +429,7 @@ SECTIONS
     ASSERT(SIZEOF(ewram_overlay_coselect) <= 256K, "ewram_overlay_coselect exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_sio) <= 256K, "ewram_overlay_sio exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_worldmap) <= 256K, "ewram_overlay_worldmap exceeds EWRAM")
+    ASSERT(SIZEOF(ewram_overlay_debugconsole) <= 256K, "ewram_overlay_debugconsole exceeds EWRAM")
 
     .stab             0 : { *(.stab) }
     .stabstr          0 : { *(.stabstr) }
