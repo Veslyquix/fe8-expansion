@@ -354,16 +354,16 @@ static void FactionStatus_Setup(ProcPtr proc)
      * ChapterStatus_Init's own SetDefaultColorEffects() call
      * (src/uichapterstatus.c), the vanilla screen this one replaces. */
     SetDefaultColorEffects();
-
     ResetText();
     /* text_drawing_guide.md: every PutNumber-using screen must preallocate
      * the common digit/special-char glyph set once per color actually
      * used, right after ResetText, before any PutNumber calls -- this
      * screen draws 20+ numbers (Units/Lost/Bases/Income/Funds x4 rows,
-     * plus Neutral Bases) in white and the Turn value in blue, so which
+     * plus Neutral Bases) in BLACK and the Turn value in blue, so which
      * glyphs are already resident otherwise depends on draw order and can
-     * shift between redraws. */
-    PreallocateCommonGlyphs(TEXT_COLOR_SYSTEM_WHITE);
+     * shift between redraws.
+     */
+    PreallocateCommonGlyphs(TEXT_COLOR_SYSTEM_BLACK);
     PreallocateCommonGlyphs(TEXT_COLOR_SYSTEM_BLUE);
     LoadUiFrameGraphics();
 

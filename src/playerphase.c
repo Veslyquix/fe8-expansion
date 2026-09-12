@@ -31,7 +31,7 @@
 #include "expansion_itemtest.h"
 #include "purchase_generics.h"
 #include "dangerradius.h"
-
+void PurchaseGenerics_StartTileMenu(void); 
 #include "playerphase.h"
 
 #include "constants/classes.h"
@@ -159,6 +159,11 @@ PROC_LABEL(12),
     PROC_CALL(PlayerPhase_DisplayDangerZone),
     PROC_REPEAT(PlayerPhase_RangeDisplayIdle),
 
+    PROC_GOTO(9),
+PROC_LABEL(13), // Vesly added 
+    PROC_SLEEP(1),
+    PROC_CALL(PurchaseGenerics_StartTileMenu), 
+    PROC_SLEEP(1),
     PROC_GOTO(9),
 
 PROC_LABEL(3),
@@ -376,7 +381,7 @@ void PlayerPhase_MainIdle(ProcPtr proc)
                     {
                         Eventinfo_CondFalse_2();
 
-                        Proc_Goto(proc, 9);
+                        Proc_Goto(proc, 13);
 
                         return;
                     }

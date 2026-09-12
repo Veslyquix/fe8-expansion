@@ -37,7 +37,21 @@ CONST_DATA EventScr EventScrWM_Ch1_ChapterIntro[] = {
     ENDA
 };
 
+/*
+#define DefaultAI              0x00,0x00
+#define GuardTileAI            0x03,0x03
+#define AttackInRangeAI        0x00,0x03
+#define ChaseOnceApproachedAI  0x00,0x06
+#define HealUnits              0x0E,0x03
+#define BrigandAI              0x06,0x04
+#define StealingThiefAI        0x10,0x05
+#define LootingThiefAI         0x06,0x05
+#define MoveWithLeaderAI       0x0D,0x03
+#define NeverMoveAI            0x03,0x03,0x04,0x20
+#define DemonKingAI            0x14,0x03
+*/ 
 
+        // .ai = {DefaultAI, 0x4, 0x0}, // No recovery mode 
 
 CONST_DATA struct UnitDefinition UnitDef_Ch1Allies[] = {
     {
@@ -96,6 +110,14 @@ CONST_DATA struct REDA REDA_Ch1Ally_Archer[] = {
         .y = 1,
     },
 };
+CONST_DATA struct REDA REDA_Ch1Ally_Fighter[] = {
+    {
+        .x = 2,
+        .y = 1,
+    },
+};
+
+
 CONST_DATA struct UnitDefinition UnitDef_Event_Ch1Asin[] = {
     {
         .charIndex = CHARACTER_MOULDER,
@@ -106,8 +128,10 @@ CONST_DATA struct UnitDefinition UnitDef_Event_Ch1Asin[] = {
         .yPosition = 0,
         .redaCount = 1,
         .redas = REDA_Ch1Ally_Asin,
+        .ai = {GuardTileAI, 0x0, 0x0},
         .items = {
             ITEM_STAFF_NOSTAL,
+            ITEM_STAFF_HEAL,
             ITEM_VULNERARY,
         },
     },
@@ -120,8 +144,23 @@ CONST_DATA struct UnitDefinition UnitDef_Event_Ch1Asin[] = {
         .yPosition = 0,
         .redaCount = 1,
         .redas = REDA_Ch1Ally_Archer,
+        .ai = {GuardTileAI, 0x0, 0x0},
         .items = {
             ITEM_BOW_IRON,
+        },
+    },
+    {
+        .charIndex = CHARACTER_CITIZEN,
+        .classIndex = CLASS_FIGHTER,
+        .allegiance = FACTION_ID_GREEN,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 0,
+        .redaCount = 1,
+        .redas = REDA_Ch1Ally_Fighter,
+        .ai = {AttackInRangeAI, 0x0, 0x0},
+        .items = {
+            ITEM_AXE_IRON,
         },
     },
     { 0 },
