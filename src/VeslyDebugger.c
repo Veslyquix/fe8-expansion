@@ -66,12 +66,6 @@ typedef struct
     u16 lastFlag;
     int gold;
     struct Unit * unit;
-    /* DisplayVertUiHand's own smoothing state -- used to belong to a pair
-     * of file-scope statics (persistent EWRAM, never freed even though
-     * only ever meaningful while this proc is alive). Every call site
-     * already has `proc` in scope, so this just moves them here instead. */
-    int prevHandClockFrame;
-    struct Vec2 prevHandScreenPosition;
     s16 tmp[tmpSize]; // 0x6c out of 0x6c max (bumped from 15 to 19 slots for the Co editor)
 } DebuggerProc;
 
@@ -1004,17 +998,29 @@ static const u16 sSprite_VertHand[] = { 1, 0x0002, 0x4000, 0x0006 };
 static const u8 sHandVOffsetLookup[] = {
     0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1,
 };
+static int sDebuggerPrevHandClockFrame;
+static struct Vec2 sDebuggerPrevHandScreenPosition;
+
+static void ResetDebuggerHandSmoothing(void)
+{
+    sDebuggerPrevHandClockFrame = -1;
+    sDebuggerPrevHandScreenPosition.x = 0;
+    sDebuggerPrevHandScreenPosition.y = 0;
+}
+
 static void DisplayVertUiHand(DebuggerProc * proc, int x, int y)
 {
-    if ((int)(GetGameClock() - 1) == proc->prevHandClockFrame)
+    (void)proc;
+
+    if ((int)(GetGameClock() - 1) == sDebuggerPrevHandClockFrame)
     {
-        x = (x + proc->prevHandScreenPosition.x) >> 1;
-        y = (y + proc->prevHandScreenPosition.y) >> 1;
+        x = (x + sDebuggerPrevHandScreenPosition.x) >> 1;
+        y = (y + sDebuggerPrevHandScreenPosition.y) >> 1;
     }
 
-    proc->prevHandScreenPosition.x = x;
-    proc->prevHandScreenPosition.y = y;
-    proc->prevHandClockFrame = GetGameClock();
+    sDebuggerPrevHandScreenPosition.x = x;
+    sDebuggerPrevHandScreenPosition.y = y;
+    sDebuggerPrevHandClockFrame = GetGameClock();
 
     y += (sHandVOffsetLookup[Mod(GetGameClock(), ARRAY_COUNT(sHandVOffsetLookup))] - 14);
     PutSprite(2, x, y, sSprite_VertHand, 0);
@@ -6781,6 +6787,7 @@ void InitProc(DebuggerProc * proc)
     proc->mainID = 0;
     proc->page = 0;
     proc->editing = false;
+    ResetDebuggerHandSmoothing();
     proc->actionID = 0;
     proc->godMode = 0;
     proc->autoplay = 0;

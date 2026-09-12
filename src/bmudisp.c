@@ -356,6 +356,7 @@ u16 CONST_DATA sSprite_32x32_Window[] = {
     0x0800, 0x8000, 0x0000,
 };
 
+// #define GetInfo(id) (unit_icon_wait_table[(id) & ((1<<7)-1)])
 #define GetInfo(id) (unit_icon_wait_table[(id) & 0xFF])
 
 void RequestUnitSpriteSheetSync(void)
@@ -478,7 +479,7 @@ int ApplyUnitSpriteImage16x16(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = 0;
+    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
 
     for (i = 0; i < 3; i++)
     {
@@ -498,7 +499,7 @@ int ApplyUnitSpriteUiImage16x16(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = 0;
+    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
 
     for (i = 0; i < 3; i++)
     {
@@ -534,7 +535,7 @@ int ApplyUnitSpriteImage16x32(int slot, u32 id)
     int i;
 
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = 0;
+    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
 
     for (i = 0; i < 3; i++)
     {
@@ -553,7 +554,7 @@ int ApplyUnitSpriteImage32x32(int slot, u32 id)
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
 
-    id = 0;
+    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
 
 
     for (i = 0; i < 3; i++)
