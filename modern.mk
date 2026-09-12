@@ -303,6 +303,9 @@ endif
 ifeq ($(NIMAP2),1)
 MODERN_DEFINE_FLAGS += -DFE8_NIMAP2=1
 endif
+ifeq ($(WORLDMAP_REWORK),1)
+MODERN_DEFINE_FLAGS += -DFE8_WORLDMAP_REWORK=1
+endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
 # Issue #6 bundled content example: its ORIGINAL display text is authored in
@@ -1746,6 +1749,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--aw2-assets "$(AW2_ASSETS)" \
 		--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
 		--nimap2 "$(NIMAP2)" \
+		--worldmap-rework "$(WORLDMAP_REWORK)" \
 		--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
@@ -1848,6 +1852,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--aw2-assets "$(AW2_ASSETS)" \
 	--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
 	--nimap2 "$(NIMAP2)" \
+	--worldmap-rework "$(WORLDMAP_REWORK)" \
 	--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
@@ -1959,7 +1964,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS) \
 	-DFE8_AW2_ASSETS=$(AW2_ASSETS) \
 	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD) \
-	-DFE8_NIMAP2=$(NIMAP2)
+	-DFE8_NIMAP2=$(NIMAP2) \
+	-DFE8_WORLDMAP_REWORK=$(WORLDMAP_REWORK)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -2163,6 +2169,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'aw2_assets=$(AW2_ASSETS)'; \
 		printf '%s\n' 'anims_fast_forward=$(ANIMS_FAST_FORWARD)'; \
 		printf '%s\n' 'nimap2=$(NIMAP2)'; \
+		printf '%s\n' 'worldmap_rework=$(WORLDMAP_REWORK)'; \
 		printf '%s\n' 'show_heal_amount=$(SHOW_HEAL_AMOUNT)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \

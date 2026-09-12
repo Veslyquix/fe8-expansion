@@ -449,6 +449,11 @@
 #define FE8_RANGE_REWORK 0
 #endif
 
+/* Enables the modern world map road/cursor rework. */
+#ifndef FE8_WORLDMAP_REWORK
+#define FE8_WORLDMAP_REWORK 0
+#endif
+
 /* Treat item crit 255 as a "cannot crit" sentinel and display it as "--". */
 #ifndef FE8_CANNOT_CRIT_WEPS
 #define FE8_CANNOT_CRIT_WEPS 0
@@ -720,6 +725,10 @@
 
 #if (FE8_RANGE_REWORK != 0) && (FE8_RANGE_REWORK != 1)
 #error "FE8_RANGE_REWORK must be 0 or 1"
+#endif
+
+#if (FE8_WORLDMAP_REWORK != 0) && (FE8_WORLDMAP_REWORK != 1)
+#error "FE8_WORLDMAP_REWORK must be 0 or 1"
 #endif
 
 #if (FE8_CANNOT_CRIT_WEPS != 0) && (FE8_CANNOT_CRIT_WEPS != 1)

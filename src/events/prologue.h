@@ -201,7 +201,7 @@ CONST_DATA EventListScr EventScr_Prologue_EndingScene[] = {
     REMA
     MUNO
 
-    MNC2(0x1)
+    MNCH(0x1)
     ENDA
 };
 

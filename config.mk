@@ -528,6 +528,17 @@ ANIMS_FAST_FORWARD ?= 1
 # their own voicegroup instead (see docs/custom_bgm.md).
 NIMAP2 ?= 1
 
+# --- Optional world map road rework -----------------------------------------
+# Draws the roads between world map nodes procedurally from 4 generic 2x2
+# tile pieces (straight horizontal/vertical, and both diagonals) instead of
+# a hand-authored gWorldmapSprite_N line per pair of connected nodes: walks
+# tile-by-tile from one node to the other, using a diagonal piece while both
+# axes still have distance left and a straight piece to finish off whichever
+# axis has distance remaining, so a road can flow from a 45-degree run into
+# a straight one. See MapRoute_RenderAutoPath in src/worldmap_path.c and the
+# piece data in src/data/worldmap/worldmap_road_pieces.c. Modern lane only.
+WORLDMAP_REWORK ?= 1
+
 
 
 

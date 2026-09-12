@@ -412,7 +412,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
-                           nimap2=0,
+                           nimap2=0, worldmap_rework=0,
                            rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
                            show_heal_amount=0,
                            cannot_crit_weps=0,
@@ -468,6 +468,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     aw2_assets_flag = validate_feature_flag("AW2_ASSETS", aw2_assets)
     anims_fast_forward_flag = validate_feature_flag("ANIMS_FAST_FORWARD", anims_fast_forward)
     nimap2_flag = validate_feature_flag("NIMAP2", nimap2)
+    worldmap_rework_flag = validate_feature_flag("WORLDMAP_REWORK", worldmap_rework)
     rand_bgm_flag = validate_feature_flag("RAND_BGM", rand_bgm)
     continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
     danger_radius_flag = validate_feature_flag("DANGER_RADIUS", danger_radius)
@@ -523,7 +524,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             range_rework_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
-            anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
+            anims_fast_forward_flag, nimap2_flag, worldmap_rework_flag, rand_bgm_flag, continue_bgm_battle_flag,
             dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag, l_cycle_flag,
             movearrow_hack_flag,
             custom_formulas_flag, mode_select_flag, heal_amount_flag, cannot_crit_weps_flag)
@@ -772,6 +773,7 @@ class ExpansionIdentity:
     aw2_assets: int = 0
     anims_fast_forward: int = 0
     nimap2: int = 0
+    worldmap_rework: int = 0
     rand_bgm: int = 0
     continue_bgm_battle: int = 0
     danger_radius: int = 0
@@ -864,6 +866,7 @@ class ExpansionIdentity:
                 "aw2_assets": self.aw2_assets,
                 "anims_fast_forward": self.anims_fast_forward,
                 "nimap2": self.nimap2,
+                "worldmap_rework": self.worldmap_rework,
                 "rand_bgm": self.rand_bgm,
                 "continue_bgm_battle": self.continue_bgm_battle,
                 "danger_radius": self.danger_radius,
@@ -944,6 +947,7 @@ def load_identity(
     aw2_assets=None,
     anims_fast_forward=None,
     nimap2=None,
+    worldmap_rework=None,
     rand_bgm=None,
     continue_bgm_battle=None,
     danger_radius=None,
@@ -1013,7 +1017,7 @@ def load_identity(
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
-     resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
+     resolved_nimap2, resolved_worldmap_rework, resolved_rand_bgm, resolved_continue_bgm_battle,
      resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
      resolved_rng_randomizer, resolved_l_cycle, resolved_movearrow_hack, resolved_custom_formulas,
      resolved_mode_select, resolved_show_heal_amount, resolved_cannot_crit_weps) = validate_feature_flags(
@@ -1146,6 +1150,9 @@ def load_identity(
         nimap2
         if nimap2 not in (None, "")
         else cfg.get("NIMAP2", "0"),
+        worldmap_rework
+        if worldmap_rework not in (None, "")
+        else cfg.get("WORLDMAP_REWORK", "0"),
         rand_bgm
         if rand_bgm not in (None, "")
         else cfg.get("RAND_BGM", "0"),
@@ -1234,6 +1241,7 @@ def load_identity(
         aw2_assets=resolved_aw2_assets,
         anims_fast_forward=resolved_anims_fast_forward,
         nimap2=resolved_nimap2,
+        worldmap_rework=resolved_worldmap_rework,
         rand_bgm=resolved_rand_bgm,
         continue_bgm_battle=resolved_continue_bgm_battle,
         danger_radius=resolved_danger_radius,
@@ -1516,6 +1524,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override NIMAP2 (0 or 1)",
     )
     parser.add_argument(
+        "--worldmap-rework",
+        default=None,
+        help="override WORLDMAP_REWORK (0 or 1)",
+    )
+    parser.add_argument(
         "--rand-bgm",
         default=None,
         help="override RAND_BGM (0 or 1)",
@@ -1675,6 +1688,7 @@ def main(argv=None) -> int:
             aw2_assets=args.aw2_assets,
             anims_fast_forward=args.anims_fast_forward,
             nimap2=args.nimap2,
+            worldmap_rework=args.worldmap_rework,
             rand_bgm=args.rand_bgm,
             continue_bgm_battle=args.continue_bgm_battle,
             danger_radius=args.danger_radius,

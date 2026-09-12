@@ -481,6 +481,116 @@ void MapRoute_RenderPathGfx(u8 * data, u16 * buf, int size, u16 oam2)
     return;
 }
 
+#if FE8_WORLDMAP_REWORK
+
+extern const u8 gWMRoadPiece_Horizontal[];
+extern const u8 gWMRoadPiece_Vertical[];
+extern const u8 gWMRoadPiece_DiagonalNeSw[];
+extern const u8 gWMRoadPiece_DiagonalNwSe[];
+extern const u8 gWMRoadPiece_DiagNeSw_ConnectHorizontalNE[];
+extern const u8 gWMRoadPiece_DiagNeSw_ConnectHorizontalSW[];
+extern const u8 gWMRoadPiece_DiagNeSw_ConnectVerticalNE[];
+extern const u8 gWMRoadPiece_DiagNeSw_ConnectVerticalSW[];
+extern const u8 gWMRoadPiece_DiagNwSe_ConnectHorizontalNW[];
+extern const u8 gWMRoadPiece_DiagNwSe_ConnectHorizontalSE[];
+extern const u8 gWMRoadPiece_DiagNwSe_ConnectVerticalNW[];
+extern const u8 gWMRoadPiece_DiagNwSe_ConnectVerticalSE[];
+
+/* Stamps a straight road piece (1 tile wide for Horizontal, 1 tile tall for
+ * Vertical) anchored top-left at the walk's current tile. */
+static void WmRoad_StampStraight(const u8 * piece, u16 * buf, int size, int x, int y, u16 oam2)
+{
+    MapRoute_RenderPathGfx((u8 *)piece, buf + (y * size + x), size, oam2);
+}
+
+/* Stamps a diagonal (or diagonal-connector) piece, which is a 3x3 diamond
+ * of tiles authored around a center point, so it's anchored 1 tile up and
+ * to the left of the walk's current tile to land that center on it. */
+static void WmRoad_StampDiagonal(const u8 * piece, u16 * buf, int size, int x, int y, u16 oam2)
+{
+    MapRoute_RenderPathGfx((u8 *)piece, buf + ((y - 1) * size + (x - 1)), size, oam2);
+}
+
+/* Builds a road between two world map nodes out of the generic road pieces
+ * above instead of a hand-authored gWorldmapSprite_N line: walks tile by
+ * tile from nodeA's position towards nodeB's, spending a diagonal stamp
+ * per tile of overlap between the remaining x/y distance, then finishes
+ * off whichever axis has distance left with straight stamps. The single
+ * tile where the diagonal run bends into the straight run uses one of the
+ * 8 connector variants (matching the diagonal's direction of travel and
+ * which kind of straight run follows) so the seam blends instead of
+ * showing a hard style change. */
+void MapRoute_RenderAutoPath(int nodeA, int nodeB, u16 * buf, int size, u16 oam2)
+{
+    int x = nodeA[gWMNodeData].x / 8;
+    int y = nodeA[gWMNodeData].y / 8;
+    int destX = nodeB[gWMNodeData].x / 8;
+    int destY = nodeB[gWMNodeData].y / 8;
+    int dx = destX - x;
+    int dy = destY - y;
+    int stepX = (dx >= 0) ? 1 : -1;
+    int stepY = (dy >= 0) ? 1 : -1;
+    int remX = (dx >= 0) ? dx : -dx;
+    int remY = (dy >= 0) ? dy : -dy;
+    bool8 isNeSw = (dx >= 0) != (dy >= 0); // "/" if x and y move opposite ways
+    int nDiag = (remX < remY) ? remX : remY;
+    int i;
+
+    for (i = 0; i < nDiag; i++)
+    {
+        const u8 * piece;
+
+        if (i + 1 < nDiag || remX == remY)
+        {
+            // Not the bend tile (or there's no straight tail at all):
+            // just the plain diagonal.
+            piece = isNeSw ? gWMRoadPiece_DiagonalNeSw : gWMRoadPiece_DiagonalNwSe;
+        }
+        else if (remX > remY)
+        {
+            // Bending into a horizontal tail.
+            if (isNeSw)
+                piece = (stepX > 0) ? gWMRoadPiece_DiagNeSw_ConnectHorizontalNE
+                                     : gWMRoadPiece_DiagNeSw_ConnectHorizontalSW;
+            else
+                piece = (stepX > 0) ? gWMRoadPiece_DiagNwSe_ConnectHorizontalSE
+                                     : gWMRoadPiece_DiagNwSe_ConnectHorizontalNW;
+        }
+        else
+        {
+            // Bending into a vertical tail.
+            if (isNeSw)
+                piece = (stepX > 0) ? gWMRoadPiece_DiagNeSw_ConnectVerticalNE
+                                     : gWMRoadPiece_DiagNeSw_ConnectVerticalSW;
+            else
+                piece = (stepX > 0) ? gWMRoadPiece_DiagNwSe_ConnectVerticalSE
+                                     : gWMRoadPiece_DiagNwSe_ConnectVerticalNW;
+        }
+
+        WmRoad_StampDiagonal(piece, buf, size, x, y, oam2);
+        x += stepX;
+        y += stepY;
+    }
+    remX -= nDiag;
+    remY -= nDiag;
+
+    while (remX > 0)
+    {
+        WmRoad_StampStraight(gWMRoadPiece_Horizontal, buf, size, x, y, oam2);
+        x += stepX;
+        remX--;
+    }
+
+    while (remY > 0)
+    {
+        WmRoad_StampStraight(gWMRoadPiece_Vertical, buf, size, x, y, oam2);
+        y += stepY;
+        remY--;
+    }
+}
+
+#endif
+
 //! FE8U = 0x080BBC54
 void MapRoute_RenderOpenPaths(struct GmRouteProc * proc)
 {
@@ -492,12 +602,23 @@ void MapRoute_RenderOpenPaths(struct GmRouteProc * proc)
 
     for (i = 0; i < proc->pOpenPaths->openPathsLength; i++)
     {
-        MapRoute_RenderPathGfx(
-            proc->pOpenPaths->openPaths[i][gWMPathData].gfxData,
+        s8 pathId = proc->pOpenPaths->openPaths[i];
+#if FE8_WORLDMAP_REWORK
+        MapRoute_RenderAutoPath(
+            pathId[gWMPathData].node[0],
+            pathId[gWMPathData].node[1],
             gUnk_9,
             60,
             oam2Base
         );
+#else
+        MapRoute_RenderPathGfx(
+            pathId[gWMPathData].gfxData,
+            gUnk_9,
+            60,
+            oam2Base
+        );
+#endif
     }
 
     return;

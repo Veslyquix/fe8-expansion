@@ -727,8 +727,13 @@ void WmMain_MoveCursor(struct WorldMapMainProc * proc)
         }
     } while (0);
 
+#if FE8_WORLDMAP_REWORK
+    xCursorPrev = ((gGMData.ix >> 8) / 8);
+    yCursorPrev = ((gGMData.iy >> 8) / 8);
+#else
     xCursorPrev = ((gGMData.ix >> 8) / 16);
     yCursorPrev = ((gGMData.iy >> 8) / 16);
+#endif
 
     xCursorNew = xCursorPrev;
     yCursorNew = yCursorPrev;
@@ -743,6 +748,17 @@ void WmMain_MoveCursor(struct WorldMapMainProc * proc)
     else if (keys & DPAD_UP)
         yCursorNew--;
 
+#if FE8_WORLDMAP_REWORK
+    if (xCursorNew < 3)
+        xCursorNew = 3;
+    else if (xCursorNew > 57)
+        xCursorNew = 57;
+
+    if (yCursorNew < 3)
+        yCursorNew = 3;
+    else if (yCursorNew > 37)
+        yCursorNew = 37;
+#else
     if (xCursorNew < 1)
         xCursorNew = 1;
     else if (xCursorNew > 28)
@@ -752,13 +768,19 @@ void WmMain_MoveCursor(struct WorldMapMainProc * proc)
         yCursorNew = 1;
     else if (yCursorNew > 18)
         yCursorNew = 18;
+#endif
 
     if ((xCursorPrev != xCursorNew) || (yCursorPrev != yCursorNew))
     {
         PlaySoundEffect(SONG_65);
 
+#if FE8_WORLDMAP_REWORK
+        pos.x = xCursorNew * 8;
+        pos.y = yCursorNew * 8;
+#else
         pos.x = xCursorNew * 16 + 8;
         pos.y = yCursorNew * 16 + 8;
+#endif
 
         StartGmMoveCursor(0, &pos, duration, 0, proc);
     }
