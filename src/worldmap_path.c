@@ -496,18 +496,30 @@ extern const u8 gWMRoadPiece_DiagNwSe_ConnectHorizontalSE[];
 extern const u8 gWMRoadPiece_DiagNwSe_ConnectVerticalNW[];
 extern const u8 gWMRoadPiece_DiagNwSe_ConnectVerticalSE[];
 
-/* Stamps a straight road piece (1 tile wide for Horizontal, 1 tile tall for
- * Vertical) anchored top-left at the walk's current tile. */
-static void WmRoad_StampStraight(const u8 * piece, u16 * buf, int size, int x, int y, u16 oam2)
+static void WmRoad_StampHorizontal(u16 * buf, int size, int x, int y, int stepX, u16 oam2)
 {
-    MapRoute_RenderPathGfx((u8 *)piece, buf + (y * size + x), size, oam2);
+    if (stepX < 0)
+        x--;
+
+    MapRoute_RenderPathGfx((u8 *)gWMRoadPiece_Horizontal, buf + ((y - 1) * size + x), size, oam2);
 }
 
-/* Stamps a diagonal (or diagonal-connector) piece, which is a 3x3 diamond
- * of tiles authored around a center point, so it's anchored 1 tile up and
- * to the left of the walk's current tile to land that center on it. */
-static void WmRoad_StampDiagonal(const u8 * piece, u16 * buf, int size, int x, int y, u16 oam2)
+static void WmRoad_StampVertical(u16 * buf, int size, int x, int y, int stepY, u16 oam2)
 {
+    if (stepY < 0)
+        y--;
+
+    MapRoute_RenderPathGfx((u8 *)gWMRoadPiece_Vertical, buf + (y * size + (x - 1)), size, oam2);
+}
+
+static void WmRoad_StampDiagonal(const u8 * piece, u16 * buf, int size, int x, int y, int stepX, int stepY, u16 oam2)
+{
+    if (stepX < 0)
+        x--;
+
+    if (stepY < 0)
+        y--;
+
     MapRoute_RenderPathGfx((u8 *)piece, buf + ((y - 1) * size + (x - 1)), size, oam2);
 }
 
@@ -584,34 +596,23 @@ void MapRoute_RenderAutoPath(int nodeA, int nodeB, u16 * buf, int size, u16 oam2
                                      : gWMRoadPiece_DiagNwSe_ConnectVerticalNW;
         }
 
-        WmRoad_StampDiagonal(piece, buf, size, x, y, oam2);
-
-        if (i + 1 == nDiag && remX != remY)
-        {
-            if (remX > remY)
-                x += stepX;
-            else
-                y += stepY;
-        }
-        else
-        {
-            x += stepX;
-            y += stepY;
-        }
+        WmRoad_StampDiagonal(piece, buf, size, x, y, stepX, stepY, oam2);
+        x += stepX;
+        y += stepY;
     }
     remX -= nDiag;
     remY -= nDiag;
 
     while (remX > 0)
     {
-        WmRoad_StampStraight(gWMRoadPiece_Horizontal, buf, size, x, y, oam2);
+        WmRoad_StampHorizontal(buf, size, x, y, stepX, oam2);
         x += stepX;
         remX--;
     }
 
     while (remY > 0)
     {
-        WmRoad_StampStraight(gWMRoadPiece_Vertical, buf, size, x, y, oam2);
+        WmRoad_StampVertical(buf, size, x, y, stepY, oam2);
         y += stepY;
         remY--;
     }

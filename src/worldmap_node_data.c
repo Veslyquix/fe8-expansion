@@ -187,20 +187,14 @@ const struct NodeIcon gWMNodeIconData[] =
         (1,1, 2,2) // correct 
         (1,1, 3,3) 
         (1,1, 1,1) // does nothing, as it should 
-
-// bad: 
-        (2,1, 2,2) // appears 1 tile to the east of where it should be 
-        (1,1, 0,0) // apears 1 tile southeast of where it should go 
-        (1,1, 0,1) // apears 1 tile southeast of where it should go  
-        (1,1, 0,2) // appears 1 tile to the east of where it should go 
-        (1,1, 1,0) // // apears 1 tile southeast of where it should go 
-        (1,1, 1,2) // appears 1 tile to the east of where it should go 
-        (1,1, 2,0) // appears 1 tile south 
-        (1,1, 2,1) // appears 1 tile south 
-        (1,1, 3,0) // appears 1 tile south, horizontal continuation teleports 1 tile further south 
-        (1,1, 3,1) // appears 1 tile south 
-        (1,1, 3,2) // starts with wrong tile type 1 tile south: should be diag SE twice instead of once 
+        (1,1, 3,4)
+        (1,1, 2,4)
         
+// bad: 
+
+        (1,1, 3,2) // starts with wrong tile type 1 tile south: should be diag SE twice instead of once 
+        (1,1, 4,2)
+        (1,1, 5,2) 
 
 */
 
