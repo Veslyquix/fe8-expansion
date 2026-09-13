@@ -2790,9 +2790,6 @@ CONST_DATA struct ItemData gItemData[] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
 		.number = ITEM_UNK_BD,
-		/* Also used (FE8_SKILLSYSTEM) as UnitCall_SetUpSoloAttackAnim's
-		 * (src/unitcall.c) internal-only Axe weapon for Fighter callers --
-		 * already an unused dummy slot, no other changes needed here. */
 		.weaponType = ITYPE_AXE,
 		.attributes = IA_WEAPON,
 		.encodedRange = 0x11,
@@ -2803,13 +2800,7 @@ CONST_DATA struct ItemData gItemData[] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
 		.number = ITEM_UNK_BE,
-		/* Repurposed (FE8_SKILLSYSTEM) as the internal-only Anima weapon
-		 * UnitCall_SetUpSoloAttackAnim (src/unitcall.c) passes into
-		 * gBattleActor to drive Call's cosmetic solo animation for Mage
-		 * callers -- never given to a unit, never sold/dropped. Was
-		 * ITYPE_DARK; nothing else in the codebase references
-		 * ITEM_UNK_BE (confirmed via grep), so retyping it is safe. */
-		.weaponType = ITYPE_ANIMA,
+		.weaponType = ITYPE_DARK,
 		.attributes = IA_WEAPON | IA_MAGIC,
 		.might = 11,
 		.hit = 80,
@@ -2861,17 +2852,23 @@ CONST_DATA struct ItemData gItemData[] = {
 		.weaponExp = 1,
 	},
 	[ITEM_UNK_C3] = {
-		.nameTextId = 0x403,
-		.descTextId = 0x4ab,
+		.nameTextId = MSG_ITEM_CALL_NAME,
+		.descTextId = MSG_4AB,
 		.number = ITEM_UNK_C3,
-		/* Also used (FE8_SKILLSYSTEM) as UnitCall_SetUpSoloAttackAnim's
-		 * (src/unitcall.c) internal-only Lance weapon for Soldier/Armor
-		 * Knight callers -- already an unused dummy slot, no other changes
-		 * needed here. */
-		.weaponType = ITYPE_LANCE,
-		.attributes = IA_WEAPON,
-		.encodedRange = 0x11,
-		.iconId = 0x0,
+		/* Repurposed (FE8_SKILLSYSTEM) as ITEM_CALL: the internal-only
+		 * weapon UnitCall_SetUpSoloAttackAnim (src/unitcall.c) passes into
+		 * gBattleActor to drive the Call command's cosmetic solo attack
+		 * animation. ITYPE_DANCE needs no weapon rank (matches
+		 * ITEM_UNK_CD, the other ITYPE_DANCE dummy, which has no
+		 * .attributes/.baseRanks requirement either) and, per
+		 * AnimConf_158/159 (src/data_banimconf.c), resolves to
+		 * CLASS_HORN_BRIGAND/CLASS_HORN_SOLDIER's own real attack pose.
+		 * Was ITYPE_LANCE; already an unused dummy slot, safe to retype.
+		 * iconId 0xDE = item_icon_horn (src/data/data_item_icon.c), art:
+		 * "Horn of the Savage" (Tactics Ogre: LUCT, EldritchAbo, serebii01). */
+		.weaponType = ITYPE_DANCE,
+		.encodedRange = 0x12,
+		.iconId = 0xde,
 		.weaponExp = 1,
 	},
 	[ITEM_UNK_C4] = {

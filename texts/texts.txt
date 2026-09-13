@@ -41122,3 +41122,6 @@ ranged combat and survival.[X]
 
 ## MSG_UNIT_ACTION_CALL
  Call[.][X]
+
+## MSG_ITEM_CALL_NAME
+Horn[X]

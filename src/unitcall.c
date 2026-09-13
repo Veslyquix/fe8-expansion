@@ -416,53 +416,34 @@ void UnitCallWalker_OnEnd(struct UnitCallWalkerProc* proc)
         sUnitCallActiveWalkers--;
 }
 
-// ITEM_UNK_C3/BD/BE are otherwise-unused vanilla dummy weapon slots
-// (src/data_items.c) repurposed to drive this: each carries a
+// ITEM_UNK_C3 is an otherwise-unused vanilla dummy weapon slot
+// (src/data_items.c), repurposed as ITEM_CALL: an internal-only ITYPE_DANCE
+// weapon (needs no weapon rank) that UnitCall_SetUpSoloAttackAnim passes
+// into gBattleActor to drive Call's cosmetic solo animation. It carries a
 // SPELL_ASSOC_DATA count=1 entry (src/spellassoc-data.c), which is what
 // routes the Ekr battle intro to a solo/single-unit-centered scene instead
 // of a normal two-sided one (the same mechanism ITEM_STAFF_LATONA uses).
-// Real callable-weapon items don't have such an entry -- adding one to a
-// real weapon would also force every ordinary battle using it (any unit,
-// any time) into the same solo layout, so a dedicated per-category
-// placeholder is used instead of the caller's real equipped weapon.
-static u16 GetCallAnimWeapon(struct Unit* unit)
-{
-    switch (unit->pClassData->number) {
-        case CLASS_FIGHTER:
-            return ITEM_UNK_BD; // Axe
+// Per AnimConf_158/159 (src/data_banimconf.c), an ITYPE_DANCE weapon
+// resolves to CLASS_HORN_BRIGAND/CLASS_HORN_SOLDIER's own real attack pose.
+#define ITEM_CALL ITEM_UNK_C3
 
-        case CLASS_MAGE:
-        case CLASS_MAGE_F:
-            return ITEM_UNK_BE; // Anima
-
-        case CLASS_SOLDIER:
-        case CLASS_ARMOR_KNIGHT:
-        case CLASS_ARMOR_KNIGHT_F:
-        default:
-            return ITEM_UNK_C3; // Lance
-    }
-}
-
-// Sets up a solo attack-swing animation (a class-appropriate placeholder
-// weapon -- see GetCallAnimWeapon -- self-targeted) with a guaranteed miss
-// so nothing actually takes damage. BattleInitItemEffect(unit, -1) leaves
-// gBattleActor.weaponSlotIndex at -1 (no real inventory slot involved), so
-// overwriting its weapon fields afterward never touches unit->items[].
-// Unlike a real ActionCombat, there's no BattleApplyItemEffect (that would
-// grant exp / consume weapon durability -- moot here anyway, since this
-// isn't a real inventory item) and no BattleApplyGameStateUpdates afterward
-// (no real target to update).
+// Sets up a solo attack-swing animation (ITEM_CALL, self-targeted) with a
+// guaranteed miss so nothing actually takes damage. BattleInitItemEffect(unit,
+// -1) leaves gBattleActor.weaponSlotIndex at -1 (no real inventory slot
+// involved), so overwriting its weapon fields afterward never touches
+// unit->items[]. Unlike a real ActionCombat, there's no BattleApplyItemEffect
+// (that would grant exp / consume weapon durability -- moot here anyway,
+// since this isn't a real inventory item) and no BattleApplyGameStateUpdates
+// afterward (no real target to update).
 static void UnitCall_SetUpSoloAttackAnim(struct Unit* unit)
 {
-    u16 weapon = GetCallAnimWeapon(unit);
-
     BattleInitItemEffect(unit, -1);
     BattleInitItemEffectTarget(unit);
 
-    gBattleActor.weapon = weapon;
-    gBattleActor.weaponBefore = weapon;
-    gBattleActor.weaponType = GetItemType(weapon);
-    gBattleActor.weaponAttributes = GetItemAttributes(weapon);
+    gBattleActor.weapon = ITEM_CALL;
+    gBattleActor.weaponBefore = ITEM_CALL;
+    gBattleActor.weaponType = GetItemType(ITEM_CALL);
+    gBattleActor.weaponAttributes = GetItemAttributes(ITEM_CALL);
 
     gBattleHitIterator->info |= BATTLE_HIT_INFO_BEGIN;
     gBattleHitIterator->attributes |= BATTLE_HIT_ATTR_MISS;
@@ -510,7 +491,7 @@ s8 ActionCall(ProcPtr proc)
         StartUnitCallConvergence(gActiveUnit);
     }
 
-    return 1;
+    return 0;
 }
 
 u8 CallCommandUsability(const struct MenuItemDef* def, int number)

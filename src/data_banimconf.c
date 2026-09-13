@@ -3296,6 +3296,13 @@ CONST_DATA struct BattleAnimDef AnimConf_158[] = { // Horn_Brigand
         .wtype = 0x0100 | ITYPE_ITEM,
         .index = 0x019C,
     },
+    // Explicit wiring (FE8_SKILLSYSTEM) for ITEM_CALL: the Call command's
+    // cosmetic solo animation (src/unitcall.c) uses this class's own real
+    // attack pose, same index as the ITYPE_AXE/ITYPE_ITEM entries above.
+    {
+        .wtype = 0x0100 | ITYPE_DANCE,
+        .index = 0x019C,
+    },
     { 0 }
 };
 
@@ -3306,6 +3313,11 @@ CONST_DATA struct BattleAnimDef AnimConf_159[] = { // Horn_Soldier
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x019D,
+    },
+    // Explicit wiring (FE8_SKILLSYSTEM) for ITEM_CALL: see AnimConf_158 above.
+    {
+        .wtype = 0x0100 | ITYPE_DANCE,
         .index = 0x019D,
     },
     { 0 }
