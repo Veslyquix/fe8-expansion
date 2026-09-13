@@ -49,7 +49,8 @@ CONST_DATA EventScr EventScrWM_Prologue_Beginning[] = {
 
     // wait for talk locked
     TEXTEND
-
+    WM_CREATENEXTDESTINATION
+    WM_WAITFORFX
     SKIPWN
     ENDA
 };
@@ -202,6 +203,7 @@ CONST_DATA EventListScr EventScr_Prologue_EndingScene[] = {
     MUNO
 
     MNCH(0x1)
+    // WmEvtSetUnitOnNode(WM_MU_0, WM_NODE_BorderMulan) // doesn't seem to help here 
     ENDA
 };
 

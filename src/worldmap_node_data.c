@@ -203,7 +203,7 @@ const struct GMapNodeData gWMNodeData[] =
     },
     [NODE_CASTLE_FRELIA] =
     {
-        .placementFlag = GMAP_NODE_PLACEMENT_PROGRESSION,
+        .placementFlag = GMAP_NODE_PLACEMENT_FRELIA,
         .encounters = GMAP_ENCOUNTERS_NONE,
         .iconPreClear = 0x0F,
         .iconPostClear = 0x0F,

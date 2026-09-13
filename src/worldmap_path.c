@@ -194,7 +194,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_BORDER_MULAN,
             [1] = NODE_CASTLE_FRELIA,
         },
-        .movementPath = gWorldmapPath_0,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_3,
@@ -202,7 +202,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_CASTLE_FRELIA,
             [1] = NODE_IDE,
         },
-        .movementPath = gWorldmapPath_1,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_4,
@@ -234,7 +234,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_SERAFEW,
             [1] = NODE_ADLAS_PLAINS,
         },
-        .movementPath = gWorldmapPath_2,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_8,
@@ -242,7 +242,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_ADLAS_PLAINS,
             [1] = NODE_RENVALL_07,
         },
-        .movementPath = gWorldmapPath_3,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_9,
@@ -250,7 +250,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_ADLAS_PLAINS,
             [1] = NODE_RENVALL_08,
         },
-        .movementPath = gWorldmapPath_3,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_10,
@@ -258,7 +258,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_BORDER_MULAN,
             [1] = NODE_PORT_KIRIS,
         },
-        .movementPath = gWorldmapPath_4,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_11,
@@ -290,7 +290,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_CAER_PELYN,
             [1] = NODE_HAMILL_CANYON,
         },
-        .movementPath = gWorldmapPath_5,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_15,
@@ -306,7 +306,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_CASTLE_FRELIA,
             [1] = NODE_FORT_RIGWALD,
         },
-        .movementPath = gWorldmapPath_6,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_17,
@@ -314,7 +314,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_FORT_RIGWALD,
             [1] = NODE_BETHROEN,
         },
-        .movementPath = gWorldmapPath_7,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_18,
@@ -322,7 +322,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_BETHROEN,
             [1] = NODE_TAIZEL,
         },
-        .movementPath = gWorldmapPath_8,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_19,
@@ -330,7 +330,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_TAIZEL,
             [1] = NODE_ZAALBUL_MARSH,
         },
-        .movementPath = gWorldmapPath_9,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_20,
@@ -346,7 +346,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_GRADO_KEEP,
             [1] = NODE_JEHANNA_HALL_13,
         },
-        .movementPath = gWorldmapPath_10,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_22,
@@ -354,7 +354,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_RENVALL_08,
             [1] = NODE_GRADO_KEEP,
         },
-        .movementPath = gWorldmapPath_11,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_23,
@@ -362,7 +362,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_JEHANNA_HALL_13,
             [1] = NODE_RENAIS_CASTLE,
         },
-        .movementPath = gWorldmapPath_12,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_24,
@@ -378,7 +378,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_BORDER_MULAN,
             [1] = NODE_RENAIS_CASTLE,
         },
-        .movementPath = gWorldmapPath_13,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_26,
@@ -386,7 +386,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_JEHANNA_HALL_13,
             [1] = NODE_NARUBE_RIVER,
         },
-        .movementPath = gWorldmapPath_14,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_27,
@@ -410,7 +410,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_RAUSTEN_COURT,
             [1] = NODE_BLACK_TEMPLE,
         },
-        .movementPath = gWorldmapPath_15,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_30,
@@ -418,7 +418,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_RAUSTEN_COURT,
             [1] = NODE_LAGDOU_RUINS,
         },
-        .movementPath = gWorldmapPath_16,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_31,
@@ -426,7 +426,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_RAUSTEN_COURT,
             [1] = NODE_MELKAEN_COAST,
         },
-        .movementPath = gWorldmapPath_17,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_32,
@@ -434,7 +434,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_PORT_KIRIS,
             [1] = NODE_MELKAEN_COAST,
         },
-        .movementPath = gWorldmapPath_18,
+        .movementPath = NULL,
     },
     {
         .gfxData = gWorldmapSprite_33,
@@ -442,7 +442,7 @@ const struct GMapPathData gWMPathData[] =
             [0] = NODE_DARKLING_WOODS,
             [1] = NODE_BLACK_TEMPLE,
         },
-        .movementPath = gWorldmapPath_19,
+        .movementPath = NULL,
     },
 };
 
