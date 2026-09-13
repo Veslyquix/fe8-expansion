@@ -511,6 +511,23 @@ static void WmRoad_StampDiagonal(const u8 * piece, u16 * buf, int size, int x, i
     MapRoute_RenderPathGfx((u8 *)piece, buf + ((y - 1) * size + (x - 1)), size, oam2);
 }
 
+static int WmRoad_GetNodeAXTileCoord(s16 coord)
+{
+    return coord / 8;
+}
+static int WmRoad_GetNodeAYTileCoord(s16 coord)
+{
+    return coord / 8 - 1;
+}
+static int WmRoad_GetNodeBXTileCoord(s16 coord)
+{
+    return coord / 8 - 1;
+}
+static int WmRoad_GetNodeBYTileCoord(s16 coord)
+{
+    return coord / 8 - 1;
+}
+
 /* Builds a road between two world map nodes out of the generic road pieces
  * above instead of a hand-authored gWorldmapSprite_N line: walks tile by
  * tile from nodeA's position towards nodeB's, spending a diagonal stamp
@@ -522,10 +539,10 @@ static void WmRoad_StampDiagonal(const u8 * piece, u16 * buf, int size, int x, i
  * showing a hard style change. */
 void MapRoute_RenderAutoPath(int nodeA, int nodeB, u16 * buf, int size, u16 oam2)
 {
-    int x = nodeA[gWMNodeData].x / 8;
-    int y = nodeA[gWMNodeData].y / 8;
-    int destX = nodeB[gWMNodeData].x / 8;
-    int destY = nodeB[gWMNodeData].y / 8;
+    int x = WmRoad_GetNodeAXTileCoord(nodeA[gWMNodeData].x);
+    int y = WmRoad_GetNodeAYTileCoord(nodeA[gWMNodeData].y);
+    int destX = WmRoad_GetNodeBXTileCoord(nodeB[gWMNodeData].x);
+    int destY = WmRoad_GetNodeBYTileCoord(nodeB[gWMNodeData].y);
     int dx = destX - x;
     int dy = destY - y;
     int stepX = (dx >= 0) ? 1 : -1;
