@@ -180,7 +180,7 @@ const struct NodeIcon gWMNodeIconData[] =
         .yFlagOrigin = 8,
     },
 };
-
+#define WMC(val) (val * 16 + 8)
 const struct GMapNodeData gWMNodeData[] =
 {
     [NODE_BORDER_MULAN] =
@@ -196,8 +196,8 @@ const struct GMapNodeData gWMNodeData[] =
         .armory = ItemList_WM_BorderMulan_Armory,
         .vendor = ItemList_WM_BorderMulan_Vendor,
         .secretShop = ItemList_WM_BorderMulan_SecretShop,
-        .x = 372,
-        .y = 286,
+        .x = WMC(23),
+        .y = WMC(18),
         .nameTextId = MSG_650, // "Border Mulan"
         .shipTravelFlag = 0,
     },
@@ -214,8 +214,8 @@ const struct GMapNodeData gWMNodeData[] =
         .armory = ItemList_WM_CastleFrelia_Armory,
         .vendor = ItemList_WM_CastleFrelia_Vendor,
         .secretShop = ItemList_WM_CastleFrelia_SecretShop,
-        .x = 382,
-        .y = 265,
+        .x = WMC(24),
+        .y = WMC(16),
         .nameTextId = MSG_651, // "Castle Frelia[.]"
         .shipTravelFlag = 0,
     },

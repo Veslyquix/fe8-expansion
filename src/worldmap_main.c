@@ -674,6 +674,21 @@ s8 WorldMap_HandleNodeConfirm(struct WorldMapMainProc * param_1, int param_2)
     return 0;
 }
 
+#if FE8_WORLDMAP_REWORK 
+#define WM_CURSOR_STEP 8 
+#define WMB_X 1 
+#define WMB_X2 (29*2) 
+#define WMB_Y 1 
+#define WMB_Y2 (19*2) 
+#else 
+#define WM_CURSOR_STEP 16 
+// #define WMB_X 1 
+// #define WMB_X2 28 
+// #define WMB_Y 1 
+// #define WMB_Y2 18 
+#endif 
+
+
 //! FE8U = 0x080B93E0
 void WmMain_MoveCursor(struct WorldMapMainProc * proc)
 {
@@ -727,13 +742,8 @@ void WmMain_MoveCursor(struct WorldMapMainProc * proc)
         }
     } while (0);
 
-#if FE8_WORLDMAP_REWORK
-    xCursorPrev = ((gGMData.ix >> 8) / 8);
-    yCursorPrev = ((gGMData.iy >> 8) / 8);
-#else
-    xCursorPrev = ((gGMData.ix >> 8) / 16);
-    yCursorPrev = ((gGMData.iy >> 8) / 16);
-#endif
+    xCursorPrev = ((gGMData.ix >> 8) / WM_CURSOR_STEP);
+    yCursorPrev = ((gGMData.iy >> 8) / WM_CURSOR_STEP);
 
     xCursorNew = xCursorPrev;
     yCursorNew = yCursorPrev;
@@ -749,15 +759,15 @@ void WmMain_MoveCursor(struct WorldMapMainProc * proc)
         yCursorNew--;
 
 #if FE8_WORLDMAP_REWORK
-    if (xCursorNew < 3)
-        xCursorNew = 3;
-    else if (xCursorNew > 57)
-        xCursorNew = 57;
+    if (xCursorNew < WMB_X)
+        xCursorNew = WMB_X;
+    else if (xCursorNew > WMB_X2)
+        xCursorNew = WMB_X2;
 
-    if (yCursorNew < 3)
-        yCursorNew = 3;
-    else if (yCursorNew > 37)
-        yCursorNew = 37;
+    if (yCursorNew < WMB_Y)
+        yCursorNew = WMB_Y;
+    else if (yCursorNew > WMB_Y2)
+        yCursorNew = WMB_Y2;
 #else
     if (xCursorNew < 1)
         xCursorNew = 1;
@@ -773,14 +783,13 @@ void WmMain_MoveCursor(struct WorldMapMainProc * proc)
     if ((xCursorPrev != xCursorNew) || (yCursorPrev != yCursorNew))
     {
         PlaySoundEffect(SONG_65);
-
 #if FE8_WORLDMAP_REWORK
-        pos.x = xCursorNew * 8;
-        pos.y = yCursorNew * 8;
-#else
-        pos.x = xCursorNew * 16 + 8;
-        pos.y = yCursorNew * 16 + 8;
-#endif
+        pos.x = xCursorNew * WM_CURSOR_STEP;
+        pos.y = yCursorNew * WM_CURSOR_STEP; 
+#else 
+        pos.x = xCursorNew * WM_CURSOR_STEP + 8;
+        pos.y = yCursorNew * WM_CURSOR_STEP + 8; 
+#endif 
 
         StartGmMoveCursor(0, &pos, duration, 0, proc);
     }
