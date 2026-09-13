@@ -390,6 +390,9 @@ enum
 #if FE8_PURCHASE_GENERICS
     UNIT_ACTION_MERGE = 0x26,
 #endif
+#if FE8_SKILLSYSTEM
+    UNIT_ACTION_CALL = 0x27,
+#endif
 };
 
 enum

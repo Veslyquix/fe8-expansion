@@ -416,6 +416,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
                            show_heal_amount=0,
                            cannot_crit_weps=0,
+                           skillsystem=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -455,6 +456,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
     range_rework_flag = validate_feature_flag("RANGE_REWORK", range_rework)
     cannot_crit_weps_flag = validate_feature_flag("CANNOT_CRIT_WEPS", cannot_crit_weps)
+    skillsystem_flag = validate_feature_flag("SKILLSYSTEM", skillsystem)
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
     fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
@@ -527,7 +529,8 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             anims_fast_forward_flag, nimap2_flag, worldmap_rework_flag, rand_bgm_flag, continue_bgm_battle_flag,
             dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag, l_cycle_flag,
             movearrow_hack_flag,
-            custom_formulas_flag, mode_select_flag, heal_amount_flag, cannot_crit_weps_flag)
+            custom_formulas_flag, mode_select_flag, heal_amount_flag, cannot_crit_weps_flag,
+            skillsystem_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -760,6 +763,7 @@ class ExpansionIdentity:
     alpha_sprite_arrow: int = 0
     range_rework: int = 0
     cannot_crit_weps: int = 0
+    skillsystem: int = 0
     turn_autosave: int = 0
     fort_units_start_greyed_out: int = 0
     promote_command: int = 0
@@ -853,6 +857,7 @@ class ExpansionIdentity:
                 "alpha_sprite_arrow": self.alpha_sprite_arrow,
                 "range_rework": self.range_rework,
                 "cannot_crit_weps": self.cannot_crit_weps,
+                "skillsystem": self.skillsystem,
                 "turn_autosave": self.turn_autosave,
                 "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "promote_command": self.promote_command,
@@ -934,6 +939,7 @@ def load_identity(
     alpha_sprite_arrow=None,
     range_rework=None,
     cannot_crit_weps=None,
+    skillsystem=None,
     turn_autosave=None,
     fort_units_start_greyed_out=None,
     promote_command=None,
@@ -1020,7 +1026,8 @@ def load_identity(
      resolved_nimap2, resolved_worldmap_rework, resolved_rand_bgm, resolved_continue_bgm_battle,
      resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
      resolved_rng_randomizer, resolved_l_cycle, resolved_movearrow_hack, resolved_custom_formulas,
-     resolved_mode_select, resolved_show_heal_amount, resolved_cannot_crit_weps) = validate_feature_flags(
+     resolved_mode_select, resolved_show_heal_amount, resolved_cannot_crit_weps,
+     resolved_skillsystem) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1168,6 +1175,9 @@ def load_identity(
         cannot_crit_weps
         if cannot_crit_weps not in (None, "")
         else cfg.get("CANNOT_CRIT_WEPS", "0"),
+        skillsystem
+        if skillsystem not in (None, "")
+        else cfg.get("SKILLSYSTEM", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1228,6 +1238,7 @@ def load_identity(
         alpha_sprite_arrow=resolved_alpha_sprite_arrow,
         range_rework=resolved_range_rework,
         cannot_crit_weps=resolved_cannot_crit_weps,
+        skillsystem=resolved_skillsystem,
         turn_autosave=resolved_autosave,
         fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         promote_command=resolved_promote_command,
@@ -1489,6 +1500,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override CANNOT_CRIT_WEPS (0 or 1)",
     )
     parser.add_argument(
+        "--skillsystem",
+        default=None,
+        help="override SKILLSYSTEM (0 or 1)",
+    )
+    parser.add_argument(
         "--turn-autosave",
         default=None,
         help="override TURN_AUTOSAVE (0 or 1)",
@@ -1675,6 +1691,7 @@ def main(argv=None) -> int:
             alpha_sprite_arrow=args.alpha_sprite_arrow,
             range_rework=args.range_rework,
             cannot_crit_weps=args.cannot_crit_weps,
+            skillsystem=args.skillsystem,
             turn_autosave=args.turn_autosave,
             fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             promote_command=args.promote_command,

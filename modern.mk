@@ -264,6 +264,9 @@ endif
 ifeq ($(FORT_UNITS_START_GREYED_OUT),1)
 MODERN_DEFINE_FLAGS += -DFE8_FORT_UNITS_START_GREYED_OUT=1
 endif
+ifeq ($(SKILLSYSTEM),1)
+MODERN_DEFINE_FLAGS += -DFE8_SKILLSYSTEM=1
+endif
 ifeq ($(PROMOTE_COMMAND),1)
 MODERN_DEFINE_FLAGS += -DFE8_PROMOTE_COMMAND=1
 endif
@@ -1729,6 +1732,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--cannot-crit-weps "$(CANNOT_CRIT_WEPS)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
 		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
+		--skillsystem "$(SKILLSYSTEM)" \
 		--promote-command "$(PROMOTE_COMMAND)" \
 		--fix-bugs "$(FIX_BUGS)" \
 		--credits "$(CREDITS)" \
@@ -1839,6 +1843,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--cannot-crit-weps "$(CANNOT_CRIT_WEPS)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
 	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
+	--skillsystem "$(SKILLSYSTEM)" \
 	--promote-command "$(PROMOTE_COMMAND)" \
 	--fix-bugs "$(FIX_BUGS)" \
 	--credits "$(CREDITS)" \
@@ -1954,6 +1959,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_CANNOT_CRIT_WEPS=$(CANNOT_CRIT_WEPS) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
+	-DFE8_SKILLSYSTEM=$(SKILLSYSTEM) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS) \
@@ -2156,6 +2162,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
 		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
+		printf '%s\n' 'skillsystem=$(SKILLSYSTEM)'; \
 		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \
 		printf '%s\n' 'fix_bugs=$(FIX_BUGS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \

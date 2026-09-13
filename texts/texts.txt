@@ -41119,3 +41119,6 @@ Adventurer[X]
 ## MSG_CLASS_ADVENTURER_DESC
 An intrepid explorer skilled in[N]
 ranged combat and survival.[X]
+
+## MSG_UNIT_ACTION_CALL
+ Call[.][X]

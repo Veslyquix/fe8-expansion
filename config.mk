@@ -180,8 +180,12 @@ CUSTOM_CAMPAIGN ?= 1
 PURCHASE_GENERICS ?= 1
 
 # --- Optional FortUnitsStartGreyedOut --------------------------------------------
-# Units spawned from forts cannot immediately act. 
+# Units spawned from forts cannot immediately act.
 FORT_UNITS_START_GREYED_OUT ?= 1
+
+# --- Optional skill system --------------------------------------------------
+# Unit skills (e.g. character-id-gated commands like Call).
+SKILLSYSTEM ?= 0
 
 
 # --- Optional procedural maps ------------------------------------------------

@@ -12,6 +12,7 @@
 #include "purchase_generics.h"
 #include "promote_command.h"
 #include "power.h"
+#include "unitcall.h"
 
 #include "constants/msg.h"
 
@@ -227,6 +228,9 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　救出", 0x689, 0x6C5, 0, 0x63, RescueUsability, 0, RescueEffect, 0, 0, 0}, // Rescue >
 #if FE8_PURCHASE_GENERICS
     {"", MSG_UNIT_ACTION_MERGE, 0, 0, 0, MergeUsability, 0, MergeEffect, 0, 0, 0}, // Merge with an adjacent generic of the same class >
+#endif
+#if FE8_SKILLSYSTEM
+    {"", MSG_UNIT_ACTION_CALL, 0, 0, 0, CallCommandUsability, 0, CallCommandEffect, 0, 0, 0}, // Call nearby allies to converge on the caller
 #endif
     {"　降ろす", 0x68A, 0x6C6, 0, 0x64, DropUsability, 0, DropEffect, 0, 0, 0}, // Drop >
     {"　引受け", 0x68B, 0x6C8, 4, 0x65, TakeUsability, 0, TakeEffect, 0, 0, 0}, // Take > 
