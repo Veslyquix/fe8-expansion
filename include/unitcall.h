@@ -19,6 +19,12 @@
 // Largest number of allied units the convergence proc can track at once.
 #define UNIT_CALL_MAX_TARGETS 16
 
+// Per-walker movement script buffer size. UNIT_MOV_MAX(aUnit) is a hard 15
+// tile-move cap (include/bmunit.h), so 15 move commands + 1 halt always
+// fits -- far short of MOVE_CMD_MAX_COUNT (0x40), which sizes the general
+// purpose (but unrelated) gWorkingMovementScript buffer.
+#define UNIT_CALL_SCRIPT_LEN 16
+
 // Whether unit is allowed to use the Call command at all (character check
 // plus the usual "hasn't acted" gate).
 bool CanUnitCall(struct Unit* unit);

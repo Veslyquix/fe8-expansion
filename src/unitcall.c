@@ -16,38 +16,60 @@
 #include "constants/characters.h"
 #include "constants/classes.h"
 
-// Precomputed per-candidate movement scripts/destinations, built once (all
-// candidates at once) when a Call is issued. Kept out of struct UnitCallProc
-// because the Proc pool hands out fixed sizeof(struct Proc) slots (see
-// src/proc.c) with no room for a ~1KB table.
-static u8 sUnitCallScripts[UNIT_CALL_MAX_TARGETS][MOVE_CMD_MAX_COUNT];
-static u8 sUnitCallDestX[UNIT_CALL_MAX_TARGETS];
-static u8 sUnitCallDestY[UNIT_CALL_MAX_TARGETS];
+// One tiny walker proc per unit currently walking toward the caller (see
+// struct UnitCallWalkerProc below) -- mirrors Make6CKOIDO_common's pattern
+// (src/koido.c) of keeping a unit's own move-command buffer inside its own
+// proc struct and handing it to SetMuMoveScript, rather than a shared
+// scratch table sized for every possible target. Ticked up whenever a
+// walker proc actually starts an MU, ticked down in its own end callback,
+// so the conductor never needs to enumerate/dereference specific procs to
+// know how many are in flight.
+static u8 sUnitCallActiveWalkers;
 
-struct UnitCallSlot {
-    u8 unitId; // 0 == this MU slot is idle
-    u8 originX;
-    u8 originY;
+struct UnitCallWalkerProc {
+    PROC_HEADER;
+
+    u8 unitId;
     u8 destX;
     u8 destY;
-    u8 scriptIndex; // index into sUnitCallScripts/sUnitCallDest{X,Y}
+    u8 script[UNIT_CALL_SCRIPT_LEN];
 };
 
+void UnitCallWalker_Update(struct UnitCallWalkerProc* proc);
+void UnitCallWalker_OnEnd(struct UnitCallWalkerProc* proc);
+
+struct ProcCmd CONST_DATA gProcScr_UnitCallWalker[] = {
+    PROC_NAME("CALLWALK"),
+    PROC_SET_END_CB(UnitCallWalker_OnEnd),
+    PROC_REPEAT(UnitCallWalker_Update),
+    PROC_END,
+};
+
+// The conductor: just the queue of who's still waiting to be sent walking
+// plus the bookkeeping to stagger the initial few. Sized to fit comfortably
+// inside a single Proc slot (see src/proc.c, sizeof(struct Proc)).
 struct UnitCallProc {
     PROC_HEADER;
 
     u8 callerId;
-    u8 pendingIds[UNIT_CALL_MAX_TARGETS];
+    u8 pendingIds[UNIT_CALL_MAX_TARGETS]; // 0 == already consumed
     u8 pendingCount;
-    u8 nextPendingIndex;
-    u8 rampState; // index of the highest slot started so far by the stagger
-    struct UnitCallSlot slots[UNIT_CALL_MAX_CONCURRENT];
+    u8 totalStarted;
+    u8 rampUnitId; // unit whose progress currently gates the next stagger start; 0 once the initial ramp-up is done
 };
 
 void UnitCall_Update(struct UnitCallProc* proc);
 
 struct ProcCmd CONST_DATA gProcScr_UnitCall[] = {
     PROC_NAME("UNITCALL"),
+    // ApplyUnitAction (which starts this proc via ActionCall) and
+    // PlayerPhase_FinishAction's EndAllMus() call both run as PROC_CALL
+    // steps in the same player-phase script, so they execute in the same
+    // frame with no yield in between. Starting a walker's MU immediately
+    // would have it killed by that EndAllMus() before ever animating --
+    // sleep one frame so the first UnitCall_Update tick (and everything it
+    // starts) lands strictly after the turn-completion flow has finished.
+    PROC_SLEEP(1),
     PROC_REPEAT(UnitCall_Update),
     PROC_END,
 };
@@ -166,100 +188,119 @@ static int CountMoveSteps(const u8* script)
 {
     int i;
 
-    for (i = 0; i < MOVE_CMD_MAX_COUNT && script[i] != MOVE_CMD_HALT; i++)
+    for (i = 0; i < UNIT_CALL_SCRIPT_LEN && script[i] != MOVE_CMD_HALT; i++)
         ;
 
     return i;
 }
 
-// Starts the next not-yet-started pending unit (if any) walking into
-// proc's slotIndex; leaves the slot idle if nothing is left pending or no
-// MU proc is currently free.
-static void AdvancePendingIntoSlot(struct UnitCallProc* proc, int slotIndex)
+// Removes and returns the next not-yet-consumed id from proc->pendingIds
+// (0 if none left).
+static u8 PopNextPendingId(struct UnitCallProc* proc)
 {
-    int pendIdx;
-    u8 unitId;
-    struct Unit* unit;
-    struct UnitCallSlot* slot;
+    int i;
+
+    for (i = 0; i < proc->pendingCount; i++) {
+        if (proc->pendingIds[i] != 0) {
+            u8 id = proc->pendingIds[i];
+            proc->pendingIds[i] = 0;
+            return id;
+        }
+    }
+
+    return 0;
+}
+
+static bool HasNoMorePending(struct UnitCallProc* proc)
+{
+    int i;
+
+    for (i = 0; i < proc->pendingCount; i++) {
+        if (proc->pendingIds[i] != 0)
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+// Starts a walker (and its MU) for the next reachable pending candidate, if
+// any and if the MU pool has room. Skips (drops) any candidate that turns
+// out to be fully boxed in.
+static void TrySpawnNextWalker(struct UnitCallProc* proc)
+{
+    struct Unit* caller;
+    u8 candidateId;
+    struct Unit* candidate;
+    struct Vec2 dest;
+    struct UnitCallWalkerProc* walker;
     struct MuProc* mu;
 
-    while (proc->nextPendingIndex < proc->pendingCount
-           && proc->pendingIds[proc->nextPendingIndex] == 0)
-        proc->nextPendingIndex++;
-
-    if (proc->nextPendingIndex >= proc->pendingCount) {
-        proc->slots[slotIndex].unitId = 0;
+    if (!CanStartMu())
         return;
+
+    caller = GetUnit(proc->callerId);
+
+    for (;;) {
+        candidateId = PopNextPendingId(proc);
+
+        if (candidateId == 0)
+            return;
+
+        candidate = GetUnit(candidateId);
+
+        if (FindCallDestination(candidate, caller, &dest))
+            break;
+
+        // Boxed in -- drop it and try the next pending candidate.
     }
 
-    if (!CanStartMu()) {
-        // No free MU slot right now -- leave idle and retry next tick.
-        proc->slots[slotIndex].unitId = 0;
-        return;
+    // FindCallDestination's GenerateExtendedMovementMapOnRange call above
+    // repoints gWorkingBmMap at gBmMapRange -- point it back at the
+    // movement-cost map GenerateBestMovementScript needs to backtrack.
+    SetWorkingBmMap(gBmMapMovement);
+
+    walker = Proc_Start(gProcScr_UnitCallWalker, PROC_TREE_3);
+
+    if (!walker)
+        return; // proc pool exhausted; candidate is lost this call (rare)
+
+    walker->unitId = candidateId;
+    walker->destX = dest.x;
+    walker->destY = dest.y;
+
+    GenerateBestMovementScript(dest.x, dest.y, walker->script);
+
+    // Claim the destination so later candidates don't also path onto it.
+    gBmMapUnit[dest.y][dest.x] = candidate->index;
+
+    HideUnitSprite(candidate);
+    candidate->state |= US_HIDDEN; 
+    mu = StartMu(candidate);
+
+    if (mu) {
+        SetMuDefaultFacing(mu);
+        SetMuMoveScript(mu, walker->script);
     }
 
-    pendIdx = proc->nextPendingIndex;
-    unitId = proc->pendingIds[pendIdx];
-    unit = GetUnit(unitId);
-
-    HideUnitSprite(unit);
-    mu = StartMu(unit);
-
-    if (!mu) {
-        ShowUnitSprite(unit);
-        proc->slots[slotIndex].unitId = 0;
-        return;
-    }
-
-    proc->nextPendingIndex++;
-
-    slot = &proc->slots[slotIndex];
-    slot->unitId = unitId;
-    slot->originX = unit->xPos;
-    slot->originY = unit->yPos;
-    slot->destX = sUnitCallDestX[pendIdx];
-    slot->destY = sUnitCallDestY[pendIdx];
-    slot->scriptIndex = pendIdx;
-
-    SetMuDefaultFacing(mu);
-    SetMuMoveScript(mu, sUnitCallScripts[pendIdx]);
+    sUnitCallActiveWalkers++;
+    proc->totalStarted++;
+    proc->rampUnitId = candidateId;
 }
 
-// Commits the real position update for a unit whose MU has finished
-// walking (the actual struct Unit position/occupancy is deliberately left
-// untouched until the visual walk completes -- see StartUnitCallConvergence).
-static void FinishCallSlot(struct UnitCallProc* proc, int slotIndex)
+static bool IsUnitAtLeastThirdDone(u8 unitId)
 {
-    struct UnitCallSlot* slot = &proc->slots[slotIndex];
-    struct Unit* unit = GetUnit(slot->unitId);
-
-    gBmMapUnit[slot->originY][slot->originX] = 0;
-
-    unit->xPos = slot->destX;
-    unit->yPos = slot->destY;
-
-    gBmMapUnit[unit->yPos][unit->xPos] = unit->index;
-
-    ShowUnitSprite(unit);
-
-    slot->unitId = 0;
-}
-
-static bool SlotAtLeastThirdDone(struct UnitCallProc* proc, int slotIndex)
-{
-    struct UnitCallSlot* slot = &proc->slots[slotIndex];
     struct Unit* unit;
     struct MuProc* mu;
     int total;
 
-    if (slot->unitId == 0)
-        return TRUE; // nothing here to wait on -- don't block the ramp
+    if (unitId == 0)
+        return TRUE;
 
-    unit = GetUnit(slot->unitId);
+    unit = GetUnit(unitId);
     mu = GetUnitMu(unit);
 
     if (!mu || !IsMuActive(mu))
-        return TRUE; // already finished
+        return TRUE; // already finished (or never started)
 
     total = CountMoveSteps((u8*)mu->config->movescr);
 
@@ -271,49 +312,35 @@ static bool SlotAtLeastThirdDone(struct UnitCallProc* proc, int slotIndex)
 
 void UnitCall_Update(struct UnitCallProc* proc)
 {
-    int i;
-    bool anyActive = FALSE;
+    if (sUnitCallActiveWalkers < UNIT_CALL_MAX_CONCURRENT) {
+        bool canSpawn = TRUE;
 
-    for (i = 0; i < UNIT_CALL_MAX_CONCURRENT; i++) {
-        struct Unit* unit;
-        struct MuProc* mu;
+        // During the initial ramp (first UNIT_CALL_MAX_CONCURRENT starts),
+        // gate on the 1/3-progress rule so units peel off staggered instead
+        // of all at once. Once that many have been started, later
+        // backfills (a slot freed by a finished walker) are immediate.
+        if (proc->totalStarted < UNIT_CALL_MAX_CONCURRENT && proc->rampUnitId != 0)
+            canSpawn = IsUnitAtLeastThirdDone(proc->rampUnitId);
 
-        if (proc->slots[i].unitId == 0)
-            continue;
-
-        unit = GetUnit(proc->slots[i].unitId);
-        mu = GetUnitMu(unit);
-
-        if (!mu || !IsMuActive(mu)) {
-            FinishCallSlot(proc, i);
-            AdvancePendingIntoSlot(proc, i);
-        }
+        if (canSpawn)
+            TrySpawnNextWalker(proc);
     }
 
-    if (proc->rampState < UNIT_CALL_MAX_CONCURRENT - 1
-        && SlotAtLeastThirdDone(proc, proc->rampState)) {
-        proc->rampState++;
-        AdvancePendingIntoSlot(proc, proc->rampState);
-    }
-
-    for (i = 0; i < UNIT_CALL_MAX_CONCURRENT; i++) {
-        if (proc->slots[i].unitId != 0)
-            anyActive = TRUE;
-    }
-
-    if (!anyActive && proc->nextPendingIndex >= proc->pendingCount)
+    if (sUnitCallActiveWalkers == 0 && HasNoMorePending(proc)) { 
         Proc_End(proc);
+        RefreshEntityBmMaps();
+    }
+        
 }
 
 void StartUnitCallConvergence(struct Unit* caller)
 {
-    struct UnitCallProc* proc;
-    int i;
-
-    proc = Proc_Start(gProcScr_UnitCall, PROC_TREE_3);
+    struct UnitCallProc* proc = Proc_Start(gProcScr_UnitCall, PROC_TREE_3);
 
     if (!proc)
         return;
+
+    sUnitCallActiveWalkers = 0;
 
     proc->callerId = caller->index;
     proc->pendingCount = BuildCallTargetList(caller, proc->pendingIds);
@@ -321,37 +348,52 @@ void StartUnitCallConvergence(struct Unit* caller)
     if (proc->pendingCount > UNIT_CALL_MAX_TARGETS)
         proc->pendingCount = UNIT_CALL_MAX_TARGETS;
 
-    proc->nextPendingIndex = 0;
-    proc->rampState = 0;
+    proc->totalStarted = 0;
+    proc->rampUnitId = 0;
 
-    for (i = 0; i < UNIT_CALL_MAX_CONCURRENT; i++)
-        proc->slots[i].unitId = 0;
+    // Deliberately not starting the first walker here -- see the PROC_SLEEP
+    // note on gProcScr_UnitCall above. UnitCall_Update's first tick (after
+    // that sleep) starts it instead.
+}
 
-    // Precompute every candidate's path synchronously and up front, same as
-    // the AI does for a single unit (e.g. AiTryMoveTowards) -- the movement
-    // scratch buffers are safe to reuse here since no range overlay is
-    // currently on-screen (the unit menu that triggered this already
-    // closed). Claim each destination in gBmMapUnit immediately so later
-    // candidates in this same batch don't also path onto it.
-    for (i = 0; i < proc->pendingCount; i++) {
-        struct Unit* candidate = GetUnit(proc->pendingIds[i]);
-        struct Vec2 dest;
+void UnitCallWalker_Update(struct UnitCallWalkerProc* proc)
+{
+    struct Unit* unit = GetUnit(proc->unitId);
+    struct MuProc* mu = GetUnitMu(unit);
 
-        if (!FindCallDestination(candidate, caller, &dest)) {
-            proc->pendingIds[i] = 0; // fully boxed in -- drop it
-            continue;
-        }
+    if (mu && IsMuActive(mu))
+        return;
 
-        SetWorkingBmMap(gBmMapMovement);
-        GenerateBestMovementScript(dest.x, dest.y, sUnitCallScripts[i]);
+    // MOVE_CMD_HALT (what a normal completed walk ends on) only parks the
+    // MU proc in MU_STATE_INACTIVE -- it doesn't free its pool slot the way
+    // MOVE_CMD_END/EndMu do. Free it explicitly or it leaks a MU_MAX_COUNT
+    // slot for the rest of the session.
+    if (mu)
+        EndMu(mu);
 
-        sUnitCallDestX[i] = dest.x;
-        sUnitCallDestY[i] = dest.y;
+    gBmMapUnit[unit->yPos][unit->xPos] = 0;
 
-        gBmMapUnit[dest.y][dest.x] = candidate->index;
-    }
+    unit->xPos = proc->destX;
+    unit->yPos = proc->destY;
 
-    AdvancePendingIntoSlot(proc, 0);
+    gBmMapUnit[unit->yPos][unit->xPos] = unit->index;
+
+    ShowUnitSprite(unit);
+    unit->state &= ~(US_HIDDEN); 
+
+    // The unit's persistent map sprite handle caches its last-known screen
+    // position; ShowUnitSprite alone just clears the hide bit, so without
+    // this it reappears back at its origin tile instead of its destination.
+    
+    RefreshUnitSprites();
+
+    Proc_End(proc);
+}
+
+void UnitCallWalker_OnEnd(struct UnitCallWalkerProc* proc)
+{
+    if (sUnitCallActiveWalkers > 0)
+        sUnitCallActiveWalkers--;
 }
 
 s8 ActionCall(ProcPtr proc)

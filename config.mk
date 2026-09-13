@@ -185,7 +185,7 @@ FORT_UNITS_START_GREYED_OUT ?= 1
 
 # --- Optional skill system --------------------------------------------------
 # Unit skills (e.g. character-id-gated commands like Call).
-SKILLSYSTEM ?= 0
+SKILLSYSTEM ?= 1
 
 
 # --- Optional procedural maps ------------------------------------------------
