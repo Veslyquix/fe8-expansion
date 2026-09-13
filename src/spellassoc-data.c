@@ -57,14 +57,22 @@ CONST_DATA struct SpellAssoc gSpellAssocData[] = {
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_LANCE_AXEREAVER),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_LANCE_HEAVYSPEAR),
     SPELL_ASSOC_DATA_WPN(ITEM_LANCE_SHORTSPEAR, 3),
-    SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_UNK_C3),
+    // count=1 (not the usual _DEFAULT's 2): this dummy slot is also
+    // UnitCall_SetUpSoloAttackAnim's (src/unitcall.c, FE8_SKILLSYSTEM)
+    // internal Lance weapon, and count=1 is what routes the Ekr battle
+    // intro to a solo/single-unit-centered scene (see ITEM_STAFF_LATONA
+    // below for the same mechanism).
+    SPELL_ASSOC_DATA(ITEM_UNK_C3, 1, -1, NULL, true, MA_FACING_DEFAULT, SPELL_ASSOC_MCOLOR_NORMAL),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_IRON),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_STEEL),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_SILVER),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_VENIN),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_BRAVE),
     SPELL_ASSOC_DATA_WPN(ITEM_AXE_HANDAXE, 1),
-    SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_UNK_BD),
+    // count=1: this dummy slot doubles as UnitCall_SetUpSoloAttackAnim's
+    // (src/unitcall.c, FE8_SKILLSYSTEM) internal Axe weapon -- see the
+    // ITEM_UNK_C3 comment above.
+    SPELL_ASSOC_DATA(ITEM_UNK_BD, 1, -1, NULL, true, MA_FACING_DEFAULT, SPELL_ASSOC_MCOLOR_NORMAL),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_HAMMER),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_KILLER),
     SPELL_ASSOC_DATA_WPN_DEFAULT(ITEM_AXE_SWORDSLAYER),
@@ -158,7 +166,11 @@ CONST_DATA struct SpellAssoc gSpellAssocData[] = {
     SPELL_ASSOC_DATA_WPN_MAGIC(ITEM_UNK_C9, 0x38, SPELL_ASSOC_MCOLOR_LIGHT),
     SPELL_ASSOC_DATA_WPN_MAGIC(ITEM_DARK_LUNA, 0x34, SPELL_ASSOC_MCOLOR_DARK),
     SPELL_ASSOC_DATA_WPN_MAGIC(ITEM_UNK_CB, 0x36, SPELL_ASSOC_MCOLOR_DARK),
-    SPELL_ASSOC_DATA_WPN_MAGIC(ITEM_UNK_BE, 0x21, SPELL_ASSOC_MCOLOR_LIGHT),
+    // count=1, retyped to Anima in src/data_items.c: this dummy slot is
+    // UnitCall_SetUpSoloAttackAnim's (src/unitcall.c, FE8_SKILLSYSTEM)
+    // internal Anima weapon for Mage callers -- see the ITEM_UNK_C3 comment
+    // above for what count=1 does.
+    SPELL_ASSOC_DATA(ITEM_UNK_BE, 1, 0x21, NULL, true, MA_FACING_DEFAULT, SPELL_ASSOC_MCOLOR_FIRE),
     SPELL_ASSOC_DATA_WPN_MAGIC(ITEM_MONSTER_WRETCHAIR, 0x47, SPELL_ASSOC_MCOLOR_FIRE),
     SPELL_ASSOC_DATA_WPN_MAGIC(ITEM_UNK_CA, 0x39, SPELL_ASSOC_MCOLOR_DARK),
 

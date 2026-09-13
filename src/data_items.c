@@ -2790,6 +2790,9 @@ CONST_DATA struct ItemData gItemData[] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
 		.number = ITEM_UNK_BD,
+		/* Also used (FE8_SKILLSYSTEM) as UnitCall_SetUpSoloAttackAnim's
+		 * (src/unitcall.c) internal-only Axe weapon for Fighter callers --
+		 * already an unused dummy slot, no other changes needed here. */
 		.weaponType = ITYPE_AXE,
 		.attributes = IA_WEAPON,
 		.encodedRange = 0x11,
@@ -2800,7 +2803,13 @@ CONST_DATA struct ItemData gItemData[] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
 		.number = ITEM_UNK_BE,
-		.weaponType = ITYPE_DARK,
+		/* Repurposed (FE8_SKILLSYSTEM) as the internal-only Anima weapon
+		 * UnitCall_SetUpSoloAttackAnim (src/unitcall.c) passes into
+		 * gBattleActor to drive Call's cosmetic solo animation for Mage
+		 * callers -- never given to a unit, never sold/dropped. Was
+		 * ITYPE_DARK; nothing else in the codebase references
+		 * ITEM_UNK_BE (confirmed via grep), so retyping it is safe. */
+		.weaponType = ITYPE_ANIMA,
 		.attributes = IA_WEAPON | IA_MAGIC,
 		.might = 11,
 		.hit = 80,
@@ -2855,6 +2864,10 @@ CONST_DATA struct ItemData gItemData[] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
 		.number = ITEM_UNK_C3,
+		/* Also used (FE8_SKILLSYSTEM) as UnitCall_SetUpSoloAttackAnim's
+		 * (src/unitcall.c) internal-only Lance weapon for Soldier/Armor
+		 * Knight callers -- already an unused dummy slot, no other changes
+		 * needed here. */
 		.weaponType = ITYPE_LANCE,
 		.attributes = IA_WEAPON,
 		.encodedRange = 0x11,

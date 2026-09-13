@@ -9,12 +9,16 @@
 #include "bmidoten.h"
 #include "bmudisp.h"
 #include "bmmind.h"
+#include "bmbattle.h"
+#include "bmitem.h"
+#include "player_interface.h"
 #include "mu.h"
 #include "proc.h"
 #include "cp_common.h"
 
 #include "constants/characters.h"
 #include "constants/classes.h"
+#include "constants/items.h"
 
 // One tiny walker proc per unit currently walking toward the caller (see
 // struct UnitCallWalkerProc below) -- mirrors Make6CKOIDO_common's pattern
@@ -348,6 +352,22 @@ void StartUnitCallConvergence(struct Unit* caller)
     if (proc->pendingCount > UNIT_CALL_MAX_TARGETS)
         proc->pendingCount = UNIT_CALL_MAX_TARGETS;
 
+    // Every pending unit is about to walk away from its current tile, so
+    // clear all of them from the occupancy map up front, before anyone's
+    // destination is decided -- otherwise an earlier-decided unit's
+    // still-occupied origin would wrongly block a later unit from passing
+    // through or landing on it. TrySpawnNextWalker re-claims each unit's
+    // chosen destination as soon as it's decided, so two pending units can
+    // still never be routed onto the same tile.
+    {
+        int i;
+
+        for (i = 0; i < proc->pendingCount; i++) {
+            struct Unit* pending = GetUnit(proc->pendingIds[i]);
+            gBmMapUnit[pending->yPos][pending->xPos] = 0;
+        }
+    }
+
     proc->totalStarted = 0;
     proc->rampUnitId = 0;
 
@@ -396,11 +416,99 @@ void UnitCallWalker_OnEnd(struct UnitCallWalkerProc* proc)
         sUnitCallActiveWalkers--;
 }
 
+// ITEM_UNK_C3/BD/BE are otherwise-unused vanilla dummy weapon slots
+// (src/data_items.c) repurposed to drive this: each carries a
+// SPELL_ASSOC_DATA count=1 entry (src/spellassoc-data.c), which is what
+// routes the Ekr battle intro to a solo/single-unit-centered scene instead
+// of a normal two-sided one (the same mechanism ITEM_STAFF_LATONA uses).
+// Real callable-weapon items don't have such an entry -- adding one to a
+// real weapon would also force every ordinary battle using it (any unit,
+// any time) into the same solo layout, so a dedicated per-category
+// placeholder is used instead of the caller's real equipped weapon.
+static u16 GetCallAnimWeapon(struct Unit* unit)
+{
+    switch (unit->pClassData->number) {
+        case CLASS_FIGHTER:
+            return ITEM_UNK_BD; // Axe
+
+        case CLASS_MAGE:
+        case CLASS_MAGE_F:
+            return ITEM_UNK_BE; // Anima
+
+        case CLASS_SOLDIER:
+        case CLASS_ARMOR_KNIGHT:
+        case CLASS_ARMOR_KNIGHT_F:
+        default:
+            return ITEM_UNK_C3; // Lance
+    }
+}
+
+// Sets up a solo attack-swing animation (a class-appropriate placeholder
+// weapon -- see GetCallAnimWeapon -- self-targeted) with a guaranteed miss
+// so nothing actually takes damage. BattleInitItemEffect(unit, -1) leaves
+// gBattleActor.weaponSlotIndex at -1 (no real inventory slot involved), so
+// overwriting its weapon fields afterward never touches unit->items[].
+// Unlike a real ActionCombat, there's no BattleApplyItemEffect (that would
+// grant exp / consume weapon durability -- moot here anyway, since this
+// isn't a real inventory item) and no BattleApplyGameStateUpdates afterward
+// (no real target to update).
+static void UnitCall_SetUpSoloAttackAnim(struct Unit* unit)
+{
+    u16 weapon = GetCallAnimWeapon(unit);
+
+    BattleInitItemEffect(unit, -1);
+    BattleInitItemEffectTarget(unit);
+
+    gBattleActor.weapon = weapon;
+    gBattleActor.weaponBefore = weapon;
+    gBattleActor.weaponType = GetItemType(weapon);
+    gBattleActor.weaponAttributes = GetItemAttributes(weapon);
+
+    gBattleHitIterator->info |= BATTLE_HIT_INFO_BEGIN;
+    gBattleHitIterator->attributes |= BATTLE_HIT_ATTR_MISS;
+    (++gBattleHitIterator)->info |= BATTLE_HIT_INFO_END;
+}
+
+void UnitCall_BeginConvergence(ProcPtr proc)
+{
+    StartUnitCallConvergence(gActiveUnit);
+}
+
+// Mirrors sProcScr_CombatAction's shape (src/bmmind.c): BeginBattleAnimations
+// runs as this blocked child's own first step, and normal proc ticking
+// (including the parent player-phase proc this blocks) is suspended for the
+// animation's whole real duration -- so the follow-up call genuinely only
+// runs once the scene has finished, not just one frame later.
+struct ProcCmd CONST_DATA gProcScr_CallAction[] = {
+    PROC_NAME("CALLACTION"),
+    PROC_CALL(BeginBattleAnimations),
+    PROC_SLEEP(1),
+    PROC_CALL(UnitCall_BeginConvergence),
+    PROC_END,
+};
+
 s8 ActionCall(ProcPtr proc)
 {
-    gActiveUnit->state |= US_HAS_MOVED;
+    // Real actions (Attack, Rescue, ...) never set US_HAS_MOVED themselves --
+    // MoveActiveUnit (src/bmunit.c), called from PlayerPhase_FinishAction
+    // only once ApplyUnitAction (and thus this whole blocking sequence) has
+    // fully returned, is what actually grays the unit out via US_UNSELECTABLE.
+    // Setting US_HAS_MOVED here both grayed the actor out before the
+    // animation played and (since it aliases US_CANTOING) would wrongly deny
+    // canto to canto-capable units using Call.
 
-    StartUnitCallConvergence(gActiveUnit);
+    if (GetBattleAnimPreconfType() != PLAY_ANIMCONF_OFF) {
+        // Matches the vanilla ApplyUnitAction call sites for real actions:
+        // the side windows must be torn down before a battle scene starts or
+        // they reappear over it with corrupted graphics. PlayerPhase_FinishAction
+        // restarts them once the player-phase script returns to idle.
+        EndPlayerPhaseSideWindows();
+
+        UnitCall_SetUpSoloAttackAnim(gActiveUnit);
+        Proc_StartBlocking(gProcScr_CallAction, proc);
+    } else {
+        StartUnitCallConvergence(gActiveUnit);
+    }
 
     return 1;
 }
