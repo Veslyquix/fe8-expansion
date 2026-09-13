@@ -517,15 +517,15 @@ static int WmRoad_GetNodeAXTileCoord(s16 coord)
 }
 static int WmRoad_GetNodeAYTileCoord(s16 coord)
 {
-    return coord / 8 - 1;
+    return coord / 8;
 }
 static int WmRoad_GetNodeBXTileCoord(s16 coord)
 {
-    return coord / 8 - 1;
+    return coord / 8;
 }
 static int WmRoad_GetNodeBYTileCoord(s16 coord)
 {
-    return coord / 8 - 1;
+    return coord / 8;
 }
 
 /* Builds a road between two world map nodes out of the generic road pieces
@@ -585,8 +585,19 @@ void MapRoute_RenderAutoPath(int nodeA, int nodeB, u16 * buf, int size, u16 oam2
         }
 
         WmRoad_StampDiagonal(piece, buf, size, x, y, oam2);
-        x += stepX;
-        y += stepY;
+
+        if (i + 1 == nDiag && remX != remY)
+        {
+            if (remX > remY)
+                x += stepX;
+            else
+                y += stepY;
+        }
+        else
+        {
+            x += stepX;
+            y += stepY;
+        }
     }
     remX -= nDiag;
     remY -= nDiag;

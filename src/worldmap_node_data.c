@@ -181,6 +181,29 @@ const struct NodeIcon gWMNodeIconData[] =
     },
 };
 #define WMC(val) (val * 16 + 8)
+
+/* 
+// good: 
+        (1,1, 2,2) // correct 
+        (1,1, 3,3) 
+        (1,1, 1,1) // does nothing, as it should 
+
+// bad: 
+        (2,1, 2,2) // appears 1 tile to the east of where it should be 
+        (1,1, 0,0) // apears 1 tile southeast of where it should go 
+        (1,1, 0,1) // apears 1 tile southeast of where it should go  
+        (1,1, 0,2) // appears 1 tile to the east of where it should go 
+        (1,1, 1,0) // // apears 1 tile southeast of where it should go 
+        (1,1, 1,2) // appears 1 tile to the east of where it should go 
+        (1,1, 2,0) // appears 1 tile south 
+        (1,1, 2,1) // appears 1 tile south 
+        (1,1, 3,0) // appears 1 tile south, horizontal continuation teleports 1 tile further south 
+        (1,1, 3,1) // appears 1 tile south 
+        (1,1, 3,2) // starts with wrong tile type 1 tile south: should be diag SE twice instead of once 
+        
+
+*/
+
 const struct GMapNodeData gWMNodeData[] =
 {
     [NODE_BORDER_MULAN] =
@@ -196,8 +219,8 @@ const struct GMapNodeData gWMNodeData[] =
         .armory = ItemList_WM_BorderMulan_Armory,
         .vendor = ItemList_WM_BorderMulan_Vendor,
         .secretShop = ItemList_WM_BorderMulan_SecretShop,
-        .x = WMC(23),
-        .y = WMC(18),
+        .x = WMC(1),
+        .y = WMC(1),
         .nameTextId = MSG_650, // "Border Mulan"
         .shipTravelFlag = 0,
     },
@@ -214,8 +237,8 @@ const struct GMapNodeData gWMNodeData[] =
         .armory = ItemList_WM_CastleFrelia_Armory,
         .vendor = ItemList_WM_CastleFrelia_Vendor,
         .secretShop = ItemList_WM_CastleFrelia_SecretShop,
-        .x = WMC(24),
-        .y = WMC(16),
+        .x = WMC(2),
+        .y = WMC(2),
         .nameTextId = MSG_651, // "Castle Frelia[.]"
         .shipTravelFlag = 0,
     },
