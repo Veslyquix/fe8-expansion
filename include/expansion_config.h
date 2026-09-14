@@ -391,6 +391,13 @@
 #define FE8_TEXT_CHAPTER_NAMES 0
 #endif
 
+/* Runtime text-token replacement. When enabled, the main gMsgTable is
+ * generated as raw text instead of Huffman-compressed text so substitutions
+ * can scan decoded strings without paying a decompression cost first. */
+#ifndef FE8_REPLACE_TEXT
+#define FE8_REPLACE_TEXT 0
+#endif
+
 /* Hit/Damage/Crit/AS numbers shown alongside the map battle info boxes
  * when battle animations are off (see ShowBattleStatsNoAnims in
  * src/mapanim_infobox.c). */
@@ -685,6 +692,10 @@
 
 #if (FE8_TEXT_CHAPTER_NAMES != 0) && (FE8_TEXT_CHAPTER_NAMES != 1)
 #error "FE8_TEXT_CHAPTER_NAMES must be 0 or 1"
+#endif
+
+#if (FE8_REPLACE_TEXT != 0) && (FE8_REPLACE_TEXT != 1)
+#error "FE8_REPLACE_TEXT must be 0 or 1"
 #endif
 
 #if (FE8_BATTLE_STATS_NO_ANIMS != 0) && (FE8_BATTLE_STATS_NO_ANIMS != 1)

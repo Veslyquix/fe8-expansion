@@ -389,6 +389,10 @@ CLEAN_SONGS := $(MID_SUBDIR)/*.s
 # Isolated, opt-in modern GCC object rules (no modern ELF/ROM target).
 include modern.mk
 
+ifeq ($(REPLACE_TEXT),1)
+CPPFLAGS += -DFE8_REPLACE_TEXT=1
+endif
+
 # Shared clean routine
 clean_common:
 	$(RM) $(CLEAN_FILES) $(CLEAN_BINS) $(CLEAN_SONGS)
@@ -464,10 +468,25 @@ TEXT_SRC  := $(TEXT_MAIN) $(shell find $(TEXT_DIR) -type f -name "*.txt")
 
 TEXT_HEADER := include/constants/msg.h
 MSG_LIST    := src/msg_data.c
+ifeq ($(REPLACE_TEXT),1)
+TEXT_STORAGE := raw
+else
+TEXT_STORAGE := huffman
+endif
+TEXT_CONFIG_STAMP := build/text_storage.stamp
 
-src/msg_data.c: $(TEXT_SRC) $(TEXT_DEFS)
+$(TEXT_CONFIG_STAMP): FORCE
+	@mkdir -p "$(@D)"
+	@printf '%s\n' 'storage=$(TEXT_STORAGE)' > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then \
+		mv -f "$@.tmp" "$@"; \
+	else \
+		rm -f "$@.tmp"; \
+	fi
+
+src/msg_data.c: $(TEXT_SRC) $(TEXT_DEFS) $(TEXT_TOOLS)/textprocess.py $(TEXT_CONFIG_STAMP)
 	@$(TEXT_ALIGNMENT_CHECK) --main $(TEXT_MAIN) --defs $(TEXT_DEFS) --fix
-	@$(TEXT_PROCESS) $(TEXT_MAIN) $(TEXT_DEFS) $@ $(TEXT_HEADER) utf8
+	@$(TEXT_PROCESS) $(TEXT_MAIN) $(TEXT_DEFS) $@ $(TEXT_HEADER) utf8 $(TEXT_STORAGE)
 
 # Graphics Recipes
 

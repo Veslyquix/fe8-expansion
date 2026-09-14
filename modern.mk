@@ -210,6 +210,9 @@ endif
 ifeq ($(TEXT_CHAPTER_NAMES),1)
 MODERN_DEFINE_FLAGS += -DFE8_TEXT_CHAPTER_NAMES=1
 endif
+ifeq ($(REPLACE_TEXT),1)
+MODERN_DEFINE_FLAGS += -DFE8_REPLACE_TEXT=1
+endif
 ifeq ($(BATTLE_STATS_NO_ANIMS),1)
 MODERN_DEFINE_FLAGS += -DFE8_BATTLE_STATS_NO_ANIMS=1
 endif
@@ -1715,6 +1718,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
+		--replace-text "$(REPLACE_TEXT)" \
 		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
@@ -1824,9 +1828,10 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
 	--extend-dialogue-box "$(EXTEND_DIALOGUE_BOX)" \
 	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
-	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
-	--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
-	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
+		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
+		--replace-text "$(REPLACE_TEXT)" \
+		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
@@ -1940,6 +1945,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
 	-DFE8_DEBUFFS_STACK=$(DEBUFFS_STACK) \
 	-DFE8_SELECT_VIEW_GROWTHS=$(SELECT_VIEW_GROWTHS) \
+	-DFE8_REPLACE_TEXT=$(REPLACE_TEXT) \
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
 	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
@@ -2146,6 +2152,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \
 		printf '%s\n' 'debuffs_stack=$(DEBUFFS_STACK)'; \
 		printf '%s\n' 'select_view_growths=$(SELECT_VIEW_GROWTHS)'; \
+		printf '%s\n' 'replace_text=$(REPLACE_TEXT)'; \
 		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \

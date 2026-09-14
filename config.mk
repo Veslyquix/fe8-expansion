@@ -215,6 +215,13 @@ TITLE_256_COLORS ?= 1
 # Note: vanilla text names for chapters are like this: TXT00 L00 gChapterDataTable in src/data/chapter_settings.h 
 TEXT_CHAPTER_NAMES ?= 1
 
+# --- Optional ReplaceText -----------------------------------------------------
+# Generates the main message table as raw, un-Huffman-encoded text and runs a
+# small token-replacement pass whenever GetStringFromIndex decodes a message.
+# This is intended for fast runtime substitutions like <they>/<he>/<she> and
+# simple conditional spans such as <ifFlag114>...<endif>.
+REPLACE_TEXT ?= 1
+
 # --- Optional Credits ----------------------------------------------------------
 # Scrolling end-credits sequence using text instead of images.
 CREDITS ?= 0
@@ -542,7 +549,6 @@ NIMAP2 ?= 1
 # a straight one. See MapRoute_RenderAutoPath in src/worldmap_path.c and the
 # piece data in src/data/worldmap/worldmap_road_pieces.c. Modern lane only.
 WORLDMAP_REWORK ?= 1
-
 
 
 

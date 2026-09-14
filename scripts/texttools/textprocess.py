@@ -223,7 +223,7 @@ def write_all_compressed_data(messages, code_table, data_file):
             data_file.write(f"0x{data:02X}, ")
         data_file.write("};\n")
 
-def write_text_table(messages, data_file):
+def write_text_table(messages, data_file, text_prefix="CompressedText"):
     data_file.write("const u8 * const gMsgTable[] = {")
     for i, msg in enumerate(messages):
         if i % 8 == 0:
@@ -231,7 +231,7 @@ def write_text_table(messages, data_file):
         else:
             data_file.write(" ")
 
-        data_file.write(f"CompressedText_{msg.definiation},")
+        data_file.write(f"{text_prefix}_{msg.definiation},")
     data_file.write("\n};\n")
 
 def write_huffman_table(huffman_table, data_file):
@@ -245,6 +245,23 @@ def write_huffman_table(huffman_table, data_file):
         data_file.write(f"0x{branch:08X},")
     data_file.write("\n};\n\n")
     data_file.write(f"const u32 * const gMsgHuffmanTableRoot = gMsgHuffmanTable + 0x{(len(huffman_table) - 1):04X};\n")
+
+def iter_raw_text_bytes(data):
+    for value in data:
+        yield value & 0xFF
+        if value > 0xFF:
+            yield (value >> 8) & 0xFF
+
+def write_all_raw_data(messages, data_file):
+    for msg in messages:
+        data_file.write(f"static const u8 Text_{msg.definiation}[] = " + "{")
+        for data in iter_raw_text_bytes(msg.data):
+            data_file.write(f"0x{data:02X}, ")
+        data_file.write("};\n")
+
+def write_dummy_huffman_table(data_file):
+    data_file.write("const u32 gMsgHuffmanTable[] = { 0xFFFF0000, };\n\n")
+    data_file.write("const u32 * const gMsgHuffmanTableRoot = gMsgHuffmanTable;\n")
 
 def dump_msg(messages):
     for msg in messages:
@@ -260,20 +277,16 @@ def main(args):
         output_data = args[2]
         output_header = args[3]
         encoding_method = args[4]
+        storage_method = args[5] if len(args) > 5 else "huffman"
 
     except IndexError:
-        sys.exit(f"Usage: {sys.argv[0]} <text-main> <defs> <output_data> <output_header> <'cp932' or 'utf8'>")
+        sys.exit(f"Usage: {sys.argv[0]} <text-main> <defs> <output_data> <output_header> <'cp932' or 'utf8'> [huffman|raw]")
+
+    if storage_method not in ("huffman", "raw"):
+        sys.exit(f"error: storage method must be 'huffman' or 'raw', got {storage_method!r}")
 
     control_chars = load_control_chars(input_parse_ref)
     messages = process_file(input_fpath, control_chars, encoding_method)
-
-    # generate huffman
-    freq_table = GenerateFreqTable(all_data)
-
-    huff_tree = huffman.BuildHuffmanTree(freq_table)
-
-    huffman_table = huffman.BuildHuffmanTable()
-    code_table = huffman.build_code_table(huff_tree)
 
     # output
     with open(output_header, 'w', encoding='utf-8') as header_file:
@@ -281,11 +294,26 @@ def main(args):
 
     with open(output_data, 'w', encoding='utf-8') as data_file:
         data_file.write('#include "global.h"\n\n')
-        write_all_compressed_data(messages, code_table, data_file)
-        data_file.write("\n")
-        write_huffman_table(huffman_table, data_file)
-        data_file.write("\n")
-        write_text_table(messages, data_file)
+        if storage_method == "raw":
+            write_all_raw_data(messages, data_file)
+            data_file.write("\n")
+            write_dummy_huffman_table(data_file)
+            data_file.write("\n")
+            write_text_table(messages, data_file, "Text")
+        else:
+            # generate huffman
+            freq_table = GenerateFreqTable(all_data)
+
+            huff_tree = huffman.BuildHuffmanTree(freq_table)
+
+            huffman_table = huffman.BuildHuffmanTable()
+            code_table = huffman.build_code_table(huff_tree)
+
+            write_all_compressed_data(messages, code_table, data_file)
+            data_file.write("\n")
+            write_huffman_table(huffman_table, data_file)
+            data_file.write("\n")
+            write_text_table(messages, data_file)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])

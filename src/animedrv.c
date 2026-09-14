@@ -1,7 +1,7 @@
 #include "global.h"
 
 #include "hardware.h"
-
+#include "ekrbattle.h"
 #include "anime.h"
 
 static int  AnimInterpret(struct Anim* anim);
@@ -94,17 +94,42 @@ void AnimUpdateAll(void)
 
 void AnimClearAll(void)
 {
-    struct Anim* it;
+    // struct Anim* it;
 
-    for (it = sAnimPool; it < sAnimPool + ANIM_MAX_COUNT; ++it)
+    // for (it = sAnimPool; it < sAnimPool + ANIM_MAX_COUNT; ++it)
+    // {
+    //     it->state = 0;
+    //     it->pPrev = NULL;
+    //     it->pNext = NULL;
+    // }
+    struct Anim * anim;
+    gEkrBattleEndFlag = true; // immediately ends without waiting for anything
+
+    // anim = gAnims[2];
+    // if (anim)
+    //     EndEfxStatusUnits(anim);
+
+    // anim = gAnims[0];
+    // if (anim)
+    //     EndEfxStatusUnits(anim);
+
+    ProcPtr otherProc = Proc_Find(ProcScr_efxWeaponIcon);
+    if (otherProc)
     {
-        it->state = 0;
-        it->pPrev = NULL;
-        it->pNext = NULL;
+        Proc_End(otherProc);
     }
 
+    otherProc = Proc_Find(ProcScr_efxHPBarColorChange);
+    if (otherProc)
+    {
+        Proc_End(otherProc);
+    }
+
+    Proc_EndEach(ProcScr_efxStatusUnit);
     sFirstAnim = NULL;
 }
+
+
 
 struct Anim* AnimCreate_unused(const void* frameData)
 {
