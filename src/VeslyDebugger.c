@@ -8537,9 +8537,124 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
     DebuggerBanimPreview_ResetScript(proc);
 }
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool DebuggerProcNameHasPrefix(const char * name, const char * prefix)
+{
+    if (name == NULL)
+        return false;
+
+    while (*prefix != '\0')
+    {
+        if (*name != *prefix)
+            return false;
+
+        name++;
+        prefix++;
+    }
+
+    return true;
+}
+
+static void EndLingeringBanimEffectProc(ProcPtr procPtr)
+{
+    struct Proc * proc = procPtr;
+
+    if (DebuggerProcNameHasPrefix(proc->proc_name, "efx") ||
+        DebuggerProcNameHasPrefix(proc->proc_name, "ekrsubAnimeEmulator"))
+        Proc_End(proc);
+}
+
+// Spell effect procs (efxPurge, efxResire, their BG/OBJ/ALPHA/quake children,
+// the substitute-anim emulators, ...) get started deep inside
+// StartSpellAnimation() -> gEkrSpellAnimLut[index](anim), which records no
+// handle anywhere. The vanilla class-info reel never has to care: it only ever
+// reaches a spell through StartClassReelSpellAnim(), which stores
+// gpActiveClassReelSpellProc so EndActiveClassReelSpell() can stop it again.
+// This preview calls StartSpellAnimation() directly, so nothing can stop them.
+//
+// That matters because cycling the previewed weapon tears this preview's anims
+// down (ClearDebuggerBanimAnimSlots -> AnimDelete) and immediately rebuilds new
+// ones into the very same pool slots. An effect proc still in flight from the
+// previous weapon keeps running against its raw struct Anim pointers and
+// eventually AnimDelete()s the *new* preview's anim out from under it. The new
+// anim then never reaches the C01/C02 command that marks a round end, so the
+// reel's CR_WAIT_ROUND_END step waits for a round end that can never arrive and
+// the viewer hangs (before the proc.c callback guard it derailed outright).
+static void EndLingeringBanimEffectProcs(void)
+{
+    int i;
+
+    Proc_ForAll(EndLingeringBanimEffectProc);
+
+    // Those procs' substitute anims are tracked here and nowhere else, so
+    // ending the procs alone would strand the anim slots they drew into.
+    for (i = 0; i < 2; i++)
+    {
+        if (gEkrbattle_0[i] != NULL)
+        {
+            AnimDelete(gEkrbattle_0[i]);
+            gEkrbattle_0[i] = NULL;
+        }
+    }
+
+    // An effect proc killed mid-flight never reaches its own SpellFx_Finish()
+    // or its gEfxBgSemaphore-- , so both would stay latched at whatever the
+    // interrupted spell left them. gEfxSpellAnimExists in particular is what
+    // the reel's CR_WAIT_SPELL step waits on, so leaving it set would just
+    // trade one hang for another.
+    SpellFx_Finish();
+    gEfxBgSemaphore = 0;
+}
+#endif
+
 static void EndDebuggerBanimPreview(void)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    // Before the preview's own teardown frees and reallocates the anim slots.
+    EndLingeringBanimEffectProcs();
+#endif
+
     Proc_EndEach(sProc_DebuggerBanimPreview);
+}
+
+// gEfxHpLut is EWRAM_DATA u16[22] (banim-ekrbattleintro.c); no ARRAY_COUNT-able
+// size is visible through its extern declaration, so this mirrors that literal.
+#define DEBUGGER_BANIM_HP_LUT_SIZE 22
+#define DEBUGGER_BANIM_NEUTRAL_HP 61
+
+// Neither this preview nor the vanilla class-info screen it is modeled on ever
+// runs a real battle (ParseBattleHitToBanimCmd(), InitMainAnims()) to populate
+// gEfxHpLut/gEfxHpLutOff/gEkrHpBarCount/etc - they are left holding whatever a
+// previous real battle (or a previous preview session whose hit-effect proc
+// was still mid-flight) last wrote. A stale gEfxHpLutOff in particular makes
+// GetEfxHp() index gEfxHpLut out of bounds, and a stuck gEkrHpBarCount makes
+// every hit-effect helper (NewEfxHpBar/NewEfxHpBarResire/NewEfxAvoid, all of
+// which early-return while it is nonzero) silently do nothing forever.
+//
+// Reset them the same way the original standalone tool's separate
+// AnimViewerBattle feature already resets them for itself
+// (ResetAnimViewerBattleHp(), never wired into this Class Sprites preview in
+// either the original source or this port) - filling gEfxHpLut with one
+// constant makes every hit-effect's "before"/"after" HP read compare equal,
+// so it always takes the safe "no damage" branch instead of trying to drive
+// a real HP-bar-drain/heal sequence (which assumes both battle sides have
+// fully-initialized Anim/BattleUnit state that a bare class/weapon preview
+// never sets up) off of leftover data.
+static void ResetDebuggerBanimHitEffectState(void)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    int i;
+
+    gEkrHpBarCount = 0;
+    gEfxHpBarResireFlag = 0;
+    gEkrHitNow[EKR_POS_L] = 0;
+    gEkrHitNow[EKR_POS_R] = 0;
+    gEfxHpLutOff[EKR_POS_L] = 0;
+    gEfxHpLutOff[EKR_POS_R] = 0;
+
+    for (i = 0; i < DEBUGGER_BANIM_HP_LUT_SIZE; ++i)
+        gEfxHpLut[i] = DEBUGGER_BANIM_NEUTRAL_HP;
+#endif
 }
 
 static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride)
@@ -8567,6 +8682,8 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapo
 
     if (!IsDebuggerBanimSafe(entry, classId, unit, weapon, palOverride))
         return;
+
+    ResetDebuggerBanimHitEffectState();
 
     BMapDispSuspend();
     proc = Proc_Start(sProc_DebuggerBanimPreview, PROC_TREE_3);
