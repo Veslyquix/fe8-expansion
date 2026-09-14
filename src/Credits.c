@@ -972,6 +972,13 @@ static const signed char body13[] =
     " White Mountain Landscape" NL
     "  by Martin Johnson Heade";
 
+/* Kept in sync with CREDITS.md's "Item Icons" table. */
+static const signed char header16[] = "Item Icons";
+static const signed char body16[] =
+    " Horn icon from Tactics Ogre:" NL
+    "  Let Us Cling Together, via" NL
+    "  EldritchAbo, serebii01";
+
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
@@ -1041,6 +1048,9 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
     { header11, body11, BG_SEP_AQUADUCT_THOMAS_COLE_192, BG_Type, 0, 0 },
     { header12, body12, BG_SEP_AURORA_BOREALIS_FREDERIC_EDWIN_CHURCH_192, BG_Type, 0, 0 },
     { header13, body13, BG_SEP_WHITE_MOUNTAIN_LANDSCAPE_MOUNT_WASHINGTON_MARTIN_JOHNSON_HEADE_192, BG_Type, 0, 0 },
+#endif
+#if FE8_SKILLSYSTEM
+    { header16, body16, SubstituteRandomBG, BG_Type, 0, 0 },
 #endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },

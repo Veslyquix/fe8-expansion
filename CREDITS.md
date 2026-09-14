@@ -290,6 +290,12 @@ Original compositions remain the property of their respective rights holders
 (Camelot/Nintendo for *Golden Sun*; Game Freak/Nintendo for *Pokémon
 Gold/Silver*); only the GBA arrangements are credited above.
 
+## Item Icons (`FE8_SKILLSYSTEM`)
+
+| Item | Icon | Credits |
+| --- | --- | --- |
+| `ITEM_UNK_C3` (`ITEM_CALL`) | `graphics/item_icon/item_icon_horn.png` | "Horn of the Savage" -- Tactics Ogre: Let Us Cling Together, ripped/reposted by EldritchAbo and serebii01. |
+
 ## Ported Code Patches
 
 | Patch | Author |
