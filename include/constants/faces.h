@@ -86,19 +86,30 @@ enum {
     FID_CLASS_MYSTERY_FADED          = 0xAA,
 
     FID_FACTION_CHIBI       = 0x7F00,
-    
-    
-#if FE8_CUSTOM_CAMPAIGN
     FID_WAKWI              = 0x02,
     FID_ISHKODE              = 0x04,
     FID_FREDERICK              = 0x05,
     FID_FOX              = 0x06,
     FID_ASIN              = 0x07,
     FID_LIZ              = 0x08,
+    FID_TOREN              = 0x09,
+    FID_LENORA             = 0x0A,
+    FID_VOLIK              = 0x0C,
+    FID_CLARISSE           = 0x0E,
+    FID_ELAYNE             = 0x0F,
+    FID_EDRIC              = 0x10,
+    FID_ORELUS             = 0x11,
+    FID_NURI               = 0x13,
+    FID_FARID              = 0x14,
+    FID_KAVRA              = 0x16,
+    FID_ZAHIR              = 0x18,
+    FID_BRANN              = 0x19,
+    FID_KIT                = 0x1A,
+    FID_MARIUS             = 0x1B,
+    FID_LYRIA              = 0x1C,
+    FID_MORTIVAR           = 0x1E,
+    FID_VEYR               = 0x20,
     FID_KARGAN              = 0x30,
-
-#endif 
-    
 };
 
 #endif // GUARD_CONSTANTS_FACES_H

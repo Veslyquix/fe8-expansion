@@ -40375,6 +40375,57 @@ Fox[.][X]
 ## MSG_NAME_LIZ
 Liz[.][X]
 
+## MSG_NAME_TOREN
+Toren[.][X]
+
+## MSG_NAME_LENORA
+Lenora[.][X]
+
+## MSG_NAME_VOLIK
+Volik[.][X]
+
+## MSG_NAME_CLARISSE
+Clarisse[.][X]
+
+## MSG_NAME_ELAYNE
+Elayne[.][X]
+
+## MSG_NAME_EDRIC
+Edric[.][X]
+
+## MSG_NAME_ORELUS
+Orelus[.][X]
+
+## MSG_NAME_NURI
+Nuri[.][X]
+
+## MSG_NAME_FARID
+Farid[.][X]
+
+## MSG_NAME_KAVRA
+Kavra[.][X]
+
+## MSG_NAME_ZAHIR
+Zahir[.][X]
+
+## MSG_NAME_BRANN
+Brann[.][X]
+
+## MSG_NAME_KIT
+Kit[.][X]
+
+## MSG_NAME_MARIUS
+Marius[.][X]
+
+## MSG_NAME_LYRIA
+Lyria[.][X]
+
+## MSG_NAME_MORTIVAR
+Mortivar[.][X]
+
+## MSG_NAME_VEYR
+Veyr[.][X]
+
 ## MSG_TERRAIN_CAMP
 Camp[X]
 

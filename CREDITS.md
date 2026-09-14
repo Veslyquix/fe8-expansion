@@ -222,6 +222,23 @@ No suitable map sprite found / not copied:
 | Wakwi | `{Eden} Wakwi.png` | Eden |
 | Kargan (replaces O'Neill) | `{Eden} Kargan[F2E].png` | Eden |
 | Asin (replaces Moulder) | `{Eden} Asin.png` | Eden |
+| Toren (replaces Ross) | `2_{MeatofJustice} Toren.png` | MeatofJustice |
+| Lenora (replaces Neimi) | `2_{MegaCowsamMan} Lenora.png` | MegaCowsamMan |
+| Volik (replaces Colm) | `2_{Nickt} Volik.png` | Nickt |
+| Clarisse (replaces Garcia) | `3_Clarisse {Garytop}.png` | Garytop |
+| Elayne (replaces Innes) | `3_{MeatofJustice, Melia} Elayne.png` | MeatofJustice, Melia |
+| Edric (replaces Lute) | `3_{Miguel-Rojo} Edric.png` | Miguel-Rojo |
+| Orelus (replaces Natasha) | `3_{N426} Orelus.png` | N426 |
+| Nuri (replaces Cormag) | `4_{Cravat} Nuri.png` | Cravat |
+| Farid (replaces Ephraim) | `4_{Epicer} Farid.png` | Epicer |
+| Kavra (replaces Forde) | `4_{Garytop} Kavra.png` | Garytop |
+| Zahir (replaces Kyle) | `4_{Garytop} Zahir.png` | Garytop |
+| Brann (replaces Amelia) | `5_Brann {Garytop}.png` | Garytop |
+| Kit (replaces Artur) | `6_Kit {Garytop}.png` | Garytop |
+| Marius (replaces Gerik) | `6_{Bowgun} Marius.png` | Bowgun |
+| Lyria (replaces Tethys) | `6_{Cygnus} Lyria.png` | Cygnus |
+| Mortivar (replaces Marisa) | `7_{Fenriel} Mortivar.png` | Fenriel |
+| Veyr (replaces Saleh) | `7_{Krisk} Veyr.png` | Krisk |
 
 Hannah and Francis are no longer used by `src/portrait_data.c` (replaced by
 Wakwi and Ishkode respectively) but remain credited/linked, not removed.
@@ -326,7 +343,6 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
 | `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
 | `MOVEARROW_HACK` | circleseverywhere |
-
 
 
 

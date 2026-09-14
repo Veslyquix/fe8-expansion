@@ -876,7 +876,24 @@ static const signed char body1[] =
     " Ishkode portrait by Eden" NL
     " Wakwi portrait by Eden" NL
     " Kargan (replaces O'Neill) portrait by Eden" NL
-    " Asin (replaces Moulder) portrait by Eden";
+    " Asin (replaces Moulder) portrait by Eden" NL
+    " Toren portrait by MeatofJustice" NL
+    " Lenora portrait by MegaCowsamMan" NL
+    " Volik portrait by Nickt" NL
+    " Clarisse portrait by Garytop" NL
+    " Elayne portrait by MeatofJustice, Melia" NL
+    " Edric portrait by Miguel-Rojo" NL
+    " Orelus portrait by N426" NL
+    " Nuri portrait by Cravat" NL
+    " Farid portrait by Epicer" NL
+    " Kavra portrait by Garytop" NL
+    " Zahir portrait by Garytop" NL
+    " Brann portrait by Garytop" NL
+    " Kit portrait by Garytop" NL
+    " Marius portrait by Bowgun" NL
+    " Lyria portrait by Cygnus" NL
+    " Mortivar portrait by Fenriel" NL
+    " Veyr portrait by Krisk";
 
 
 /* Kept in sync with CREDITS.md's "Batch2 Imported Classes" section.

@@ -39,6 +39,32 @@ struct FaceData CONST_DATA portrait_data[] =
 	{portrait_Moulder_tileset, portrait_Moulder_chibi, portrait_Moulder_palette, portrait_Moulder_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 6
 	{portrait_Vanessa_tileset, portrait_Vanessa_chibi, portrait_Vanessa_palette, portrait_Vanessa_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 7
 #endif
+#if FE8_CUSTOM_CAMPAIGN
+	{portrait_Toren_tileset, portrait_Toren_chibi, portrait_Toren_palette, portrait_Toren_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 8
+	{portrait_Lenora_tileset, portrait_Lenora_chibi, portrait_Lenora_palette, portrait_Lenora_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 9
+	{portrait_Lenora_tileset, portrait_Lenora_chibi, portrait_Lenora_palette, portrait_Lenora_mouth, 0, 2, 6, 3, 4, FACE_BLINK_CLOSED}, // 10
+	{portrait_Volik_tileset, portrait_Volik_chibi, portrait_Volik_palette, portrait_Volik_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 11
+	{portrait_Volik_tileset, portrait_Volik_chibi, portrait_Volik_palette, portrait_Volik_mouth, 0, 3, 5, 3, 3, FACE_BLINK_CLOSED}, // 12
+	{portrait_Clarisse_tileset, portrait_Clarisse_chibi, portrait_Clarisse_palette, portrait_Clarisse_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 13
+	{portrait_Elayne_tileset, portrait_Elayne_chibi, portrait_Elayne_palette, portrait_Elayne_mouth, 0, 3, 5, 4, 3, FACE_BLINK_NORMAL}, // 14
+	{portrait_Edric_tileset, portrait_Edric_chibi, portrait_Edric_palette, portrait_Edric_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 15
+	{portrait_Orelus_tileset, portrait_Orelus_chibi, portrait_Orelus_palette, portrait_Orelus_mouth, 0, 2, 4, 2, 2, FACE_BLINK_NORMAL}, // 16
+	{portrait_Orelus_tileset, portrait_Orelus_chibi, portrait_Orelus_palette, portrait_Orelus_mouth, 0, 2, 4, 2, 2, FACE_BLINK_CLOSED}, // 17
+	{portrait_Nuri_tileset, portrait_Nuri_chibi, portrait_Nuri_palette, portrait_Nuri_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 18
+	{portrait_Farid_tileset, portrait_Farid_chibi, portrait_Farid_palette, portrait_Farid_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 19
+	{portrait_Farid_tileset, portrait_Farid_chibi, portrait_Farid_palette, portrait_Farid_mouth, 0, 3, 5, 3, 3, FACE_BLINK_CLOSED}, // 20
+	{portrait_Kavra_tileset, portrait_Kavra_chibi, portrait_Kavra_palette, portrait_Kavra_mouth, 0, 3, 4, 3, 2, FACE_BLINK_NORMAL}, // 21
+	{portrait_Kavra_tileset, portrait_Kavra_chibi, portrait_Kavra_palette, portrait_Kavra_mouth, 0, 3, 4, 3, 2, FACE_BLINK_CLOSED}, // 22
+	{portrait_Zahir_tileset, portrait_Zahir_chibi, portrait_Zahir_palette, portrait_Zahir_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 23
+	{portrait_Brann_tileset, portrait_Brann_chibi, portrait_Brann_palette, portrait_Brann_mouth, 0, 3, 4, 3, 2, FACE_BLINK_NORMAL}, // 24
+	{portrait_Kit_tileset, portrait_Kit_chibi, portrait_Kit_palette, portrait_Kit_mouth, 0, 3, 5, 3, 3, FACE_BLINK_NORMAL}, // 25
+	{portrait_Marius_tileset, portrait_Marius_chibi, portrait_Marius_palette, portrait_Marius_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 26
+	{portrait_Lyria_tileset, portrait_Lyria_chibi, portrait_Lyria_palette, portrait_Lyria_mouth, 0, 2, 6, 2, 4, FACE_BLINK_NORMAL}, // 27
+	{portrait_Lyria_tileset, portrait_Lyria_chibi, portrait_Lyria_palette, portrait_Lyria_mouth, 0, 2, 6, 2, 4, FACE_BLINK_CLOSED}, // 28
+	{portrait_Mortivar_tileset, portrait_Mortivar_chibi, portrait_Mortivar_palette, portrait_Mortivar_mouth, 0, 3, 6, 3, 4, FACE_BLINK_NORMAL}, // 29
+	{portrait_Mortivar_tileset, portrait_Mortivar_chibi, portrait_Mortivar_palette, portrait_Mortivar_mouth, 0, 3, 6, 3, 4, FACE_BLINK_CLOSED}, // 30
+	{portrait_Veyr_tileset, portrait_Veyr_chibi, portrait_Veyr_palette, portrait_Veyr_mouth, 0, 3, 7, 3, 5, FACE_BLINK_NORMAL}, // 31
+#else
 	{portrait_Ross_tileset, portrait_Ross_chibi, portrait_Ross_palette, portrait_Ross_mouth, 0, 3, 6, 3, 4, FACE_BLINK_NORMAL}, // 8
 	{portrait_Neimi_tileset, portrait_Neimi_chibi, portrait_Neimi_palette, portrait_Neimi_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 9
 	{portrait_Neimi_tileset, portrait_Neimi_chibi, portrait_Neimi_palette, portrait_Neimi_mouth, 0, 2, 6, 3, 4, FACE_BLINK_CLOSED}, // 10
@@ -63,6 +89,7 @@ struct FaceData CONST_DATA portrait_data[] =
 	{portrait_Marisa_tileset, portrait_Marisa_chibi, portrait_Marisa_palette, portrait_Marisa_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 29
 	{portrait_Marisa_tileset, portrait_Marisa_chibi, portrait_Marisa_palette, portrait_Marisa_mouth, 0, 2, 6, 3, 4, FACE_BLINK_CLOSED}, // 30
 	{portrait_Saleh_tileset, portrait_Saleh_chibi, portrait_Saleh_palette, portrait_Saleh_mouth, 0, 2, 5, 3, 3, FACE_BLINK_NORMAL}, // 31
+#endif
 	{portrait_Ewan_tileset, portrait_Ewan_chibi, portrait_Ewan_palette, portrait_Ewan_mouth, 0, 3, 7, 3, 5, FACE_BLINK_NORMAL}, // 32
 	{portrait_L_Arachel_tileset, portrait_L_Arachel_chibi, portrait_L_Arachel_palette, portrait_L_Arachel_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 33
 	{portrait_Dozla_tileset, portrait_Dozla_chibi, portrait_Dozla_palette, portrait_Dozla_mouth, 0, 2, 6, 3, 4, FACE_BLINK_NORMAL}, // 34
