@@ -5,11 +5,11 @@
 
 #if FE8_SKILLSYSTEM
 
-// Only this character can use the Call command.
-#define UNIT_CALL_CHARACTER CHARACTER_EIRIKA
+// Only this class can use the Call command.
+#define UNIT_CALL_CLASS CLASS_HORN_BRIGAND
 
-// Max Manhattan-distance tiles a unit can be called from.
-#define UNIT_CALL_RANGE 9
+// Max distance tiles a unit can be called from.
+#define UNIT_CALL_RANGE 5
 
 // Move-unit procs the convergence proc drives itself. The calling unit's
 // own MU proc is treated as a permanently reserved slot out of MU_MAX_COUNT

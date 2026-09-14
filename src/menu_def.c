@@ -13,7 +13,6 @@
 #include "promote_command.h"
 #include "power.h"
 #include "unitcall.h"
-
 #include "constants/msg.h"
 
 #include "menu_def.h"
@@ -196,6 +195,10 @@ CONST_DATA struct MenuItemDef gWeaponSelectMenuItems[] = {
     {"", 0, 0, 0, 0x4D, WeaponSelectMenu_IsAvailable, WeaponSelectMenu_Draw, WeaponSelectMenu_Selected, 0, WeaponSelectMenu_SwitchIn, BallistaRangeMenu_SwitchOut},
     MenuItemsEnd
 };
+#if FE8_SKILLSYSTEM 
+int CallCommandRange(struct MenuProc* menu, struct MenuItemProc* menuItem); 
+int HideMoveRangeGraphicsCall(struct MenuProc* menu, struct MenuItemProc* menuItem); 
+#endif 
 
 CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　制圧", 0x67A, 0x6CC, 0, 0x4E, UnitActionMenu_CanSeize, 0, UnitActionMenu_Seize, 0, 0, 0}, // Seize
@@ -230,7 +233,7 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"", MSG_UNIT_ACTION_MERGE, 0, 0, 0, MergeUsability, 0, MergeEffect, 0, 0, 0}, // Merge with an adjacent generic of the same class >
 #endif
 #if FE8_SKILLSYSTEM
-    {"", MSG_UNIT_ACTION_CALL, 0, 0, 0, CallCommandUsability, 0, CallCommandEffect, 0, 0, 0}, // Call nearby allies to converge on the caller
+    {"", MSG_UNIT_ACTION_CALL, 0, 0, 0, CallCommandUsability, 0, CallCommandEffect, 0, CallCommandRange, HideMoveRangeGraphicsCall}, // Call nearby allies to converge on the caller
 #endif
     {"　降ろす", 0x68A, 0x6C6, 0, 0x64, DropUsability, 0, DropEffect, 0, 0, 0}, // Drop >
     {"　引受け", 0x68B, 0x6C8, 4, 0x65, TakeUsability, 0, TakeEffect, 0, 0, 0}, // Take > 

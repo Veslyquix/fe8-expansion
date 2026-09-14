@@ -243,12 +243,12 @@ enum
     US_NONE         = 0,
 
     US_HIDDEN       = (1 << 0),
-    US_UNSELECTABLE = (1 << 1),
+    US_UNSELECTABLE = (1 << 1), // this is "has acted/moved" - their action is fully complete 
     US_DEAD         = (1 << 2),
     US_NOT_DEPLOYED = (1 << 3),
     US_RESCUING     = (1 << 4),
     US_RESCUED      = (1 << 5),
-    US_HAS_MOVED    = (1 << 6), // Bad name?
+    US_HAS_MOVED    = (1 << 6), // Bad name. This means they've done a partial action and may canto 
     US_CANTOING     = US_HAS_MOVED, // Alias
     US_UNDER_A_ROOF = (1 << 7),
     US_BIT8 = (1 << 8), // has been seen?

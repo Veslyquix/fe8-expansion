@@ -15,7 +15,7 @@
 #include "mu.h"
 #include "proc.h"
 #include "cp_common.h"
-
+#include "playerphase.h"
 #include "constants/characters.h"
 #include "constants/classes.h"
 #include "constants/items.h"
@@ -66,13 +66,6 @@ void UnitCall_Update(struct UnitCallProc* proc);
 
 struct ProcCmd CONST_DATA gProcScr_UnitCall[] = {
     PROC_NAME("UNITCALL"),
-    // ApplyUnitAction (which starts this proc via ActionCall) and
-    // PlayerPhase_FinishAction's EndAllMus() call both run as PROC_CALL
-    // steps in the same player-phase script, so they execute in the same
-    // frame with no yield in between. Starting a walker's MU immediately
-    // would have it killed by that EndAllMus() before ever animating --
-    // sleep one frame so the first UnitCall_Update tick (and everything it
-    // starts) lands strictly after the turn-completion flow has finished.
     PROC_SLEEP(1),
     PROC_REPEAT(UnitCall_Update),
     PROC_END,
@@ -80,10 +73,10 @@ struct ProcCmd CONST_DATA gProcScr_UnitCall[] = {
 
 bool CanUnitCall(struct Unit* unit)
 {
-    if (unit->state & US_HAS_MOVED)
+    if (unit->state & US_CANTOING)
         return FALSE;
 
-    if (unit->pCharacterData->number != UNIT_CALL_CHARACTER)
+    if (unit->pClassData->number != UNIT_CALL_CLASS) // CLASS_HORN_BRIGAND
         return FALSE;
 
     return TRUE;
@@ -91,18 +84,19 @@ bool CanUnitCall(struct Unit* unit)
 
 static bool IsCallableClass(int classId)
 {
-    switch (classId) {
-        case CLASS_SOLDIER:
-        case CLASS_ARMOR_KNIGHT:
-        case CLASS_ARMOR_KNIGHT_F:
-        case CLASS_FIGHTER:
-        case CLASS_MAGE:
-        case CLASS_MAGE_F:
-            return TRUE;
+    return true; 
+    // switch (classId) {
+    //     case CLASS_SOLDIER:
+    //     case CLASS_ARMOR_KNIGHT:
+    //     case CLASS_ARMOR_KNIGHT_F:
+    //     case CLASS_FIGHTER:
+    //     case CLASS_MAGE:
+    //     case CLASS_MAGE_F:
+    //         return TRUE;
 
-        default:
-            return FALSE;
-    }
+    //     default:
+    //         return FALSE;
+    // }
 }
 
 bool IsUnitCallable(struct Unit* candidate, struct Unit* caller)
@@ -118,7 +112,7 @@ bool IsUnitCallable(struct Unit* candidate, struct Unit* caller)
     if (UNIT_FACTION(candidate) != UNIT_FACTION(caller))
         return FALSE;
 
-    if (candidate->state & (US_HAS_MOVED | US_HIDDEN))
+    if (candidate->state & (US_UNSELECTABLE | US_HIDDEN | US_UNAVAILABLE | US_RESCUED | US_UNDER_A_ROOF | US_IN_BALLISTA))
         return FALSE;
 
     if (!IsCallableClass(candidate->pClassData->number))
@@ -512,6 +506,22 @@ u8 CallCommandEffect(struct MenuProc* menu, struct MenuItemProc* menuItem)
     gActionData.unitActionType = UNIT_ACTION_CALL;
 
     return MENU_ACT_SKIPCURSOR | MENU_ACT_END | MENU_ACT_SND6A | MENU_ACT_CLEAR;
+}
+
+int CallCommandRange(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+    BmMapFill(gBmMapMovement, -1);
+    BmMapFill(gBmMapRange, 0);
+    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, 1, UNIT_CALL_RANGE);
+
+    DisplayMoveRangeGraphics(5);
+
+    return 0;
+}
+
+int HideMoveRangeGraphicsCall(struct MenuProc* menu, struct MenuItemProc* menuItem) {
+    HideMoveRangeGraphics();
+
+    return 0;
 }
 
 bool AiTryDoCall(void)
