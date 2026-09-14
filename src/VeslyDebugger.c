@@ -1,6 +1,7 @@
 
 
 #include "gbafe.h"
+#include "opinfo.h"
 #include "fontgrp.h"
 #include "power.h"
 #include "class_preview.h"
@@ -2581,7 +2582,7 @@ void ChStateIdle(DebuggerProc * proc)
 }
 
 #define NumberOfMisc 8
-#define MiscNameWidth 6
+#define MiscNameWidth 8
 
 void AdjustWEXPForClass(struct Unit * unit, int classID)
 {
@@ -7926,16 +7927,7 @@ void EndBanimTerrain(struct BanimUnkStructComm * buf);
 void InitBanimTerrain(struct BanimUnkStructComm * buf);
 void SetBanimTerrainPos(struct BanimUnkStructComm * buf, s16 x1, s16 y1, s16 x2, s16 y2);
 
-#define CR_END() { CLASS_REEL_OP_0, 0 }
-#define CR_ANIM_ROUND_HIT_CLOSE() { CLASS_REEL_OP_1, 0 }
-#define CR_ANIM_ROUND_CRIT_CLOSE() { CLASS_REEL_OP_2, 0 }
-#define CR_RETURN_TO_STANDING() { CLASS_REEL_OP_3, 0 }
-#define CR_ANIM_ROUND_NONCRIT_FAR() { CLASS_REEL_OP_4, 0 }
-#define CR_WAIT(frames) { CLASS_REEL_OP_5, frames }
-#define CR_WAIT_ROUND_END() { CLASS_REEL_OP_8, 0 }
-#define CR_ANIM_ROUND_CRIT_FAR() { CLASS_REEL_CRIT_FAR, 0 }
-#define CR_WAIT_SPELL() { CLASS_REEL_WAIT_SPELL, 0 }
-#define CR_WAIT_RETURN() { CLASS_REEL_WAIT_RETURN, 0 }
+
 
 #define DEBUGGER_BANIM_TERRAIN 0x3F
 #define DEBUGGER_BANIM_X 148

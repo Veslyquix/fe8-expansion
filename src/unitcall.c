@@ -111,7 +111,7 @@ bool IsUnitCallable(struct Unit* candidate, struct Unit* caller)
 
     if (UNIT_FACTION(candidate) != UNIT_FACTION(caller))
         return FALSE;
-
+// US_UNSELECTABLE
     if (candidate->state & (US_UNSELECTABLE | US_HIDDEN | US_UNAVAILABLE | US_RESCUED | US_UNDER_A_ROOF | US_IN_BALLISTA))
         return FALSE;
 

@@ -50,8 +50,11 @@
     {  .classId = CLASS_BRIGAND,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_ARCHER,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_FIGHTER,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_LYN_LORD,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     // {  .classId = CLASS_MERCENARY,        .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_MYRMIDON_F,        .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_CAVALIER,         .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_HORN_BRIGAND,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_MONK,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_MAGE,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     // {  .classId = CLASS_SHAMAN,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
@@ -67,24 +70,24 @@ static const struct CoClassAffinity sIshkodeAffinities[] = {
     { .classId = CLASS_ARMOR_KNIGHT,  .rating = 30 },
     { .classId = CLASS_BRIGAND,       .rating = 30 },
     { .classId = CLASS_ARCHER,        .rating = 36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 },
-    //  .classId = CLASS_ARCHER,      .rating =   36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
+    //  .classId = CLASS_NOMAD,      .rating =   36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
     { .classId = CLASS_FIGHTER,       .rating = 30 },
     { .classId = CLASS_MERCENARY,     .rating = 30 },
     { .classId = CLASS_CAVALIER,      .rating = 30 },
     { .classId = CLASS_MONK,          .rating = 30 },
-    { .classId = CLASS_MAGE,          .rating = 30 },
-    { .classId = CLASS_SHAMAN,        .rating = 30 },
+    // { .classId = CLASS_MAGE,          .rating = 30 },
+    // { .classId = CLASS_SHAMAN,        .rating = 30 },
     { .classId = CLASS_CLERIC,        .rating = 30 },
-    { .classId = CLASS_THIEF,         .rating = 30 },
-    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30 },
-    { .classId = CLASS_WYVERN_RIDER,      .rating = 30 },
+    // { .classId = CLASS_THIEF,         .rating = 30 },
+    // { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30 },
+    // { .classId = CLASS_WYVERN_RIDER,      .rating = 30 },
 };
 
 /* Asin is a healing specialist */
 static const struct CoClassAffinity sAsinAffinities[] = {
     { .classId = CLASS_SOLDIER,       .rating = 27 },
     { .classId = CLASS_ARMOR_KNIGHT,  .rating = 27 },
-    { .classId = CLASS_BRIGAND,       .rating = 27 },
+    // { .classId = CLASS_BRIGAND,       .rating = 27 },
     { .classId = CLASS_ARCHER,        .rating = 27 }, 
     { .classId = CLASS_FIGHTER,       .rating = 27 },
     { .classId = CLASS_MERCENARY,     .rating = 27 },
@@ -93,9 +96,9 @@ static const struct CoClassAffinity sAsinAffinities[] = {
     { .classId = CLASS_MAGE,          .rating = 30 },
     { .classId = CLASS_SHAMAN,        .rating = 30 },
     { .classId = CLASS_CLERIC,        .rating = 30 },
-    { .classId = CLASS_THIEF,         .rating = 27 },
-    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 27 },
-    { .classId = CLASS_WYVERN_RIDER,      .rating = 27 },
+    // { .classId = CLASS_THIEF,         .rating = 27 },
+    // { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 27 },
+    // { .classId = CLASS_WYVERN_RIDER,      .rating = 27 },
 };
 
 /* Francis is a soldier specialist, with weak magic units. */
@@ -151,7 +154,7 @@ static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
         .powerTargetGroup = CO_POWER_TARGET_ALL,
         .superPowerTargetGroup = CO_POWER_TARGET_ALL,
         .affinities = sWakwiAffinities,
-        .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
+        .affinityCount = ARRAY_COUNT(sWakwiAffinities),
     },
     [CO_ISHKODE] = {
         .charId = CHARACTER_SETH, // Ishkode (see src/data_characters.c)
@@ -685,6 +688,21 @@ static const struct CoDefinition* GetCoDefinition(int coId)
         coId = CO_ISHKODE;
 
     return &sCoDefinitions[coId];
+}
+
+int Co_GetClassAffinityCount(int coId)
+{
+    return GetCoDefinition(coId)->affinityCount;
+}
+
+int Co_GetClassAffinityClassId(int coId, int index)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+
+    if (index < 0 || index >= co->affinityCount)
+        return CLASS_NONE;
+
+    return co->affinities[index].classId;
 }
 
 /* A class with no explicit struct CoClassAffinity entry for this CO is

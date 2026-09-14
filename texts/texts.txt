@@ -40730,395 +40730,394 @@ Restores half their[LF]
 current HP.[.][X]
 
 ## MSG_CLASS_SWASHBUCKLER_F_NAME
-Swashbuckler F[X]
-
+Swashbuckler[X]
 ## MSG_CLASS_SWASHBUCKLER_F_DESC
-A nimble raider skilled with[N]
+A nimble raider skilled with[LF]
 swords, axes, and trickery.[.][X]
+
 ## MSG_CLASS_SWASHBUCKLER_NAME
 Swashbuckler[X]
-
 ## MSG_CLASS_SWASHBUCKLER_DESC
-A nimble raider skilled with[N]
+A nimble raider skilled with[LF]
 swords, axes, and trickery.[.][X]
+
 ## MSG_CLASS_LEO_BERSERKER_NAME
-Leo Berserker[.][X]
-
+Berserker[.][X]
 ## MSG_CLASS_LEO_BERSERKER_DESC
-A fierce warrior who charges in[N]
+A fierce warrior who charges in[LF]
 with overwhelming axe power.[.][X]
+
 ## MSG_CLASS_GRAND_MAHOUT_NAME
-GrandMahout[.][X]
-
+Grand Mahout[.][X]
 ## MSG_CLASS_GRAND_MAHOUT_DESC
-A mounted archer and lancer who[N]
+A mounted archer and lancer who[LF]
 commands a mighty beast.[.][X]
-## MSG_CLASS_ARCANIST_NURAMON_NAME
-Arcanist Nuramon[X]
 
+## MSG_CLASS_ARCANIST_NURAMON_NAME
+Arcanist[X]
 ## MSG_CLASS_ARCANIST_NURAMON_DESC
-A dark scholar who bends ancient[N]
+A dark scholar who bends ancient[LF]
 magic and staves to his will.[.][X]
+
 ## MSG_CLASS_HALBERDIER_CUSTOM_NAME
 Halberdier[X]
-
 ## MSG_CLASS_HALBERDIER_CUSTOM_DESC
-A disciplined infantry lancer with[N]
+A disciplined infantry lancer with[LF]
 steady skill and stout defense.[.][X]
+
 ## MSG_CLASS_MIKO_NAME
 Miko[X]
-
 ## MSG_CLASS_MIKO_DESC
-A shrine maiden who mixes sacred[N]
+A shrine maiden who mixes sacred[LF]
 rites with precise bowplay.[.][X]
+
 ## MSG_CLASS_WAR_CLERIC_NAME
 War Cleric[X]
-
 ## MSG_CLASS_WAR_CLERIC_DESC
-A battle cleric who pairs healing[N]
-arts with crushing axe blows.[X]
+A battle cleric who pairs healing[LF]
+arts with crushing axe blows.[.][X]
+
 ## MSG_CLASS_WITCH_NAME
 Witch[.][X]
-
 ## MSG_CLASS_WITCH_DESC
-A strange mage who warps dark power[N]
-into wicked magic and staves.[X]
+A strange mage who warps dark power[LF]
+into wicked magic and staves.[.][X]
+
 ## MSG_CLASS_ANGEL_NAME
 Angel[.][X]
-
 ## MSG_CLASS_ANGEL_DESC
-A radiant being who brings holy[N]
-judgment down from above.[X]
+A radiant being who brings holy[LF]
+judgment down from above.[.][X]
+
 ## MSG_CLASS_BRIGHID_NAME
 Brighid[.][X]
-
 ## MSG_CLASS_BRIGHID_DESC
-A bold halberd fighter whose heavy[N]
+A bold halberd fighter whose heavy[LF]
 axe sweeps foes aside.[X]
+
 ## MSG_CLASS_ARCANIST_DEVISIAN_NAME
 Arcanist[X]
-
 ## MSG_CLASS_ARCANIST_DEVISIAN_DESC
-A dark scholar who bends ancient[N]
+A dark scholar who bends ancient[LF]
 magic to his will.[X]
+
 ## MSG_CLASS_MAGICIAN_NAME
 Magician[X]
-
 ## MSG_CLASS_MAGICIAN_DESC
-A showy spellcaster with swift[N]
+A showy spellcaster with swift[LF]
 magic and evasive movement.[.][X]
+
 ## MSG_CLASS_OCCULTIST_NAME
 Occultist[.][X]
-
 ## MSG_CLASS_OCCULTIST_DESC
-A sinister mage who studies curses[N]
+A sinister mage who studies curses[LF]
 and forbidden rites.[X]
-## MSG_CLASS_BLADER_F_NAME
-Blader F[X]
 
+## MSG_CLASS_BLADER_F_NAME
+Blader[X]
 ## MSG_CLASS_BLADER_F_DESC
-A swift swordfighter who cuts down[N]
+A swift swordfighter who cuts down[LF]
 foes with graceful technique.[.][X]
+
 ## MSG_CLASS_HARBINGER_NAME
 Harbinger[.][X]
-
 ## MSG_CLASS_HARBINGER_DESC
-A grim champion trained in many[N]
-weapons and dark magic.[X]
+A grim champion trained in many[LF]
+weapons and dark magic.[.][X]
+
 ## MSG_CLASS_HARBINGER_ALT_NAME
 Harbinger[.][X]
-
 ## MSG_CLASS_HARBINGER_ALT_DESC
-A grim champion trained in many[N]
-weapons and dark magic.[X]
-## MSG_CLASS_HEAVY_INFANTRY_NAME
-Heavy Infantry[X]
+A grim champion trained in many[LF]
+weapons and dark magic.[.][X]
 
+## MSG_CLASS_HEAVY_INFANTRY_NAME
+Hvy Infantry[X]
 ## MSG_CLASS_HEAVY_INFANTRY_DESC
-A sturdy lordly infantryman who[N]
-holds the line with ease.[X]
+A sturdy lordly infantryman who[LF]
+holds the line with ease.[.][X]
+
 ## MSG_CLASS_BARON_CUSTOM_NAME
 Baron[.][X]
-
 ## MSG_CLASS_BARON_CUSTOM_DESC
-A high-ranking armored knight with[N]
+A high-ranking armored knight with[LF]
 command of many weapons.[X]
+
 ## MSG_CLASS_SHIELD_GENERAL_NAME
 Shield General[X]
-
 ## MSG_CLASS_SHIELD_GENERAL_DESC
-An armored wall who protects allies[N]
-behind an unbreakable shield.[X]
-## MSG_CLASS_BLACK_DRAGON_NAME
-BlackDragon[.][X]
+An armored wall who protects allies[LF]
+behind an unbreakable shield.[.][X]
 
+## MSG_CLASS_BLACK_DRAGON_NAME
+Black Dragon[.][X]
 ## MSG_CLASS_BLACK_DRAGON_DESC
-A mighty black dragon with scales[N]
+A mighty black dragon with scales[LF]
 as hard as iron.[.][X]
+
 ## MSG_CLASS_DJINN_NAME
 Djinn[.][X]
-
 ## MSG_CLASS_DJINN_DESC
-A spirit warrior who strikes with[N]
+A spirit warrior who strikes with[LF]
 blades and mystic force.[.][X]
-## MSG_CLASS_LIVING_ARMOR_NAME
-LivingArmor[.][X]
 
+## MSG_CLASS_LIVING_ARMOR_NAME
+Living Armor[.][X]
 ## MSG_CLASS_LIVING_ARMOR_DESC
-An empty suit of armor driven by[N]
+An empty suit of armor driven by[LF]
 a restless will to fight.[.][X]
+
 ## MSG_CLASS_FELLBEAST_NAME
 Fellbeast[.][X]
-
 ## MSG_CLASS_FELLBEAST_DESC
-A fearsome creature of darkness with[N]
+A fearsome creature of darkness with[LF]
 powerful, terrifying attacks.[.][X]
-## MSG_CLASS_SAMURAI_F_NAME
-Samurai F[.][X]
 
+## MSG_CLASS_SAMURAI_F_NAME
+Samurai[.][X]
 ## MSG_CLASS_SAMURAI_F_DESC
-A swift swordmaster who relies on[N]
-precision and sudden strikes.[X]
+A swift swordmaster who relies on[LF]
+precision and sudden strikes.[.][X]
+
 ## MSG_CLASS_MASTER_NINJA_NAME
 Master Ninja[X]
-
 ## MSG_CLASS_MASTER_NINJA_DESC
-A master of stealth who cuts foes[N]
-down before they can react.[X]
+A master of stealth who cuts foes[LF]
+down before they can react.[.][X]
+
 ## MSG_CLASS_HOODED_NINJA_NAME
-Hooded Ninja[X]
-
+Ninja[.][X]
 ## MSG_CLASS_HOODED_NINJA_DESC
-A silent assassin who fights from[N]
-the shadows with a blade.[X]
-## MSG_CLASS_MYRMIDON_FE15_F_NAME
-Myrmidon F[X]
+A silent assassin who fights from[LF]
+the shadows with a blade.[.][X]
 
+## MSG_CLASS_MYRMIDON_FE15_F_NAME
+Myrmidon[X]
 ## MSG_CLASS_MYRMIDON_FE15_F_DESC
-A quick swordfighter who prizes[N]
+A quick swordfighter who prizes[LF]
 speed and clean technique.[.][X]
+
 ## MSG_CLASS_MYRMIDON_FE15_NAME
 Myrmidon[X]
-
 ## MSG_CLASS_MYRMIDON_FE15_DESC
-A quick swordfighter who prizes[N]
+A quick swordfighter who prizes[LF]
 speed and clean technique.[.][X]
-## MSG_CLASS_KATARINA_FENCER_NAME
-Katarina Fencer[.][X]
 
+## MSG_CLASS_KATARINA_FENCER_NAME
+Fencer[.][X]
 ## MSG_CLASS_KATARINA_FENCER_DESC
-An elegant fencer whose nimble[N]
+An elegant fencer whose nimble[LF]
 blade work overwhelms foes.[.][X]
+
 ## MSG_CLASS_THUG_NAME
 Thug[X]
-
 ## MSG_CLASS_THUG_DESC
-A rough swordsman who fights dirty[N]
+A rough swordsman who fights dirty[LF]
 and hits harder than expected.[X]
+
 ## MSG_CLASS_DREAD_FIGHTER_NAME
 Dread Fighter[.][X]
-
 ## MSG_CLASS_DREAD_FIGHTER_DESC
-A veteran swordsman trained to[N]
+A veteran swordsman trained to[LF]
 cut through magic and monsters.[.][X]
-## MSG_CLASS_FIR_SWORDMASTER_NAME
-Fir[.][X]
 
+## MSG_CLASS_FIR_SWORDMASTER_NAME
+Swordmaster[.][X]
 ## MSG_CLASS_FIR_SWORDMASTER_DESC
-A swordmaster whose sharp blade[N]
+A swordmaster whose sharp blade[LF]
 and footwork leave no opening.[.][X]
+
 ## MSG_CLASS_TRUEBLADE_NAME
 Trueblade[.][X]
-
 ## MSG_CLASS_TRUEBLADE_DESC
-A master swordsman who overwhelms[N]
-foes with blinding speed.[X]
+A master swordsman who overwhelms[LF]
+foes with blinding speed.[.][X]
+
 ## MSG_CLASS_RED_MAGE_NAME
 Red Mage[X]
-
 ## MSG_CLASS_RED_MAGE_DESC
-A versatile mage who blends sword[N]
+A versatile mage who blends sword[LF]
 technique, spells, and staves.[.][X]
+
 ## MSG_CLASS_MOLOCH_NAME
 Moloch[X]
-
 ## MSG_CLASS_MOLOCH_DESC
-A dreadful sorcerer who commands[N]
+A dreadful sorcerer who commands[LF]
 dark power and ancient rites.[.][X]
+
 ## MSG_CLASS_TACTICIAN_CUSTOM_NAME
 Tactician[.][X]
-
 ## MSG_CLASS_TACTICIAN_CUSTOM_DESC
-A battlefield strategist who uses[N]
-magic to control the fight.[X]
-## MSG_CLASS_TRICKSTER_F_NAME
-Trickster F[.][X]
+A battlefield strategist who uses[LF]
+magic to control the fight.[.][X]
 
+## MSG_CLASS_TRICKSTER_F_NAME
+Trickster[.][X]
 ## MSG_CLASS_TRICKSTER_F_DESC
-A nimble rogue who mixes swordplay,[N]
+A nimble rogue who mixes swordplay,[LF]
 magic, bows, and staves.[.][X]
+
 ## MSG_CLASS_TRICKSTER_NAME
 Trickster[.][X]
-
 ## MSG_CLASS_TRICKSTER_DESC
-A nimble rogue who mixes swordplay,[N]
+A nimble rogue who mixes swordplay,[LF]
 magic, bows, and staves.[.][X]
+
 ## MSG_CLASS_VILLAGER_F_NAME
 Villager[X]
-
 ## MSG_CLASS_VILLAGER_F_DESC
-A humble villager with hidden grit[N]
+A humble villager with hidden grit[LF]
 and room to grow.[.][X]
+
 ## MSG_CLASS_VILLAGER_NAME
 Villager[X]
-
 ## MSG_CLASS_VILLAGER_DESC
-A humble villager with hidden grit[N]
+A humble villager with hidden grit[LF]
 and room to grow.[.][X]
+
 ## MSG_CLASS_LEGION_KING_NAME
 Legion King[.][X]
-
 ## MSG_CLASS_LEGION_KING_DESC
-A powerful armored ruler trained[N]
+A powerful armored ruler trained[LF]
 in weapons and magic alike.[.][X]
+
 ## MSG_CLASS_ONI_CHIEFTAIN_NAME
 Oni Chieftain[.][X]
-
 ## MSG_CLASS_ONI_CHIEFTAIN_DESC
-A brutal chieftain who crushes foes[N]
-with axes and wild magic.[X]
+A brutal chieftain who crushes foes[LF]
+with axes and wild magic.[.][X]
+
 ## MSG_CLASS_ELFFIN_FANCY_NAME
 Elffin Fancy[X]
-
 ## MSG_CLASS_ELFFIN_FANCY_DESC
-A graceful bard whose song and magic[N]
+A graceful bard whose song and magic[LF]
 raise allies spirits.[.][X]
-## MSG_CLASS_MOUNTED_MARAUDER_NAME
-Mounted Marauder[X]
 
+## MSG_CLASS_MOUNTED_MARAUDER_NAME
+Marauder[X]
 ## MSG_CLASS_MOUNTED_MARAUDER_DESC
-A mounted raider who harasses foes[N]
+A mounted raider who harasses foes[LF]
 with axes and bows.[.][X]
+
 ## MSG_CLASS_MECHANIST_NAME
 Mechanist[.][X]
-
 ## MSG_CLASS_MECHANIST_DESC
-A clever bow user who fights with[N]
+A clever bow user who fights with[LF]
 crafted tools and precision.[.][X]
+
 ## MSG_CLASS_DRAGOON_CUSTOM_NAME
 Dragoon[.][X]
-
 ## MSG_CLASS_DRAGOON_CUSTOM_DESC
-An airborne lancer who dives on foes[N]
+An airborne lancer who dives on foes[LF]
 with piercing force.[X]
+
 ## MSG_CLASS_LANCER_CUSTOM_NAME
 Lancer[X]
-
 ## MSG_CLASS_LANCER_CUSTOM_DESC
-A focused lancer with reliable reach[N]
+A focused lancer with reliable reach[LF]
 and disciplined technique.[X]
+
 ## MSG_CLASS_MILITIA_NAME
 Militia[.][X]
-
 ## MSG_CLASS_MILITIA_DESC
-A common soldier hardened by battle[N]
-and practical experience.[X]
+A common soldier hardened by battle[LF]
+and practical experience.[.][X]
+
 ## MSG_CLASS_SENTINEL_NAME
 Sentinel[X]
-
 ## MSG_CLASS_SENTINEL_DESC
-An elite guardian with many weapons[N]
+An elite guardian with many weapons[LF]
 and iron discipline.[.][X]
-## MSG_CLASS_T1_LANCER_NAME
-T1 Lancer[.][X]
 
+## MSG_CLASS_T1_LANCER_NAME
+Lancer[.][X]
 ## MSG_CLASS_T1_LANCER_DESC
-A young lancer with strong basics[N]
-and room to grow.[X]
+A young lancer with strong basics[LF]
+and room to grow.[.][X]
+
 ## MSG_CLASS_GLADIATOR_NAME
 Gladiator[.][X]
-
 ## MSG_CLASS_GLADIATOR_DESC
-A hardened arena fighter who swings[N]
-blades and axes with force.[X]
+A hardened arena fighter who swings[LF]
+blades and axes with force.[.][X]
+
 ## MSG_CLASS_HORN_BRIGAND_NAME
-Horn Brigand[X]
-
+Heralder[X]
 ## MSG_CLASS_HORN_BRIGAND_DESC
-A horned brigand who attacks with[N]
-raw axe strength.[X]
-## MSG_CLASS_HORN_SOLDIER_NAME
-Horn Soldier[X]
+A scout who signals[LF]
+allies when it's safe.[.][X]
 
+## MSG_CLASS_HORN_SOLDIER_NAME
+Heralder[X]
 ## MSG_CLASS_HORN_SOLDIER_DESC
-A horned soldier who holds steady[N]
-with lance in hand.[X]
+A scout who signals[LF]
+allies when it's safe.[.][X]
+
 ## MSG_CLASS_HUNTER_NAME
 Hunter[X]
-
 ## MSG_CLASS_HUNTER_DESC
-A woodsman archer skilled at tracking[N]
-and striking from afar.[X]
-## MSG_CLASS_SUPPLIER_ANNA_NAME
-Supplier Anna[.][X]
+A woodsman archer skilled at tracking[LF]
+and striking from afar.[.][X]
 
+## MSG_CLASS_SUPPLIER_ANNA_NAME
+Supplier[X]
 ## MSG_CLASS_SUPPLIER_ANNA_DESC
-A traveling supplier who supports[N]
+A traveling supplier who supports[LF]
 allies with arms and staves.[.][X]
+
 ## MSG_CLASS_SANDWORM_NAME
 Sandworm[X]
-
 ## MSG_CLASS_SANDWORM_DESC
-A desert monster that erupts from[N]
-the sand to swallow prey.[X]
+A desert monster that erupts from[LF]
+the sand to swallow prey.[.][X]
+
 ## MSG_CLASS_CURSED_SWORD_NAME
 Cursed Sword[X]
-
 ## MSG_CLASS_CURSED_SWORD_DESC
-A possessed blade that moves with[N]
+A possessed blade that moves with[LF]
 malice of its own.[.][X]
+
 ## MSG_CLASS_MAGICAL_TOMES_NAME
-Magical Tomes[.][X]
-
+Tome[X]
 ## MSG_CLASS_MAGICAL_TOMES_DESC
-Enchanted tomes that unleash spells[N]
+Enchanted tomes that unleash spells[LF]
 without a living caster.[.][X]
-## MSG_CLASS_MIMIC_CHEST_NAME
-Mimic Chest[.][X]
 
+## MSG_CLASS_MIMIC_CHEST_NAME
+Mimic[.][X]
 ## MSG_CLASS_MIMIC_CHEST_DESC
-A false treasure chest that attacks[N]
+A false treasure chest that attacks[LF]
 those who draw too near.[.][X]
+
 ## MSG_CLASS_MOSQUITO_NAME
 Mosquito[X]
-
 ## MSG_CLASS_MOSQUITO_DESC
-A vicious insect that darts in to[N]
-drain the life of foes.[X]
+A vicious insect that darts in to[LF]
+drain the life of foes.[.][X]
+
 ## MSG_CLASS_PHANTOM_CUSTOM_NAME
 Phantom[.][X]
-
 ## MSG_CLASS_PHANTOM_CUSTOM_DESC
-A fragile apparition summoned to[N]
+A fragile apparition summoned to[LF]
 strike once and fade away.[X]
+
 ## MSG_CLASS_SLIME_NAME
 Slime[.][X]
-
 ## MSG_CLASS_SLIME_DESC
-A creeping monster that lashes out[N]
+A creeping monster that lashes out[LF]
 with corrosive magic.[.][X]
+
 ## MSG_CLASS_WARBIRD_NAME
 Warbird[.][X]
-
 ## MSG_CLASS_WARBIRD_DESC
-A trained warbird that dives on foes[N]
+A trained warbird that dives on foes[LF]
 with beak, talon, or bow.[.][X]
+
 ## MSG_CLASS_ADVENTURER_NAME
 Adventurer[X]
-
 ## MSG_CLASS_ADVENTURER_DESC
-An intrepid explorer skilled in[N]
-ranged combat and survival.[X]
+An intrepid explorer skilled in[LF]
+ranged combat and survival.[.][X]
 
 ## MSG_UNIT_ACTION_CALL
  Call[.][X]

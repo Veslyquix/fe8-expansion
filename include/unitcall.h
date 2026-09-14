@@ -9,7 +9,7 @@
 #define UNIT_CALL_CLASS CLASS_HORN_BRIGAND
 
 // Max distance tiles a unit can be called from.
-#define UNIT_CALL_RANGE 5
+#define UNIT_CALL_RANGE 6
 
 // Move-unit procs the convergence proc drives itself. The calling unit's
 // own MU proc is treated as a permanently reserved slot out of MU_MAX_COUNT

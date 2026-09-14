@@ -124,6 +124,12 @@ int Co_GetCharId(int coId);
 int Co_GetBriefMsg(int coId);
 int Co_GetDisplayClassId(int coId);
 
+/* Read-only view of a CO's explicit class-affinity list. Used by systems
+ * that want to key off the same class roster the CO affinity page displays
+ * without duplicating the table or allocating a filtered copy. */
+int Co_GetClassAffinityCount(int coId);
+int Co_GetClassAffinityClassId(int coId, int index);
+
 /* CO gauge stars each of a CO's two powers costs. The mini CO gauge
  * (src/aw2_gfx.c) draws CoScreen_GetCoPowerStars small stars followed by
  * the (super - normal) big ones that top it up to the super power.
