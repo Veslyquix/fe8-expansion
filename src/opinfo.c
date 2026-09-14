@@ -20,7 +20,30 @@
 #include "sysutil.h"
 #include "constants/classes.h"
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+/* The "gamestart" overlay aliases the "banim" one, and this struct's two Anim
+ * pointers land exactly on top of battle-animation scroll state:
+ *
+ *     gOpInfoData.anim1 (+0x14) == gpBg1ScrollOffset
+ *     gOpInfoData.anim2 (+0x18) == gEfxlvup_0
+ *
+ * The vanilla class-display screen never notices, because it only ever reaches
+ * a spell through StartClassReelSpellAnim()'s nine-entry table (fire, thunder,
+ * heal, light, flux, myrrh, evil eye, stone) -- none of which touch those.
+ * The debugger's battle-animation preview drives the *full* gEkrSpellAnimLut
+ * instead, so a spell's own effect code writes those banim globals while this
+ * screen is live and turns anim1/anim2 into a scroll pointer and an SFX
+ * counter. Every spell that hangs/crashes the preview is one that does exactly
+ * that: Purge via gEfxlvup_0, and Aura/Excalibur/Nosferatu/Luna/Eclipse/Fenrir
+ * via NewEfxRestWINH()'s gpBg1ScrollOffset/gpBg2ScrollOffset writes.
+ *
+ * 0x38 bytes of its own storage is enough to stop the two screens colliding.
+ * gOpInfoImgSheetBuf below stays overlaid: the preview points pImgSheetBuf at
+ * the banim sheet buffers instead, so it is never live at the same time. */
+EWRAM_DATA struct AnimBuffer gOpInfoData = {0};
+#else
 EWRAM_OVERLAY(gamestart) struct AnimBuffer gOpInfoData = {0};
+#endif
 /* Not static: reused by src/modeselect.c's carousel (FE8_MODE_SELECT) for
  * its third slot's image-sheet buffer -- Mode Select only ever runs from
  * the save-menu New Game flow, never alongside this class-display screen,
