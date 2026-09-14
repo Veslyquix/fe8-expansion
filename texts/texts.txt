@@ -40314,8 +40314,9 @@ The Unyielding Blade[.][X]
 ## MSG_CO_WAKWI_INFO
 A fearless leader who stands[LF]
 at the heart of every battle,[LF]
-inspiring allies to strike true.[LF]
- [LF]
+inspiring allies to strike true.[X]
+
+## MSG_CO_WAKWI_PASSIVE
 Passive: her units have[LF]
 +10 critical hit rate.[.][X]
 
@@ -40345,8 +40346,9 @@ The Hunter's Eye[.][X]
 ## MSG_CO_ISHKODE_INFO
 A young leader who treads[LF]
 carefully into battle,[LF]
-guiding his allies from afar.[LF]
- [LF]
+guiding his allies from afar.[.][X]
+
+## MSG_CO_ISHKODE_PASSIVE
 Passive: his bow wielders[LF]
 have +1 range.[X]
 
@@ -40378,53 +40380,462 @@ Liz[.][X]
 ## MSG_NAME_TOREN
 Toren[.][X]
 
+## MSG_CO_TOREN_BRIEF
+ [.][X]
+
+## MSG_CO_TOREN_TITLE
+ [.][X]
+
+## MSG_CO_TOREN_INFO
+ [.][X]
+
+## MSG_CO_TOREN_PASSIVE
+ [.][X]
+
+## MSG_CO_TOREN_POWER_NAME
+ [.][X]
+
+## MSG_CO_TOREN_POWER_DESC
+ [.][X]
+
+## MSG_CO_TOREN_SUPER_NAME
+ [.][X]
+
+## MSG_CO_TOREN_SUPER_DESC
+ [.][X]
+
+
 ## MSG_NAME_LENORA
 Lenora[.][X]
+
+## MSG_CO_LENORA_BRIEF
+ [.][X]
+
+## MSG_CO_LENORA_TITLE
+ [.][X]
+
+## MSG_CO_LENORA_INFO
+ [.][X]
+
+## MSG_CO_LENORA_PASSIVE
+ [.][X]
+
+## MSG_CO_LENORA_POWER_NAME
+ [.][X]
+
+## MSG_CO_LENORA_POWER_DESC
+ [.][X]
+
+## MSG_CO_LENORA_SUPER_NAME
+ [.][X]
+
+## MSG_CO_LENORA_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_VOLIK
 Volik[.][X]
 
+## MSG_CO_VOLIK_BRIEF
+ [.][X]
+
+## MSG_CO_VOLIK_TITLE
+ [.][X]
+
+## MSG_CO_VOLIK_INFO
+ [.][X]
+
+## MSG_CO_VOLIK_PASSIVE
+ [.][X]
+
+## MSG_CO_VOLIK_POWER_NAME
+ [.][X]
+
+## MSG_CO_VOLIK_POWER_DESC
+ [.][X]
+
+## MSG_CO_VOLIK_SUPER_NAME
+ [.][X]
+
+## MSG_CO_VOLIK_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_CLARISSE
 Clarisse[.][X]
+
+## MSG_CO_CLARISSE_BRIEF
+ [.][X]
+
+## MSG_CO_CLARISSE_TITLE
+ [.][X]
+
+## MSG_CO_CLARISSE_INFO
+ [.][X]
+
+## MSG_CO_CLARISSE_PASSIVE
+ [.][X]
+
+## MSG_CO_CLARISSE_POWER_NAME
+ [.][X]
+
+## MSG_CO_CLARISSE_POWER_DESC
+ [.][X]
+
+## MSG_CO_CLARISSE_SUPER_NAME
+ [.][X]
+
+## MSG_CO_CLARISSE_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_ELAYNE
 Elayne[.][X]
 
+## MSG_CO_ELAYNE_BRIEF
+ [.][X]
+
+## MSG_CO_ELAYNE_TITLE
+ [.][X]
+
+## MSG_CO_ELAYNE_INFO
+ [.][X]
+
+## MSG_CO_ELAYNE_PASSIVE
+ [.][X]
+
+## MSG_CO_ELAYNE_POWER_NAME
+ [.][X]
+
+## MSG_CO_ELAYNE_POWER_DESC
+ [.][X]
+
+## MSG_CO_ELAYNE_SUPER_NAME
+ [.][X]
+
+## MSG_CO_ELAYNE_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_EDRIC
 Edric[.][X]
+
+## MSG_CO_EDRIC_BRIEF
+ [.][X]
+
+## MSG_CO_EDRIC_TITLE
+ [.][X]
+
+## MSG_CO_EDRIC_INFO
+ [.][X]
+
+## MSG_CO_EDRIC_PASSIVE
+ [.][X]
+
+## MSG_CO_EDRIC_POWER_NAME
+ [.][X]
+
+## MSG_CO_EDRIC_POWER_DESC
+ [.][X]
+
+## MSG_CO_EDRIC_SUPER_NAME
+ [.][X]
+
+## MSG_CO_EDRIC_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_ORELUS
 Orelus[.][X]
 
+## MSG_CO_ORELUS_BRIEF
+ [.][X]
+
+## MSG_CO_ORELUS_TITLE
+ [.][X]
+
+## MSG_CO_ORELUS_INFO
+ [.][X]
+
+## MSG_CO_ORELUS_PASSIVE
+ [.][X]
+
+## MSG_CO_ORELUS_POWER_NAME
+ [.][X]
+
+## MSG_CO_ORELUS_POWER_DESC
+ [.][X]
+
+## MSG_CO_ORELUS_SUPER_NAME
+ [.][X]
+
+## MSG_CO_ORELUS_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_NURI
 Nuri[.][X]
+
+## MSG_CO_NURI_BRIEF
+ [.][X]
+
+## MSG_CO_NURI_TITLE
+ [.][X]
+
+## MSG_CO_NURI_INFO
+ [.][X]
+
+## MSG_CO_NURI_PASSIVE
+ [.][X]
+
+## MSG_CO_NURI_POWER_NAME
+ [.][X]
+
+## MSG_CO_NURI_POWER_DESC
+ [.][X]
+
+## MSG_CO_NURI_SUPER_NAME
+ [.][X]
+
+## MSG_CO_NURI_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_FARID
 Farid[.][X]
 
+## MSG_CO_FARID_BRIEF
+ [.][X]
+
+## MSG_CO_FARID_TITLE
+ [.][X]
+
+## MSG_CO_FARID_INFO
+ [.][X]
+
+## MSG_CO_FARID_PASSIVE
+ [.][X]
+
+## MSG_CO_FARID_POWER_NAME
+ [.][X]
+
+## MSG_CO_FARID_POWER_DESC
+ [.][X]
+
+## MSG_CO_FARID_SUPER_NAME
+ [.][X]
+
+## MSG_CO_FARID_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_KAVRA
 Kavra[.][X]
+
+## MSG_CO_KAVRA_BRIEF
+ [.][X]
+
+## MSG_CO_KAVRA_TITLE
+ [.][X]
+
+## MSG_CO_KAVRA_INFO
+ [.][X]
+
+## MSG_CO_KAVRA_PASSIVE
+ [.][X]
+
+## MSG_CO_KAVRA_POWER_NAME
+ [.][X]
+
+## MSG_CO_KAVRA_POWER_DESC
+ [.][X]
+
+## MSG_CO_KAVRA_SUPER_NAME
+ [.][X]
+
+## MSG_CO_KAVRA_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_ZAHIR
 Zahir[.][X]
 
+## MSG_CO_ZAHIR_BRIEF
+ [.][X]
+
+## MSG_CO_ZAHIR_TITLE
+ [.][X]
+
+## MSG_CO_ZAHIR_INFO
+ [.][X]
+
+## MSG_CO_ZAHIR_PASSIVE
+ [.][X]
+
+## MSG_CO_ZAHIR_POWER_NAME
+ [.][X]
+
+## MSG_CO_ZAHIR_POWER_DESC
+ [.][X]
+
+## MSG_CO_ZAHIR_SUPER_NAME
+ [.][X]
+
+## MSG_CO_ZAHIR_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_BRANN
 Brann[.][X]
+
+## MSG_CO_BRANN_BRIEF
+ [.][X]
+
+## MSG_CO_BRANN_TITLE
+ [.][X]
+
+## MSG_CO_BRANN_INFO
+ [.][X]
+
+## MSG_CO_BRANN_PASSIVE
+ [.][X]
+
+## MSG_CO_BRANN_POWER_NAME
+ [.][X]
+
+## MSG_CO_BRANN_POWER_DESC
+ [.][X]
+
+## MSG_CO_BRANN_SUPER_NAME
+ [.][X]
+
+## MSG_CO_BRANN_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_KIT
 Kit[.][X]
 
+## MSG_CO_KIT_BRIEF
+ [.][X]
+
+## MSG_CO_KIT_TITLE
+ [.][X]
+
+## MSG_CO_KIT_INFO
+ [.][X]
+
+## MSG_CO_KIT_PASSIVE
+ [.][X]
+
+## MSG_CO_KIT_POWER_NAME
+ [.][X]
+
+## MSG_CO_KIT_POWER_DESC
+ [.][X]
+
+## MSG_CO_KIT_SUPER_NAME
+ [.][X]
+
+## MSG_CO_KIT_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_MARIUS
 Marius[.][X]
+
+## MSG_CO_MARIUS_BRIEF
+ [.][X]
+
+## MSG_CO_MARIUS_TITLE
+ [.][X]
+
+## MSG_CO_MARIUS_INFO
+ [.][X]
+
+## MSG_CO_MARIUS_PASSIVE
+ [.][X]
+
+## MSG_CO_MARIUS_POWER_NAME
+ [.][X]
+
+## MSG_CO_MARIUS_POWER_DESC
+ [.][X]
+
+## MSG_CO_MARIUS_SUPER_NAME
+ [.][X]
+
+## MSG_CO_MARIUS_SUPER_DESC
+ [.][X]
 
 ## MSG_NAME_LYRIA
 Lyria[.][X]
 
+## MSG_CO_LYRIA_BRIEF
+ [.][X]
+
+## MSG_CO_LYRIA_TITLE
+ [.][X]
+
+## MSG_CO_LYRIA_INFO
+ [.][X]
+
+## MSG_CO_LYRIA_PASSIVE
+ [.][X]
+
+## MSG_CO_LYRIA_POWER_NAME
+ [.][X]
+
+## MSG_CO_LYRIA_POWER_DESC
+ [.][X]
+
+## MSG_CO_LYRIA_SUPER_NAME
+ [.][X]
+
+## MSG_CO_LYRIA_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_MORTIVAR
 Mortivar[.][X]
 
+## MSG_CO_MORTIVAR_BRIEF
+ [.][X]
+
+## MSG_CO_MORTIVAR_TITLE
+ [.][X]
+
+## MSG_CO_MORTIVAR_INFO
+ [.][X]
+
+## MSG_CO_MORTIVAR_PASSIVE
+ [.][X]
+
+## MSG_CO_MORTIVAR_POWER_NAME
+ [.][X]
+
+## MSG_CO_MORTIVAR_POWER_DESC
+ [.][X]
+
+## MSG_CO_MORTIVAR_SUPER_NAME
+ [.][X]
+
+## MSG_CO_MORTIVAR_SUPER_DESC
+ [.][X]
+
 ## MSG_NAME_VEYR
 Veyr[.][X]
+
+## MSG_CO_VEYR_BRIEF
+ [.][X]
+
+## MSG_CO_VEYR_TITLE
+ [.][X]
+
+## MSG_CO_VEYR_INFO
+ [.][X]
+
+## MSG_CO_VEYR_PASSIVE
+ [.][X]
+
+## MSG_CO_VEYR_POWER_NAME
+ [.][X]
+
+## MSG_CO_VEYR_POWER_DESC
+ [.][X]
+
+## MSG_CO_VEYR_SUPER_NAME
+ [.][X]
+
+## MSG_CO_VEYR_SUPER_DESC
+ [.][X]
 
 ## MSG_TERRAIN_CAMP
 Camp[X]
@@ -40449,9 +40860,13 @@ The Wise Elder[.][X]
 Healing[.][X]
 
 ## MSG_CO_ASIN_INFO
-A wise elder who guides his people[LF]
-through hardship, tending to the[LF]
-wounded with skill and patience.[.][X]
+A kind elder who guides his[LF]
+people through hardship, tending[LF]
+to the wounded with patience.[.][X]
+
+## MSG_CO_ASIN_PASSIVE
+Asin's units heal 10% health[LF]
+at the start of your turn.[X]
 
 ## MSG_CO_ASIN_POWER_NAME
 Rekindle[.][X]
@@ -40507,8 +40922,9 @@ The Reckless Brawler[X]
 ## MSG_CO_KARGAN_INFO
 A brash commander who trusts[LF]
 raw power over careful[LF]
-planning.[LF]
- [LF]
+planning.[.][X]
+
+## MSG_CO_KARGAN_PASSIVE
 Passive: his axe-wielders[LF]
 have +1 movement.[.][X]
 

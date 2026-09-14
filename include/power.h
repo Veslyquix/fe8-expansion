@@ -11,7 +11,23 @@ enum {
     CO_WAKWI,
     CO_ISHKODE,
     CO_ASIN,
-    CO_FRANCIS,
+    CO_TOREN,
+    CO_LENORA,
+    CO_VOLIK,
+    CO_CLARISSE,
+    CO_ELAYNE,
+    CO_EDRIC,
+    CO_ORELUS,
+    CO_NURI,
+    CO_FARID,
+    CO_KAVRA,
+    CO_ZAHIR,
+    CO_BRANN,
+    CO_KIT,
+    CO_MARIUS,
+    CO_LYRIA,
+    CO_MORTIVAR,
+    CO_VEYR,
     CO_KARGAN,
     CO_COUNT,
 };
@@ -24,7 +40,7 @@ struct MenuItemProc;
  * call: pans the camera onto every one of the player's units in turn,
  * applying the commander's power (or super, for the second one) to
  * whichever ones CoPower_AppliesToClass (src/power.c) says it targets --
- * see also CO_FRANCIS_POWER_HEAL_AMOUNT there for the one CO with an
+ * see also CO_EDRIC_POWER_HEAL_AMOUNT there for the one CO with an
  * effect implemented so far. */
 u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
 u8 CoSuperPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
@@ -138,7 +154,7 @@ int Co_GetClassAffinityClassId(int coId, int index);
 int CoScreen_GetCoPowerStars(int coId);
 int CoScreen_GetCoSuperPowerStars(int coId);
 
-/* A CO's class affinity (struct CoClassAffinity, sFrancisAffinities etc.)
+/* A CO's class affinity (struct CoClassAffinity, sEdricAffinities etc.)
  * scales a class's power the same way a weapon's Pow bonus does: this
  * returns the delta to add to baseValue (POW only -- other stats are
  * unaffected), not the adjusted total, so callers use it exactly like
@@ -149,7 +165,7 @@ int CoScreen_GetCoSuperPowerStars(int coId);
  * 0. While coId's power/super is active (see CoPowers_OnPhaseEnd above),
  * ratingPow/ratingSup are added on top of rating first -- unlike the
  * *Bon fields below, these stack rather than replace. An out-of-range
- * coId falls back to CO_FRANCIS, same as every other lookup through
+ * coId falls back to CO_EDRIC, same as every other lookup through
  * GetCoDefinition. */
 int AdjustStatForCo(int coId, int classId, int baseValue);
 
@@ -281,7 +297,8 @@ struct CoDefinition {
     u16 charId;
     u16 titleMsg; // shown on the info page (e.g. their epithet)
     u16 briefMsg; 
-    u16 infoMsg; // single texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
+    u16 infoMsg; // three-line texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
+    u16 passiveMsg; // optional multiline passive text shown below infoMsg
     u16 powerNameMsg;
     u16 powerDescMsg; // single texts.txt entry, [LF]-separated
     u16 superPowerNameMsg;

@@ -2,6 +2,33 @@
 #define GUARD_CONSTANTS_CHARACTERS_H
 
 enum {
+    CHARACTER_WAKWI      = 0x01, // replaces Eirika
+    CHARACTER_ISHKODE    = 0x02, // replaces Seth
+    CHARACTER_FREDERICK  = 0x03, // replaces Gilliam
+    CHARACTER_FOX        = 0x04, // replaces Franz
+    CHARACTER_ASIN       = 0x05, // replaces Moulder
+    CHARACTER_LIZ        = 0x06, // replaces Vanessa
+    CHARACTER_TOREN      = 0x07, // replaces Ross
+    CHARACTER_LENORA     = 0x08, // replaces Neimi
+    CHARACTER_VOLIK      = 0x09, // replaces Colm
+    CHARACTER_CLARISSE   = 0x0A, // replaces Garcia
+    CHARACTER_ELAYNE     = 0x0B, // replaces Innes
+    CHARACTER_EDRIC      = 0x0C, // replaces Lute
+    CHARACTER_ORELUS     = 0x0D, // replaces Natasha
+    CHARACTER_NURI       = 0x0E, // replaces Cormag
+    CHARACTER_FARID      = 0x0F, // replaces Ephraim
+    CHARACTER_KAVRA      = 0x10, // replaces Forde
+    CHARACTER_ZAHIR      = 0x11, // replaces Kyle
+    CHARACTER_BRANN      = 0x12, // replaces Amelia
+    CHARACTER_KIT        = 0x13, // replaces Artur
+    CHARACTER_MARIUS     = 0x14, // replaces Gerik
+    CHARACTER_LYRIA      = 0x15, // replaces Tethys
+    CHARACTER_MORTIVAR   = 0x16, // replaces Marisa
+    CHARACTER_VEYR       = 0x17, // replaces Saleh
+    CHARACTER_KARGAN     = 0x68, // replaces O'Neill
+};
+
+enum {
     CHARACTER_NONE         = 0x00,
 
     // Player Characters
