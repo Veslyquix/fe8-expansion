@@ -14,16 +14,54 @@ typedef void (*AnimCallback_t) (struct Anim* anim);
 EWRAM_DATA static struct Anim sAnimPool[ANIM_MAX_COUNT] = {};
 EWRAM_DATA static struct Anim* sFirstAnim = NULL;
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+// Set by AnimUpdateAll() when it has to abandon a corrupted anim list, so
+// callers can react (e.g. wind down whatever was driving that animation)
+// instead of continuing to tick/reference anims that no longer exist.
+// Consume it via ConsumeAnimListCorruptFlag() rather than reading it directly.
+EWRAM_DATA static bool sAnimListCorrupted = FALSE;
+#endif
+
+bool ConsumeAnimListCorruptFlag(void)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    bool result = sAnimListCorrupted;
+    sAnimListCorrupted = FALSE;
+    return result;
+#else
+    return FALSE;
+#endif
+}
+
 void AnimUpdateAll(void)
 {
     struct Anim* anim;
     int boolNeedsSort = FALSE;
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    int iterations = 0;
+#endif
 
     if (!sFirstAnim)
         return;
 
     for (anim = sFirstAnim;; anim = anim->pNext)
     {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+        // A corrupted/cyclic pNext chain would otherwise walk off sAnimPool's
+        // bounds or spin forever. Rather than just bailing out of this one
+        // traversal (which would leave the same corrupted chain to walk into
+        // again next frame), reset the whole anim system to a known-safe
+        // state and let the caller know so it can give up on whatever it was
+        // doing with these anims too.
+        if ((anim < sAnimPool || anim >= sAnimPool + ANIM_MAX_COUNT) ||
+            (++iterations > ANIM_MAX_COUNT))
+        {
+            sAnimListCorrupted = TRUE;
+            AnimClearAll();
+            return;
+        }
+#endif
+
         if (ANIM_IS_DISABLED(anim))
             continue;
 

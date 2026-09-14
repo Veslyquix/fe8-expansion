@@ -674,6 +674,20 @@ void EndEfxAnimeDrvProc(void)
 void ExecAllAIS(void)
 {
     AnimUpdateAll();
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (ConsumeAnimListCorruptFlag())
+    {
+        // AnimUpdateAll() just wiped a corrupted anim list out from under
+        // whatever was driving it here - this proc feeds both real-battle
+        // spell casts and the VeslyDebugger battle-anim preview, neither of
+        // which respond to gEkrBattleEndFlag. Clear gEfxSpellAnimExists so a
+        // CLASS_REEL_WAIT_SPELL (or any other "wait for the spell to end")
+        // check doesn't hang forever waiting on a spell whose anim is gone.
+        gEfxSpellAnimExists = FALSE;
+    }
+#endif
+
     return;
 }
 

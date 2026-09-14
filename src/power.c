@@ -46,22 +46,22 @@
 // issue: classes not shown here don't get the crit bonus 
  static const struct CoClassAffinity sWakwiAffinities[] = {
     {  .classId = CLASS_SOLDIER,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    //Cavalier and Knights don't have custom anims for _F yet. 
     {  .classId = CLASS_ARMOR_KNIGHT,     .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_BRIGAND,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_ARCHER,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_ARCHER_F,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_FIGHTER,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_LYN_LORD,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    // {  .classId = CLASS_MERCENARY,        .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_MYRMIDON_F,        .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+ // {  .classId = CLASS_MERCENARY,        .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // Wakwi gets myrmidon instead of mercenary 
+    {  .classId = CLASS_MYRMIDON_F,        .rating = 36, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_CAVALIER,         .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_HORN_BRIGAND,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_MONK,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_MAGE,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_MONK,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_MAGE_F,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     // {  .classId = CLASS_SHAMAN,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
     {  .classId = CLASS_CLERIC,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_THIEF,            .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_PEGASUS_KNIGHT,   .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    {  .classId = CLASS_WYVERN_RIDER,     .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_THIEF,            .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_PEGASUS_KNIGHT,   .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_WYVERN_RIDER,     .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
 };
 
 /* Ishkode is a ranged specialist */

@@ -195,6 +195,7 @@ typedef u32 AnimScr;
     (ANFMT_NOT_FORCESPRITE + ANFMT_INST_TYPE(ANIM_INS_TYPE_END))
 
 void AnimUpdateAll(void);
+bool ConsumeAnimListCorruptFlag(void);
 void AnimClearAll(void);
 struct Anim * AnimCreate_unused(const void * script);
 struct Anim * AnimCreate(const void* script, u16 displayPriority);

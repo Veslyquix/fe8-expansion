@@ -273,6 +273,20 @@ void MainUpdateEkrBattle(void)
     Proc_Run(gProcTreeRootArray[1]);
 
     AnimUpdateAll();
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (ConsumeAnimListCorruptFlag())
+    {
+        // The anim list got corrupted badly enough that AnimUpdateAll() had
+        // to wipe it - don't keep running this battle on top of whatever's
+        // left. InBattleMainRoutine's switch on gEkrBattleEndFlag (further
+        // down in this file) already knows how to wind the battle down
+        // gracefully next frame; defer to that instead of tearing anything
+        // down directly from here.
+        gEkrBattleEndFlag = 1;
+    }
+#endif
+
     BattleAIS_ExecCommands();
 
     Proc_Run(gProcTreeRootArray[4]);
