@@ -7378,7 +7378,8 @@ static int GetNextDebuggerPreviewWeapon(int item, int direction);
 static const char * GetDebuggerPreviewWeaponName(int item);
 static int GetNextDebuggerClassPaletteCycle(int classId, int current, int direction);
 static int ResolveDebuggerClassPaletteOverride(DebuggerProc * proc);
-static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride);
+static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride, DebuggerProc * proc);
+static void RestoreGfxViewerMenuAfterBanimPreview(DebuggerProc * proc);
 
 #define GfxViewerMenuXShift -13
 #define GfxViewerMenuWidthShrink 2
@@ -7496,6 +7497,11 @@ void GfxViewerInitMenuGfx(DebuggerProc * proc)
     UnpackUiFramePalette(2);
     DrawUiFrame(BG_GetMapBuffer(2), x, y, w, h, TILEREF(0, 1), 0);
     BG_EnableSyncByMask(BG2_SYNC_BIT);
+}
+
+static void RestoreGfxViewerMenuAfterBanimPreview(DebuggerProc * proc)
+{
+    GfxViewerInitMenuGfx(proc);
 }
 
 void GfxViewerInit(DebuggerProc * proc)
@@ -8637,14 +8643,21 @@ static void EndLingeringBanimEffectProcs(void)
 
 static void EndDebuggerBanimPreview(void)
 {
-    BG_Fill(gBG2TilemapBuffer, 0); // Erase anything leftover by the spell 
-    BG_EnableSyncByMask(BG2_SYNC_BIT);
+    bool hadPreview = Proc_Find(sProc_DebuggerBanimPreview) != NULL;
+
 #if FE8_OVERFLOW_SAFETY_CHECKS
     // Before the preview's own teardown frees and reallocates the anim slots.
     EndLingeringBanimEffectProcs();
 #endif
 
     Proc_EndEach(sProc_DebuggerBanimPreview);
+
+    if (hadPreview)
+    {
+        BG_Fill(gBG1TilemapBuffer, 0);
+        BG_Fill(gBG2TilemapBuffer, 0);
+        BG_EnableSyncByMask(BG1_SYNC_BIT | BG2_SYNC_BIT);
+    }
 }
 
 // gEfxHpLut is EWRAM_DATA u16[22] (banim-ekrbattleintro.c); no ARRAY_COUNT-able
@@ -8687,7 +8700,7 @@ static void ResetDebuggerBanimHitEffectState(void)
 #endif
 }
 
-static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride)
+static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride, DebuggerProc * parent)
 {
     struct OpInfoClassDisplayProc * proc;
     struct ClassReelEnt * vanillaEntry;
@@ -8698,7 +8711,10 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapo
     EndDebuggerBanimPreview();
 
     if (classId == 0 || GetClassData(classId) == NULL)
+    {
+        RestoreGfxViewerMenuAfterBanimPreview(parent);
         return;
+    }
 
     vanillaEntry = GetDebuggerBanimReelEntry(classId);
 
@@ -8711,13 +8727,17 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapo
     }
 
     if (!IsDebuggerBanimSafe(entry, classId, unit, weapon, palOverride))
+    {
+        RestoreGfxViewerMenuAfterBanimPreview(parent);
         return;
+    }
 
     ResetDebuggerBanimHitEffectState();
 
     BMapDispSuspend();
     proc = Proc_Start(sProc_DebuggerBanimPreview, PROC_TREE_3);
     SetupDebuggerBanimAnim(proc, entry, vanillaEntry, unit, weapon, palOverride);
+    RestoreGfxViewerMenuAfterBanimPreview(parent);
 }
 
 static void DebuggerBanimPreview_ExecScript(struct OpInfoClassDisplayProc * proc)
@@ -8800,7 +8820,7 @@ void DrawGfxFromIDs(int type, int id, struct Unit * unit, DebuggerProc * proc)
             ClearMainMenuGfx(proc);
             GfxViewerInitMenuGfx(proc);
             MU_EndAll();
-            StartDebuggerBanimPreview(id, unit, proc->tmp[GfxViewerOption_Weapon], -1);
+            StartDebuggerBanimPreview(id, unit, proc->tmp[GfxViewerOption_Weapon], -1, proc);
             break;
         }
     }
@@ -8813,7 +8833,7 @@ static void RefreshDebuggerBanimPreviewForGfxViewer(DebuggerProc * proc, struct 
         HasDebuggerBanimForClass(proc->tmp[GfxViewerOption_ClassAnim]))
     {
         StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-            ResolveDebuggerClassPaletteOverride(proc));
+            ResolveDebuggerClassPaletteOverride(proc), proc);
     }
 }
 
@@ -8857,7 +8877,7 @@ void GfxViewerLoop(DebuggerProc * proc)
             {
                 proc->tmp[GfxViewerOption_Weapon] = GetNextDebuggerPreviewWeapon(proc->tmp[GfxViewerOption_Weapon], +1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else if (proc->id == GfxViewerOption_Pal)
@@ -8867,7 +8887,7 @@ void GfxViewerLoop(DebuggerProc * proc)
                 proc->tmp[GfxViewerOption_Pal] = GetNextDebuggerClassPaletteCycle(
                     proc->tmp[GfxViewerOption_ClassAnim], proc->tmp[GfxViewerOption_Pal], +1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else
@@ -8888,7 +8908,7 @@ void GfxViewerLoop(DebuggerProc * proc)
             {
                 proc->tmp[GfxViewerOption_Weapon] = GetNextDebuggerPreviewWeapon(proc->tmp[GfxViewerOption_Weapon], -1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else if (proc->id == GfxViewerOption_Pal)
@@ -8898,7 +8918,7 @@ void GfxViewerLoop(DebuggerProc * proc)
                 proc->tmp[GfxViewerOption_Pal] = GetNextDebuggerClassPaletteCycle(
                     proc->tmp[GfxViewerOption_ClassAnim], proc->tmp[GfxViewerOption_Pal], -1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else
@@ -8926,6 +8946,7 @@ void GfxViewerLoop(DebuggerProc * proc)
         {
             EndDebuggerBanimPreview();
             BMapDispResume();
+            RestoreGfxViewerMenuAfterBanimPreview(proc);
         }
 
         RefreshDebuggerBanimPreviewForGfxViewer(proc, unit);
@@ -8942,6 +8963,7 @@ void GfxViewerLoop(DebuggerProc * proc)
         {
             EndDebuggerBanimPreview();
             BMapDispResume();
+            RestoreGfxViewerMenuAfterBanimPreview(proc);
         }
 
         RefreshDebuggerBanimPreviewForGfxViewer(proc, unit);

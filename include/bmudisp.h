@@ -2,7 +2,6 @@
 #define GUARD_BM_UDISP_H
 
 #define UNITSPRITE_MAX 0xD0
-#define UNITSPRITE_ID_BITS 7
 
 extern u16* sPoisonIconSprites[12];
 extern u16* sSleepIconSprites[7];
