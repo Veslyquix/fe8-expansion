@@ -225,6 +225,23 @@ inline int GetItemCrit(int item) {
     return GetItemData(ITEM_INDEX(item))->crit;
 }
 
+int GetItemDisplayCrit(int item) {
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(item))
+        return 0xFF;
+#endif
+
+    return GetItemCrit(item);
+}
+
+bool ItemCannotCrit(int item) {
+#if FE8_CANNOT_CRIT_WEPS
+    return GetItemCrit(item) == 0xFF;
+#else
+    return FALSE;
+#endif
+}
+
 inline int GetItemCost(int item) {
     if (GetItemAttributes(item) & IA_UNBREAKABLE)
         return GetItemData(ITEM_INDEX(item))->costPerUse;
@@ -248,18 +265,35 @@ inline int GetItemEncodedRange(int item) {
 /* An encoded max range of 0 (e.g. status staves) means "mag/2" -- vanilla
  * (GetUnitStaffReachBits/GetUnitItemUseReachBits above) always treats
  * that as min 1, max GetUnitMagBy2Range(unit), ignoring whatever the
- * encoded min nibble says. ITEM_NIGHTMARE is hardcoded to the same mag/2
- * behavior regardless of its own encoded range (see GetUnitStaffReachBits).
- * The new getters below match that exactly rather than trying to also
- * generalize a custom min for these -- unlike a weapon's fixed nibble-
- * encoded range, this repo has no vanilla data that ever combines mag/2
- * with a non-1 minimum, so there's nothing to preserve. */
+ * encoded min nibble says. The new getters below match that exactly
+ * rather than trying to also generalize a custom min for these -- unlike
+ * a weapon's fixed nibble-encoded range, this repo has no vanilla data
+ * that ever combines mag/2 with a non-1 minimum, so there's nothing to
+ * preserve. */
 static s8 IsItemMagBy2Range(int item) {
-    return (GetItemMaxRange(item) == 0) || (GetItemIndex(item) == ITEM_NIGHTMARE);
+    return GetItemMaxRange(item) == 0;
+}
+
+/* A raw encoded range of 0xFF means "hits everyone on the map" (Latona,
+ * Nightmare) -- see GetItemDisplayRangeString's own 0xFF case above,
+ * where vanilla already shows this as "Total". Neither item's own target
+ * list goes through GetUnitItemEffectiveMinRange/MaxRange or
+ * MakeTargetListInRange at all (MakeTargetListForLatona/
+ * MakeTargetListForFuckingNightmare, src/bmtarget.c, loop every unit on
+ * the map unconditionally), so these getters only matter for other
+ * generic callers of this pair -- IsItemCoveringRange and
+ * GetItemEffDisplayRangeString below -- which is why min/max are just
+ * "the widest possible range" (0/99) rather than something derived from
+ * the 0xFF byte's own (meaningless, if nibble-decoded) 15/15. */
+static s8 IsItemAllRange(int item) {
+    return GetItemEncodedRange(item) == 0xFF;
 }
 
 /* See declaration comment (include/bmitem.h). */
 int GetUnitItemEffectiveMinRange(struct Unit* unit, int item) {
+    if (IsItemAllRange(item))
+        return 0;
+
     if (IsItemMagBy2Range(item))
         return 1;
 
@@ -270,6 +304,9 @@ int GetUnitItemEffectiveMaxRange(struct Unit* unit, int item) {
     int maxRange;
     int minRange;
     int bonus = 0;
+
+    if (IsItemAllRange(item))
+        return 99;
 
     if (IsItemMagBy2Range(item))
         maxRange = GetUnitMagBy2Range(unit);
@@ -822,6 +859,37 @@ char* GetItemDisplayRangeString(int item) {
     } // switch (GetItemEncodedRange(item))
 }
 
+#if FE8_RANGE_REWORK
+char* GetItemEffDisplayRangeString(int item, struct Unit* unit) {
+    int min;
+    int max;
+    char* buf;
+
+    /* Matches GetItemDisplayRangeString's own 0xFF case above ("Total") --
+     * without this, min/max's 0/99 "widest possible range" sentinel values
+     * (see IsItemAllRange's comment) would print the nonsensical "0-99"
+     * instead. */
+    if (GetItemEncodedRange(item) == 0xFF)
+        return GetStringFromIndex(0x52A);
+
+    min = GetUnitItemEffectiveMinRange(unit, item);
+    max = GetUnitItemEffectiveMaxRange(unit, item);
+    buf = sRangeDisplayBuf;
+
+    buf = AppendDecimal(buf, min);
+
+    if (max != min) {
+        *buf++ = '-';
+        buf = AppendDecimal(buf, max);
+    }
+
+    *buf = '\0';
+
+    return sRangeDisplayBuf;
+        
+}
+#endif 
+
 int GetWeaponLevelFromExp(int wexp) {
     if (wexp < WPN_EXP_E)
         return WPN_LEVEL_0;
@@ -1007,6 +1075,27 @@ int GetUnitItemHealAmount(struct Unit* unit, int item) {
     }
 
     return result;
+}
+
+/* GetUnitItemHealAmount above, for items whose heal amount doesn't depend
+ * on who's being healed (a fixed base + the healer's own power). Nostal
+ * (FE8_CUSTOM_CAMPAIGN) instead heals half of the TARGET's own current HP,
+ * which GetUnitItemHealAmount has no way to express -- it only ever sees
+ * the healer and the item, never who's on the receiving end.
+ *
+ * Callers that already have one specific target in hand (ExecStandardHeal,
+ * src/bmusemind.c; DrawUnitHealAmountText, src/unitinfowindow.c) use this
+ * instead of GetUnitItemHealAmount directly. ExecFortify (src/bmusemind.c)
+ * keeps calling GetUnitItemHealAmount unchanged -- it applies the same
+ * amount to every unit in range, so there is no single target to derive a
+ * per-target amount from. */
+int GetUnitItemHealAmountForTarget(struct Unit* unit, int item, struct Unit* target) {
+#if FE8_CUSTOM_CAMPAIGN
+    if (GetItemIndex(item) == ITEM_STAFF_NOSTAL)
+        return GetUnitCurrentHp(target) / 2;
+#endif
+
+    return GetUnitItemHealAmount(unit, item);
 }
 
 int GetUnitItemSlot(struct Unit* unit, int itemIndex) {

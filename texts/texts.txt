@@ -40302,11 +40302,11 @@ Erase All Save Data[.][X]
 Erase all save data?[.][LF]
 This cannot be undone.[X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_WAKWI
+## MSG_NAME_WAKWI
 Wakwi[.][X]
 
-## MSG_CO_WAKWI_NAME
-Wakwi[.][X]
+## MSG_CO_WAKWI_BRIEF
+Criticals[.][X]
 
 ## MSG_CO_WAKWI_TITLE
 The Unyielding Blade[.][X]
@@ -40314,8 +40314,9 @@ The Unyielding Blade[.][X]
 ## MSG_CO_WAKWI_INFO
 A fearless leader who stands[LF]
 at the heart of every battle,[LF]
-inspiring allies to strike true.[LF]
- [LF]
+inspiring allies to strike true.[X]
+
+## MSG_CO_WAKWI_PASSIVE
 Passive: her units have[LF]
 +10 critical hit rate.[.][X]
 
@@ -40333,11 +40334,11 @@ Deadly Edge[.][X]
 Wakwi's units gain +100[LF]
 critical hit rate.[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_ISHKODE
+## MSG_NAME_ISHKODE
 Ishkode[.][X]
 
-## MSG_CO_ISHKODE_NAME
-Ishkode[.][X]
+## MSG_CO_ISHKODE_BRIEF
+Ranged[X]
 
 ## MSG_CO_ISHKODE_TITLE
 The Hunter's Eye[.][X]
@@ -40345,8 +40346,9 @@ The Hunter's Eye[.][X]
 ## MSG_CO_ISHKODE_INFO
 A young leader who treads[LF]
 carefully into battle,[LF]
-guiding his allies from afar.[LF]
- [LF]
+guiding his allies from afar.[.][X]
+
+## MSG_CO_ISHKODE_PASSIVE
 Passive: his bow wielders[LF]
 have +1 range.[X]
 
@@ -40365,14 +40367,475 @@ Bow wielders gain[LF]
 +2 range and 40% power.[.][X]
 
 
-## MSG_CUSTOM_CAMPAIGN_NAME_FREDERICK
+## MSG_NAME_FREDERICK
 Frederick[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_FOX
+
+## MSG_NAME_FOX
 Fox[.][X]
 
-## MSG_CUSTOM_CAMPAIGN_NAME_LIZ
+## MSG_NAME_LIZ
 Liz[.][X]
+
+## MSG_NAME_TOREN
+Toren[.][X]
+
+## MSG_CO_TOREN_BRIEF
+ [.][X]
+
+## MSG_CO_TOREN_TITLE
+ [.][X]
+
+## MSG_CO_TOREN_INFO
+ [.][X]
+
+## MSG_CO_TOREN_PASSIVE
+ [.][X]
+
+## MSG_CO_TOREN_POWER_NAME
+ [.][X]
+
+## MSG_CO_TOREN_POWER_DESC
+ [.][X]
+
+## MSG_CO_TOREN_SUPER_NAME
+ [.][X]
+
+## MSG_CO_TOREN_SUPER_DESC
+ [.][X]
+
+
+## MSG_NAME_LENORA
+Lenora[.][X]
+
+## MSG_CO_LENORA_BRIEF
+ [.][X]
+
+## MSG_CO_LENORA_TITLE
+ [.][X]
+
+## MSG_CO_LENORA_INFO
+ [.][X]
+
+## MSG_CO_LENORA_PASSIVE
+ [.][X]
+
+## MSG_CO_LENORA_POWER_NAME
+ [.][X]
+
+## MSG_CO_LENORA_POWER_DESC
+ [.][X]
+
+## MSG_CO_LENORA_SUPER_NAME
+ [.][X]
+
+## MSG_CO_LENORA_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_VOLIK
+Volik[.][X]
+
+## MSG_CO_VOLIK_BRIEF
+ [.][X]
+
+## MSG_CO_VOLIK_TITLE
+ [.][X]
+
+## MSG_CO_VOLIK_INFO
+ [.][X]
+
+## MSG_CO_VOLIK_PASSIVE
+ [.][X]
+
+## MSG_CO_VOLIK_POWER_NAME
+ [.][X]
+
+## MSG_CO_VOLIK_POWER_DESC
+ [.][X]
+
+## MSG_CO_VOLIK_SUPER_NAME
+ [.][X]
+
+## MSG_CO_VOLIK_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_CLARISSE
+Clarisse[.][X]
+
+## MSG_CO_CLARISSE_BRIEF
+ [.][X]
+
+## MSG_CO_CLARISSE_TITLE
+ [.][X]
+
+## MSG_CO_CLARISSE_INFO
+ [.][X]
+
+## MSG_CO_CLARISSE_PASSIVE
+ [.][X]
+
+## MSG_CO_CLARISSE_POWER_NAME
+ [.][X]
+
+## MSG_CO_CLARISSE_POWER_DESC
+ [.][X]
+
+## MSG_CO_CLARISSE_SUPER_NAME
+ [.][X]
+
+## MSG_CO_CLARISSE_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_ELAYNE
+Elayne[.][X]
+
+## MSG_CO_ELAYNE_BRIEF
+ [.][X]
+
+## MSG_CO_ELAYNE_TITLE
+ [.][X]
+
+## MSG_CO_ELAYNE_INFO
+ [.][X]
+
+## MSG_CO_ELAYNE_PASSIVE
+ [.][X]
+
+## MSG_CO_ELAYNE_POWER_NAME
+ [.][X]
+
+## MSG_CO_ELAYNE_POWER_DESC
+ [.][X]
+
+## MSG_CO_ELAYNE_SUPER_NAME
+ [.][X]
+
+## MSG_CO_ELAYNE_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_EDRIC
+Edric[.][X]
+
+## MSG_CO_EDRIC_BRIEF
+ [.][X]
+
+## MSG_CO_EDRIC_TITLE
+ [.][X]
+
+## MSG_CO_EDRIC_INFO
+ [.][X]
+
+## MSG_CO_EDRIC_PASSIVE
+ [.][X]
+
+## MSG_CO_EDRIC_POWER_NAME
+ [.][X]
+
+## MSG_CO_EDRIC_POWER_DESC
+ [.][X]
+
+## MSG_CO_EDRIC_SUPER_NAME
+ [.][X]
+
+## MSG_CO_EDRIC_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_ORELUS
+Orelus[.][X]
+
+## MSG_CO_ORELUS_BRIEF
+ [.][X]
+
+## MSG_CO_ORELUS_TITLE
+ [.][X]
+
+## MSG_CO_ORELUS_INFO
+ [.][X]
+
+## MSG_CO_ORELUS_PASSIVE
+ [.][X]
+
+## MSG_CO_ORELUS_POWER_NAME
+ [.][X]
+
+## MSG_CO_ORELUS_POWER_DESC
+ [.][X]
+
+## MSG_CO_ORELUS_SUPER_NAME
+ [.][X]
+
+## MSG_CO_ORELUS_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_NURI
+Nuri[.][X]
+
+## MSG_CO_NURI_BRIEF
+ [.][X]
+
+## MSG_CO_NURI_TITLE
+ [.][X]
+
+## MSG_CO_NURI_INFO
+ [.][X]
+
+## MSG_CO_NURI_PASSIVE
+ [.][X]
+
+## MSG_CO_NURI_POWER_NAME
+ [.][X]
+
+## MSG_CO_NURI_POWER_DESC
+ [.][X]
+
+## MSG_CO_NURI_SUPER_NAME
+ [.][X]
+
+## MSG_CO_NURI_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_FARID
+Farid[.][X]
+
+## MSG_CO_FARID_BRIEF
+ [.][X]
+
+## MSG_CO_FARID_TITLE
+ [.][X]
+
+## MSG_CO_FARID_INFO
+ [.][X]
+
+## MSG_CO_FARID_PASSIVE
+ [.][X]
+
+## MSG_CO_FARID_POWER_NAME
+ [.][X]
+
+## MSG_CO_FARID_POWER_DESC
+ [.][X]
+
+## MSG_CO_FARID_SUPER_NAME
+ [.][X]
+
+## MSG_CO_FARID_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_KAVRA
+Kavra[.][X]
+
+## MSG_CO_KAVRA_BRIEF
+ [.][X]
+
+## MSG_CO_KAVRA_TITLE
+ [.][X]
+
+## MSG_CO_KAVRA_INFO
+ [.][X]
+
+## MSG_CO_KAVRA_PASSIVE
+ [.][X]
+
+## MSG_CO_KAVRA_POWER_NAME
+ [.][X]
+
+## MSG_CO_KAVRA_POWER_DESC
+ [.][X]
+
+## MSG_CO_KAVRA_SUPER_NAME
+ [.][X]
+
+## MSG_CO_KAVRA_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_ZAHIR
+Zahir[.][X]
+
+## MSG_CO_ZAHIR_BRIEF
+ [.][X]
+
+## MSG_CO_ZAHIR_TITLE
+ [.][X]
+
+## MSG_CO_ZAHIR_INFO
+ [.][X]
+
+## MSG_CO_ZAHIR_PASSIVE
+ [.][X]
+
+## MSG_CO_ZAHIR_POWER_NAME
+ [.][X]
+
+## MSG_CO_ZAHIR_POWER_DESC
+ [.][X]
+
+## MSG_CO_ZAHIR_SUPER_NAME
+ [.][X]
+
+## MSG_CO_ZAHIR_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_BRANN
+Brann[.][X]
+
+## MSG_CO_BRANN_BRIEF
+ [.][X]
+
+## MSG_CO_BRANN_TITLE
+ [.][X]
+
+## MSG_CO_BRANN_INFO
+ [.][X]
+
+## MSG_CO_BRANN_PASSIVE
+ [.][X]
+
+## MSG_CO_BRANN_POWER_NAME
+ [.][X]
+
+## MSG_CO_BRANN_POWER_DESC
+ [.][X]
+
+## MSG_CO_BRANN_SUPER_NAME
+ [.][X]
+
+## MSG_CO_BRANN_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_KIT
+Kit[.][X]
+
+## MSG_CO_KIT_BRIEF
+ [.][X]
+
+## MSG_CO_KIT_TITLE
+ [.][X]
+
+## MSG_CO_KIT_INFO
+ [.][X]
+
+## MSG_CO_KIT_PASSIVE
+ [.][X]
+
+## MSG_CO_KIT_POWER_NAME
+ [.][X]
+
+## MSG_CO_KIT_POWER_DESC
+ [.][X]
+
+## MSG_CO_KIT_SUPER_NAME
+ [.][X]
+
+## MSG_CO_KIT_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_MARIUS
+Marius[.][X]
+
+## MSG_CO_MARIUS_BRIEF
+ [.][X]
+
+## MSG_CO_MARIUS_TITLE
+ [.][X]
+
+## MSG_CO_MARIUS_INFO
+ [.][X]
+
+## MSG_CO_MARIUS_PASSIVE
+ [.][X]
+
+## MSG_CO_MARIUS_POWER_NAME
+ [.][X]
+
+## MSG_CO_MARIUS_POWER_DESC
+ [.][X]
+
+## MSG_CO_MARIUS_SUPER_NAME
+ [.][X]
+
+## MSG_CO_MARIUS_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_LYRIA
+Lyria[.][X]
+
+## MSG_CO_LYRIA_BRIEF
+ [.][X]
+
+## MSG_CO_LYRIA_TITLE
+ [.][X]
+
+## MSG_CO_LYRIA_INFO
+ [.][X]
+
+## MSG_CO_LYRIA_PASSIVE
+ [.][X]
+
+## MSG_CO_LYRIA_POWER_NAME
+ [.][X]
+
+## MSG_CO_LYRIA_POWER_DESC
+ [.][X]
+
+## MSG_CO_LYRIA_SUPER_NAME
+ [.][X]
+
+## MSG_CO_LYRIA_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_MORTIVAR
+Mortivar[.][X]
+
+## MSG_CO_MORTIVAR_BRIEF
+ [.][X]
+
+## MSG_CO_MORTIVAR_TITLE
+ [.][X]
+
+## MSG_CO_MORTIVAR_INFO
+ [.][X]
+
+## MSG_CO_MORTIVAR_PASSIVE
+ [.][X]
+
+## MSG_CO_MORTIVAR_POWER_NAME
+ [.][X]
+
+## MSG_CO_MORTIVAR_POWER_DESC
+ [.][X]
+
+## MSG_CO_MORTIVAR_SUPER_NAME
+ [.][X]
+
+## MSG_CO_MORTIVAR_SUPER_DESC
+ [.][X]
+
+## MSG_NAME_VEYR
+Veyr[.][X]
+
+## MSG_CO_VEYR_BRIEF
+ [.][X]
+
+## MSG_CO_VEYR_TITLE
+ [.][X]
+
+## MSG_CO_VEYR_INFO
+ [.][X]
+
+## MSG_CO_VEYR_PASSIVE
+ [.][X]
+
+## MSG_CO_VEYR_POWER_NAME
+ [.][X]
+
+## MSG_CO_VEYR_POWER_DESC
+ [.][X]
+
+## MSG_CO_VEYR_SUPER_NAME
+ [.][X]
+
+## MSG_CO_VEYR_SUPER_DESC
+ [.][X]
 
 ## MSG_TERRAIN_CAMP
 Camp[X]
@@ -40389,11 +40852,42 @@ Super CO Power[X]
 ## MSG_CO_LABEL_AFFINITY
 Class Affinity[X]
 
-## MSG_CO_FRANCIS_NAME
-Francis[.][X]
+
+## MSG_CO_ASIN_TITLE
+The Wise Elder[.][X]
+
+## MSG_CO_ASIN_BRIEF
+Healing[.][X]
+
+## MSG_CO_ASIN_INFO
+A kind elder who guides his[LF]
+people through hardship, tending[LF]
+to the wounded with patience.[.][X]
+
+## MSG_CO_ASIN_PASSIVE
+Asin's units heal 10% health[LF]
+at the start of your turn.[X]
+
+## MSG_CO_ASIN_POWER_NAME
+Rekindle[.][X]
+
+## MSG_CO_ASIN_POWER_DESC
+All of Asin's[LF]
+units heal 10 HP.[.][X]
+
+## MSG_CO_ASIN_SUPER_NAME
+Resurgence[.][X]
+
+## MSG_CO_ASIN_SUPER_DESC
+All of Asin's units are[LF]
+fully healed and deal[LF]
+more damage.[.][X]
 
 ## MSG_CO_FRANCIS_TITLE
 The Steadfast Commander[.][X]
+
+## MSG_CO_FRANCIS_BRIEF
+Armor[.][X]
 
 ## MSG_CO_FRANCIS_INFO
 A stalwart tactician who leads[LF]
@@ -40401,22 +40895,26 @@ from the front and never[LF]
 leaves a unit behind.[.][X]
 
 ## MSG_CO_FRANCIS_POWER_NAME
-Rekindle[.][X]
+March On[.][X]
 
 ## MSG_CO_FRANCIS_POWER_DESC
 All of Francis's preferred[LF]
-units heal 10 HP.[.][X]
+units gain +1 mov and deal[LF]
+more damage.[X]
 
 ## MSG_CO_FRANCIS_SUPER_NAME
-Resurgance[.][X]
+Forward, Troops![X]
 
 ## MSG_CO_FRANCIS_SUPER_DESC
-All of Francis's units are[LF]
-fully healed and deal[LF]
-more damage.[.][X]
+All of Francis's preferred[LF]
+units gain +2 mov and deal[LF]
+even more damage.[.][X]
 
-## MSG_CO_KARGAN_NAME
+## MSG_NAME_KARGAN
 Kargan[.][X]
+
+## MSG_CO_KARGAN_BRIEF
+Axes[X]
 
 ## MSG_CO_KARGAN_TITLE
 The Reckless Brawler[X]
@@ -40424,8 +40922,9 @@ The Reckless Brawler[X]
 ## MSG_CO_KARGAN_INFO
 A brash commander who trusts[LF]
 raw power over careful[LF]
-planning.[LF]
- [LF]
+planning.[.][X]
+
+## MSG_CO_KARGAN_PASSIVE
 Passive: his axe-wielders[LF]
 have +1 movement.[.][X]
 
@@ -40521,38 +41020,132 @@ Neutral Bases[.][X]
 ## MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION
 Nahara Valley[.][X]
 
+## MSG_PROLOGUE_TITLE
+The First Stand[.][X]
+
+## MSG_CH1A_TITLE
+The Trails Back[.][X]
+
 ## MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING
 [OpenMidLeft][LoadFace][FID_Wakwi]
 [OpenMidRight][LoadFace][FID_Ishkode]
 [OpenMidLeft]We should have stayed[LF]
-on the eastern trail.[.][LF]
+on the eastern trail.[LF]
 The mountains are too quiet.[A]
 [OpenMidRight]The Naskwa have made[LF]
-every trail dangerous.[.][LF]
+every trail dangerous.[LF]
 We cannot keep running from them.[A]
-[OpenMidLeft]We aren't running.[.][LF]
+[OpenMidLeft]We aren't running.[LF]
 We are surviving.[A]
-[OpenMidRight]And for how long?[.][LF]
+[OpenMidRight]And for how long?[LF]
 Our people have abandoned[LF]
 three camps this season.[A]
-[OpenMidLeft]Until we can take our lands back.[.][A][CloseSpeechSlow]
+[OpenMidLeft]Until we can take our lands back.[A][CloseSpeechSlow]
 [OpenFarFarRight][LoadFace][FID_VillagerYoungMan]
 [OpenFarFarRight][MoveRight]
-[OpenRight]The fort[ToggleMouthMove]...[.][ToggleMouthMove][LF]
-beyond the mountains.[.][LF]
+[OpenRight]The fort[ToggleMouthMove]...[ToggleMouthMove][LF]
+beyond the mountains.[LF]
 The Naskwa are marching on it.[A]
-[OpenMidRight]How many?[.][A]
-[OpenRight]Too many.[.][LF]
-They'll begin the siege[.][LF]
+[OpenMidRight]How many?[A]
+[OpenRight]Too many.[LF]
+They'll begin the siege[LF]
 before nightfall.[A][CloseSpeechFast]
-[OpenMidLeft]Then we leave now.[.][A]
+[OpenMidLeft]Then we leave now.[A]
 [OpenMidRight]Our people have only[LF]
-just made camp.[.][A]
-[OpenMidLeft]And our allies may not live[.][LF]
+just made camp.[A]
+[OpenMidLeft]And our allies may not live[LF]
 to see another sunrise.[A]
-[OpenMidRight]Let the Naskwa learn that we are[.][LF]
+[OpenMidRight]Let the Naskwa learn that we are[LF]
 not so easily driven from our home.[A]
-[OpenMidLeft]To the mountains, then.[.][A][X]
+[OpenMidLeft]To the mountains, then.[A][X]
+
+## MSG_CUSTOM_CAMPAIGN_PROLOGUE_KARGAN
+[OpenMidRight][LoadFace][FID_KARGAN]Heheh.[LF]
+C'mon, boys.[LF]
+We got'ta job to do.[A][X]
+
+## MSG_CUSTOM_CAMPAIGN_PROLOGUE_ENDING
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
+[OpenMidLeft]The Naskwa are retreating.[A]
+[OpenMidRight]Then the fort is safe.[A]
+[OpenMidLeft]For now.[A]
+[OpenMidRight]You think they'll return?[A]
+[OpenMidLeft]Not like this.[LF]
+They've lost too many warriors.[A]
+[OpenMidRight]Then why attack us here?[A]
+[OpenMidLeft]That is what troubles me.[A]
+[OpenMidRight]They weren't trying to[LF]
+take the fort?[A]
+[OpenMidLeft]No. If I'm right[LF]
+about this.. then we[LF]
+must hurry back.[A]
+[OpenMidRight]Our home..![A]
+[OpenMidLeft]This battle was only[LF]
+the beginning.[A][X]
+
+
+
+## MSG_CUSTOM_CAMPAIGN_CH1_OPENING
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
+[OpenMidLeft]The rain is getting heavier.[A]
+[OpenMidRight]We should reach home by dusk.[A]
+[OpenMidLeft]Wait.[A]
+[OpenMidRight]What is it?[A]
+[OpenMidLeft]Smoke.[LF]
+To the west.[A]
+[OpenMidRight]Naskwa?[A]
+[OpenMidLeft]They're moving north.[LF]
+Toward our people.[A]
+[OpenMidRight]Just as you thought.[A]
+[OpenMidLeft]We must stop them here.[A]
+[OpenMidRight]In this rain?[A]
+[OpenMidLeft]We've spent too long giving ground.[LF]
+This time, we make them come no farther.[A][X]
+
+## MSG_CUSTOM_CAMPAIGN_CH1A_START
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
+[OpenMidLeft]The rain is getting heavier.[A]
+[OpenMidRight]We should reach home by dusk.[A]
+[OpenMidLeft]Wait.[A]
+[OpenMidRight]What is it?[A]
+[OpenMidLeft]Smoke.[LF]
+To the west.[A]
+[OpenMidRight]Naskwa?[A]
+[OpenMidLeft]They're moving north.[LF]
+Toward our people.[A]
+[OpenMidRight]Just as you thought.[A]
+[OpenMidLeft]We must stop them here.[A]
+[OpenMidRight]In this rain?[A]
+[OpenMidLeft]We've spent too long giving ground.[LF]
+This time, we make them come no farther.[A][X]
+
+
+## MSG_CC_CH1A_REINFORCEMENT
+[OpenMidLeft][LoadFace][FID_Asin]I warned them not to linger.[....][LF]
+And now the Naskwa are here.[A][LF]
+Wakwi... Ishkode.[LF]
+Hurry back.[.....][LF]
+Your people need you.[A][X]
+
+
+
+
+ 
+
+## MSG_CUSTOM_CAMPAIGN_CH1A_END
+[OpenMidLeft][LoadFace][FID_Wakwi]
+[OpenMidRight][LoadFace][FID_Ishkode]
+[OpenMidLeft]They're retreating.[A]
+[OpenMidRight]Then we've bought our people some time.[A]
+[OpenMidLeft]We should regroup at home.[A][X]
+
+
+
+
+
 
 ## MSG_CLASS_LYN_LORD_NAME
 Lord[.][X]
@@ -40569,7 +41162,7 @@ Mounted archers who strike from afar[LF]
 and range far ahead. Equip: Bows.[.][X]
 
 ## MSG_CLASS_NOMAD_TROOPER_NAME
-Nomad Trooper[.][X]
+Nomad Trpr[.][X]
 
 ## MSG_CLASS_NOMAD_TROOPER_DESC
 Veteran nomads who have added the[LF]
@@ -40577,3 +41170,424 @@ sword to their bow. Equip: Swords, Bows.[X]
 
 ## MSG_PURCHASE_GENERIC_DEPLOY_SELECT
 Select where to deploy the new unit.[X]
+
+
+## MSG_MKATTI_NAME
+Mani Katti[X]
+
+## MSG_MKATTI_DESC
+A sword infused with power.[.][X]
+
+
+## MSG_WM_INTRO
+The continent of Ashor.[A][X]
+
+## MSG_NAME_ASIN
+Asin[.][X]
+
+## MSG_NAME_NOSTAL
+Nostal[X]
+
+## MSG_DESC_NOSTAL
+Restores half an ally's[LF]
+current HP from afar.[.][X]
+
+## MSG_USEDESC_NOSTAL
+Restores half their[LF]
+current HP.[.][X]
+
+## MSG_CLASS_SWASHBUCKLER_F_NAME
+Swashbuckler[X]
+## MSG_CLASS_SWASHBUCKLER_F_DESC
+A nimble raider skilled with[LF]
+swords, axes, and trickery.[.][X]
+
+## MSG_CLASS_SWASHBUCKLER_NAME
+Swashbuckler[X]
+## MSG_CLASS_SWASHBUCKLER_DESC
+A nimble raider skilled with[LF]
+swords, axes, and trickery.[.][X]
+
+## MSG_CLASS_LEO_BERSERKER_NAME
+Berserker[.][X]
+## MSG_CLASS_LEO_BERSERKER_DESC
+A fierce warrior who charges in[LF]
+with overwhelming axe power.[.][X]
+
+## MSG_CLASS_GRAND_MAHOUT_NAME
+Grand Mahout[.][X]
+## MSG_CLASS_GRAND_MAHOUT_DESC
+A mounted archer and lancer who[LF]
+commands a mighty beast.[.][X]
+
+## MSG_CLASS_ARCANIST_NURAMON_NAME
+Arcanist[X]
+## MSG_CLASS_ARCANIST_NURAMON_DESC
+A dark scholar who bends ancient[LF]
+magic and staves to his will.[.][X]
+
+## MSG_CLASS_HALBERDIER_CUSTOM_NAME
+Halberdier[X]
+## MSG_CLASS_HALBERDIER_CUSTOM_DESC
+A disciplined infantry lancer with[LF]
+steady skill and stout defense.[.][X]
+
+## MSG_CLASS_MIKO_NAME
+Miko[X]
+## MSG_CLASS_MIKO_DESC
+A shrine maiden who mixes sacred[LF]
+rites with precise bowplay.[.][X]
+
+## MSG_CLASS_WAR_CLERIC_NAME
+War Cleric[X]
+## MSG_CLASS_WAR_CLERIC_DESC
+A battle cleric who pairs healing[LF]
+arts with crushing axe blows.[.][X]
+
+## MSG_CLASS_WITCH_NAME
+Witch[.][X]
+## MSG_CLASS_WITCH_DESC
+A strange mage who warps dark power[LF]
+into wicked magic and staves.[.][X]
+
+## MSG_CLASS_ANGEL_NAME
+Angel[.][X]
+## MSG_CLASS_ANGEL_DESC
+A radiant being who brings holy[LF]
+judgment down from above.[.][X]
+
+## MSG_CLASS_BRIGHID_NAME
+Brighid[.][X]
+## MSG_CLASS_BRIGHID_DESC
+A bold halberd fighter whose heavy[LF]
+axe sweeps foes aside.[X]
+
+## MSG_CLASS_ARCANIST_DEVISIAN_NAME
+Arcanist[X]
+## MSG_CLASS_ARCANIST_DEVISIAN_DESC
+A dark scholar who bends ancient[LF]
+magic to his will.[X]
+
+## MSG_CLASS_MAGICIAN_NAME
+Magician[X]
+## MSG_CLASS_MAGICIAN_DESC
+A showy spellcaster with swift[LF]
+magic and evasive movement.[.][X]
+
+## MSG_CLASS_OCCULTIST_NAME
+Occultist[.][X]
+## MSG_CLASS_OCCULTIST_DESC
+A sinister mage who studies curses[LF]
+and forbidden rites.[X]
+
+## MSG_CLASS_BLADER_F_NAME
+Blader[X]
+## MSG_CLASS_BLADER_F_DESC
+A swift swordfighter who cuts down[LF]
+foes with graceful technique.[.][X]
+
+## MSG_CLASS_HARBINGER_NAME
+Harbinger[.][X]
+## MSG_CLASS_HARBINGER_DESC
+A grim champion trained in many[LF]
+weapons and dark magic.[.][X]
+
+## MSG_CLASS_HARBINGER_ALT_NAME
+Harbinger[.][X]
+## MSG_CLASS_HARBINGER_ALT_DESC
+A grim champion trained in many[LF]
+weapons and dark magic.[.][X]
+
+## MSG_CLASS_HEAVY_INFANTRY_NAME
+Hvy Infantry[X]
+## MSG_CLASS_HEAVY_INFANTRY_DESC
+A sturdy lordly infantryman who[LF]
+holds the line with ease.[.][X]
+
+## MSG_CLASS_BARON_CUSTOM_NAME
+Baron[.][X]
+## MSG_CLASS_BARON_CUSTOM_DESC
+A high-ranking armored knight with[LF]
+command of many weapons.[X]
+
+## MSG_CLASS_SHIELD_GENERAL_NAME
+Shield General[X]
+## MSG_CLASS_SHIELD_GENERAL_DESC
+An armored wall who protects allies[LF]
+behind an unbreakable shield.[.][X]
+
+## MSG_CLASS_BLACK_DRAGON_NAME
+Black Dragon[.][X]
+## MSG_CLASS_BLACK_DRAGON_DESC
+A mighty black dragon with scales[LF]
+as hard as iron.[.][X]
+
+## MSG_CLASS_DJINN_NAME
+Djinn[.][X]
+## MSG_CLASS_DJINN_DESC
+A spirit warrior who strikes with[LF]
+blades and mystic force.[.][X]
+
+## MSG_CLASS_LIVING_ARMOR_NAME
+Living Armor[.][X]
+## MSG_CLASS_LIVING_ARMOR_DESC
+An empty suit of armor driven by[LF]
+a restless will to fight.[.][X]
+
+## MSG_CLASS_FELLBEAST_NAME
+Fellbeast[.][X]
+## MSG_CLASS_FELLBEAST_DESC
+A fearsome creature of darkness with[LF]
+powerful, terrifying attacks.[.][X]
+
+## MSG_CLASS_SAMURAI_F_NAME
+Samurai[.][X]
+## MSG_CLASS_SAMURAI_F_DESC
+A swift swordmaster who relies on[LF]
+precision and sudden strikes.[.][X]
+
+## MSG_CLASS_MASTER_NINJA_NAME
+Master Ninja[X]
+## MSG_CLASS_MASTER_NINJA_DESC
+A master of stealth who cuts foes[LF]
+down before they can react.[.][X]
+
+## MSG_CLASS_HOODED_NINJA_NAME
+Ninja[.][X]
+## MSG_CLASS_HOODED_NINJA_DESC
+A silent assassin who fights from[LF]
+the shadows with a blade.[.][X]
+
+## MSG_CLASS_MYRMIDON_FE15_F_NAME
+Myrmidon[X]
+## MSG_CLASS_MYRMIDON_FE15_F_DESC
+A quick swordfighter who prizes[LF]
+speed and clean technique.[.][X]
+
+## MSG_CLASS_MYRMIDON_FE15_NAME
+Myrmidon[X]
+## MSG_CLASS_MYRMIDON_FE15_DESC
+A quick swordfighter who prizes[LF]
+speed and clean technique.[.][X]
+
+## MSG_CLASS_KATARINA_FENCER_NAME
+Fencer[.][X]
+## MSG_CLASS_KATARINA_FENCER_DESC
+An elegant fencer whose nimble[LF]
+blade work overwhelms foes.[.][X]
+
+## MSG_CLASS_THUG_NAME
+Thug[X]
+## MSG_CLASS_THUG_DESC
+A rough swordsman who fights dirty[LF]
+and hits harder than expected.[X]
+
+## MSG_CLASS_DREAD_FIGHTER_NAME
+Dread Fighter[.][X]
+## MSG_CLASS_DREAD_FIGHTER_DESC
+A veteran swordsman trained to[LF]
+cut through magic and monsters.[.][X]
+
+## MSG_CLASS_FIR_SWORDMASTER_NAME
+Swordmaster[.][X]
+## MSG_CLASS_FIR_SWORDMASTER_DESC
+A swordmaster whose sharp blade[LF]
+and footwork leave no opening.[.][X]
+
+## MSG_CLASS_TRUEBLADE_NAME
+Trueblade[.][X]
+## MSG_CLASS_TRUEBLADE_DESC
+A master swordsman who overwhelms[LF]
+foes with blinding speed.[.][X]
+
+## MSG_CLASS_RED_MAGE_NAME
+Red Mage[X]
+## MSG_CLASS_RED_MAGE_DESC
+A versatile mage who blends sword[LF]
+technique, spells, and staves.[.][X]
+
+## MSG_CLASS_MOLOCH_NAME
+Moloch[X]
+## MSG_CLASS_MOLOCH_DESC
+A dreadful sorcerer who commands[LF]
+dark power and ancient rites.[.][X]
+
+## MSG_CLASS_TACTICIAN_CUSTOM_NAME
+Tactician[.][X]
+## MSG_CLASS_TACTICIAN_CUSTOM_DESC
+A battlefield strategist who uses[LF]
+magic to control the fight.[.][X]
+
+## MSG_CLASS_TRICKSTER_F_NAME
+Trickster[.][X]
+## MSG_CLASS_TRICKSTER_F_DESC
+A nimble rogue who mixes swordplay,[LF]
+magic, bows, and staves.[.][X]
+
+## MSG_CLASS_TRICKSTER_NAME
+Trickster[.][X]
+## MSG_CLASS_TRICKSTER_DESC
+A nimble rogue who mixes swordplay,[LF]
+magic, bows, and staves.[.][X]
+
+## MSG_CLASS_VILLAGER_F_NAME
+Villager[X]
+## MSG_CLASS_VILLAGER_F_DESC
+A humble villager with hidden grit[LF]
+and room to grow.[.][X]
+
+## MSG_CLASS_VILLAGER_NAME
+Villager[X]
+## MSG_CLASS_VILLAGER_DESC
+A humble villager with hidden grit[LF]
+and room to grow.[.][X]
+
+## MSG_CLASS_LEGION_KING_NAME
+Legion King[.][X]
+## MSG_CLASS_LEGION_KING_DESC
+A powerful armored ruler trained[LF]
+in weapons and magic alike.[.][X]
+
+## MSG_CLASS_ONI_CHIEFTAIN_NAME
+Oni Chieftain[.][X]
+## MSG_CLASS_ONI_CHIEFTAIN_DESC
+A brutal chieftain who crushes foes[LF]
+with axes and wild magic.[.][X]
+
+## MSG_CLASS_ELFFIN_FANCY_NAME
+Elffin Fancy[X]
+## MSG_CLASS_ELFFIN_FANCY_DESC
+A graceful bard whose song and magic[LF]
+raise allies spirits.[.][X]
+
+## MSG_CLASS_MOUNTED_MARAUDER_NAME
+Marauder[X]
+## MSG_CLASS_MOUNTED_MARAUDER_DESC
+A mounted raider who harasses foes[LF]
+with axes and bows.[.][X]
+
+## MSG_CLASS_MECHANIST_NAME
+Mechanist[.][X]
+## MSG_CLASS_MECHANIST_DESC
+A clever bow user who fights with[LF]
+crafted tools and precision.[.][X]
+
+## MSG_CLASS_DRAGOON_CUSTOM_NAME
+Dragoon[.][X]
+## MSG_CLASS_DRAGOON_CUSTOM_DESC
+An airborne lancer who dives on foes[LF]
+with piercing force.[X]
+
+## MSG_CLASS_LANCER_CUSTOM_NAME
+Lancer[X]
+## MSG_CLASS_LANCER_CUSTOM_DESC
+A focused lancer with reliable reach[LF]
+and disciplined technique.[X]
+
+## MSG_CLASS_MILITIA_NAME
+Militia[.][X]
+## MSG_CLASS_MILITIA_DESC
+A common soldier hardened by battle[LF]
+and practical experience.[.][X]
+
+## MSG_CLASS_SENTINEL_NAME
+Sentinel[X]
+## MSG_CLASS_SENTINEL_DESC
+An elite guardian with many weapons[LF]
+and iron discipline.[.][X]
+
+## MSG_CLASS_T1_LANCER_NAME
+Lancer[.][X]
+## MSG_CLASS_T1_LANCER_DESC
+A young lancer with strong basics[LF]
+and room to grow.[.][X]
+
+## MSG_CLASS_GLADIATOR_NAME
+Gladiator[.][X]
+## MSG_CLASS_GLADIATOR_DESC
+A hardened arena fighter who swings[LF]
+blades and axes with force.[.][X]
+
+## MSG_CLASS_HORN_BRIGAND_NAME
+Heralder[X]
+## MSG_CLASS_HORN_BRIGAND_DESC
+A scout who signals[LF]
+allies when it's safe.[.][X]
+
+## MSG_CLASS_HORN_SOLDIER_NAME
+Heralder[X]
+## MSG_CLASS_HORN_SOLDIER_DESC
+A scout who signals[LF]
+allies when it's safe.[.][X]
+
+## MSG_CLASS_HUNTER_NAME
+Hunter[X]
+## MSG_CLASS_HUNTER_DESC
+A woodsman archer skilled at tracking[LF]
+and striking from afar.[.][X]
+
+## MSG_CLASS_SUPPLIER_ANNA_NAME
+Supplier[X]
+## MSG_CLASS_SUPPLIER_ANNA_DESC
+A traveling supplier who supports[LF]
+allies with arms and staves.[.][X]
+
+## MSG_CLASS_SANDWORM_NAME
+Sandworm[X]
+## MSG_CLASS_SANDWORM_DESC
+A desert monster that erupts from[LF]
+the sand to swallow prey.[.][X]
+
+## MSG_CLASS_CURSED_SWORD_NAME
+Cursed Sword[X]
+## MSG_CLASS_CURSED_SWORD_DESC
+A possessed blade that moves with[LF]
+malice of its own.[.][X]
+
+## MSG_CLASS_MAGICAL_TOMES_NAME
+Tome[X]
+## MSG_CLASS_MAGICAL_TOMES_DESC
+Enchanted tomes that unleash spells[LF]
+without a living caster.[.][X]
+
+## MSG_CLASS_MIMIC_CHEST_NAME
+Mimic[.][X]
+## MSG_CLASS_MIMIC_CHEST_DESC
+A false treasure chest that attacks[LF]
+those who draw too near.[.][X]
+
+## MSG_CLASS_MOSQUITO_NAME
+Mosquito[X]
+## MSG_CLASS_MOSQUITO_DESC
+A vicious insect that darts in to[LF]
+drain the life of foes.[.][X]
+
+## MSG_CLASS_PHANTOM_CUSTOM_NAME
+Phantom[.][X]
+## MSG_CLASS_PHANTOM_CUSTOM_DESC
+A fragile apparition summoned to[LF]
+strike once and fade away.[X]
+
+## MSG_CLASS_SLIME_NAME
+Slime[.][X]
+## MSG_CLASS_SLIME_DESC
+A creeping monster that lashes out[LF]
+with corrosive magic.[.][X]
+
+## MSG_CLASS_WARBIRD_NAME
+Warbird[.][X]
+## MSG_CLASS_WARBIRD_DESC
+A trained warbird that dives on foes[LF]
+with beak, talon, or bow.[.][X]
+
+## MSG_CLASS_ADVENTURER_NAME
+Adventurer[X]
+## MSG_CLASS_ADVENTURER_DESC
+An intrepid explorer skilled in[LF]
+ranged combat and survival.[.][X]
+
+## MSG_UNIT_ACTION_CALL
+ Call[.][X]
+
+## MSG_ITEM_CALL_NAME
+Horn[X]

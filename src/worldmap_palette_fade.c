@@ -151,13 +151,22 @@ void EndGmPalFade(void)
     return;
 }
 
+#if FE8_CUSTOM_CAMPAIGN 
+extern u16 gPal_WorldmapGmap_0[];
+#endif 
 //! FE8U = 0x080BF788
 ProcPtr StartGmPalFade_(ProcPtr parent, int unk)
 {
     struct GmPalFadeInput input;
 
+// #if FE8_CUSTOM_CAMPAIGN 
+    // input.unk_00 = gPal_WorldmapGmap_0;
+    // input.unk_04 = gPal_WorldmapGmap_0;
+// #else 
     input.unk_00 = gWorldmapGmap_2;
     input.unk_04 = gWorldmapGmap_1;
+// #endif     
+    
     input.unk_09 = 144;
     input.unk_08 = 64;
     input.unk_0c = unk;

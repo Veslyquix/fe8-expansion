@@ -41,10 +41,16 @@ void MenuItemPanelProcIdle(struct MenuItemPanelProc * proc)
 		UpdateStatArrowSprites(proc->x * 8 + 0x33, (proc->y + 5) * 8, 1);
 
 	/* crit */
+#if FE8_CANNOT_CRIT_WEPS
+	if (gBattleActor.battleCritRate != 0xFF && gBattleTarget.battleCritRate != 0xFF) {
+#endif
 	if (gBattleActor.battleCritRate > gBattleTarget.battleCritRate)
 		UpdateStatArrowSprites(proc->x * 8 + 0x63, (proc->y + 3) * 8, 0);
 	if (gBattleActor.battleCritRate < gBattleTarget.battleCritRate)
 		UpdateStatArrowSprites(proc->x * 8 + 0x63, (proc->y + 3) * 8, 1);
+#if FE8_CANNOT_CRIT_WEPS
+	}
+#endif
 
 	/* avoid */
 	if (gBattleActor.battleAvoidRate > gBattleTarget.battleAvoidRate)

@@ -20,6 +20,7 @@
 #include "sysutil.h"
 #include "helpbox.h"
 #include "savemenu.h"
+#include "modeselect.h"
 #include "uisupport.h"
 #include "gba_sprites.h"
 #include "save_format.h"
@@ -536,7 +537,26 @@ void SaveMenuWriteNewGame(struct SaveMenuProc * proc)
         break;
     }
 
+#if FE8_MODE_SELECT
+    /* Persist Mode Select's lord choice as the new game's chapterModeIndex.
+     *
+     * ModeSelect_Loop_KeyHandler stashes the lord index (0 Eirika, 1 Ephraim,
+     * 2 Lyon) in unk_3d via SaveMenu_SetDifficultyChoice's second argument;
+     * WriteNewGameSave stores its mode argument into gPlaySt.chapterModeIndex,
+     * which is written to the save and read back as gPlayStChapterMode.
+     *
+     * The +1 matters: WriteNewGameSave treats mode 0 as "keep the current
+     * chapterModeIndex" rather than as a value, so the lord indices are shifted
+     * to 1/2/3. That also makes Eirika land on 1, the mode a vanilla new game
+     * already uses, so only Ephraim and Lyon differ from stock behaviour.
+     *
+     * unk_3d is 0 on any path that did not come through Mode Select (it is set
+     * in SaveMenu_InitScreen and by difficultymenu.c), which yields mode 1 --
+     * the vanilla value. */
+    WriteNewGameSave(proc->sus_slot, isDifficult, proc->unk_3d + 1, isTutorial);
+#else
     WriteNewGameSave(proc->sus_slot, isDifficult, 1, isTutorial);
+#endif
 }
 
 //! FE8U = 0x080A9290
@@ -1561,9 +1581,18 @@ PROC_LABEL(PL_SAVEMENU_DIFFICULTY_SEL),
     PROC_CALL_ARG(NewFadeOut, 8),
     PROC_WHILE(FadeOutExists),
     PROC_CALL(DisableAllGfx),
+#if FE8_MODE_SELECT
+    PROC_CALL(StartModeSelect),
+#else
     PROC_CALL(NewNewGameDifficultySelect),
+#endif
     PROC_YIELD,
     PROC_CALL(SaveMenu_ReloadScreenFormDifficulty),
+#if FE8_MODE_SELECT
+    // The reload above syncs BG0/BG1 only; Mode Select's exit path also needs
+    // BG2 (fog) and BG3 (mural) flushed. See ModeSelect_SyncSaveMenuBgs.
+    PROC_CALL(ModeSelect_SyncSaveMenuBgs),
+#endif
     PROC_CALL(SaveMenu_ResetLcdFormDifficulty),
     PROC_CALL_ARG(NewFadeIn, 8),
     PROC_WHILE(FadeInExists),

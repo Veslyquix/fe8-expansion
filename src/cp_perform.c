@@ -25,6 +25,9 @@
 #if FE8_PURCHASE_GENERICS
 #include "purchase_generics.h"
 #endif
+#if FE8_SKILLSYSTEM
+#include "unitcall.h"
+#endif
 
 #include "constants/terrains.h"
 #include "constants/songs.h"
@@ -359,6 +362,14 @@ s8 AiRefreshAction(struct CpPerformProc* proc) {
     return 1;
 }
 
+#if FE8_SKILLSYSTEM
+s8 AiCallAction(struct CpPerformProc* proc) {
+    StartUnitCallConvergence(gActiveUnit);
+
+    return 1;
+}
+#endif
+
 s8 AiTalkAction(struct CpPerformProc* proc) {
     gActiveUnit->xPos = gAiDecision.xMove;
     gActiveUnit->yPos = gAiDecision.yMove;
@@ -460,6 +471,9 @@ void CpPerform_MoveCameraOntoTarget(struct CpPerformProc* proc) {
         case AI_ACTION_PICK:
 #if FE8_PURCHASE_GENERICS
         case AI_ACTION_CAPTURE: // acts on the unit's own tile, no separate target to re-center on
+#endif
+#if FE8_SKILLSYSTEM
+        case AI_ACTION_CALL: // acts on the unit's own tile, no separate target to re-center on
 #endif
 
             return;
@@ -590,6 +604,13 @@ void CpPerform_PerformAction(struct CpPerformProc* proc) {
             proc->func = AiRefreshAction;
 
             break;
+
+#if FE8_SKILLSYSTEM
+        case AI_ACTION_CALL:
+            proc->func = AiCallAction;
+
+            break;
+#endif
 
         case AI_ACTION_TALK:
             proc->func = AiTalkAction;

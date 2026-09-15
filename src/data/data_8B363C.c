@@ -9,6 +9,7 @@ extern const u8 TileConfiguration1[];
 extern const u8 PrologueMap[];
 #if FE8_CUSTOM_CAMPAIGN
 extern const u8 NewPrologueMap[];
+extern const u8 NewCh1Map[];
 #endif
 extern const u8 TileAnimations1[];
 extern const u8 PrologueMapChanges[];
@@ -382,7 +383,11 @@ const void* gChapterDataAssetTable[] =
     TileAnimations1,
     PrologueMapChanges,
     PrologueEvents,
+#if FE8_CUSTOM_CAMPAIGN
+    NewCh1Map,
+#else
     Ch1Map,
+#endif
     Ch1MapChanges,
     Ch1Events,
     Ch2Map,

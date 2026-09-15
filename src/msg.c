@@ -4,6 +4,7 @@
 #include "bmio.h"
 #include "bmitem.h"
 #include "bmunit.h"
+#include "eventinfo.h"
 #include "bmlib.h"
 #include "bmmind.h"
 #include "expansion_starter_content.h"
@@ -71,6 +72,374 @@ const char *gStrPrefix[][2] =
     {"a ", "A "},
     {"an ", "An "},
 };
+
+#if FE8_REPLACE_TEXT
+#if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
+#error "FE8_REPLACE_TEXT currently supports the legacy gMsgTable text path only"
+#endif
+
+#define REPLACE_TEXT_BUFFER_CAPACITY FE8_LOCALIZED_GAME_TEXT_LEGACY_MSG_BUFFER_BYTES
+#define REPLACE_TEXT_CHAPTER_ANY 0xFF
+#define REPLACE_TEXT_THEY_FLAG 0x114
+#define REPLACE_TEXT_HE_FLAG 0x115
+#define REPLACE_TEXT_SHE_FLAG 0x116
+
+struct ReplaceTextEntry
+{
+    u16 flag;
+    u8 chapterId;
+    u8 pad;
+    const char *find;
+    const char *replace;
+};
+
+static const struct ReplaceTextEntry sReplaceTextList[] =
+{
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<they>", "they" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<they>", "he" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<they>", "she" },
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<They>", "They" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<They>", "He" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<They>", "She" },
+
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<have>", "have" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<have>", "has" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<have>", "has" },
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<Have>", "Have" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<Have>", "Has" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<Have>", "Has" },
+
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<them>", "them" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<them>", "him" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<them>", "her" },
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<Them>", "Them" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<Them>", "Him" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<Them>", "Her" },
+
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<their>", "their" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<their>", "his" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<their>", "her" },
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<Their>", "Their" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<Their>", "His" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<Their>", "Her" },
+
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<theirs>", "theirs" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<theirs>", "his" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<theirs>", "hers" },
+    { REPLACE_TEXT_THEY_FLAG, REPLACE_TEXT_CHAPTER_ANY, 0, "<Theirs>", "Theirs" },
+    { REPLACE_TEXT_HE_FLAG,   REPLACE_TEXT_CHAPTER_ANY, 0, "<Theirs>", "His" },
+    { REPLACE_TEXT_SHE_FLAG,  REPLACE_TEXT_CHAPTER_ANY, 0, "<Theirs>", "Hers" },
+
+    { 0, 0, 0, NULL, NULL },
+};
+
+static int ReplaceText_StrLen(const char *str)
+{
+    int i;
+
+    for (i = 0; str[i] != 0; ++i)
+        ;
+
+    return i;
+}
+
+static int ReplaceText_BufferLen(char *buffer, int capacity)
+{
+    int i;
+
+    for (i = 0; i < capacity; ++i)
+    {
+        if (buffer[i] == 0)
+            return i;
+    }
+
+    return capacity;
+}
+
+static void ReplaceText_RemoveRange(char *buffer, int start, int end, int *length)
+{
+    int i;
+    int oldLength = *length;
+    int removeSize;
+
+    if (start < 0 || end < start || end > oldLength)
+        return;
+
+    removeSize = end - start;
+
+    for (i = start; i < oldLength - removeSize; ++i)
+        buffer[i] = buffer[i + removeSize];
+
+    *length = oldLength - removeSize;
+    buffer[*length] = 0;
+}
+
+static int ReplaceText_ParseHex(const char *str, int start, int digits)
+{
+    int i;
+    int result = 0;
+
+    for (i = 0; i < digits; ++i)
+    {
+        char ch = str[start + i];
+
+        if (ch >= '0' && ch <= '9')
+            result = (result << 4) | (ch - '0');
+        else if (ch >= 'A' && ch <= 'F')
+            result = (result << 4) | (ch - 'A' + 10);
+        else if (ch >= 'a' && ch <= 'f')
+            result = (result << 4) | (ch - 'a' + 10);
+        else
+            break;
+    }
+
+    return result;
+}
+
+static int ReplaceText_IsIfTag(const char *buffer, int index)
+{
+    return buffer[index] == '<'
+        && buffer[index + 1] == 'i'
+        && buffer[index + 2] == 'f';
+}
+
+static int ReplaceText_IsEndIf(const char *buffer, int index)
+{
+    return buffer[index] == '<'
+        && buffer[index + 1] == 'e'
+        && buffer[index + 2] == 'n'
+        && buffer[index + 3] == 'd'
+        && buffer[index + 4] == 'i'
+        && buffer[index + 5] == 'f'
+        && buffer[index + 6] == '>';
+}
+
+static int ReplaceText_IsUnitAlive(int charId)
+{
+    struct Unit *unit = GetUnitFromCharId(charId);
+
+    return UNIT_IS_VALID(unit) && !(unit->state & US_DEAD);
+}
+
+static int ReplaceText_IsUnitDead(int charId)
+{
+    struct Unit *unit = GetUnitFromCharId(charId);
+
+    return UNIT_IS_VALID(unit) && (unit->state & US_DEAD);
+}
+
+static int ReplaceText_IsUnitMissing(int charId)
+{
+    return !UNIT_IS_VALID(GetUnitFromCharId(charId));
+}
+
+static int ReplaceText_TryHandleConditional(char *buffer, int index, int *length)
+{
+    int condition = 0;
+    int tagEnd = index;
+    int depth;
+    int scan;
+
+    if (!ReplaceText_IsIfTag(buffer, index))
+    {
+        if (ReplaceText_IsEndIf(buffer, index))
+        {
+            ReplaceText_RemoveRange(buffer, index, index + 7, length);
+            return TRUE;
+        }
+
+        return FALSE;
+    }
+
+    switch (buffer[index + 3])
+    {
+    case 'F':
+        condition = CheckFlag(ReplaceText_ParseHex(buffer, index + 7, 3));
+        break;
+
+    case 'A':
+        condition = ReplaceText_IsUnitAlive(ReplaceText_ParseHex(buffer, index + 8, 2));
+        break;
+
+    case 'D':
+        condition = ReplaceText_IsUnitDead(ReplaceText_ParseHex(buffer, index + 7, 2));
+        break;
+
+    case 'M':
+        condition = ReplaceText_IsUnitMissing(ReplaceText_ParseHex(buffer, index + 10, 2));
+        break;
+
+    default:
+        return FALSE;
+    }
+
+    while (tagEnd < *length && buffer[tagEnd] != '>')
+        ++tagEnd;
+
+    if (tagEnd >= *length)
+        return FALSE;
+
+    ReplaceText_RemoveRange(buffer, index, tagEnd + 1, length);
+
+    if (condition)
+        return TRUE;
+
+    depth = 1;
+    scan = index;
+
+    while (scan < *length)
+    {
+        if (ReplaceText_IsIfTag(buffer, scan))
+            depth++;
+        else if (ReplaceText_IsEndIf(buffer, scan))
+        {
+            depth--;
+
+            if (depth == 0)
+            {
+                ReplaceText_RemoveRange(buffer, index, scan + 7, length);
+                return TRUE;
+            }
+        }
+
+        scan++;
+    }
+
+    return TRUE;
+}
+
+static int ReplaceText_ShouldCheckAt(const char *buffer, int index)
+{
+    if (index > 0 && buffer[index - 1] < 0x20)
+        return TRUE;
+
+    if (index > 0 && (buffer[index - 1] == ' ' || buffer[index - 1] == '>'))
+        return TRUE;
+
+    return buffer[index] == '<' || buffer[index] == '>';
+}
+
+static int ReplaceText_EntryApplies(const struct ReplaceTextEntry *entry)
+{
+    if (entry->flag != 0 && !CheckFlag(entry->flag))
+        return FALSE;
+
+    if (entry->chapterId != REPLACE_TEXT_CHAPTER_ANY
+        && entry->chapterId != gPlaySt.chapterIndex)
+        return FALSE;
+
+    return TRUE;
+}
+
+static int ReplaceText_TryReplaceAt(
+    char *buffer,
+    int index,
+    int capacity,
+    int *length,
+    const struct ReplaceTextEntry *entry)
+{
+    int i;
+    int findLen;
+    int replaceLen;
+    int delta;
+
+    if (entry->find == NULL || !ReplaceText_EntryApplies(entry))
+        return 0;
+
+    for (findLen = 0; entry->find[findLen] != 0; ++findLen)
+    {
+        if (index + findLen >= *length)
+            return 0;
+
+        if (buffer[index + findLen] != entry->find[findLen])
+            return 0;
+    }
+
+    replaceLen = ReplaceText_StrLen(entry->replace);
+    delta = replaceLen - findLen;
+
+    if (delta > 0)
+    {
+        if (*length + delta >= capacity)
+            return 0;
+
+        for (i = *length; i >= index + findLen; --i)
+            buffer[i + delta] = buffer[i];
+    }
+    else if (delta < 0)
+    {
+        for (i = index + findLen; i <= *length; ++i)
+            buffer[i + delta] = buffer[i];
+    }
+
+    for (i = 0; i < replaceLen; ++i)
+        buffer[index + i] = entry->replace[i];
+
+    *length += delta;
+    buffer[*length] = 0;
+
+    return replaceLen;
+}
+
+static void ReplaceText_Apply(char *buffer, int capacity)
+{
+    int length = ReplaceText_BufferLen(buffer, capacity);
+    int i;
+
+    if (length >= capacity)
+        length = capacity - 1;
+
+    buffer[length] = 0;
+
+    for (i = 0; i < length; ++i)
+    {
+        int c;
+        int replacedLen;
+
+        if (ReplaceText_TryHandleConditional(buffer, i, &length))
+        {
+            i--;
+            continue;
+        }
+
+        if (i > 0 && !ReplaceText_ShouldCheckAt(buffer, i))
+            continue;
+
+        for (c = 0; sReplaceTextList[c].find != NULL; ++c)
+        {
+            replacedLen = ReplaceText_TryReplaceAt(
+                buffer, i, capacity, &length, &sReplaceTextList[c]);
+
+            if (replacedLen != 0)
+            {
+                i += replacedLen - 1;
+                break;
+            }
+        }
+    }
+}
+
+static char *ReplaceText_CopyStringFromIndex(int index, char *buffer, int capacity)
+{
+    const char *input = (const char *)gMsgTable[index];
+    int i;
+
+    if (capacity <= 0)
+        return buffer;
+
+    for (i = 0; i + 1 < capacity; ++i)
+    {
+        buffer[i] = input[i];
+        if (input[i] == 0)
+            break;
+    }
+
+    buffer[i] = 0;
+    ReplaceText_Apply(buffer, capacity);
+
+    return buffer;
+}
+#endif
 
 #if FE8_LOCALIZED_GAME_TEXT_CJK_PROFILE_ENABLED
 static ExpansionLocaleId GetMsgLocale(void)
@@ -963,17 +1332,28 @@ char * GetStringFromIndexInBuffer(int index, char *buffer)
 #else
 char * GetStringFromIndex(int index)
 {
+#if FE8_REPLACE_TEXT
+    ReplaceText_CopyStringFromIndex(index, (char *)MSG_BUFFER1, REPLACE_TEXT_BUFFER_CAPACITY);
+    SetMsgTerminator((signed char *)MSG_BUFFER1);
+    sActiveMsg = index;
+    return (char *)MSG_BUFFER1;
+#else
     if (index == sActiveMsg)
         return (char *)MSG_BUFFER1;
     CallARM_DecompText((const char *)gMsgTable[index], (char *)MSG_BUFFER1);
     SetMsgTerminator((signed char *)MSG_BUFFER1);
     sActiveMsg = index;
     return (char *)MSG_BUFFER1;
+#endif
 }
 
 char * GetStringFromIndexInBuffer(int index, char *buffer)
 {
+#if FE8_REPLACE_TEXT
+    ReplaceText_CopyStringFromIndex(index, buffer, 0x1000);
+#else
     CallARM_DecompText((const char *)gMsgTable[index], buffer);
+#endif
     SetMsgTerminator((signed char *)buffer);
     return buffer;
 }

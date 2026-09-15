@@ -1528,9 +1528,15 @@ void StartTalkWaitForInputUnk(ProcPtr parent, int x, int y, int unk) {
 void TalkShiftClearAll_OnInit(struct Proc* proc) {
 
     TileMap_FillRect(
+#if FE8_EXTEND_DIALOGUE_BOX
+        gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + sTalkState->lines * 2),
+        sTalkState->activeWidth - 2,
+        sTalkState->lines * 2,
+#else
         gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + 4),
         sTalkState->activeWidth - 2,
         sTalkState->lines * 2,
+#endif
         0
     );
 
@@ -1645,9 +1651,15 @@ void TalkChoice_OnIdle(struct TalkChoiceProc* proc) {
 void TalkShiftClear_OnInit(struct Proc* proc) {
 
     TileMap_FillRect(
+#if FE8_EXTEND_DIALOGUE_BOX
+        gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + sTalkState->lines * 2),
+        sTalkState->activeWidth - 2,
+        2,
+#else
         gBG0TilemapBuffer + TILEMAP_INDEX(sTalkState->xText, sTalkState->yText + 4),
         sTalkState->activeWidth - 2,
         sTalkState->lines * 2,
+#endif
         0
     );
 
@@ -2460,7 +2472,17 @@ static int GetStrTalkLenUtf8(const char *str, s8 isBubbleOpen)
  * [LF]/[NL2] (so a run of several [A]-separated screens for the same
  * speaker each restart the count). The result is the tallest single
  * [A]-delimited screen anywhere in the upcoming bubble's text, i.e. how
- * many lines the box needs to show all of it without scrolling. */
+ * many visible lines the bubble needs before the usual upward scroll
+ * handles the next line.
+ *
+ * A same-speaker continuation (an [A] with no [Open...] before the next
+ * line) is required to be followed by exactly one [LF]/[NL2] -- that
+ * token doesn't add a visible blank line to the next page, it's the
+ * mandatory separator that may drive the scroll when the current page
+ * already filled the bubble; a speaker change needs no such token since
+ * opening a new face already repositions. So the first [LF]/[NL2]
+ * immediately after an [A] is consumed without incrementing the line
+ * count; every one after that is a real line break. */
 static int GetStrTalkLineCountUtf8(const char *str, s8 isBubbleOpen)
 {
     struct TextUtf8Token token;
@@ -2469,14 +2491,24 @@ static int GetStrTalkLineCountUtf8(const char *str, s8 isBubbleOpen)
     int activeFace;
     int currentLines;
     int maxLines;
+    /* Same-speaker continuation after [A] (no [Open...] in between) is
+     * required to have a [LF]/[NL2] right after the [A] -- see the
+     * non-UTF8 GetStrTalkLineCount below for why that one token doesn't
+     * itself represent a visible extra line. */
+    s8 afterA;
+    s8 wasAfterA;
 
     speakFace = sTalkState->speakingFaceSlot;
     activeFace = sTalkState->activeFaceSlot;
     currentLines = 1;
     maxLines = 1;
+    afterA = FALSE;
 
     for (;;)
     {
+        wasAfterA = afterA;
+        afterA = FALSE;
+
         next = TextUtf8_Next(str, &token);
 
         if (token.kind == TEXT_UTF8_TOKEN_END
@@ -2494,13 +2526,15 @@ static int GetStrTalkLineCountUtf8(const char *str, s8 isBubbleOpen)
             {
             case CHFE_L_NL:
             case CHFE_L_2NL:
-                currentLines++;
+                if (!wasAfterA)
+                    currentLines++;
                 break;
 
             case CHFE_L_A:
                 if (currentLines > maxLines)
                     maxLines = currentLines;
                 currentLines = 1;
+                afterA = TRUE;
                 break;
 
             case CHFE_L_OpenFarLeft:
@@ -2600,8 +2634,20 @@ int GetStrTalkLineCount(const char* str, s8 isBubbleOpen) {
 
     int currentLines = 1;
     int maxLines = 1;
+    /* Same-speaker continuation after [A] (no [Open...] before the next
+     * line) is required to be followed by exactly one [LF]/[NL2] -- see
+     * GetStrTalkLineCountUtf8's doc comment above for why that token affects
+     * runtime scrolling but not the line count. wasAfterA captures whether *this*
+     * token immediately follows an [A] (afterA is set there and cleared
+     * at the top of every iteration, so it only ever survives across
+     * exactly one token). */
+    s8 afterA = 0;
+    s8 wasAfterA;
 
     while (1) {
+        wasAfterA = afterA;
+        afterA = 0;
+
         switch (*str) {
             case 0x00:
             case 0x15:
@@ -2613,7 +2659,9 @@ int GetStrTalkLineCount(const char* str, s8 isBubbleOpen) {
 
             case 0x01:
             case 0x02:
-                currentLines++;
+                if (!wasAfterA) {
+                    currentLines++;
+                }
                 str++;
                 break;
 
@@ -2634,6 +2682,7 @@ int GetStrTalkLineCount(const char* str, s8 isBubbleOpen) {
                 }
 
                 currentLines = 1;
+                afterA = 1;
                 str++;
                 break;
 

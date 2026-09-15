@@ -10,6 +10,21 @@
 
 #if FE8_MAPGEN
 
+// A map smaller than this has no room for two separated quadrants.
+#define MAPGEN_MIN_SIZE 8
+bool MapGen_IsEnabledForChapter(int chapterIndex)
+{
+
+    // usability enabled 
+    if (gBmMapSize.x < MAPGEN_MIN_SIZE || gBmMapSize.y < MAPGEN_MIN_SIZE)
+        return FALSE;
+
+    if (chapterIndex >= 2) { return true; } 
+
+    return FALSE;
+}
+
+
 /*
  * Procedural chapter maps: randomly place pre-made tile chunks (the .tmx
  * library under scripts/map_gen/chunks/, converted to gMapGenChunks by
@@ -56,8 +71,7 @@
 // Keep bases off the outermost ring so a tent always has somewhere to stand.
 #define MAPGEN_EDGE_INSET 2
 
-// A map smaller than this has no room for two separated quadrants.
-#define MAPGEN_MIN_SIZE 8
+
 
 static CONST_DATA u8 sMapGenBaseOwner[MAPGEN_BASE_COUNT] = {
     [MAPGEN_BASE_PLAYER] = FACTION_ID_BLUE,
@@ -498,21 +512,6 @@ static void MapGen_PlaceRandomChunks(u32 seed, int mapWidth, int mapHeight)
     }
 }
 
-/* ---- entry points -------------------------------------------------------- */
-
-bool MapGen_IsEnabledForChapter(int chapterId)
-{
-
-    // Deliberately not per-chapter yet: gate real chapters in here (or behind a
-    // flag) once there is content to protect. A map too small for two separated
-    // quadrants is refused outright so the hand-authored map survives intact.
-    if (gBmMapSize.x < MAPGEN_MIN_SIZE || gBmMapSize.y < MAPGEN_MIN_SIZE)
-        return FALSE;
-
-    if (chapterId == 1) { return true; } 
-
-    return FALSE;
-}
 
 
 // NOTE: the tmx file GIDs are these values +1, so take those values and subtract 1 for here 

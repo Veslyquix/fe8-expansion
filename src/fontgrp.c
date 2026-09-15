@@ -28,24 +28,17 @@ static void DrawSpriteTextGlyphBitmap(
     struct Text *text, const u32 *bitmap, int width);
 #endif
 
-struct Struct02026E30
-{
-    u32 tileDataOffset;
-    s16 bg;
-    u16 tileIndex;
-    u32 unk8;
-    u32 unkC;
-    u32 unk10;
-    char unk14[256][32];
-};
-
 struct SpecialCharSt {
     s8 color;
     s8 id;
     s16 chr_position;
 };
 
-EWRAM_DATA struct Struct02026E30 gFontgrp_0 = {0};
+/* Only ever live while a debug text console is actually in use (see
+ * include/fontgrp.h) -- never during normal gameplay or any of the game's
+ * special screens -- so its memory is shared with every other
+ * EWRAM_OVERLAY tag instead of costing its own persistent EWRAM. */
+EWRAM_OVERLAY(debugconsole) struct Struct02026E30 gFontgrp_0 = {0};
 EWRAM_DATA char gNumberStr[9] = {0};
 EWRAM_DATA int gFontgrp_1 = 0;
 EWRAM_DATA int gFontgrp_2 = 0;

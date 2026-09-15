@@ -415,15 +415,52 @@ s8 GmapMuEntry1Exists(void)
     return Proc_Find(gProcScr_GmapMuEntry1) ? 1 : 0;
 }
 
+
+#if FE8_CUSTOM_CAMPAIGN 
+
+/* Fills an 8x8 tile rect (the 64x64px worldmap minimap) at the top-left of
+ * bg's tilemap, with chr indices starting at chr and incrementing to match
+ * the minimap image's 64 tiles decompressed sequentially into VRAM. Unlike
+ * VeslyFillTileIndices (worldmap_rm.c), the rect (8 tiles wide) is narrower
+ * than the tilemap's row stride (0x20 tiles), so each row must skip ahead
+ * to the next tilemap row rather than advancing linearly. */
+void VeslyFillTileIndices2(int bg, int palId, u16 chr)
+{
+    int iy;
+    int ix;
+    u16 * bgBuf;
+    u16 * rowStart;
+
+    bgBuf = BG_GetMapBuffer(bg);
+    for (iy = 0; iy < 8; iy++)
+    {
+        rowStart = bgBuf;
+        for (ix = 0; ix < 8; ix++)
+        {
+            *bgBuf = ((chr) | (palId << 12));
+            chr++;
+            bgBuf++;
+        }
+        bgBuf = rowStart + 0x20;
+    }
+}
+#endif
+
 //! FE8U = 0x080BFD28
 void LoadWorldmapMinimap(void)
 {
     ApplyPalette(gPal_WorldmapMinimap_0, 2);
     EnablePaletteSync();
 
-    Decompress(gImg_WorldmapMinimap_0, (void *)0x06004C00);
+    Decompress(gImg_WorldmapMinimap_0, (void *)0x06004C00); // 0x6004C00 
+// #if FE8_CUSTOM_CAMPAIGN
+    // VeslyFillTileIndices2(0, 2, 0x240);
+    // Decompress(gTsa_WorldmapMinimap_0, gGenericBuffer);
+    // CallARM_FillTileRect(gBG0TilemapBuffer, gGenericBuffer, 0x2260);
+// #else
     Decompress(gTsa_WorldmapMinimap_0, gGenericBuffer);
     CallARM_FillTileRect(gBG0TilemapBuffer, gGenericBuffer, 0x2260);
+// #endif
 
     BG_EnableSyncByMask(BG0_SYNC_BIT);
 

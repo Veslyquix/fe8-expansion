@@ -159,6 +159,9 @@ enum
 #if FE8_PURCHASE_GENERICS
     AI_ACTION_CAPTURE = 14,
 #endif
+#if FE8_SKILLSYSTEM
+    AI_ACTION_CALL = 15,
+#endif
 };
 
 enum

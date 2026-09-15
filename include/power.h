@@ -7,9 +7,27 @@
  * event scripts (e.g. src/events/prologue-eventscript.h) can name a CO
  * when setting up a faction's commander via SetFactionCo. */
 enum {
+    CO_NONE = 0, 
     CO_WAKWI,
     CO_ISHKODE,
-    CO_FRANCIS,
+    CO_ASIN,
+    CO_TOREN,
+    CO_LENORA,
+    CO_VOLIK,
+    CO_CLARISSE,
+    CO_ELAYNE,
+    CO_EDRIC,
+    CO_ORELUS,
+    CO_NURI,
+    CO_FARID,
+    CO_KAVRA,
+    CO_ZAHIR,
+    CO_BRANN,
+    CO_KIT,
+    CO_MARIUS,
+    CO_LYRIA,
+    CO_MORTIVAR,
+    CO_VEYR,
     CO_KARGAN,
     CO_COUNT,
 };
@@ -22,7 +40,7 @@ struct MenuItemProc;
  * call: pans the camera onto every one of the player's units in turn,
  * applying the commander's power (or super, for the second one) to
  * whichever ones CoPower_AppliesToClass (src/power.c) says it targets --
- * see also CO_FRANCIS_POWER_HEAL_AMOUNT there for the one CO with an
+ * see also CO_EDRIC_POWER_HEAL_AMOUNT there for the one CO with an
  * effect implemented so far. */
 u8 CoPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
 u8 CoSuperPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
@@ -40,6 +58,12 @@ u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number);
  * EWRAM_OVERLAY(0) group (statscreen.c and others) since it can never be
  * open at the same time as the unit stat screen. See src/power.c. */
 u8 CoScreen_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem);
+
+/* Open the CO info page on a specific CO, blocking `parent` until B closes it.
+ * Unlike the map-menu entry above, this hands the screen back still faded out
+ * and does not redraw the map, so the caller must put its own display back --
+ * see src/coSelect.c, where R opens this and B returns to the carousel. */
+void StartCoScreenForCo(ProcPtr parent, int coId);
 
 /* CO gauge points one star (struct CoDefinition's powerStars/
  * superPowerStars, and the CO gauge stat screen/mini-gauge UI) is worth.
@@ -73,7 +97,7 @@ void CoGauge_OnPowerUsed(int faction);
 struct Proc;
 int CoPowers_OnAiPhaseStart(struct Proc* parent);
 
-/* Marks faction's CO power/super as no longer active (see the *Pow/*Sup
+/* Marks faction's CO power/super as no longer active (see the Pow/Sup
  * fields of struct CoClassAffinity, src/power.c, and AdjustStatForCo/
  * GetCoClassMovBonus/GetCoClassRangeBonus/GetCoClassCritBonus below) -- a
  * power lasts until its own faction's *next* turn (Advance Wars rules), so
@@ -91,11 +115,36 @@ void CoPowers_OnPhaseStart(int faction);
  * the map starts -- see src/events/prologue-eventscript.h. */
 void SetFactionCo(int faction, int coId);
 
+/* ASMC-callable wrapper around SetFactionCo, taking its args from
+ * gEventSlots[EVT_SLOT_1]/[EVT_SLOT_2] (include/event.h) instead of a
+ * normal argument list -- event scripts set those slots with SVAL just
+ * before calling this, since ASMC() only supports niladic functions. Used
+ * by multiple chapters' beginning-scene event scripts (src/events/ch1.h,
+ * prologue.h, etc.); kept here as the one shared definition instead of
+ * each chapter declaring its own `static void SetFactionCoFromSlots(void)`
+ * copy, which collides once two such headers are included from the same
+ * .c file. */
+void SetFactionCoFromSlots(void);
+
 /* Small read-only accessors onto the CO definition table (src/power.c),
  * for UI code (the CO screen, the VeslyDebugger CO editor) that needs a
  * CO's display name without depending on struct CoDefinition directly. */
 int CoScreen_GetCoCount(void);
 const char* CoScreen_GetCoName(int coId);
+
+/* struct CoDefinition accessors for the CO select screen (src/coSelect.c),
+ * which cannot see the static sCoDefinitions table directly.
+ * Co_GetDisplayClassId returns the CO's real unit's current class if that unit
+ * is on the map, else the character's defaultClass. */
+int Co_GetCharId(int coId);
+int Co_GetBriefMsg(int coId);
+int Co_GetDisplayClassId(int coId);
+
+/* Read-only view of a CO's explicit class-affinity list. Used by systems
+ * that want to key off the same class roster the CO affinity page displays
+ * without duplicating the table or allocating a filtered copy. */
+int Co_GetClassAffinityCount(int coId);
+int Co_GetClassAffinityClassId(int coId, int index);
 
 /* CO gauge stars each of a CO's two powers costs. The mini CO gauge
  * (src/aw2_gfx.c) draws CoScreen_GetCoPowerStars small stars followed by
@@ -105,7 +154,7 @@ const char* CoScreen_GetCoName(int coId);
 int CoScreen_GetCoPowerStars(int coId);
 int CoScreen_GetCoSuperPowerStars(int coId);
 
-/* A CO's class affinity (struct CoClassAffinity, sFrancisAffinities etc.)
+/* A CO's class affinity (struct CoClassAffinity, sEdricAffinities etc.)
  * scales a class's power the same way a weapon's Pow bonus does: this
  * returns the delta to add to baseValue (POW only -- other stats are
  * unaffected), not the adjusted total, so callers use it exactly like
@@ -116,7 +165,7 @@ int CoScreen_GetCoSuperPowerStars(int coId);
  * 0. While coId's power/super is active (see CoPowers_OnPhaseEnd above),
  * ratingPow/ratingSup are added on top of rating first -- unlike the
  * *Bon fields below, these stack rather than replace. An out-of-range
- * coId falls back to CO_FRANCIS, same as every other lookup through
+ * coId falls back to CO_EDRIC, same as every other lookup through
  * GetCoDefinition. */
 int AdjustStatForCo(int coId, int classId, int baseValue);
 
@@ -157,6 +206,132 @@ int GetCoClassRangeBonus(int coId, int classId);
  * Unconditional on FE8_CO_POWERS alone, same as movBon (crit isn't a
  * range mechanic either). */
 int GetCoClassCritBonus(int coId, int classId);
+
+
+
+
+#define CO_AFFINITY_ROW_MAX 7
+
+enum {
+    CO_SCREEN_PAGE_INFO,
+    CO_SCREEN_PAGE_POWER,
+    CO_SCREEN_PAGE_SUPER,
+    CO_SCREEN_PAGE_AFFINITY,
+    CO_SCREEN_PAGE_COUNT,
+};
+
+struct CoClassAffinity {
+    u8 classId;
+    /* rating: the class's baseline affinity (CO_AFFINITY_NEUTRAL_RATING ==
+     * neutral), proportionally scaling POW same as a weapon's own Pow bonus
+     * -- see AdjustStatForCo. ratingPow/ratingSup ADD to rating while
+     * coId's power/super is active (see GetCoActivePowerStateForCo,
+     * GetEffectiveClassAffinityRating) -- unlike the *Bon fields below,
+     * this one stacks rather than replaces, since it's already a
+     * proportional adjustment rather than a flat shift. */
+    u8 rating;
+    u8 ratingPow;
+    u8 ratingSup;
+
+    /* -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
+     * below the class's affinity bar (see
+     * CoScreen_DrawPageAffinityClassBonusIcons). 0 draws nothing.
+     * movBon: applied unconditionally (FE8_CO_POWERS alone) to actual
+     * unit movement -- see GetCoClassMovBonus, GetUnitMovement
+     * (src/bmunit.c). rangeBon: applied to actual weapon attack range
+     * only when FE8_RANGE_REWORK is also on -- see GetCoClassRangeBonus,
+     * GetUnitItemEffectiveMaxRange (src/bmitem.c); with RANGE_REWORK off,
+     * this still draws the icon but doesn't change what the unit can
+     * actually hit (the vanilla reach-bits system it would need to feed
+     * into can't represent a shifted range at all -- see RANGE_REWORK's
+     * config.mk comment). critBon: applied unconditionally (FE8_CO_POWERS
+     * alone) to battle crit rate -- see GetCoClassCritBonus,
+     * ComputeBattleUnitCritRate (src/bmbattle.c).
+     *
+     * movBonPow/rangeBonPow/critBonPow REPLACE their plain field while
+     * coId's power is active, and movBonSup/rangeBonSup/critBonSup REPLACE
+     * it while coId's super is active -- unlike rating above, these don't
+     * stack with the plain value, since a flat +/-N shift doesn't have a
+     * sensible "add both" reading. None of the icon drawing reflects the
+     * Pow/Sup variants -- the affinity page always shows the plain
+     * movBon/rangeBon regardless of whether a power happens to be active. */
+    s8 movBon;
+    s8 movBonPow;
+    s8 movBonSup;
+    s8 rangeBon;
+    s8 rangeBonPow;
+    s8 rangeBonSup;
+    s8 critBon;
+    s8 critBonPow;
+    s8 critBonSup;
+};
+
+/* CoScreen_DrawPageAffinity's bar base: a class's affinity bar (and
+ * CoPower_ClassAffinityGroup below) is green/positive above this, red/
+ * negative below it, plain yellow/neutral exactly at it. */
+#define CO_AFFINITY_NEUTRAL_RATING 30
+
+/* Which classes a CO power affects, by their affinity rating relative to
+ * CO_AFFINITY_NEUTRAL_RATING -- struct CoDefinition's powerTargetGroup/
+ * superPowerTargetGroup (the two needn't match: a power and its super
+ * don't have to target the same classes). A class the CO has no explicit
+ * struct CoClassAffinity entry for defaults to neutral (see
+ * CoPower_ClassAffinityGroup). */
+enum CoPowerTargetGroup {
+    CO_POWER_TARGET_ALL,
+    CO_POWER_TARGET_POSITIVE,
+    CO_POWER_TARGET_POSITIVE_NEUTRAL,
+    CO_POWER_TARGET_NEGATIVE,
+    CO_POWER_TARGET_NEGATIVE_NEUTRAL,
+    CO_POWER_TARGET_NEGATIVE_POSITIVE,
+};
+
+
+struct CoDefinition {
+    /* The real character this CO is. Every CO has one. Their display name
+     * and portrait come from it (GetCharacterData()->nameTextId /
+     * ->portraitId) rather than being duplicated here, and the CO select
+     * screen (src/coSelect.c) uses it to find the CO's unit on the map so
+     * it can show that unit's actual class in the carousel, falling back to
+     * ->defaultClass when the unit isn't deployed. */
+    u16 charId;
+    u16 titleMsg; // shown on the info page (e.g. their epithet)
+    u16 briefMsg; 
+    u16 infoMsg; // three-line texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
+    u16 passiveMsg; // optional multiline passive text shown below infoMsg
+    u16 powerNameMsg;
+    u16 powerDescMsg; // single texts.txt entry, [LF]-separated
+    u16 superPowerNameMsg;
+    u16 superPowerDescMsg; // single texts.txt entry, [LF]-separated
+    /* CO gauge stars each power costs. The mini CO gauge (src/aw2_gfx.c)
+     * draws powerStars small stars followed by the
+     * (superPowerStars - powerStars) big ones that top it up to the super,
+     * so superPowerStars must be >= powerStars. */
+    u8 powerStars;
+    u8 superPowerStars;
+    /* enum CoPowerTargetGroup -- which classes the power/super actually
+     * affects when used (see CoPower_AppliesToClass). Defaults to
+     * CO_POWER_TARGET_ALL (0) if left off a CoDefinition. */
+    u8 powerTargetGroup;
+    u8 superPowerTargetGroup;
+    const struct CoClassAffinity* affinities;
+    u8 affinityCount;
+};
+
+/* Mirrors the classes actually sellable in sPurchaseGenericDefinitions
+ * (src/purchase_generics.c) -- keep the class list in sync if that table
+ * changes. */
+ 
+/* Co power ideas: 
+- Spawn generics in empty controlled properties + adjacent to camp
+- Spawn generics of x class in forests within x tiles from controlled properties 
+- Grant x classes +n movement or attack range 
+- */ 
+
+
+
+
+
 
 #endif // FE8_CO_POWERS
 

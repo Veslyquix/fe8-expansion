@@ -25,9 +25,28 @@ void BattleAIS_ExecCommands(void)
             continue;
 
         if (type & ANIM_BIT2_COMMAND) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+            u32 cmdIterations = 0;
+#endif
+
             while (1) {
                 if (anim->commandQueueSize == 0)
                     goto end_exec_loop;
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+                // commandQueueSize is normally bounded by commandQueue's own
+                // length and decreases to 0 every iteration, but a broken/
+                // corrupted animation can leave it holding a value past that
+                // length (indexing commandQueue OOB below) or otherwise never
+                // reaching 0 the way this loop expects. Abandon this anim's
+                // queue instead of reading garbage as commands or spinning.
+                if (anim->commandQueueSize > ARRAY_COUNT(anim->commandQueue) ||
+                    ++cmdIterations > ARRAY_COUNT(anim->commandQueue))
+                {
+                    anim->commandQueueSize = 0;
+                    goto end_exec_loop;
+                }
+#endif
 
                 switch (anim->commandQueue[anim->commandQueueSize - 1]) {
                 case 0:

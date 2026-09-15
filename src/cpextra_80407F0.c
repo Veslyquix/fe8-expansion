@@ -583,11 +583,20 @@ s8 AiTryUseNightmareStaff(struct UnknownAiInputA* input) {
                     }
 
                     BmMapFill(gBmMapRange, 0);
-#if FE8_RANGE_REWORK
-                    MapAddInBoundedRange(ix, iy, GetUnitItemEffectiveMinRange(gActiveUnit, ITEM_NIGHTMARE), GetUnitItemEffectiveMaxRange(gActiveUnit, ITEM_NIGHTMARE));
-#else
-                    MapAddInBoundedRange(ix, iy, GetItemMinRange(ITEM_NIGHTMARE), GetItemMaxRange(ITEM_NIGHTMARE));
-#endif
+                    /* Deliberately NOT GetUnitItemEffectiveMinRange/MaxRange(_,
+                     * ITEM_NIGHTMARE): this is Fomortiis's own bounded "how far
+                     * can a Nightmare cast from here reach" search radius, used
+                     * to find the best position to maximize hits -- a
+                     * fundamentally different question from "what does
+                     * Nightmare's item data claim its range is" (0xFF, "hits
+                     * everyone", once FE8_RANGE_REWORK repurposes its
+                     * encodedRange -- see IsItemAllRange, src/bmitem.c). Every
+                     * tile would appear to hit the same (every) unit if this
+                     * used that sentinel instead, defeating the whole point of
+                     * this position scan. GetUnitMagBy2Range keeps returning
+                     * the historical bounded value (3) for Fomortiis
+                     * specifically -- see its own comment, src/bmunit.c. */
+                    MapAddInBoundedRange(ix, iy, 1, GetUnitMagBy2Range(gActiveUnit));
 
                     targetUnitId = AiDetermineNightmareEffectiveness(&numValidTargets, &numHit, input->unk_02);
 
@@ -665,11 +674,10 @@ s8 AiTryDKSummon(struct UnknownAiInputB* input) {
     }
 
     BmMapFill(gBmMapRange, 0);
-#if FE8_RANGE_REWORK
-    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetUnitItemEffectiveMinRange(gActiveUnit, ITEM_NIGHTMARE), GetUnitItemEffectiveMaxRange(gActiveUnit, ITEM_NIGHTMARE));
-#else
-    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, GetItemMinRange(ITEM_NIGHTMARE), GetItemMaxRange(ITEM_NIGHTMARE));
-#endif
+    /* Same reasoning as AiTryUseNightmareStaff's own comment above -- a
+     * bounded search radius, not Nightmare's "hits everyone" item-data
+     * sentinel. */
+    MapAddInBoundedRange(gActiveUnit->xPos, gActiveUnit->yPos, 1, GetUnitMagBy2Range(gActiveUnit));
 
     AiDetermineNightmareEffectiveness(&numValidTargets, &numHit, 0);
 

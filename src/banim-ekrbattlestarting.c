@@ -86,6 +86,18 @@ void MainUpdate_0(void)
     Proc_Run(gProcTreeRootArray[4]);
 
     AnimUpdateAll();
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (ConsumeAnimListCorruptFlag())
+    {
+        // The anim list got corrupted badly enough that AnimUpdateAll() had
+        // to wipe it - wind this battle down the same way it would end
+        // normally (arena/hensei/vanilla-aware) rather than keep driving a
+        // battle-starting/-ending sequence on top of whatever's left.
+        EkrMainEndExec();
+    }
+#endif
+
     BattleAIS_ExecCommands();
 
     PushSpriteLayerObjects(0xD);

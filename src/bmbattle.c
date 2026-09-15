@@ -40,6 +40,30 @@
 void VeslyDebugger_ApplyGodMode(struct BattleUnit * attacker, struct BattleUnit * defender);
 #endif
 
+#if !FE8_CUSTOM_FORMULAS
+static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
+    { ITYPE_SWORD, ITYPE_LANCE, -15, -1 },
+    { ITYPE_SWORD, ITYPE_AXE,   +15, +1 },
+
+    { ITYPE_LANCE, ITYPE_AXE,   -15, -1 },
+    { ITYPE_LANCE, ITYPE_SWORD, +15, +1 },
+
+    { ITYPE_AXE,   ITYPE_SWORD, -15, -1 },
+    { ITYPE_AXE,   ITYPE_LANCE, +15, +1 },
+
+    { ITYPE_ANIMA, ITYPE_DARK,  -15, -1 },
+    { ITYPE_ANIMA, ITYPE_LIGHT, +15, +1 },
+
+    { ITYPE_LIGHT, ITYPE_ANIMA, -15, -1 },
+    { ITYPE_LIGHT, ITYPE_DARK,  +15, +1 },
+
+    { ITYPE_DARK,  ITYPE_LIGHT, -15, -1 },
+    { ITYPE_DARK,  ITYPE_ANIMA, +15, +1 },
+
+    { -1 },
+};
+#endif 
+#if FE8_CUSTOM_FORMULAS
 static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
     { ITYPE_SWORD, ITYPE_LANCE, -25, -3 },
     { ITYPE_SWORD, ITYPE_AXE,   +25, +3 },
@@ -61,6 +85,7 @@ static CONST_DATA struct WeaponTriangleRule sWeaponTriangleRules[] = {
 
     { -1 },
 };
+#endif
 
 #undef CONST_DATA
 #define CONST_DATA SECTION(".data.bmbattletail")
@@ -487,6 +512,16 @@ void SetBattleUnitWeaponBallista(struct BattleUnit* bu) {
 
 void Battle_Nop(void) {} // unused
 
+#if FE8_CANNOT_CRIT_WEPS
+static void ApplyCannotCritWeaponStats(struct BattleUnit* bu)
+{
+    if (ItemCannotCrit(bu->weapon)) {
+        bu->battleCritRate = 0xFF;
+        bu->battleEffectiveCritRate = 0xFF;
+    }
+}
+#endif
+
 void ComputeBattleUnitStats(struct BattleUnit* attacker, struct BattleUnit* defender) {
     ComputeBattleUnitDefense(attacker, defender);
     ComputeBattleUnitAttack(attacker, defender);
@@ -508,6 +543,10 @@ void ComputeBattleUnitStats(struct BattleUnit* attacker, struct BattleUnit* defe
      * docs/issue-resolution-policy.md). */
     ExpansionMechanicsApplyBattleStats(attacker, defender, gBattleStats.config);
 #endif
+
+#if FE8_CANNOT_CRIT_WEPS
+    ApplyCannotCritWeaponStats(attacker);
+#endif
 }
 
 void ComputeBattleUnitEffectiveStats(struct BattleUnit* attacker, struct BattleUnit* defender) {
@@ -518,6 +557,10 @@ void ComputeBattleUnitEffectiveStats(struct BattleUnit* attacker, struct BattleU
 
 #if FE8_VESLY_DEBUGGER
     VeslyDebugger_ApplyGodMode(attacker, defender);
+#endif
+
+#if FE8_CANNOT_CRIT_WEPS
+    ApplyCannotCritWeaponStats(attacker);
 #endif
 }
 
@@ -603,11 +646,20 @@ void ComputeBattleUnitSpeed(struct BattleUnit* bu) {
 }
 
 void ComputeBattleUnitHitRate(struct BattleUnit* bu) {
-    bu->battleHitRate = (bu->unit.skl * 2) + GetItemHit(bu->weapon) + (bu->unit.lck / 2) + bu->wTriangleHitBonus;
+    #if !FE8_CUSTOM_FORMULAS
+    bu->battleHitRate = (bu->unit.skl * 2) + GetItemHit(bu->weapon) + (bu->unit.lck / 2) + bu->wTriangleHitBonus; // vanilla 
+    #else 
+    bu->battleHitRate = (bu->unit.skl * 3) + GetItemHit(bu->weapon) + (bu->unit.lck / 2) + bu->wTriangleHitBonus; 
+    #endif 
 }
 
 void ComputeBattleUnitAvoidRate(struct BattleUnit* bu) {
-    bu->battleAvoidRate = (bu->battleSpeed * 2) + bu->terrainAvoid + (bu->unit.lck);
+    
+    #if !FE8_CUSTOM_FORMULAS
+    bu->battleAvoidRate = (bu->battleSpeed * 2) + bu->terrainAvoid + (bu->unit.lck); // vanilla 
+    #else 
+    bu->battleAvoidRate = (bu->battleSpeed) + bu->terrainAvoid + (bu->unit.lck);
+    #endif 
 
     if (bu->battleAvoidRate < 0)
         bu->battleAvoidRate = 0;
@@ -641,6 +693,13 @@ void ComputeBattleUnitEffectiveHitRate(struct BattleUnit* attacker, struct Battl
 
 void ComputeBattleUnitEffectiveCritRate(struct BattleUnit* attacker, struct BattleUnit* defender) {
     int item, i;
+
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(attacker->weapon)) {
+        attacker->battleEffectiveCritRate = 0xFF;
+        return;
+    }
+#endif
 
     attacker->battleEffectiveCritRate = attacker->battleCritRate - defender->battleDodgeRate;
 
@@ -913,6 +972,11 @@ void BattleUpdateBattleStats(struct BattleUnit* attacker, struct BattleUnit* def
     gBattleStats.attack = attacker->battleAttack;
     gBattleStats.defense = defender->battleDefense;
     gBattleStats.hitRate = attacker->battleEffectiveHitRate;
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(attacker->weapon))
+        gBattleStats.critRate = 0;
+    else
+#endif
     gBattleStats.critRate = attacker->battleEffectiveCritRate;
     gBattleStats.silencerRate = attacker->battleSilencerRate;
 }
@@ -1104,6 +1168,11 @@ void BattleGenerateHitTriangleAttack(struct BattleUnit* attacker, struct BattleU
     if (!BattleCheckTriangleAttack(attacker, defender))
         return;
 
+#if FE8_CANNOT_CRIT_WEPS
+    if (ItemCannotCrit(attacker->weapon))
+        return;
+#endif
+
     gBattleHitIterator->attributes |= BATTLE_HIT_ATTR_TATTACK;
 
     gBattleStats.critRate = 100;
@@ -1145,7 +1214,9 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
                 attacker->unit.curHP = 0;
 
 #if FE8_CO_POWERS
-            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+            if (gBattleStats.config & BATTLE_CONFIG_REAL) { 
+                CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+            }
 #endif
         } else {
             if (gBattleStats.damage > defender->unit.curHP)
@@ -1157,8 +1228,10 @@ void BattleGenerateHitEffects(struct BattleUnit* attacker, struct BattleUnit* de
                 defender->unit.curHP = 0;
 
 #if FE8_CO_POWERS
-            CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
-            CoGauge_OnDamage(UNIT_FACTION(&defender->unit), gBattleStats.damage);
+            if (gBattleStats.config & BATTLE_CONFIG_REAL) { 
+                CoGauge_OnDamage(UNIT_FACTION(&attacker->unit), gBattleStats.damage);
+                CoGauge_OnDamage(UNIT_FACTION(&defender->unit), gBattleStats.damage);
+            } 
 #endif
         }
 

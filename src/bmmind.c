@@ -30,6 +30,9 @@
 #if FE8_PURCHASE_GENERICS
 #include "purchase_generics.h"
 #endif
+#if FE8_SKILLSYSTEM
+#include "unitcall.h"
+#endif
 
 #include "bmmind.h"
 
@@ -201,10 +204,15 @@ u32 ApplyUnitAction(ProcPtr proc) {
 
 #if FE8_PURCHASE_GENERICS
         case UNIT_ACTION_CAPTURE:
-            return ActionCapture(proc); 
-            
+            return ActionCapture(proc);
+
         case UNIT_ACTION_CAPTURED:
-            return ActionCaptured(proc); 
+            return ActionCaptured(proc);
+#endif
+
+#if FE8_SKILLSYSTEM
+        case UNIT_ACTION_CALL:
+            return ActionCall(proc);
 #endif
 
         default:

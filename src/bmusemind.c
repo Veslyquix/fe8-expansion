@@ -66,9 +66,10 @@ void ExecStandardHeal(ProcPtr proc) {
 
     BattleInitItemEffectTarget(GetUnit(gActionData.targetIndex));
 
-    amount = GetUnitItemHealAmount(
+    amount = GetUnitItemHealAmountForTarget(
         GetUnit(gActionData.subjectIndex),
-        GetUnit(gActionData.subjectIndex)->items[gActionData.itemSlotIndex]
+        GetUnit(gActionData.subjectIndex)->items[gActionData.itemSlotIndex],
+        GetUnit(gActionData.targetIndex)
     );
 
     AddUnitHp(GetUnit(gActionData.targetIndex), amount);
@@ -954,6 +955,9 @@ void ActionStaffDoorChestUseItem(ProcPtr proc) {
         case ITEM_STAFF_MEND:
         case ITEM_STAFF_RECOVER:
         case ITEM_STAFF_PHYSIC:
+#if FE8_CUSTOM_CAMPAIGN
+        case ITEM_STAFF_NOSTAL:
+#endif
             ExecStandardHeal(proc);
             break;
         case ITEM_STAFF_SILENCE:

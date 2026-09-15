@@ -148,5 +148,580 @@
       "Unarmed"
     ],
     "class_tag": "ntf"
+  },
+  "swbf": {
+    "credit": "[Axe-Custom] Swashbuckler [F] by Yellowtoad",
+    "weapons": [
+      "Sword",
+      "Axe",
+      "Handaxe",
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "swbf"
+  },
+  "swbm": {
+    "credit": "[Axe-Custom] Swashbuckler [M] by Yellowtoad",
+    "weapons": [
+      "Sword",
+      "Axe",
+      "Handaxe",
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "swbm"
+  },
+  "leob": {
+    "credit": "[Berserker-Custom] Leo's Berserker [M] by Leo_Link",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "leob"
+  },
+  "gmah": {
+    "credit": "[CavalryCustom]_[U]_Updated_Grand_Mahout_by_Orihara_Saki_DatonDemand",
+    "weapons": [
+      "Lance",
+      "Bow",
+      "Monster"
+    ],
+    "class_tag": "gmah"
+  },
+  "arcn": {
+    "credit": "[Custom_DM_[M]_Arcanist_by_Nuramon",
+    "weapons": [
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "arcn"
+  },
+  "halb": {
+    "credit": "[Custom_Halb]_[M]_Halberdier_+Axes_by_TBA",
+    "weapons": [
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "halb"
+  },
+  "miko": {
+    "credit": "[Custom_Magi]_[F]_Miko_V_2_by_RedBean",
+    "weapons": [
+      "Lance",
+      "Bow",
+      "Staff",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "miko"
+  },
+  "wcl": {
+    "credit": "[Custom_Magi]_[F]_War_Cleric_by_SkidMarc25",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Magic"
+    ],
+    "class_tag": "wcl"
+  },
+  "wtch": {
+    "credit": "[Custom_Magi]_[F]_Witch_Nuibaba_by_Nuramon",
+    "weapons": [
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "wtch"
+  },
+  "angl": {
+    "credit": "[Custom_Magi]_[U]_Angel_by_Atey",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "angl"
+  },
+  "brgh": {
+    "credit": "[CustomLord]_[F]_Halberd_Brighid_by_Sphealnuke",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "brgh"
+  },
+  "arcd": {
+    "credit": "[DevisianCustom]_[M]_Arcanist_by_Devisian_Nights",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "arcd"
+  },
+  "magc": {
+    "credit": "[DevisianCustom]_[M]_Magician_v2_by_Devisian_Nights",
+    "weapons": [
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "magc"
+  },
+  "oclt": {
+    "credit": "[DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "oclt"
+  },
+  "bldr": {
+    "credit": "[FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "bldr"
+  },
+  "hrbg": {
+    "credit": "[FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Staff",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "hrbg"
+  },
+  "hrba": {
+    "credit": "[FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Staff",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "hrba"
+  },
+  "hvin": {
+    "credit": "[FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "hvin"
+  },
+  "baro": {
+    "credit": "[GeneralReskin]_[U]_Baron_+Weapons",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Bow",
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "baro"
+  },
+  "shgn": {
+    "credit": "[GeneralReskin]_[U]_ShieldGeneral_v2_+Cape",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "shgn"
+  },
+  "bdrg": {
+    "credit": "[ManaketeCustom]_[U]_Black_Dragon_FE10Style_by_Nuramon",
+    "weapons": [
+      "Unarmed",
+      "Dragonstone"
+    ],
+    "class_tag": "bdrg"
+  },
+  "djin": {
+    "credit": "[MonsterCustom]_[M]_Djinn_by_Alexsplode",
+    "weapons": [
+      "Sword",
+      "Magic",
+      "Supply"
+    ],
+    "class_tag": "djin"
+  },
+  "larm": {
+    "credit": "[MonsterCustom]_[U]_Living_Armor_by_Sphealnuke",
+    "weapons": [
+      "Sword",
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "larm"
+  },
+  "fell": {
+    "credit": "[MonsterCustom]_[U]_Wild_Fellbeast_by_Nuramon",
+    "weapons": [
+      "Magic",
+      "Monster"
+    ],
+    "class_tag": "fell"
+  },
+  "samf": {
+    "credit": "[RogueVariant]_[F]_Samurai__Iaijutsu_Rogue",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "samf"
+  },
+  "mnja": {
+    "credit": "[Sword Custom] Master Ninja [M] by Pikmin and Der",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "mnja"
+  },
+  "hnja": {
+    "credit": "[Sword Custom] Ninja - Hooded [U] by Pikmin and Der",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "hnja"
+  },
+  "myff": {
+    "credit": "[Sword FE15 Custom] Myrmidon [F] by Nuramon",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "myff"
+  },
+  "myfm": {
+    "credit": "[Sword FE15 Custom] Myrmidon [M] by Nuramon",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "myfm"
+  },
+  "kata": {
+    "credit": "[Sword_Custom]_[F]_Katarina_Fencer_by_GabrielKnight",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "kata"
+  },
+  "thug": {
+    "credit": "[Sword_Custom]_[M]_Thug_by_MonkeyBard",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "thug"
+  },
+  "drdf": {
+    "credit": "[Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon",
+    "weapons": [
+      "Sword",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "drdf"
+  },
+  "firs": {
+    "credit": "[SwordmasterVariant]_[F]_Fir_by_Redbean",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "firs"
+  },
+  "trub": {
+    "credit": "[SwordmasterVariant]_[M]_Trueblade_by_Dinar87",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "trub"
+  },
+  "redm": {
+    "credit": "[T3_Custom]_[M]_Red_Mage_by_Mycahel",
+    "weapons": [
+      "Sword",
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "redm"
+  },
+  "molo": {
+    "credit": "[T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar",
+    "weapons": [
+      "Lance",
+      "Staff",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "molo"
+  },
+  "tact": {
+    "credit": "[Tactician]_[U]_Tactician_by_SALVAGED",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "tact"
+  },
+  "trif": {
+    "credit": "[Trickster]_F_Trickster_V_2_Ponytail",
+    "weapons": [
+      "Sword",
+      "Bow",
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "trif"
+  },
+  "trim": {
+    "credit": "[Trickster]_M_Trickster_V_2_by_Leo_Link",
+    "weapons": [
+      "Sword",
+      "Bow",
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "trim"
+  },
+  "vilf": {
+    "credit": "[VillagerCustom]_F_Villager_v2_by_Nuramon",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "vilf"
+  },
+  "vilm": {
+    "credit": "[VillagerCustom]_M_Villager_v2_by_Nuramon",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "vilm"
+  },
+  "legk": {
+    "credit": "[ZephielReskin]_[U]_Legion_King_by_Huichelaar",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "legk"
+  },
+  "onic": {
+    "credit": "AxeCustom__%5BM__Oni_Chieftain_Repalette_by_Dora_Drago",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Magic"
+    ],
+    "class_tag": "onic"
+  },
+  "elfn": {
+    "credit": "BardBase__%5BM__Elffin_Fancy_%2BMagic",
+    "weapons": [
+      "Magic",
+      "Refresh"
+    ],
+    "class_tag": "elfn"
+  },
+  "mmar": {
+    "credit": "BrigandStyle_____Mounted_Marauder_by_TytheBub",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "mmar"
+  },
+  "mech": {
+    "credit": "Crossbow__%5BM__Mechanist_by_Sphealnuke",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "mech"
+  },
+  "drag": {
+    "credit": "Custom_Drag_____Dragoon_Repal_by_Pikmin",
+    "weapons": [
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "drag"
+  },
+  "lanc": {
+    "credit": "Custom_Lance__%5BM__Lancer_by_SALVAGED",
+    "weapons": [
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "lanc"
+  },
+  "milt": {
+    "credit": "Custom_Lance__%5BM__Militia_Deserter_by_Alusq",
+    "weapons": [
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "milt"
+  },
+  "sent": {
+    "credit": "Custom_Lance_____Sentinel_by_Nuramon",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "sent"
+  },
+  "t1ln": {
+    "credit": "EphraimVariant_____T1_Lancer_Fix_by_MemaeMemai",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "t1ln"
+  },
+  "glad": {
+    "credit": "HectorReskin__%5BM__T1_Waleed's_Gladiator_Repal_v2_%2BSword",
+    "weapons": [
+      "Sword",
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "glad"
+  },
+  "hbrg": {
+    "credit": "horn_brigand",
+    "weapons": [
+      "Axe"
+    ],
+    "class_tag": "hbrg"
+  },
+  "hsld": {
+    "credit": "horn_soldier",
+    "weapons": [
+      "Lance"
+    ],
+    "class_tag": "hsld"
+  },
+  "hunt": {
+    "credit": "HunterM__%5BM__Hunter_by_MeatOfJustice",
+    "weapons": [
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "hunt"
+  },
+  "anna": {
+    "credit": "MiscSupplierAnna_____Repalled_%2B_Weapons_by_JonoTheRed_DatonDemand",
+    "weapons": [
+      "Lance",
+      "Bow",
+      "Staff"
+    ],
+    "class_tag": "anna"
+  },
+  "sand": {
+    "credit": "Monster_Custom_____Sandworm_by_Stephano",
+    "weapons": [
+      "Monster"
+    ],
+    "class_tag": "sand"
+  },
+  "cswd": {
+    "credit": "MonsterCustom_____Cursed_Sword_by_SALVAGED",
+    "weapons": [
+      "Sword"
+    ],
+    "class_tag": "cswd"
+  },
+  "tome": {
+    "credit": "MonsterCustom_____Magical_Tomes_by_N426",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "tome"
+  },
+  "mimc": {
+    "credit": "MonsterCustom_____Mimic_Chest_by_Seal",
+    "weapons": [
+      "Magic"
+    ],
+    "class_tag": "mimc"
+  },
+  "mosq": {
+    "credit": "MonsterCustom_____Mosquito_by_Dutch_Introvert",
+    "weapons": [
+      "Monster"
+    ],
+    "class_tag": "mosq"
+  },
+  "phnt": {
+    "credit": "MonsterCustom_____Phantom_by_TBA",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "phnt"
+  },
+  "slim": {
+    "credit": "MonsterCustom_____Slime_by_Yellowtoad",
+    "weapons": [
+      "Staff",
+      "Magic"
+    ],
+    "class_tag": "slim"
+  },
+  "wbrd": {
+    "credit": "MonsterCustom_____Warbird_by_Alexsplode",
+    "weapons": [
+      "Lance",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "wbrd"
+  },
+  "advn": {
+    "credit": "SniperReskin_____Adventurer_by_ltranc",
+    "weapons": [
+      "Bow",
+      "Staff",
+      "Unarmed"
+    ],
+    "class_tag": "advn"
   }
 }

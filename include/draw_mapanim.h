@@ -51,7 +51,12 @@ struct DrawMapAnimFrame
     const u16 * pal;
 };
 
+struct Unit;
+
 extern CONST_DATA struct ProcCmd ProcScr_DrawMapAnimDefaultItemEffect[];
+extern CONST_DATA struct ProcCmd ProcScr_DrawMapAnimHealNumber[];
+
+void DrawMapAnim_StartHealNumber(struct Unit * unit);
 
 extern const struct DrawMapAnimFrame * const gDrawMapAnimTable[DRAW_MAP_ANIM_COUNT];
 extern const u8 * const gDrawMapAnimNumbersImg;

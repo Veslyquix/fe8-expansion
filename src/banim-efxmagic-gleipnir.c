@@ -1452,7 +1452,16 @@ void efxDarkGradoOBJ02piece_Loop(struct ProcEfxOBJ * proc)
 
     proc->timer++;
 
+    // proc->terminator is caller-supplied (StartSubSpell_efxDarkGradoOBJ02piece_A/_B);
+    // if it is ever 0 (or otherwise not exactly reachable by this ++timer), the exact
+    // equality below never fires, proc->anim2 is never AnimDelete()'d, and this proc
+    // runs forever leaking an Anim/Proc slot each cast. `> 30` is a hard fallback so
+    // the effect always ends even if terminator is missed.
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (proc->timer == proc->terminator || proc->timer > 30)
+#else
     if (proc->timer == proc->terminator)
+#endif
     {
         gEfxBgSemaphore--;
         AnimDelete(proc->anim2);

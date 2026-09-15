@@ -37,6 +37,24 @@
 
 extern struct Unit gStatGainSimUnit;
 
+static s8 HasSelectTargetForItem(struct Unit* unit, int item, void(*func)(struct Unit*))
+{
+    s8 result;
+    int oldItemSlot = gActionData.itemSlotIndex;
+    int itemSlot = GetUnitItemSlot(unit, GetItemIndex(item));
+
+    /* Target builders use gActionData.itemSlotIndex as one concrete item.
+     * The -1 inventory-scan convention only belongs to range-preview helpers. */
+    if (itemSlot >= 0)
+        gActionData.itemSlotIndex = itemSlot;
+
+    result = HasSelectTarget(unit, func);
+
+    gActionData.itemSlotIndex = oldItemSlot;
+
+    return result;
+}
+
 // clang-format off
 
 struct ProcCmd CONST_DATA gProcScr_SquareSelectWarp[] =
@@ -104,40 +122,43 @@ s8 CanUnitUseItem(struct Unit* unit, int item)
     case ITEM_STAFF_HEAL:
     case ITEM_STAFF_MEND:
     case ITEM_STAFF_RECOVER:
-        return HasSelectTarget(unit, MakeTargetListForAdjacentHeal);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForAdjacentHeal);
 
     case ITEM_STAFF_PHYSIC:
-        return HasSelectTarget(unit, MakeTargetListForRangedHeal);
+#if FE8_CUSTOM_CAMPAIGN
+    case ITEM_STAFF_NOSTAL:
+#endif
+        return HasSelectTargetForItem(unit, item, MakeTargetListForRangedHeal);
 
     case ITEM_STAFF_FORTIFY:
-        return HasSelectTarget(unit, MakeTargetListForRangedHeal);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForRangedHeal);
 
     case ITEM_STAFF_RESTORE:
-        return HasSelectTarget(unit, MakeTargetListForRestore);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForRestore);
 
     case ITEM_STAFF_RESCUE:
-        return HasSelectTarget(unit, MakeTargetListForRescueStaff);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForRescueStaff);
 
     case ITEM_STAFF_BARRIER:
-        return HasSelectTarget(unit, MakeTargetListForBarrier);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForBarrier);
 
     case ITEM_STAFF_SILENCE:
-        return HasSelectTarget(unit, MakeTargetListForSilence);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForSilence);
 
     case ITEM_STAFF_SLEEP:
-        return HasSelectTarget(unit, MakeTargetListForSleep);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForSleep);
 
     case ITEM_STAFF_BERSERK:
-        return HasSelectTarget(unit, MakeTargetListForBerserk);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForBerserk);
 
     case ITEM_STAFF_WARP:
-        return HasSelectTarget(unit, MakeTargetListForWarp);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForWarp);
 
     case ITEM_STAFF_REPAIR:
-        return HasSelectTarget(unit, MakeTargetListForHammerne);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForHammerne);
 
     case ITEM_STAFF_UNLOCK:
-        return HasSelectTarget(unit, MakeTargetListForUnlock);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForUnlock);
 
     case ITEM_BOOSTER_HP:
     case ITEM_BOOSTER_POW:
@@ -188,13 +209,13 @@ s8 CanUnitUseItem(struct Unit* unit, int item)
         return CanUnitUseLockpickItem(unit);
 
     case ITEM_STAFF_LATONA:
-        return HasSelectTarget(unit, MakeTargetListForLatona);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForLatona);
 
     case ITEM_MINE:
-        return HasSelectTarget(unit, MakeTargetListForMine);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForMine);
 
     case ITEM_LIGHTRUNE:
-        return HasSelectTarget(unit, MakeTargetListForLightRune);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForLightRune);
 
     case ITEM_STAFF_TORCH:
         return gPlaySt.chapterVisionRange != 0;
@@ -203,7 +224,7 @@ s8 CanUnitUseItem(struct Unit* unit, int item)
     case ITEM_NINISS_GRACE:
     case ITEM_THORS_IRE:
     case ITEM_SETS_LITANY:
-        return HasSelectTarget(unit, MakeTargetListForDanceRing);
+        return HasSelectTargetForItem(unit, item, MakeTargetListForDanceRing);
 
     case ITEM_METISSTOME:
         if (unit->state & US_GROWTH_BOOST)
@@ -305,6 +326,9 @@ void DoItemUse(struct Unit* unit, int item)
         break;
 
     case ITEM_STAFF_PHYSIC:
+#if FE8_CUSTOM_CAMPAIGN
+    case ITEM_STAFF_NOSTAL:
+#endif
         DoUseHealStaff(unit, MakeTargetListForRangedHeal);
         break;
 

@@ -11,7 +11,7 @@ OUT = ROOT / "build" / "shiftcheck" / "modern_relocs.elf"
 MAP = ROOT / "build" / "shiftcheck" / "modern_relocs.map"
 OBJECTS_LST = ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "link" / "objects.lst"
 ROM = ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.gba"
-BANIM_SYM = ROOT / "banim" / "data_banim.o.sym.o"
+BANIM_SYM = ROOT / "banim" / "data_banim.modern.o.sym.o"
 
 
 class ModernRelinkTests(unittest.TestCase):

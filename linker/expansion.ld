@@ -52,6 +52,34 @@ SECTIONS
     } > ewram AT> ewram
     __ewram_overlay_gameending_size = __ewram_overlay_gameending_end - __ewram_start;
 
+    /* Mode Select (FE8_MODE_SELECT). Its three carousel slots each need a
+       full set of battle-animation scratch buffers, so it cannot borrow the
+       banim/gamestart buffers piecemeal — those two tags share one address
+       range, and their individual buffers alias each other. It gets its own
+       tag instead, disjoint by construction, reusing the same physical EWRAM
+       as the other overlays (no battle animation or opening cinematic is
+       running while the save menu's New Game flow is open). */
+    ewram_overlay_modeselect __ewram_start (NOLOAD) : ALIGN(4)
+    {
+        *(ewram_overlay_modeselect)
+        __ewram_overlay_modeselect_end = .;
+    } > ewram AT> ewram
+    __ewram_overlay_modeselect_size = __ewram_overlay_modeselect_end - __ewram_start;
+
+    /* CO select (FE8_CO_POWERS, src/coSelect.c). Same reasoning as
+       ewram_overlay_modeselect above -- its three carousel slots each need a
+       full set of battle-animation scratch buffers and so need a tag of their
+       own. Separate from modeselect's tag because data within one tag is
+       concatenated rather than aliased, and these two screens never run at the
+       same time (one is on the title save menu, the other on the battle map),
+       so they should share the address range rather than stack on it. */
+    ewram_overlay_coselect __ewram_start (NOLOAD) : ALIGN(4)
+    {
+        *(ewram_overlay_coselect)
+        __ewram_overlay_coselect_end = .;
+    } > ewram AT> ewram
+    __ewram_overlay_coselect_size = __ewram_overlay_coselect_end - __ewram_start;
+
     ewram_overlay_bmstart __ewram_start (NOLOAD) : ALIGN(4)
     {
         *(ewram_overlay_bmstart)
@@ -150,15 +178,28 @@ SECTIONS
     } > ewram AT> ewram
     __ewram_overlay_worldmap_size = __ewram_overlay_worldmap_end - __ewram_start;
 
+    ewram_overlay_debugconsole __ewram_start (NOLOAD) : ALIGN(4)
+    {
+        *(ewram_overlay_debugconsole)
+        __ewram_overlay_debugconsole_end = .;
+    } > ewram AT> ewram
+    __ewram_overlay_debugconsole_size = __ewram_overlay_debugconsole_end - __ewram_start;
+
     __ewram_overlay_peak_size = MAX(
         MAX(
-            MAX(__ewram_overlay_0_size, __ewram_overlay_gameending_size),
-            MAX(__ewram_overlay_bmstart_size, __ewram_overlay_gamestartsave_size)
+            MAX(
+                MAX(__ewram_overlay_0_size, __ewram_overlay_gameending_size),
+                MAX(__ewram_overlay_bmstart_size, __ewram_overlay_gamestartsave_size)
+            ),
+            MAX(
+                MAX(
+                    MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
+                    MAX(__ewram_overlay_modeselect_size, __ewram_overlay_coselect_size)
+                ),
+                MAX(__ewram_overlay_sio_size, __ewram_overlay_worldmap_size)
+            )
         ),
-        MAX(
-            MAX(__ewram_overlay_gamestart_size, __ewram_overlay_banim_size),
-            MAX(__ewram_overlay_sio_size, __ewram_overlay_worldmap_size)
-        )
+        __ewram_overlay_debugconsole_size
     );
     __ewram_persistent_start =
         __ewram_start + ((__ewram_overlay_peak_size + 3) & ~3);
@@ -203,8 +244,13 @@ SECTIONS
         PROVIDE(gUnk_Sio_21 = .); . += 0x28;
         PROVIDE(gUnk_Sio_22 = .); . += 0x4;
 
+        /* Event-script unit-load scratch: aliased onto sMsgString's storage
+         * (src/msg.c) rather than given its own space -- units are never
+         * loaded while a message is on screen, and sMsgString (0x1000
+         * bytes) is far larger than any gLoadUnitBuffer use needs. */
+        PROVIDE(gLoadUnitBuffer = sMsgString);
+
         . = ALIGN(4);
-        PROVIDE(gLoadUnitBuffer = .);
         PROVIDE(end = .);
     } > ewram AT> ewram
 
@@ -227,6 +273,46 @@ SECTIONS
         KEEP(*src/crt0.o(.text))
         *asm/arm.o(.text)
 
+        /* banim/data_banim.modern.o(.data) is a fully pre-linked binary
+         * blob (arm_compressing_linker.py -Tdata, modern.mk's
+         * $(MODERN_BANIM_OBJECT) rule -- NOT a relocatable object), whose
+         * internal pointers between animation sheets/OAM/palettes are
+         * baked as absolute addresses at a fixed base
+         * (MODERN_BANIM_DATA_BASE). Wherever THIS linker places its
+         * bytes must match that base exactly, or every pointer inside it
+         * is wrong -- silent corruption, crashing on the first battle
+         * animation played (confirmed the hard way, twice: once when
+         * this was briefly left fully floating, and again when it was
+         * pinned right after the *floating* region -- every time
+         * floating .text/.rodata/.data grew even slightly, the base
+         * went stale and this object needed an expensive ~10-minute
+         * full recompression and a relink).
+         *
+         * Pinned here instead, immediately after the fixed ARM
+         * startup/interwork code (rom_header.o/crt0.o/arm.o(.text)) and
+         * *before* the floating region -- this code is just the entry
+         * point jumping into the real C runtime init and is not
+         * expected to change size, so this address is now permanently
+         * stable regardless of how large .text/.rodata/.data ever grow
+         * (they all float *after* this point now, with no upper bound).
+         * The only thing that can still move this pin is the fixed
+         * startup code itself growing, which would show up immediately
+         * as a build failure (ld's "not within region"/backwards-move
+         * errors), not a silent crash.
+         *
+         * __banim_data_base_abs (passed via --defsym, same as
+         * MODERN_BANIM_DATA_BASE in modern.mk) is a true absolute ROM
+         * address, matching what arm_compressing_linker.py's -Tdata
+         * sub-link used to produce this blob. Bare `. = X` assignments
+         * in THIS output section are relative to the section's own
+         * base (__text_start) rather than truly absolute -- confirmed
+         * empirically, not just per the GNU ld manual -- matching every
+         * other pin historically used in this file, so the absolute
+         * address has to have __text_start subtracted back out here. */
+        . = ALIGN(4);
+        . = __banim_data_base_abs - __text_start;
+        banim/data_banim.modern.o(.data)
+
         /* === SHIFT PADDING: inserts __text_shift bytes here === */
         . = ALIGN(4);
         __shift_start = .;
@@ -243,10 +329,21 @@ SECTIONS
         *(.rodata .rodata.* .rodata.str1.* .rodata.cst*)
 
         . = ALIGN(4);
-        /* Outside the section list so the exclusion covers .data and .data.*. */
+        /* Outside the section list so the exclusion covers .data and
+         * .data.*. These (banim_data.o's own array table, terrain data,
+         * palettes, misc data blobs) are still excluded and grouped
+         * explicitly below rather than left to the generic wildcard, to
+         * preserve adjacency contracts real C code depends on via linker
+         * symbols (_banim_pal_start/_banim_pal_end/_banim_pal_size
+         * bracket exactly banim_pal_chara.o+data_banim_pal.o's data, in
+         * that order -- letting the wildcard scatter them across the ROM
+         * in whatever order objects happen to link would silently zero
+         * that computed size). banim/data_banim.modern.o is NOT excluded
+         * here any more -- it's placed up near the pinned startup code
+         * above instead, so it never needs to move as this floating
+         * region grows; see the comment there. */
         EXCLUDE_FILE (
             *banim_data.o
-            banim/data_banim.o
             *banim_terrain_data.o
             *data_banim_terrain.o
             *banim_pal_chara.o
@@ -257,58 +354,37 @@ SECTIONS
         *(.igot.plt)
         __floating_end = .;
 
-        /* === PINNED: banim regions (never shift) === */
-        FILL(0xFF);
-        . = 0xC00000;
+        /* Normal relocatable C (confirmed by e.g. src/banim_data.c's
+         * banim_data[] table using plain `&extern` references, not baked
+         * addresses), so unlike the pinned blob above these need no
+         * particular address -- just grouped together, back-to-back,
+         * with no reserved gap. */
         *banim_data.o(.data)
         *banim_data.o(.data.banim_array_len)
         *banim_data.o(.data.banim_array)
-
-        FILL(0x00);
-        . = 0xC02000;
-        banim/data_banim.o(.data)
-
-        FILL(0xFF);
-        /* Was 0xEE0000: banim/data_banim.o (the FE8_NEW_ANIMS custom
-         * animation table, .index 0xC9 on) grew past the old 0xC02000-
-         * 0xEE0000 budget (~2.86MB) once the 2026-09 pack import added 17
-         * more animations on top of the existing 31 -- see
-         * scripts/banim_event_to_source.py's module docstring for why
-         * only rtl OAM is stored per entry (that's what got this far in
-         * the first place). Bumped the whole banim_terrain/banim_pal
-         * region by +0x60000 (384K) to cover that plus headroom for
-         * further packs, rather than just enough for exactly today's
-         * content -- verified by nothing else referencing these
-         * addresses as a literal (only *_start/*_size linker symbols and
-         * the offline scripts/dump_*.py tools, which anchor against the
-         * ORIGINAL vanilla ROM, not this one) before moving it. */
-        . = 0xF40000;
         *banim_terrain_data.o(.data)
         *banim_terrain_data.o(.data.banim_terrain_head)
         *banim_terrain_data.o(.data.banim_terrain_ptr_table)
-
-        FILL(0x00);
-        . = 0xF40C00;
         *data_banim_terrain.o(.data)
 
-        FILL(0xFF);
-        _banim_pal_start = 0xF58000;
-        . = _banim_pal_start;
+        _banim_pal_start = .;
         *banim_pal_chara.o(.data)
         *banim_pal_chara.o(.data.banim_pal_head)
         *banim_pal_chara.o(.data.banim_pal_ptr_table)
-
-        FILL(0x00);
-        . = _banim_pal_start + 0x1000;
         *data_banim_pal.o(.data)
         _banim_pal_end = .;
         _banim_pal_size = . - _banim_pal_start;
 
-        FILL(0xFF);
-        . = 0xFE0000;
         *data_FE0000.o(.data)
-        . = 0xFFF000;
         *data_FFF000.o(.data)
+
+        /* Trailing padding: 32 zero bytes, 4-aligned, instead of padding
+         * the whole ROM out to a fixed power-of-two size -- see
+         * MODERN_ROM_SIZE/MODERN_ROM in modern.mk, which no longer force
+         * the built .gba to a full 16M/32M file. */
+        . = ALIGN(4);
+        FILL(0x00);
+        . += 32;
     } > rom = 0xFF
 
     /* === UPPER ROM: locale bank (32 MiB profiles only) === */
@@ -343,15 +419,17 @@ SECTIONS
         "gMainCallback overlaps the buffered UI-frame scratch region")
     ASSERT(ADDR(ewram_data) >= __ewram_start + __ewram_overlay_peak_size,
         "Persistent EWRAM overlaps an overlay")
-    ASSERT(__floating_end <= 0x08C00000, "Floating ROM content overlaps pinned banim region at 0x08C00000")
     ASSERT(SIZEOF(ewram_overlay_0) <= 256K, "ewram_overlay_0 exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_gameending) <= 256K, "ewram_overlay_gameending exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_bmstart) <= 256K, "ewram_overlay_bmstart exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_gamestartsave) <= 256K, "ewram_overlay_gamestartsave exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_gamestart) <= 256K, "ewram_overlay_gamestart exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_banim) <= 256K, "ewram_overlay_banim exceeds EWRAM")
+    ASSERT(SIZEOF(ewram_overlay_modeselect) <= 256K, "ewram_overlay_modeselect exceeds EWRAM")
+    ASSERT(SIZEOF(ewram_overlay_coselect) <= 256K, "ewram_overlay_coselect exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_sio) <= 256K, "ewram_overlay_sio exceeds EWRAM")
     ASSERT(SIZEOF(ewram_overlay_worldmap) <= 256K, "ewram_overlay_worldmap exceeds EWRAM")
+    ASSERT(SIZEOF(ewram_overlay_debugconsole) <= 256K, "ewram_overlay_debugconsole exceeds EWRAM")
 
     .stab             0 : { *(.stab) }
     .stabstr          0 : { *(.stabstr) }

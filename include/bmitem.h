@@ -188,6 +188,10 @@ void EquipUnitItemSlot(struct Unit* unit, int itemSlot);
 s8 IsItemEffectiveAgainst(u16 item, struct Unit* unit);
 s8 IsUnitEffectiveAgainst(struct Unit* actor, struct Unit* target);
 char* GetItemDisplayRangeString(int item);
+#if FE8_RANGE_REWORK
+char* GetItemEffDisplayRangeString(int item, struct Unit* unit);
+#endif 
+
 int GetWeaponLevelFromExp(int wexp);
 char* GetItemDisplayRankString(int item);
 int GetDisplayRankStringFromExp(int wexp);
@@ -197,6 +201,7 @@ s8 IsItemDanceRing(int item);
 s8 IsItemDisplayUsable(struct Unit* unit, int item);
 s8 CanUnitUse_unused(struct Unit* unit, int item);
 int GetUnitItemHealAmount(struct Unit* unit, int item);
+int GetUnitItemHealAmountForTarget(struct Unit* unit, int item, struct Unit* target);
 int GetUnitItemSlot(struct Unit* unit, int itemIndex);
 s8 IsItemStealable(int item);
 s8 IsItemHammernable(int item);
@@ -221,6 +226,8 @@ int GetItemMight(int item);
 int GetItemHit(int item);
 int GetItemWeight(int item);
 int GetItemCrit(int item);
+int GetItemDisplayCrit(int item);
+bool ItemCannotCrit(int item);
 int GetItemCost(int item);
 int GetItemMinRange(int item);
 int GetItemMaxRange(int item);

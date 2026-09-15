@@ -102,18 +102,33 @@ static const struct PurchaseGenericDefinition sPurchaseGenericDefinitions[] =
 {
     { "Soldier", CLASS_SOLDIER, 1500, { ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
     { "Knight", CLASS_ARMOR_KNIGHT, 3000, { ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
-    // { "Pegasus", CLASS_PEGASUS_KNIGHT, 5500, { ITEM_LANCE_SLIM, ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE } },
+    { "Knight", CLASS_ARMOR_KNIGHT_F, 3000, { ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Pegasus", CLASS_PEGASUS_KNIGHT, 5500, { ITEM_LANCE_SLIM, ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE } },
     { "Mage", CLASS_MAGE, 4000, { ITEM_ANIMA_FIRE, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Mage", CLASS_MAGE_F, 4000, { ITEM_ANIMA_FIRE, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
     { "Archer", CLASS_ARCHER, 4000, { ITEM_BOW_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } }, // ITEM_BOW_LONGBOW
+    { "Archer", CLASS_ARCHER_F, 4000, { ITEM_BOW_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } }, // ITEM_BOW_LONGBOW
     { "Mercenary", CLASS_MERCENARY, 4000, { ITEM_SWORD_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Myrmidon", CLASS_MYRMIDON, 4000, { ITEM_SWORD_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Samurai", CLASS_SAMURAI_F, 4000, { ITEM_SWORD_SHAMSIR, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
     { "Fighter", CLASS_FIGHTER, 5000, { ITEM_AXE_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
 
 
     { "Cavalier", CLASS_CAVALIER, 6500, { ITEM_SWORD_IRON, ITEM_LANCE_IRON, ITEM_AXE_IRON, ITEM_NONE } },
+    { "Cavalier", CLASS_CAVALIER_F, 6500, { ITEM_SWORD_IRON, ITEM_LANCE_IRON, ITEM_AXE_IRON, ITEM_NONE } },
+    { "Lord", CLASS_LYN_LORD, 6500, { ITEM_SWORD_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+
     
-    // { "Dancer", CLASS_DANCER, 4000, { ITEM_NONE, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
-    // { "Cleric", CLASS_CLERIC, 2500, { ITEM_STAFF_HEAL, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
-    // { "Brigand", CLASS_BRIGAND, 2000, { ITEM_AXE_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Wyvern", CLASS_WYVERN_RIDER, 5500, { ITEM_LANCE_SLIM, ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE } },
+    { "Cleric", CLASS_CLERIC, 5500, { ITEM_STAFF_HEAL, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Thief", CLASS_THIEF, 5500, { ITEM_SWORD_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Monk", CLASS_MONK, 5500, { ITEM_LIGHT_LIGHTNING, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Shaman", CLASS_SHAMAN, 5500, { ITEM_DARK_FLUX, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    
+    { "Heralder", CLASS_HORN_BRIGAND, 4000, { ITEM_UNK_C3, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+
+    { "Dancer", CLASS_DANCER, 4000, { ITEM_NONE, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
+    { "Brigand", CLASS_BRIGAND, 4000, { ITEM_AXE_IRON, ITEM_NONE, ITEM_NONE, ITEM_NONE } },
     // { "Paladin", CLASS_PALADIN, 9000, { ITEM_SWORD_IRON, ITEM_LANCE_IRON, ITEM_NONE, ITEM_NONE } },
     // { "Hero", CLASS_HERO, 8500, { ITEM_SWORD_IRON, ITEM_AXE_IRON, ITEM_NONE, ITEM_NONE } },
     // { "Warrior", CLASS_WARRIOR, 8000, { ITEM_AXE_IRON, ITEM_BOW_IRON, ITEM_NONE, ITEM_NONE } },
@@ -125,12 +140,21 @@ static const struct PurchaseGenericDefinition sPurchaseGenericDefinitions[] =
 
 static struct ClassReelAnimScr CONST_DATA sPurchaseGenericPlatformScript[] =
 {
-    { CLASS_REEL_OP_5, 0x28 },
-    { CLASS_REEL_OP_1, 0 },
-    { CLASS_REEL_OP_8, 0 },
-    { CLASS_REEL_OP_5, 0x28 },
-    { CLASS_REEL_OP_3, 0 },
-    { CLASS_REEL_OP_0, 0 },
+    CR_WAIT(40),
+    CR_ANIM_ROUND_HIT_CLOSE(),
+    CR_WAIT_ROUND_END(),
+    CR_WAIT(40),
+    CR_WAIT_SPELL(),
+    CR_RETURN_TO_STANDING(),
+    CR_WAIT_RETURN(),
+
+    CR_ANIM_ROUND_CRIT_CLOSE(),
+    CR_WAIT_ROUND_END(),
+    CR_WAIT(45),
+    CR_WAIT_SPELL(),
+    CR_RETURN_TO_STANDING(),
+    CR_WAIT_RETURN(),
+    CR_END(),
 };
 
 static struct ClassReelEnt sPurchaseGenericFallbackReelEntry;
@@ -140,19 +164,16 @@ static int GetPurchaseGenericCount(void)
     return sizeof(sPurchaseGenericDefinitions) / sizeof(sPurchaseGenericDefinitions[0]);
 }
 
+static int GetPurchaseGenericStockCount(void);
+
 static int GetPurchaseGenericPageCount(void)
 {
-    return (GetPurchaseGenericCount() + PURCHASE_GENERIC_PAGE_SIZE - 1) / PURCHASE_GENERIC_PAGE_SIZE;
-}
+    int count = GetPurchaseGenericStockCount();
 
-static const struct PurchaseGenericDefinition* GetPurchaseGenericForSlot(int slot)
-{
-    int index = sPurchaseGenericPage * PURCHASE_GENERIC_PAGE_SIZE + slot;
+    if (count == 0)
+        return 1;
 
-    if (index < 0 || index >= GetPurchaseGenericCount())
-        return NULL;
-
-    return sPurchaseGenericDefinitions + index;
+    return (count + PURCHASE_GENERIC_PAGE_SIZE - 1) / PURCHASE_GENERIC_PAGE_SIZE;
 }
 
 static const struct PurchaseGenericDefinition* GetPurchaseGenericByClass(int classId)
@@ -166,6 +187,83 @@ static const struct PurchaseGenericDefinition* GetPurchaseGenericByClass(int cla
     }
 
     return NULL;
+}
+
+#if FE8_CO_POWERS
+static int GetPurchaseGenericBuyerCoId(void)
+{
+    if (sPurchaseGenericFactionId < FACTION_ID_BLUE || sPurchaseGenericFactionId > FACTION_ID_PURPLE)
+        return CO_NONE;
+
+    return gPlaySt.commanderId[sPurchaseGenericFactionId];
+}
+#endif
+
+static int GetPurchaseGenericStockCount(void)
+{
+#if FE8_CO_POWERS
+    int coId = GetPurchaseGenericBuyerCoId();
+    int affinityCount = Co_GetClassAffinityCount(coId);
+    int i;
+    int count = 0;
+
+    if (affinityCount > 0)
+    {
+        for (i = 0; i < affinityCount; ++i)
+        {
+            if (GetPurchaseGenericByClass(Co_GetClassAffinityClassId(coId, i)) != NULL)
+                ++count;
+        }
+
+        return count;
+    }
+#endif
+
+    return GetPurchaseGenericCount();
+}
+
+static const struct PurchaseGenericDefinition* GetPurchaseGenericForIndex(int index)
+{
+    if (index < 0)
+        return NULL;
+
+#if FE8_CO_POWERS
+    {
+        int coId = GetPurchaseGenericBuyerCoId();
+        int affinityCount = Co_GetClassAffinityCount(coId);
+        int i;
+        int visibleIndex = 0;
+
+        if (affinityCount > 0)
+        {
+            for (i = 0; i < affinityCount; ++i)
+            {
+                const struct PurchaseGenericDefinition* def =
+                    GetPurchaseGenericByClass(Co_GetClassAffinityClassId(coId, i));
+
+                if (def == NULL)
+                    continue;
+
+                if (visibleIndex == index)
+                    return def;
+
+                ++visibleIndex;
+            }
+
+            return NULL;
+        }
+    }
+#endif
+
+    if (index >= GetPurchaseGenericCount())
+        return NULL;
+
+    return sPurchaseGenericDefinitions + index;
+}
+
+static const struct PurchaseGenericDefinition* GetPurchaseGenericForSlot(int slot)
+{
+    return GetPurchaseGenericForIndex(sPurchaseGenericPage * PURCHASE_GENERIC_PAGE_SIZE + slot);
 }
 
 int GetPurchaseGenericPrice(int classId)
@@ -344,10 +442,6 @@ static int FindSpawnPositionFrom(int baseX, int baseY, int classId, int* xOut, i
         { 1, 0 },
         { 0, 1 },
         { -1, 0 },
-        { 1, -1 },
-        { 1, 1 },
-        { -1, 1 },
-        { -1, -1 },
     };
 
     const struct ClassData* class = GetClassData(classId);
@@ -627,7 +721,7 @@ static void PutPurchaseGenericPowStat(int y, const char* label, int base, int cl
     PutNumber(TILEMAP_LOCATED(gBG0TilemapBuffer, 5, y), TEXT_COLOR_SYSTEM_BLUE, base);
 #if FE8_CO_POWERS
     PutNumberBonus(
-        AdjustStatForCo(gPlaySt.commanderId[FACTION_ID_BLUE], classId, base),
+        AdjustStatForCo(gPlaySt.commanderId[sPurchaseGenericFactionId], classId, base),
         TILEMAP_LOCATED(gBG0TilemapBuffer, 6, y));
 #endif
 }
@@ -777,11 +871,11 @@ static struct ClassReelEnt* GetPurchaseGenericPlatformReelEntry(const struct Pur
     if (def == NULL)
         return NULL;
 
-    for (i = 0; i < PURCHASE_GENERIC_REEL_ENTRY_COUNT; i++)
-    {
-        if (gClassReelData[i].classId == def->classId)
-            return &gClassReelData[i];
-    }
+    // for (i = 0; i < PURCHASE_GENERIC_REEL_ENTRY_COUNT; i++)
+    // {
+    //     if (gClassReelData[i].classId == def->classId)
+    //         return &gClassReelData[i];
+    // }
 
     class = GetClassData(def->classId);
 
@@ -1649,6 +1743,17 @@ static void EndPurchaseGenericMenuLockProc(void)
     Proc_EndEach(PurchaseGenericsProcCmd);
 }
 
+void PurchaseGenerics_StartTileMenu(void) { 
+    gLCDControlBuffer.bg0cnt.priority = 1; // text 
+    gLCDControlBuffer.bg1cnt.priority = 0; // spell 
+    gLCDControlBuffer.bg2cnt.priority = 2; // menu 
+    gLCDControlBuffer.bg3cnt.priority = 3; // map 
+    
+
+    
+    // struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
+    struct MenuProc* menu = StartOrphanMenuExt(&gPurchaseGenericsMenuDef, 2, TILEREF(0, 0), 0, 0); // backBg as 2, frontBg (text) as 0
+}
 bool PurchaseGenerics_TryStartTileMenu(int x, int y)
 {
     struct Trap* trap;
@@ -1689,18 +1794,13 @@ bool PurchaseGenerics_TryStartTileMenu(int x, int y)
     sPurchaseGenericBaseX = x;
     sPurchaseGenericBaseY = y;
     sPurchaseGenericFactionId = FACTION_ID_BLUE;
-    TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
-    BG_EnableSyncByMask(BG2_SYNC_BIT);
     
-    gLCDControlBuffer.bg0cnt.priority = 1; // text 
-    gLCDControlBuffer.bg1cnt.priority = 0; // spell 
-    gLCDControlBuffer.bg2cnt.priority = 2; // menu 
-    gLCDControlBuffer.bg3cnt.priority = 3; // map 
+    TileMap_FillRect(gBG0TilemapBuffer, 30, 20, 0);
+    TileMap_FillRect(gBG1TilemapBuffer, 30, 20, 0);
+    TileMap_FillRect(gBG2TilemapBuffer, 30, 20, 0);
+    BG_EnableSyncByMask(BG0_SYNC_BIT|BG1_SYNC_BIT|BG2_SYNC_BIT);
     
 
-    
-    // struct MenuProc* menu = StartOrphanMenu(&gPurchaseGenericsMenuDef);
-    struct MenuProc* menu = StartOrphanMenuExt(&gPurchaseGenericsMenuDef, 2, TILEREF(0, 0), 0, 0); // backBg as 2, frontBg (text) as 0
 
     return true;
 }
@@ -1805,14 +1905,26 @@ int GetFactionIncomePreview(int factionId)
 
 static const struct PurchaseGenericDefinition* GetAiPriorityPurchase(int factionId)
 {
-    if (CountFactionUnitsByClass(factionId, CLASS_SOLDIER) < 3)
-        return GetPurchaseGenericByClass(CLASS_SOLDIER);
+    if (gPlaySt.chapterTurnNumber < 4) { 
+        if (CountFactionUnitsByClass(factionId, CLASS_SOLDIER) < 3)
+            return GetPurchaseGenericByClass(CLASS_SOLDIER);
 
-    if (CountFactionUnitsByClass(factionId, CLASS_ARMOR_KNIGHT) < 2)
-        return GetPurchaseGenericByClass(CLASS_ARMOR_KNIGHT);
+        if (CountFactionUnitsByClass(factionId, CLASS_ARMOR_KNIGHT) < 2)
+            return GetPurchaseGenericByClass(CLASS_ARMOR_KNIGHT);
+    } 
 
     return sPurchaseGenericDefinitions + NextRN_N(GetPurchaseGenericCount());
 }
+
+
+void TryPurchaseGenericUnitForFaction(int count, int factionId, int baseX, int baseY) { 
+    const struct PurchaseGenericDefinition* def; 
+    for (int i = 0; i < count; ++i) { 
+        def = GetAiPriorityPurchase(factionId);
+        if (def != NULL)
+            PurchaseGenericUnitForFaction(def, factionId, baseX, baseY);
+    } 
+} 
 
 static void RunAiPurchasesForFaction(int factionId)
 {
@@ -1821,7 +1933,6 @@ static void RunAiPurchasesForFaction(int factionId)
     for (i = 0; i < TRAP_MAX_COUNT; ++i)
     {
         struct Trap* trap = GetTrap(i);
-        const struct PurchaseGenericDefinition* def;
 
         if (trap->type == TRAP_NONE)
             break;
@@ -1838,21 +1949,26 @@ static void RunAiPurchasesForFaction(int factionId)
          * must not spawn units from them either. */
         switch (GetPurchaseBaseTrapKind(trap))
         {
-        case PURCHASE_BASE_KIND_FORT:
+        
         case PURCHASE_BASE_KIND_CAMP:
+        {
+            TryPurchaseGenericUnitForFaction(4, factionId, trap->xPos, trap->yPos); // 4 adjacents 
+            break; 
+        }
+        case PURCHASE_BASE_KIND_FORT:
         case PURCHASE_BASE_KIND_TENT:
+        {
+            TryPurchaseGenericUnitForFaction(1, factionId, trap->xPos, trap->yPos);
             break;
-
+        }
         default:
             continue;
-        }
-
-        def = GetAiPriorityPurchase(factionId);
-
-        if (def != NULL)
-            PurchaseGenericUnitForFaction(def, factionId, trap->xPos, trap->yPos);
+        } 
     }
 }
+
+
+
 
 static void RunAiCapturesForFaction(int factionId)
 {

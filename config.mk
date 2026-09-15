@@ -180,8 +180,12 @@ CUSTOM_CAMPAIGN ?= 1
 PURCHASE_GENERICS ?= 1
 
 # --- Optional FortUnitsStartGreyedOut --------------------------------------------
-# Units spawned from forts cannot immediately act. 
+# Units spawned from forts cannot immediately act.
 FORT_UNITS_START_GREYED_OUT ?= 1
+
+# --- Optional skill system --------------------------------------------------
+# Unit skills (e.g. character-id-gated commands like Call).
+SKILLSYSTEM ?= 1
 
 
 # --- Optional procedural maps ------------------------------------------------
@@ -208,8 +212,15 @@ TITLE_256_COLORS ?= 1
 # Draws the actual chapter title text instead of a pre-rendered graphic
 # banner, so any chapter name reads correctly without needing a hand-drawn
 # banner per chapter. 
-# Note: vanilla text names for chapters are like this: TXT00 L00
+# Note: vanilla text names for chapters are like this: TXT00 L00 gChapterDataTable in src/data/chapter_settings.h 
 TEXT_CHAPTER_NAMES ?= 1
+
+# --- Optional ReplaceText -----------------------------------------------------
+# Generates the main message table as raw, un-Huffman-encoded text and runs a
+# small token-replacement pass whenever GetStringFromIndex decodes a message.
+# This is intended for fast runtime substitutions like <they>/<he>/<she> and
+# simple conditional spans such as <ifFlag114>...<endif>.
+REPLACE_TEXT ?= 1
 
 # --- Optional Credits ----------------------------------------------------------
 # Scrolling end-credits sequence using text instead of images.
@@ -298,7 +309,7 @@ DRAW_MAP_ANIMS ?= 1
 BATTLE_ANIMATION_NUMBERS ?= 1
 
 # --- Optional multipalette conversation backgrounds --------------------------
-# Adds 224/256-colour (8bpp) conversation-background images alongside the
+# Adds 192/224/256-colour (8bpp) conversation-background images alongside the
 # vanilla 16-colour ones in gConvoBackgroundData. A 224-colour image leaves
 # two palette banks (32 colours) free for text/chatbubble UI.
 MULTIPALETTE_BG ?= 1
@@ -351,10 +362,27 @@ DANGER_RADIUS ?= 1
 # text/staff AI still use for display (see GetItemReachBits, src/bmitem.c).
 RANGE_REWORK ?= 1
 
+# --- Optional CannotCritWeps -------------------------------------------------
+# Treats weapon crit 255 as a "cannot crit" sentinel instead of a 255% crit
+# weapon. UI weapon/battle crit displays show "--" for those weapons.
+CANNOT_CRIT_WEPS ?= 1
+
 # --- Optional AlphaSpriteArrow ---------------------------------------------------
 # Displays a ghost of the unit at the tip of the blue arrow when selecting
 # where to move the unit to.
 ALPHA_SPRITE_ARROW ?= 1
+
+# --- Optional ShowHealAmount ------------------------------------------------
+# Ported from FEBuilderGBA's "Show Heal Amount" patch. While selecting a
+# target for a healing staff/item on the map, the unit info window's usual
+# "HP xx/yy" line is replaced with a projected-heal preview: the target's
+# current HP, an arrow, and the HP they'll have after the heal (capped and
+# recolored once it reaches their max) -- see RefreshUnitHealAmountInfoWindow,
+# src/unitinfowindow.c, and its one caller, HealMapSelect_SwitchIn
+# (src/bmmenu.c). Only that one caller is affected; every other
+# RefreshUnitHpInfoWindow caller (talk/support/rescue/etc. target selection)
+# keeps showing the plain HP line.
+SHOW_HEAL_AMOUNT ?= 1
 
 
 
@@ -387,6 +415,49 @@ NULL_BOSSAI_MOV ?= 1
 # result. Ported from TR143's "RNG Randomizer" GBA ASM hack
 # (https://feuniverse.us/t/gba-rng-randomizer/3175). See src/rng_randomizer.c.
 RNG_RANDOMIZER ?= 1
+
+# --- Optional LCycle ----------------------------------------------------------
+# Extends the map-phase L button (TrySwitchViewedUnit, src/playerphase.c)
+# beyond player units: pressing L while the cursor is on an enemy cycles to
+# the next enemy, and on an NPC cycles to the next NPC. With
+# PURCHASE_GENERICS also on, pressing L on the last player unit instead
+# jumps to the faction's next deploy point (Fort/Camp/Tent), pressing L on a
+# deploy point cycles to the next one of the same kind and owner (or the
+# first player unit if none), pressing L on an uncontrolled base cycles to
+# the next uncontrolled base (any kind, houses included), and pressing L on
+# an enemy-controlled base cycles to the next enemy-controlled base (any
+# kind).
+L_CYCLE ?= 1
+
+# --- Optional MoveArrowHack ---------------------------------------------------
+# Lets pressing A on a tile within a unit's move range but occupied by
+# another unit (e.g. an adjacent enemy) commit the move instead of just
+# beeping, as long as the occupied tile is inside the active unit's
+# displayed weapon/staff range (gBmMapRange) -- matching the vanilla
+# "select an enemy to attack/heal without stepping off it first" flow used
+# by e.g. staves and 1-range weapons. Also lets the path arrow extend onto
+# an in-range tile that CanMoveActiveUnitTo() disallows only because the
+# hook above is about to let you act on it, instead of freezing the arrow
+# one tile short. Ported from circleseverywhere's "Movement Arrow Fix" GBA
+# ASM hack. See src/bmpatharrowdisp.c (UpdatePathArrowWithCursor) and
+# src/playerphase.c (PlayerPhase_RangeDisplayIdle).
+MOVEARROW_HACK ?= 1
+
+# --- Optional CustomFormulas --------------------------------------------------
+# Swaps in an editable copy of the vanilla weapon-triangle rule table
+# (sCustomWeaponTriangleRules, src/bmbattle.c) in place of the vanilla
+# sWeaponTriangleRules, as a starting point for battle-formula tweaks.
+CUSTOM_FORMULAS ?= 1
+
+# --- Optional ModeSelect -------------------------------------------------------
+# Replaces the New Game difficulty menu with a full "Mode Select" screen
+# (ported from the classic FE7 hack): a spinning Eirika/Ephraim/Lyon
+# carousel plus chapter-range and difficulty pickers, wired in at the same
+# save-menu step vanilla's plain difficulty select uses. See
+# src/modeselect.c and src/savemenu.c's PL_SAVEMENU_DIFFICULTY_SEL step.
+# WARNING: Cursor will auto go to the chosen Lord each turn. 
+# If your game has no Ephraim/Lyon, for example, it'll go off-screen if they're the current main character. 
+MODE_SELECT ?= 0 
 
 
 # --- Optional PromoteCommand ------------------------------------------------------
@@ -468,7 +539,16 @@ ANIMS_FAST_FORWARD ?= 1
 # their own voicegroup instead (see docs/custom_bgm.md).
 NIMAP2 ?= 1
 
-
+# --- Optional world map road rework -----------------------------------------
+# Draws the roads between world map nodes procedurally from 4 generic 2x2
+# tile pieces (straight horizontal/vertical, and both diagonals) instead of
+# a hand-authored gWorldmapSprite_N line per pair of connected nodes: walks
+# tile-by-tile from one node to the other, using a diagonal piece while both
+# axes still have distance left and a straight piece to finish off whichever
+# axis has distance remaining, so a road can flow from a 45-degree run into
+# a straight one. See MapRoute_RenderAutoPath in src/worldmap_path.c and the
+# piece data in src/data/worldmap/worldmap_road_pieces.c. Modern lane only.
+WORLDMAP_REWORK ?= 1
 
 
 

@@ -275,7 +275,7 @@ void DrawHelpBoxWeaponStats(int item)
 
     Text_InsertDrawNumberOrBlank(&gHelpBoxSt.text[1], 32, 7, GetItemMight(item));
     Text_InsertDrawNumberOrBlank(&gHelpBoxSt.text[1], 81, 7, GetItemHit(item));
-    Text_InsertDrawNumberOrBlank(&gHelpBoxSt.text[1], 129, 7, GetItemCrit(item));
+    Text_InsertDrawNumberOrBlank(&gHelpBoxSt.text[1], 129, 7, GetItemDisplayCrit(item));
 }
 
 //! FE8U = 0x08089D50

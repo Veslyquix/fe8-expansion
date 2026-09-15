@@ -3,13 +3,22 @@
 palette pair the build compiles from (see include/types.h's struct gfx_set
 and src/eventscr2.c's LoadMultipaletteConvoBg).
 
-Ported from the FE8U_256ColBG patch's Sommie.py (SRR_FEGBA/gfx/BGs), which
-this reproduces exactly: for a 224- or 192-colour image, any pixel using
-palette index >= 32 is shifted up by (256 - colCount) so a gap opens right
-after index 31 -- 32 colours (2 banks) for 224, 64 colours (4 banks) for
-192 -- leaving that gap in the palette for text/chatbubble/portrait UI to
-use without touching the background's own colours. A 256-colour image is
-passed through unshifted (no gap; the whole palette belongs to the image).
+Ported from the FE8U_256ColBG patch's Sommie.py (SRR_FEGBA/gfx/BGs), with
+one deviation from Sommie.py for the 192-colour mode (see below). A
+256-colour image is passed through unshifted (no gap; the whole palette
+belongs to the image).
+
+For a 224-colour image, any pixel using palette index >= 32 is shifted up
+by 32 so a gap opens right after index 31 -- the image keeps banks 0-1 for
+its own low colours, and banks 2-3 (32 colours) are left untouched for
+text/chatbubble/portrait UI.
+
+For a 192-colour image (a newer, different scheme from Sommie.py's
+original): banks 0-3 (64 colours) are left untouched *entirely* -- for
+got item / gold popup UI -- and every pixel maps into banks 4-15 instead,
+i.e. every pixel index is shifted up by 64 unconditionally (no low-index
+exception the way 224 keeps one). See LoadMultipaletteConvoBg
+(src/eventscr2.c) for the matching runtime side of this.
 
 Palette index 0 is additionally reserved everywhere (Sommie.py does not do
 this): GBA 8bpp BG tiles always treat colour index 0 as transparent, in
@@ -32,12 +41,16 @@ palette index >= colCount (checked below).
 Output <output.8bpp> is raw, gbagfx-compatible tile-order 8bpp data (still
 needs `tools/gbagfx/gbagfx <output.8bpp> <output.8bpp>.lz` to compress for
 INCBIN -- this script does not compress). <output.gbapal> is a packed
-BGR555 palette holding only the image's own colCount colours (224*2=448 or
-192*2=384 bytes for the reduced modes, matching Sommie.py's own truncation)
--- not a full 256-entry table. The runtime loader (LoadMultipaletteConvoBg,
-src/eventscr2.c) applies bytes [0:64) to banks 0-1 and the rest to banks
-4-15, skipping banks 2-3 (224) or 2-5 (192) entirely so whatever else has
-those banks loaded (text/chatbubble/portrait UI) is left alone.
+BGR555 palette:
+  - 256 mode: colCount (256) entries, no padding -- the whole table.
+  - 224 mode: colCount (224) entries, no padding -- entries [0:32) are
+    real colours for banks 0-1, entries [32:224) are real colours for
+    banks 4-15 (LoadMultipaletteConvoBg applies set->pal to banks 0-1 and
+    set->pal+32 to banks 4-15).
+  - 192 mode: 224 entries -- a 32-entry *dummy* padding block (never
+    applied to any bank -- LoadMultipaletteConvoBg only ever reads this
+    file starting at set->pal+32) followed by the 192 real colours, which
+    land entirely in banks 4-15.
 """
 import argparse
 import struct
@@ -95,7 +108,11 @@ def convert(col_count: int, src: Path, out_gfx: Path, out_pal: Path) -> None:
             for y in range(8):
                 for x in range(8):
                     col = pixels[h + x, v + y]
-                    if col > 31:
+                    # 192 mode reserves banks 0-3 entirely and maps every
+                    # pixel into banks 4-15 -- unlike 224, there is no
+                    # low-index exception (224 keeps indices <=31 in
+                    # banks 0-1; 192 has nothing in banks 0-3 at all).
+                    if col_count == 192 or col > 31:
                         col += gap
                         if col > 255:
                             raise SystemExit(
@@ -110,12 +127,22 @@ def convert(col_count: int, src: Path, out_gfx: Path, out_pal: Path) -> None:
 
     # Packed, truncated to the image's own colCount colours -- no gap
     # inserted here (that only exists in the pixel indices written above).
-    # LoadMultipaletteConvoBg splits this back into two ApplyPalettes calls
-    # at load time: entries [0:32) to banks 0-1, entries [32:colCount) to
-    # the banks starting right after the reserved gap. Index 0's own entry
-    # is written but never referenced by any pixel once the merge above ran.
+    # Index 0's own entry is written but never referenced by any pixel once
+    # the merge above ran.
+    #
+    # 224 mode: LoadMultipaletteConvoBg applies entries [0:32) to banks 0-1
+    # and entries [32:224) to banks 4-15, so this table needs no padding --
+    # both halves are real colours.
+    #
+    # 192 mode: LoadMultipaletteConvoBg only ever reads this file starting
+    # at set->pal+32 (there is no separate banks-0-1 call the way 224 has),
+    # so a 32-entry dummy block goes first -- it is never applied to any
+    # bank -- followed by the 192 real colours, which land entirely in
+    # banks 4-15.
     pal = pal[: col_count * 3]
     entries = bytearray()
+    if col_count == 192:
+        entries += b"\x00\x00" * 32
     for idx in range(col_count):
         r, g, b = pal[idx * 3], pal[idx * 3 + 1], pal[idx * 3 + 2]
         entries += struct.pack("<H", (r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10))

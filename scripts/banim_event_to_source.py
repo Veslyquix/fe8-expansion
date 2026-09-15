@@ -39,9 +39,11 @@ Key correctness notes learned the hard way:
 * AAA.py computes a REAL, distinct OAM table per facing (Anim_<Weapon>_rtl
   and _ltr are genuinely different byte streams -- verified). We deliberately
   DON'T store both: banim/data_banim.o is pinned to a fixed, hard address
-  range in linker/expansion.ld (0xC02000-0xEE0000, ~2.86MB -- the next pinned
-  region starts right after it), and storing a genuine second OAM table for
-  every animation overflowed that budget by ~125KB on the very first attempt.
+  range in linker/expansion.ld (0x1102000-0x1440000, ~3.24MB as of the
+  2026-09 convo_bg import's +0x500000 pinned-region shift -- the next
+  pinned region starts right after it), and storing a genuine second OAM
+  table for every animation overflowed that budget by ~125KB on the very
+  first attempt.
   Instead we only extract `rtl` and point BOTH struct fields at it, exactly
   like the AA.exe-sourced entries did, relying on the existing "AutoGenLeftOAM"
   runtime mirror (src/banim_autogen_left_oam.c) to derive the left-facing OAM
@@ -83,7 +85,8 @@ FIRST_SLOT = 0xC9  # first free banim_data[] slot after the 201 vanilla entries
 
 # struct BattleAnim::abbr is char[12] -> <= 11 chars.
 WEAPON_TAG = {"Sword": "sw", "Lance": "ln", "Axe": "ax", "Handaxe": "hx",
-              "Bow": "bw", "Magic": "mg", "Unarmed": "un"}
+              "Bow": "bw", "Staff": "st", "Magic": "mg", "Unarmed": "un",
+              "Monster": "mo", "Dragonstone": "dr", "Refresh": "rf", "Supply": "su"}
 
 def compile_with_aaa(pack, weapon, work_dir):
     """Copy the checked-in source + AAA.py into a scratch dir and compile it

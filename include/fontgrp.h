@@ -147,6 +147,25 @@ struct TextPrintProc {
     /* 36 */ s8 char_per_tick;
 };
 
+// The debug-console scrollback buffer SetupDebugFontForBG/PrintDebugStringToBG
+// use (256 lines x 32 bytes = 0x2000 bytes of the 0x2008-byte struct). Only
+// ever live when a debug text console is actually in use, never during
+// normal gameplay or any special screen -- its storage (src/fontgrp.c) is
+// tagged EWRAM_OVERLAY(debugconsole), so it costs no persistent EWRAM and
+// shares memory with every other overlay-tagged screen's buffers instead.
+struct Struct02026E30
+{
+    u32 tileDataOffset;
+    s16 bg;
+    u16 tileIndex;
+    u32 unk8;
+    u32 unkC;
+    u32 unk10;
+    char unk14[256][32];
+};
+
+extern struct Struct02026E30 gFontgrp_0;
+
 extern char gNumberStr[9];
 
 // ??? SetupDebugFontForBG(???);

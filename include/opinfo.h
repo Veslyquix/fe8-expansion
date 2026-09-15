@@ -17,7 +17,20 @@ enum ClassReelScrOpCode {
     CLASS_REEL_WAIT_RETURN,
 #endif
 };
-
+#define CR_END() { CLASS_REEL_OP_0, 0 }
+#define CR_ANIM_ROUND_HIT_CLOSE() { CLASS_REEL_OP_1, 0 }
+#define CR_ANIM_ROUND_CRIT_CLOSE() { CLASS_REEL_OP_2, 0 }
+#define CR_RETURN_TO_STANDING() { CLASS_REEL_OP_3, 0 }
+#define CR_ANIM_ROUND_NONCRIT_FAR() { CLASS_REEL_OP_4, 0 }
+#define CR_WAIT(frames) { CLASS_REEL_OP_5, frames }
+#define CR_ANIM_ROUND_TAKING_MISS_CLOSE() { CLASS_REEL_OP_6, 0 }
+#define CR_RETURN_TO_STANDING_ALT() { CLASS_REEL_OP_7, 0 }
+#define CR_WAIT_ROUND_END() { CLASS_REEL_OP_8, 0 }
+#if FE8_VESLY_DEBUGGER
+#define CR_ANIM_ROUND_CRIT_FAR() { CLASS_REEL_CRIT_FAR, 0 }
+#define CR_WAIT_SPELL() { CLASS_REEL_WAIT_SPELL, 0 }
+#define CR_WAIT_RETURN() { CLASS_REEL_WAIT_RETURN, 0 }
+#endif 
 struct ClassReelAnimScr {
     u16 opCode : 8;
     u16 extra  : 8;
@@ -26,10 +39,10 @@ struct ClassReelAnimScr {
 struct ClassReelEnt {
     /* 00 */ u32 descTextId;
 
-    /* 04 */ s8 paletteId;
+    /* 04 */ s16 paletteId; // edited to be s16  
+    /* 07 */ u16 banimId;// edited 
     /* 05 */ u8 classId;
     /* 06 */ u8 unk_06;
-    /* 07 */ u8 banimId;
     /* 08 */ u8 magicFx;
     /* 09 */ u8 unk_09;
     /* 0A */ u8 unk_0A;
@@ -159,6 +172,7 @@ struct OpInfoGaugeDrawProc {
 };
 
 extern struct AnimBuffer gOpInfoData;
+extern u8 gOpInfoImgSheetBuf[0x2000];
 extern struct AnimMagicFxBuffer gUnk_4;
 extern struct BanimUnkStructComm gUnk_Opinfo_0;
 

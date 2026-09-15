@@ -11,6 +11,7 @@
 #include "bmmind.h"
 #include "variables.h"
 #include "alpha_sprite_arrow.h"
+#include "playerphase.h"
 
 #if FE8_DANGER_BONES
 void UpdateVisualsForEnemiesWhoCanAttackTile(void);
@@ -210,35 +211,51 @@ static inline u8 GetTerrainAtCursor(void) {
 void UpdatePathArrowWithCursor(void) {
     s8 point;
     s32 pointAlias;
+    s16 targetX, targetY;
 
     if (gpPathArrowProc->lastX == gBmSt.playerCursor.x &&
         gpPathArrowProc->lastY == gBmSt.playerCursor.y)
     {
         return;
     }
-#if FE8_DANGER_BONES
-    UpdateVisualsForEnemiesWhoCanAttackTile();
-#else
+#if FE8_MOVEARROW_HACK
+    s8 prevX = gpPathArrowProc->lastX;
+    s8 prevY = gpPathArrowProc->lastY;
+#endif
+
     SetLastCoords(gBmSt.playerCursor.x, gBmSt.playerCursor.y);
     SetWorkingBmMap(gBmMapMovement);
+#if FE8_DANGER_BONES
+    UpdateVisualsForEnemiesWhoCanAttackTile();
 #endif
+
+#if FE8_MOVEARROW_HACK
+    // Only keep the cursor as our target while it's over a tile the active
+    // unit can actually move to; otherwise keep steering towards the last
+    // tile that qualified.
+    if (!CanMoveActiveUnitTo(gBmSt.playerCursor.x, gBmSt.playerCursor.y))
+        SetLastCoords(prevX, prevY);
+#else 
     if (GetBmMapPointAtCursor() == -1)
         return;
-    pointAlias = point = GetPointAlongPath(
-        gBmSt.playerCursor.x, gBmSt.playerCursor.y);
+#endif
+
+
+    targetX = gpPathArrowProc->lastX;
+    targetY = gpPathArrowProc->lastY;
+    pointAlias = point = GetPointAlongPath(targetX, targetY);
     if (pointAlias != -1) {
         ++point;
         CutOffPathLength(point);
         return;
     }
     if (gpPathArrowProc->pathCosts[gpPathArrowProc->pathLen] >=
-        GetWorkingMoveCosts()[GetTerrainAtCursor()])
+        GetWorkingMoveCosts()[TERRAIN_AT(targetX, targetY)])
     {
-        if (abs(LAST_X_POINT - gBmSt.playerCursor.x) +
-            abs(LAST_Y_POINT - gBmSt.playerCursor.y) == 1)
+        if (abs(LAST_X_POINT - targetX) +
+            abs(LAST_Y_POINT - targetY) == 1)
         {
-            AddPointToPathArrowProc(
-                gBmSt.playerCursor.x, gBmSt.playerCursor.y);
+            AddPointToPathArrowProc(targetX, targetY);
             return;
         }
     }
@@ -246,14 +263,11 @@ void UpdatePathArrowWithCursor(void) {
         CutOffPathLength(1);
     SetWorkingBmMap(gBmMapOther);
     GenerateMovementMapForActiveUnit();
-    if (GetBmMapPointAtCursor() == -1) {
+    if (gWorkingBmMap[targetY][targetX] == -1) {
         ResetPathArrow();
         return;
     }
-    GenerateBestMovementScript(
-        gBmSt.playerCursor.x,
-        gBmSt.playerCursor.y,
-        gWorkingMovementScript);
+    GenerateBestMovementScript(targetX, targetY, gWorkingMovementScript);
     GetPathFromMovementScript();
     if (!PathContainsNoCycle())
         ResetPathArrow();

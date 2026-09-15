@@ -1,0 +1,1318 @@
+#include "global.h"
+
+#if FE8_MODE_SELECT
+
+#include "proc.h"
+#include "hardware.h"
+#include "bm.h"
+#include "m4a.h"
+#include "soundwrapper.h"
+#include "fontgrp.h"
+#include "face.h"
+#include "uiutils.h"
+#include "ctc.h"
+#include "savemenu.h"
+#include "ekrbattle.h"
+#include "efxbattle.h"
+#include "bmlib.h"
+#include "mu.h"
+#include "bmsave.h"
+#include "sysutil.h"
+#include "statscreen.h"
+#include "modeselect.h"
+
+#include "constants/faces.h"
+#include "constants/songs.h"
+
+/* Ported from the classic FE7 "Mode Select" hack (two source drops: the
+ * FE8-address-adapted "FE8ModeSelect", trusted as the source of truth, and
+ * a fork by Jester that fixes two bugs -- a misaligned/glitched inner-frame
+ * tilemap (see Tsa_084150E0_Full below) and a black-background/redraw bug
+ * on returning to the save screen (see ModeSelect_End). The tilemap fix is
+ * applied verbatim. The redraw fix is adapted, not copied verbatim: this
+ * repo's own src/savemenu.c already runs SaveMenu_ReloadScreenFormDifficulty
+ * (a full BG0-3/font/palette rebuild) immediately after this proc ends, for
+ * both the plain-difficulty-select and Mode Select paths -- so only
+ * Jester's PROC_MARK_SAVEDRAW/PROC_MARK_D unblock (undoing ModeSelect_Init's
+ * own block) is needed here; her SaveMenu_Init/InitScreen/
+ * LoadExtraMenuGraphics re-invocation would be redundant in this repo's
+ * proc flow. Also: this repo's actual decompiled
+ * SaveMenu_ResetLcdFormDifficulty (src/savemenu.c) never had the
+ * SetupBackgrounds(gBgConfig_SaveMenu) call her fix removes, so that half
+ * of the fix needs no corresponding change here at all. Everything else
+ * follows FE8ModeSelect.
+ *
+ * Wired in from src/savemenu.c's PL_SAVEMENU_DIFFICULTY_SEL step, in place
+ * of vanilla's NewNewGameDifficultySelect.
+ *
+ * RAM: the spinning carousel needs 3 concurrent "EkrUnitMainMini" mini-
+ * animation slots (struct AnimBuffer, include/ekrbattle.h). All of this
+ * screen's state -- the three slots' large scratch buffers (image sheet,
+ * OAM, palette, frame data) and its own small per-slot/UI state (3x
+ * AnimBuffer, 3x AnimMagicFxBuffer, the palette-dim cache, text/font
+ * state) -- lives in its own dedicated EWRAM_OVERLAY(modeselect) tag (see
+ * struct ModeSelectScratch below) rather than borrowing individual buffers
+ * from other screens/overlays. An earlier version of this file instead put
+ * this state in EWRAM_OVERLAY(gameending) to dodge an EWRAM budget
+ * shortfall -- that corrupted pAnimBuf->anim1/anim2 into garbage pointers
+ * (confirmed live: EkrUnitMainMiniMain crashed reading anim->pScrCurrent
+ * with anim==8) once the carousel actually ran, because every
+ * EWRAM_OVERLAY tag starts at the same address and the two screens' own
+ * internal layouts didn't line up. A dedicated tag sidesteps that: see the
+ * comment on struct ModeSelectScratch for why it's still free (overlays
+ * alias each other by design).
+ */
+
+#define ModeSelectBg0Tm gBG0TilemapBuffer
+#define ModeSelectClawTm gBG1TilemapBuffer
+#define ModeSelectBg3Tm gBG3TilemapBuffer
+
+struct ModeSelectTextState
+{
+    struct Font font;
+    // text[3] in the FE7 source is allocated (InitText) but never drawn to
+    // (no PutDrawText call anywhere references it, in either source) -- a
+    // genuinely dead slot there, so it's dropped here. Indices above it
+    // are renumbered down by one accordingly (old 4/5/6 -> 3/4/5).
+    struct Text text[6];
+};
+
+/* Per-slot battle-animation scratch buffer sizes. These come from the FE7
+ * source's own hardcoded per-slot address strides (0x020000F4/0x020060F4/
+ * 0x020168F4/0x02016AD4 and friends), and they match this repo's own banim
+ * buffers exactly -- with one caveat on the image sheet: the decomp declares
+ * gBanimLeftImgSheetBuf as [0x1000], but RegisterAISSheetGraphics
+ * (src/banim-ekrmain.c) decompresses and DMAs a full 0x2000 into it. Vanilla
+ * gets away with that because gEkrKakudaiSomeBufLeft[0x1000] sits immediately
+ * after it; the sheet is really one 0x2000 buffer split across two names.
+ * Size the real thing correctly here rather than inheriting that overflow. */
+#define MODESELECT_IMGSHEET_SIZE 0x2000
+#define MODESELECT_OAM_SIZE      0x5800
+#define MODESELECT_PALETTE_SIZE  0x00A0
+#define MODESELECT_FRAMEDATA_SIZE 0x2A00
+
+/* All of this screen's state -- the three carousel slots' animation scratch
+ * plus this file's own small per-slot/UI state -- lives in one dedicated
+ * EWRAM overlay (linker/expansion.ld's ewram_overlay_modeselect).
+ *
+ * The earlier attempt here borrowed individual buffers from the banim and
+ * gamestart overlays (gBanimLeftImgSheetBuf/gBanimOaml/gBanimScrLeft for
+ * slots 0-1, gUnk_0/gUnk_1/gUnk_2 for slot 2) and put this struct in
+ * gUiTmScratchA/C. That cannot work: every ewram_overlay_* tag starts at
+ * __ewram_start, so the banim and gamestart buffers are *the same physical
+ * memory* as each other, and gUiTmScratch{A,B,C} land inside gBanimScr*.
+ * Slot 2's OAM buffer overlapped slot 1's image sheet and both palettes,
+ * and slot 0's frame data overlapped this very struct -- which is what
+ * produced the corrupted/upside-down third lord, the bad OAM ("oops obj
+ * xsiz"), and the earlier AnimBuffer pointer corruption.
+ *
+ * A dedicated tag is disjoint by construction and still costs no new EWRAM:
+ * overlays alias each other by design, and this one is smaller than the
+ * gamestart overlay it shares an address range with. Nothing here is live
+ * outside this screen -- no battle animation and no opening cinematic runs
+ * while the save menu's New Game flow is open.
+ *
+ * A dedicated tag only guarantees the three slots don't collide with *each
+ * other*. It guarantees nothing about other tags: since every tag starts at
+ * __ewram_start, this struct necessarily sits on top of overlay 0, banim,
+ * gamestart and the rest. Anything in another overlay that must survive this
+ * screen has to be re-created on the way out -- see ModeSelect_End, which
+ * reloads the save-slot metadata (EWRAM_OVERLAY(0)) this struct overwrites. */
+struct ModeSelectScratch
+{
+    u8 imgSheet[3][MODESELECT_IMGSHEET_SIZE];
+    u8 oam[3][MODESELECT_OAM_SIZE];
+    u8 frameData[3][MODESELECT_FRAMEDATA_SIZE];
+    u8 palette[3][MODESELECT_PALETTE_SIZE];
+
+    struct AnimBuffer animBuf[3];
+    struct AnimMagicFxBuffer magicFx[3];
+    u16 paletteCache[3 * 15]; // gUnk_0201E9F4 in the FE7 source
+    struct ModeSelectTextState text;
+    u8 blendThreshold; // gUnk_ModeSelect_02000000 in the FE7 source
+    u8 blendAmount;    // gUnk_ModeSelect_02000001 in the FE7 source
+};
+
+EWRAM_OVERLAY(modeselect) struct ModeSelectScratch sModeSelectScratch = {0};
+
+static struct AnimBuffer* ModeSelectGetAnimBuf(int slot)
+{
+    return &sModeSelectScratch.animBuf[slot];
+}
+
+static struct AnimMagicFxBuffer* ModeSelectGetMagicFx(int slot)
+{
+    return &sModeSelectScratch.magicFx[slot];
+}
+
+struct ModeSelectProc
+{
+    /* 00 */ PROC_HEADER;
+    /* 2C */ s32 unk_2c;
+    /* 30 */ u16 unk_30;
+    /* 32 */ u16 unk_32;
+    /* 34 */ s32 unk_34;
+    /* 38 */ void* unk_38; // ProcPtr; ProcScr_ModeSelectSpriteDraw instance
+    /* 3C */ struct FaceProc* unk_3c;
+    /* 40 */ u8 unk_40; // bitmask of unlocked difficulties (see fe7u_func_0809E9FC below)
+    /* 41 */ u8 unk_41; // currently-highlighted carousel slot (0-2)
+    /* 42 */ u8 unk_42; // bit0: started via the save-menu hook (always set -- see StartModeSelect)
+    /* 43 */ u8 unk_43[3]; // per-slot chosen difficulty (0 normal, 1 hard)
+    /* 46 */ STRUCT_PAD(0x46, 0x49);
+    /* 49 */ u8 unk_49[3]; // per-slot lord index (0 Eirika, 1 Ephraim, 2 Lyon)
+    /* 4C */ u8 unk_4c; // number of selectable slots (2 or 3)
+    /* 50 */ s32 unk_50;
+};
+
+struct ModeSelectSpriteDrawProc
+{
+    /* 00 */ PROC_HEADER;
+    /* 2C */ s32 unk_2c;
+    /* 30 */ s32 unk_30;
+    /* 34 */ s32 unk_34;
+
+    /* 38 */ s32 unk_38;
+    /* 3C */ u8 unk_3c;
+    /* 3E */ u16 unk_3e;
+    /* 40 */ s32 unk_40;
+    /* 44 */ s32 unk_44;
+    /* 48 */ s32 unk_48;
+    /* 4C */ u8 unk_4c;
+    /* 4D */ u8 unk_4d;
+    /* 4E */ u8 unk_4e;
+};
+
+/* fe7u_func_0809E9FC in the FE7 source: real behavior (unlock hard modes
+ * once enough saves are completed, via LoadMetaSave/
+ * MetaSave_CountCompletedPlaythroughs) is FE7-specific meta-save plumbing
+ * this repo has no equivalent of, and is already entirely commented out in
+ * the trusted FE8ModeSelect.c source, hardcoded to unlock everything.
+ * Keeping that exactly as committed there, not as a regression. */
+// src/code_80AC6AC.c -- not yet declared in any header (see its own file's
+// still-address-named filename), so forward-declared here like this repo's
+// own convention for other not-yet-header-exposed functions.
+int InterpolateCubicSpline(int a, int b, int c, int d, int e);
+
+static int ModeSelect_GetUnlockedDifficultyMask(void)
+{
+    return 0x1f;
+}
+
+// clang-format off
+
+static const int sModeSelectLordText[3][3] = {
+    { 0x212, 0x78B, 0x4FE }, // Eirika / "The Valiant" / "Str"
+    { 0x220, 0x78B, 0x4FE }, // Ephraim / "The Valiant" / "Str"
+    { 0x234, 0x78B, 0x4FF }, // Lyon / "The Valiant" / "Mag"
+};
+
+// clang-format on
+
+static void ModeSelectAnim_Pause(struct AnimBuffer* pAnimBuf)
+{
+    pAnimBuf->anim1->state3 |= 8;
+    pAnimBuf->anim2->state3 |= 8;
+}
+
+static const int sModeSelectBanimIds[] = {
+    2, 0, 0x9c,
+};
+
+// FE7U: 0x080A7480
+static void InitModeSelectAnims(int count, u8* lordIndices)
+{
+    int i;
+
+    for (i = 0; i < count; i++)
+    {
+        struct AnimBuffer* animBuf = ModeSelectGetAnimBuf(i);
+        struct AnimMagicFxBuffer* magicFx = ModeSelectGetMagicFx(i);
+
+        animBuf->xPos = 320;
+        animBuf->yPos = 88;
+        animBuf->animId = sModeSelectBanimIds[lordIndices[i]];
+        animBuf->roundType = 6;
+        animBuf->genericPalId = 0;
+        animBuf->state2 = 1;
+        animBuf->oam2Tile = (i * 0x2000 + 0x2000) >> 5;
+        animBuf->oam2Pal = i + 0xd;
+
+        animBuf->pImgSheetBuf = sModeSelectScratch.imgSheet[i];
+        animBuf->unk_24 = sModeSelectScratch.oam[i];
+        animBuf->unk_20 = sModeSelectScratch.palette[i];
+        animBuf->unk_28 = sModeSelectScratch.frameData[i];
+
+        animBuf->charPalId = 0xffff;
+
+        animBuf->unk_30 = magicFx;
+
+        magicFx->magicFuncIdx = 0;
+        magicFx->xOffsetBg = 0;
+        magicFx->yOffsetBg = 0;
+        magicFx->xOffsetObj = 0;
+        magicFx->yOffsetObj = 0;
+        magicFx->objChr = 0;
+        magicFx->objPalId = 0;
+        magicFx->bgChr = 0;
+        magicFx->bgPalId = 0;
+        magicFx->bg = 0;
+
+        magicFx->bgTmBuf = NULL;
+        magicFx->bgImgBuf = NULL;
+        magicFx->bgTsaBuf = NULL;
+        magicFx->objImgBuf = NULL;
+        magicFx->resetCallback = NULL;
+
+        NewEkrUnitMainMini(animBuf);
+    }
+}
+
+// FE7U: 0x080A75CC
+static void EndModeSelectAnims(s32 count)
+{
+    int i;
+
+    for (i = 0; i < count; i++)
+        EndEkrUnitMainMini(ModeSelectGetAnimBuf(i));
+}
+
+const char StrModeSelect_MainCharacter[] = "Main character:";
+const char StrModeSelect_Weapon[] = "Weapon:";
+
+// FE7U: 0x080A75F0
+static void PutModeSelectLabelText(void)
+{
+    ClearText(&sModeSelectScratch.text.text[4]);
+    ClearText(&sModeSelectScratch.text.text[5]);
+
+    PutDrawText(&sModeSelectScratch.text.text[4], ModeSelectClawTm + TILEMAP_INDEX(14, 6), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrModeSelect_MainCharacter);
+    PutDrawText(&sModeSelectScratch.text.text[5], ModeSelectClawTm + TILEMAP_INDEX(14, 10), TEXT_COLOR_SYSTEM_WHITE, 0, 0, StrModeSelect_Weapon);
+
+    BG_EnableSyncByMask(BG1_SYNC_BIT);
+}
+
+const char StrModeSelect_Swd[] = "Swd";
+const char StrModeSelect_Lnc[] = "Lnc";
+const char StrModeSelect_Mag[] = "Mag";
+
+static const char* const sModeSelectWeaponText[] = {
+    StrModeSelect_Swd,
+    StrModeSelect_Lnc,
+    StrModeSelect_Mag,
+};
+
+// FE7U: 0x080A7668
+static void PutModeSelectCharacterText(s32 index)
+{
+    ClearText(&sModeSelectScratch.text.text[2]);
+    ClearText(&sModeSelectScratch.text.text[3]);
+
+    PutDrawText(&sModeSelectScratch.text.text[2], ModeSelectClawTm + TILEMAP_INDEX(14, 8), TEXT_COLOR_SYSTEM_BLUE, 0, 0, GetStringFromIndex(sModeSelectLordText[index][0]));
+    PutDrawText(&sModeSelectScratch.text.text[3], ModeSelectClawTm + TILEMAP_INDEX(19, 10), TEXT_COLOR_SYSTEM_BLUE, 0, 0, sModeSelectWeaponText[index]);
+
+    BG_EnableSyncByMask(BG1_SYNC_BIT);
+}
+
+// FE7U: 0x080A76F8
+static void PutModeSelectDifficultyText(struct ModeSelectProc* proc)
+{
+    int chosen = proc->unk_43[proc->unk_41];
+
+    ClearText(&sModeSelectScratch.text.text[0]);
+    ClearText(&sModeSelectScratch.text.text[1]);
+
+    PutDrawText(&sModeSelectScratch.text.text[0], ModeSelectClawTm + TILEMAP_INDEX(15, 12), chosen == 0 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_GRAY, 0, 0, GetStringFromIndex(0x053E));
+
+    BG_EnableSyncByMask(BG1_SYNC_BIT);
+
+    switch (proc->unk_49[proc->unk_41])
+    {
+        case 0:
+            if (!(proc->unk_40 & 1))
+                return;
+            break;
+
+        case 1:
+            if (!(proc->unk_40 & 4))
+                return;
+            break;
+
+        case 2:
+            if (!(proc->unk_40 & 0x10))
+                return;
+            break;
+    }
+
+    PutDrawText(&sModeSelectScratch.text.text[1], ModeSelectClawTm + TILEMAP_INDEX(15, 14), chosen == 1 ? TEXT_COLOR_SYSTEM_GOLD : TEXT_COLOR_SYSTEM_GRAY, 0, 0, GetStringFromIndex(0x053F));
+}
+
+static const int sModeSelectFaceIds[3] = {
+    FID_EIRIKA,
+    FID_EPHRAIM,
+    0x46, // FID_LYON
+};
+
+// FE7U: 0x080A77C0
+static struct FaceProc* StartModeSelectFace(int index)
+{
+    struct FaceProc* pFaceProc = StartFace2(0, sModeSelectFaceIds[index], 204, 72, (FACE_DISP_KIND(FACE_96x80) | FACE_DISP_HLAYER(FACE_HLAYER_0)));
+    StartFaceFadeIn(pFaceProc);
+    return pFaceProc;
+}
+
+extern u8 Img_08415BE8[]; // lord0 chapter-range icon, top-left
+extern u8 Img_08415CB0[]; // lord0 chapter-range icon, bottom-left
+extern u8 Img_08415DC4[]; // lord0 chapter-range icon, top-right
+extern u8 Img_08415E04[]; // lord0 chapter-range icon, bottom-right
+
+extern u8 Img_08415E54[]; // lord1 chapter-range icon, top-left
+extern u8 Img_08415F14[]; // lord1 chapter-range icon, bottom-left
+extern u8 Img_08415FF0[]; // lord1 chapter-range icon, top-right
+extern u8 Img_0841601C[]; // lord1 chapter-range icon, bottom-right
+
+extern u8 Img_08416058[]; // lord2 chapter-range icon, top-left
+extern u8 Img_08416118[]; // lord2 chapter-range icon, bottom-left
+extern u8 Img_084161F4[]; // lord2 chapter-range icon, top-right
+extern u8 Img_08416220[]; // lord2 chapter-range icon, bottom-right
+
+// FE7U: 0x080A77F8
+static void LoadModeSelectChapterGfx(s32 lordIndex)
+{
+    static void* const sChapterGfx[3][4] = {
+        { Img_08415BE8, Img_08415CB0, Img_08415DC4, Img_08415E04 },
+        { Img_08415E54, Img_08415F14, Img_08415FF0, Img_0841601C },
+        { Img_08416058, Img_08416118, Img_084161F4, Img_08416220 },
+    };
+
+    Decompress(sChapterGfx[lordIndex][0], (void*)0x60102C0);
+    Decompress(sChapterGfx[lordIndex][1], (void*)0x60106C0);
+    Decompress(sChapterGfx[lordIndex][2], (void*)0x6010AC0);
+    Decompress(sChapterGfx[lordIndex][3], (void*)0x6010EC0);
+}
+
+// FE7U: 0x080A7860 -- caches this slot's undimmed palette for
+// ModeSelectPalette_ApplyBlend to fade from every frame.
+static void ModeSelectPalette_CacheUndimmed(s32 palId)
+{
+    int i;
+    u16* src = gPaletteBuffer + (palId + 0xd) * 0x10 + 0x101;
+
+    for (i = 0; i < 0xf; i++)
+        sModeSelectScratch.paletteCache[i + palId * 0xf] = *src++;
+}
+
+// FE7U: 0x080A7890
+static void ModeSelectPalette_ApplyBlend(s32 palId, s32 amount)
+{
+    s32 i;
+    u16* dst = gPaletteBuffer + (palId + 0xd) * 0x10 + 0x101;
+
+    if (amount > 0x40)
+        amount = 0x40;
+
+    amount = amount + (sModeSelectScratch.blendAmount - 10) * 2;
+
+    for (i = 0; i < 0xf; i++)
+    {
+        s32 accum = 0;
+        s32 r, g, b;
+        u16 base = sModeSelectScratch.paletteCache[i + palId * 0xf];
+
+        r = (amount * (base & RED_MASK)) >> 6;
+        accum += (r < 0) ? 0 : (r <= RED_MASK ? (r & RED_MASK) : RED_MASK);
+
+        g = (amount * (base & GREEN_MASK)) >> 6;
+        accum += (g < 0) ? 0 : (g <= GREEN_MASK ? (g & GREEN_MASK) : GREEN_MASK);
+
+        b = (amount * (base & BLUE_MASK)) >> 6;
+        *dst = accum + ((b < 0) ? 0 : (b <= BLUE_MASK ? (b & BLUE_MASK) : BLUE_MASK));
+
+        dst++;
+    }
+
+    EnablePaletteSync();
+}
+
+// FE7U: 0x080A793C
+static void ModeSelectPalette_ApplyGlow(s32 palId, s32 signedByte)
+{
+    s32 b = signedByte & 0xff;
+    s32 amount = (((b >= 0x81) ? b - 0x80 : 0x80 - b) * 0x30 >> 7);
+    ModeSelectPalette_ApplyBlend(palId, amount + 0x10);
+}
+
+// FE7U: 0x080A796C
+static void ModeSelectSpriteDraw_Init(struct ModeSelectSpriteDrawProc* proc)
+{
+    proc->unk_30 = 0;
+    proc->unk_3e = 0;
+    proc->unk_3c = 0;
+    proc->unk_34 = DISPLAY_WIDTH / 2;
+    proc->unk_38 = DISPLAY_HEIGHT;
+    proc->unk_40 = 0;
+    proc->unk_44 = 0;
+    proc->unk_48 = 0;
+    proc->unk_4c = 0;
+    proc->unk_2c = 0;
+    proc->unk_4e = 0;
+}
+
+// clang-format off
+
+// FE7U: 0x08CE483C
+static const u16 Sprite_ModeSelect_Mode[] = {
+    4,
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16, 0,
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(32), OAM2_CHR(0x4),
+    OAM0_SHAPE_32x8 + OAM0_Y(16), OAM1_SIZE_32x8, OAM2_CHR(0x40),
+    OAM0_SHAPE_32x8 + OAM0_Y(16), OAM1_SIZE_32x8 + OAM1_X(32), OAM2_CHR(0x44),
+};
+
+// FE7U: 0x08CE4856
+static const u16 Sprite_ModeSelect_Select[] = {
+    6,
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16, OAM2_CHR(0x8),
+    OAM0_SHAPE_32x16, OAM1_SIZE_32x16 + OAM1_X(32), OAM2_CHR(0xC),
+    OAM0_SHAPE_8x16, OAM1_SIZE_8x16 + OAM1_X(64), OAM2_CHR(0x10),
+    OAM0_SHAPE_32x8 + OAM0_Y(16), OAM1_SIZE_32x8, OAM2_CHR(0x60),
+    OAM0_SHAPE_32x8 + OAM0_Y(16), OAM1_SIZE_32x8 + OAM1_X(32), OAM2_CHR(0x64),
+    OAM0_SHAPE_8x8 + OAM0_Y(16), OAM1_SIZE_8x8 + OAM1_X(64), OAM2_CHR(0x68),
+};
+
+// FE7U: 0x08CE487C
+static const u16 Sprite_ModeSelect_PressStart[] = {
+    5,
+    OAM0_SHAPE_32x8, OAM1_SIZE_32x8, OAM2_CHR(0x11),
+    OAM0_SHAPE_32x8 + OAM0_Y(8), OAM1_SIZE_32x8, OAM2_CHR(0x49),
+    OAM0_SHAPE_32x8, OAM1_SIZE_32x8 + OAM1_X(32), OAM2_CHR(0x31),
+    OAM0_SHAPE_32x8 + OAM0_Y(8), OAM1_SIZE_32x8 + OAM1_X(32), OAM2_CHR(0x4D),
+    OAM0_SHAPE_8x16, OAM1_SIZE_8x16 + OAM1_X(64), OAM2_CHR(0x55),
+};
+
+// FE7U: 0x08CE489C
+static const u16 Sprite_ModeSelect_Change[] = {
+    1,
+    OAM0_SHAPE_32x8, OAM1_SIZE_32x8, OAM2_CHR(0x51),
+};
+
+// FE7U: 0x08CE48A4
+static const u16 Sprite_ModeSelect_ChapterRange[] = {
+    4,
+    OAM0_SHAPE_32x16 + OAM0_AFFINE_ENABLE, OAM1_SIZE_32x16, OAM2_CHR(0x16),
+    OAM0_SHAPE_32x16 + OAM0_AFFINE_ENABLE, OAM1_SIZE_32x16 + OAM1_X(32), OAM2_CHR(0x1A),
+    OAM0_SHAPE_16x16 + OAM0_AFFINE_ENABLE, OAM1_SIZE_16x16 + OAM1_X(64), OAM2_CHR(0x1E),
+    OAM0_SHAPE_32x16 + OAM0_AFFINE_ENABLE, OAM1_SIZE_32x16 + OAM1_X(80), OAM2_CHR(0x56),
+};
+
+// clang-format on
+
+extern u16 Pal_084150C0[];
+
+/* Palette cycling for the "Press Start" sprite (OBJ palette 0xB, colour 13).
+ *
+ * FE7U: 0x080A73F8. Both FE8ModeSelect.c and Jester's fork leave this as an
+ * empty stub, so it was ported here from the FE7 ROM's own Thumb code rather
+ * than from either C source. It crossfades between colours 12 and 13 of
+ * Pal_084150C0 (the same palette ApplyPalette loads into slot 0x1B) on a
+ * 64-step triangle wave: rising over 0-31, falling over 32-63. Both halves
+ * use weights summing to 32, hence the >> 5. */
+static void ModeSelectPalette_CyclePressStart(s32 timer)
+{
+    s32 t = timer & 0x3f;
+    s32 wA, wB;
+    u16 a = Pal_084150C0[12];
+    u16 b = Pal_084150C0[13];
+    s32 color;
+
+    if (t <= 31)
+    {
+        wA = 32 - t;
+        wB = t;
+    }
+    else
+    {
+        wA = t - 32;
+        wB = 64 - t;
+    }
+
+    color = ((((a & RED_MASK) * wA + (b & RED_MASK) * wB) >> 5) & RED_MASK);
+    color += ((((a & GREEN_MASK) * wA + (b & GREEN_MASK) * wB) >> 5) & GREEN_MASK);
+    color += ((((a & BLUE_MASK) * wA + (b & BLUE_MASK) * wB) >> 5) & BLUE_MASK);
+
+    gPaletteBuffer[0x100 + 0xb * 0x10 + 0xd] = color;
+
+    EnablePaletteSync();
+}
+
+// FE7U: 0x080A79A4
+static void ModeSelectSpriteDraw_Loop(struct ModeSelectSpriteDrawProc* proc)
+{
+    s32 i;
+
+    if (proc->unk_3c != 0)
+    {
+        for (i = 0; i < proc->unk_40; i++)
+        {
+            s32 angle = (proc->unk_3e >> 4) + i * proc->unk_44 + 40;
+            s32 x = (proc->unk_34 << 12) + SIN(angle) * 70;
+            s32 y = (((proc->unk_38 << 12) + COS(angle) * 28) >> 12) - 16;
+
+            SetMainMiniAnimPos(ModeSelectGetAnimBuf(i), x >> 12, y);
+            ModeSelectPalette_ApplyGlow(i, (proc->unk_3e >> 4) + i * proc->unk_44);
+        }
+    }
+
+    BgAffinRotScaling(BG_2, proc->unk_3e, 0, 0, 0x160, 0x160);
+    BgAffinScaling(BG_2, 0x280, 0x100);
+    BgAffinAnchoring(BG_2, proc->unk_34, proc->unk_38, 76, 76);
+
+    sModeSelectScratch.blendAmount = InterpolateCubicSpline(8, 8, 16, 16, proc->unk_48);
+
+    if (proc->unk_4c == 0)
+    {
+        proc->unk_48 += 8;
+        if (proc->unk_48 >= 0x400)
+            proc->unk_4c = 1;
+    }
+    else
+    {
+        proc->unk_48 -= 8;
+        if (proc->unk_48 <= 0)
+            proc->unk_4c = 0;
+    }
+
+    // unk_4d is the chosen difficulty (0 = Normal, 1 = Hard); it only picks
+    // which row the hand cursor sits on. It is NOT a spin speed — feeding it
+    // into unk_3e made the carousel rotate whenever Hard was selected.
+    if (proc->unk_4e & 2)
+        DisplayFrozenUiHandExt(108, (proc->unk_4d & 1) * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+    else
+        DisplayUiHandExt(108, proc->unk_4d * 16 + 104, OAM2_CHR(0x3C0) + OAM2_LAYER(2));
+
+    PutSpriteExt(0xd, 0, 8, Sprite_ModeSelect_Mode, OAM2_PAL(11));
+    PutSpriteExt(0xd, 20, 28, Sprite_ModeSelect_Select, OAM2_PAL(11));
+    PutSpriteExt(0xd, 40, 64, Sprite_ModeSelect_Change, OAM2_PAL(11));
+
+    if ((proc->unk_2c >> 2 & 1) == 0)
+        PutSpriteExt(0xd, 8, 130, Sprite_ModeSelect_PressStart, OAM2_PAL(11));
+
+    if (proc->unk_2c != 0)
+        proc->unk_2c++;
+
+    PutSpriteExt(0xd, 108, 24, Sprite_ModeSelect_ChapterRange, OAM2_PAL(10));
+
+    ModeSelectPalette_CyclePressStart(proc->unk_30);
+    proc->unk_30++;
+}
+
+static const struct ProcCmd sProc_ModeSelectSpriteDraw[] = {
+    PROC_NAME("ModeSelectSpriteDraw"),
+    PROC_CALL(ModeSelectSpriteDraw_Init),
+    PROC_YIELD,
+    PROC_REPEAT(ModeSelectSpriteDraw_Loop),
+    PROC_END,
+};
+const struct ProcCmd* const ProcScr_ModeSelectSpriteDraw = sProc_ModeSelectSpriteDraw;
+
+// Starts the "Press Start" blink timer (unk_2c counts up from 1; bit 2 of it
+// gates whether the sprite is drawn each frame).
+static void ModeSelectSpriteDraw_SetActive(bool active)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    if (proc != NULL)
+        proc->unk_2c = 1;
+}
+
+static void ModeSelectSpriteDraw_SetGlowing(bool glowing)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    if (proc != NULL)
+        proc->unk_3c = glowing;
+}
+
+static void ModeSelectSpriteDraw_SetSlotCount(s32 count)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    if (proc != NULL)
+    {
+        proc->unk_40 = count;
+        proc->unk_44 = 0x100 / count;
+    }
+}
+
+static void ModeSelectSpriteDraw_SetCenter(s32 x, s32 y)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    if (proc != NULL)
+    {
+        proc->unk_34 = x;
+        proc->unk_38 = y;
+    }
+    sModeSelectScratch.blendThreshold = y - 60;
+}
+
+static void ModeSelectSpriteDraw_SetAngle(u16 angle)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    if (proc != NULL)
+        proc->unk_3e = angle;
+}
+
+static void ModeSelectSpriteDraw_SetSpin(u8 direction, u8 speed)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    if (proc != NULL)
+    {
+        proc->unk_4d = direction;
+        proc->unk_4e = speed;
+    }
+}
+
+static s32 ModeSelectSpriteDraw_GetSlotAngleStep(void)
+{
+    struct ModeSelectSpriteDrawProc* proc = Proc_Find(ProcScr_ModeSelectSpriteDraw);
+    return proc->unk_44;
+}
+
+// Blend effect on the outer spell-circle background (HBlank handler).
+static void ModeSelectBg_UpdateSpellCircleBlend(void)
+{
+    u16 vcount = REG_VCOUNT + 1;
+
+    if (vcount > DISPLAY_HEIGHT)
+        vcount = 0;
+
+    if (vcount & 1)
+        return;
+
+    if (vcount < sModeSelectScratch.blendThreshold)
+    {
+        REG_BLDCNT = 0xc1;
+        REG_BLDY = (sModeSelectScratch.blendThreshold != 0)
+            ? (sModeSelectScratch.blendThreshold - vcount) * 0x10 / sModeSelectScratch.blendThreshold
+            : 0;
+    }
+    else
+    {
+        REG_BLDCNT = 0x144;
+        REG_BLDALPHA = sModeSelectScratch.blendAmount | 0x1000;
+    }
+}
+
+static const u16 sModeSelectBgConfig[] = {
+    0x0000, 0x6000, 0x0000,
+    0xC000, 0x6800, 0x0000,
+    0x8000, 0x7800, 0x0000,
+    0x8000, 0x7800, 0x0000,
+};
+
+extern u16 Pal_084138F0[];
+extern u16 Pal_0840F9A0[];
+extern u8 Img_08418E44[];
+extern u8 Img_0840FEB4[];
+extern u8 Tsa_0840FA00[];
+extern u8 Tsa_08411F34[];
+
+// FE7U: 0x080A4E58 -- sets up the outer spinning spell-circle background,
+// always run when entering via StartModeSelect (unk_42 & 1 is always set).
+static void ModeSelect_InitBgs(void)
+{
+    SetupBackgrounds((u16*)sModeSelectBgConfig);
+
+    gLCDControlBuffer.dispcnt.mode = 1;
+
+    gLCDControlBuffer.bg2cnt.screenSize = 1;
+    gLCDControlBuffer.bg2cnt.areaOverflowMode = 0;
+
+    gLCDControlBuffer.bg0cnt.priority = 3;
+    gLCDControlBuffer.bg1cnt.priority = 0;
+    gLCDControlBuffer.bg2cnt.priority = 2;
+    gLCDControlBuffer.bg3cnt.priority = 2;
+
+    EndAllMus();
+
+    SetDispEnable(0, 0, 0, 0, 0);
+
+    sModeSelectScratch.blendAmount = 10;
+    sModeSelectScratch.blendThreshold = 100;
+
+    SetPrimaryHBlankHandler(ModeSelectBg_UpdateSpellCircleBlend);
+
+    CopyToPaletteBuffer(Pal_084138F0, 0x220, 0x100);
+    CopyToPaletteBuffer(Pal_0840F9A0, 0, 0x60);
+
+    Decompress(Img_08418E44, (void*)(GetBackgroundTileDataOffset(BG_0) + 0x6000000));
+    CallARM_FillTileRect(ModeSelectBg0Tm, Tsa_0840FA00, 0);
+
+    Decompress(Img_0840FEB4, (void*)(GetBackgroundTileDataOffset(BG_3) + 0x6000000));
+    // The FE7 source's `sub_800154C(gBg3Tm, Tsa_08411F34, 0, 5)` is this
+    // repo's BlitU8TileMapData (FE8U 0x0800154C) — the 8-bit affine-map
+    // blit, NOT CallARM_FillTileRect. BG2/BG3 here are affine layers
+    // (dispcnt.mode = 1), so their maps are one byte per tile; using the
+    // 16-bit tilemap fill instead produces garbage on BG2.
+    BlitU8TileMapData(ModeSelectBg3Tm, Tsa_08411F34, 0, 5);
+
+    BG_EnableSyncByMask(BG3_SYNC_BIT);
+}
+
+// FE7U: 0x080A7C6C
+static void ModeSelect_InitGfxMaybe(struct ModeSelectProc* proc)
+{
+    if (proc->unk_42 & 1)
+        ModeSelect_InitBgs();
+}
+
+static const struct FaceVramEntry sModeSelectFaceConfig[] = {
+    { .tileOffset = 0x1000, .paletteId = 0xC },
+    { .tileOffset = 0x1000, .paletteId = 0xC },
+    { .tileOffset = 0x1000, .paletteId = 0xC },
+    { .tileOffset = 0x1000, .paletteId = 0xC },
+};
+
+extern u16 Pal_084150C0[];
+extern u8 Img_08414940[];
+extern u8 Tsa_084150E0_Full[];
+
+extern u16 Pal_08415AA0[];
+extern u8 Img_08415594[];
+extern u8 Tsa_08415AC0[];
+
+extern u16 Pal_0841625C[];
+
+static void ModeSelectBg_ApplyCompressedTsa(u16* dest, u8* compressedTsa, u16 tileref)
+{
+    Decompress(compressedTsa, gGenericBuffer);
+    CallARM_FillTileRect(dest, gGenericBuffer, tileref);
+}
+
+// FE7U: 0x080A7C84
+static void ModeSelect_Init(struct ModeSelectProc* proc)
+{
+    int i;
+
+    LoadObjUIGfx();
+
+    BG_SetPosition(BG_1, 8, -8);
+
+    Proc_BlockEachMarked(PROC_MARK_SAVEDRAW);
+    Proc_BlockEachMarked(PROC_MARK_D);
+
+    sModeSelectScratch.blendThreshold = 100;
+
+    SetupFaceGfxData((struct FaceVramEntry*)sModeSelectFaceConfig);
+
+    ApplyPalette(Pal_08415AA0, 0xF);
+
+    Decompress(Img_08415594, (void*)(0x6000000 + GetBackgroundTileDataOffset(1)));
+    CallARM_FillTileRect(ModeSelectBg0Tm, Tsa_084150E0_Full, 0);
+    ModeSelectBg_ApplyCompressedTsa(ModeSelectClawTm, Tsa_08415AC0, 0xf000);
+    ApplyPalette(Pal_084150C0, 0x1B);
+
+    Decompress(Img_08414940, (void*)0x6010000);
+    ApplyPalette(Pal_0841625C, 0x1A);
+
+    ResetClassReelSpell();
+    NewEfxAnimeDrvProc();
+
+    proc->unk_38 = Proc_Start(sProc_ModeSelectSpriteDraw, proc);
+    ModeSelectSpriteDraw_SetCenter(0, 0x70);
+
+    proc->unk_41 = 0;
+    proc->unk_4c = 0;
+
+    proc->unk_40 = ModeSelect_GetUnlockedDifficultyMask();
+
+    if ((proc->unk_42 & 1) == 0)
+    {
+        static const int sHardModeMask[] = { 4, 0x10 };
+
+        proc->unk_4c = 2;
+        proc->unk_49[0] = 1;
+        proc->unk_49[1] = 2;
+
+        for (i = 0; i < proc->unk_4c; i++)
+        {
+            if ((gPlaySt.chapterStateBits & PLAY_FLAG_HARD) && (proc->unk_40 & sHardModeMask[i]))
+                proc->unk_43[i] = 1;
+            else
+                proc->unk_43[i] = 0;
+        }
+    }
+    else
+    {
+        proc->unk_49[0] = 0;
+        proc->unk_4c++;
+
+        if (proc->unk_40 & 2)
+        {
+            proc->unk_49[proc->unk_4c] = 1;
+            proc->unk_4c++;
+        }
+
+        if (proc->unk_40 & 8)
+        {
+            proc->unk_49[proc->unk_4c] = 2;
+            proc->unk_4c++;
+        }
+
+        for (i = 0; i < proc->unk_4c; i++)
+            proc->unk_43[i] = 0;
+    }
+
+    ModeSelectSpriteDraw_SetSlotCount(proc->unk_4c);
+    InitModeSelectAnims(proc->unk_4c, proc->unk_49);
+
+    for (i = 0; i < proc->unk_4c; i++)
+        ModeSelectPalette_CacheUndimmed(i);
+
+    ModeSelectSpriteDraw_SetGlowing(true);
+    StartUiSpinningArrows(proc);
+    LoadUiSpinningArrowGfx(0, 0xd20, 9);
+    LoadUiSpinningArrowGfx(0, 0xd20, 9);
+    SetUiSpinningArrowPositions(30, 61, 68, 61);
+    SetUiSpinningArrowConfig(3);
+    
+
+    InitTextFont(&sModeSelectScratch.text.font, (void*)0x600E000, 0x100, 0xe);
+
+    InitText(&sModeSelectScratch.text.text[0], 5);
+    InitText(&sModeSelectScratch.text.text[1], 9);
+    InitText(&sModeSelectScratch.text.text[2], 5);
+    InitText(&sModeSelectScratch.text.text[3], 4);
+    InitText(&sModeSelectScratch.text.text[4], 10);
+    InitText(&sModeSelectScratch.text.text[5], 5);
+
+    proc->unk_30 = proc->unk_41 * ModeSelectSpriteDraw_GetSlotAngleStep() * 0x10;
+
+    proc->unk_3c = StartModeSelectFace(proc->unk_49[proc->unk_41]);
+    PutModeSelectLabelText();
+    PutModeSelectCharacterText(proc->unk_49[proc->unk_41]);
+    PutModeSelectDifficultyText(proc);
+    ModeSelectSpriteDraw_SetSpin(proc->unk_43[proc->unk_41], proc->unk_42);
+    ModeSelectSpriteDraw_SetAngle(proc->unk_30);
+    BG_EnableSyncByMask(BG0_SYNC_BIT | BG1_SYNC_BIT);
+
+    proc->unk_2c = 0;
+    proc->unk_50 = 0;
+
+    SetWinEnable(1, 0, 0);
+    SetWin0Layers(1, 1, 1, 1, 1);
+    SetWin0Box(0, 0x50, 0xf0, 0x50);
+    SetWOutLayers(0, 0, 0, 0, 0);
+
+    LoadModeSelectChapterGfx(proc->unk_49[proc->unk_41]);
+    // clang-format off
+    SetObjAffine(
+        0,
+        Div(+COS(0) * 16, 0x100),
+        Div(-SIN(0) * 16, 0x100),
+        Div(+SIN(0) * 16, 0x100),
+        Div(+COS(0) * 16, 0x100)
+    );
+    // clang-format on
+}
+
+// FE7U: 0x080A8054
+static void ModeSelect_TransitionSplitOpen(struct ModeSelectProc* proc)
+{
+    s32 tmp;
+    s32 step = ++proc->unk_2c;
+
+    SetDispEnable(1, 1, 1, 1, 1);
+
+    tmp = 0x48 - (((0x10 - step) * 0x48) * (0x10 - step) / 256);
+
+    SetWin0Box(0, 0x50 - tmp, 0xf0, tmp + 0x50);
+
+    if (step == 0x10)
+        Proc_Break(proc);
+}
+
+// FE7U: 0x080A80C4
+static void ModeSelect_TransitionSplitClose(struct ModeSelectProc* proc)
+{
+    s32 tmp;
+    s32 step = ++proc->unk_2c;
+
+    tmp = 0x48 - (((0x10 - step) * 0x48) * (0x10 - step) / 256);
+
+    SetWin0Box(0, tmp + 8, 0xf0, -0x68 - tmp);
+
+    if (step == 0x10)
+        Proc_Break(proc);
+}
+
+static void ModeSelect_StopSpinAndResetTimer(struct ModeSelectProc* proc)
+{
+    s32 i;
+
+    for (i = 0; i < proc->unk_4c; i++)
+        ModeSelectAnim_Pause(ModeSelectGetAnimBuf(i));
+
+    proc->unk_50 = 0;
+}
+
+static void ModeSelect_SetDifficulty(struct ModeSelectProc* proc, s32 hard)
+{
+    proc->unk_43[proc->unk_41] = hard;
+
+    PutModeSelectDifficultyText(proc);
+    ModeSelectSpriteDraw_SetSpin(hard, proc->unk_42);
+}
+
+// FE7U: 0x080A817C
+static void ModeSelect_Loop_KeyHandler(struct ModeSelectProc* proc)
+{
+    if ((gKeyStatusPtr->repeatedKeys & DPAD_UP) && proc->unk_43[proc->unk_41] == 1)
+    {
+        PlaySoundEffect(0x66);
+        ModeSelect_SetDifficulty(proc, 0);
+        return;
+    }
+
+    if (gKeyStatusPtr->repeatedKeys & DPAD_DOWN)
+    {
+        if (proc->unk_43[proc->unk_41] == 0)
+        {
+            if (proc->unk_49[proc->unk_41] == 0 && !(proc->unk_40 & 1))
+            {
+                PlaySoundEffect(0x6c);
+                return;
+            }
+
+            if (proc->unk_49[proc->unk_41] == 1 && !(proc->unk_40 & 4))
+            {
+                PlaySoundEffect(0x6c);
+                return;
+            }
+
+            if (proc->unk_49[proc->unk_41] == 2 && !(proc->unk_40 & 0x10))
+            {
+                PlaySoundEffect(0x6c);
+                return;
+            }
+
+            PlaySoundEffect(0x66);
+            ModeSelect_SetDifficulty(proc, 1);
+            return;
+        }
+    }
+
+    if (gKeyStatusPtr->heldKeys & (DPAD_LEFT | L_BUTTON))
+    {
+        Proc_Goto(proc, 1);
+        SetUiSpinningArrowFastMaybe(0);
+        PlaySoundEffect(0x67);
+        ModeSelect_StopSpinAndResetTimer(proc);
+        return;
+    }
+
+    if (gKeyStatusPtr->heldKeys & (DPAD_RIGHT | R_BUTTON))
+    {
+        Proc_Goto(proc, 2);
+        SetUiSpinningArrowFastMaybe(1);
+        PlaySoundEffect(0x67);
+        ModeSelect_StopSpinAndResetTimer(proc);
+        return;
+    }
+
+    if (gKeyStatusPtr->newKeys & (START_BUTTON | A_BUTTON))
+    {
+        proc->unk_2c = 0;
+
+        PlaySoundEffect(0x6a);
+        Proc_Goto(proc, 3);
+
+        ModeSelectGetAnimBuf(proc->unk_41)->roundType = 0;
+        RestartMainMiniAnim(ModeSelectGetAnimBuf(proc->unk_41));
+
+        /* Record the chosen difficulty.
+         *
+         * The FE7 source splits here on unk_42 bit 0, which StartModeSelect always
+         * sets: that branch writes gPlaySt directly, while its save-menu branch
+         * (dead in this port) calls SaveMenu_SetDifficultyChoice. Both are folded
+         * into the single call below, because writing gPlaySt cannot work on FE8:
+         * SaveMenuWriteNewGame -> WriteNewGameSave -> InitPlayConfig (src/bmio.c)
+         * begins with CpuFill16(0, &gPlaySt, sizeof(gPlaySt)) and then rebuilds
+         * the state from proc->difficulty, so anything staged in gPlaySt here is
+         * discarded. Left as-is, proc->difficulty was never set at all and every
+         * new game came out Easy.
+         *
+         * SaveMenu_SetDifficultyChoice's first argument is that difficulty choice:
+         * 0 = Easy/tutorial, 1 = Normal, 2 = Difficult, 3 = cancelled. unk_43 is
+         * this slot's selection (0 = Normal, 1 = Hard) and Mode Select offers no
+         * Easy row -- only two fit on screen -- so it maps onto 1 and 2. Note the
+         * FE7 source's other branch passes its *lord* index as this argument,
+         * because in FE7 it chose Lyn/Eliwood/Hector mode.
+         *
+         * The chosen lord goes in the second argument instead, which lands in the
+         * save menu's unk_3d -- a field the vanilla code writes (always 0) but
+         * never reads, and which FE7 used for exactly this. SaveMenuWriteNewGame
+         * picks it up from there as the new game's chapterModeIndex. */
+        SaveMenu_SetDifficultyChoice(
+            proc->unk_43[proc->unk_41] + 1, proc->unk_49[proc->unk_41]);
+
+        if (!(proc->unk_42 & 1))
+            ModeSelectSpriteDraw_SetSpin(proc->unk_43[proc->unk_41], proc->unk_42 | 2);
+
+        ModeSelectSpriteDraw_SetActive(1);
+        return;
+    }
+
+    if ((gKeyStatusPtr->newKeys & B_BUTTON) && !(proc->unk_42 & 1))
+    {
+        proc->unk_2c = 0;
+
+        PlaySoundEffect(0x6b);
+        Proc_Goto(proc, 4);
+        SaveMenu_SetDifficultyChoice(3, 0);
+    }
+
+    proc->unk_50++;
+
+    if ((proc->unk_50 & 0x1ff) == 0x20)
+    {
+        ModeSelectGetAnimBuf(proc->unk_41)->roundType = 2;
+        RestartMainMiniAnim(ModeSelectGetAnimBuf(proc->unk_41));
+    }
+
+    if ((proc->unk_50 & 0x1ff) != 0x80)
+        return;
+
+    ModeSelectAnim_Pause(ModeSelectGetAnimBuf(proc->unk_41));
+}
+
+// FE7U: 0x080A8424
+static void ModeSelect_RotateRight(struct ModeSelectProc* proc)
+{
+    proc->unk_34 = -1;
+    proc->unk_2c = 0;
+
+    StartFaceFadeOut(proc->unk_3c);
+
+    if (proc->unk_41 == 0)
+        proc->unk_41 = proc->unk_4c - 1;
+    else
+        proc->unk_41--;
+
+    proc->unk_32 = (0x100 - ModeSelectSpriteDraw_GetSlotAngleStep() * proc->unk_41) << 4;
+
+    ModeSelect_SetDifficulty(proc, proc->unk_43[proc->unk_41]);
+
+    if (proc->unk_32 < proc->unk_30)
+        proc->unk_32 += 0x1000;
+}
+
+// FE7U: 0x080A848C
+static void ModeSelect_RotateLeft(struct ModeSelectProc* proc)
+{
+    proc->unk_34 = 1;
+    proc->unk_2c = 0;
+
+    StartFaceFadeOut(proc->unk_3c);
+
+    if (proc->unk_41 < proc->unk_4c - 1)
+        proc->unk_41++;
+    else
+        proc->unk_41 = 0;
+
+    proc->unk_32 = (0x100 - ModeSelectSpriteDraw_GetSlotAngleStep() * proc->unk_41) << 4;
+
+    ModeSelect_SetDifficulty(proc, proc->unk_43[proc->unk_41]);
+
+    if (proc->unk_32 > proc->unk_30)
+        proc->unk_30 += 0x1000;
+}
+
+// FE7U: 0x080A84F8
+static void ModeSelect_Loop_RotateCarousel(struct ModeSelectProc* proc)
+{
+    s32 a, b, c;
+    u16 angle;
+
+    a = (proc->unk_32 - proc->unk_30) * proc->unk_34;
+    proc->unk_2c++;
+
+    b = a >> 2;
+    c = b * (0x1e - proc->unk_2c) * (0x1e - proc->unk_2c) / 900;
+    angle = proc->unk_30 + proc->unk_34 * 4 * (b - c);
+
+    if (proc->unk_2c == 13)
+        LoadModeSelectChapterGfx(proc->unk_49[proc->unk_41]);
+
+    if (proc->unk_2c == 14)
+        proc->unk_3c = StartModeSelectFace(proc->unk_49[proc->unk_41]);
+
+    if (proc->unk_2c == 20)
+        PutModeSelectCharacterText(proc->unk_49[proc->unk_41]);
+
+    if (proc->unk_2c == 30)
+    {
+        angle = proc->unk_32 & 0xfff;
+        proc->unk_30 = proc->unk_32 & 0xfff;
+        Proc_Break(proc);
+    }
+
+    // clang-format off
+    SetObjAffine(
+        0,
+        Div(+COS(0) * 16, 0x100),
+        Div(-SIN(0) * 16, 0x100),
+        Div(+SIN(0) * 16, 0x100),
+        Div(+COS(0) * 16, 0x100)
+    );
+    // clang-format on
+
+    ModeSelectSpriteDraw_SetAngle(angle);
+}
+
+// FE7U: 0x080A8624
+static void ModeSelect_End(struct ModeSelectProc* proc)
+{
+    EndModeSelectAnims(proc->unk_4c);
+    EndEfxAnimeDrvProc();
+    EndFaceById(0);
+
+    /* Jester's fix (adapted): ModeSelect_Init blocks the save-menu's own
+     * draw process (PROC_MARK_SAVEDRAW/PROC_MARK_D) so it doesn't render
+     * underneath the carousel; it must be unblocked again here or the save
+     * screen stays frozen/black after returning. */
+    Proc_UnblockEachMarked(PROC_MARK_SAVEDRAW);
+    Proc_UnblockEachMarked(PROC_MARK_D);
+
+    if (!(proc->unk_42 & 1))
+    {
+        StartBgmVolumeChange(0x100, 0xc0, 0x10, 0);
+    }
+    else
+    {
+        SetPrimaryHBlankHandler(NULL);
+
+        /* Restore the save menu's own background configuration. ModeSelect_Init
+         * replaced it wholesale (SetupBackgrounds(sModeSelectBgConfig), plus
+         * dispcnt.mode = 1 and the affine BG2 settings), and nothing on the way
+         * back out puts it right: this repo's SaveMenu_ResetLcdFormDifficulty
+         * only touches the window registers, and SaveMenu_ReloadScreenFormDifficulty
+         * -- which the PL_SAVEMENU_DIFFICULTY_SEL script runs immediately after
+         * this proc ends -- redraws the screen's *contents* but never calls
+         * SetupBackgrounds. Left alone, BG1 keeps Mode Select's char base
+         * (0x0600C000 instead of 0x06000000) and the save-slot screen draws
+         * corrupted.
+         *
+         * SaveMenu_Init is the same call Jester's fork uses here and is what the
+         * normal save-menu entry path runs; it restores gBgConfig_SaveMenu, the
+         * BG priorities, dispcnt.mode and the blend setup. It must happen here
+         * rather than after, because SaveMenu_ReloadScreenFormDifficulty
+         * decompresses into GetBackgroundTileDataOffset(3) and so needs the
+         * correct bases already in place. The screenSize/areaOverflowMode fields
+         * are reset explicitly since only Mode Select's affine BG2 sets them and
+         * SaveMenu_Init does not clear them. Jester additionally re-runs
+         * SaveMenu_InitScreen/SaveMenu_LoadExtraMenuGraphics, which would be
+         * redundant here -- SaveMenu_ReloadScreenFormDifficulty already covers
+         * that content redraw on this repo's path. */
+        SaveMenu_Init();
+        gLCDControlBuffer.bg2cnt.screenSize = 0;
+        gLCDControlBuffer.bg2cnt.areaOverflowMode = 0;
+
+        /* Re-read every save slot's metadata, because this screen destroyed it.
+         *
+         * gPlayStChapterBits / gPlayStChapterMode / gPlayStOptionBits
+         * (src/difficultymenu.c) are EWRAM_OVERLAY(0), which lands at
+         * 0x0200462C -- inside this screen's own ewram_overlay_modeselect
+         * buffers. Overlay tags do not partition EWRAM, they alias it: every
+         * ewram_overlay_* section starts at __ewram_start, so putting Mode
+         * Select in its own tag is precisely what makes it collide with
+         * overlay 0. (Data within a *single* tag is concatenated and safe,
+         * which is why the vanilla difficulty menu -- also EWRAM_OVERLAY(0) --
+         * coexists with these arrays without trouble.)
+         *
+         * SaveMenuInitSlotPalette derives each slot's difficulty colour from
+         * exactly these three arrays, so without this the save slots come back
+         * with colours computed from whatever battle-animation graphics landed
+         * on top of them. SaveMenu_ReloadScreenFormDifficulty calls
+         * SaveMenuInitSlotPalette but never reloads the data behind it, so this
+         * has to happen here, before the reload runs. This is the same loop
+         * SaveMenu_InitScreen uses on normal save-menu entry. */
+        {
+            struct SaveMenuProc* saveMenuProc = proc->proc_parent;
+            int slot;
+
+            if (saveMenuProc != NULL)
+            {
+                for (slot = 0; slot < 4; slot++)
+                    SaveMenuInitSaveSlotData(slot, saveMenuProc);
+            }
+        }
+    }
+}
+
+// clang-format off
+
+// FE7U: 0x08CE4930
+static const struct ProcCmd sProc_ModeSelect[] =
+{
+    PROC_CALL(DisableAllGfx),
+    PROC_YIELD,
+
+    PROC_CALL(ModeSelect_InitGfxMaybe),
+    PROC_YIELD,
+
+    PROC_CALL(ModeSelect_Init),
+    PROC_YIELD,
+
+    PROC_REPEAT(ModeSelect_TransitionSplitOpen),
+
+PROC_LABEL(0),
+    PROC_REPEAT(ModeSelect_Loop_KeyHandler),
+
+PROC_LABEL(1),
+    PROC_CALL(ModeSelect_RotateLeft),
+    PROC_REPEAT(ModeSelect_Loop_RotateCarousel),
+
+    PROC_GOTO(0),
+
+PROC_LABEL(2),
+    PROC_CALL(ModeSelect_RotateRight),
+    PROC_REPEAT(ModeSelect_Loop_RotateCarousel),
+
+    PROC_GOTO(0),
+
+PROC_LABEL(3),
+    PROC_SLEEP(60),
+
+PROC_LABEL(4),
+    PROC_REPEAT(ModeSelect_TransitionSplitClose),
+    PROC_CALL(ModeSelect_End),
+
+    PROC_END,
+};
+
+// clang-format on
+
+// FE7U: 0x080A8664
+void StartModeSelect(ProcPtr parent)
+{
+    struct ModeSelectProc* proc = Proc_StartBlocking(sProc_ModeSelect, parent);
+    proc->unk_42 = 1;
+}
+
+/* Flush the BG2 (fog) and BG3 (mural) tilemaps after returning to the save menu.
+ *
+ * SaveMenu_ReloadScreenFormDifficulty rewrites all four tilemap buffers but ends
+ * with BG_EnableSyncByMask(3) -- BG0 and BG1 only -- whereas SaveMenu_InitScreen
+ * syncs all four. On the vanilla difficulty-select path that asymmetry is
+ * harmless, because nothing there ever disturbs BG2/BG3 VRAM and the fog and
+ * mural simply stay resident. Mode Select breaks that assumption: ModeSelect_End
+ * calls SaveMenu_Init to restore gBgConfig_SaveMenu, and SetupBackgrounds
+ * BG_Fills every map buffer to 0 -- so without this, the cleared BG2/BG3 maps
+ * are what reach VRAM and the fog and mural are missing.
+ *
+ * Runs from ProcScr_SaveMenu immediately after the reload (see
+ * PL_SAVEMENU_DIFFICULTY_SEL in src/savemenu.c), since the buffers must already
+ * hold the redrawn maps when the sync bits are set. */
+void ModeSelect_SyncSaveMenuBgs(ProcPtr proc)
+{
+    BG_EnableSyncByMask(BG2_SYNC_BIT | BG3_SYNC_BIT);
+}
+
+#endif // FE8_MODE_SELECT

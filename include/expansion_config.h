@@ -391,6 +391,13 @@
 #define FE8_TEXT_CHAPTER_NAMES 0
 #endif
 
+/* Runtime text-token replacement. When enabled, the main gMsgTable is
+ * generated as raw text instead of Huffman-compressed text so substitutions
+ * can scan decoded strings without paying a decompression cost first. */
+#ifndef FE8_REPLACE_TEXT
+#define FE8_REPLACE_TEXT 0
+#endif
+
 /* Hit/Damage/Crit/AS numbers shown alongside the map battle info boxes
  * when battle animations are off (see ShowBattleStatsNoAnims in
  * src/mapanim_infobox.c). */
@@ -447,6 +454,16 @@
  * real, not just display it. */
 #ifndef FE8_RANGE_REWORK
 #define FE8_RANGE_REWORK 0
+#endif
+
+/* Enables the modern world map road/cursor rework. */
+#ifndef FE8_WORLDMAP_REWORK
+#define FE8_WORLDMAP_REWORK 0
+#endif
+
+/* Treat item crit 255 as a "cannot crit" sentinel and display it as "--". */
+#ifndef FE8_CANNOT_CRIT_WEPS
+#define FE8_CANNOT_CRIT_WEPS 0
 #endif
 
 /* Consolidates every vanilla per-action suspend-save write down to one,
@@ -531,13 +548,15 @@
 #define FE8_NIMAP2 0
 #endif
 
-/* Swaps in graphics/map/layout/NewPrologueMap.tmx (see scripts/tmx_to_map.py
- * and docs/map_authoring.md -- this map is authored directly in Tiled, not
- * FEBuilder's own .mar format) for the prologue chapter's map, and replaces
- * the prologue's scripted beginning-of-chapter events with a version that
- * still loads Eirika and Seth the same way but skips the Renais-throne-room
- * cutscene and dialogue (see src/data/data_8B363C.c and
- * src/events/prologue-eventscript.h). */
+/* Swaps in graphics/map/layout/NewPrologueMap.tmx and NewCh1Map.tmx (see
+ * scripts/tmx_to_map.py and docs/map_authoring.md -- these maps are authored
+ * directly in Tiled, not FEBuilder's own .mar format) for the prologue and
+ * Chapter 1 maps respectively, and replaces the prologue's scripted
+ * beginning-of-chapter events with a version that still loads Eirika and
+ * Seth the same way but skips the Renais-throne-room cutscene and dialogue
+ * (see src/data/data_8B363C.c and src/events/prologue-eventscript.h). Only
+ * the map layout is swapped for Chapter 1 -- its events/map-changes are
+ * unchanged. */
 #ifndef FE8_CUSTOM_CAMPAIGN
 #define FE8_CUSTOM_CAMPAIGN 0
 #endif
@@ -675,6 +694,10 @@
 #error "FE8_TEXT_CHAPTER_NAMES must be 0 or 1"
 #endif
 
+#if (FE8_REPLACE_TEXT != 0) && (FE8_REPLACE_TEXT != 1)
+#error "FE8_REPLACE_TEXT must be 0 or 1"
+#endif
+
 #if (FE8_BATTLE_STATS_NO_ANIMS != 0) && (FE8_BATTLE_STATS_NO_ANIMS != 1)
 #error "FE8_BATTLE_STATS_NO_ANIMS must be 0 or 1"
 #endif
@@ -713,6 +736,14 @@
 
 #if (FE8_RANGE_REWORK != 0) && (FE8_RANGE_REWORK != 1)
 #error "FE8_RANGE_REWORK must be 0 or 1"
+#endif
+
+#if (FE8_WORLDMAP_REWORK != 0) && (FE8_WORLDMAP_REWORK != 1)
+#error "FE8_WORLDMAP_REWORK must be 0 or 1"
+#endif
+
+#if (FE8_CANNOT_CRIT_WEPS != 0) && (FE8_CANNOT_CRIT_WEPS != 1)
+#error "FE8_CANNOT_CRIT_WEPS must be 0 or 1"
 #endif
 
 #if (FE8_FORT_UNITS_START_GREYED_OUT != 0) && (FE8_FORT_UNITS_START_GREYED_OUT != 1)

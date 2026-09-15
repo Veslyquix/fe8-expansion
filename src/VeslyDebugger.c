@@ -1,8 +1,10 @@
 
 
 #include "gbafe.h"
+#include "opinfo.h"
 #include "fontgrp.h"
 #include "power.h"
+#include "class_preview.h"
 #define FE8
 #define PUREFUNC __attribute__((pure))
 #define brk asm("mov r11, r11");
@@ -999,8 +1001,18 @@ static const u8 sHandVOffsetLookup[] = {
 };
 static int sDebuggerPrevHandClockFrame;
 static struct Vec2 sDebuggerPrevHandScreenPosition;
-static void DisplayVertUiHand(int x, int y)
+
+static void ResetDebuggerHandSmoothing(void)
 {
+    sDebuggerPrevHandClockFrame = -1;
+    sDebuggerPrevHandScreenPosition.x = 0;
+    sDebuggerPrevHandScreenPosition.y = 0;
+}
+
+static void DisplayVertUiHand(DebuggerProc * proc, int x, int y)
+{
+    (void)proc;
+
     if ((int)(GetGameClock() - 1) == sDebuggerPrevHandClockFrame)
     {
         x = (x + sDebuggerPrevHandScreenPosition.x) >> 1;
@@ -1065,7 +1077,7 @@ void EditStatsIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND - 1 + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND - 1 + (proc->id * 2)) * 8);
         int max = StatCapLookup[proc->id];
         int min = 0;
         int max_digits = GetMaxDigits(max, 0);
@@ -1329,7 +1341,7 @@ void EditWExpIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = 251;
         int min = 0;
         int max_digits = GetMaxDigits(max, 0);
@@ -1527,7 +1539,7 @@ void EditSupportsIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = 255;
         int min = 0;
         int max_digits = GetMaxDigits(max, 0);
@@ -1923,7 +1935,7 @@ void EditItemsIdle(DebuggerProc * proc)
     {
         if (proc->editing == 1)
         {
-            DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+            DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
             int max = GetMaxItems();
             int min = 0;
             int max_digits = GetMaxDigits(max, 1);
@@ -1998,7 +2010,7 @@ void EditItemsIdle(DebuggerProc * proc)
         }
         else
         {
-            DisplayVertUiHand(CursorLocationTable[proc->digit].x + (3 * 8), (Y_HAND + (proc->id * 2)) * 8);
+            DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + (3 * 8), (Y_HAND + (proc->id * 2)) * 8);
             int max = 255 << 8; // skill scrolls
             int min = 0 << 8;
             int max_digits = GetMaxDigits(max >> 8, 0);
@@ -2424,7 +2436,7 @@ void ChStateIdle(DebuggerProc * proc)
 
     if (proc->editing && (type >= 0))
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x + 32, (Y_HAND + (id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + 32, (Y_HAND + (id * 2)) * 8);
         int max = GetChStateMax(id);
         int min = GetChStateMin(id);
         int max_digits = GetMaxDigits(max, type);
@@ -2570,7 +2582,7 @@ void ChStateIdle(DebuggerProc * proc)
 }
 
 #define NumberOfMisc 8
-#define MiscNameWidth 6
+#define MiscNameWidth 8
 
 void AdjustWEXPForClass(struct Unit * unit, int classID)
 {
@@ -2978,7 +2990,7 @@ void EditMiscIdle(DebuggerProc * proc)
 
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = GetMiscMax(proc->id);
         int min = GetMiscMin(proc->id);
         int type = (proc->id < 2);
@@ -3653,7 +3665,7 @@ void EditAiIdle(DebuggerProc * proc)
 
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x + (8 * 8), (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + (8 * 8), (Y_HAND + (proc->id * 2)) * 8);
         int max = GetAiMax(proc->id);
         int min = GetAiMin(proc->id);
         int type = (proc->id < AiMenuOption_Recovery);
@@ -4114,7 +4126,7 @@ void EditCoIdle(DebuggerProc * proc)
         // EditStatsIdle/EditWExpIdle above).
         int max_digits = GetMaxDigits(CoGoldEditMax, 0);
 
-        DisplayVertUiHand(CoValueX * 8 - 4 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
+        DisplayVertUiHand(proc, CoValueX * 8 - 4 + (max_digits - 1 - proc->digit) * 8, (Y_HAND + (CoRow_Gold * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
         {
@@ -4305,7 +4317,7 @@ void EditBgmIdle(DebuggerProc * proc)
         int max_digits = GetMaxDigits(DebugBgmMax, type);
         int val = 0;
 
-        DisplayVertUiHand(
+        DisplayVertUiHand(proc, 
             CursorLocationTable[proc->digit].x + ((4 + BgmMenuXOffset) * 8), (Y_HAND + (proc->id * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
@@ -4826,7 +4838,7 @@ void EditTrapIdle(DebuggerProc * proc)
         int max_digits = GetMaxDigits(max, type);
         int val = 0;
 
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x + (6 * 8), ((Y_HAND - 1) + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x + (6 * 8), ((Y_HAND - 1) + (proc->id * 2)) * 8);
 
         if (keys & DPAD_RIGHT)
         {
@@ -5473,7 +5485,7 @@ void LoadUnitsIdle(DebuggerProc * proc)
     };
     if (proc->editing)
     {
-        DisplayVertUiHand(CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
+        DisplayVertUiHand(proc, CursorLocationTable[proc->digit].x, (Y_HAND + (proc->id * 2)) * 8);
         int max = GetLoadMax(proc->id);
         int min = GetLoadMin(proc->id);
         int max_digits = GetMaxDigits(max, 1);
@@ -6776,6 +6788,7 @@ void InitProc(DebuggerProc * proc)
     proc->mainID = 0;
     proc->page = 0;
     proc->editing = false;
+    ResetDebuggerHandSmoothing();
     proc->actionID = 0;
     proc->godMode = 0;
     proc->autoplay = 0;
@@ -6825,13 +6838,25 @@ void RestartDebuggerMenu(DebuggerProc * proc)
     SetBlendAlpha(11, 5);
     gPlaySt.xCursor = gBmSt.playerCursor.x;
     gPlaySt.yCursor = gBmSt.playerCursor.y;
-    // MU_EndAll();
     // ShowUnitSprite(unit);
     // UnitSpriteHoverUpdate();
 
     // gBmMapUnit[gActiveUnit->yPos][gActiveUnit->xPos] = 0;
     gActiveUnit->state |= US_HIDDEN;
     HideUnitSprite(gActiveUnit);
+    /* MakeMoveunitForAnyActiveUnit only creates a new MU if MU_Exists()
+     * is false -- it reuses whatever's already running otherwise (e.g.
+     * the vanilla cursor-hover MU from src/bmudisp.c's
+     * UnitSpriteHoverUpdate). That reuse doesn't reconfigure the existing
+     * MuProc's position/jid for gActiveUnit, so if the MU that's already
+     * running belongs to a stale context (this file's own MU_EndAll()
+     * call here was commented out since the file was first ported in),
+     * the debugger's menu can end up next to a leftover MU that never
+     * gets cleared, instead of a single one tracking the current unit --
+     * the "duplicate slot" bug. Ending all MUs right before creating the
+     * debugger's own guarantees exactly one exists afterward, always
+     * configured for the unit actually being edited now. */
+    MU_EndAll();
     MakeMoveunitForAnyActiveUnit();
 
     gBmSt.gameStateBits &= ~(BM_FLAG_0 | BM_FLAG_1);
@@ -7608,8 +7633,15 @@ int CanDisplayCG(int id)
     return IsImgValidLZ77(data, (const u8 *)*data->img);
 }
 
-extern struct TalkState sTalkStateCore;
-struct TalkState * const pTalkState = &sTalkStateCore;
+/* The real, live talk state (src/scene.c) -- NOT a private copy. This used
+ * to declare its own `struct TalkState sTalkStateCore;`
+ * (src/vesly_debugger_data.c) and point pTalkState at THAT instead of the
+ * real one, which both wasted a whole extra sizeof(struct TalkState) of
+ * EWRAM (never freed, since ordinary globals aren't) and meant every use
+ * of pTalkState below was reading/writing a dead struct nothing else in
+ * the game ever touched, not the actual live conversation state. */
+extern struct TalkState * sTalkState;
+#define pTalkState sTalkState
 int GetMenuSide(DebuggerProc * proc)
 { // StartOrphanMenuAdjusted
     // StartSemiCenteredOrphanMenu(&gUnitActionMenuDef, gBmSt.cursorTarget.x - gBmSt.camera.x, 1, 22)
@@ -7895,16 +7927,7 @@ void EndBanimTerrain(struct BanimUnkStructComm * buf);
 void InitBanimTerrain(struct BanimUnkStructComm * buf);
 void SetBanimTerrainPos(struct BanimUnkStructComm * buf, s16 x1, s16 y1, s16 x2, s16 y2);
 
-#define CR_END() { CLASS_REEL_OP_0, 0 }
-#define CR_ANIM_ROUND_HIT_CLOSE() { CLASS_REEL_OP_1, 0 }
-#define CR_ANIM_ROUND_CRIT_CLOSE() { CLASS_REEL_OP_2, 0 }
-#define CR_RETURN_TO_STANDING() { CLASS_REEL_OP_3, 0 }
-#define CR_ANIM_ROUND_NONCRIT_FAR() { CLASS_REEL_OP_4, 0 }
-#define CR_WAIT(frames) { CLASS_REEL_OP_5, frames }
-#define CR_WAIT_ROUND_END() { CLASS_REEL_OP_8, 0 }
-#define CR_ANIM_ROUND_CRIT_FAR() { CLASS_REEL_CRIT_FAR, 0 }
-#define CR_WAIT_SPELL() { CLASS_REEL_WAIT_SPELL, 0 }
-#define CR_WAIT_RETURN() { CLASS_REEL_WAIT_RETURN, 0 }
+
 
 #define DEBUGGER_BANIM_TERRAIN 0x3F
 #define DEBUGGER_BANIM_X 148
@@ -7958,22 +7981,6 @@ static struct ClassReelEnt CONST_DATA DefaultClassReelData[1] = {
 static void DebuggerBanimBlendWindowConfig(void)
 {
     SetBlendConfig(1, 16, 16, 0);
-}
-
-static int GetDebuggerDefaultSpellItem(const struct ClassData * class)
-{
-    bool promoted = (class->attributes & CA_PROMOTED) != 0;
-
-    if (class->baseRanks[ITYPE_ANIMA])
-        return promoted ? ITEM_ANIMA_ELFIRE : ITEM_ANIMA_FIRE;
-    if (class->baseRanks[ITYPE_LIGHT])
-        return promoted ? ITEM_LIGHT_SHINE : ITEM_LIGHT_LIGHTNING;
-    if (class->baseRanks[ITYPE_DARK])
-        return promoted ? ITEM_DARK_LUNA : ITEM_DARK_FLUX;
-    if (class->baseRanks[ITYPE_STAFF])
-        return promoted ? ITEM_STAFF_MEND : ITEM_STAFF_HEAL;
-
-    return ITEM_NONE;
 }
 
 static bool HasDebuggerBanimForClass(int classId)
@@ -8080,40 +8087,9 @@ static int ResolveDebuggerClassPaletteOverride(DebuggerProc * proc)
     return ((u32)state < GetDebuggerPaletteTableCount()) ? state : -1;
 }
 
-static int GetDebuggerDefaultPreviewWeapon(int classId)
+int GetDebuggerDefaultPreviewWeapon(int classId)
 {
-    const struct ClassData * class = GetClassData(classId);
-
-    if (class == NULL)
-        return ITEM_NONE;
-
-    if (classId == CLASS_MANAKETE || classId == CLASS_MANAKETE_2)
-        return ITEM_DEMONSTONE;
-    if (classId == CLASS_MANAKETE_MYRRH)
-        return ITEM_DIVINESTONE;
-    if (classId == CLASS_DEMON_KING)
-        return ITEM_RAVAGER;
-    if (classId == CLASS_DRACO_ZOMBIE)
-        return ITEM_MONSTER_WRETCHAIR;
-    if (classId == CLASS_MOGALL || classId == CLASS_ARCH_MOGALL)
-        return ITEM_DARK_FLUX;
-
-    if (class->baseRanks[ITYPE_SWORD])
-        return ITEM_SWORD_IRON;
-    if (class->baseRanks[ITYPE_LANCE])
-        return ITEM_LANCE_IRON;
-    if (class->baseRanks[ITYPE_AXE])
-        return ITEM_AXE_IRON;
-    if (class->baseRanks[ITYPE_BOW])
-        return ITEM_BOW_IRON;
-    if (class->attributes & CA_LOCK_3)
-        return ITEM_MONSTER_ROTTENCLW;
-    if (class->baseRanks[ITYPE_ANIMA] || class->baseRanks[ITYPE_LIGHT] || class->baseRanks[ITYPE_DARK])
-        return GetDebuggerDefaultSpellItem(class);
-    if (class->baseRanks[ITYPE_STAFF])
-        return ITEM_STAFF_HEAL;
-
-    return ITEM_NONE;
+    return GetClassPreviewWeapon(classId);
 }
 
 static bool IsDebuggerPreviewWeapon(int item)
@@ -8168,28 +8144,8 @@ static const char * GetDebuggerPreviewWeaponName(int item)
 
 static int GetDebuggerBanimId(int classId, struct Unit * unit, int weapon)
 {
-    const struct ClassData * class;
-    const struct BattleAnimDef * animDef;
-    int expectedType;
-
     (void)unit;
-
-    class = GetClassData(classId);
-    if (class == NULL || class->pBattleAnimDef == NULL)
-        return 0;
-
-    animDef = class->pBattleAnimDef;
-    expectedType = weapon != ITEM_NONE ? (GetItemType(weapon) + 0x100) : SPECIAL_BANIM_WTYPE;
-
-    for (int i = 0; animDef[i].index != 0; ++i)
-        if (animDef[i].wtype == expectedType)
-            return animDef[i].index - 1;
-
-    for (int i = 0; animDef[i].index != 0; ++i)
-        if (animDef[i].wtype == SPECIAL_BANIM_WTYPE)
-            return animDef[i].index - 1;
-
-    return 0;
+    return GetClassPreviewBanimId(classId, weapon);
 }
 
 static struct ClassReelEnt * GetDebuggerBanimReelEntry(int classId)
@@ -8581,9 +8537,124 @@ static void SetupDebuggerBanimAnim(struct OpInfoClassDisplayProc * proc, struct 
     DebuggerBanimPreview_ResetScript(proc);
 }
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool DebuggerProcNameHasPrefix(const char * name, const char * prefix)
+{
+    if (name == NULL)
+        return false;
+
+    while (*prefix != '\0')
+    {
+        if (*name != *prefix)
+            return false;
+
+        name++;
+        prefix++;
+    }
+
+    return true;
+}
+
+static void EndLingeringBanimEffectProc(ProcPtr procPtr)
+{
+    struct Proc * proc = procPtr;
+
+    if (DebuggerProcNameHasPrefix(proc->proc_name, "efx") ||
+        DebuggerProcNameHasPrefix(proc->proc_name, "ekrsubAnimeEmulator"))
+        Proc_End(proc);
+}
+
+// Spell effect procs (efxPurge, efxResire, their BG/OBJ/ALPHA/quake children,
+// the substitute-anim emulators, ...) get started deep inside
+// StartSpellAnimation() -> gEkrSpellAnimLut[index](anim), which records no
+// handle anywhere. The vanilla class-info reel never has to care: it only ever
+// reaches a spell through StartClassReelSpellAnim(), which stores
+// gpActiveClassReelSpellProc so EndActiveClassReelSpell() can stop it again.
+// This preview calls StartSpellAnimation() directly, so nothing can stop them.
+//
+// That matters because cycling the previewed weapon tears this preview's anims
+// down (ClearDebuggerBanimAnimSlots -> AnimDelete) and immediately rebuilds new
+// ones into the very same pool slots. An effect proc still in flight from the
+// previous weapon keeps running against its raw struct Anim pointers and
+// eventually AnimDelete()s the *new* preview's anim out from under it. The new
+// anim then never reaches the C01/C02 command that marks a round end, so the
+// reel's CR_WAIT_ROUND_END step waits for a round end that can never arrive and
+// the viewer hangs (before the proc.c callback guard it derailed outright).
+static void EndLingeringBanimEffectProcs(void)
+{
+    int i;
+
+    Proc_ForAll(EndLingeringBanimEffectProc);
+
+    // Those procs' substitute anims are tracked here and nowhere else, so
+    // ending the procs alone would strand the anim slots they drew into.
+    for (i = 0; i < 2; i++)
+    {
+        if (gEkrbattle_0[i] != NULL)
+        {
+            AnimDelete(gEkrbattle_0[i]);
+            gEkrbattle_0[i] = NULL;
+        }
+    }
+
+    // An effect proc killed mid-flight never reaches its own SpellFx_Finish()
+    // or its gEfxBgSemaphore-- , so both would stay latched at whatever the
+    // interrupted spell left them. gEfxSpellAnimExists in particular is what
+    // the reel's CR_WAIT_SPELL step waits on, so leaving it set would just
+    // trade one hang for another.
+    SpellFx_Finish();
+    gEfxBgSemaphore = 0;
+}
+#endif
+
 static void EndDebuggerBanimPreview(void)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    // Before the preview's own teardown frees and reallocates the anim slots.
+    EndLingeringBanimEffectProcs();
+#endif
+
     Proc_EndEach(sProc_DebuggerBanimPreview);
+}
+
+// gEfxHpLut is EWRAM_DATA u16[22] (banim-ekrbattleintro.c); no ARRAY_COUNT-able
+// size is visible through its extern declaration, so this mirrors that literal.
+#define DEBUGGER_BANIM_HP_LUT_SIZE 22
+#define DEBUGGER_BANIM_NEUTRAL_HP 61
+
+// Neither this preview nor the vanilla class-info screen it is modeled on ever
+// runs a real battle (ParseBattleHitToBanimCmd(), InitMainAnims()) to populate
+// gEfxHpLut/gEfxHpLutOff/gEkrHpBarCount/etc - they are left holding whatever a
+// previous real battle (or a previous preview session whose hit-effect proc
+// was still mid-flight) last wrote. A stale gEfxHpLutOff in particular makes
+// GetEfxHp() index gEfxHpLut out of bounds, and a stuck gEkrHpBarCount makes
+// every hit-effect helper (NewEfxHpBar/NewEfxHpBarResire/NewEfxAvoid, all of
+// which early-return while it is nonzero) silently do nothing forever.
+//
+// Reset them the same way the original standalone tool's separate
+// AnimViewerBattle feature already resets them for itself
+// (ResetAnimViewerBattleHp(), never wired into this Class Sprites preview in
+// either the original source or this port) - filling gEfxHpLut with one
+// constant makes every hit-effect's "before"/"after" HP read compare equal,
+// so it always takes the safe "no damage" branch instead of trying to drive
+// a real HP-bar-drain/heal sequence (which assumes both battle sides have
+// fully-initialized Anim/BattleUnit state that a bare class/weapon preview
+// never sets up) off of leftover data.
+static void ResetDebuggerBanimHitEffectState(void)
+{
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    int i;
+
+    gEkrHpBarCount = 0;
+    gEfxHpBarResireFlag = 0;
+    gEkrHitNow[EKR_POS_L] = 0;
+    gEkrHitNow[EKR_POS_R] = 0;
+    gEfxHpLutOff[EKR_POS_L] = 0;
+    gEfxHpLutOff[EKR_POS_R] = 0;
+
+    for (i = 0; i < DEBUGGER_BANIM_HP_LUT_SIZE; ++i)
+        gEfxHpLut[i] = DEBUGGER_BANIM_NEUTRAL_HP;
+#endif
 }
 
 static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride)
@@ -8611,6 +8682,8 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapo
 
     if (!IsDebuggerBanimSafe(entry, classId, unit, weapon, palOverride))
         return;
+
+    ResetDebuggerBanimHitEffectState();
 
     BMapDispSuspend();
     proc = Proc_Start(sProc_DebuggerBanimPreview, PROC_TREE_3);

@@ -102,6 +102,29 @@ ProcPtr Proc_StartBlocking(const struct ProcCmd *script, ProcPtr parent)
     return proc;
 }
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+// Loose "does this look like it could be a real code address" check for a
+// callback pointer we are about to call blindly. Not a guarantee the target
+// is actually valid code -- just enough to refuse an obviously-corrupted
+// pointer (e.g. 0x0002003B, a wild small integer, or straddling unmapped
+// space) instead of branching into it and derailing execution entirely.
+static bool IsPlausibleCodePointer(const void *ptr)
+{
+    u32 addr = (u32) ptr;
+
+    if (addr >= EWRAM_START && addr < EWRAM_START + 0x40000)
+        return true;
+
+    if (addr >= IWRAM_START && addr < IWRAM_START + 0x8000)
+        return true;
+
+    if (addr >= 0x08000000 && addr < 0x08000000 + FE8_EXPANSION_ROM_SIZE_BYTES)
+        return true;
+
+    return false;
+}
+#endif
+
 static void DeleteProcessRecursive(struct Proc *proc)
 {
     if (proc->proc_prev)
@@ -113,8 +136,17 @@ static void DeleteProcessRecursive(struct Proc *proc)
     if (proc->proc_flags & PROC_FLAG_ENDED)
         return;
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    // A proc left dangling as a stale sibling/child in this tree (e.g. an
+    // effect proc a caller expected to already be gone) can have this
+    // pointer corrupted by whatever clobbered it; refuse to branch into
+    // something that clearly is not a code address rather than derailing.
+    if (proc->proc_endCb && IsPlausibleCodePointer(proc->proc_endCb))
+        proc->proc_endCb(proc);
+#else
     if (proc->proc_endCb)
         proc->proc_endCb(proc);
+#endif
 
     FreeProcess(proc);
 

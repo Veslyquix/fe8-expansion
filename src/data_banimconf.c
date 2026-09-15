@@ -2246,3 +2246,1248 @@ CONST_DATA struct BattleAnimDef AnimConf_105[] = { // Nomad Trooper_F
     },
     { 0 }
 };
+/* Batch2 custom classes (2026-09 import). */
+CONST_DATA struct BattleAnimDef AnimConf_106[] = { // Swashbuckler_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00FA,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x00FB,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x00FD,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x00FE,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x00FE,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x00FE,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x00FE,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_107[] = { // Swashbuckler
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x00FF,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0100,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0102,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0103,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0103,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0103,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0103,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_108[] = { // Leo_Berserker
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0104,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0106,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_109[] = { // Grand_Mahout
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0107,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x0108,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0109,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_110[] = { // Arcanist_Nuramon
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x010A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x010B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x010B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x010B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x010B,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_111[] = { // Halberdier_Custom
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x010C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x010D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x010F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_112[] = { // Miko
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0110,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x0111,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0112,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0114,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0113,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0113,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0113,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_113[] = { // War_Cleric
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0115,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0117,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0117,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0117,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0117,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_114[] = { // Witch
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0118,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0119,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0119,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0119,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0119,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_115[] = { // Angel
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x011A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x011A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x011A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x011A,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_116[] = { // Brighid
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x011B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x011D,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_117[] = { // Arcanist_Devisian
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x011E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x011E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x011E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x011E,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_118[] = { // Magician
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0120,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x011F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x011F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x011F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_119[] = { // Occultist
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0121,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0121,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0121,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0121,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_120[] = { // Blader_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0122,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0123,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_121[] = { // Harbinger
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0124,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0125,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0126,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0128,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x012A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0129,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0129,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0129,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_122[] = { // Harbinger_Alt
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x012B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x012C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x012D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x012F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0131,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0130,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0130,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0130,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_123[] = { // Heavy_Infantry
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0132,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0133,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0134,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0136,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_124[] = { // Baron_Custom
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0137,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0138,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0139,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x013B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x013C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x013D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x013D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x013D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x013D,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_125[] = { // Shield_General
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x013E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x013F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0140,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0143,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0142,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0142,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0142,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_126[] = { // Black_Dragon
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0144,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_127[] = { // Djinn
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0146,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0148,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0147,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0147,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0147,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_128[] = { // Living_Armor
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0149,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x014A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x014C,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_129[] = { // Fellbeast
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x014E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x014D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x014D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x014D,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_130[] = { // Samurai_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x014F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0150,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_131[] = { // Master_Ninja
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0151,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0152,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_132[] = { // Hooded_Ninja
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0153,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0154,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_133[] = { // Myrmidon_FE15_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0155,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0156,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_134[] = { // Myrmidon_FE15
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0157,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0158,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_135[] = { // Katarina_Fencer
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0159,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x015A,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_136[] = { // Thug
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x015B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x015C,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_137[] = { // Dread_Fighter
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x015D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x015F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x015E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x015E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x015E,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_138[] = { // Fir_Swordmaster
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0160,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0161,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0162,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_139[] = { // Trueblade
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0163,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0164,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_140[] = { // Red_Mage
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0165,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0166,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0167,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0167,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0167,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0167,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_141[] = { // Moloch
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0168,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0169,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x016B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x016A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x016A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x016A,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_142[] = { // Tactician_Custom
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x016C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x016C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x016C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x016C,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_143[] = { // Trickster_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x016D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x016E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x016F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0170,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0170,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0170,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0170,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_144[] = { // Trickster
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0171,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x0172,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x0173,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0174,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0174,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0174,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0174,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_145[] = { // Villager_F
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0175,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0176,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_146[] = { // Villager
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0177,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0178,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_147[] = { // Legion_King
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0179,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x017A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x017B,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x017E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x017D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x017D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x017D,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_148[] = { // Oni_Chieftain
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x017F,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0181,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0181,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0181,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0181,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_149[] = { // Elffin_Fancy
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0183,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x0182,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x0182,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x0182,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_150[] = { // Mounted_Marauder
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0184,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x0186,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0187,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_151[] = { // Mechanist
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x0188,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0189,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_152[] = { // Dragoon_Custom
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x018A,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x018B,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_153[] = { // Lancer_Custom
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x018C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x018D,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_154[] = { // Militia
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x018E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x018F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_155[] = { // Sentinel
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0190,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0191,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0192,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0194,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_156[] = { // T1_Lancer
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0195,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x0196,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x0197,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_157[] = { // Gladiator
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x0198,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x0199,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x019B,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_158[] = { // Horn_Brigand
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x019C,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x019C,
+    },
+    // Explicit wiring (FE8_SKILLSYSTEM) for ITEM_CALL: the Call command's
+    // cosmetic solo animation (src/unitcall.c) uses this class's own real
+    // attack pose, same index as the ITYPE_AXE/ITYPE_ITEM entries above.
+    {
+        .wtype = 0x0100 | ITYPE_DANCE,
+        .index = 0x019C,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_159[] = { // Horn_Soldier
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x019D,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x019D,
+    },
+    // Explicit wiring (FE8_SKILLSYSTEM) for ITEM_CALL: see AnimConf_158 above.
+    {
+        .wtype = 0x0100 | ITYPE_DANCE,
+        .index = 0x019D,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_160[] = { // Hunter
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x019E,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x019F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_161[] = { // Supplier_Anna
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x01A0,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x01A1,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x01A2,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01A0,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_162[] = { // Sandworm
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01A3,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_163[] = { // Cursed_Sword
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x01A4,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01A4,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_164[] = { // Magical_Tomes
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01A5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01A5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01A5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01A5,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_165[] = { // Mimic_Chest
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01A6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01A6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01A6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01A6,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_166[] = { // Mosquito
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01A7,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_167[] = { // Phantom_Custom
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x01A8,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01AA,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_168[] = { // Slime
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x01AB,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01AC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01AC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01AC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01AC,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_169[] = { // Warbird
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x01AD,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x01AE,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01AF,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_170[] = { // Adventurer
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x01B0,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x01B1,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01B2,
+    },
+    { 0 }
+};
+

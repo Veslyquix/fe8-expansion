@@ -15,6 +15,9 @@
 #include "purchase_generics.h"
 #include "bmtrick.h"
 #include "cp_script.h"
+#if FE8_SKILLSYSTEM
+#include "unitcall.h"
+#endif
 
 #include "constants/items.h"
 
@@ -69,6 +72,11 @@ s8 AiAttemptOffensiveAction(s8 (* isEnemy)(struct Unit * unit))
 
     finalResult.targetId = 0;
     finalResult.score = 0;
+
+#if FE8_SKILLSYSTEM
+    if (AiTryDoCall())
+        return 1;
+#endif
 
 #if FE8_PURCHASE_GENERICS
     if (AiShouldCaptureBaseInsteadOfAttacking())

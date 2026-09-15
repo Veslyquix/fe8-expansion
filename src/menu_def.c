@@ -12,7 +12,7 @@
 #include "purchase_generics.h"
 #include "promote_command.h"
 #include "power.h"
-
+#include "unitcall.h"
 #include "constants/msg.h"
 
 #include "menu_def.h"
@@ -195,6 +195,10 @@ CONST_DATA struct MenuItemDef gWeaponSelectMenuItems[] = {
     {"", 0, 0, 0, 0x4D, WeaponSelectMenu_IsAvailable, WeaponSelectMenu_Draw, WeaponSelectMenu_Selected, 0, WeaponSelectMenu_SwitchIn, BallistaRangeMenu_SwitchOut},
     MenuItemsEnd
 };
+#if FE8_SKILLSYSTEM 
+int CallCommandRange(struct MenuProc* menu, struct MenuItemProc* menuItem); 
+int HideMoveRangeGraphicsCall(struct MenuProc* menu, struct MenuItemProc* menuItem); 
+#endif 
 
 CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
     {"　制圧", 0x67A, 0x6CC, 0, 0x4E, UnitActionMenu_CanSeize, 0, UnitActionMenu_Seize, 0, 0, 0}, // Seize
@@ -228,6 +232,9 @@ CONST_DATA struct MenuItemDef gUnitActionMenuItems[] = {
 #if FE8_PURCHASE_GENERICS
     {"", MSG_UNIT_ACTION_MERGE, 0, 0, 0, MergeUsability, 0, MergeEffect, 0, 0, 0}, // Merge with an adjacent generic of the same class >
 #endif
+#if FE8_SKILLSYSTEM
+    {"", MSG_UNIT_ACTION_CALL, 0, 0, 0, CallCommandUsability, 0, CallCommandEffect, 0, CallCommandRange, HideMoveRangeGraphicsCall}, // Call nearby allies to converge on the caller
+#endif
     {"　降ろす", 0x68A, 0x6C6, 0, 0x64, DropUsability, 0, DropEffect, 0, 0, 0}, // Drop >
     {"　引受け", 0x68B, 0x6C8, 4, 0x65, TakeUsability, 0, TakeEffect, 0, 0, 0}, // Take > 
     {"　引渡し", 0x68C, 0x6C7, 4, 0x66, GiveUsability, 0, GiveEffect, 0, 0, 0}, // Give > 
@@ -246,9 +253,9 @@ CONST_DATA struct MenuItemDef gMapMenuItems[] = {
 #else 
     {"　部隊", 0x69A, 0x6DF, 0, 0x6e, MenuAlwaysEnabled, 0, MapMenu_UnitCommand, 0, 0, 0}, // Unit >
     {"　状況", 0x690, 0x6E0, 0, 0x6f, MenuAlwaysEnabled, 0, MapMenu_StatusCommand, 0, 0, 0}, // Status >
-#endif
     {"　辞書", 0x69C, 0x6E5, 4, 0x74, MapMenu_IsGuideCommandAvailable, MapMenu_GuideCommandDraw, MapMenu_GuideCommand}, // Guide
     {"　戦績", 0x69E, 0x6E3, 0, 0x70, MapMenu_IsRecordsCommandAvailable, 0, MapMenu_RecordsCommand, 0, 0, 0}, // Records
+#endif
     {"　設定", 0x69B, 0x6E1, 0, 0x71, MenuAlwaysEnabled, 0, MapMenu_OptionsCommand, 0, 0, 0}, // Options
     {"　退却", 0x69D, 0x6E2, 0, 0x72, MapMenu_IsRetreatCommandAvailable, 0, MapMenu_RetreatCommand, 0, 0, 0}, // Retreat
     {"　中断", 0x69F, 0x6E4, 0, 0x73, MapMenu_IsSuspendCommandAvailable, 0, MapMenu_SuspendCommand, 0, 0, 0}, // Suspend

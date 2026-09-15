@@ -20,6 +20,9 @@ void RefreshUnitStealInventoryInfoWindow(struct Unit*);
 void RefreshHammerneUnitInfoWindow(struct Unit*);
 void StartUnitHpInfoWindow(ProcPtr);
 void RefreshUnitHpInfoWindow(struct Unit*);
+#if FE8_SHOW_HEAL_AMOUNT
+void RefreshUnitHealAmountInfoWindow(struct Unit*);
+#endif
 void StartUnitHpStatusInfoWindow(ProcPtr proc);
 void RefreshUnitHpStatusInfoWindow(struct Unit* unit);
 void StartUnitResChangeInfoWindow(ProcPtr proc);

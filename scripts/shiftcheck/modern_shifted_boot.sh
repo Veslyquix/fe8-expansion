@@ -23,13 +23,17 @@ cd "$ROOT_DIR"
 SHIFT="${1:-${SHIFTCHECK_SHIFT:-0x40000}}"
 OUTDIR="${SHIFTCHECK_OUTDIR:-build/shiftcheck}"
 OBJECTS_LST="${SHIFTCHECK_OBJECTS_LST:-build/expansion-modern/debug/aapcs/link/objects.lst}"
-BANIM_SYM="${SHIFTCHECK_BANIM_SYM:-banim/data_banim.o.sym.o}"
+BANIM_SYM="${SHIFTCHECK_BANIM_SYM:-banim/data_banim.modern.o.sym.o}"
 LDSCRIPT="${SHIFTCHECK_LDSCRIPT:-linker/expansion.ld}"
 BASE_ELF="${SHIFTCHECK_BASE_ELF:-build/expansion-modern/debug/aapcs/fireemblem8.elf}"
 ROM_SIZE="${SHIFTCHECK_ROM_SIZE_BYTES:-0x01000000}"
 ROM_SIZE_NAME="${SHIFTCHECK_ROM_SIZE:-16M}"
 PAD_TO="${SHIFTCHECK_PAD_TO:-0x9000000}"
 PREFIX="${PREFIX:-arm-none-eabi-}"
+# Must match modern.mk's MODERN_BANIM_DATA_BASE, which banim/data_banim.modern.o
+# (see BANIM_SYM above) is pre-linked against -- see linker/expansion.ld's
+# __banim_data_base_abs placement for why this can't just be any value.
+BANIM_DATA_BASE="${SHIFTCHECK_BANIM_DATA_BASE:-0x08000a20}"
 
 # --- Tool resolution ---
 CC=$(shiftcheck_resolve_tool \
@@ -66,6 +70,7 @@ printf 'Linking shifted ELF (__text_shift=%s)...\n' "$SHIFT"
     --orphan-handling=error \
     --defsym=__rom_size="$ROM_SIZE" \
     --defsym=__text_shift="$SHIFT" \
+    --defsym=__banim_data_base_abs="$BANIM_DATA_BASE" \
     -T "$LDSCRIPT" \
     -Map "$OUTDIR/shifted.map" \
     @"$OBJECTS_LST" \

@@ -14,6 +14,9 @@
 #include "ap.h"
 #include "eventinfo.h"
 #include "efxbattle.h"
+#if FE8_DRAW_MAP_ANIMS
+#include "draw_mapanim.h"
+#endif
 #include "constants/items.h"
 #include "constants/video-global.h"
 #include "constants/songs.h"
@@ -525,6 +528,12 @@ void NewMapAnimEffectAnimator(struct Unit * unit, void const * img, void const *
     proc->img = img;
     proc->pal = pal;
     proc->song = song;
+
+#if FE8_DRAW_MAP_ANIMS
+    // Every healing map effect (staves, vulnerary/elixir, fort recovery)
+    // routes through here; show the amount healed over the target.
+    DrawMapAnim_StartHealNumber(unit);
+#endif
 }
 
 void MapAnimEffectAnimator_Init(struct ProcMapAnimator * proc)

@@ -201,8 +201,6 @@ void UpdateVisualsForEnemiesWhoCanAttackTile(void)
 {
     int x = gBmSt.playerCursor.x;
     int y = gBmSt.playerCursor.y;
-    SetLastCoords(x, y);             // vanilla
-    SetWorkingBmMap(gBmMapMovement); // vanilla
     if (ShouldDangerBonesNotRun())
     {
         return;

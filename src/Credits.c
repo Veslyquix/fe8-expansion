@@ -570,7 +570,12 @@ static bool IsCgImg256Col(int id)
 
 static bool IsBgImg256Col(int id)
 {
-    return (int)gConvoBackgroundData[id].tsa <= 1;
+    /* <= 2, not <= 1: covers all three multipalette sentinels
+     * (CONVOBG_MULTIPALETTE_256/224/192, include/bg.h) -- none of them
+     * support the ordinary cross-fade-via-palette-darkening path below,
+     * same reason as the original 256/224 check. Missing 192 here would
+     * silently pass its background image through canFadeBetweenImgs. */
+    return (int)gConvoBackgroundData[id].tsa <= 2;
 }
 
 int IsImg256Col(int type, int id)
@@ -870,7 +875,46 @@ static const signed char body1[] =
     " Liz portrait by RandomWizard" NL
     " Ishkode portrait by Eden" NL
     " Wakwi portrait by Eden" NL
-    " Kargan (replaces O'Neill) portrait by Eden";
+    " Kargan (replaces O'Neill) portrait by Eden" NL
+    " Asin (replaces Moulder) portrait by Eden" NL
+    " Toren portrait by MeatofJustice" NL
+    " Lenora portrait by MegaCowsamMan" NL
+    " Volik portrait by Nickt" NL
+    " Clarisse portrait by Garytop" NL
+    " Elayne portrait by MeatofJustice, Melia" NL
+    " Edric portrait by Miguel-Rojo" NL
+    " Orelus portrait by N426" NL
+    " Nuri portrait by Cravat" NL
+    " Farid portrait by Epicer" NL
+    " Kavra portrait by Garytop" NL
+    " Zahir portrait by Garytop" NL
+    " Brann portrait by Garytop" NL
+    " Kit portrait by Garytop" NL
+    " Marius portrait by Bowgun" NL
+    " Lyria portrait by Cygnus" NL
+    " Mortivar portrait by Fenriel" NL
+    " Veyr portrait by Krisk";
+
+
+/* Kept in sync with CREDITS.md's "Batch2 Imported Classes" section.
+ * Full per-folder class-card and map-sprite source paths are documented there. */
+static const signed char header14[] = "Batch2 Animations";
+static const signed char body14[] =
+    " Batch2 battle animations from FE-Repo" NL
+    "  and FEBuilder community packs" NL
+    " Major artists include Yellowtoad," NL
+    "  Nuramon, RedBean, Devisian_Nights," NL
+    "  Sphealnuke, SALVAGED, Huichelaar," NL
+    "  Leo_Link, Pikmin, Der, SkidMarc25," NL
+    "  and the credited folder authors";
+
+static const signed char header15[] = "Batch2 Class Art";
+static const signed char body15[] =
+    " Batch2 class cards from Repo/Class Cards" NL
+    " Batch2 map sprites from SRR_FEGBA" NL
+    "  and Repo/Map Sprites" NL
+    " See CREDITS.md for each folder's" NL
+    "  exact card and map-sprite source";
 
 /* Kept in sync with CREDITS.md's "Map Tilesets" table. */
 static const signed char header2[] = "Map Tilesets";
@@ -917,6 +961,41 @@ static const signed char body7[] =
     "  MeatOfJustice, UltraFenix" NL
     " Nomad Trooper map sprite by IS";
 
+/* Kept in sync with CREDITS.md's "Conversation Backgrounds" table --
+ * public-domain paintings used as the new 192-colour multipalette test
+ * backgrounds (FE8_MULTIPALETTE_BG, added alongside CONVOBG_MULTIPALETTE_192
+ * itself; see scripts/convo_bg_to_source.py). */
+static const signed char header8[] = "Conversation Backgrounds";
+static const signed char body8[] =
+    " Hillside painting by Alexander Lawrie";
+static const signed char header9[] = "Conversation Backgrounds";
+static const signed char body9[] =
+    " Mountains at Dusk painting" NL
+    "  by Gustave Dore";
+static const signed char header10[] = "Conversation Backgrounds";
+static const signed char body10[] =
+    " River Forest Landscape painting" NL
+    "  by Tobias Everet Spence";
+static const signed char header11[] = "Conversation Backgrounds";
+static const signed char body11[] =
+    " Sep BG paintings by" NL
+    "  Thomas Cole";
+static const signed char header12[] = "Conversation Backgrounds";
+static const signed char body12[] =
+    " Sep BG paintings by" NL
+    "  Frederic Edwin Church";
+static const signed char header13[] = "Conversation Backgrounds";
+static const signed char body13[] =
+    " White Mountain Landscape" NL
+    "  by Martin Johnson Heade";
+
+/* Kept in sync with CREDITS.md's "Item Icons" table. */
+static const signed char header16[] = "Item Icons";
+static const signed char body16[] =
+    " Horn icon from Tactics Ogre:" NL
+    "  Let Us Cling Together, via" NL
+    "  EldritchAbo, serebii01";
+
 /* Kept in sync with CREDITS.md's "Ported Code Patches" table. */
 static const signed char header4[] = "Ported Patches";
 static const signed char body4[] =
@@ -932,14 +1011,17 @@ static const signed char body4[] =
     " HP Bars by circleseverywhere, Tequila," NL
     "  hypergammaspaces, Alusq" NL
     " Alpha Sprite Arrow by JesterWizard" NL
+    " Show Heal Amount by Tequila" NL
     " Debuffs, Promote Command, Turn Autosave," NL
     "  Anims Fast Forward by Vesly" NL
+    " Mode Select by Eebit, JesterWizard" NL
     " Group AI by Vesly, PhantomSentine" NL
     " Text Chapter Names by circleseverywhere," NL
     "  hypergammaspaces" NL
     " NIMAP2 patch: community; repo integration by Vesly" NL
     " Rand Bgm / Continue Bgm Battle: ported from SRR;" NL
-    "  repo integration by Vesly";
+    "  repo integration by Vesly" NL
+    " Movearrow Hack by circleseverywhere";
 
 enum
 {
@@ -950,7 +1032,7 @@ enum
 enum
 {
     /* RandomBG (0x37) from the original patch is out of range for
-     * gConvoBackgroundData (54 entries) -- substituted with a fixed,
+     * gConvoBackgroundData -- substituted with a fixed,
      * valid background here; see this file's header comment. */
     BurningBG = 0x2B,
     BlackBG = 0x35,
@@ -973,6 +1055,19 @@ struct CreditsStruct CONST_DATA gCreditsData[] = {
 #if FE8_NEW_ANIMS
     { header6, body6, SubstituteRandomBG, BG_Type, 0, 0 },
     { header7, body7, SubstituteRandomBG, BG_Type, 0, 0 },
+    { header14, body14, SubstituteRandomBG, BG_Type, 0, 0 },
+    { header15, body15, SubstituteRandomBG, BG_Type, 0, 0 },
+#endif
+#if FE8_MULTIPALETTE_BG
+    { header8, body8, BG_ALEXANDER_LAWRIE_HILLSIDE_192, BG_Type, 0, 0 },
+    { header9, body9, BG_GUSTAVE_DORE_MOUNTAINS_DUSK_192, BG_Type, 0, 0 },
+    { header10, body10, BG_TOBIAS_SPENCE_RIVER_FOREST_192, BG_Type, 0, 0 },
+    { header11, body11, BG_SEP_AQUADUCT_THOMAS_COLE_192, BG_Type, 0, 0 },
+    { header12, body12, BG_SEP_AURORA_BOREALIS_FREDERIC_EDWIN_CHURCH_192, BG_Type, 0, 0 },
+    { header13, body13, BG_SEP_WHITE_MOUNTAIN_LANDSCAPE_MOUNT_WASHINGTON_MARTIN_JOHNSON_HEADE_192, BG_Type, 0, 0 },
+#endif
+#if FE8_SKILLSYSTEM
+    { header16, body16, SubstituteRandomBG, BG_Type, 0, 0 },
 #endif
     { header4, body4, BurningBG, BG_Type, 0, 0 },
     { emptyString, emptyStringLong, 0xFF, 0, 0, 0 },

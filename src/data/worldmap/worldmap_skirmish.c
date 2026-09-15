@@ -8,9 +8,16 @@ u16 Pal_WmPlaceDot_Standard[] = INCBIN_U16("graphics/misc/Pal_WmPlaceDot_Standar
 
 u8 gWorldmapSkirmish_0[] = INCBIN_U8("graphics/misc/gUnknown_08AA11D0.4bpp.lz");
 
+
+#if FE8_CUSTOM_CAMPAIGN
+u8 Img_WorldmapMinimap[] = INCBIN_U8("graphics/misc/WorldMiniMapAshor.4bpp.lz");
+  
+u16 Pal_WorldmapMinimap[] = INCBIN_U16("graphics/misc/WorldMiniMapAshor.gbapal");
+#else
 u8 Img_WorldmapMinimap[] = INCBIN_U8("graphics/misc/Img_WorldmapMinimap.4bpp.lz");
 
 u16 Pal_WorldmapMinimap[] = INCBIN_U16("graphics/misc/Pal_WorldmapMinimap.gbapal");
+#endif
 
 u8 gWorldmapSkirmish_1[] = INCBIN_U8("graphics/misc/gWorldmapSkirmish_1.tsa.bin");
 

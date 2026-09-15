@@ -123,7 +123,12 @@ CONFIG_MK_FEATURE_KEYS = (
     "DEBUFFS_EXIST",
     "DEBUFFS_STACK",
     "SELECT_VIEW_GROWTHS",
+    "REPLACE_TEXT",
     "CUSTOM_CAMPAIGN",
+    # Read from config.mk so the CUSTOM_CAMPAIGN dependency below compares two
+    # values from the same source. Real builds always pass --co-powers, so this
+    # only affects the fallback when no override is given.
+    "CO_POWERS",
     "SKIP_OPENING",
     "RAND_BGM",
     "CONTINUE_BGM_BATTLE",
@@ -403,13 +408,17 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            overflow_safety_checks=1, display_obtainable_item=0,
                            debuffs_exist=0, debuffs_stack=0,
                            select_view_growths=0,
+                           replace_text=0,
                            text_chapter_names=0, battle_stats_no_anims=0,
-                           draw_map_anims=0, hp_bars=0, group_ai=0, null_bossai_mov=0, rng_randomizer=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
+                           draw_map_anims=0, hp_bars=0, group_ai=0, null_bossai_mov=0, rng_randomizer=0, l_cycle=0, movearrow_hack=0, custom_formulas=0, mode_select=0, alpha_sprite_arrow=0, range_rework=0, turn_autosave=0,
                            fort_units_start_greyed_out=0, promote_command=0, fix_bugs=0, credits=0,
                            custom_campaign=0, skip_opening=0, game_rank=0, co_powers=0,
                            febuilder_pointers=0, aw2_assets=0, anims_fast_forward=0,
-                           nimap2=0,
+                           nimap2=0, worldmap_rework=0,
                            rand_bgm=0, continue_bgm_battle=0, danger_radius=0,
+                           show_heal_amount=0,
+                           cannot_crit_weps=0,
+                           skillsystem=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -435,6 +444,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     debuffs = validate_feature_flag("DEBUFFS_EXIST", debuffs_exist)
     debuffs_stack_flag = validate_feature_flag("DEBUFFS_STACK", debuffs_stack)
     select_growths = validate_feature_flag("SELECT_VIEW_GROWTHS", select_view_growths)
+    replace_text_flag = validate_feature_flag("REPLACE_TEXT", replace_text)
     ch_names = validate_feature_flag("TEXT_CHAPTER_NAMES", text_chapter_names)
     battle_stats = validate_feature_flag("BATTLE_STATS_NO_ANIMS", battle_stats_no_anims)
     draw_map = validate_feature_flag("DRAW_MAP_ANIMS", draw_map_anims)
@@ -442,8 +452,14 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     group_ai_flag = validate_feature_flag("GROUP_AI", group_ai)
     null_bossai_mov_flag = validate_feature_flag("NULL_BOSSAI_MOV", null_bossai_mov)
     rng_randomizer_flag = validate_feature_flag("RNG_RANDOMIZER", rng_randomizer)
+    l_cycle_flag = validate_feature_flag("L_CYCLE", l_cycle)
+    movearrow_hack_flag = validate_feature_flag("MOVEARROW_HACK", movearrow_hack)
+    custom_formulas_flag = validate_feature_flag("CUSTOM_FORMULAS", custom_formulas)
+    mode_select_flag = validate_feature_flag("MODE_SELECT", mode_select)
     alpha_sprite_arrow_flag = validate_feature_flag("ALPHA_SPRITE_ARROW", alpha_sprite_arrow)
     range_rework_flag = validate_feature_flag("RANGE_REWORK", range_rework)
+    cannot_crit_weps_flag = validate_feature_flag("CANNOT_CRIT_WEPS", cannot_crit_weps)
+    skillsystem_flag = validate_feature_flag("SKILLSYSTEM", skillsystem)
     autosave_flag = validate_feature_flag("TURN_AUTOSAVE", turn_autosave)
     fort_greyed_flag = validate_feature_flag("FORT_UNITS_START_GREYED_OUT", fort_units_start_greyed_out)
     promote_command_flag = validate_feature_flag("PROMOTE_COMMAND", promote_command)
@@ -457,9 +473,11 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     aw2_assets_flag = validate_feature_flag("AW2_ASSETS", aw2_assets)
     anims_fast_forward_flag = validate_feature_flag("ANIMS_FAST_FORWARD", anims_fast_forward)
     nimap2_flag = validate_feature_flag("NIMAP2", nimap2)
+    worldmap_rework_flag = validate_feature_flag("WORLDMAP_REWORK", worldmap_rework)
     rand_bgm_flag = validate_feature_flag("RAND_BGM", rand_bgm)
     continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
     danger_radius_flag = validate_feature_flag("DANGER_RADIUS", danger_radius)
+    heal_amount_flag = validate_feature_flag("SHOW_HEAL_AMOUNT", show_heal_amount)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -473,6 +491,13 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             "the bundled content item's mechanic is registered through the "
             "mechanics hook registry, which is not linked when "
             "EXPANSION_MECHANICS_HOOKS=0"
+        )
+    if campaign and not co_powers_flag:
+        raise ConfigError(
+            "CUSTOM_CAMPAIGN=1 requires CO_POWERS=1: the campaign's own event "
+            "scripts assign each faction's commander (SetFactionCo, CO_* ids -- "
+            "see src/events/prologue-eventscript.h), and none of that exists "
+            "when CO_POWERS=0"
         )
     if content and cap < ITEM_ID_EXPANSION_FIRST:
         raise ConfigError(
@@ -500,12 +525,15 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
         )
     return (hooks, sample, danger, content, debugger, bones, anims, tilesets, generics, mmb_flag, desc_box,
             overflow_checks, obtainable_item, debuffs, debuffs_stack_flag,
-            select_growths, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
+            select_growths, replace_text_flag, ch_names, battle_stats, draw_map, bars, group_ai_flag, alpha_sprite_arrow_flag,
             range_rework_flag,
             autosave_flag, fort_greyed_flag, promote_command_flag, fix_bugs_flag, credits_flag, campaign, skip_opening_flag,
             game_rank_flag, co_powers_flag, febuilder_pointers_flag, aw2_assets_flag,
-            anims_fast_forward_flag, nimap2_flag, rand_bgm_flag, continue_bgm_battle_flag,
-            dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag)
+            anims_fast_forward_flag, nimap2_flag, worldmap_rework_flag, rand_bgm_flag, continue_bgm_battle_flag,
+            dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag, l_cycle_flag,
+            movearrow_hack_flag,
+            custom_formulas_flag, mode_select_flag, heal_amount_flag, cannot_crit_weps_flag,
+            skillsystem_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -724,6 +752,7 @@ class ExpansionIdentity:
     debuffs_exist: int = 0
     debuffs_stack: int = 0
     select_view_growths: int = 0
+    replace_text: int = 0
     text_chapter_names: int = 0
     battle_stats_no_anims: int = 0
     draw_map_anims: int = 0
@@ -731,8 +760,14 @@ class ExpansionIdentity:
     group_ai: int = 0
     null_bossai_mov: int = 0
     rng_randomizer: int = 0
+    l_cycle: int = 0
+    movearrow_hack: int = 0
+    custom_formulas: int = 0
+    mode_select: int = 0
     alpha_sprite_arrow: int = 0
     range_rework: int = 0
+    cannot_crit_weps: int = 0
+    skillsystem: int = 0
     turn_autosave: int = 0
     fort_units_start_greyed_out: int = 0
     promote_command: int = 0
@@ -746,9 +781,11 @@ class ExpansionIdentity:
     aw2_assets: int = 0
     anims_fast_forward: int = 0
     nimap2: int = 0
+    worldmap_rework: int = 0
     rand_bgm: int = 0
     continue_bgm_battle: int = 0
     danger_radius: int = 0
+    show_heal_amount: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -810,6 +847,7 @@ class ExpansionIdentity:
                 "debuffs_exist": self.debuffs_exist,
                 "debuffs_stack": self.debuffs_stack,
                 "select_view_growths": self.select_view_growths,
+                "replace_text": self.replace_text,
                 "text_chapter_names": self.text_chapter_names,
                 "battle_stats_no_anims": self.battle_stats_no_anims,
                 "draw_map_anims": self.draw_map_anims,
@@ -817,8 +855,14 @@ class ExpansionIdentity:
                 "group_ai": self.group_ai,
                 "null_bossai_mov": self.null_bossai_mov,
                 "rng_randomizer": self.rng_randomizer,
+                "l_cycle": self.l_cycle,
+                "movearrow_hack": self.movearrow_hack,
+                "custom_formulas": self.custom_formulas,
+                "mode_select": self.mode_select,
                 "alpha_sprite_arrow": self.alpha_sprite_arrow,
                 "range_rework": self.range_rework,
+                "cannot_crit_weps": self.cannot_crit_weps,
+                "skillsystem": self.skillsystem,
                 "turn_autosave": self.turn_autosave,
                 "fort_units_start_greyed_out": self.fort_units_start_greyed_out,
                 "promote_command": self.promote_command,
@@ -832,9 +876,11 @@ class ExpansionIdentity:
                 "aw2_assets": self.aw2_assets,
                 "anims_fast_forward": self.anims_fast_forward,
                 "nimap2": self.nimap2,
+                "worldmap_rework": self.worldmap_rework,
                 "rand_bgm": self.rand_bgm,
                 "continue_bgm_battle": self.continue_bgm_battle,
                 "danger_radius": self.danger_radius,
+                "show_heal_amount": self.show_heal_amount,
             },
         }
 
@@ -884,6 +930,7 @@ def load_identity(
     debuffs_exist=None,
     debuffs_stack=None,
     select_view_growths=None,
+    replace_text=None,
     text_chapter_names=None,
     battle_stats_no_anims=None,
     draw_map_anims=None,
@@ -891,8 +938,14 @@ def load_identity(
     group_ai=None,
     null_bossai_mov=None,
     rng_randomizer=None,
+    l_cycle=None,
+    movearrow_hack=None,
+    custom_formulas=None,
+    mode_select=None,
     alpha_sprite_arrow=None,
     range_rework=None,
+    cannot_crit_weps=None,
+    skillsystem=None,
     turn_autosave=None,
     fort_units_start_greyed_out=None,
     promote_command=None,
@@ -906,9 +959,11 @@ def load_identity(
     aw2_assets=None,
     anims_fast_forward=None,
     nimap2=None,
+    worldmap_rework=None,
     rand_bgm=None,
     continue_bgm_battle=None,
     danger_radius=None,
+    show_heal_amount=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -968,15 +1023,17 @@ def load_identity(
     (resolved_hooks, resolved_sample, resolved_danger, resolved_content, resolved_debugger,
      resolved_bones, resolved_anims, resolved_tilesets, resolved_generics, resolved_mmb, resolved_desc_box, resolved_overflow_checks,
      resolved_obtainable_item, resolved_debuffs, resolved_debuffs_stack,
-     resolved_select_growths, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
+     resolved_select_growths, resolved_replace_text, resolved_ch_names, resolved_battle_stats, resolved_draw_map_anims,
      resolved_hp_bars, resolved_group_ai, resolved_alpha_sprite_arrow,
      resolved_range_rework, resolved_autosave,
      resolved_fort_units_start_greyed_out, resolved_promote_command, resolved_fix_bugs, resolved_credits,
      resolved_custom_campaign, resolved_skip_opening, resolved_game_rank, resolved_co_powers,
      resolved_febuilder_pointers, resolved_aw2_assets, resolved_anims_fast_forward,
-     resolved_nimap2, resolved_rand_bgm, resolved_continue_bgm_battle,
+     resolved_nimap2, resolved_worldmap_rework, resolved_rand_bgm, resolved_continue_bgm_battle,
      resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
-     resolved_rng_randomizer) = validate_feature_flags(
+     resolved_rng_randomizer, resolved_l_cycle, resolved_movearrow_hack, resolved_custom_formulas,
+     resolved_mode_select, resolved_show_heal_amount, resolved_cannot_crit_weps,
+     resolved_skillsystem) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1028,6 +1085,9 @@ def load_identity(
         select_view_growths
         if select_view_growths not in (None, "")
         else cfg.get("SELECT_VIEW_GROWTHS", "0"),
+        replace_text
+        if replace_text not in (None, "")
+        else cfg.get("REPLACE_TEXT", "0"),
         text_chapter_names
         if text_chapter_names not in (None, "")
         else cfg.get("TEXT_CHAPTER_NAMES", "0"),
@@ -1049,6 +1109,18 @@ def load_identity(
         rng_randomizer
         if rng_randomizer not in (None, "")
         else cfg.get("RNG_RANDOMIZER", "0"),
+        l_cycle
+        if l_cycle not in (None, "")
+        else cfg.get("L_CYCLE", "0"),
+        movearrow_hack
+        if movearrow_hack not in (None, "")
+        else cfg.get("MOVEARROW_HACK", "0"),
+        custom_formulas
+        if custom_formulas not in (None, "")
+        else cfg.get("CUSTOM_FORMULAS", "0"),
+        mode_select
+        if mode_select not in (None, "")
+        else cfg.get("MODE_SELECT", "0"),
         alpha_sprite_arrow
         if alpha_sprite_arrow not in (None, "")
         else cfg.get("ALPHA_SPRITE_ARROW", "0"),
@@ -1094,6 +1166,9 @@ def load_identity(
         nimap2
         if nimap2 not in (None, "")
         else cfg.get("NIMAP2", "0"),
+        worldmap_rework
+        if worldmap_rework not in (None, "")
+        else cfg.get("WORLDMAP_REWORK", "0"),
         rand_bgm
         if rand_bgm not in (None, "")
         else cfg.get("RAND_BGM", "0"),
@@ -1103,6 +1178,15 @@ def load_identity(
         danger_radius
         if danger_radius not in (None, "")
         else cfg.get("DANGER_RADIUS", "0"),
+        show_heal_amount
+        if show_heal_amount not in (None, "")
+        else cfg.get("SHOW_HEAL_AMOUNT", "0"),
+        cannot_crit_weps
+        if cannot_crit_weps not in (None, "")
+        else cfg.get("CANNOT_CRIT_WEPS", "0"),
+        skillsystem
+        if skillsystem not in (None, "")
+        else cfg.get("SKILLSYSTEM", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1149,6 +1233,7 @@ def load_identity(
         debuffs_exist=resolved_debuffs,
         debuffs_stack=resolved_debuffs_stack,
         select_view_growths=resolved_select_growths,
+        replace_text=resolved_replace_text,
         text_chapter_names=resolved_ch_names,
         battle_stats_no_anims=resolved_battle_stats,
         draw_map_anims=resolved_draw_map_anims,
@@ -1156,8 +1241,14 @@ def load_identity(
         group_ai=resolved_group_ai,
         null_bossai_mov=resolved_null_bossai_mov,
         rng_randomizer=resolved_rng_randomizer,
+        l_cycle=resolved_l_cycle,
+        movearrow_hack=resolved_movearrow_hack,
+        custom_formulas=resolved_custom_formulas,
+        mode_select=resolved_mode_select,
         alpha_sprite_arrow=resolved_alpha_sprite_arrow,
         range_rework=resolved_range_rework,
+        cannot_crit_weps=resolved_cannot_crit_weps,
+        skillsystem=resolved_skillsystem,
         turn_autosave=resolved_autosave,
         fort_units_start_greyed_out=resolved_fort_units_start_greyed_out,
         promote_command=resolved_promote_command,
@@ -1171,9 +1262,11 @@ def load_identity(
         aw2_assets=resolved_aw2_assets,
         anims_fast_forward=resolved_anims_fast_forward,
         nimap2=resolved_nimap2,
+        worldmap_rework=resolved_worldmap_rework,
         rand_bgm=resolved_rand_bgm,
         continue_bgm_battle=resolved_continue_bgm_battle,
         danger_radius=resolved_danger_radius,
+        show_heal_amount=resolved_show_heal_amount,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1347,6 +1440,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override SELECT_VIEW_GROWTHS (0 or 1)",
     )
     parser.add_argument(
+        "--replace-text",
+        default=None,
+        help="override REPLACE_TEXT (0 or 1)",
+    )
+    parser.add_argument(
         "--text-chapter-names",
         default=None,
         help="override TEXT_CHAPTER_NAMES (0 or 1)",
@@ -1382,6 +1480,26 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override RNG_RANDOMIZER (0 or 1)",
     )
     parser.add_argument(
+        "--l-cycle",
+        default=None,
+        help="override L_CYCLE (0 or 1)",
+    )
+    parser.add_argument(
+        "--movearrow-hack",
+        default=None,
+        help="override MOVEARROW_HACK (0 or 1)",
+    )
+    parser.add_argument(
+        "--custom-formulas",
+        default=None,
+        help="override CUSTOM_FORMULAS (0 or 1)",
+    )
+    parser.add_argument(
+        "--mode-select",
+        default=None,
+        help="override MODE_SELECT (0 or 1)",
+    )
+    parser.add_argument(
         "--alpha-sprite-arrow",
         default=None,
         help="override ALPHA_SPRITE_ARROW (0 or 1)",
@@ -1390,6 +1508,16 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--range-rework",
         default=None,
         help="override RANGE_REWORK (0 or 1)",
+    )
+    parser.add_argument(
+        "--cannot-crit-weps",
+        default=None,
+        help="override CANNOT_CRIT_WEPS (0 or 1)",
+    )
+    parser.add_argument(
+        "--skillsystem",
+        default=None,
+        help="override SKILLSYSTEM (0 or 1)",
     )
     parser.add_argument(
         "--turn-autosave",
@@ -1425,6 +1553,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--nimap2",
         default=None,
         help="override NIMAP2 (0 or 1)",
+    )
+    parser.add_argument(
+        "--worldmap-rework",
+        default=None,
+        help="override WORLDMAP_REWORK (0 or 1)",
     )
     parser.add_argument(
         "--rand-bgm",
@@ -1470,6 +1603,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         "--skip-opening",
         default=None,
         help="override SKIP_OPENING (0 or 1)",
+    )
+    parser.add_argument(
+        "--show-heal-amount",
+        default=None,
+        help="override SHOW_HEAL_AMOUNT (0 or 1)",
     )
     parser.add_argument(
         "--item-id-cap",
@@ -1554,6 +1692,7 @@ def main(argv=None) -> int:
             debuffs_exist=args.debuffs_exist,
             debuffs_stack=args.debuffs_stack,
             select_view_growths=args.select_view_growths,
+            replace_text=args.replace_text,
             text_chapter_names=args.text_chapter_names,
             battle_stats_no_anims=args.battle_stats_no_anims,
             draw_map_anims=args.draw_map_anims,
@@ -1561,8 +1700,14 @@ def main(argv=None) -> int:
             group_ai=args.group_ai,
             null_bossai_mov=args.null_bossai_mov,
             rng_randomizer=args.rng_randomizer,
+            l_cycle=args.l_cycle,
+            movearrow_hack=args.movearrow_hack,
+            custom_formulas=args.custom_formulas,
+            mode_select=args.mode_select,
             alpha_sprite_arrow=args.alpha_sprite_arrow,
             range_rework=args.range_rework,
+            cannot_crit_weps=args.cannot_crit_weps,
+            skillsystem=args.skillsystem,
             turn_autosave=args.turn_autosave,
             fort_units_start_greyed_out=args.fort_units_start_greyed_out,
             promote_command=args.promote_command,
@@ -1576,9 +1721,11 @@ def main(argv=None) -> int:
             aw2_assets=args.aw2_assets,
             anims_fast_forward=args.anims_fast_forward,
             nimap2=args.nimap2,
+            worldmap_rework=args.worldmap_rework,
             rand_bgm=args.rand_bgm,
             continue_bgm_battle=args.continue_bgm_battle,
             danger_radius=args.danger_radius,
+            show_heal_amount=args.show_heal_amount,
             item_id_cap=args.item_id_cap,
         )
     except ConfigError as error:

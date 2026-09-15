@@ -3,7 +3,6 @@
 #include "chapterdata.h"
 #include "face.h"
 #include "mu.h"
-#include "scene.h"
 #include "unit_icon_data.h"
 
 #if FE8_VESLY_DEBUGGER
@@ -38,7 +37,6 @@ struct MuInfo const * const sUnit_icon_move_table = unit_icon_move_table;
 struct gfx_set const * const sConvoBackgroundData = gConvoBackgroundData;
 struct CGDataEnt const * const sCGDataTable = (struct CGDataEnt const *)gCGDataTable;
 u8 * pPromoJidLut = (u8 *)gPromoJidLut;
-struct TalkState sTalkStateCore;
 
 int sStatusNameTextIdLookup[] = {
     [UNIT_STATUS_NONE]     = 0x536,

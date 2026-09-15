@@ -926,8 +926,11 @@ void DisplayPage1(void)
     }
 
     // TODO: macro, maybe?
-
+    #if FE8_RANGE_REWORK
+    str = GetItemEffDisplayRangeString(item, gStatScreen.unit);
+    #else 
     str = GetItemDisplayRangeString(item);
+    #endif 
     Text_InsertDrawString(
         &gStatScreen.text[STATSCREEN_TEXT_BSRANGE],
         55 - GetStringTextLen(str),

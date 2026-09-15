@@ -227,6 +227,19 @@ u8 item_icon_fili_shield[] = INCBIN_U8("graphics/item_icon/item_icon_fili_shield
 u8 item_icon_hoplon_guard[] = INCBIN_U8("graphics/item_icon/item_icon_hoplon_guard.4bpp");
 u8 item_icon_metiss_tome[] = INCBIN_U8("graphics/item_icon/item_icon_metiss_tome.4bpp");
 u8 item_icon_unk[] = INCBIN_U8("graphics/item_icon/item_icon_unk.4bpp");
+#if FE8_SKILLSYSTEM
+// Same slot as vanilla's unused item_icon_unused_9 (iconId 0xDE) -- see
+// ITEM_UNK_C3/ITEM_CALL, src/data_items.c. Art: "Horn of the Savage" by
+// Tactics Ogre: Let Us Cling Together, EldritchAbo, serebii01.
+u8 item_icon_horn[] = INCBIN_U8("graphics/item_icon/item_icon_horn.4bpp");
+#else
 u8 item_icon_unused_9[] = INCBIN_U8("graphics/item_icon/item_icon_unused_9.4bpp");
+#endif
+#if FE8_CUSTOM_CAMPAIGN
+// Same slot as vanilla's unused item_icon_unused_10 -- see ITEM_STAFF_NOSTAL,
+// include/constants/items.h and src/data_items.c. Art by Peerless.
+u8 item_icon_staff_nostal[] = INCBIN_U8("graphics/item_icon/item_icon_staff_nostal.4bpp");
+#else
 u8 item_icon_unused_10[] = INCBIN_U8("graphics/item_icon/item_icon_unused_10.4bpp");
+#endif
 u8 item_icon_palette[] = INCBIN_U8("graphics/item_icon/item_icon_palette.agbpal");

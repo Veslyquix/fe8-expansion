@@ -151,6 +151,30 @@ struct CONST_DATA gfx_set gConvoBackgroundData[] = {
 	 * tsa pointer is always a ROM/RAM address far larger than these. */
 	{bg_AltarNight256_tiles, CONVOBG_MULTIPALETTE_256, bg_AltarNight256_palette}, // 0x38
 	{bg_kh_tiles, CONVOBG_MULTIPALETTE_224, bg_kh_palette}, // 0x39
+	{bg_AlexanderLawrieHillside_tiles, CONVOBG_MULTIPALETTE_192, bg_AlexanderLawrieHillside_palette}, // 0x3A
+	{bg_GustaveDoreMountainsDusk_tiles, CONVOBG_MULTIPALETTE_192, bg_GustaveDoreMountainsDusk_palette}, // 0x3B
+	{bg_TobiasSpenceRiverForest_tiles, CONVOBG_MULTIPALETTE_192, bg_TobiasSpenceRiverForest_palette}, // 0x3C
+	{bg_sep_a_tornado_in_the_wilderness_1835_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_a_tornado_in_the_wilderness_1835_Thomas_Cole_palette}, // 0x3D
+	{bg_sep_Aquaduct_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_Aquaduct_Thomas_Cole_palette}, // 0x3E
+	{bg_sep_aurora_borealis_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_aurora_borealis_Frederic_Edwin_Church_palette}, // 0x3F
+	{bg_sep_distant_view_of_niagara_falls_1830_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_distant_view_of_niagara_falls_1830_Thomas_Cole_palette}, // 0x40
+	{bg_sep_expulsion_from_the_garden_of_eden_1828_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_expulsion_from_the_garden_of_eden_1828_Thomas_Cole_palette}, // 0x41
+	{bg_sep_expulsion_moon_and_firelight_thomas_cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_expulsion_moon_and_firelight_thomas_cole_palette}, // 0x42
+	{bg_sep_interior_of_the_colosseum_rome_1832_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_interior_of_the_colosseum_rome_1832_Thomas_Cole_palette}, // 0x43
+	{bg_sep_lake_with_dead_trees_catskill_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_lake_with_dead_trees_catskill_Thomas_Cole_palette}, // 0x44
+	{bg_sep_mount_aetna_from_taormina_1843_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_mount_aetna_from_taormina_1843_Thomas_Cole_palette}, // 0x45
+	{bg_sep_mountain_sunrise_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_mountain_sunrise_Thomas_Cole_palette}, // 0x46
+	{bg_sep_parthenon_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_parthenon_Frederic_Edwin_Church_palette}, // 0x47
+	{bg_sep_romantic_landscape_with_ruined_tower_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_romantic_landscape_with_ruined_tower_Thomas_Cole_palette}, // 0x48
+	{bg_sep_the_arabian_desert_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_arabian_desert_Frederic_Edwin_Church_palette}, // 0x49
+	{bg_sep_the_cascatelli_tivoli_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_cascatelli_tivoli_Thomas_Cole_palette}, // 0x4A
+	{bg_sep_the_garden_of_eden_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_garden_of_eden_Thomas_Cole_palette}, // 0x4B
+	{bg_sep_the_notch_of_the_white_mountains_crawford_notch_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_notch_of_the_white_mountains_crawford_notch_Thomas_Cole_palette}, // 0x4C
+	{bg_sep_the_past_thomas_cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_past_thomas_cole_palette}, // 0x4D
+	{bg_sep_the_subsiding_of_the_waters_of_the_deluge_Thomas_Cole_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_the_subsiding_of_the_waters_of_the_deluge_Thomas_Cole_palette}, // 0x4E
+	{bg_sep_thomas_cole_scene_from_the_last_of_the_mohicans_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_thomas_cole_scene_from_the_last_of_the_mohicans_palette}, // 0x4F
+	{bg_sep_TwilightMount_Frederic_Edwin_Church_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_TwilightMount_Frederic_Edwin_Church_palette}, // 0x50
+	{bg_sep_white_mountain_landscape_mount_washington_Martin_Johnson_Heade_tiles, CONVOBG_MULTIPALETTE_192, bg_sep_white_mountain_landscape_mount_washington_Martin_Johnson_Heade_palette}, // 0x51
 #endif
 };
 
@@ -178,31 +202,37 @@ bool IsMultipaletteConvoBgActive(void)
  * Ported from FE8U_256ColBG (SRR_FEGBA/gfx/BGs): a 256-colour image claims
  * the whole BG palette; a 224-colour image leaves banks 2-3 (32 colours)
  * untouched for text/chatbubble UI; the new 192-colour mode leaves banks
- * 2-5 (64 colours) untouched for UI that needs more room (e.g. several
- * portraits' worth of palette). Banks 0-1 always hold the image's first 32
- * colours; the rest resume right after the reserved gap. See
+ * 0-4 (64 colours) untouched for got item / gold popups. See
  * scripts/convo_bg_to_source.py for the matching pixel/palette encoding. */
 bool LoadMultipaletteConvoBg(int bgIndex, int bg)
 {
     const struct gfx_set * set = &gConvoBackgroundData[bgIndex];
-    int gap;
-    int bankStart;
-    int bankCount;
+    int bankStart = 0;
+    int bankCount = 0;
     void * charBase;
     u16 * tilemapBuffer;
     int row, col;
+    bankStart = 4; 
+    bankCount = 12; 
 
-    if (set->tsa == CONVOBG_MULTIPALETTE_256)
-        gap = 0;
-    else if (set->tsa == CONVOBG_MULTIPALETTE_224)
-        gap = 32;
-    else if (set->tsa == CONVOBG_MULTIPALETTE_192)
-        gap = 64;
+    if (set->tsa == CONVOBG_MULTIPALETTE_256) { 
+        bankStart = 0; 
+        bankCount = 16; 
+    }
+    else if (set->tsa == CONVOBG_MULTIPALETTE_224) { 
+
+        ApplyPalettes(set->pal, 0, 2); // 
+    } 
+    else if (set->tsa == CONVOBG_MULTIPALETTE_192) { 
+    // continue; 
+    }
     else
     {
         sMultipaletteConvoBgActive = FALSE;
         return FALSE;
     }
+
+    ApplyPalettes((u16 *)set->pal + 32, bankStart, bankCount);
 
     sMultipaletteConvoBgActive = TRUE;
 
@@ -237,11 +267,7 @@ bool LoadMultipaletteConvoBg(int bgIndex, int bg)
         for (col = 0; col < 32; col++)
             tilemapBuffer[row * 32 + col] = 0x100 + row * 32 + col;
 
-    ApplyPalettes(set->pal, 0, 2);
 
-    bankStart = 2 + gap / 16;
-    bankCount = (224 - gap) / 16;
-    ApplyPalettes((u16 *)set->pal + 32, bankStart, bankCount);
 
     return TRUE;
 }

@@ -210,6 +210,9 @@ endif
 ifeq ($(TEXT_CHAPTER_NAMES),1)
 MODERN_DEFINE_FLAGS += -DFE8_TEXT_CHAPTER_NAMES=1
 endif
+ifeq ($(REPLACE_TEXT),1)
+MODERN_DEFINE_FLAGS += -DFE8_REPLACE_TEXT=1
+endif
 ifeq ($(BATTLE_STATS_NO_ANIMS),1)
 MODERN_DEFINE_FLAGS += -DFE8_BATTLE_STATS_NO_ANIMS=1
 endif
@@ -234,17 +237,38 @@ endif
 ifeq ($(RNG_RANDOMIZER),1)
 MODERN_DEFINE_FLAGS += -DFE8_RNG_RANDOMIZER=1
 endif
+ifeq ($(L_CYCLE),1)
+MODERN_DEFINE_FLAGS += -DFE8_L_CYCLE=1
+endif
+ifeq ($(MOVEARROW_HACK),1)
+MODERN_DEFINE_FLAGS += -DFE8_MOVEARROW_HACK=1
+endif
+ifeq ($(CUSTOM_FORMULAS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CUSTOM_FORMULAS=1
+endif
+ifeq ($(MODE_SELECT),1)
+MODERN_DEFINE_FLAGS += -DFE8_MODE_SELECT=1
+endif
 ifeq ($(ALPHA_SPRITE_ARROW),1)
 MODERN_DEFINE_FLAGS += -DFE8_ALPHA_SPRITE_ARROW=1
 endif
+ifeq ($(SHOW_HEAL_AMOUNT),1)
+MODERN_DEFINE_FLAGS += -DFE8_SHOW_HEAL_AMOUNT=1
+endif
 ifeq ($(RANGE_REWORK),1)
 MODERN_DEFINE_FLAGS += -DFE8_RANGE_REWORK=1
+endif
+ifeq ($(CANNOT_CRIT_WEPS),1)
+MODERN_DEFINE_FLAGS += -DFE8_CANNOT_CRIT_WEPS=1
 endif
 ifeq ($(TURN_AUTOSAVE),1)
 MODERN_DEFINE_FLAGS += -DFE8_TURN_AUTOSAVE=1
 endif
 ifeq ($(FORT_UNITS_START_GREYED_OUT),1)
 MODERN_DEFINE_FLAGS += -DFE8_FORT_UNITS_START_GREYED_OUT=1
+endif
+ifeq ($(SKILLSYSTEM),1)
+MODERN_DEFINE_FLAGS += -DFE8_SKILLSYSTEM=1
 endif
 ifeq ($(PROMOTE_COMMAND),1)
 MODERN_DEFINE_FLAGS += -DFE8_PROMOTE_COMMAND=1
@@ -284,6 +308,9 @@ MODERN_DEFINE_FLAGS += -DFE8_ANIMS_FAST_FORWARD=1
 endif
 ifeq ($(NIMAP2),1)
 MODERN_DEFINE_FLAGS += -DFE8_NIMAP2=1
+endif
+ifeq ($(WORLDMAP_REWORK),1)
+MODERN_DEFINE_FLAGS += -DFE8_WORLDMAP_REWORK=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
@@ -1494,11 +1521,72 @@ MODERN_ELF_REPLACED_ASM := \
 
 MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 
+# Modern-lane battle-animation data blob. banim/data_banim.o ($(BANIM_OBJECT),
+# Makefile) is a fully pre-linked binary blob (arm_compressing_linker.py
+# -Tdata, not a relocatable object) whose internal pointers between
+# animation sheets/OAM/palettes are baked as absolute addresses at
+# COMPILE time against a fixed base (-b) -- wherever the final link
+# actually places its bytes MUST match that base exactly, or every
+# pointer inside it is wrong (silent corruption -> crash on the first
+# battle animation played). The archival lane's object is pinned to
+# vanilla's own 0x8c02000 (ldscript.txt) and can never move: that's a
+# byte-matching requirement. The modern lane used to reuse that same
+# object at that same address, back when its floating .data still fit
+# under it -- the 2026-09 convo_bg import (21 new full-screen paintings)
+# pushed floating .data past 0x8c02000, so modern needs its OWN copy
+# pre-linked against a base beyond that, kept in lockstep with the
+# `. = __banim_data_base_abs - __text_start;` pin for banim/data_banim.modern.o(.data) in
+# linker/expansion.ld via the --defsym below.
+#
+# Pinned at 0x08000a20 -- immediately after the fixed ARM startup/
+# interwork code (rom_header.o + crt0.o + arm.o(.text), which just jumps
+# into the real C runtime init and isn't expected to grow), *before* the
+# floating .text/.rodata/.data region in linker/expansion.ld, rather than
+# after it. Two earlier placements (fully floating, then pinned right
+# after the floating region with "deliberately zero headroom") both went
+# stale every time floating .data grew even slightly, each requiring a
+# bump here plus an expensive ~10-minute full recompression of this
+# object -- and each stale-but-undetected case crashed battle animations
+# outright (see MODERN_BANIM_DATA_BASE_STAMP below for the matching
+# Makefile dependency fix). Placing it before the floating region instead
+# means floating .text/.rodata/.data can grow without bound and never
+# touch this address again -- the only thing that still could is the
+# fixed startup code itself growing, which fails the build immediately
+# (ld's own errors) rather than silently corrupting animation pointers.
+MODERN_BANIM_DATA_BASE := 0x08000a20
+MODERN_BANIM_OBJECT := banim/data_banim.modern.o
+# banim/.data_banim_base.stamp: a plain shell-computed file list has no
+# way to depend on MODERN_BANIM_DATA_BASE's *value* -- only on files --
+# so without this, changing the base with no source file also touched
+# leaves the existing (now wrongly-based) $(MODERN_BANIM_OBJECT) on disk
+# looking up to date, silently linked at the NEW address while its
+# internal pointers are still baked for the OLD one (confirmed: this
+# exact bug crashed battle animations again after the base was bumped
+# for the batch2 import, since linker_script_banim.txt happened to also
+# change that same time and masked it by forcing a rebuild anyway).
+# This stamp makes the base's value itself a real, content-addressed
+# prerequisite, same idiom as $(MODERN_ELF_LINK_SETTINGS) below.
+MODERN_BANIM_DATA_BASE_STAMP := banim/.data_banim_base.stamp
+.PHONY: FORCE_MODERN_BANIM_DATA_BASE_STAMP
+FORCE_MODERN_BANIM_DATA_BASE_STAMP:
+
+$(MODERN_BANIM_DATA_BASE_STAMP): FORCE_MODERN_BANIM_DATA_BASE_STAMP
+	@mkdir -p "$(@D)"
+	@echo "$(MODERN_BANIM_DATA_BASE)" > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then \
+		mv -f "$@.tmp" "$@"; \
+	else \
+		rm -f "$@.tmp"; \
+	fi
+
+$(MODERN_BANIM_OBJECT): $(MODERN_BANIM_DATA_BASE_STAMP) $(shell ./scripts/arm_compressing_linker.py -t linker_script_banim.txt -m)
+	./scripts/arm_compressing_linker.py -o $@ -t linker_script_banim.txt -b $(MODERN_BANIM_DATA_BASE) -l $(LD) --objcopy $(OBJCOPY) -c ./scripts/compressor.py
+
 # Non-C assembled objects from the legacy pipeline (sound, data asm, midi).
 # Filter out every C object, every modern-replaced assembly, and prebuilts.
 MODERN_ELF_LEGACY_ASM := $(filter-out \
 	$(C_OBJECTS) $(DATA_SRC_C_OBJECTS) \
-	$(MODERN_ELF_FE6SIO) $(BANIM_OBJECT) \
+	$(MODERN_ELF_FE6SIO) $(MODERN_BANIM_OBJECT) \
 	$(MODERN_ELF_NIMAP2_DROPPED) \
 	$(MODERN_ELF_REPLACED_ASM), \
 	$(ASM_OBJECTS))
@@ -1511,7 +1599,7 @@ MODERN_ELF_LINK_SETTINGS := $(MODERN_ELF_LINK_DIR)/settings.txt
 MODERN_ELF_LINK_PREP := $(MODERN_ELF_LINK_DIR)/prepare.stamp
 MODERN_ELF := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.elf
 MODERN_MAP := $(MODERN_OUTPUT_DIR)/AdvanfeWarblem.map
-MODERN_ELF_BANIM_SYM := $(BANIM_OBJECT).sym.o
+MODERN_ELF_BANIM_SYM := $(MODERN_BANIM_OBJECT).sym.o
 
 # Clean linker script (issue #4/#16) — replaces the transitional generator.
 MODERN_CLEAN_LDSCRIPT := linker/expansion.ld
@@ -1521,11 +1609,19 @@ $(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM): ;
 # ROM size configuration: 16M or 32M. Production profiles enabling ja or
 # zh-Hans are validated (scripts/modernize/expansion_config.py) as 32M-only;
 # the upper locale bank carries their full-game catalog and localized font
-# data. Default is 16M: the current config.mk default flag set (including
-# FE8_MAPGEN) fits comfortably under the 16M ceiling with room to spare;
-# opt into MODERN_ROM_SIZE=32M for CJK locales or once real headroom is
-# needed.
-MODERN_ROM_SIZE ?= 16M
+# data. This only bounds the linker's ROM region (LENGTH=__rom_size) and
+# gates 32M-only features like the locale bank -- it no longer controls
+# the built .gba's actual file size (see $(MODERN_ROM) below, which is
+# exactly as large as its real content plus a 32-byte zero tail, not
+# padded out to this ceiling). Default was 16M until the 2026-09
+# "batch2" custom class import (~65 new classes with their own battle
+# animations/map sprites) pushed real ROM content past 16M outright
+# (confirmed via a real 32M build: ~19.5MB) -- not just the banim pin
+# (see MODERN_BANIM_DATA_BASE above), the actual total content. Default
+# is now 32M; 16M remains available as an explicit opt-in
+# (MODERN_ROM_SIZE=16M) for anyone who still fits under it, same as the
+# CJK-locale case.
+MODERN_ROM_SIZE ?= 32M
 ifeq ($(MODERN_ROM_SIZE),16M)
   MODERN_ROM_SIZE_BYTES := 0x01000000
   MODERN_PAD_TO := 0x09000000
@@ -1622,6 +1718,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
 		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
 		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
+		--replace-text "$(REPLACE_TEXT)" \
 		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 		--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 		--draw-map-anims "$(DRAW_MAP_ANIMS)" \
@@ -1630,10 +1727,16 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--group-ai "$(GROUP_AI)" \
 		--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
 		--rng-randomizer "$(RNG_RANDOMIZER)" \
+		--l-cycle "$(L_CYCLE)" \
+		--movearrow-hack "$(MOVEARROW_HACK)" \
+		--custom-formulas "$(CUSTOM_FORMULAS)" \
+		--mode-select "$(MODE_SELECT)" \
 		--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 		--range-rework "$(RANGE_REWORK)" \
+		--cannot-crit-weps "$(CANNOT_CRIT_WEPS)" \
 		--turn-autosave "$(TURN_AUTOSAVE)" \
 		--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
+		--skillsystem "$(SKILLSYSTEM)" \
 		--promote-command "$(PROMOTE_COMMAND)" \
 		--fix-bugs "$(FIX_BUGS)" \
 		--credits "$(CREDITS)" \
@@ -1654,6 +1757,8 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--aw2-assets "$(AW2_ASSETS)" \
 		--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
 		--nimap2 "$(NIMAP2)" \
+		--worldmap-rework "$(WORLDMAP_REWORK)" \
+		--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
@@ -1723,9 +1828,10 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--extend-desc-box "$(EXTEND_DESC_BOX)" \
 	--extend-dialogue-box "$(EXTEND_DIALOGUE_BOX)" \
 	--overflow-safety-checks "$(OVERFLOW_SAFETY_CHECKS)" \
-	--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
-	--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
-	--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
+		--display-obtainable-item "$(DISPLAY_OBTAINABLE_ITEM)" \
+		--select-view-growths "$(SELECT_VIEW_GROWTHS)" \
+		--replace-text "$(REPLACE_TEXT)" \
+		--text-chapter-names "$(TEXT_CHAPTER_NAMES)" \
 	--battle-stats-no-anims "$(BATTLE_STATS_NO_ANIMS)" \
 	--draw-map-anims "$(DRAW_MAP_ANIMS)" \
 	--hp-bars "$(HP_BARS)" \
@@ -1733,10 +1839,16 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--group-ai "$(GROUP_AI)" \
 	--null-bossai-mov "$(NULL_BOSSAI_MOV)" \
 	--rng-randomizer "$(RNG_RANDOMIZER)" \
+	--l-cycle "$(L_CYCLE)" \
+	--movearrow-hack "$(MOVEARROW_HACK)" \
+	--custom-formulas "$(CUSTOM_FORMULAS)" \
+	--mode-select "$(MODE_SELECT)" \
 	--alpha-sprite-arrow "$(ALPHA_SPRITE_ARROW)" \
 	--range-rework "$(RANGE_REWORK)" \
+	--cannot-crit-weps "$(CANNOT_CRIT_WEPS)" \
 	--turn-autosave "$(TURN_AUTOSAVE)" \
 	--fort-units-start-greyed-out "$(FORT_UNITS_START_GREYED_OUT)" \
+	--skillsystem "$(SKILLSYSTEM)" \
 	--promote-command "$(PROMOTE_COMMAND)" \
 	--fix-bugs "$(FIX_BUGS)" \
 	--credits "$(CREDITS)" \
@@ -1750,6 +1862,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--aw2-assets "$(AW2_ASSETS)" \
 	--anims-fast-forward "$(ANIMS_FAST_FORWARD)" \
 	--nimap2 "$(NIMAP2)" \
+	--worldmap-rework "$(WORLDMAP_REWORK)" \
+	--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
@@ -1831,6 +1945,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_DEBUFFS_EXIST=$(DEBUFFS_EXIST) \
 	-DFE8_DEBUFFS_STACK=$(DEBUFFS_STACK) \
 	-DFE8_SELECT_VIEW_GROWTHS=$(SELECT_VIEW_GROWTHS) \
+	-DFE8_REPLACE_TEXT=$(REPLACE_TEXT) \
 	-DFE8_TEXT_CHAPTER_NAMES=$(TEXT_CHAPTER_NAMES) \
 	-DFE8_BATTLE_STATS_NO_ANIMS=$(BATTLE_STATS_NO_ANIMS) \
 	-DFE8_DRAW_MAP_ANIMS=$(DRAW_MAP_ANIMS) \
@@ -1840,10 +1955,17 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_GROUP_AI=$(GROUP_AI) \
 	-DFE8_NULL_BOSSAI_MOV=$(NULL_BOSSAI_MOV) \
 	-DFE8_RNG_RANDOMIZER=$(RNG_RANDOMIZER) \
+	-DFE8_L_CYCLE=$(L_CYCLE) \
+	-DFE8_MOVEARROW_HACK=$(MOVEARROW_HACK) \
+	-DFE8_CUSTOM_FORMULAS=$(CUSTOM_FORMULAS) \
+	-DFE8_MODE_SELECT=$(MODE_SELECT) \
 	-DFE8_ALPHA_SPRITE_ARROW=$(ALPHA_SPRITE_ARROW) \
+	-DFE8_SHOW_HEAL_AMOUNT=$(SHOW_HEAL_AMOUNT) \
 	-DFE8_RANGE_REWORK=$(RANGE_REWORK) \
+	-DFE8_CANNOT_CRIT_WEPS=$(CANNOT_CRIT_WEPS) \
 	-DFE8_TURN_AUTOSAVE=$(TURN_AUTOSAVE) \
 	-DFE8_FORT_UNITS_START_GREYED_OUT=$(FORT_UNITS_START_GREYED_OUT) \
+	-DFE8_SKILLSYSTEM=$(SKILLSYSTEM) \
 	-DFE8_PROMOTE_COMMAND=$(PROMOTE_COMMAND) \
 	-DFE8_FIX_BUGS=$(FIX_BUGS) \
 	-DFE8_CREDITS=$(CREDITS) \
@@ -1854,7 +1976,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_FEBUILDER_POINTERS=$(FEBUILDER_POINTERS) \
 	-DFE8_AW2_ASSETS=$(AW2_ASSETS) \
 	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD) \
-	-DFE8_NIMAP2=$(NIMAP2)
+	-DFE8_NIMAP2=$(NIMAP2) \
+	-DFE8_WORLDMAP_REWORK=$(WORLDMAP_REWORK)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -2029,6 +2152,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'debuffs_exist=$(DEBUFFS_EXIST)'; \
 		printf '%s\n' 'debuffs_stack=$(DEBUFFS_STACK)'; \
 		printf '%s\n' 'select_view_growths=$(SELECT_VIEW_GROWTHS)'; \
+		printf '%s\n' 'replace_text=$(REPLACE_TEXT)'; \
 		printf '%s\n' 'text_chapter_names=$(TEXT_CHAPTER_NAMES)'; \
 		printf '%s\n' 'battle_stats_no_anims=$(BATTLE_STATS_NO_ANIMS)'; \
 		printf '%s\n' 'draw_map_anims=$(DRAW_MAP_ANIMS)'; \
@@ -2037,10 +2161,15 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'group_ai=$(GROUP_AI)'; \
 		printf '%s\n' 'null_bossai_mov=$(NULL_BOSSAI_MOV)'; \
 		printf '%s\n' 'rng_randomizer=$(RNG_RANDOMIZER)'; \
+		printf '%s\n' 'l_cycle=$(L_CYCLE)'; \
+		printf '%s\n' 'movearrow_hack=$(MOVEARROW_HACK)'; \
+		printf '%s\n' 'custom_formulas=$(CUSTOM_FORMULAS)'; \
+		printf '%s\n' 'mode_select=$(MODE_SELECT)'; \
 		printf '%s\n' 'alpha_sprite_arrow=$(ALPHA_SPRITE_ARROW)'; \
 		printf '%s\n' 'range_rework=$(RANGE_REWORK)'; \
 		printf '%s\n' 'turn_autosave=$(TURN_AUTOSAVE)'; \
 		printf '%s\n' 'fort_units_start_greyed_out=$(FORT_UNITS_START_GREYED_OUT)'; \
+		printf '%s\n' 'skillsystem=$(SKILLSYSTEM)'; \
 		printf '%s\n' 'promote_command=$(PROMOTE_COMMAND)'; \
 		printf '%s\n' 'fix_bugs=$(FIX_BUGS)'; \
 		printf '%s\n' 'credits=$(CREDITS)'; \
@@ -2054,6 +2183,8 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'aw2_assets=$(AW2_ASSETS)'; \
 		printf '%s\n' 'anims_fast_forward=$(ANIMS_FAST_FORWARD)'; \
 		printf '%s\n' 'nimap2=$(NIMAP2)'; \
+		printf '%s\n' 'worldmap_rework=$(WORLDMAP_REWORK)'; \
+		printf '%s\n' 'show_heal_amount=$(SHOW_HEAL_AMOUNT)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
 		printf '%s\n' 'item_expansion_itemtest=$(FE8_EXPANSION_ITEMTEST)'; \
@@ -2301,7 +2432,7 @@ $(MODERN_ELF_OBJECTS_LST): $(MODERN_ALL_OBJECTS) $(MODERN_ELF_EXTRA_ASM_OBJECTS)
 		$(MODERN_ELF_FE6SIO) \
 		$(MODERN_ELF_LEGACY_ASM) \
 		$(MODERN_ELF_LEGACY_MIDI) \
-		$(BANIM_OBJECT)) > "$@"
+		$(MODERN_BANIM_OBJECT)) > "$@"
 
 # Link-affecting command-line settings are a content-addressed prerequisite.
 # The FORCE recipe runs every invocation, but preserves this file's timestamp
@@ -2314,6 +2445,7 @@ $(MODERN_ELF_LINK_SETTINGS): FORCE_MODERN_ELF_LINK_SETTINGS
 	@{ \
 		printf '%s\n' 'rom_size=$(MODERN_ROM_SIZE_BYTES)'; \
 		printf '%s\n' 'text_shift=$(MODERN_TEXT_SHIFT)'; \
+		printf '%s\n' 'banim_data_base=$(MODERN_BANIM_DATA_BASE)'; \
 		printf '%s\n' 'ld=$(MODERN_LD)'; \
 		printf '%s\n' 'ldscript=$(MODERN_CLEAN_LDSCRIPT)'; \
 	} > "$@.tmp"
@@ -2335,20 +2467,20 @@ expansion-modern-legacy-ready:
 
 # Link preparation: FE6 SIO build output, banim via scheduler, legacy
 # freshness, sidecar recovery, then the clean static linker inputs.
-# $(BANIM_OBJECT) is a normal prerequisite so the main scheduler builds it
-# once with no recursive-make race.
+# $(MODERN_BANIM_OBJECT) is a normal prerequisite so the main scheduler
+# builds it once with no recursive-make race.
 $(MODERN_ELF_LINK_PREP): $(MODERN_ELF_FE6SIO) \
-		$(MODERN_ELF_OBJECTS_LST) $(BANIM_OBJECT) \
+		$(MODERN_ELF_OBJECTS_LST) $(MODERN_BANIM_OBJECT) \
 		$(MODERN_ELF_LEGACY_ASM) $(MODERN_ELF_LEGACY_MIDI) \
 		$(MODERN_CLEAN_LDSCRIPT) $(MODERN_CLEAN_IWRAM)
 	+$(MAKE) NODEP=0 $(MODERN_ELF_LEGACY_ASM) $(MODERN_ELF_LEGACY_MIDI)
 	@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
 		printf '%s\n' \
 			"Sidecar missing; forcing banim rebuild..." >&2; \
-		rm -f "$(BANIM_OBJECT)" "$(MODERN_ELF_BANIM_SYM)"; \
+		rm -f "$(MODERN_BANIM_OBJECT)" "$(MODERN_ELF_BANIM_SYM)"; \
 	fi
 	+@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
-		$(MAKE) "$(BANIM_OBJECT)"; \
+		$(MAKE) "$(MODERN_BANIM_OBJECT)"; \
 	fi
 	@if [ ! -f "$(MODERN_ELF_BANIM_SYM)" ]; then \
 		printf '%s\n' \
@@ -2416,6 +2548,7 @@ $(MODERN_ELF): $(MODERN_ELF_LINK_PREP) $(MODERN_ELF_LINK_SETTINGS) \
 		--orphan-handling=error \
 		--defsym=__rom_size=$(MODERN_ROM_SIZE_BYTES) \
 		--defsym=__text_shift=$(MODERN_TEXT_SHIFT) \
+		--defsym=__banim_data_base_abs=$(MODERN_BANIM_DATA_BASE) \
 		--defsym=__end__=end \
 		-T "$(MODERN_CLEAN_LDSCRIPT)" \
 		-Map "$(MODERN_MAP)" \
@@ -2477,22 +2610,31 @@ MODERN_DEBUGTOOLS_MAP_SCENARIO := tools/gba-playtest/scenarios/debugtools-map-hu
 MODERN_DEBUGTOOLS_MAP_FINGERPRINT := tools/gba-playtest/fingerprints/debugtools-map-hub-modern-$(MODERN_CONFIG).json
 MODERN_PLAYTEST := tools/gba-playtest/gba_playtest.py
 
-# Convert the linked ELF to a flat, padded ROM image, patch the configured
-# ROM identity (title/game code/maker code/revision -- see config.mk
+# Convert the linked ELF to a flat ROM image, patch the configured ROM
+# identity (title/game code/maker code/revision -- see config.mk
 # EXPANSION_ROM_*) into the header and regenerate its checksum, then verify
-# the result in-place: configured ROM size, title/game code/maker
-# code/revision/fixed byte, the checksum byte at offset 0xBD recomputed over
-# 0xA0..0xBC, and the embedded ExpansionMetadata record (issue #8). A failed
-# verification deletes the ROM so a stale, invalid image is never left behind
-# for expansion-modern-boot-check (or a caller) to pick up silently.
+# the result in-place: ROM size, title/game code/maker code/revision/fixed
+# byte, the checksum byte at offset 0xBD recomputed over 0xA0..0xBC, and the
+# embedded ExpansionMetadata record (issue #8). A failed verification
+# deletes the ROM so a stale, invalid image is never left behind for
+# expansion-modern-boot-check (or a caller) to pick up silently.
+#
+# The output is exactly as large as its real content (the linker script's
+# own trailing 32-byte zero tail, not a --pad-to here) rather than padded
+# out to the full MODERN_ROM_SIZE ceiling -- --gap-fill=0xff still covers
+# the genuine internal gap between the main ROM section and the 32M-only
+# locale bank at a fixed 0x09000000, when populated. The verifier is given
+# the ROM's own actual byte count as --size, since there is no longer a
+# fixed target size to check it against; this still catches objcopy
+# producing an unexpected/corrupt length.
 $(MODERN_ROM): $(MODERN_ELF) $(MODERN_BUILD_METADATA_JSON)
 	@mkdir -p "$(@D)"
-	"$(MODERN_OBJCOPY)" --strip-debug -O binary --pad-to $(MODERN_PAD_TO) --gap-fill=0xff "$<" "$@"
+	"$(MODERN_OBJCOPY)" --strip-debug -O binary --gap-fill=0xff "$<" "$@"
 	@if ! "$(PYTHON)" "$(MODERN_ROM_HEADER_FINALIZER)" --metadata-json "$(MODERN_BUILD_METADATA_JSON)" "$@"; then \
 		rm -f "$@"; \
 		exit 1; \
 	fi
-	@if ! "$(PYTHON)" "$(MODERN_ROM_HEADER_VERIFIER)" --size "$(MODERN_ROM_SIZE)" --metadata-json "$(MODERN_BUILD_METADATA_JSON)" "$@"; then \
+	@if ! "$(PYTHON)" "$(MODERN_ROM_HEADER_VERIFIER)" --size "$$(wc -c < "$@" | tr -d ' ')" --metadata-json "$(MODERN_BUILD_METADATA_JSON)" "$@"; then \
 		rm -f "$@"; \
 		exit 1; \
 	fi
@@ -2536,10 +2678,20 @@ expansion-modern-ups: expansion-modern-rom $(MODERN_UPS)
 	@printf 'Modern UPS patch ready: %s\n' "$(MODERN_UPS)"
 
 # IPS patch (baserom.gba -> the built modern ROM): simpler/more widely
-# supported than UPS, but its 3-byte address field caps both files at 16MB
-# -- only valid while MODERN_ROM_SIZE=16M (the default). Errors out (via
+# supported than UPS, but its 3-byte address field caps both files at 16MB.
+# The built ROM is no longer padded to a fixed MODERN_ROM_SIZE (see
+# $(MODERN_ROM)'s own recipe above), so eligibility is decided from its
+# real, current byte count rather than that ceiling knob -- see
+# _sync_win_impl's own `rom_bytes` checks below, which must be real shell
+# `if` blocks run *after* expansion-modern-rom, not a Make-level
+# $(if $(shell ...)) inside that same recipe's command list: GNU Make
+# expands a whole recipe's command lines up front before running any of
+# them, so a $(shell) embedded that way sees the ROM's size from before
+# this invocation rebuilt it, not after (confirmed the hard way — it
+# tried to build an IPS patch against a >16MB ROM once). Errors out (via
 # scripts/gen_ips.py's own size check) rather than silently truncating if
-# built against a 32M ROM.
+# it doesn't actually fit.
+MODERN_IPS_MAX_BYTES := 16777216
 MODERN_IPS := $(MODERN_ROM:.gba=.ips)
 MODERN_IPS_GENERATOR := scripts/gen_ips.py
 
@@ -2592,9 +2744,16 @@ _sync_win_impl:
 	mv -f "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp" "$(WIN_SYNC_DIR)/$(notdir $(MODERN_ROM))"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	+$(MAKE) expansion-modern-sym \
-		$(if $(filter 1,$(WITH_UPS)),$(if $(wildcard $(BASEROM)),expansion-modern-ups)) \
-		$(if $(and $(wildcard $(BASEROM)),$(filter 16M,$(MODERN_ROM_SIZE))),expansion-modern-ips) \
 		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
+	+@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \
+		$(MAKE) expansion-modern-ups; \
+	fi
+	+@if [ -f "$(BASEROM)" ]; then \
+		rom_bytes="$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)"; \
+		if [ "$$rom_bytes" -le $(MODERN_IPS_MAX_BYTES) ]; then \
+			$(MAKE) expansion-modern-ips; \
+		fi; \
+	fi
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
 	@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \
@@ -2602,11 +2761,12 @@ _sync_win_impl:
 		printf 'Copied %s -> %s/\n' "$(MODERN_UPS)" "$(WIN_SYNC_DIR)"; \
 	fi
 	@if [ -f "$(BASEROM)" ]; then \
-		if [ "$(MODERN_ROM_SIZE)" = "16M" ]; then \
+		rom_bytes="$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)"; \
+		if [ "$$rom_bytes" -le $(MODERN_IPS_MAX_BYTES) ]; then \
 			cp "$(MODERN_IPS)" "$(WIN_SYNC_DIR)/"; \
 			printf 'Copied %s -> %s/\n' "$(MODERN_IPS)" "$(WIN_SYNC_DIR)"; \
 		else \
-			echo "note: MODERN_ROM_SIZE=$(MODERN_ROM_SIZE) (not 16M), skipping IPS patch"; \
+			echo "note: built ROM is $$rom_bytes bytes (over IPS's 16MB limit), skipping IPS patch -- use WITH_UPS=1 for a UPS patch instead"; \
 		fi; \
 	else \
 		echo "note: $(BASEROM) not found, skipping IPS patch"; \
@@ -3440,6 +3600,7 @@ $(MODERN_RELOCS_ELF): $(MODERN_ELF) $(MODERN_ELF_OBJECTS_LST) \
 	LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	TEXT_SHIFT=0 \
+	BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	"$(MODERN_RELINK_SCRIPT)" "$@"
 
 expansion-modern-relocs: $(MODERN_RELOCS_ELF)
@@ -3469,6 +3630,7 @@ expansion-modern-shifted-check: expansion-modern-boot-preflight expansion-modern
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" \
 	SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
 	SHIFTCHECK_TITLE_EXPECTED="$(MODERN_TITLE_FINGERPRINT)" \
+	SHIFTCHECK_BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	"$(MODERN_SHIFTED_SCRIPT)" "$(MODERN_SHIFT_AMOUNT)"
 
 
@@ -3787,6 +3949,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/blank.sav" \
 	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-blank-sram-no-selector-default-modern-debug.json" \
 	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-blank-sram-no-selector-default-modern-debug.json" \
@@ -3797,6 +3960,7 @@ ifeq ($(MODERN_CONFIG),debug)
 	SHIFTCHECK_BANIM_SYM="$(MODERN_ELF_BANIM_SYM)" SHIFTCHECK_LDSCRIPT="$(MODERN_CLEAN_LDSCRIPT)" \
 	SHIFTCHECK_BASE_ELF="$(MODERN_ELF)" SHIFTCHECK_ROM_SIZE_BYTES="$(MODERN_ROM_SIZE_BYTES)" \
 	SHIFTCHECK_ROM_SIZE="$(MODERN_ROM_SIZE)" SHIFTCHECK_PAD_TO="$(MODERN_PAD_TO)" \
+	SHIFTCHECK_BANIM_DATA_BASE="$(MODERN_BANIM_DATA_BASE)" \
 	SHIFTCHECK_SRAM_IMAGE="$(MODERN_LOCALE_FIXTURE_DIR)/unset.sav" \
 	SHIFTCHECK_SCENARIO="$(MODERN_LOCALE_SCEN)/locale-auto-select-single-locale-modern-debug.json" \
 	SHIFTCHECK_EXPECTED="$(MODERN_LOCALE_FP)/locale-auto-select-single-locale-modern-debug.json" \

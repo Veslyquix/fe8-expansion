@@ -7957,6 +7957,4029 @@
       "terrainAvoid": "TerrainTable_Avo_Common",
       "terrainDefense": "TerrainTable_Def_Common",
       "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_SWASHBUCKLER_F",
+      "nameTextId": 3508,
+      "descTextId": 3509,
+      "promotion": "CLASS_SWASHBUCKLER_F",
+      "smsId": 115,
+      "sortOrder": 60,
+      "defaultPortraitId": 116,
+      "base": {
+        "hp": 20,
+        "pow": 7,
+        "skl": 2,
+        "spd": 4,
+        "def": 1,
+        "res": 0,
+        "con": 11,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 85,
+        "pow": 55,
+        "skl": 35,
+        "spd": 30,
+        "def": 15,
+        "res": 15,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 2,
+        "skl": 1,
+        "spd": 0,
+        "def": 0,
+        "res": 1
+      },
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_106",
+      "movCostTable": [
+        "TerrainTable_MovCost_FighterNormal",
+        "TerrainTable_MovCost_FighterRain",
+        "TerrainTable_MovCost_FighterSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_SWASHBUCKLER",
+      "nameTextId": 3510,
+      "descTextId": 3511,
+      "promotion": "CLASS_SWASHBUCKLER",
+      "smsId": 116,
+      "sortOrder": 61,
+      "defaultPortraitId": 116,
+      "base": {
+        "hp": 20,
+        "pow": 7,
+        "skl": 2,
+        "spd": 4,
+        "def": 1,
+        "res": 0,
+        "con": 11,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 85,
+        "pow": 55,
+        "skl": 35,
+        "spd": 30,
+        "def": 15,
+        "res": 15,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 2,
+        "skl": 1,
+        "spd": 0,
+        "def": 0,
+        "res": 1
+      },
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_107",
+      "movCostTable": [
+        "TerrainTable_MovCost_FighterNormal",
+        "TerrainTable_MovCost_FighterRain",
+        "TerrainTable_MovCost_FighterSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_LEO_BERSERKER",
+      "nameTextId": 3512,
+      "descTextId": 3513,
+      "promotion": "CLASS_LEO_BERSERKER",
+      "smsId": 117,
+      "sortOrder": 62,
+      "defaultPortraitId": 141,
+      "base": {
+        "hp": 24,
+        "pow": 7,
+        "skl": 6,
+        "spd": 7,
+        "def": 6,
+        "res": 0,
+        "con": 13,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 30,
+        "skl": 29,
+        "spd": 28,
+        "def": 23,
+        "res": 21,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 50,
+        "skl": 35,
+        "spd": 25,
+        "def": 10,
+        "res": 13,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 1,
+        "skl": 1,
+        "spd": 1,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_CRITBONUS",
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_108",
+      "movCostTable": [
+        "TerrainTable_MovCost_BerserkerNormal",
+        "TerrainTable_MovCost_BerserkerRain",
+        "TerrainTable_MovCost_BerserkerSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "reservedTerrainTable": "Unk_TerrainTable_5"
+    },
+    {
+      "class": "CLASS_GRAND_MAHOUT",
+      "nameTextId": 3514,
+      "descTextId": 3515,
+      "promotion": "CLASS_GRAND_MAHOUT",
+      "smsId": 118,
+      "sortOrder": 63,
+      "defaultPortraitId": 128,
+      "base": {
+        "hp": 20,
+        "pow": 5,
+        "skl": 2,
+        "spd": 5,
+        "def": 6,
+        "res": 0,
+        "con": 9,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 35,
+        "skl": 40,
+        "spd": 28,
+        "def": 15,
+        "res": 15,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_109",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT1Normal",
+        "TerrainTable_MovCost_HorseT1Rain",
+        "TerrainTable_MovCost_HorseT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_ARCANIST_NURAMON",
+      "nameTextId": 3516,
+      "descTextId": 3517,
+      "promotion": "CLASS_ARCANIST_NURAMON",
+      "smsId": 119,
+      "slowWalking": true,
+      "sortOrder": 64,
+      "defaultPortraitId": 126,
+      "base": {
+        "hp": 16,
+        "pow": 2,
+        "skl": 1,
+        "spd": 2,
+        "def": 2,
+        "res": 4,
+        "con": 7,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 50,
+        "skl": 32,
+        "spd": 30,
+        "def": 10,
+        "res": 30,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 1,
+        "pow": 2,
+        "skl": 0,
+        "spd": 1,
+        "def": 1,
+        "res": 2
+      },
+      "baseRanks": {
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_110",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_HALBERDIER_CUSTOM",
+      "nameTextId": 3518,
+      "descTextId": 3519,
+      "smsId": 120,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 15,
+        "pow": 4,
+        "skl": 0,
+        "spd": 3,
+        "def": 0,
+        "res": 2,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 80,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 12,
+        "res": 15,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_111",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_HALBERDIER_CUSTOM",
+      "sortOrder": 65
+    },
+    {
+      "class": "CLASS_MIKO",
+      "nameTextId": 3520,
+      "descTextId": 3521,
+      "promotion": "CLASS_MIKO",
+      "smsId": 121,
+      "sortOrder": 66,
+      "defaultPortraitId": 120,
+      "base": {
+        "hp": 17,
+        "pow": 3,
+        "skl": 3,
+        "spd": 4,
+        "def": 3,
+        "res": 0,
+        "con": 5,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 32,
+        "def": 15,
+        "res": 20,
+        "lck": 35
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_BALLISTAE"
+      ],
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_112",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_WAR_CLERIC",
+      "nameTextId": 3522,
+      "descTextId": 3523,
+      "promotion": "CLASS_WAR_CLERIC",
+      "smsId": 122,
+      "sortOrder": 67,
+      "defaultPortraitId": 122,
+      "base": {
+        "hp": 16,
+        "pow": 1,
+        "skl": 2,
+        "spd": 2,
+        "def": 0,
+        "res": 6,
+        "con": 4,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 50,
+        "pow": 30,
+        "skl": 35,
+        "spd": 32,
+        "def": 8,
+        "res": 50,
+        "lck": 45
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_113",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "reservedTerrainTable": "Unk_TerrainTable_6"
+    },
+    {
+      "class": "CLASS_WITCH",
+      "nameTextId": 3524,
+      "descTextId": 3525,
+      "promotion": "CLASS_WITCH",
+      "smsId": 123,
+      "sortOrder": 68,
+      "defaultPortraitId": 124,
+      "base": {
+        "hp": 16,
+        "pow": 1,
+        "skl": 3,
+        "spd": 2,
+        "def": 2,
+        "res": 4,
+        "con": 3,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 55,
+        "pow": 55,
+        "skl": 40,
+        "spd": 35,
+        "def": 5,
+        "res": 40,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_114",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_ANGEL",
+      "nameTextId": 3526,
+      "descTextId": 3527,
+      "promotion": "CLASS_ANGEL",
+      "smsId": 124,
+      "sortOrder": 69,
+      "defaultPortraitId": 123,
+      "base": {
+        "hp": 19,
+        "pow": 4,
+        "skl": 5,
+        "spd": 4,
+        "def": 2,
+        "res": 9,
+        "con": 5,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 25,
+        "spd": 26,
+        "def": 21,
+        "res": 30,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 45,
+        "pow": 35,
+        "skl": 25,
+        "spd": 22,
+        "def": 8,
+        "res": 50,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 1,
+        "skl": 2,
+        "spd": 1,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_115",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "reservedTerrainTable": "Unk_TerrainTable_6"
+    },
+    {
+      "class": "CLASS_BRIGHID",
+      "nameTextId": 3528,
+      "descTextId": 3529,
+      "promotion": "CLASS_BRIGHID",
+      "smsId": 125,
+      "sortOrder": 70,
+      "defaultPortraitId": 139,
+      "base": {
+        "hp": 18,
+        "pow": 3,
+        "skl": 3,
+        "spd": 4,
+        "def": 5,
+        "res": 0,
+        "con": 10,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 27,
+        "skl": 26,
+        "spd": 24,
+        "def": 23,
+        "res": 23,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 90,
+        "pow": 45,
+        "skl": 40,
+        "spd": 45,
+        "def": 15,
+        "res": 15,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 3,
+        "spd": 2,
+        "def": 2,
+        "res": 5
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_PROMOTED",
+        "CA_MOUNTED",
+        "CA_LORD",
+        "CA_LOCK_5"
+      ],
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_116",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT2Normal",
+        "TerrainTable_MovCost_HorseT2Rain",
+        "TerrainTable_MovCost_HorseT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_ARCANIST_DEVISIAN",
+      "nameTextId": 3530,
+      "descTextId": 3531,
+      "promotion": "CLASS_ARCANIST_DEVISIAN",
+      "smsId": 126,
+      "slowWalking": true,
+      "sortOrder": 71,
+      "defaultPortraitId": 126,
+      "base": {
+        "hp": 16,
+        "pow": 2,
+        "skl": 1,
+        "spd": 2,
+        "def": 2,
+        "res": 4,
+        "con": 7,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 50,
+        "skl": 32,
+        "spd": 30,
+        "def": 10,
+        "res": 30,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 1,
+        "pow": 2,
+        "skl": 0,
+        "spd": 1,
+        "def": 1,
+        "res": 2
+      },
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_117",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_MAGICIAN",
+      "nameTextId": 3532,
+      "descTextId": 3533,
+      "promotion": "CLASS_MAGICIAN",
+      "smsId": 127,
+      "sortOrder": 72,
+      "defaultPortraitId": 124,
+      "base": {
+        "hp": 13,
+        "pow": 5,
+        "skl": 2,
+        "spd": 6,
+        "def": 0,
+        "res": 3,
+        "con": 6,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 55,
+        "pow": 55,
+        "skl": 40,
+        "spd": 35,
+        "def": 5,
+        "res": 30,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 1,
+        "pow": 0,
+        "skl": 1,
+        "spd": 2,
+        "def": 1,
+        "res": 2
+      },
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_118",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_OCCULTIST",
+      "nameTextId": 3534,
+      "descTextId": 3535,
+      "promotion": "CLASS_OCCULTIST",
+      "smsId": 128,
+      "slowWalking": true,
+      "sortOrder": 73,
+      "defaultPortraitId": 127,
+      "base": {
+        "hp": 19,
+        "pow": 6,
+        "skl": 3,
+        "spd": 4,
+        "def": 4,
+        "res": 6,
+        "con": 8,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 29,
+        "skl": 26,
+        "spd": 26,
+        "def": 21,
+        "res": 28,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 45,
+        "pow": 55,
+        "skl": 30,
+        "spd": 25,
+        "def": 10,
+        "res": 35,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 0,
+        "skl": 0,
+        "spd": 3,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_119",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_BLADER_F",
+      "nameTextId": 3536,
+      "descTextId": 3537,
+      "promotion": "CLASS_BLADER_F",
+      "smsId": 129,
+      "sortOrder": 74,
+      "defaultPortraitId": 114,
+      "base": {
+        "hp": 15,
+        "pow": 3,
+        "skl": 9,
+        "spd": 10,
+        "def": 1,
+        "res": 1,
+        "con": 5,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 40,
+        "def": 15,
+        "res": 20,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_120",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_HARBINGER",
+      "nameTextId": 3538,
+      "descTextId": 3539,
+      "smsId": 130,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 15,
+        "pow": 4,
+        "skl": 0,
+        "spd": 3,
+        "def": 0,
+        "res": 2,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 80,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 12,
+        "res": 15,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_121",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_HARBINGER",
+      "sortOrder": 75
+    },
+    {
+      "class": "CLASS_HARBINGER_ALT",
+      "nameTextId": 3540,
+      "descTextId": 3541,
+      "smsId": 131,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 15,
+        "pow": 4,
+        "skl": 0,
+        "spd": 3,
+        "def": 0,
+        "res": 2,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 80,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 12,
+        "res": 15,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_122",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_HARBINGER_ALT",
+      "sortOrder": 76
+    },
+    {
+      "class": "CLASS_HEAVY_INFANTRY",
+      "nameTextId": 3542,
+      "descTextId": 3543,
+      "promotion": "CLASS_HEAVY_INFANTRY",
+      "smsId": 132,
+      "sortOrder": 77,
+      "defaultPortraitId": 139,
+      "base": {
+        "hp": 18,
+        "pow": 3,
+        "skl": 3,
+        "spd": 4,
+        "def": 5,
+        "res": 0,
+        "con": 10,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 27,
+        "skl": 26,
+        "spd": 24,
+        "def": 23,
+        "res": 23,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 90,
+        "pow": 45,
+        "skl": 40,
+        "spd": 45,
+        "def": 15,
+        "res": 15,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 3,
+        "spd": 2,
+        "def": 2,
+        "res": 5
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_PROMOTED",
+        "CA_MOUNTED",
+        "CA_LORD",
+        "CA_LOCK_5"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_123",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT2Normal",
+        "TerrainTable_MovCost_HorseT2Rain",
+        "TerrainTable_MovCost_HorseT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_BARON_CUSTOM",
+      "nameTextId": 3544,
+      "descTextId": 3545,
+      "promotion": "CLASS_BARON_CUSTOM",
+      "smsId": 133,
+      "slowWalking": true,
+      "sortOrder": 78,
+      "defaultPortraitId": 119,
+      "base": {
+        "hp": 21,
+        "pow": 8,
+        "skl": 4,
+        "spd": 3,
+        "def": 13,
+        "res": 3,
+        "con": 15,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 29,
+        "skl": 27,
+        "spd": 24,
+        "def": 30,
+        "res": 25,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 30,
+        "skl": 20,
+        "spd": 10,
+        "def": 23,
+        "res": 25,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 2,
+        "spd": 3,
+        "def": 2,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_124",
+      "movCostTable": [
+        "TerrainTable_MovCost_ArmorNormal",
+        "TerrainTable_MovCost_ArmorRain",
+        "TerrainTable_MovCost_ArmorSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_SHIELD_GENERAL",
+      "nameTextId": 3546,
+      "descTextId": 3547,
+      "promotion": "CLASS_SHIELD_GENERAL",
+      "smsId": 134,
+      "slowWalking": true,
+      "sortOrder": 79,
+      "defaultPortraitId": 119,
+      "base": {
+        "hp": 21,
+        "pow": 8,
+        "skl": 4,
+        "spd": 3,
+        "def": 13,
+        "res": 3,
+        "con": 15,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 29,
+        "skl": 27,
+        "spd": 24,
+        "def": 30,
+        "res": 25,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 30,
+        "skl": 20,
+        "spd": 10,
+        "def": 23,
+        "res": 25,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 2,
+        "spd": 3,
+        "def": 2,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_125",
+      "movCostTable": [
+        "TerrainTable_MovCost_ArmorNormal",
+        "TerrainTable_MovCost_ArmorRain",
+        "TerrainTable_MovCost_ArmorSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_BLACK_DRAGON",
+      "nameTextId": 3548,
+      "descTextId": 3549,
+      "promotion": "CLASS_BLACK_DRAGON",
+      "smsId": 135,
+      "sortOrder": 80,
+      "defaultPortraitId": 143,
+      "base": {
+        "hp": 12,
+        "pow": 0,
+        "skl": 0,
+        "spd": 2,
+        "def": 2,
+        "res": 2,
+        "con": 5,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 95,
+        "pow": 40,
+        "skl": 30,
+        "spd": 20,
+        "def": 0,
+        "res": 10,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "battleAnim": "AnimConf_126",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly"
+    },
+    {
+      "class": "CLASS_DJINN",
+      "nameTextId": 3550,
+      "descTextId": 3551,
+      "promotion": "CLASS_DJINN",
+      "smsId": 136,
+      "defaultPortraitId": 164,
+      "base": {
+        "hp": 15,
+        "pow": 2,
+        "skl": 1,
+        "spd": 2,
+        "def": 2,
+        "res": 4,
+        "con": 4,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 45,
+        "skl": 32,
+        "spd": 30,
+        "def": 10,
+        "res": 28,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_127",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly",
+      "sortOrder": 81
+    },
+    {
+      "class": "CLASS_LIVING_ARMOR",
+      "nameTextId": 3552,
+      "descTextId": 3553,
+      "promotion": "CLASS_LIVING_ARMOR",
+      "smsId": 137,
+      "slowWalking": true,
+      "sortOrder": 82,
+      "defaultPortraitId": 119,
+      "base": {
+        "hp": 21,
+        "pow": 8,
+        "skl": 4,
+        "spd": 3,
+        "def": 13,
+        "res": 3,
+        "con": 15,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 29,
+        "skl": 27,
+        "spd": 24,
+        "def": 30,
+        "res": 25,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 30,
+        "skl": 20,
+        "spd": 10,
+        "def": 23,
+        "res": 25,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 2,
+        "spd": 3,
+        "def": 2,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_128",
+      "movCostTable": [
+        "TerrainTable_MovCost_ArmorNormal",
+        "TerrainTable_MovCost_ArmorRain",
+        "TerrainTable_MovCost_ArmorSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_FELLBEAST",
+      "nameTextId": 3554,
+      "descTextId": 3555,
+      "promotion": "CLASS_FELLBEAST",
+      "smsId": 138,
+      "defaultPortraitId": 169,
+      "base": {
+        "hp": 53,
+        "pow": 1,
+        "skl": 0,
+        "spd": 1,
+        "def": 0,
+        "res": 3,
+        "con": 25,
+        "mov": 4
+      },
+      "max": {
+        "hp": 100,
+        "pow": 50,
+        "skl": 50,
+        "spd": 50,
+        "def": 50,
+        "res": 50,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 85,
+        "pow": 35,
+        "skl": 20,
+        "spd": 20,
+        "def": 30,
+        "res": 10,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_PROMOTED",
+        "CA_LOCK_3"
+      ],
+      "battleAnim": "AnimConf_129",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly",
+      "sortOrder": 83,
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      }
+    },
+    {
+      "class": "CLASS_SAMURAI_F",
+      "nameTextId": 3556,
+      "descTextId": 3557,
+      "promotion": "CLASS_SAMURAI_F",
+      "smsId": 139,
+      "sortOrder": 84,
+      "defaultPortraitId": 115,
+      "base": {
+        "hp": 19,
+        "pow": 6,
+        "skl": 11,
+        "spd": 12,
+        "def": 4,
+        "res": 3,
+        "con": 7,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 22,
+        "skl": 29,
+        "spd": 30,
+        "def": 22,
+        "res": 25,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 25,
+        "skl": 30,
+        "spd": 30,
+        "def": 15,
+        "res": 22,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 1,
+        "spd": 0,
+        "def": 2,
+        "res": 1
+      },
+      "attributes": [
+        "CA_CRITBONUS",
+        "CA_PROMOTED",
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_130",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_MASTER_NINJA",
+      "nameTextId": 3558,
+      "descTextId": 3559,
+      "promotion": "CLASS_MASTER_NINJA",
+      "smsId": 140,
+      "sortOrder": 85,
+      "defaultPortraitId": 142,
+      "base": {
+        "hp": 16,
+        "pow": 3,
+        "skl": 1,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 8,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 30,
+        "spd": 30,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 5,
+        "skl": 45,
+        "spd": 40,
+        "def": 5,
+        "res": 20,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 1,
+        "skl": 0,
+        "spd": 0,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_THIEF",
+        "CA_PROMOTED",
+        "CA_LOCK_2",
+        "CA_ASSASSIN"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_131",
+      "movCostTable": [
+        "TerrainTable_MovCost_ThiefNormal",
+        "TerrainTable_MovCost_ThiefRain",
+        "TerrainTable_MovCost_ThiefSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_HOODED_NINJA",
+      "nameTextId": 3560,
+      "descTextId": 3561,
+      "promotion": "CLASS_HOODED_NINJA",
+      "smsId": 141,
+      "sortOrder": 86,
+      "defaultPortraitId": 142,
+      "base": {
+        "hp": 16,
+        "pow": 3,
+        "skl": 1,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 8,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 30,
+        "spd": 30,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 5,
+        "skl": 45,
+        "spd": 40,
+        "def": 5,
+        "res": 20,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 1,
+        "skl": 0,
+        "spd": 0,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_THIEF",
+        "CA_PROMOTED",
+        "CA_LOCK_2",
+        "CA_ASSASSIN"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_132",
+      "movCostTable": [
+        "TerrainTable_MovCost_ThiefNormal",
+        "TerrainTable_MovCost_ThiefRain",
+        "TerrainTable_MovCost_ThiefSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_MYRMIDON_FE15_F",
+      "nameTextId": 3562,
+      "descTextId": 3563,
+      "promotion": "CLASS_MYRMIDON_FE15_F",
+      "smsId": 142,
+      "sortOrder": 87,
+      "defaultPortraitId": 114,
+      "base": {
+        "hp": 15,
+        "pow": 3,
+        "skl": 9,
+        "spd": 10,
+        "def": 1,
+        "res": 1,
+        "con": 5,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 40,
+        "def": 15,
+        "res": 20,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_133",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_MYRMIDON_FE15",
+      "nameTextId": 3564,
+      "descTextId": 3565,
+      "promotion": "CLASS_MYRMIDON_FE15",
+      "smsId": 143,
+      "sortOrder": 88,
+      "defaultPortraitId": 114,
+      "base": {
+        "hp": 16,
+        "pow": 4,
+        "skl": 9,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 40,
+        "def": 15,
+        "res": 20,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_134",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_KATARINA_FENCER",
+      "nameTextId": 3566,
+      "descTextId": 3567,
+      "promotion": "CLASS_KATARINA_FENCER",
+      "smsId": 144,
+      "sortOrder": 89,
+      "defaultPortraitId": 115,
+      "base": {
+        "hp": 19,
+        "pow": 6,
+        "skl": 11,
+        "spd": 12,
+        "def": 4,
+        "res": 3,
+        "con": 7,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 22,
+        "skl": 29,
+        "spd": 30,
+        "def": 22,
+        "res": 25,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 25,
+        "skl": 30,
+        "spd": 30,
+        "def": 15,
+        "res": 22,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 1,
+        "spd": 0,
+        "def": 2,
+        "res": 1
+      },
+      "attributes": [
+        "CA_CRITBONUS",
+        "CA_PROMOTED",
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_135",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_THUG",
+      "nameTextId": 3568,
+      "descTextId": 3569,
+      "promotion": "CLASS_THUG",
+      "smsId": 145,
+      "sortOrder": 90,
+      "defaultPortraitId": 114,
+      "base": {
+        "hp": 16,
+        "pow": 4,
+        "skl": 9,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 40,
+        "def": 15,
+        "res": 20,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_136",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_DREAD_FIGHTER",
+      "nameTextId": 3570,
+      "descTextId": 3571,
+      "promotion": "CLASS_DREAD_FIGHTER",
+      "smsId": 146,
+      "sortOrder": 91,
+      "defaultPortraitId": 115,
+      "base": {
+        "hp": 21,
+        "pow": 6,
+        "skl": 11,
+        "spd": 10,
+        "def": 5,
+        "res": 2,
+        "con": 9,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 24,
+        "skl": 29,
+        "spd": 30,
+        "def": 22,
+        "res": 23,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 25,
+        "skl": 30,
+        "spd": 30,
+        "def": 15,
+        "res": 22,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 5,
+        "pow": 2,
+        "skl": 0,
+        "spd": 0,
+        "def": 2,
+        "res": 1
+      },
+      "attributes": [
+        "CA_CRITBONUS",
+        "CA_PROMOTED",
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_137",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_FIR_SWORDMASTER",
+      "nameTextId": 3572,
+      "descTextId": 3573,
+      "promotion": "CLASS_FIR_SWORDMASTER",
+      "smsId": 147,
+      "sortOrder": 92,
+      "defaultPortraitId": 115,
+      "base": {
+        "hp": 19,
+        "pow": 6,
+        "skl": 11,
+        "spd": 12,
+        "def": 4,
+        "res": 3,
+        "con": 7,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 22,
+        "skl": 29,
+        "spd": 30,
+        "def": 22,
+        "res": 25,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 25,
+        "skl": 30,
+        "spd": 30,
+        "def": 15,
+        "res": 22,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 1,
+        "spd": 0,
+        "def": 2,
+        "res": 1
+      },
+      "attributes": [
+        "CA_CRITBONUS",
+        "CA_PROMOTED",
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_138",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_TRUEBLADE",
+      "nameTextId": 3574,
+      "descTextId": 3575,
+      "promotion": "CLASS_TRUEBLADE",
+      "smsId": 148,
+      "sortOrder": 93,
+      "defaultPortraitId": 115,
+      "base": {
+        "hp": 21,
+        "pow": 6,
+        "skl": 11,
+        "spd": 10,
+        "def": 5,
+        "res": 2,
+        "con": 9,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 24,
+        "skl": 29,
+        "spd": 30,
+        "def": 22,
+        "res": 23,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 25,
+        "skl": 30,
+        "spd": 30,
+        "def": 15,
+        "res": 22,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 5,
+        "pow": 2,
+        "skl": 0,
+        "spd": 0,
+        "def": 2,
+        "res": 1
+      },
+      "attributes": [
+        "CA_CRITBONUS",
+        "CA_PROMOTED",
+        "CA_LOCK_2"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_139",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_RED_MAGE",
+      "nameTextId": 3576,
+      "descTextId": 3577,
+      "promotion": "CLASS_RED_MAGE",
+      "smsId": 149,
+      "sortOrder": 94,
+      "defaultPortraitId": 149,
+      "base": {
+        "hp": 20,
+        "pow": 4,
+        "skl": 3,
+        "spd": 5,
+        "def": 5,
+        "res": 5,
+        "con": 8,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 24,
+        "skl": 26,
+        "spd": 25,
+        "def": 24,
+        "res": 25,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 45,
+        "pow": 40,
+        "skl": 30,
+        "spd": 40,
+        "def": 10,
+        "res": 40,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 0,
+        "spd": 0,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_PROMOTED",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_140",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT2Normal",
+        "TerrainTable_MovCost_HorseT2Rain",
+        "TerrainTable_MovCost_HorseT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_MOLOCH",
+      "nameTextId": 3578,
+      "descTextId": 3579,
+      "promotion": "CLASS_MOLOCH",
+      "smsId": 150,
+      "sortOrder": 95,
+      "defaultPortraitId": 127,
+      "base": {
+        "hp": 18,
+        "pow": 5,
+        "skl": 3,
+        "spd": 4,
+        "def": 3,
+        "res": 5,
+        "con": 8,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 27,
+        "skl": 27,
+        "spd": 26,
+        "def": 20,
+        "res": 28,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 45,
+        "pow": 50,
+        "skl": 30,
+        "spd": 25,
+        "def": 8,
+        "res": 35,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 0,
+        "skl": 1,
+        "spd": 3,
+        "def": 1,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED",
+        "CA_SUMMON"
+      ],
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_141",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_TACTICIAN_CUSTOM",
+      "nameTextId": 3580,
+      "descTextId": 3581,
+      "promotion": "CLASS_TACTICIAN_CUSTOM",
+      "smsId": 151,
+      "sortOrder": 96,
+      "defaultPortraitId": 124,
+      "base": {
+        "hp": 13,
+        "pow": 5,
+        "skl": 2,
+        "spd": 6,
+        "def": 0,
+        "res": 3,
+        "con": 6,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 55,
+        "pow": 55,
+        "skl": 40,
+        "spd": 35,
+        "def": 5,
+        "res": 30,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 1,
+        "pow": 0,
+        "skl": 1,
+        "spd": 2,
+        "def": 1,
+        "res": 2
+      },
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_142",
+      "movCostTable": [
+        "TerrainTable_MovCost_MagicNormal",
+        "TerrainTable_MovCost_MagicRain",
+        "TerrainTable_MovCost_MagicSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_TRICKSTER_F",
+      "nameTextId": 3582,
+      "descTextId": 3583,
+      "promotion": "CLASS_TRICKSTER_F",
+      "smsId": 152,
+      "sortOrder": 97,
+      "defaultPortraitId": 148,
+      "base": {
+        "hp": 16,
+        "pow": 3,
+        "skl": 1,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 7,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 30,
+        "spd": 30,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 10,
+        "skl": 45,
+        "spd": 35,
+        "def": 5,
+        "res": 20,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 1,
+        "skl": 1,
+        "spd": 0,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_STEAL",
+        "CA_THIEF",
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_143",
+      "movCostTable": [
+        "TerrainTable_MovCost_ThiefNormal",
+        "TerrainTable_MovCost_ThiefRain",
+        "TerrainTable_MovCost_ThiefSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_TRICKSTER",
+      "nameTextId": 3584,
+      "descTextId": 3585,
+      "promotion": "CLASS_TRICKSTER",
+      "smsId": 153,
+      "sortOrder": 98,
+      "defaultPortraitId": 148,
+      "base": {
+        "hp": 16,
+        "pow": 3,
+        "skl": 1,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 7,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 30,
+        "spd": 30,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 10,
+        "skl": 45,
+        "spd": 35,
+        "def": 5,
+        "res": 20,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 1,
+        "skl": 1,
+        "spd": 0,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_STEAL",
+        "CA_THIEF",
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_144",
+      "movCostTable": [
+        "TerrainTable_MovCost_ThiefNormal",
+        "TerrainTable_MovCost_ThiefRain",
+        "TerrainTable_MovCost_ThiefSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_VILLAGER_F",
+      "nameTextId": 3586,
+      "descTextId": 3587,
+      "smsId": 154,
+      "sortOrder": 99,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 13,
+        "pow": 3,
+        "skl": 0,
+        "spd": 1,
+        "def": 0,
+        "res": 1,
+        "con": 6,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 1,
+      "growth": {
+        "hp": 75,
+        "pow": 45,
+        "skl": 40,
+        "spd": 40,
+        "def": 25,
+        "res": 35,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_MAXLEVEL10"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_145",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_VILLAGER_F"
+    },
+    {
+      "class": "CLASS_VILLAGER",
+      "nameTextId": 3588,
+      "descTextId": 3589,
+      "smsId": 155,
+      "sortOrder": 100,
+      "defaultPortraitId": 116,
+      "base": {
+        "hp": 14,
+        "pow": 3,
+        "skl": 0,
+        "spd": 1,
+        "def": 1,
+        "res": 0,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 1,
+      "growth": {
+        "hp": 85,
+        "pow": 55,
+        "skl": 40,
+        "spd": 32,
+        "def": 18,
+        "res": 20,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_MAXLEVEL10"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_146",
+      "movCostTable": [
+        "TerrainTable_MovCost_FighterNormal",
+        "TerrainTable_MovCost_FighterRain",
+        "TerrainTable_MovCost_FighterSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_VILLAGER"
+    },
+    {
+      "class": "CLASS_LEGION_KING",
+      "nameTextId": 3590,
+      "descTextId": 3591,
+      "promotion": "CLASS_LEGION_KING",
+      "smsId": 156,
+      "slowWalking": true,
+      "sortOrder": 101,
+      "defaultPortraitId": 119,
+      "base": {
+        "hp": 21,
+        "pow": 8,
+        "skl": 4,
+        "spd": 3,
+        "def": 13,
+        "res": 3,
+        "con": 15,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 29,
+        "skl": 27,
+        "spd": 24,
+        "def": 30,
+        "res": 25,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 30,
+        "skl": 20,
+        "spd": 10,
+        "def": 23,
+        "res": 25,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 2,
+        "spd": 3,
+        "def": 2,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_147",
+      "movCostTable": [
+        "TerrainTable_MovCost_ArmorNormal",
+        "TerrainTable_MovCost_ArmorRain",
+        "TerrainTable_MovCost_ArmorSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_ONI_CHIEFTAIN",
+      "nameTextId": 3592,
+      "descTextId": 3593,
+      "promotion": "CLASS_ONI_CHIEFTAIN",
+      "smsId": 157,
+      "sortOrder": 102,
+      "defaultPortraitId": 117,
+      "base": {
+        "hp": 28,
+        "pow": 8,
+        "skl": 5,
+        "spd": 6,
+        "def": 5,
+        "res": 0,
+        "con": 13,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 30,
+        "skl": 28,
+        "spd": 26,
+        "def": 26,
+        "res": 22,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 80,
+        "pow": 45,
+        "skl": 25,
+        "spd": 20,
+        "def": 16,
+        "res": 17,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 1,
+        "skl": 2,
+        "spd": 0,
+        "def": 3,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_148",
+      "movCostTable": [
+        "TerrainTable_MovCost_FighterNormal",
+        "TerrainTable_MovCost_FighterRain",
+        "TerrainTable_MovCost_FighterSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_ELFFIN_FANCY",
+      "nameTextId": 3594,
+      "descTextId": 3595,
+      "smsId": 158,
+      "defaultPortraitId": 139,
+      "base": {
+        "hp": 14,
+        "pow": 1,
+        "skl": 2,
+        "spd": 7,
+        "def": 1,
+        "res": 0,
+        "con": 6,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 10,
+        "skl": 10,
+        "spd": 30,
+        "def": 24,
+        "res": 26,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 45,
+        "pow": 45,
+        "skl": 30,
+        "spd": 60,
+        "def": 0,
+        "res": 13,
+        "lck": 70
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_PLAY"
+      ],
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_ELFFIN_FANCY",
+      "sortOrder": 103,
+      "battleAnim": "AnimConf_149",
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      }
+    },
+    {
+      "class": "CLASS_MOUNTED_MARAUDER",
+      "nameTextId": 3596,
+      "descTextId": 3597,
+      "promotion": "CLASS_MOUNTED_MARAUDER",
+      "smsId": 159,
+      "sortOrder": 104,
+      "defaultPortraitId": 128,
+      "base": {
+        "hp": 20,
+        "pow": 5,
+        "skl": 2,
+        "spd": 5,
+        "def": 6,
+        "res": 0,
+        "con": 9,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 35,
+        "skl": 40,
+        "spd": 28,
+        "def": 15,
+        "res": 15,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_MOUNTED"
+      ],
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_150",
+      "movCostTable": [
+        "TerrainTable_MovCost_HorseT1Normal",
+        "TerrainTable_MovCost_HorseT1Rain",
+        "TerrainTable_MovCost_HorseT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_MECHANIST",
+      "nameTextId": 3598,
+      "descTextId": 3599,
+      "promotion": "CLASS_MECHANIST",
+      "smsId": 160,
+      "sortOrder": 105,
+      "defaultPortraitId": 120,
+      "base": {
+        "hp": 14,
+        "pow": 7,
+        "skl": 3,
+        "spd": 3,
+        "def": 3,
+        "res": 3,
+        "con": 7,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 32,
+        "def": 15,
+        "res": 15,
+        "lck": 35
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_BALLISTAE"
+      ],
+      "baseRanks": {
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_151",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_DRAGOON_CUSTOM",
+      "nameTextId": 3600,
+      "descTextId": 3601,
+      "promotion": "CLASS_DRAGOON_CUSTOM",
+      "smsId": 161,
+      "sortOrder": 106,
+      "defaultPortraitId": 147,
+      "base": {
+        "hp": 20,
+        "pow": 7,
+        "skl": 7,
+        "spd": 8,
+        "def": 7,
+        "res": 1,
+        "con": 10,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 26,
+        "spd": 28,
+        "def": 24,
+        "res": 22,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 35,
+        "skl": 30,
+        "spd": 30,
+        "def": 15,
+        "res": 17,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 1,
+        "skl": 2,
+        "spd": 3,
+        "def": 0,
+        "res": 1
+      },
+      "attributes": [
+        "CA_MOUNTEDAID",
+        "CA_CANTO",
+        "CA_PROMOTED",
+        "CA_WYVERN"
+      ],
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_152",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly"
+    },
+    {
+      "class": "CLASS_LANCER_CUSTOM",
+      "nameTextId": 3602,
+      "descTextId": 3603,
+      "smsId": 162,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 15,
+        "pow": 4,
+        "skl": 0,
+        "spd": 3,
+        "def": 0,
+        "res": 2,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 80,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 12,
+        "res": 15,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_153",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_LANCER_CUSTOM",
+      "sortOrder": 107
+    },
+    {
+      "class": "CLASS_MILITIA",
+      "nameTextId": 3604,
+      "descTextId": 3605,
+      "smsId": 163,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 15,
+        "pow": 4,
+        "skl": 0,
+        "spd": 3,
+        "def": 0,
+        "res": 2,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 80,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 12,
+        "res": 15,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_154",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_MILITIA",
+      "sortOrder": 108
+    },
+    {
+      "class": "CLASS_SENTINEL",
+      "nameTextId": 3606,
+      "descTextId": 3607,
+      "promotion": "CLASS_SENTINEL",
+      "smsId": 164,
+      "slowWalking": true,
+      "sortOrder": 109,
+      "defaultPortraitId": 119,
+      "base": {
+        "hp": 21,
+        "pow": 8,
+        "skl": 4,
+        "spd": 3,
+        "def": 13,
+        "res": 3,
+        "con": 15,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 29,
+        "skl": 27,
+        "spd": 24,
+        "def": 30,
+        "res": 25,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 75,
+        "pow": 30,
+        "skl": 20,
+        "spd": 10,
+        "def": 23,
+        "res": 25,
+        "lck": 20
+      },
+      "promotionGain": {
+        "hp": 4,
+        "pow": 2,
+        "skl": 2,
+        "spd": 3,
+        "def": 2,
+        "res": 3
+      },
+      "attributes": [
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_155",
+      "movCostTable": [
+        "TerrainTable_MovCost_ArmorNormal",
+        "TerrainTable_MovCost_ArmorRain",
+        "TerrainTable_MovCost_ArmorSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_T1_LANCER",
+      "nameTextId": 3608,
+      "descTextId": 3609,
+      "promotion": "CLASS_T1_LANCER",
+      "smsId": 165,
+      "sortOrder": 110,
+      "defaultPortraitId": 139,
+      "base": {
+        "hp": 18,
+        "pow": 6,
+        "skl": 6,
+        "spd": 7,
+        "def": 6,
+        "res": 0,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 90,
+        "pow": 45,
+        "skl": 40,
+        "spd": 45,
+        "def": 15,
+        "res": 15,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LORD",
+        "CA_LOCK_5"
+      ],
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_LANCE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_156",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_GLADIATOR",
+      "nameTextId": 3610,
+      "descTextId": 3611,
+      "promotion": "CLASS_GLADIATOR",
+      "smsId": 166,
+      "sortOrder": 111,
+      "defaultPortraitId": 116,
+      "base": {
+        "hp": 20,
+        "pow": 7,
+        "skl": 2,
+        "spd": 4,
+        "def": 1,
+        "res": 0,
+        "con": 11,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 85,
+        "pow": 55,
+        "skl": 35,
+        "spd": 30,
+        "def": 15,
+        "res": 15,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 2,
+        "skl": 1,
+        "spd": 0,
+        "def": 0,
+        "res": 1
+      },
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D",
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_157",
+      "movCostTable": [
+        "TerrainTable_MovCost_FighterNormal",
+        "TerrainTable_MovCost_FighterRain",
+        "TerrainTable_MovCost_FighterSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_HORN_BRIGAND",
+      "nameTextId": 3612,
+      "descTextId": 3613,
+      "promotion": "CLASS_HORN_BRIGAND",
+      "smsId": 167,
+      "defaultPortraitId": 139,
+      "base": {
+        "hp": 20,
+        "pow": 5,
+        "skl": 1,
+        "spd": 5,
+        "def": 3,
+        "res": 0,
+        "con": 12,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 82,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 10,
+        "res": 13,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 1,
+        "skl": 1,
+        "spd": 0,
+        "def": 1,
+        "res": 1
+      },
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_158",
+      "movCostTable": [
+        "TerrainTable_MovCost_BrigandNormal",
+        "TerrainTable_MovCost_BrigandRain",
+        "TerrainTable_MovCost_BrigandSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "reservedTerrainTable": "Unk_TerrainTable_3",
+      "sortOrder": 112
+    },
+    {
+      "class": "CLASS_HORN_SOLDIER",
+      "nameTextId": 3614,
+      "descTextId": 3615,
+      "smsId": 168,
+      "defaultPortraitId": 138,
+      "base": {
+        "hp": 15,
+        "pow": 4,
+        "skl": 0,
+        "spd": 3,
+        "def": 0,
+        "res": 2,
+        "con": 8,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 2,
+      "growth": {
+        "hp": 80,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 12,
+        "res": 15,
+        "lck": 25
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_159",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "promotion": "CLASS_HORN_SOLDIER",
+      "sortOrder": 113
+    },
+    {
+      "class": "CLASS_HUNTER",
+      "nameTextId": 3616,
+      "descTextId": 3617,
+      "promotion": "CLASS_HUNTER",
+      "smsId": 169,
+      "sortOrder": 114,
+      "defaultPortraitId": 120,
+      "base": {
+        "hp": 14,
+        "pow": 7,
+        "skl": 3,
+        "spd": 3,
+        "def": 3,
+        "res": 3,
+        "con": 7,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 40,
+        "spd": 32,
+        "def": 15,
+        "res": 15,
+        "lck": 35
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_BALLISTAE"
+      ],
+      "baseRanks": {
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_160",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_SUPPLIER_ANNA",
+      "nameTextId": 3618,
+      "descTextId": 3619,
+      "promotion": "CLASS_SUPPLIER_ANNA",
+      "smsId": 170,
+      "sortOrder": 115,
+      "defaultPortraitId": 148,
+      "base": {
+        "hp": 16,
+        "pow": 3,
+        "skl": 1,
+        "spd": 9,
+        "def": 2,
+        "res": 0,
+        "con": 7,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 30,
+        "spd": 30,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 10,
+        "skl": 45,
+        "spd": 35,
+        "def": 5,
+        "res": 20,
+        "lck": 40
+      },
+      "promotionGain": {
+        "hp": 2,
+        "pow": 1,
+        "skl": 1,
+        "spd": 0,
+        "def": 2,
+        "res": 2
+      },
+      "attributes": [
+        "CA_STEAL",
+        "CA_THIEF",
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_161",
+      "movCostTable": [
+        "TerrainTable_MovCost_ThiefNormal",
+        "TerrainTable_MovCost_ThiefRain",
+        "TerrainTable_MovCost_ThiefSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
+    },
+    {
+      "class": "CLASS_SANDWORM",
+      "nameTextId": 3620,
+      "descTextId": 3621,
+      "promotion": "CLASS_SANDWORM",
+      "smsId": 171,
+      "defaultPortraitId": 157,
+      "base": {
+        "hp": 25,
+        "pow": 6,
+        "skl": 3,
+        "spd": 3,
+        "def": 6,
+        "res": 1,
+        "con": 12,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 30,
+        "skl": 28,
+        "spd": 26,
+        "def": 26,
+        "res": 22,
+        "con": 25
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 82,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 18,
+        "res": 13,
+        "lck": 15
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "battleAnim": "AnimConf_162",
+      "movCostTable": [
+        "TerrainTable_MovCost_BrigandNormal",
+        "TerrainTable_MovCost_BrigandRain",
+        "TerrainTable_MovCost_BrigandSnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "reservedTerrainTable": "Unk_TerrainTable_3",
+      "sortOrder": 116
+    },
+    {
+      "class": "CLASS_CURSED_SWORD",
+      "nameTextId": 3622,
+      "descTextId": 3623,
+      "promotion": "CLASS_CURSED_SWORD",
+      "smsId": 172,
+      "defaultPortraitId": 153,
+      "base": {
+        "hp": 25,
+        "pow": 2,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0,
+        "con": 6,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 95,
+        "pow": 50,
+        "skl": 30,
+        "spd": 20,
+        "def": 10,
+        "res": 13,
+        "lck": 10
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "battleAnim": "AnimConf_163",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "sortOrder": 117,
+      "baseRanks": {
+        "ITYPE_SWORD": "WPN_EXP_D"
+      }
+    },
+    {
+      "class": "CLASS_MAGICAL_TOMES",
+      "nameTextId": 3624,
+      "descTextId": 3625,
+      "promotion": "CLASS_MAGICAL_TOMES",
+      "smsId": 173,
+      "defaultPortraitId": 164,
+      "base": {
+        "hp": 15,
+        "pow": 2,
+        "skl": 1,
+        "spd": 2,
+        "def": 2,
+        "res": 4,
+        "con": 4,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 45,
+        "skl": 32,
+        "spd": 30,
+        "def": 10,
+        "res": 28,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_164",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly",
+      "sortOrder": 118
+    },
+    {
+      "class": "CLASS_MIMIC_CHEST",
+      "nameTextId": 3626,
+      "descTextId": 3627,
+      "promotion": "CLASS_MIMIC_CHEST",
+      "smsId": 174,
+      "defaultPortraitId": 154,
+      "base": {
+        "hp": 35,
+        "pow": 3,
+        "skl": 0,
+        "spd": 1,
+        "def": 0,
+        "res": 0,
+        "con": 6,
+        "mov": 4
+      },
+      "max": {
+        "hp": 80,
+        "pow": 25,
+        "skl": 22,
+        "spd": 21,
+        "def": 24,
+        "res": 22,
+        "con": 25
+      },
+      "classRelativePower": 1,
+      "growth": {
+        "hp": 85,
+        "pow": 40,
+        "skl": 25,
+        "spd": 17,
+        "def": 10,
+        "res": 13,
+        "lck": 50
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_PROMOTED",
+        "CA_LOCK_3"
+      ],
+      "battleAnim": "AnimConf_165",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT1Normal",
+        "TerrainTable_MovCost_CommonT1Rain",
+        "TerrainTable_MovCost_CommonT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "sortOrder": 119,
+      "baseRanks": {
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      }
+    },
+    {
+      "class": "CLASS_MOSQUITO",
+      "nameTextId": 3628,
+      "descTextId": 3629,
+      "promotion": "CLASS_MOSQUITO",
+      "smsId": 175,
+      "defaultPortraitId": 160,
+      "base": {
+        "hp": 16,
+        "pow": 4,
+        "skl": 10,
+        "spd": 10,
+        "def": 2,
+        "res": 0,
+        "con": 6,
+        "mov": 6
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 70,
+        "pow": 35,
+        "skl": 45,
+        "spd": 45,
+        "def": 15,
+        "res": 20,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "battleAnim": "AnimConf_166",
+      "movCostTable": [
+        "TerrainTable_MovCost_AnimalT1Normal",
+        "TerrainTable_MovCost_AnimalT1Rain",
+        "TerrainTable_MovCost_AnimalT1Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common",
+      "sortOrder": 120
+    },
+    {
+      "class": "CLASS_PHANTOM_CUSTOM",
+      "nameTextId": 3630,
+      "descTextId": 3631,
+      "smsId": 176,
+      "sortOrder": 121,
+      "defaultPortraitId": 152,
+      "base": {
+        "hp": 1,
+        "pow": 5,
+        "skl": 2,
+        "spd": 4,
+        "def": 0,
+        "res": 0,
+        "con": 11,
+        "mov": 4
+      },
+      "max": {
+        "hp": 1,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 0,
+        "res": 0,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 0,
+        "pow": 55,
+        "skl": 35,
+        "spd": 45,
+        "def": 15,
+        "res": 15,
+        "lck": 50
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_AXE": "WPN_EXP_D"
+      },
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly",
+      "promotion": "CLASS_PHANTOM_CUSTOM",
+      "battleAnim": "AnimConf_167"
+    },
+    {
+      "class": "CLASS_SLIME",
+      "nameTextId": 3632,
+      "descTextId": 3633,
+      "promotion": "CLASS_SLIME",
+      "smsId": 177,
+      "defaultPortraitId": 164,
+      "base": {
+        "hp": 15,
+        "pow": 2,
+        "skl": 1,
+        "spd": 2,
+        "def": 2,
+        "res": 4,
+        "con": 4,
+        "mov": 4
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 50,
+        "pow": 45,
+        "skl": 32,
+        "spd": 30,
+        "def": 10,
+        "res": 28,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "attributes": [
+        "CA_LOCK_3"
+      ],
+      "baseRanks": {
+        "ITYPE_STAFF": "WPN_EXP_D",
+        "ITYPE_ANIMA": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_168",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly",
+      "sortOrder": 122
+    },
+    {
+      "class": "CLASS_WARBIRD",
+      "nameTextId": 3634,
+      "descTextId": 3635,
+      "promotion": "CLASS_WARBIRD",
+      "smsId": 178,
+      "defaultPortraitId": 167,
+      "base": {
+        "hp": 19,
+        "pow": 6,
+        "skl": 3,
+        "spd": 6,
+        "def": 6,
+        "res": 0,
+        "con": 8,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 20,
+        "skl": 20,
+        "spd": 20,
+        "def": 20,
+        "res": 20,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 80,
+        "pow": 45,
+        "skl": 35,
+        "spd": 35,
+        "def": 25,
+        "res": 15,
+        "lck": 10
+      },
+      "promotionGain": {
+        "hp": 0,
+        "pow": 0,
+        "skl": 0,
+        "spd": 0,
+        "def": 0,
+        "res": 0
+      },
+      "baseRanks": {
+        "ITYPE_LANCE": "WPN_EXP_D",
+        "ITYPE_BOW": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_169",
+      "movCostTable": [
+        "TerrainTable_MovCost_FlyNormal",
+        "TerrainTable_MovCost_FlyRain",
+        "TerrainTable_MovCost_FlySnow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Fly",
+      "terrainDefense": "TerrainTable_Def_Fly",
+      "terrainResistance": "TerrainTable_Res_Fly",
+      "sortOrder": 123
+    },
+    {
+      "class": "CLASS_ADVENTURER",
+      "nameTextId": 3636,
+      "descTextId": 3637,
+      "promotion": "CLASS_ADVENTURER",
+      "smsId": 179,
+      "sortOrder": 124,
+      "defaultPortraitId": 121,
+      "base": {
+        "hp": 21,
+        "pow": 7,
+        "skl": 6,
+        "spd": 5,
+        "def": 5,
+        "res": 2,
+        "con": 8,
+        "mov": 5
+      },
+      "max": {
+        "hp": 60,
+        "pow": 25,
+        "skl": 30,
+        "spd": 28,
+        "def": 25,
+        "res": 23,
+        "con": 20
+      },
+      "classRelativePower": 3,
+      "growth": {
+        "hp": 65,
+        "pow": 30,
+        "skl": 30,
+        "spd": 20,
+        "def": 15,
+        "res": 20,
+        "lck": 30
+      },
+      "promotionGain": {
+        "hp": 3,
+        "pow": 1,
+        "skl": 2,
+        "spd": 2,
+        "def": 2,
+        "res": 3
+      },
+      "attributes": [
+        "CA_BALLISTAE",
+        "CA_PROMOTED"
+      ],
+      "baseRanks": {
+        "ITYPE_BOW": "WPN_EXP_D",
+        "ITYPE_STAFF": "WPN_EXP_D"
+      },
+      "battleAnim": "AnimConf_170",
+      "movCostTable": [
+        "TerrainTable_MovCost_CommonT2Normal",
+        "TerrainTable_MovCost_CommonT2Rain",
+        "TerrainTable_MovCost_CommonT2Snow"
+      ],
+      "terrainAvoid": "TerrainTable_Avo_Common",
+      "terrainDefense": "TerrainTable_Def_Common",
+      "terrainResistance": "TerrainTable_Res_Common"
     }
   ]
 }

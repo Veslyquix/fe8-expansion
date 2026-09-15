@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "scripts" / "shiftcheck" / "modern_shifted_boot.sh"
 MODERN_MAP = ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "fireemblem8.map"
 OBJECTS_LST = ROOT / "build" / "expansion-modern" / "debug" / "aapcs" / "link" / "objects.lst"
-BANIM_SYM = ROOT / "banim" / "data_banim.o.sym.o"
+BANIM_SYM = ROOT / "banim" / "data_banim.modern.o.sym.o"
 LDSCRIPT = ROOT / "linker" / "expansion.ld"
 
 

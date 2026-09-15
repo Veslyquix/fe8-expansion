@@ -1,0 +1,570 @@
+#pragma once
+
+#include "global.h"
+#include "bmguide.h"
+#include "bmunit.h"
+#include "event.h"
+#include "eventinfo.h"
+#include "eventcall.h"
+#include "coSelect.h"
+#include "EAstdlib.h"
+#include "constants/characters.h"
+#include "constants/classes.h"
+#include "constants/backgrounds.h"
+#include "constants/items.h"
+#include "constants/songs.h"
+#include "constants/chapters.h"
+#include "constants/msg.h"
+#include "power.h"
+
+#if FE8_CUSTOM_CAMPAIGN
+
+
+
+CONST_DATA struct UnitDefinition UnitDef_PrologueAllies[] = {
+    {
+        .charIndex = CHARACTER_SETH,
+        .classIndex = CLASS_NOMAD,
+        .allegiance = FACTION_ID_BLUE,
+        .level = 1,
+        .xPosition = 6,
+        .yPosition = 0,
+        .items = {
+            ITEM_BOW_IRON,
+            ITEM_VULNERARY,
+        },
+    },
+    {
+        .charIndex = CHARACTER_EIRIKA,
+        .classIndex = CLASS_LYN_LORD, //CLASS_MYRMIDON_F
+        .allegiance = FACTION_ID_BLUE,
+        .level = 1,
+        .xPosition = 1,
+        .yPosition = 2,
+        .items = {
+            ITEM_SWORD_MKATTI,
+            ITEM_VULNERARY,
+        },
+    },
+    { 0 },
+};
+// #define DEBUG_TESTING 
+// 0x88B3C50
+CONST_DATA struct UnitDefinition UnitDef_PrologueEnemies[] = {
+    // {
+        // .charIndex = CHARACTER_ONEILL,
+        // .classIndex = CLASS_FIGHTER,
+        // .allegiance = FACTION_ID_RED,
+        // .level = 4,
+        // .xPosition = 17,
+        // .yPosition = 12,
+        // .items = {
+            // ITEM_AXE_IRON,
+        // },
+        // .ai = {0x6, 0x3, 0x0, 0x1},
+    // },
+    {
+        .charIndex = 0x82,
+        .classIndex = CLASS_SOLDIER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 18,
+        .yPosition = 10,
+        .items = {
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 0x0, 0x0, 0x1},
+    },
+#if DEBUG_TESTING
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_SOLDIER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 0,
+        .yPosition = 3,
+        .items = {
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_MAGE,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 1,
+        .yPosition = 3,
+        .items = {
+            ITEM_ANIMA_FIRE,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_ARCHER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 2,
+        .yPosition = 3,
+        .items = {
+            ITEM_BOW_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_CAVALIER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 3,
+        .yPosition = 3,
+        .items = {
+            ITEM_SWORD_IRON,
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_ARMOR_KNIGHT,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 2,
+        .items = {
+            ITEM_LANCE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_FIGHTER,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 1,
+        .items = {
+            ITEM_AXE_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+    {
+        .charIndex = 0x80,
+        .classIndex = CLASS_MERCENARY,
+        .allegiance = FACTION_ID_RED,
+        .level = 1,
+        .xPosition = 4,
+        .yPosition = 0,
+        .items = {
+            ITEM_SWORD_IRON,
+        },
+        .ai = {0x0, 3, 0x2, 0x1},
+    },
+#endif 
+
+    { 0 },
+};
+
+static void SetFactionCoFromSlots(void)
+{
+    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
+}
+
+CONST_DATA EventListScr EventScr_Prologue_BeginningScene_Custom[] = {
+    SVAL(EVT_SLOT_1, FACTION_BLUE)
+    SVAL(EVT_SLOT_2, CO_ISHKODE)
+    ASMC(SetFactionCoFromSlots)
+
+    SVAL(EVT_SLOT_1, FACTION_RED)
+    SVAL(EVT_SLOT_2, CO_KARGAN)
+    ASMC(SetFactionCoFromSlots)
+
+#if FE8_CO_POWERS
+    SVAL(EVT_SLOT_1, 0) // All COs right now. 
+    SVAL(EVT_SLOT_3, FACTION_BLUE)
+    ASMC(StartCoSelect)
+#endif
+
+    LOAD1(1, UnitDef_PrologueAllies)
+    ENUN 
+    FADU(16)
+
+    MUSI
+    BROWNBOXTEXT(MSG_CUSTOM_CAMPAIGN_PROLOGUE_LOCATION, 8, 8)
+    MUNO
+
+    ENUT(0x7)
+    ENUT(0x8)
+
+    FlashCursor(CHARACTER_EIRIKA, 20)
+    MOVE(4, CHARACTER_SETH, 10, 0)
+    MOVE(1, CHARACTER_EIRIKA, 1, 3)
+    ENUN
+    MOVE(3, CHARACTER_SETH, 5, 1)
+
+    
+    // MOVE(3, CHARACTER_EIRIKA, 3, 1)
+    MOVE(3, CHARACTER_EIRIKA, 4, 1)
+    ENUN
+
+    FlashCursor(CHARACTER_EIRIKA, 60)
+    
+    MUSI
+    Text_BG(BG_ALEXANDER_LAWRIE_HILLSIDE_192, MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
+    MUNO
+    
+    /* Color distortion test - working fine with 192 col BGs. 
+    SetBackground(BG_TOBIAS_SPENCE_RIVER_FOREST_192)
+    SVAL(EVT_SLOT_3, ITEM_SWORD_RAPIER)
+    GIVEITEMTO(CHARACTER_EIRIKA)
+    FADI(16)
+    CLEAN 
+    */ 
+
+    
+    // Text(MSG_CUSTOM_CAMPAIGN_PROLOGUE_OPENING)
+    FlashCursor(CHARACTER_SETH, 20)
+    MOVE(0, CHARACTER_SETH, 1, 2)
+    ENUN
+    DISA(CHARACTER_SETH)
+    
+    LOAD1(1, UnitDef_PrologueEnemies)
+    ENUN
+    NoFade
+    ENDA
+};
+#endif
+
+CONST_DATA EventListScr EventScr_Prologue_BeginningScene[] = {
+    CALL(EventScr_Prologue_RenaisThroneCutscene)
+    SVAL(EVT_SLOT_2, EventScr_Prologue_EirikaAttacked)
+    CALL(EventScr_CallOnTutorialMode)
+    CHECK_TUTORIAL
+    BNE(0x0, EVT_SLOT_C, EVT_SLOT_0)
+    ASMC(BmGuideTextSetAllGreen)
+
+LABEL(0x0)
+    ENUT(0x8)
+    LOAD1(1, UnitDef_Event_PrologueAlly)
+    ENUN
+    SVAL(EVT_SLOT_1, 13)
+    SET_HP(CHARACTER_SETH)
+    FlashCursor(CHARACTER_EIRIKA, 60)
+    MUSI
+    Text_BG(BG_PLAIN_2, 0x90D)
+    MUNO
+    MOVE(0x18, CHARACTER_SETH, 4, 4)
+    ENUN
+    FlashCursor(CHARACTER_SETH, 60)
+    Text(0x90E)
+    SVAL(EVT_SLOT_2, EventScr_Prologue_ExecTut) /* This scr ends at ENDB! */
+    CALL(EventScr_CallOnTutorialMode)
+
+    /* Not exec if tutorial */
+    MOVE_CLOSEST(0x0, CHARACTER_EIRIKA, 4, 5)
+    ENUN
+    CALL(EventScr_Prologue_GiveRapier)
+    CALL(EventScr_Prologue_ONeillSpawn)
+    NoFade
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_RenaisThroneCutscene[] = {
+    SVAL(EVT_SLOT_B, 0x000A000E)
+    LOMA(CHAPTER_E_16)
+    LOAD2(1, UnitDef_Event_PrologueThroneRoomUnits)
+    ENUN
+    FADU(16)
+    MUSC(SONG_RAID)
+    BROWNBOXTEXT(0x664, 8, 8)
+
+    /* WTF we load Ephraim as the messager... */
+    LOAD1(1, UnitDef_Event_PrologueMessager)
+    ENUN
+    CAMERA(0xE, 0x0)
+    FlashCursor(CHARACTER_EPHRAIM, 60)
+    Text(0x903)
+    MOVE(0, CHARACTER_EPHRAIM, 0xD, 0xB)
+    ENUN
+    DISA(CHARACTER_EPHRAIM)
+
+    MOVE_1STEP(0, CHARACTER_EIRIKA, FACING_LEFT)
+    ENUN
+    FlashCursor(CHARACTER_EIRIKA, 60)
+    Text(0x904)
+
+    /* Seth pick Eirika and run */
+    MOVEONTO(0, CHARACTER_SETH, CHARACTER_EIRIKA)
+    ENUN
+    DISA(CHARACTER_EIRIKA)
+    FlashCursor(CHARACTER_SETH, 60)
+    Text(0x905)
+    MOVE(0, CHARACTER_SETH, 0xD, 0xB)
+
+    /* sD is used as queue length */
+    SVAL(EVT_SLOT_D, 0)
+    SVAL(EVT_SLOT_1, 0x010C)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x2CC)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    MOVE_DEFINED(CHARACTER_FRANZ)
+    ENUN
+
+    DISA(CHARACTER_SETH)
+    DISA(CHARACTER_FRANZ)
+
+    /* generals move in to protect the king */
+    MOVE(0, CHARACTER_MOULDER, 11, 4)
+    MOVE(0, CHARACTER_VANESSA, 15, 4)
+    ENUN
+    MOVE_1STEP(0, CHARACTER_MOULDER, FACING_RIGHT)
+    MOVE_1STEP(0, CHARACTER_VANESSA, FACING_LEFT)
+    ENUN
+
+    LOAD1(1, UnitDef_Event_PrologueGradoShamans)
+    ENUN
+    LOAD1(1, UnitDef_Event_PrologueGradoCavalry)
+    ENUN
+    LOAD1(1, UnitDef_Event_PrologueGradoRoyals)
+    ENUN
+
+    FlashCursor(CHARACTER_FADO, 60)
+    TEXTSTART
+    TEXTSHOW(0x906) /* Ephraim, Eirika...You must survive. */
+    TEXTEND
+    FADI(2)
+    REMA
+
+    /* Load to new map */
+    EVBIT_F(0x2)
+    CLEA CLEE CLEN
+    SVAL(EVT_SLOT_B, 0x00000000)
+    LOMA(CHAPTER_40)
+    FADU(16)
+
+    LOAD2(1, UnitDef_Event_PrologueEscapees)
+    ENUN
+    FlashCursor(CHARACTER_SETH, 60)
+    Text_BG(BG_PLAIN_2, 0x907)
+
+    /* Franz run */
+    SVAL(EVT_SLOT_D, 0)
+    SVAL(EVT_SLOT_1, 0x104)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x84)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x80)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    MOVE_DEFINED(CHARACTER_FRANZ)
+    ENUN
+    DISA(CHARACTER_FRANZ)
+
+    FlashCursor(CHARACTER_SETH, 60)
+    Text_BG(BG_PLAIN_2, 0x908) /* behind me */
+
+    LOAD1(1, UnitDef_Event_PrologueValterGroup)
+    ENUN
+    MOVE_1STEP(0, CHARACTER_SETH, FACING_RIGHT)
+    ENUN
+    MOVE_1STEP(0, CHARACTER_EIRIKA, FACING_LEFT)
+    ENUN
+
+    FlashCursor(CHARACTER_VALTER_PROLOGUE, 60)
+    Text_BG(BG_PLAIN_2, 0x909)
+    MOVE_1STEP(0, CHARACTER_VALTER_PROLOGUE, FACING_LEFT)
+    ENUN
+
+    StartBattle
+    MissedAttack(0, 0)
+    NormalDamage(1, 0)
+    EndAttack
+    FIGHT(CHARACTER_SETH, CHARACTER_VALTER_PROLOGUE, 0, false)
+
+    FlashCursor(CHARACTER_SETH, 60)
+    Text(0x90B)
+
+    /* Seth 'rescues' Eirika */
+    MOVE_1STEP(8, CHARACTER_SETH, FACING_LEFT)
+    ENUN
+    DISA(CHARACTER_EIRIKA)
+
+    SVAL(EVT_SLOT_D, 0)
+    SVAL(EVT_SLOT_1, 0x18104)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x18084)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x18080)
+    SAVETOQUEUE
+    SVAL(EVT_SLOT_1, 0x0)
+    SAVETOQUEUE
+    MOVE_DEFINED(CHARACTER_SETH)
+    ENUN
+    DISA(CHARACTER_SETH)
+
+    FlashCursor(CHARACTER_VALTER_PROLOGUE, 60)
+    Text(0x90C)
+
+    /* Load to new map */
+    FADI(16)
+    EVBIT_F(0x2)
+    CLEA CLEE CLEN
+    SVAL(EVT_SLOT_B, 0x00000000)
+    LOMA(CHAPTER_L_PROLOGUE)
+    FADU(16)
+
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_GiveRapier[] = {
+    FlashCursor(CHARACTER_SETH, 60)
+    Text(0x90F)
+    CALL(EventScr_RemoveBGIfNeeded)
+
+    /* Give item via slot3 */
+    SVAL(EVT_SLOT_3, ITEM_SWORD_RAPIER)
+    GIVEITEMTO(CHARACTER_EIRIKA)
+
+    SVAL(EVT_SLOT_2, EventScr_Prologue_9EF828)
+    CALL(EventScr_CallOnTutorialMode)
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_ONeillSpawn[] = {
+    LOAD1(1, UnitDef_Event_PrologueEnemy)
+    ENUN
+    FlashCursor(CHARACTER_ONEILL, 60)
+    MUSC(SONG_SHADOW_OF_THE_ENEMY)
+    Text(0x910)
+    ENUF(EVFLAG_BGM_CHANGE)
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_OneEnemyLeft[] = {
+    CHECK_ENEMIES
+    SVAL(EVT_SLOT_7, 1)
+    BNE(0x0, EVT_SLOT_C, EVT_SLOT_7)
+
+    CUMO_CHAR(CHARACTER_SETH)
+    STAL(60)
+    CURE
+    TEXTSTART
+    TEXTSHOW(0x913)
+    TEXTEND
+    REMA
+    /* this unsets the event ID so the next turn Oneill will agro (see TURN events) */
+    ENUF(EVFLAG_TMP(8))
+    GOTO(0x1)
+
+LABEL(0x0)
+    CHECK_EVENTID_
+    SADD(EVT_SLOT_2, EVT_SLOT_C, EVT_SLOT_0)
+    ENUF_SLOT2
+
+LABEL(0x1)
+    NoFade
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_ONeillAttack[] = {
+    MUSC(SONG_SHADOW_OF_THE_ENEMY)
+    Text(0x914)
+    CHECK_TUTORIAL
+    BNE(0x0, EVT_SLOT_C, EVT_SLOT_0)
+
+    /* slot1 saves the (u8)( (AI1 << 8) | AI2 ) */
+    SVAL(EVT_SLOT_1, 0x0)
+    CHAI(CHARACTER_ONEILL)
+
+LABEL(0x0)
+    NoFade
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_EndingScene[] = {
+    MUSC(SONG_VICTORY)
+    
+    MUSI
+    SetBackground(BG_ALEXANDER_LAWRIE_HILLSIDE_192)
+    TEXTSHOW(MSG_CUSTOM_CAMPAIGN_PROLOGUE_ENDING)
+    TEXTEND
+    FADI(16)
+    REMA
+    MUNO
+
+    ENUT(0xE0)
+    ENUT(0xE1)
+    ENUT(0xB7)
+    ENUT(0xB4)
+    ENUT(0xB5)
+    ENUT(0xDC)
+    ENUT(0xB9)
+    ENUT(0xC2)
+    ENUT(0xC3)
+    ENUT(0xE7)
+    ENUT(0xC9)
+
+    MNC2(0x1)
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_EirikaAttacked[] = {
+    DISABLEOPTIONS(EVENT_MENUOVERRIDE_OPTIONS | EVENT_MENUOVERRIDE_END)
+    ENUT(0x66) /* Disable objective window */
+    ENUT(0xE0) /* Guide:Suspend */
+    ENUT(0xE1) /* Guide:Save */
+    ENUT(EVFLAG_BGM_CHANGE)
+
+    StartBattle
+    MissedAttack(0, 0)
+    NormalDamage(1, 0)
+    NormalDamage(1, 0)
+    EndAttack
+    FIGHT_SCRIPT
+
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_Turn1[] = {
+    SVAL(EVT_SLOT_2, EventScr_Prologue_ONeillSpawn)
+    CALL(EventScr_CallOnTutorialMode)
+
+    SVAL(EVT_SLOT_2, EventScr_Prologue_TutMessageTurn1)
+    CALL(EventScr_CallOnTutorialMode)
+
+    NoFade
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_Turn2[] = {
+    SVAL(EVT_SLOT_2, EventScr_Prologue_TutMessageTurn2)
+    CALL(EventScr_CallOnTutorialMode)
+
+    NoFade
+    ENDA
+};
+
+CONST_DATA EventListScr EventScr_Prologue_Turn3[] = {
+    SVAL(EVT_SLOT_2, EventScr_Prologue_OneillSethBattle)
+    CALL(EventScr_CallOnTutorialMode)
+
+    SVAL(EVT_SLOT_2, EventScr_Prologue_TutEirikaAttack)
+    CALL(EventScr_CallOnTutorialMode)
+
+    NoFade
+    ENDA
+};

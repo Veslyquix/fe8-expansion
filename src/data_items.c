@@ -1,6 +1,7 @@
 #include "global.h"
 #include "bmitem.h"
 #include "constants/items.h"
+#include "constants/msg.h"
 
 CONST_DATA struct ItemData gItemData[] = {
 	[ITEM_NONE] = {
@@ -15,8 +16,8 @@ CONST_DATA struct ItemData gItemData[] = {
 		.weaponType = ITYPE_SWORD,
 		.attributes = IA_WEAPON,
 		.maxUses = 46,
-		.might = 5,
-		.hit = 90,
+		.might = 6,
+		.hit = 95,
 		.weight = 5,
 		.encodedRange = 0x11,
 		.costPerUse = 10,
@@ -155,11 +156,11 @@ CONST_DATA struct ItemData gItemData[] = {
 		.weaponExp = 2,
 	},
 	[ITEM_SWORD_MKATTI] = {
-		.nameTextId = 0x403,
-		.descTextId = 0x4ab,
+		.nameTextId = MSG_MKATTI_NAME,
+		.descTextId = MSG_MKATTI_DESC,
 		.number = ITEM_SWORD_MKATTI,
 		.weaponType = ITYPE_SWORD,
-		.attributes = IA_WEAPON | IA_UNSELLABLE | IA_LOCK_6,
+		.attributes = IA_WEAPON | IA_UNSELLABLE | IA_UNBREAKABLE | IA_LOCK_6,
 		.pEffectiveness = ItemEffectiveness_ArmorAndHorse,
 		.maxUses = 45,
 		.might = 8,
@@ -329,7 +330,7 @@ CONST_DATA struct ItemData gItemData[] = {
 		.attributes = IA_WEAPON,
 		.maxUses = 45,
 		.might = 7,
-		.hit = 80,
+		.hit = 90,
 		.weight = 8,
 		.encodedRange = 0x11,
 		.costPerUse = 8,
@@ -510,7 +511,7 @@ CONST_DATA struct ItemData gItemData[] = {
 		.attributes = IA_WEAPON,
 		.maxUses = 45,
 		.might = 8,
-		.hit = 75,
+		.hit = 85,
 		.weight = 10,
 		.encodedRange = 0x11,
 		.costPerUse = 6,
@@ -740,8 +741,8 @@ CONST_DATA struct ItemData gItemData[] = {
 		.attributes = IA_WEAPON,
 		.pEffectiveness = ItemEffectiveness_Flier,
 		.maxUses = 45,
-		.might = 6,
-		.hit = 85,
+		.might = 7,
+		.hit = 90,
 		.weight = 5,
 		.encodedRange = 0x22,
 		.costPerUse = 12,
@@ -2485,7 +2486,11 @@ CONST_DATA struct ItemData gItemData[] = {
 		.maxUses = 1,
 		.hit = 70,
 		.weight = 8,
+#if FE8_RANGE_REWORK
+		.encodedRange = 0xFF, // "hits everyone" sentinel -- see IsItemAllRange, src/bmitem.c
+#else
 		.encodedRange = 0x13,
+#endif
 		.iconId = 0xc7,
 	},
 	[ITEM_DEMONSTONE] = {
@@ -2750,6 +2755,26 @@ CONST_DATA struct ItemData gItemData[] = {
 		.costPerUse = 40000,
 		.iconId = 0xc9,
 	},
+#if FE8_CUSTOM_CAMPAIGN
+	// Same slot as vanilla's unused ITEM_UNK_BC below -- see include/constants/items.h.
+	[ITEM_STAFF_NOSTAL] = {
+		.nameTextId = MSG_NAME_NOSTAL,
+		.descTextId = MSG_DESC_NOSTAL,
+		.useDescTextId = MSG_USEDESC_NOSTAL,
+		.number = ITEM_STAFF_NOSTAL,
+		.weaponType = ITYPE_STAFF,
+		.attributes = IA_STAFF|IA_UNBREAKABLE,
+		.maxUses = 15,
+		.hit = 100,
+		.weight = 5,
+		.encodedRange = 0x1A, // always 1-10, never mag/2 like Physic
+		.costPerUse = 250,
+		.weaponRank = WPN_EXP_E,
+		.iconId = 0xdf, // item_icon_staff_nostal -- see src/data/data_item_icon.c
+		.useEffectId = 4,
+		.weaponExp = 2,
+	},
+#else
 	[ITEM_UNK_BC] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
@@ -2760,6 +2785,7 @@ CONST_DATA struct ItemData gItemData[] = {
 		.iconId = 0x0,
 		.weaponExp = 1,
 	},
+#endif
 	[ITEM_UNK_BD] = {
 		.nameTextId = 0x403,
 		.descTextId = 0x4ab,
@@ -2826,13 +2852,23 @@ CONST_DATA struct ItemData gItemData[] = {
 		.weaponExp = 1,
 	},
 	[ITEM_UNK_C3] = {
-		.nameTextId = 0x403,
-		.descTextId = 0x4ab,
+		.nameTextId = MSG_ITEM_CALL_NAME,
+		.descTextId = MSG_4AB,
 		.number = ITEM_UNK_C3,
-		.weaponType = ITYPE_LANCE,
-		.attributes = IA_WEAPON,
-		.encodedRange = 0x11,
-		.iconId = 0x0,
+		/* Repurposed (FE8_SKILLSYSTEM) as ITEM_CALL: the internal-only
+		 * weapon UnitCall_SetUpSoloAttackAnim (src/unitcall.c) passes into
+		 * gBattleActor to drive the Call command's cosmetic solo attack
+		 * animation. ITYPE_DANCE needs no weapon rank (matches
+		 * ITEM_UNK_CD, the other ITYPE_DANCE dummy, which has no
+		 * .attributes/.baseRanks requirement either) and, per
+		 * AnimConf_158/159 (src/data_banimconf.c), resolves to
+		 * CLASS_HORN_BRIGAND/CLASS_HORN_SOLDIER's own real attack pose.
+		 * Was ITYPE_LANCE; already an unused dummy slot, safe to retype.
+		 * iconId 0xDE = item_icon_horn (src/data/data_item_icon.c), art:
+		 * "Horn of the Savage" (Tactics Ogre: LUCT, EldritchAbo, serebii01). */
+		.weaponType = ITYPE_DANCE,
+		.encodedRange = 0x12,
+		.iconId = 0xde,
 		.weaponExp = 1,
 	},
 	[ITEM_UNK_C4] = {

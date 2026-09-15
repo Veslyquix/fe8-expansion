@@ -41,13 +41,783 @@
 #endif
 
 
+ 
+/* Wakwi is a critical hit specialist */ 
+// issue: classes not shown here don't get the crit bonus 
+ static const struct CoClassAffinity sWakwiAffinities[] = {
+    {  .classId = CLASS_SOLDIER,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    //Cavalier and Knights don't have custom anims for _F yet. 
+    {  .classId = CLASS_ARMOR_KNIGHT,     .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_ARCHER_F,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_FIGHTER,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+ // {  .classId = CLASS_MERCENARY,        .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // Wakwi gets myrmidon instead of mercenary 
+    {  .classId = CLASS_MYRMIDON_F,        .rating = 36, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_CAVALIER,         .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_HORN_BRIGAND,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_MONK,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_MAGE_F,             .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_SHAMAN,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    {  .classId = CLASS_CLERIC,           .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_THIEF,            .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_PEGASUS_KNIGHT,   .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+    // {  .classId = CLASS_WYVERN_RIDER,     .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+};
+
+/* Ishkode is a ranged specialist */
+static const struct CoClassAffinity sIshkodeAffinities[] = {
+    { .classId = CLASS_SOLDIER, .rating = 30 },
+    { .classId = CLASS_ARMOR_KNIGHT,  .rating = 30 },
+    { .classId = CLASS_BRIGAND,       .rating = 30 },
+    { .classId = CLASS_ARCHER,        .rating = 36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 },
+    //  .classId = CLASS_NOMAD,      .rating =   36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
+    { .classId = CLASS_FIGHTER,       .rating = 30 },
+    { .classId = CLASS_MERCENARY,     .rating = 30 },
+    { .classId = CLASS_CAVALIER,      .rating = 30 },
+    { .classId = CLASS_MONK,          .rating = 30 },
+    // { .classId = CLASS_MAGE,          .rating = 30 },
+    // { .classId = CLASS_SHAMAN,        .rating = 30 },
+    { .classId = CLASS_CLERIC,        .rating = 30 },
+    // { .classId = CLASS_THIEF,         .rating = 30 },
+    // { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30 },
+    // { .classId = CLASS_WYVERN_RIDER,      .rating = 30 },
+};
+
+/* Asin is a healing specialist */
+static const struct CoClassAffinity sAsinAffinities[] = {
+    { .classId = CLASS_SOLDIER,       .rating = 27 },
+    { .classId = CLASS_ARMOR_KNIGHT,  .rating = 27 },
+    // { .classId = CLASS_BRIGAND,       .rating = 27 },
+    { .classId = CLASS_ARCHER,        .rating = 27 }, 
+    { .classId = CLASS_FIGHTER,       .rating = 27 },
+    { .classId = CLASS_MERCENARY,     .rating = 27 },
+    { .classId = CLASS_CAVALIER,      .rating = 27 },
+    { .classId = CLASS_MONK,          .rating = 30 },
+    { .classId = CLASS_MAGE,          .rating = 30 },
+    { .classId = CLASS_SHAMAN,        .rating = 30 },
+    { .classId = CLASS_CLERIC,        .rating = 30 },
+    // { .classId = CLASS_THIEF,         .rating = 27 },
+    // { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 27 },
+    // { .classId = CLASS_WYVERN_RIDER,      .rating = 27 },
+};
+
+/* Edric is a soldier specialist, with weak magic units. */
+static const struct CoClassAffinity sEdricAffinities[] = {
+    { .classId = CLASS_SOLDIER,       .rating = 36, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
+    { .classId = CLASS_ARMOR_KNIGHT,  .rating = 36, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
+    { .classId = CLASS_BRIGAND,       .rating = 30 },
+    { .classId = CLASS_ARCHER,        .rating = 30 },
+    { .classId = CLASS_FIGHTER,       .rating = 30 },
+    { .classId = CLASS_MERCENARY,     .rating = 30 },
+    { .classId = CLASS_CAVALIER,      .rating = 39, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
+    { .classId = CLASS_MONK,          .rating = 24 },
+    { .classId = CLASS_MAGE,          .rating = 24 },
+    { .classId = CLASS_SHAMAN,        .rating = 24 },
+    { .classId = CLASS_CLERIC,        .rating = 24 },
+    { .classId = CLASS_THIEF,         .rating = 30 },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30 },
+    { .classId = CLASS_WYVERN_RIDER,      .rating = 33 },
+};
+
+/* Kargan is an axe specialist, but weak with anything magical. */
+static const struct CoClassAffinity sKarganAffinities[] = {
+    { .classId = CLASS_SOLDIER,       .rating = 30, .ratingPow = 3, .ratingSup = 6 },
+    { .classId = CLASS_ARMOR_KNIGHT,  .rating = 30, .ratingPow = 3, .ratingSup = 6 },
+    // { .classId = CLASS_BRIGAND,       .rating = 42, .ratingPow = 3, .ratingSup = 6, .movBon = +1 },
+    { .classId = CLASS_ARCHER,        .rating = 24, .ratingPow = 3, .ratingSup = 6 },
+    { .classId = CLASS_FIGHTER,       .rating = 45, .ratingPow = 3, .ratingSup = 6, .movBon = +1 },
+    { .classId = CLASS_MERCENARY,     .rating = 24, .ratingPow = 3, .ratingSup = 6 },
+    { .classId = CLASS_CAVALIER,      .rating = 30, .ratingPow = 3, .ratingSup = 6 },
+    { .classId = CLASS_MONK,          .rating = 24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { .classId = CLASS_MAGE,          .rating = 24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { .classId = CLASS_SHAMAN,        .rating = 24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
+    { .classId = CLASS_CLERIC,        .rating = 24 },
+    { .classId = CLASS_THIEF,         .rating = 27, .ratingPow = 3, .ratingSup = 6 },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 27, .ratingPow = 3, .ratingSup = 6 },
+    { .classId = CLASS_WYVERN_RIDER,      .rating = 30, .ratingPow = 3, .ratingSup = 6 },
+    {  .classId = CLASS_HORN_BRIGAND,          .rating = 30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
+
+};
+
+
+/* Placeholder affinities */
+static const struct CoClassAffinity sPlaceholderAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Toren */
+static const struct CoClassAffinity sTorenAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Lenora */
+static const struct CoClassAffinity sLenoraAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Volik */
+static const struct CoClassAffinity sVolikAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Clarisse */
+static const struct CoClassAffinity sClarisseAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Elayne */
+static const struct CoClassAffinity sElayneAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Orelus */
+static const struct CoClassAffinity sOrelusAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Nuri */
+static const struct CoClassAffinity sNuriAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Farid */
+static const struct CoClassAffinity sFaridAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Kavra */
+static const struct CoClassAffinity sKavraAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Zahir */
+static const struct CoClassAffinity sZahirAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Brann */
+static const struct CoClassAffinity sBrannAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Kit */
+static const struct CoClassAffinity sKitAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Marius */
+static const struct CoClassAffinity sMariusAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Lyria */
+static const struct CoClassAffinity sLyriaAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Mortivar */
+static const struct CoClassAffinity sMortivarAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+/* Veyr */
+static const struct CoClassAffinity sVeyrAffinities[] = {
+    { .classId = CLASS_SOLDIER,             .rating = 30, },
+    { .classId = CLASS_ARMOR_KNIGHT,        .rating = 30, },
+    { .classId = CLASS_ARCHER,              .rating = 30, },
+    { .classId = CLASS_FIGHTER,             .rating = 30, },
+    { .classId = CLASS_MERCENARY,           .rating = 30, },
+    { .classId = CLASS_CAVALIER,            .rating = 30, },
+    { .classId = CLASS_MONK,                .rating = 30, },
+    { .classId = CLASS_MAGE,                .rating = 30, },
+    { .classId = CLASS_SHAMAN,              .rating = 30, },
+    { .classId = CLASS_CLERIC,              .rating = 30  },
+    { .classId = CLASS_THIEF,               .rating = 30, },
+    { .classId = CLASS_PEGASUS_KNIGHT,      .rating = 30, },
+    { .classId = CLASS_WYVERN_RIDER,        .rating = 30, },
+    { .classId = CLASS_HORN_BRIGAND,        .rating = 30, },
+};
+
+static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
+    
+    [CO_WAKWI] = {
+        .charId = CHARACTER_WAKWI, // Wakwi (see src/data_characters.c)
+        .titleMsg = MSG_CO_WAKWI_TITLE,
+        .briefMsg = MSG_CO_WAKWI_BRIEF,
+        .infoMsg = MSG_CO_WAKWI_INFO,
+        .passiveMsg = MSG_CO_WAKWI_PASSIVE,
+        .powerNameMsg = MSG_CO_WAKWI_POWER_NAME,
+        .powerDescMsg = MSG_CO_WAKWI_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_WAKWI_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_WAKWI_SUPER_DESC,
+        .powerStars = 2,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sWakwiAffinities,
+        .affinityCount = ARRAY_COUNT(sWakwiAffinities),
+    },
+    [CO_ISHKODE] = {
+        .charId = CHARACTER_ISHKODE, // Ishkode (see src/data_characters.c)
+        .titleMsg = MSG_CO_ISHKODE_TITLE,
+        .briefMsg = MSG_CO_ISHKODE_BRIEF,
+        .infoMsg = MSG_CO_ISHKODE_INFO,
+        .passiveMsg = MSG_CO_ISHKODE_PASSIVE,
+        .powerNameMsg = MSG_CO_ISHKODE_POWER_NAME,
+        .powerDescMsg = MSG_CO_ISHKODE_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ISHKODE_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ISHKODE_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 5,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sIshkodeAffinities,
+        .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
+    },
+    [CO_ASIN] = {
+        .charId = CHARACTER_ASIN, // Asin (see src/data_characters.c)
+        .titleMsg = MSG_CO_ASIN_TITLE,
+        .briefMsg = MSG_CO_ASIN_BRIEF,
+        .infoMsg = MSG_CO_ASIN_INFO,
+        .passiveMsg = MSG_CO_ASIN_PASSIVE,
+        .powerNameMsg = MSG_CO_ASIN_POWER_NAME,
+        .powerDescMsg = MSG_CO_ASIN_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ASIN_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ASIN_SUPER_DESC,
+        .powerStars = 2,
+        .superPowerStars = 4,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sAsinAffinities,
+        .affinityCount = ARRAY_COUNT(sAsinAffinities),
+    },
+    [CO_EDRIC] = {
+        .charId = CHARACTER_EDRIC,
+        .titleMsg = MSG_CO_EDRIC_TITLE,
+        .briefMsg = MSG_CO_EDRIC_BRIEF,
+        .infoMsg = MSG_CO_EDRIC_INFO,
+        .passiveMsg = MSG_CO_EDRIC_PASSIVE,
+        .powerNameMsg = MSG_CO_EDRIC_POWER_NAME,
+        .powerDescMsg = MSG_CO_EDRIC_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_EDRIC_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_EDRIC_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 5,
+        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
+        .affinities = sEdricAffinities,
+        .affinityCount = ARRAY_COUNT(sEdricAffinities),
+    },
+    [CO_TOREN] = {
+        .charId = CHARACTER_TOREN,
+        .titleMsg = MSG_CO_TOREN_TITLE,
+        .briefMsg = MSG_CO_TOREN_BRIEF,
+        .infoMsg = MSG_CO_TOREN_INFO,
+        .passiveMsg = MSG_CO_TOREN_PASSIVE,
+        .powerNameMsg = MSG_CO_TOREN_POWER_NAME,
+        .powerDescMsg = MSG_CO_TOREN_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_TOREN_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_TOREN_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sTorenAffinities,
+        .affinityCount = ARRAY_COUNT(sTorenAffinities),
+    },
+    [CO_LENORA] = {
+        .charId = CHARACTER_LENORA,
+        .titleMsg = MSG_CO_LENORA_TITLE,
+        .briefMsg = MSG_CO_LENORA_BRIEF,
+        .infoMsg = MSG_CO_LENORA_INFO,
+        .passiveMsg = MSG_CO_LENORA_PASSIVE,
+        .powerNameMsg = MSG_CO_LENORA_POWER_NAME,
+        .powerDescMsg = MSG_CO_LENORA_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_LENORA_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_LENORA_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sLenoraAffinities,
+        .affinityCount = ARRAY_COUNT(sLenoraAffinities),
+    },
+    [CO_VOLIK] = {
+        .charId = CHARACTER_VOLIK,
+        .titleMsg = MSG_CO_VOLIK_TITLE,
+        .briefMsg = MSG_CO_VOLIK_BRIEF,
+        .infoMsg = MSG_CO_VOLIK_INFO,
+        .passiveMsg = MSG_CO_VOLIK_PASSIVE,
+        .powerNameMsg = MSG_CO_VOLIK_POWER_NAME,
+        .powerDescMsg = MSG_CO_VOLIK_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_VOLIK_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_VOLIK_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sVolikAffinities,
+        .affinityCount = ARRAY_COUNT(sVolikAffinities),
+    },
+    [CO_CLARISSE] = {
+        .charId = CHARACTER_CLARISSE,
+        .titleMsg = MSG_CO_CLARISSE_TITLE,
+        .briefMsg = MSG_CO_CLARISSE_BRIEF,
+        .infoMsg = MSG_CO_CLARISSE_INFO,
+        .passiveMsg = MSG_CO_CLARISSE_PASSIVE,
+        .powerNameMsg = MSG_CO_CLARISSE_POWER_NAME,
+        .powerDescMsg = MSG_CO_CLARISSE_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_CLARISSE_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_CLARISSE_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sClarisseAffinities,
+        .affinityCount = ARRAY_COUNT(sClarisseAffinities),
+    },
+    [CO_ELAYNE] = {
+        .charId = CHARACTER_ELAYNE,
+        .titleMsg = MSG_CO_ELAYNE_TITLE,
+        .briefMsg = MSG_CO_ELAYNE_BRIEF,
+        .infoMsg = MSG_CO_ELAYNE_INFO,
+        .passiveMsg = MSG_CO_ELAYNE_PASSIVE,
+        .powerNameMsg = MSG_CO_ELAYNE_POWER_NAME,
+        .powerDescMsg = MSG_CO_ELAYNE_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ELAYNE_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ELAYNE_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sElayneAffinities,
+        .affinityCount = ARRAY_COUNT(sElayneAffinities),
+    },
+    [CO_ORELUS] = {
+        .charId = CHARACTER_ORELUS,
+        .titleMsg = MSG_CO_ORELUS_TITLE,
+        .briefMsg = MSG_CO_ORELUS_BRIEF,
+        .infoMsg = MSG_CO_ORELUS_INFO,
+        .passiveMsg = MSG_CO_ORELUS_PASSIVE,
+        .powerNameMsg = MSG_CO_ORELUS_POWER_NAME,
+        .powerDescMsg = MSG_CO_ORELUS_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ORELUS_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ORELUS_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sOrelusAffinities,
+        .affinityCount = ARRAY_COUNT(sOrelusAffinities),
+    },
+    [CO_NURI] = {
+        .charId = CHARACTER_NURI,
+        .titleMsg = MSG_CO_NURI_TITLE,
+        .briefMsg = MSG_CO_NURI_BRIEF,
+        .infoMsg = MSG_CO_NURI_INFO,
+        .passiveMsg = MSG_CO_NURI_PASSIVE,
+        .powerNameMsg = MSG_CO_NURI_POWER_NAME,
+        .powerDescMsg = MSG_CO_NURI_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_NURI_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_NURI_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sNuriAffinities,
+        .affinityCount = ARRAY_COUNT(sNuriAffinities),
+    },
+    [CO_FARID] = {
+        .charId = CHARACTER_FARID,
+        .titleMsg = MSG_CO_FARID_TITLE,
+        .briefMsg = MSG_CO_FARID_BRIEF,
+        .infoMsg = MSG_CO_FARID_INFO,
+        .passiveMsg = MSG_CO_FARID_PASSIVE,
+        .powerNameMsg = MSG_CO_FARID_POWER_NAME,
+        .powerDescMsg = MSG_CO_FARID_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_FARID_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_FARID_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sFaridAffinities,
+        .affinityCount = ARRAY_COUNT(sFaridAffinities),
+    },
+    [CO_KAVRA] = {
+        .charId = CHARACTER_KAVRA,
+        .titleMsg = MSG_CO_KAVRA_TITLE,
+        .briefMsg = MSG_CO_KAVRA_BRIEF,
+        .infoMsg = MSG_CO_KAVRA_INFO,
+        .passiveMsg = MSG_CO_KAVRA_PASSIVE,
+        .powerNameMsg = MSG_CO_KAVRA_POWER_NAME,
+        .powerDescMsg = MSG_CO_KAVRA_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_KAVRA_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_KAVRA_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sKavraAffinities,
+        .affinityCount = ARRAY_COUNT(sKavraAffinities),
+    },
+    [CO_ZAHIR] = {
+        .charId = CHARACTER_ZAHIR,
+        .titleMsg = MSG_CO_ZAHIR_TITLE,
+        .briefMsg = MSG_CO_ZAHIR_BRIEF,
+        .infoMsg = MSG_CO_ZAHIR_INFO,
+        .passiveMsg = MSG_CO_ZAHIR_PASSIVE,
+        .powerNameMsg = MSG_CO_ZAHIR_POWER_NAME,
+        .powerDescMsg = MSG_CO_ZAHIR_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_ZAHIR_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_ZAHIR_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sZahirAffinities,
+        .affinityCount = ARRAY_COUNT(sZahirAffinities),
+    },
+    [CO_BRANN] = {
+        .charId = CHARACTER_BRANN,
+        .titleMsg = MSG_CO_BRANN_TITLE,
+        .briefMsg = MSG_CO_BRANN_BRIEF,
+        .infoMsg = MSG_CO_BRANN_INFO,
+        .passiveMsg = MSG_CO_BRANN_PASSIVE,
+        .powerNameMsg = MSG_CO_BRANN_POWER_NAME,
+        .powerDescMsg = MSG_CO_BRANN_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_BRANN_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_BRANN_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sBrannAffinities,
+        .affinityCount = ARRAY_COUNT(sBrannAffinities),
+    },
+    [CO_KARGAN] = {
+        .charId = CHARACTER_KARGAN, // Kargan replaces O'Neill for now (portrait 0x30)
+        .titleMsg = MSG_CO_KARGAN_TITLE,
+        .briefMsg = MSG_CO_KARGAN_BRIEF,
+        .infoMsg = MSG_CO_KARGAN_INFO,
+        .passiveMsg = MSG_CO_KARGAN_PASSIVE,
+        .powerNameMsg = MSG_CO_KARGAN_POWER_NAME,
+        .powerDescMsg = MSG_CO_KARGAN_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_KARGAN_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_KARGAN_SUPER_DESC,
+        .powerStars = 2,
+        .superPowerStars = 4,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sKarganAffinities,
+        .affinityCount = ARRAY_COUNT(sKarganAffinities),
+    },
+    [CO_KIT] = {
+        .charId = CHARACTER_KIT,
+        .titleMsg = MSG_CO_KIT_TITLE,
+        .briefMsg = MSG_CO_KIT_BRIEF,
+        .infoMsg = MSG_CO_KIT_INFO,
+        .passiveMsg = MSG_CO_KIT_PASSIVE,
+        .powerNameMsg = MSG_CO_KIT_POWER_NAME,
+        .powerDescMsg = MSG_CO_KIT_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_KIT_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_KIT_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sKitAffinities,
+        .affinityCount = ARRAY_COUNT(sKitAffinities),
+    },
+    [CO_MARIUS] = {
+        .charId = CHARACTER_MARIUS,
+        .titleMsg = MSG_CO_MARIUS_TITLE,
+        .briefMsg = MSG_CO_MARIUS_BRIEF,
+        .infoMsg = MSG_CO_MARIUS_INFO,
+        .passiveMsg = MSG_CO_MARIUS_PASSIVE,
+        .powerNameMsg = MSG_CO_MARIUS_POWER_NAME,
+        .powerDescMsg = MSG_CO_MARIUS_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_MARIUS_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_MARIUS_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sMariusAffinities,
+        .affinityCount = ARRAY_COUNT(sMariusAffinities),
+    },
+    [CO_LYRIA] = {
+        .charId = CHARACTER_LYRIA,
+        .titleMsg = MSG_CO_LYRIA_TITLE,
+        .briefMsg = MSG_CO_LYRIA_BRIEF,
+        .infoMsg = MSG_CO_LYRIA_INFO,
+        .passiveMsg = MSG_CO_LYRIA_PASSIVE,
+        .powerNameMsg = MSG_CO_LYRIA_POWER_NAME,
+        .powerDescMsg = MSG_CO_LYRIA_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_LYRIA_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_LYRIA_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sLyriaAffinities,
+        .affinityCount = ARRAY_COUNT(sLyriaAffinities),
+    },
+    [CO_VEYR] = {
+        .charId = CHARACTER_VEYR,
+        .titleMsg = MSG_CO_VEYR_TITLE,
+        .briefMsg = MSG_CO_VEYR_BRIEF,
+        .infoMsg = MSG_CO_VEYR_INFO,
+        .passiveMsg = MSG_CO_VEYR_PASSIVE,
+        .powerNameMsg = MSG_CO_VEYR_POWER_NAME,
+        .powerDescMsg = MSG_CO_VEYR_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_VEYR_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_VEYR_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sVeyrAffinities,
+        .affinityCount = ARRAY_COUNT(sVeyrAffinities),
+    },
+    [CO_MORTIVAR] = {
+        .charId = CHARACTER_MORTIVAR,
+        .titleMsg = MSG_CO_MORTIVAR_TITLE,
+        .briefMsg = MSG_CO_MORTIVAR_BRIEF,
+        .infoMsg = MSG_CO_MORTIVAR_INFO,
+        .passiveMsg = MSG_CO_MORTIVAR_PASSIVE,
+        .powerNameMsg = MSG_CO_MORTIVAR_POWER_NAME,
+        .powerDescMsg = MSG_CO_MORTIVAR_POWER_DESC,
+        .superPowerNameMsg = MSG_CO_MORTIVAR_SUPER_NAME,
+        .superPowerDescMsg = MSG_CO_MORTIVAR_SUPER_DESC,
+        .powerStars = 3,
+        .superPowerStars = 6,
+        .powerTargetGroup = CO_POWER_TARGET_ALL,
+        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
+        .affinities = sMortivarAffinities,
+        .affinityCount = ARRAY_COUNT(sMortivarAffinities),
+    },
+
+};
+
+
+
+
 /* Define this to make the CO screen's Up/Down scroll (CoScreen_KeyListener)
  * cycle through every defined CO, including ones no faction is currently
  * using -- useful for browsing/debugging all COs regardless of the actual
  * match. Left undefined by default: scrolling only reaches a CO that some
  * faction's gPlaySt.commanderId[] is actually set to (see IsCoInUse/
  * FindNextUsedCoId below), so e.g. Blue using Ishkode and Red using
- * O'Neill won't also scroll past unused COs like Francis. */
+ * O'Neill won't also scroll past unused COs like Edric. */
 // #define SCROLL_ALL_COS
 
 #define CO_POWERS_UNIT_DISPLAY_FRAMES 5
@@ -406,7 +1176,15 @@ static void CoPowers_Anim(struct CoPowersProc* proc)
 u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number)
 {
     int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
-    int needed = CoScreen_GetCoPowerStars(coId) * CO_GAUGE_PER_STAR;
+    int needed;
+
+    /* No commander, no powers. CO_NONE's blank definition has powerStars 0,
+     * which would otherwise read as "costs nothing" and leave both entries
+     * permanently selectable. */
+    if (coId == CO_NONE)
+        return MENU_DISABLED;
+
+    needed = CoScreen_GetCoPowerStars(coId) * CO_GAUGE_PER_STAR;
 
     if (CoGauge_Get(FACTION_BLUE) < needed)
         return MENU_DISABLED;
@@ -420,7 +1198,12 @@ u8 CoPowers_IsAvailable(const struct MenuItemDef* def, int number)
 u8 CoSuperPowers_IsAvailable(const struct MenuItemDef* def, int number)
 {
     int coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
-    int needed = CoScreen_GetCoSuperPowerStars(coId) * CO_GAUGE_PER_STAR;
+    int needed;
+
+    if (coId == CO_NONE)
+        return MENU_DISABLED;
+
+    needed = CoScreen_GetCoSuperPowerStars(coId) * CO_GAUGE_PER_STAR;
 
     if (CoGauge_Get(FACTION_BLUE) < needed)
         return MENU_DISABLED;
@@ -468,266 +1251,6 @@ u8 CoSuperPowers_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuIte
  * page (like the unit stat screen's left panel, src/statscreen.c). 
  * ---------------------------------------------------------------------- */
 
-#define CO_AFFINITY_ROW_MAX 7
-
-enum {
-    CO_SCREEN_PAGE_INFO,
-    CO_SCREEN_PAGE_POWER,
-    CO_SCREEN_PAGE_SUPER,
-    CO_SCREEN_PAGE_AFFINITY,
-    CO_SCREEN_PAGE_COUNT,
-};
-
-struct CoClassAffinity {
-    const char* className; // unused for display now (SMS icon + bar replace name+hearts); kept for reference/tooling
-    u8 classId;
-
-    /* rating: the class's baseline affinity (CO_AFFINITY_NEUTRAL_RATING ==
-     * neutral), proportionally scaling POW same as a weapon's own Pow bonus
-     * -- see AdjustStatForCo. ratingPow/ratingSup ADD to rating while
-     * coId's power/super is active (see GetCoActivePowerStateForCo,
-     * GetEffectiveClassAffinityRating) -- unlike the *Bon fields below,
-     * this one stacks rather than replaces, since it's already a
-     * proportional adjustment rather than a flat shift. */
-    u8 rating;
-    u8 ratingPow;
-    u8 ratingSup;
-
-    /* -3..+3, drawn as [type icon][sign icon][magnitude digit] directly
-     * below the class's affinity bar (see
-     * CoScreen_DrawPageAffinityClassBonusIcons). 0 draws nothing.
-     * movBon: applied unconditionally (FE8_CO_POWERS alone) to actual
-     * unit movement -- see GetCoClassMovBonus, GetUnitMovement
-     * (src/bmunit.c). rangeBon: applied to actual weapon attack range
-     * only when FE8_RANGE_REWORK is also on -- see GetCoClassRangeBonus,
-     * GetUnitItemEffectiveMaxRange (src/bmitem.c); with RANGE_REWORK off,
-     * this still draws the icon but doesn't change what the unit can
-     * actually hit (the vanilla reach-bits system it would need to feed
-     * into can't represent a shifted range at all -- see RANGE_REWORK's
-     * config.mk comment). critBon: applied unconditionally (FE8_CO_POWERS
-     * alone) to battle crit rate -- see GetCoClassCritBonus,
-     * ComputeBattleUnitCritRate (src/bmbattle.c).
-     *
-     * movBonPow/rangeBonPow/critBonPow REPLACE their plain field while
-     * coId's power is active, and movBonSup/rangeBonSup/critBonSup REPLACE
-     * it while coId's super is active -- unlike rating above, these don't
-     * stack with the plain value, since a flat +/-N shift doesn't have a
-     * sensible "add both" reading. None of the icon drawing reflects the
-     * Pow/Sup variants -- the affinity page always shows the plain
-     * movBon/rangeBon regardless of whether a power happens to be active. */
-    s8 movBon;
-    s8 movBonPow;
-    s8 movBonSup;
-    s8 rangeBon;
-    s8 rangeBonPow;
-    s8 rangeBonSup;
-    s8 critBon;
-    s8 critBonPow;
-    s8 critBonSup;
-};
-
-/* CoScreen_DrawPageAffinity's bar base: a class's affinity bar (and
- * CoPower_ClassAffinityGroup below) is green/positive above this, red/
- * negative below it, plain yellow/neutral exactly at it. */
-#define CO_AFFINITY_NEUTRAL_RATING 30
-
-/* Which classes a CO power affects, by their affinity rating relative to
- * CO_AFFINITY_NEUTRAL_RATING -- struct CoDefinition's powerTargetGroup/
- * superPowerTargetGroup (the two needn't match: a power and its super
- * don't have to target the same classes). A class the CO has no explicit
- * struct CoClassAffinity entry for defaults to neutral (see
- * CoPower_ClassAffinityGroup). */
-enum CoPowerTargetGroup {
-    CO_POWER_TARGET_ALL,
-    CO_POWER_TARGET_POSITIVE,
-    CO_POWER_TARGET_POSITIVE_NEUTRAL,
-    CO_POWER_TARGET_NEGATIVE,
-    CO_POWER_TARGET_NEGATIVE_NEUTRAL,
-    CO_POWER_TARGET_NEGATIVE_POSITIVE,
-};
-
-
-struct CoDefinition {
-    u16 nameMsg;
-    int faceId;
-    u16 titleMsg; // shown on the info page (e.g. their epithet)
-    u16 infoMsg; // single texts.txt entry, [LF]-separated (see PrintStringToTexts, src/scene.c)
-    u16 powerNameMsg;
-    u16 powerDescMsg; // single texts.txt entry, [LF]-separated
-    u16 superPowerNameMsg;
-    u16 superPowerDescMsg; // single texts.txt entry, [LF]-separated
-    /* CO gauge stars each power costs. The mini CO gauge (src/aw2_gfx.c)
-     * draws powerStars small stars followed by the
-     * (superPowerStars - powerStars) big ones that top it up to the super,
-     * so superPowerStars must be >= powerStars. */
-    u8 powerStars;
-    u8 superPowerStars;
-    /* enum CoPowerTargetGroup -- which classes the power/super actually
-     * affects when used (see CoPower_AppliesToClass). Defaults to
-     * CO_POWER_TARGET_ALL (0) if left off a CoDefinition. */
-    u8 powerTargetGroup;
-    u8 superPowerTargetGroup;
-    const struct CoClassAffinity* affinities;
-    u8 affinityCount;
-};
-
-/* Mirrors the classes actually sellable in sPurchaseGenericDefinitions
- * (src/purchase_generics.c) -- keep the class list in sync if that table
- * changes. */
- 
-/* Co power ideas: 
-- Spawn generics in empty controlled properties + adjacent to camp
-- Spawn generics of x class in forests within x tiles from controlled properties 
-- Grant x classes +n movement or attack range 
-- 
-
-
-
-
-*/ 
- 
-/* Wakwi is a critical hit specialist */ 
-// issue: classes not shown here don't get the crit bonus 
- static const struct CoClassAffinity sWakwiAffinities[] = {
-    { "Soldier",        CLASS_SOLDIER,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Knight",         CLASS_ARMOR_KNIGHT,     30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Brigand",        CLASS_BRIGAND,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Archer",         CLASS_ARCHER,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Fighter",        CLASS_FIGHTER,          30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Mercenary",      CLASS_MERCENARY,        30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Cavalier",       CLASS_CAVALIER,         30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Monk",           CLASS_MONK,             30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Mage",           CLASS_MAGE,             30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Shaman",         CLASS_SHAMAN,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Cleric",         CLASS_CLERIC,           30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Thief",          CLASS_THIEF,            30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,    30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30, .critBon = 10, .critBonPow = 40, .critBonSup = 100 },
-};
-
-/* Ishkode is a ranged specialist */
-static const struct CoClassAffinity sIshkodeAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       30 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  30 },
-    { "Brigand",    CLASS_BRIGAND,       30 },
-    { "Archer",     CLASS_ARCHER,        36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 },
-    // { "Nomad",     CLASS_ARCHER,        36, .ratingPow = 6, .ratingSup = 12, .rangeBon = +1, .rangeBonPow = +2, .rangeBonSup = +3 }, // todo: add nomad/nomad trpr eventually 
-    { "Fighter",    CLASS_FIGHTER,       30 },
-    { "Mercenary",  CLASS_MERCENARY,     30 },
-    { "Cavalier",   CLASS_CAVALIER,      30 },
-    { "Monk",       CLASS_MONK,          30 },
-    { "Mage",       CLASS_MAGE,          30 },
-    { "Shaman",     CLASS_SHAMAN,        30 },
-    { "Cleric",     CLASS_CLERIC,        30 },
-    { "Thief",      CLASS_THIEF,         30 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
-};
-
-/* Francis is a soldier specialist, with weak magic units. */
-static const struct CoClassAffinity sFrancisAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       36, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  36, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
-    { "Brigand",    CLASS_BRIGAND,       30 },
-    { "Archer",     CLASS_ARCHER,        30 },
-    { "Fighter",    CLASS_FIGHTER,       30 },
-    { "Mercenary",  CLASS_MERCENARY,     30 },
-    { "Cavalier",   CLASS_CAVALIER,      39, .ratingPow = 3, .ratingSup = 6, .movBon = +1, .movBonPow = +2, .movBonSup = +3 },
-    { "Monk",       CLASS_MONK,          24 },
-    { "Mage",       CLASS_MAGE,          24 },
-    { "Shaman",     CLASS_SHAMAN,        24 },
-    { "Cleric",     CLASS_CLERIC,        24 },
-    { "Thief",      CLASS_THIEF,         30 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      30 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      33 },
-};
-
-/* Kargan is an axe specialist, but weak with anything magical. */
-static const struct CoClassAffinity sKarganAffinities[] = {
-    { "Soldier",    CLASS_SOLDIER,       30, .ratingPow = 3, .ratingSup = 6 },
-    { "Knight",     CLASS_ARMOR_KNIGHT,  30, .ratingPow = 3, .ratingSup = 6 },
-    { "Brigand",    CLASS_BRIGAND,       42, .ratingPow = 3, .ratingSup = 6, .movBon = +1 },
-    { "Archer",     CLASS_ARCHER,        24, .ratingPow = 3, .ratingSup = 6 },
-    { "Fighter",    CLASS_FIGHTER,       45, .ratingPow = 3, .ratingSup = 6, .movBon = +1 },
-    { "Mercenary",  CLASS_MERCENARY,     24, .ratingPow = 3, .ratingSup = 6 },
-    { "Cavalier",   CLASS_CAVALIER,      30, .ratingPow = 3, .ratingSup = 6 },
-    { "Monk",       CLASS_MONK,          24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
-    { "Mage",       CLASS_MAGE,          24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
-    { "Shaman",     CLASS_SHAMAN,        24, .ratingPow = 3, .ratingSup = 6, .rangeBon = -1 },
-    { "Cleric",     CLASS_CLERIC,        24 },
-    { "Thief",      CLASS_THIEF,         27, .ratingPow = 3, .ratingSup = 6 },
-    { "Pegasus Kn.",   CLASS_PEGASUS_KNIGHT,      27 },
-    { "Wyvern Rider",  CLASS_WYVERN_RIDER,      30 },
-};
-
-
-static const struct CoDefinition sCoDefinitions[CO_COUNT] = {
-    
-    [CO_WAKWI] = {
-        .nameMsg = MSG_CO_WAKWI_NAME,
-        .faceId = 2,
-        .titleMsg = MSG_CO_WAKWI_TITLE,
-        .infoMsg = MSG_CO_WAKWI_INFO,
-        .powerNameMsg = MSG_CO_WAKWI_POWER_NAME,
-        .powerDescMsg = MSG_CO_WAKWI_POWER_DESC,
-        .superPowerNameMsg = MSG_CO_WAKWI_SUPER_NAME,
-        .superPowerDescMsg = MSG_CO_WAKWI_SUPER_DESC,
-        .powerStars = 2,
-        .superPowerStars = 6,
-        .powerTargetGroup = CO_POWER_TARGET_ALL,
-        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
-        .affinities = sWakwiAffinities,
-        .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
-    },
-    [CO_ISHKODE] = {
-        .nameMsg = MSG_CO_ISHKODE_NAME,
-        .faceId = 4,
-        .titleMsg = MSG_CO_ISHKODE_TITLE,
-        .infoMsg = MSG_CO_ISHKODE_INFO,
-        .powerNameMsg = MSG_CO_ISHKODE_POWER_NAME,
-        .powerDescMsg = MSG_CO_ISHKODE_POWER_DESC,
-        .superPowerNameMsg = MSG_CO_ISHKODE_SUPER_NAME,
-        .superPowerDescMsg = MSG_CO_ISHKODE_SUPER_DESC,
-        .powerStars = 3,
-        .superPowerStars = 5,
-        .powerTargetGroup = CO_POWER_TARGET_ALL,
-        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
-        .affinities = sIshkodeAffinities,
-        .affinityCount = ARRAY_COUNT(sIshkodeAffinities),
-    },
-    [CO_FRANCIS] = {
-        .nameMsg = MSG_CO_FRANCIS_NAME,
-        .faceId = 4,
-        .titleMsg = MSG_CO_FRANCIS_TITLE,
-        .infoMsg = MSG_CO_FRANCIS_INFO,
-        .powerNameMsg = MSG_CO_FRANCIS_POWER_NAME,
-        .powerDescMsg = MSG_CO_FRANCIS_POWER_DESC,
-        .superPowerNameMsg = MSG_CO_FRANCIS_SUPER_NAME,
-        .superPowerDescMsg = MSG_CO_FRANCIS_SUPER_DESC,
-        .powerStars = 3,
-        .superPowerStars = 5,
-        .powerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
-        .superPowerTargetGroup = CO_POWER_TARGET_POSITIVE_NEUTRAL,
-        .affinities = sFrancisAffinities,
-        .affinityCount = ARRAY_COUNT(sFrancisAffinities),
-    },
-    [CO_KARGAN] = {
-        .nameMsg = MSG_CO_KARGAN_NAME,
-        .faceId = 0x30,
-        .titleMsg = MSG_CO_KARGAN_TITLE,
-        .infoMsg = MSG_CO_KARGAN_INFO,
-        .powerNameMsg = MSG_CO_KARGAN_POWER_NAME,
-        .powerDescMsg = MSG_CO_KARGAN_POWER_DESC,
-        .superPowerNameMsg = MSG_CO_KARGAN_SUPER_NAME,
-        .superPowerDescMsg = MSG_CO_KARGAN_SUPER_DESC,
-        .powerStars = 2,
-        .superPowerStars = 4,
-        .powerTargetGroup = CO_POWER_TARGET_ALL,
-        .superPowerTargetGroup = CO_POWER_TARGET_ALL,
-        .affinities = sKarganAffinities,
-        .affinityCount = ARRAY_COUNT(sKarganAffinities),
-    },
-};
 
 struct CoScreenSt {
     u8 coId;
@@ -751,6 +1274,21 @@ static const struct CoDefinition* GetCoDefinition(int coId)
         coId = CO_ISHKODE;
 
     return &sCoDefinitions[coId];
+}
+
+int Co_GetClassAffinityCount(int coId)
+{
+    return GetCoDefinition(coId)->affinityCount;
+}
+
+int Co_GetClassAffinityClassId(int coId, int index)
+{
+    const struct CoDefinition* co = GetCoDefinition(coId);
+
+    if (index < 0 || index >= co->affinityCount)
+        return CLASS_NONE;
+
+    return co->affinities[index].classId;
 }
 
 /* A class with no explicit struct CoClassAffinity entry for this CO is
@@ -779,10 +1317,11 @@ static int GetClassAffinityRating(const struct CoDefinition* co, int classId)
 static int GetEffectiveClassAffinityRating(const struct CoDefinition* co, int coId, int classId)
 {
     int i;
+    int rating;
 
     for (i = 0; i < co->affinityCount; ++i) {
         if (co->affinities[i].classId == classId) {
-            int rating = co->affinities[i].rating;
+            rating = co->affinities[i].rating;
 
             switch (GetCoActivePowerStateForCo(coId)) {
             case CO_POWER_STATE_NORMAL:
@@ -912,9 +1451,16 @@ int GetCoClassCritBonus(int coId, int classId)
  * silently -- see gProcScr_CoPowers below. */
 static bool8 CoPower_AppliesToClass(int coId, bool8 isSuper, int classId)
 {
-    const struct CoDefinition* co = GetCoDefinition(coId);
-    int rating = GetClassAffinityRating(co, classId);
-    int group = isSuper ? co->superPowerTargetGroup : co->powerTargetGroup;
+    const struct CoDefinition* co;
+    int rating;
+    int group;
+
+    if (coId == CO_NONE)
+        return FALSE;
+
+    co = GetCoDefinition(coId);
+    rating = GetClassAffinityRating(co, classId);
+    group = isSuper ? co->superPowerTargetGroup : co->powerTargetGroup;
 
     switch (group) {
     case CO_POWER_TARGET_POSITIVE:
@@ -938,22 +1484,22 @@ static bool8 CoPower_AppliesToClass(int coId, bool8 isSuper, int classId)
     }
 }
 
-/* Amount Francis' power heals a matching unit for; his super heals them
+/* Amount Edric' power heals a matching unit for; his super heals them
  * to full instead (see CoPower_ApplyEffect). */
-#define CO_FRANCIS_POWER_HEAL_AMOUNT 10
+#define CO_EDRIC_POWER_HEAL_AMOUNT 10
 
 /* The actual effect a CO's power/super has on a unit CoPower_AppliesToClass
- * has already said it targets. Only Francis has one implemented so far --
+ * has already said it targets. Only Edric has one implemented so far --
  * everyone else is a no-op, leaving the roll-call/barrier animation as the
  * only visible effect (see CoPower_ApplyEffect's caller, CoPowers_Anim). */
 static void CoPower_ApplyEffect(int coId, bool8 isSuper, struct Unit* unit)
 {
     switch (coId) {
-    case CO_FRANCIS:
+    case CO_EDRIC:
         if (isSuper) {
             unit->curHP = GetUnitMaxHp(unit);
         } else {
-            unit->curHP += CO_FRANCIS_POWER_HEAL_AMOUNT;
+            unit->curHP += CO_EDRIC_POWER_HEAL_AMOUNT;
 
             if (unit->curHP > GetUnitMaxHp(unit))
                 unit->curHP = GetUnitMaxHp(unit);
@@ -970,6 +1516,40 @@ int CoScreen_GetCoCount(void)
     return CO_COUNT;
 }
 
+#ifdef SCROLL_ALL_COS
+/* Step coId by direction through the real COs only. CO_NONE is index 0 and is
+ * the "no commander" marker rather than a CO, so the cycle is [1, CO_COUNT). */
+static int StepCoIdSkippingNone(int coId, int direction)
+{
+    int count = CoScreen_GetCoCount() - 1; // excluding CO_NONE
+
+    if (count < 1)
+        return CO_NONE;
+
+    if (coId < 1)
+        coId = 1;
+
+    return ((coId - 1 + direction + count) % count) + 1;
+}
+#endif // SCROLL_ALL_COS
+
+/* A CO safe to display when the caller has none of its own: the first one some
+ * faction is using, else simply the first real CO. Never returns CO_NONE
+ * unless there are no COs defined at all. */
+static int FirstDisplayableCoId(void)
+{
+    int count = CoScreen_GetCoCount();
+    int coId;
+
+    for (coId = CO_NONE + 1; coId < count; ++coId) {
+        if (gPlaySt.commanderId[0] == coId || gPlaySt.commanderId[1] == coId ||
+            gPlaySt.commanderId[2] == coId || gPlaySt.commanderId[3] == coId)
+            return coId;
+    }
+
+    return count > CO_NONE + 1 ? CO_NONE + 1 : CO_NONE;
+}
+
 #ifndef SCROLL_ALL_COS
 /* Is coId the commander of any faction right now? gPlaySt.commanderId[]
  * has one entry per faction (Blue/Green/Red/Purple, see include/types.h),
@@ -977,6 +1557,13 @@ int CoScreen_GetCoCount(void)
 static bool8 IsCoInUse(int coId)
 {
     int i;
+
+    /* CO_NONE is the "this faction has no commander" marker, not a CO. Without
+     * this, every unused faction's commanderId (0) would make CO_NONE look
+     * "in use" and FindNextUsedCoId would happily scroll the CO screen onto
+     * the blank sCoDefinitions[0] entry. */
+    if (coId == CO_NONE)
+        return FALSE;
 
     for (i = 0; i < 4; ++i) {
         if (gPlaySt.commanderId[i] == coId)
@@ -1007,9 +1594,40 @@ static int FindNextUsedCoId(int coId, int direction)
 }
 #endif
 
+static const char StrCoNone[] = "---";
+
 const char* CoScreen_GetCoName(int coId)
 {
-    return GetStringFromIndex(GetCoDefinition(coId)->nameMsg);
+    /* CO_NONE has no character behind it, so there is no name to look up. */
+    if (coId == CO_NONE)
+        return StrCoNone;
+
+    return GetStringFromIndex(GetCharacterData(GetCoDefinition(coId)->charId)->nameTextId);
+}
+
+/* sCoDefinitions is static, so the CO select screen (src/coSelect.c) reads a
+ * CO's character through here rather than reaching into the table. */
+int Co_GetCharId(int coId)
+{
+    return GetCoDefinition(coId)->charId;
+}
+
+int Co_GetBriefMsg(int coId) 
+{
+    return GetCoDefinition(coId)->briefMsg; 
+}
+/* Class to animate for a CO in the select carousel: the class their real unit
+ * is currently using if that unit is on the map (so a promoted or reclassed CO
+ * animates as what they actually are), otherwise the character's default. */
+int Co_GetDisplayClassId(int coId)
+{
+    int charId = GetCoDefinition(coId)->charId;
+    struct Unit* unit = GetUnitFromCharId(charId);
+
+    if (unit != NULL && unit->pClassData != NULL)
+        return UNIT_CLASS_ID(unit);
+
+    return GetCharacterData(charId)->defaultClass;
 }
 
 int CoScreen_GetCoPowerStars(int coId)
@@ -1078,6 +1696,11 @@ void CoGauge_OnPowerUsed(int faction)
     CoGauge_Set(faction, 0);
 }
 
+void SetFactionCoFromSlots(void)
+{
+    SetFactionCo(gEventSlots[EVT_SLOT_1], gEventSlots[EVT_SLOT_2]);
+}
+
 void SetFactionCo(int faction, int coId)
 {
     int slot = faction >> 6;
@@ -1110,10 +1733,19 @@ int CoPowers_OnAiPhaseStart(struct Proc* parent)
 {
     int faction = gPlaySt.faction;
     int coId = gPlaySt.commanderId[faction >> 6];
-    const struct CoDefinition* co = GetCoDefinition(coId);
-    int halfStars = CoGauge_Get(faction) / (CO_GAUGE_PER_STAR / 2);
+    const struct CoDefinition* co;
+    int halfStars;
     bool8 isSuper;
     struct CoPowersProc* proc;
+
+    /* A faction with no commander never uses a power. CO_NONE's blank
+     * definition has powerStars/superPowerStars 0, so the gauge test below
+     * would otherwise be satisfied on turn one and every turn after. */
+    if (coId == CO_NONE)
+        return 1;
+
+    co = GetCoDefinition(coId);
+    halfStars = CoGauge_Get(faction) / (CO_GAUGE_PER_STAR / 2);
 
     if (halfStars >= co->superPowerStars * 2)
         isSuper = TRUE;
@@ -1308,14 +1940,14 @@ static void CoScreen_PutText(int slot, u16* tm, int tileWidth, int color, int ms
  * accumulated in the current line's handle before moving to the next
  * handle in the array. tm here is line 0's destination; PrintStringToTexts
  * advances by a tilemap row pair (0x40) per line internally. */
- #define MULTILINE_MAX 7 
-static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
+#define MULTILINE_MAX 4
+static void CoScreen_PutMultilineText(u16* tm, int color, int msgId, int lineOffset)
 {
     struct Text* texts[MULTILINE_MAX];
     int i;
 
     for (i = 0; i < MULTILINE_MAX; ++i) {
-        struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + i];
+        struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + lineOffset + i];
 
         InitText(text, CO_TEXT_WIDTH_LINE);
         Text_SetParams(text, 0, color);
@@ -1330,7 +1962,8 @@ static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
 static void CoScreen_DrawHeader(void)
 {
     const struct CoDefinition* co = GetCoDefinition(gCoScreen.coId);
-    int fid = co->faceId;
+    const struct CharacterData* character = GetCharacterData(co->charId);
+    int fid = character->portraitId;
 
     PutFace80x72(NULL, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X, 1), fid, 0x280, 11);
 
@@ -1341,7 +1974,7 @@ static void CoScreen_DrawHeader(void)
 
     EnablePaletteSync();
     CoScreen_PutText(CO_TEXT_HEADER, gBG0TilemapBuffer + TILEMAP_INDEX(CO_PORTRAIT_X + 2, 10),
-        CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_WHITE, co->nameMsg); // CoScreen_GetCoName
+        CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_WHITE, character->nameTextId); // CoScreen_GetCoName
 }
 
 /* Everything below draws into the gUiTmScratchA/C page-region scratch
@@ -1354,21 +1987,27 @@ static void CoScreen_DrawPageInfo(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_INFO);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->titleMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg, 0);
+}
+
+static void CoScreen_DrawPagePassive(const struct CoDefinition* co)
+{
+    if (co->passiveMsg)
+        CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+12), TEXT_COLOR_SYSTEM_WHITE, co->passiveMsg, 4);
 }
 
 static void CoScreen_DrawPagePower(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_POWER);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->powerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg, 0);
 }
 
 static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_SUPER);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg, 0);
 }
 #define BAR_VRAM_WIDTH 5
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
@@ -1392,6 +2031,7 @@ void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
 static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 {
     int i;
+    int offset;
     int y = CO_AFFINITY_ROW_Y0;
 
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(2, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_AFFINITY);
@@ -1410,7 +2050,7 @@ static void CoScreen_DrawPageAffinity(const struct CoDefinition* co)
 #endif
         y += CO_AFFINITY_ROW_STEP;
     }
-    int offset = i;
+    offset = i;
     y = CO_AFFINITY_ROW_Y0;
     for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
         DrawCoInfoBar(i+offset, CO_AFFINITY_BAR_TILE_X+9, y, 30,
@@ -1430,6 +2070,7 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
 {
     const struct CoDefinition* co;
     int i;
+    int offset;
     int y;
 
     if (gStatScreen.page != CO_SCREEN_PAGE_AFFINITY)
@@ -1457,10 +2098,10 @@ static void CoScreen_DrawAffinitySprites(ProcPtr proc)
 
         y += CO_AFFINITY_ROW_STEP;
     }
-    int offset = i; 
+    offset = i;
     y = CO_AFFINITY_ROW_Y0+1;
 
-    for (i = 0; i < co->affinityCount && i < CO_AFFINITY_ROW_MAX; ++i) {
+    for (i = 0; i < co->affinityCount + offset && i < CO_AFFINITY_ROW_MAX; ++i) {
         PutUnitSpriteForClassId(0,
             (CO_AFFINITY_ICON_TILE_X+10) * 8 + gStatScreen.xDispOff,
             (CO_PAGE_Y + y) * 8 + gStatScreen.yDispOff,
@@ -1487,6 +2128,7 @@ static void CoScreen_DrawPage(void)
     switch (gStatScreen.page) {
     case CO_SCREEN_PAGE_INFO:
         CoScreen_DrawPageInfo(co);
+        CoScreen_DrawPagePassive(co);
         break;
 
     case CO_SCREEN_PAGE_POWER:
@@ -2080,9 +2722,49 @@ CONST_DATA struct ProcCmd gProcScr_CoBgOffsetCtrl[] = {
     PROC_END,
 };
 
+/* Which CO the screen opens on, stored as coId + 1 so that 0 means "unset" --
+ * i.e. the player faction's current commander, which is what the map menu's CO
+ * entry wants. The CO select carousel (src/coSelect.c) sets it so R opens the
+ * CO you are looking at rather than the one you already have. Consumed and
+ * cleared by CoScreen_Setup, so it never leaks into a later, unrelated opening.
+ *
+ * The +1 is not cosmetic: a static initialiser cannot be relied on here. The
+ * ewram_data section is NOLOAD (linker/expansion.ld), so EWRAM_DATA variables
+ * are never copied from ROM, and a plain static with a non-zero initialiser
+ * gets placed in ROM outright -- writes to it are silently discarded. An
+ * earlier version of this used `= -1` as the sentinel and so was stuck on the
+ * fallback forever, which made R always open the same CO. Zero-initialised is
+ * the only initial value that actually holds. */
+static int sCoScreenNextCo;
+
+void CoScreen_SetNextCo(int coId)
+{
+    sCoScreenNextCo = coId + 1;
+}
+
 static void CoScreen_Setup(ProcPtr proc)
 {
-    gCoScreen.coId = gPlaySt.commanderId[FACTION_BLUE >> 6];
+    u16 bgConfig[12] =
+    {
+        0x0000, 0x6000, 0,
+        0x0000, 0x6800, 0,
+        0x8000, 0x7000, 0,
+        0x8000, 0x7800, 0,
+    };
+
+    gCoScreen.coId = sCoScreenNextCo != 0
+        ? sCoScreenNextCo - 1
+        : gPlaySt.commanderId[FACTION_BLUE >> 6];
+
+    sCoScreenNextCo = 0;
+
+    /* Never open on CO_NONE: its sCoDefinitions entry is blank, so the header
+     * would look up character 0 and the pages would draw from empty text ids.
+     * Fall forward to a CO some faction is actually using; if none is (only
+     * possible with every commanderId unset), leave it as-is rather than
+     * looping -- FindNextUsedCoId already returns its input in that case. */
+    if (gCoScreen.coId == CO_NONE)
+        gCoScreen.coId = FirstDisplayableCoId();
 
     gStatScreen.page = CO_SCREEN_PAGE_INFO;
     gStatScreen.pageAmt = CO_SCREEN_PAGE_COUNT;
@@ -2090,14 +2772,6 @@ static void CoScreen_Setup(ProcPtr proc)
     gStatScreen.xDispOff = 0;
     gStatScreen.yDispOff = 0;
     gStatScreen.inTransition = FALSE;
-
-    u16 bgConfig[12] =
-    {
-        0x0000, 0x6000, 0,
-        0x0000, 0x6800, 0,
-        0x8000, 0x7000, 0, 
-        0x8000, 0x7800, 0,
-    };
 
     SetupBackgrounds(bgConfig);
     // RegisterBlankTile(0x400);
@@ -2198,14 +2872,14 @@ static void CoScreen_KeyListener(ProcPtr proc)
         CoStartSlide(DPAD_RIGHT, proc);
     } else if (keys & DPAD_UP) {
 #ifdef SCROLL_ALL_COS
-        gCoScreen.coId = (gCoScreen.coId + CoScreen_GetCoCount() - 1) % CoScreen_GetCoCount();
+        gCoScreen.coId = StepCoIdSkippingNone(gCoScreen.coId, -1);
 #else
         gCoScreen.coId = FindNextUsedCoId(gCoScreen.coId, -1);
 #endif
         CoStartCommanderFade(-1, proc);
     } else if (keys & DPAD_DOWN) {
 #ifdef SCROLL_ALL_COS
-        gCoScreen.coId = (gCoScreen.coId + 1) % CoScreen_GetCoCount();
+        gCoScreen.coId = StepCoIdSkippingNone(gCoScreen.coId, +1);
 #else
         gCoScreen.coId = FindNextUsedCoId(gCoScreen.coId, +1);
 #endif
@@ -2268,6 +2942,45 @@ CONST_DATA struct ProcCmd gProcScr_CoScreen[] = {
 
     PROC_END,
 };
+
+/* Same screen, for callers that own the display themselves and will redraw it
+ * when this returns -- currently the CO select carousel (src/coSelect.c),
+ * which R opens this from and B comes back to.
+ *
+ * Identical to gProcScr_CoScreen except for the tail: RefreshBMapGraphics and
+ * StartFastFadeFromBlack are dropped, so the screen is handed back still faded
+ * out instead of flashing the map in before the caller redraws over it.
+ * BMapDispSuspend/Resume stay paired so the map's own state is left as this
+ * screen found it. */
+CONST_DATA struct ProcCmd gProcScr_CoScreenFromSelect[] = {
+    PROC_NAME("COSCREEN_SEL"),
+    PROC_CALL(CoInfo_BlackenScreen),
+    PROC_CALL(BMapDispSuspend),
+    PROC_CALL(LockGame),
+
+    PROC_SLEEP(2),
+    PROC_CALL(CoScreen_Setup),
+    PROC_SLEEP(0),
+
+    PROC_REPEAT(CoScreen_KeyListener),
+
+    PROC_CALL_ARG(NewFadeOut, 16),
+    PROC_WHILE(FadeOutExists),
+
+    PROC_CALL(CoScreen_Teardown),
+    PROC_SLEEP(0),
+    PROC_CALL(BMapDispResume),
+    PROC_CALL(UnlockGame),
+
+    PROC_END,
+};
+
+/* Open the CO info page on a specific CO, blocking `parent` until B closes it. */
+void StartCoScreenForCo(ProcPtr parent, int coId)
+{
+    CoScreen_SetNextCo(coId);
+    Proc_StartBlocking(gProcScr_CoScreenFromSelect, parent);
+}
 
 u8 CoScreen_MenuCommand(struct MenuProc* menu, struct MenuItemProc* menuItem)
 {

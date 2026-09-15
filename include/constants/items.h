@@ -219,7 +219,13 @@ enum {
     ITEM_BLACKGEM          = 0xBA,
     ITEM_GOLDGEM           = 0xBB,
 
+#if FE8_CUSTOM_CAMPAIGN
+    // Reuses vanilla's unused 0xBC slot -- see src/data_items.c and
+    // src/spellassoc-data.c (physic's animation, reused as-is).
+    ITEM_STAFF_NOSTAL      = 0xBC,
+#else
     ITEM_UNK_BC            = 0xBC,
+#endif
     ITEM_UNK_BD            = 0xBD,
     ITEM_UNK_BE            = 0xBE,
     ITEM_UNK_BF            = 0xBF,
