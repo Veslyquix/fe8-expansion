@@ -212,7 +212,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_TOREN - 1] = {
         .nameTextId = MSG_NAME_TOREN,
-        .descTextId = 0x274,
+        .descTextId = MSG_CO_TOREN_INFO,
         .number = CHARACTER_TOREN,
         .defaultClass = CLASS_JOURNEYMAN,
         .portraitId = FID_TOREN,
@@ -245,7 +245,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_LENORA - 1] = {
         .nameTextId = MSG_NAME_LENORA,
-        .descTextId = 0x275,
+        .descTextId = MSG_CO_LENORA_INFO,
         .number = CHARACTER_LENORA,
         .defaultClass = CLASS_ARCHER_F,
         .portraitId = FID_LENORA,
@@ -279,7 +279,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_VOLIK - 1] = {
         .nameTextId = MSG_NAME_VOLIK,
-        .descTextId = 0x276,
+        .descTextId = MSG_CO_VOLIK_INFO,
         .number = CHARACTER_VOLIK,
         .defaultClass = CLASS_THIEF,
         .portraitId = FID_VOLIK,
@@ -311,7 +311,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_CLARISSE - 1] = {
         .nameTextId = MSG_NAME_CLARISSE,
-        .descTextId = 0x277,
+        .descTextId = MSG_CO_CLARISSE_INFO,
         .number = CHARACTER_CLARISSE,
         .defaultClass = CLASS_FIGHTER,
         .portraitId = FID_CLARISSE,
@@ -344,7 +344,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_ELAYNE - 1] = {
         .nameTextId = MSG_NAME_ELAYNE,
-        .descTextId = 0x278,
+        .descTextId = MSG_CO_ELAYNE_INFO,
         .number = CHARACTER_ELAYNE,
         .defaultClass = CLASS_SNIPER,
         .portraitId = FID_ELAYNE,
@@ -376,7 +376,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_EDRIC - 1] = {
         .nameTextId = MSG_NAME_EDRIC,
-        .descTextId = 0x279,
+        .descTextId = MSG_CO_EDRIC_INFO,
         .number = CHARACTER_EDRIC,
         .defaultClass = CLASS_MAGE_F,
         .portraitId = FID_EDRIC,
@@ -410,7 +410,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_ORELUS - 1] = {
         .nameTextId = MSG_NAME_ORELUS,
-        .descTextId = 0x27a,
+        .descTextId = MSG_CO_ORELUS_INFO,
         .number = CHARACTER_ORELUS,
         .defaultClass = CLASS_CLERIC,
         .portraitId = FID_ORELUS,
@@ -444,7 +444,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_NURI - 1] = {
         .nameTextId = MSG_NAME_NURI,
-        .descTextId = 0x27b,
+        .descTextId = MSG_CO_NURI_INFO,
         .number = CHARACTER_NURI,
         .defaultClass = CLASS_WYVERN_RIDER,
         .portraitId = FID_NURI,
@@ -476,7 +476,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_FARID - 1] = {
         .nameTextId = MSG_NAME_FARID,
-        .descTextId = 0x27c,
+        .descTextId = MSG_CO_FARID_INFO,
         .number = CHARACTER_FARID,
         .defaultClass = CLASS_EPHRAIM_LORD,
         .portraitId = FID_FARID,
@@ -509,7 +509,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_KAVRA - 1] = {
         .nameTextId = MSG_NAME_KAVRA,
-        .descTextId = 0x27d,
+        .descTextId = MSG_CO_KAVRA_INFO,
         .number = CHARACTER_KAVRA,
         .defaultClass = CLASS_CAVALIER,
         .portraitId = FID_KAVRA,
@@ -543,7 +543,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_ZAHIR - 1] = {
         .nameTextId = MSG_NAME_ZAHIR,
-        .descTextId = 0x27e,
+        .descTextId = MSG_CO_ZAHIR_INFO,
         .number = CHARACTER_ZAHIR,
         .defaultClass = CLASS_CAVALIER,
         .portraitId = FID_ZAHIR,
@@ -577,7 +577,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_BRANN - 1] = {
         .nameTextId = MSG_NAME_BRANN,
-        .descTextId = 0x27f,
+        .descTextId = MSG_CO_BRANN_INFO,
         .number = CHARACTER_BRANN,
         .defaultClass = CLASS_RECRUIT,
         .portraitId = FID_BRANN,
@@ -611,7 +611,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_KIT - 1] = {
         .nameTextId = MSG_NAME_KIT,
-        .descTextId = 0x280,
+        .descTextId = MSG_CO_KIT_INFO,
         .number = CHARACTER_KIT,
         .defaultClass = CLASS_MONK,
         .portraitId = FID_KIT,
@@ -643,7 +643,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_MARIUS - 1] = {
         .nameTextId = MSG_NAME_MARIUS,
-        .descTextId = 0x281,
+        .descTextId = MSG_CO_MARIUS_INFO,
         .number = CHARACTER_MARIUS,
         .defaultClass = CLASS_MERCENARY,
         .portraitId = FID_MARIUS,
@@ -676,7 +676,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_LYRIA - 1] = {
         .nameTextId = MSG_NAME_LYRIA,
-        .descTextId = 0x282,
+        .descTextId = MSG_CO_LYRIA_INFO,
         .number = CHARACTER_LYRIA,
         .defaultClass = CLASS_DANCER,
         .portraitId = FID_LYRIA,
@@ -706,7 +706,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_MORTIVAR - 1] = {
         .nameTextId = MSG_NAME_MORTIVAR,
-        .descTextId = 0x283,
+        .descTextId = MSG_CO_MORTIVAR_INFO,
         .number = CHARACTER_MORTIVAR,
         .defaultClass = CLASS_MYRMIDON_F,
         .portraitId = FID_MORTIVAR,
@@ -740,7 +740,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_VEYR - 1] = {
         .nameTextId = MSG_NAME_VEYR,
-        .descTextId = 0x284,
+        .descTextId = MSG_CO_VEYR_INFO,
         .number = CHARACTER_VEYR,
         .defaultClass = CLASS_SAGE,
         .portraitId = FID_VEYR,
@@ -3074,7 +3074,7 @@ CONST_DATA struct CharacterData gCharacterData[] = {
     },
     [CHARACTER_KARGAN - 1] = {
         .nameTextId = MSG_NAME_KARGAN,
-        .descTextId = 0x2a3,
+        .descTextId = MSG_CO_KARGAN_INFO,
         .number = CHARACTER_KARGAN,
         .defaultClass = CLASS_FIGHTER,
         .portraitId = FID_KARGAN,
