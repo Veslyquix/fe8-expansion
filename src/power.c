@@ -1940,13 +1940,13 @@ static void CoScreen_PutText(int slot, u16* tm, int tileWidth, int color, int ms
  * accumulated in the current line's handle before moving to the next
  * handle in the array. tm here is line 0's destination; PrintStringToTexts
  * advances by a tilemap row pair (0x40) per line internally. */
-#define MULTILINE_MAX 4
-static void CoScreen_PutMultilineText(u16* tm, int color, int msgId, int lineOffset)
+#define MULTILINE_MAX 8
+static void CoScreen_PrepMultilineText(u16* tm, int color, int msgId, int lineOffset)
 {
     struct Text* texts[MULTILINE_MAX];
     int i;
 
-    for (i = 0; i < MULTILINE_MAX; ++i) {
+    for (i = 0; i < (MULTILINE_MAX - lineOffset); ++i) {
         struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + lineOffset + i];
 
         InitText(text, CO_TEXT_WIDTH_LINE);
@@ -1954,10 +1954,23 @@ static void CoScreen_PutMultilineText(u16* tm, int color, int msgId, int lineOff
         texts[i] = text;
     }
 
-    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, MULTILINE_MAX * 2, 0);
+    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, (MULTILINE_MAX - lineOffset) * 2, 0);
+
+}
+
+static void CoScreen_PutMultilineText(u16* tm, int color, int msgId)
+{
+    struct Text* texts[MULTILINE_MAX];
+    int i;
+
+    for (i = 0; i < MULTILINE_MAX; ++i) {
+        struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + i];
+        texts[i] = text;
+    }
 
     PrintStringToTexts(texts, GetStringFromIndex(msgId), tm, MULTILINE_MAX);
 }
+
 
 static void CoScreen_DrawHeader(void)
 {
@@ -1987,27 +2000,30 @@ static void CoScreen_DrawPageInfo(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_INFO);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->titleMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg, 0);
+    
+    CoScreen_PrepMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg, 0);
+    if (co->passiveMsg)
+        CoScreen_PrepMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+16), TEXT_COLOR_SYSTEM_WHITE, co->passiveMsg, 4);
+
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg);
+
 }
 
-static void CoScreen_DrawPagePassive(const struct CoDefinition* co)
-{
-    if (co->passiveMsg)
-        CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+12), TEXT_COLOR_SYSTEM_WHITE, co->passiveMsg, 4);
-}
 
 static void CoScreen_DrawPagePower(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_POWER);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->powerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg, 0);
+    CoScreen_PrepMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg, 0);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg);
 }
 
 static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_SUPER);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg, 0);
+    CoScreen_PrepMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg, 0);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg);
 }
 #define BAR_VRAM_WIDTH 5
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
@@ -2128,7 +2144,6 @@ static void CoScreen_DrawPage(void)
     switch (gStatScreen.page) {
     case CO_SCREEN_PAGE_INFO:
         CoScreen_DrawPageInfo(co);
-        CoScreen_DrawPagePassive(co);
         break;
 
     case CO_SCREEN_PAGE_POWER:

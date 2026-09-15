@@ -23,8 +23,8 @@ enum {
     CHARACTER_KIT        = 0x13, // replaces Artur
     CHARACTER_MARIUS     = 0x14, // replaces Gerik
     CHARACTER_LYRIA      = 0x15, // replaces Tethys
-    CHARACTER_MORTIVAR   = 0x16, // replaces Marisa
-    CHARACTER_VEYR       = 0x17, // replaces Saleh
+    CHARACTER_VEYR       = 0x16, // replaces Marisa
+    CHARACTER_MORTIVAR   = 0x17, // replaces Saleh
     CHARACTER_KARGAN     = 0x68, // replaces O'Neill
 };
 
