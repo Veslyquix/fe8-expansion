@@ -8555,12 +8555,40 @@ static bool DebuggerProcNameHasPrefix(const char * name, const char * prefix)
     return true;
 }
 
+// Read a proc's name back out of its own script rather than off proc_name.
+// Proc_Start() never resets proc_name, and a script with no PROC_NAME of its
+// own leaves whatever the previous tenant of that pool slot wrote there - so
+// proc_name can name a proc that is long gone, and sweeping on it would end
+// the wrong proc. A script with no PROC_NAME is simply not identifiable.
+static const char * GetDebuggerProcScriptName(const struct ProcCmd * script)
+{
+    int i;
+
+    if (script == NULL)
+        return NULL;
+
+    for (i = 0; i < 8; i++)
+    {
+        if (script[i].opcode == 0x00) // PROC_END
+            break;
+
+        if (script[i].opcode == 0x01) // PROC_NAME
+            return script[i].dataPtr;
+    }
+
+    return NULL;
+}
+
 static void EndLingeringBanimEffectProc(ProcPtr procPtr)
 {
     struct Proc * proc = procPtr;
+    const char * name = GetDebuggerProcScriptName(proc->proc_script);
 
-    if (DebuggerProcNameHasPrefix(proc->proc_name, "efx") ||
-        DebuggerProcNameHasPrefix(proc->proc_name, "ekrsubAnimeEmulator"))
+    if (name == NULL)
+        return;
+
+    if (DebuggerProcNameHasPrefix(name, "efx") ||
+        DebuggerProcNameHasPrefix(name, "ekrsubAnimeEmulator"))
         Proc_End(proc);
 }
 
