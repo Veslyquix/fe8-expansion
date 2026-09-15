@@ -136,7 +136,7 @@ UnitIconWait unit_icon_wait_table[] = {
 	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_Occultist_sheet}, // 128
 	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_Blader_F_sheet}, // 129
 	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Harbinger_sheet}, // 130
-	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Harbinger_Alt_sheet}, // 131
+	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_Executioner_sheet}, // 131
 	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Heavy_Infantry_sheet}, // 132
 	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Baron_Custom_sheet}, // 133
 	{2, UNIT_ICON_SIZE_32x32, unit_icon_wait_Shield_General_sheet}, // 134

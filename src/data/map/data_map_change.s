@@ -11,40 +11,24 @@ Ch1MapChanges: @0x8a1e104
 	.include "src/data/map/change/Ch1MapChanges.inc"
 
 	.global Ch2TileChanges_change_0
-Ch2TileChanges_change_0: @0x8a1e110
-	.short 0x0E1C, 0x0E20, 0x0E24, 0x0E9C, 0x0EA0, 0x0EA4, 0x0F1C, 0x0F20
-	.short 0x0F24
+Ch2TileChanges_change_0: @ Upper Chest
+	.short 0x0004
 
 	.global Ch2TileChanges_change_1
-Ch2TileChanges_change_1: @0x8a1e122
-	.short 0x0E1C, 0x0E20, 0x0E24, 0x0E9C, 0x0EA0, 0x0EA4, 0x0F1C, 0x0F20
-	.short 0x0F24
+Ch2TileChanges_change_1: @ Throne Room Door
+	.short 0x06B4, 0x0CD0, 0x06B0, 0x0CE4, 0x0CD8, 0x0CE4
 
 	.global Ch2TileChanges_change_2
-Ch2TileChanges_change_2: @0x8a1e134
-	.short 0x0E1C, 0x0E20, 0x0E24, 0x0E9C, 0x0EA0, 0x0EA4, 0x0F1C, 0x0F20
-	.short 0x0F24
+Ch2TileChanges_change_2: @ Stair Room Door
+	.short 0x0CD0, 0x06B0, 0x0B44, 0x0B48
 
 	.global Ch2TileChanges_change_3
-Ch2TileChanges_change_3: @0x8a1e146
-	.short 0x0E1C, 0x0E20, 0x0E24, 0x0E9C, 0x0EA0, 0x0EA4, 0x0F1C, 0x0F20
-	.short 0x0F24
+Ch2TileChanges_change_3: @ Lower Chest
+	.short 0x0004
 
 	.global Ch2TileChanges_change_4
-Ch2TileChanges_change_4: @0x8a1e158
-	.short 0x0080
-
-	.global Ch2TileChanges_change_5
-Ch2TileChanges_change_5: @0x8a1e15a
-	.short 0x0080
-
-	.global Ch2TileChanges_change_6
-Ch2TileChanges_change_6: @0x8a1e15c
-	.short 0x0080
-
-	.global Ch2TileChanges_change_7
-Ch2TileChanges_change_7: @0x8a1e15e
-	.short 0x0080
+Ch2TileChanges_change_4: @ Chest Room Door
+	.short 0x06B4, 0x0B40, 0x06B0
 
 	.align 2, 0
 	.global Ch2TileChanges

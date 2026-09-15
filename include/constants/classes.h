@@ -167,7 +167,7 @@ enum {
     CLASS_OCCULTIST              = 0x94,
     CLASS_BLADER_F               = 0x95,
     CLASS_HARBINGER              = 0x96,
-    CLASS_HARBINGER_ALT          = 0x97,
+    CLASS_EXECUTIONER            = 0x97,
     CLASS_HEAVY_INFANTRY         = 0x98,
     CLASS_BARON_CUSTOM           = 0x99,
     CLASS_SHIELD_GENERAL         = 0x9A,

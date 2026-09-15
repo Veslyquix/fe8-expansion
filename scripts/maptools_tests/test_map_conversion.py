@@ -27,6 +27,7 @@ def _load(name):
 
 mar_to_map = _load("mar_to_map")
 tmx_to_map = _load("tmx_to_map")
+tmx_to_map_changes = _load("tmx_to_map_changes")
 mar_to_tmx = _load("mar_to_tmx")
 
 
@@ -52,6 +53,29 @@ class TmxToMapKnownGoodPairTests(unittest.TestCase):
 
             tmx_bytes = tmx_to_map.convert(tmx_path)
             self.assertEqual(mar_bytes, tmx_bytes)
+
+
+class TmxMapPackExportTests(unittest.TestCase):
+    def test_compressed_multilayer_tmx_produces_base_map(self):
+        tmx_path = os.path.join(MAP_LAYOUT_DIR, "NewCh2Map.tmx")
+
+        data = tmx_to_map.convert(tmx_path)
+
+        self.assertEqual(data[0], 15)
+        self.assertEqual(data[1], 26)
+        self.assertEqual(len(data), 2 + 15 * 26 * 2)
+
+    def test_hidden_layers_extract_map_changes(self):
+        tmx_path = os.path.join(MAP_LAYOUT_DIR, "NewCh2Map.tmx")
+
+        data, arrays = tmx_to_map_changes.extract_changes(tmx_path, "Ch2TileChanges")
+
+        self.assertEqual([change["id"] for change in data["changes"]], [0, 1, 2, 3, 4])
+        self.assertEqual(
+            [(change["x"], change["y"], change["w"], change["h"]) for change in data["changes"]],
+            [(5, 0, 1, 1), (9, 7, 3, 2), (5, 11, 2, 2), (12, 15, 1, 1), (11, 17, 3, 1)],
+        )
+        self.assertEqual([len(values) for _id, _label, values, _name in arrays], [1, 6, 4, 1, 3])
 
 
 class MarTmxRoundTripTests(unittest.TestCase):

@@ -41292,11 +41292,11 @@ Harbinger[.][X]
 A grim champion trained in many[LF]
 weapons and dark magic.[.][X]
 
-## MSG_CLASS_HARBINGER_ALT_NAME
-Harbinger[.][X]
-## MSG_CLASS_HARBINGER_ALT_DESC
-A grim champion trained in many[LF]
-weapons and dark magic.[.][X]
+## MSG_CLASS_EXECUTIONER_NAME
+Executioner[.][.][X]
+## MSG_CLASS_EXECUTIONER_DESC
+A sinister killer who blends blades[LF]
+with forbidden magic.[.][X]
 
 ## MSG_CLASS_HEAVY_INFANTRY_NAME
 Hvy Infantry[X]

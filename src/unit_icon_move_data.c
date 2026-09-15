@@ -161,7 +161,7 @@ UnitIconMove unit_icon_move_table[] = {
 	{unit_icon_move_Occultist_sheet, unit_icon_move_Occultist_motion}, // 147 (CLASS_OCCULTIST)
 	{unit_icon_move_Blader_F_sheet, unit_icon_move_Blader_F_motion}, // 148 (CLASS_BLADER_F)
 	{unit_icon_move_Harbinger_sheet, unit_icon_move_Harbinger_motion}, // 149 (CLASS_HARBINGER)
-	{unit_icon_move_Harbinger_Alt_sheet, unit_icon_move_Harbinger_Alt_motion}, // 150 (CLASS_HARBINGER_ALT)
+	{unit_icon_move_Executioner_sheet, unit_icon_move_Executioner_motion}, // 150 (CLASS_EXECUTIONER)
 	{unit_icon_move_Heavy_Infantry_sheet, unit_icon_move_Heavy_Infantry_motion}, // 151 (CLASS_HEAVY_INFANTRY)
 	{unit_icon_move_Baron_Custom_sheet, unit_icon_move_Baron_Custom_motion}, // 152 (CLASS_BARON_CUSTOM)
 	{unit_icon_move_Shield_General_sheet, unit_icon_move_Shield_General_motion}, // 153 (CLASS_SHIELD_GENERAL)

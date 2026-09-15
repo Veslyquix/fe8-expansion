@@ -133,7 +133,7 @@ enum {
     SMS_OCCULTIST                        = 128,
     SMS_BLADER_F                         = 129,
     SMS_HARBINGER                        = 130,
-    SMS_HARBINGER_ALT                    = 131,
+    SMS_EXECUTIONER                      = 131,
     SMS_HEAVY_INFANTRY                   = 132,
     SMS_BARON_CUSTOM                     = 133,
     SMS_SHIELD_GENERAL                   = 134,

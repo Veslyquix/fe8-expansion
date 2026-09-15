@@ -294,19 +294,6 @@
     ],
     "class_tag": "hrbg"
   },
-  "hrba": {
-    "credit": "[FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy",
-    "weapons": [
-      "Sword",
-      "Lance",
-      "Axe",
-      "Handaxe",
-      "Staff",
-      "Magic",
-      "Unarmed"
-    ],
-    "class_tag": "hrba"
-  },
   "hvin": {
     "credit": "[FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon",
     "weapons": [
@@ -811,5 +798,14 @@
       "Unarmed"
     ],
     "class_tag": "serap"
+  },
+  "exec": {
+    "credit": "[T3 Custom] [U] Executioner (Assassin+Druid) by Huichelaar",
+    "weapons": [
+      "Sword",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "exec"
   }
 }

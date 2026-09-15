@@ -343,12 +343,12 @@
     {
       "internalName": "L02",
       "map": {
-        "obj1Id": 1,
+        "obj1Id": 24,
         "obj2Id": 0,
-        "paletteId": 2,
-        "tileConfigId": 3,
+        "paletteId": 25,
+        "tileConfigId": 26,
         "mainLayerId": 11,
-        "objAnimId": 5,
+        "objAnimId": 28,
         "paletteAnimId": 0,
         "changeLayerId": 12
       },

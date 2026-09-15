@@ -898,21 +898,22 @@ static const signed char body1[] =
 
 /* Kept in sync with CREDITS.md's "Batch2 Imported Classes" section.
  * Full per-folder class-card and map-sprite source paths are documented there. */
-static const signed char header14[] = "Batch2 Animations";
+static const signed char header14[] = "Batch2/3 Animations";
 static const signed char body14[] =
-    " Batch2 battle animations from FE-Repo" NL
+    " Batch2/3 battle animations from FE-Repo" NL
     "  and FEBuilder community packs" NL
     " Major artists include Yellowtoad," NL
     "  Nuramon, RedBean, Devisian_Nights," NL
     "  Sphealnuke, SALVAGED, Huichelaar," NL
+    "  Konami," NL
     "  Leo_Link, Pikmin, Der, SkidMarc25," NL
     "  and the credited folder authors";
 
-static const signed char header15[] = "Batch2 Class Art";
+static const signed char header15[] = "Batch2/3 Class Art";
 static const signed char body15[] =
-    " Batch2 class cards from Repo/Class Cards" NL
-    " Batch2 map sprites from SRR_FEGBA" NL
-    "  and Repo/Map Sprites" NL
+    " Batch2/3 class cards from Repo/Class Cards" NL
+    " Batch2/3 map sprites from SRR_FEGBA" NL
+    "  Repo/Map Sprites, and source folders" NL
     " See CREDITS.md for each folder's" NL
     "  exact card and map-sprite source";
 
@@ -978,7 +979,8 @@ static const signed char body7[] =
     " Griffon map sprite by N426" NL
     " Archsage map sprite by IS" NL
     " Malig Queen map sprite by Pikmin" NL
-    " Seraph Knight map sprite by CamusZekeSirius";
+    " Seraph Knight map sprite by CamusZekeSirius" NL
+    " Executioner map sprite by IS, Lexou";
 
 /* Kept in sync with CREDITS.md's "Conversation Backgrounds" table --
  * public-domain paintings used as the new 192-colour multipalette test

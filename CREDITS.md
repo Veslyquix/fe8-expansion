@@ -78,7 +78,6 @@ Copied cards:
 - [Custom_Magi]_[U]_Angel_by_Atey: Magi - Special\Angel (F) {N426}.png
 - [DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights: Magi - Special\Occultist (M) Magic {Valak}.png.png
 - [FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (F) Sword {L95}.png
-- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy: Lords - Vanilla and Custom\Harbinger (M) Magic {flasuban}.png
 - [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon: Lords - Vanilla and Custom\Harbinger (M) Magic {flasuban}.png
 - [FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon: Lords - Vanilla and Custom\Heavy Infantry (M) {SamirPlayz}.png
 - [GeneralReskin]_[U]_Baron_+Weapons: Infantry - Knights, Generals, Armors\Baron (U) Lance {SamirPlayz}.png
@@ -93,6 +92,7 @@ Copied cards:
 - [Sword FE15 Custom] Myrmidon [M] by Nuramon: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (M) Sword {IS}.png
 - [Sword_Custom]_[M]_Thug_by_MonkeyBard: Infantry - (Swd) Thieves, Rogues, Assassins\Thug (M) Sword {Rasdel}.png
 - [Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon: Infantry - (Swd) Myrms and Swordmasters\[T2][SWD] Dread Fighter (U) {Nuramon}.png
+- [T3 Custom] [U] Executioner (Assassin+Druid) by Huichelaar: C:\devkitPro\feex\banims\batch3\Executioner_Assassin+Druid: Class Card.png {Huichelaar, Konami}
 - [T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar: Magi - Dark-Type\Moloch Sorcerer (U) T3 Style {Huichelaar}.png
 - [Tactician]_[U]_Tactician_by_SALVAGED: Magi - Special\Tactician (U) Magic {SALVAGED}.png
 - [Trickster]_F_Trickster_V_2_Ponytail: Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (F) Sword T2 {Jj09, Scraiza, Sword of HaE,SableMage}.png
@@ -163,7 +163,6 @@ Copied map sprites:
 - [DevisianCustom]_[M]_Magician_v2_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Magician_Eliwood_16x16_TyTheBubstand.png + MMS/Magician_EliwoodTyTheBubwalk.png
 - [DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Shaman_M_Occultist_Devisian_Nights_Pikminstand.png + MMS/Shaman_M_Occultist_Devisian_Nights_Pikminwalk.png
 - [FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link: SRR_FEGBA/gfx/MapSprites: SMS/Blade_Lord_F_Lyn_Sword_ISstand.png + MMS/Blade_Lord_F_Lyn_Sword_ISwalk.png (fallback Lyn blade-lord pair)
-- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy: SRR_FEGBA/gfx/MapSprites: SMS/Great_Lord_M_HectorHarbinger_SD9Kstand.png + MMS/Great_Lord_M_HectorHarbinger_SD9Kwalk.png
 - [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Great_Lord_M_HectorHarbinger_SD9Kstand.png + MMS/Great_Lord_M_HectorHarbinger_SD9Kwalk.png
 - [FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/HeavyInfantry_Ephraim_Snewpingstand.png + MMS/HeavyInfantry_EphraimSnewpingwalk.png
 - [GeneralReskin]_[U]_Baron_+Weapons: SRR_FEGBA/gfx/MapSprites: SMS/Baron_U_Lance_Topazlight_Nuramon_Its_Just_Jaystand.png + MMS/Baron_U_Cape_Nuramon_Jay_Rynwalk.png
@@ -181,6 +180,7 @@ Copied map sprites:
 - [Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Dread_Fighter_M_Nuramonstand.png + MMS/Dread_Fighter_M_Nuramonwalk.png
 - [SwordmasterVariant]_[F]_Fir_by_Redbean: Repo/Map Sprites: Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) {IS}-stand.png + Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) {IS}-walk.png
 - [SwordmasterVariant]_[M]_Trueblade_by_Dinar87: Repo/Map Sprites: Infantry - (Swd) Myrms and Swordmasters\Trueblade (M) {Seliost1}-stand.png + Infantry - (Swd) Myrms and Swordmasters\Trueblade (M) {Seliost1}-walk.png
+- [T3 Custom] [U] Executioner (Assassin+Druid) by Huichelaar: C:\devkitPro\feex\banims\batch3\Executioner_Assassin+Druid: Executioner_U_Huichelaar_IS_Lexoustand.png + Executioner_U_Huichelaar_IS_Lexouwalk.png
 - [T3_Custom]_[M]_Red_Mage_by_Mycahel: SRR_FEGBA/gfx/MapSprites: SMS/RedMage2_Sage_Hat_TopazlightUnknownstand.png + MMS/RedMage2_Sage_Hat_TopazlightUnknownwalk.png
 - [T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar: Repo/Map Sprites: Magi - Dark-Type\Moloch Sorcerer (U) {Huichelaar}-stand.png + Magi - Dark-Type\Moloch Sorcerer (U) {Huichelaar}-walk.png
 - [Tactician]_[U]_Tactician_by_SALVAGED: SRR_FEGBA/gfx/MapSprites: SMS/Tactician_U_SALVAGEDstand.png + MMS/Tactician_U_SALVAGEDwalk.png
@@ -360,5 +360,4 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
 | `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
 | `MOVEARROW_HACK` | circleseverywhere |
-
 
