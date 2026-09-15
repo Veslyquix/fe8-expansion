@@ -91,27 +91,25 @@ void AnimUpdateAll(void)
     if (boolNeedsSort == TRUE)
         AnimSort();
 }
-
 void AnimClearAll(void)
 {
-    // struct Anim* it;
+    struct Anim* it;
 
-    // for (it = sAnimPool; it < sAnimPool + ANIM_MAX_COUNT; ++it)
-    // {
-    //     it->state = 0;
-    //     it->pPrev = NULL;
-    //     it->pNext = NULL;
-    // }
-    struct Anim * anim;
+    for (it = sAnimPool; it < sAnimPool + ANIM_MAX_COUNT; ++it)
+    {
+        it->state = 0;
+        it->pPrev = NULL;
+        it->pNext = NULL;
+    }
+
+    sFirstAnim = NULL;
+}
+
+/*
+void AnimClearMoreVesly(void)
+{
+
     gEkrBattleEndFlag = true; // immediately ends without waiting for anything
-
-    // anim = gAnims[2];
-    // if (anim)
-    //     EndEfxStatusUnits(anim);
-
-    // anim = gAnims[0];
-    // if (anim)
-    //     EndEfxStatusUnits(anim);
 
     ProcPtr otherProc = Proc_Find(ProcScr_efxWeaponIcon);
     if (otherProc)
@@ -124,11 +122,18 @@ void AnimClearAll(void)
     {
         Proc_End(otherProc);
     }
+    // struct Anim * anim;
+-    // anim = gAnims[2];
+-    // if (anim)
+-    //     EndEfxStatusUnits(anim);
+// +    struct Anim* it;
 
+-    // anim = gAnims[0];
+-    // if (anim)
+-    //     EndEfxStatusUnits(anim);
     Proc_EndEach(ProcScr_efxStatusUnit);
-    sFirstAnim = NULL;
 }
-
+*/
 
 
 struct Anim* AnimCreate_unused(const void* frameData)
