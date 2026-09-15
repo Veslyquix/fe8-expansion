@@ -2135,7 +2135,7 @@ u8* CONST_DATA gOpinfo_1[] = {
 };
 
 struct ClassReelEnt CONST_DATA gClassReelData[65] = {
-    [0x00] = { 0x6F6, 0xFF, CLASS_EIRIKA_LORD, 0, 0x02, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 },
+    [0x00] = { 0x6F6, -1, CLASS_EIRIKA_LORD, 0, 0x02, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 },
     [0x01] = { 0x6FA, 0x3B, CLASS_PALADIN, 0, 0x3A, 0, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_2 },
     /* FE8_NEW_ANIMS: knight lance -> banim_data[0xD3], and paletteId forced to
      * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
@@ -2143,7 +2143,7 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
      * palette, which is indexed for the vanilla sprite and lands on the wrong
      * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x02] = { 0x6FB, 0xFF, CLASS_ARMOR_KNIGHT, 0, 0xD3, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
+    [0x02] = { 0x6FB, -1, CLASS_ARMOR_KNIGHT, 0, 0xD3, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
 #else
     [0x02] = { 0x6FB, 0x02, CLASS_ARMOR_KNIGHT, 0, 0x3F, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
 #endif
@@ -2153,9 +2153,9 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
      * palette, which is indexed for the vanilla sprite and lands on the wrong
      * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x03] = { 0x6F9, 0xFF, CLASS_CAVALIER, 0, 0xDC, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
+    [0x03] = { 0x6F9, -1, CLASS_CAVALIER, 0, 0xDC, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
 #else
-    [0x03] = { 0x6F9, 0xFF, CLASS_CAVALIER, 0, 0x33, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
+    [0x03] = { 0x6F9, -1, CLASS_CAVALIER, 0, 0x33, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
 #endif
     /* FE8_NEW_ANIMS: pegasus lance -> banim_data[0xE3], and paletteId forced to
      * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
@@ -2163,19 +2163,19 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
      * palette, which is indexed for the vanilla sprite and lands on the wrong
      * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x04] = { 0x71C, 0xFF, CLASS_PEGASUS_KNIGHT, 0, 0xE3, 0, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_0 },
+    [0x04] = { 0x71C, -1, CLASS_PEGASUS_KNIGHT, 0, 0xE3, 0, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_0 },
 #else
     [0x04] = { 0x71C, 0x3F, CLASS_PEGASUS_KNIGHT, 0, 0x65, 0, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_0 },
 #endif
     [0x05] = { 0x71A, 0x44, CLASS_PRIEST, 0, 0x7E, 0x03, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_8 },
-    [0x06] = { 0x70E, 0xFF, CLASS_JOURNEYMAN, 0, 0x91, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
+    [0x06] = { 0x70E, -1, CLASS_JOURNEYMAN, 0, 0x91, 0, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_0 },
     /* FE8_NEW_ANIMS: fighter axe -> banim_data[0xCF], and paletteId forced to
      * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
      * overwrite the animation's own palette with the vanilla per-character
      * palette, which is indexed for the vanilla sprite and lands on the wrong
      * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x07] = { 0x711, 0xFF, CLASS_FIGHTER, 0, 0xCF, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
+    [0x07] = { 0x711, -1, CLASS_FIGHTER, 0, 0xCF, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
 #else
     [0x07] = { 0x711, 0x1D, CLASS_FIGHTER, 0, 0x18, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
 #endif
@@ -2187,38 +2187,38 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
      * for the vanilla sprite and lands on the wrong pixels of a custom one.
      * -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x09] = { 0x703, 0xFF, CLASS_ARCHER, 0, 0xE8, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+    [0x09] = { 0x703, -1, CLASS_ARCHER, 0, 0xE8, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
 #else
     [0x09] = { 0x703, 0, CLASS_ARCHER, 0, 0x27, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
 #endif
     /* FE8_NEW_ANIMS: mage_f magic -> banim_data[0xED] (gaidenmage_ponytail),
      * and paletteId forced to -1 for the same reason as archer above. */
 #if FE8_NEW_ANIMS
-    [0x0A] = { 0x709, 0xFF, CLASS_MAGE_F, 0, 0xED, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
+    [0x0A] = { 0x709, -1, CLASS_MAGE_F, 0, 0xED, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
 #else
     [0x0A] = { 0x709, 0x2E, CLASS_MAGE_F, 0, 0x6B, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
 #endif
     [0x0B] = { 0x719, 0x36, CLASS_MONK, 0, 0x7C, 0x04, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_7 },
-    [0x0C] = { 0x725, 0xFF, CLASS_REVENANT, 0x01, 0x9F, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_2 },
-    [0x0D] = { 0x726, 0xFF, CLASS_ENTOUMBED, 0x01, 0xA0, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_2 },
-    [0x0E] = { 0x727, 0xFF, CLASS_BONEWALKER, 0x01, 0xA1, 0, 0, 0, 0, 0, 0x0E, 0x0F, 0, sClassReelScr_Opinfo_2 },
-    [0x0F] = { 0x730, 0xFF, CLASS_MOGALL, 0x01, 0xB9, 0x07, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_12 },
-    [0x10] = { 0x729, 0xFF, CLASS_BAEL, 0x01, 0xAB, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_2 },
+    [0x0C] = { 0x725, -1, CLASS_REVENANT, 0x01, 0x9F, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_2 },
+    [0x0D] = { 0x726, -1, CLASS_ENTOUMBED, 0x01, 0xA0, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_2 },
+    [0x0E] = { 0x727, -1, CLASS_BONEWALKER, 0x01, 0xA1, 0, 0, 0, 0, 0, 0x0E, 0x0F, 0, sClassReelScr_Opinfo_2 },
+    [0x0F] = { 0x730, -1, CLASS_MOGALL, 0x01, 0xB9, 0x07, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_12 },
+    [0x10] = { 0x729, -1, CLASS_BAEL, 0x01, 0xAB, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_2 },
     [0x11] = { 0x700, 0x37, CLASS_MYRMIDON, 0, 0x10, 0, 0, 0, 0, 0, 0x0B, 0x18, 0, sClassReelScr_Opinfo_0 },
     [0x12] = { 0x71E, 0x42, CLASS_CLERIC, 0, 0x7F, 0x03, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_8 },
-    [0x13] = { 0x6F5, 0xFF, CLASS_EPHRAIM_LORD, 0, 0, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 },
-    [0x14] = { 0x723, 0xFF, CLASS_PIRATE, 0x01, 0x99, 0, 0, 0, 0, 0, 0x0C, 0x0C, 0, sClassReelScr_Opinfo_0 },
+    [0x13] = { 0x6F5, -1, CLASS_EPHRAIM_LORD, 0, 0, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_0 },
+    [0x14] = { 0x723, -1, CLASS_PIRATE, 0x01, 0x99, 0, 0, 0, 0, 0, 0x0C, 0x0C, 0, sClassReelScr_Opinfo_0 },
     /* FE8_NEW_ANIMS: brigand axe -> banim_data[0xCC], and paletteId forced to
      * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
      * overwrite the animation's own palette with the vanilla per-character
      * palette, which is indexed for the vanilla sprite and lands on the wrong
      * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x15] = { 0x713, 0xFF, CLASS_BRIGAND, 0x01, 0xCC, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_0 },
+    [0x15] = { 0x713, -1, CLASS_BRIGAND, 0x01, 0xCC, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_0 },
 #else
-    [0x15] = { 0x713, 0xFF, CLASS_BRIGAND, 0x01, 0x1F, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_0 },
+    [0x15] = { 0x713, -1, CLASS_BRIGAND, 0x01, 0x1F, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_0 },
 #endif
-    [0x16] = { 0x716, 0xFF, CLASS_SHAMAN, 0x01, 0x74, 0x05, 0, 0, 0, 0, 0x15, 0x15, 0, sClassReelScr_Opinfo_11 },
+    [0x16] = { 0x716, -1, CLASS_SHAMAN, 0x01, 0x74, 0x05, 0, 0, 0, 0, 0x15, 0x15, 0, sClassReelScr_Opinfo_11 },
     [0x17] = { 0x704, 0x51, CLASS_SNIPER, 0, 0x29, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_1 },
     /* FE8_NEW_ANIMS: merc sword -> banim_data[0xD8], and paletteId forced to
      * -1. A non -1 paletteId makes InitMainMiniAnim (src/banim-ekrmainmini.c)
@@ -2226,48 +2226,48 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
      * palette, which is indexed for the vanilla sprite and lands on the wrong
      * pixels of a custom one. -1 keeps the animation's own 4 faction rows. */
 #if FE8_NEW_ANIMS
-    [0x18] = { 0x6FE, 0xFF, CLASS_MERCENARY, 0, 0xD8, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
+    [0x18] = { 0x6FE, -1, CLASS_MERCENARY, 0, 0xD8, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
 #else
     [0x18] = { 0x6FE, 0x30, CLASS_MERCENARY, 0, 0x0A, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
 #endif
     [0x19] = { 0x721, 0x14, CLASS_DANCER, 0, 0x90, 0, 0, 0, 0, 0, 0x0E, 0x0E, 0, sClassReelScr_Opinfo_9 },
-    [0x1A] = { 0x70F, 0xFF, CLASS_PUPIL, 0, 0x94, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_6 },
-    [0x1B] = { 0x700, 0xFF, CLASS_MYRMIDON_F, 0, 0x12, 0, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_0 },
-    [0x1C] = { 0x71B, 0xFF, CLASS_RECRUIT, 0, 0x95, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
-    [0x1D] = { 0x733, 0xFF, CLASS_GARGOYLE, 0x01, 0xBC, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_2 },
-    [0x1E] = { 0x72F, 0xFF, CLASS_MAELDUIN, 0x01, 0xB5, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
-    [0x1F] = { 0x72B, 0xFF, CLASS_CYCLOPS, 0x01, 0xAD, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_0 },
-    [0x20] = { 0x72C, 0xFF, CLASS_MAUTHEDOOG, 0x01, 0xB0, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
-    [0x21] = { 0x728, 0xFF, CLASS_WIGHT, 0x01, 0xA6, 0, 0, 0, 0, 0, 0x0E, 0x0F, 0, sClassReelScr_Opinfo_2 },
+    [0x1A] = { 0x70F, -1, CLASS_PUPIL, 0, 0x94, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_6 },
+    [0x1B] = { 0x700, -1, CLASS_MYRMIDON_F, 0, 0x12, 0, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_0 },
+    [0x1C] = { 0x71B, -1, CLASS_RECRUIT, 0, 0x95, 0, 0, 0, 0, 0, 0, 0, 0, sClassReelScr_Opinfo_0 },
+    [0x1D] = { 0x733, -1, CLASS_GARGOYLE, 0x01, 0xBC, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_2 },
+    [0x1E] = { 0x72F, -1, CLASS_MAELDUIN, 0x01, 0xB5, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
+    [0x1F] = { 0x72B, -1, CLASS_CYCLOPS, 0x01, 0xAD, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_0 },
+    [0x20] = { 0x72C, -1, CLASS_MAUTHEDOOG, 0x01, 0xB0, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+    [0x21] = { 0x728, -1, CLASS_WIGHT, 0x01, 0xA6, 0, 0, 0, 0, 0, 0x0E, 0x0F, 0, sClassReelScr_Opinfo_2 },
     [0x22] = { 0x71F, 0x61, CLASS_TROUBADOUR, 0, 0x85, 0x03, 0, 0, 0, 0, 0, 0x11, 0, sClassReelScr_Opinfo_8 },
     [0x23] = { 0x714, 0x12, CLASS_BERSERKER, 0, 0x22, 0, 0, 0, 0, 0, 0x10, 0x10, 0, sClassReelScr_Opinfo_0 },
     [0x24] = { 0x710, 0x45, CLASS_ROGUE, 0, 0x8E, 0, 0, 0, 0, 0, 0x1C, 0x1C, 0, sClassReelScr_Opinfo_2 },
     [0x25] = { 0x70A, 0x4B, CLASS_SAGE, 0, 0x6C, 0x01, 0, 0, 0, 0, 0x19, 0x19, 0, sClassReelScr_Opinfo_5 },
     [0x26] = { 0x715, 0x2C, CLASS_GREAT_KNIGHT, 0, 0x4F, 0, 0, 0, 0, 0, 0x0B, 0x12, 0, sClassReelScr_Opinfo_2 },
-    [0x27] = { 0x6F8, 0xFF, CLASS_EIRIKA_MASTER_LORD, 0, 0x07, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_2 },
-    [0x28] = { 0x705, 0xFF, CLASS_RANGER, 0x01, 0x2E, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_3 },
-    [0x29] = { 0x712, 0xFF, CLASS_WARRIOR, 0x01, 0x1B, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
-    [0x2A] = { 0x702, 0xFF, CLASS_ASSASSIN, 0x01, 0x8A, 0, 0, 0, 0, 0, 0x1D, 0x1D, 0, sClassReelScr_Opinfo_4 },
+    [0x27] = { 0x6F8, -1, CLASS_EIRIKA_MASTER_LORD, 0, 0x07, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_2 },
+    [0x28] = { 0x705, -1, CLASS_RANGER, 0x01, 0x2E, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_3 },
+    [0x29] = { 0x712, -1, CLASS_WARRIOR, 0x01, 0x1B, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+    [0x2A] = { 0x702, -1, CLASS_ASSASSIN, 0x01, 0x8A, 0, 0, 0, 0, 0, 0x1D, 0x1D, 0, sClassReelScr_Opinfo_4 },
     [0x2B] = { 0x70B, 0x35, CLASS_MAGE_KNIGHT_F, 0, 0x70, 0x02, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_7 },
-    [0x2C] = { 0x6F7, 0xFF, CLASS_EPHRAIM_MASTER_LORD, 0, 0x04, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_2 },
-    [0x2D] = { 0x720, 0xFF, CLASS_VALKYRIE, 0, 0x86, 0x04, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_7 },
-    [0x2E] = { 0x717, 0xFF, CLASS_DRUID, 0x01, 0x76, 0x05, 0, 0, 0, 0, 0x15, 0x15, 0, sClassReelScr_Opinfo_11 },
-    [0x2F] = { 0x6FC, 0xFF, CLASS_GENERAL, 0x01, 0x44, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
-    [0x30] = { 0x701, 0xFF, CLASS_SWORDMASTER, 0, 0x14, 0, 0, 0, 0, 0, 0x09, 0x09, 0, sClassReelScr_Opinfo_2 },
+    [0x2C] = { 0x6F7, -1, CLASS_EPHRAIM_MASTER_LORD, 0, 0x04, 0, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_2 },
+    [0x2D] = { 0x720, -1, CLASS_VALKYRIE, 0, 0x86, 0x04, 0, 0, 0, 0, 0x11, 0, 0, sClassReelScr_Opinfo_7 },
+    [0x2E] = { 0x717, -1, CLASS_DRUID, 0x01, 0x76, 0x05, 0, 0, 0, 0, 0x15, 0x15, 0, sClassReelScr_Opinfo_11 },
+    [0x2F] = { 0x6FC, -1, CLASS_GENERAL, 0x01, 0x44, 0, 0, 0, 0, 0, 0x02, 0x02, 0, sClassReelScr_Opinfo_2 },
+    [0x30] = { 0x701, -1, CLASS_SWORDMASTER, 0, 0x14, 0, 0, 0, 0, 0, 0x09, 0x09, 0, sClassReelScr_Opinfo_2 },
     [0x31] = { 0x708, 0x68, CLASS_WYVERN_KNIGHT, 0, 0x61, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_2 },
     [0x32] = { 0x70C, 0x0D, CLASS_BISHOP, 0, 0x81, 0x04, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_7 },
     [0x33] = { 0x707, 0x17, CLASS_WYVERN_LORD, 0, 0x5C, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_2 },
     [0x34] = { 0x6FF, 0x6B, CLASS_HERO, 0, 0x0D, 0, 0, 0, 0, 0, 0x17, 0x17, 0, sClassReelScr_Opinfo_0 },
     [0x35] = { 0x71D, 0x1C, CLASS_FALCON_KNIGHT, 0, 0x67, 0, 0, 0, 0, 0, 0x0D, 0x0D, 0, sClassReelScr_Opinfo_2 },
-    [0x36] = { 0x72A, 0xFF, CLASS_ELDER_BAEL, 0x01, 0xAC, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_2 },
-    [0x37] = { 0x72E, 0xFF, CLASS_TARVOS, 0x01, 0xB2, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
-    [0x38] = { 0x734, 0xFF, CLASS_DEATHGOYLE, 0x01, 0xBE, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_2 },
-    [0x39] = { 0x72D, 0xFF, CLASS_GWYLLGI, 0x01, 0xB1, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
-    [0x3A] = { 0x732, 0xFF, CLASS_GORGON, 0x01, 0xBB, 0x08, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_13 },
-    [0x3B] = { 0x724, 0xFF, CLASS_NECROMANCER, 0x01, 0x9C, 0x02, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_7 },
+    [0x36] = { 0x72A, -1, CLASS_ELDER_BAEL, 0x01, 0xAC, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_2 },
+    [0x37] = { 0x72E, -1, CLASS_TARVOS, 0x01, 0xB2, 0, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_0 },
+    [0x38] = { 0x734, -1, CLASS_DEATHGOYLE, 0x01, 0xBE, 0, 0, 0, 0, 0, 0x16, 0x16, 0, sClassReelScr_Opinfo_2 },
+    [0x39] = { 0x72D, -1, CLASS_GWYLLGI, 0x01, 0xB1, 0, 0, 0, 0, 0, 0x13, 0x13, 0, sClassReelScr_Opinfo_0 },
+    [0x3A] = { 0x732, -1, CLASS_GORGON, 0x01, 0xBB, 0x08, 0, 0, 0, 0, 0x01, 0x01, 0, sClassReelScr_Opinfo_13 },
+    [0x3B] = { 0x724, -1, CLASS_NECROMANCER, 0x01, 0x9C, 0x02, 0, 0, 0, 0, 0x14, 0x14, 0, sClassReelScr_Opinfo_7 },
     [0x3C] = { 0x718, 0x4F, CLASS_SUMMONER, 0x01, 0x7A, 0x05, 0, 0, 0, 0, 0x15, 0x15, 0, sClassReelScr_Opinfo_11 },
-    [0x3D] = { 0x70D, 0xFF, CLASS_MANAKETE_MYRRH, 0, 0xC4, 0x06, 0, 0, 0, 0, 0x10, 0x10, 0, sClassReelScr_Opinfo_10 },
-    [0x3E] = { 0x731, 0xFF, CLASS_ARCH_MOGALL, 0x01, 0xBA, 0x07, 0, 0, 0, 0, 0x06, 0x06, 0, sClassReelScr_Opinfo_12 },
+    [0x3D] = { 0x70D, -1, CLASS_MANAKETE_MYRRH, 0, 0xC4, 0x06, 0, 0, 0, 0, 0x10, 0x10, 0, sClassReelScr_Opinfo_10 },
+    [0x3E] = { 0x731, -1, CLASS_ARCH_MOGALL, 0x01, 0xBA, 0x07, 0, 0, 0, 0, 0x06, 0x06, 0, sClassReelScr_Opinfo_12 },
     [0x3F] = { 0x706, 0x15, CLASS_WYVERN_RIDER, 0, 0x57, 0, 0, 0, 0, 0, 0x04, 0x04, 0, sClassReelScr_Opinfo_0 },
     /* banimId (5th field) indexes banim_data[] directly and is 0-BASED, unlike
      * struct BattleAnimDef::index (which GetBattleAnimationId resolves as
@@ -2277,7 +2277,7 @@ struct ClassReelEnt CONST_DATA gClassReelData[65] = {
      * the class's own pBattleAnimDef by every class-reel consumer (opinfo,
      * and src/purchase_generics.c's platform preview), so it has to be
      * swapped here too or those surfaces keep showing the stock animation. */
-    [0x40] = { 0x722, 0xFF, CLASS_SOLDIER, 0x01,
+    [0x40] = { 0x722, -1, CLASS_SOLDIER, 0x01,
 #if FE8_NEW_ANIMS
         0xCA,
 #else
