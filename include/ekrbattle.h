@@ -829,6 +829,17 @@ extern CONST_DATA struct BattleAnimDef AnimConf_168[];
 extern CONST_DATA struct BattleAnimDef AnimConf_169[];
 extern CONST_DATA struct BattleAnimDef AnimConf_170[];
 
+// Batch3 custom classes (2026-09 import).
+extern CONST_DATA struct BattleAnimDef AnimConf_171[];
+extern CONST_DATA struct BattleAnimDef AnimConf_172[];
+extern CONST_DATA struct BattleAnimDef AnimConf_173[];
+extern CONST_DATA struct BattleAnimDef AnimConf_174[];
+extern CONST_DATA struct BattleAnimDef AnimConf_175[];
+extern CONST_DATA struct BattleAnimDef AnimConf_176[];
+extern CONST_DATA struct BattleAnimDef AnimConf_177[];
+extern CONST_DATA struct BattleAnimDef AnimConf_178[];
+extern CONST_DATA struct BattleAnimDef AnimConf_179[];
+
 extern struct BattleAnimDef * gUnitSpecificBanimConfigs[];
 
 void SetBanimLinkArenaFlag(int unk);

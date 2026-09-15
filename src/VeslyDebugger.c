@@ -8637,6 +8637,8 @@ static void EndLingeringBanimEffectProcs(void)
 
 static void EndDebuggerBanimPreview(void)
 {
+    BG_Fill(gBG2TilemapBuffer, 0); // Erase anything leftover by the spell 
+    BG_EnableSyncByMask(BG2_SYNC_BIT);
 #if FE8_OVERFLOW_SAFETY_CHECKS
     // Before the preview's own teardown frees and reallocates the anim slots.
     EndLingeringBanimEffectProcs();

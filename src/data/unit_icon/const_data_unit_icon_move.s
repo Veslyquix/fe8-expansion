@@ -28797,3 +28797,1583 @@ unit_icon_move_Adventurer_anim_4: @ +$142
 	.2byte  4, 17
 	.2byte 0, (-1) @ loop back to start
 	.align 2, 0
+	.global unit_icon_move_LynGreatLord_sheet
+unit_icon_move_LynGreatLord_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_LynGreatLord_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_LynGreatLord_motion
+unit_icon_move_LynGreatLord_motion:
+	.2byte (unit_icon_move_LynGreatLord_frame_list - unit_icon_move_LynGreatLord_motion), (unit_icon_move_LynGreatLord_anim_list - unit_icon_move_LynGreatLord_motion) @ header
+
+unit_icon_move_LynGreatLord_frame_list: @ +$4
+	.2byte (unit_icon_move_LynGreatLord_frame_0 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_1 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_2 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_3 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_4 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_5 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_6 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_7 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_8 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_9 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_10 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_11 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_12 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_13 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_14 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_15 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_16 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_17 - unit_icon_move_LynGreatLord_frame_list)
+	.2byte (unit_icon_move_LynGreatLord_frame_18 - unit_icon_move_LynGreatLord_frame_list)
+
+unit_icon_move_LynGreatLord_anim_list: @ +$2A
+	.2byte (unit_icon_move_LynGreatLord_anim_0 - unit_icon_move_LynGreatLord_anim_list)
+	.2byte (unit_icon_move_LynGreatLord_anim_1 - unit_icon_move_LynGreatLord_anim_list)
+	.2byte (unit_icon_move_LynGreatLord_anim_2 - unit_icon_move_LynGreatLord_anim_list)
+	.2byte (unit_icon_move_LynGreatLord_anim_3 - unit_icon_move_LynGreatLord_anim_list)
+	.2byte (unit_icon_move_LynGreatLord_anim_4 - unit_icon_move_LynGreatLord_anim_list)
+
+unit_icon_move_LynGreatLord_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- uniform X=-16, same as every
+	@ other frame in this table (and identical to Eirika_Lord's own, whose
+	@ art LynGreatLord's is a direct reskin of). A per-frame bbox-fitted offset
+	@ was tried here and reverted: it "centered" each frame in isolation,
+	@ but a walk cycle needs a CONSTANT offset across all its frames --
+	@ per-frame correction broke that, causing a visible side-to-side
+	@ wobble instead of smooth motion. See
+	@ reference_adding_classes_banims_mapsprites.md.
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- see frame_16's comment
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0 -- see frame_16's comment
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_LynGreatLord_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynGreatLord_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynGreatLord_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynGreatLord_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_LynGreatLord_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Elder_sheet
+unit_icon_move_Elder_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Elder_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Elder_motion
+unit_icon_move_Elder_motion:
+	.2byte (unit_icon_move_Elder_frame_list - unit_icon_move_Elder_motion), (unit_icon_move_Elder_anim_list - unit_icon_move_Elder_motion) @ header
+
+unit_icon_move_Elder_frame_list: @ +$4
+	.2byte (unit_icon_move_Elder_frame_0 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_1 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_2 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_3 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_4 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_5 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_6 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_7 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_8 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_9 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_10 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_11 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_12 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_13 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_14 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_15 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_16 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_17 - unit_icon_move_Elder_frame_list)
+	.2byte (unit_icon_move_Elder_frame_18 - unit_icon_move_Elder_frame_list)
+
+unit_icon_move_Elder_anim_list: @ +$2A
+	.2byte (unit_icon_move_Elder_anim_0 - unit_icon_move_Elder_anim_list)
+	.2byte (unit_icon_move_Elder_anim_1 - unit_icon_move_Elder_anim_list)
+	.2byte (unit_icon_move_Elder_anim_2 - unit_icon_move_Elder_anim_list)
+	.2byte (unit_icon_move_Elder_anim_3 - unit_icon_move_Elder_anim_list)
+	.2byte (unit_icon_move_Elder_anim_4 - unit_icon_move_Elder_anim_list)
+
+unit_icon_move_Elder_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91EE, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91EE, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91EE, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91EE, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Elder_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81EE, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Elder_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Elder_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Elder_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Elder_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Elder_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Arbalest_sheet
+unit_icon_move_Arbalest_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Arbalest_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Arbalest_motion
+unit_icon_move_Arbalest_motion:
+	.2byte (unit_icon_move_Arbalest_frame_list - unit_icon_move_Arbalest_motion), (unit_icon_move_Arbalest_anim_list - unit_icon_move_Arbalest_motion) @ header
+
+unit_icon_move_Arbalest_frame_list: @ +$4
+	.2byte (unit_icon_move_Arbalest_frame_0 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_1 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_2 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_3 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_4 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_5 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_6 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_7 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_8 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_9 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_10 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_11 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_12 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_13 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_14 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_15 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_16 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_17 - unit_icon_move_Arbalest_frame_list)
+	.2byte (unit_icon_move_Arbalest_frame_18 - unit_icon_move_Arbalest_frame_list)
+
+unit_icon_move_Arbalest_anim_list: @ +$2A
+	.2byte (unit_icon_move_Arbalest_anim_0 - unit_icon_move_Arbalest_anim_list)
+	.2byte (unit_icon_move_Arbalest_anim_1 - unit_icon_move_Arbalest_anim_list)
+	.2byte (unit_icon_move_Arbalest_anim_2 - unit_icon_move_Arbalest_anim_list)
+	.2byte (unit_icon_move_Arbalest_anim_3 - unit_icon_move_Arbalest_anim_list)
+	.2byte (unit_icon_move_Arbalest_anim_4 - unit_icon_move_Arbalest_anim_list)
+
+unit_icon_move_Arbalest_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_frame_18: @ +$E8
+	.2byte 2 @ oam entries
+	.2byte 0xE0, 0x81EB, 0x0 @ OAM Data #0
+	.2byte 0xE0, 0xB, 0x2004 @ OAM Data #1
+	.2byte 0xE0 @ Sheet Tile #0
+	.2byte 0xF0 @ Sheet Tile #1
+
+unit_icon_move_Arbalest_anim_0: @ +$FA
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_anim_1: @ +$10E
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_anim_2: @ +$122
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_anim_3: @ +$136
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_anim_4: @ +$14A
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Arbalest_F_sheet
+unit_icon_move_Arbalest_F_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Arbalest_F_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Arbalest_F_motion
+unit_icon_move_Arbalest_F_motion:
+	.2byte (unit_icon_move_Arbalest_F_frame_list - unit_icon_move_Arbalest_F_motion), (unit_icon_move_Arbalest_F_anim_list - unit_icon_move_Arbalest_F_motion) @ header
+
+unit_icon_move_Arbalest_F_frame_list: @ +$4
+	.2byte (unit_icon_move_Arbalest_F_frame_0 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_1 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_2 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_3 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_4 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_5 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_6 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_7 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_8 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_9 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_10 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_11 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_12 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_13 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_14 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_15 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_16 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_17 - unit_icon_move_Arbalest_F_frame_list)
+	.2byte (unit_icon_move_Arbalest_F_frame_18 - unit_icon_move_Arbalest_F_frame_list)
+
+unit_icon_move_Arbalest_F_anim_list: @ +$2A
+	.2byte (unit_icon_move_Arbalest_F_anim_0 - unit_icon_move_Arbalest_F_anim_list)
+	.2byte (unit_icon_move_Arbalest_F_anim_1 - unit_icon_move_Arbalest_F_anim_list)
+	.2byte (unit_icon_move_Arbalest_F_anim_2 - unit_icon_move_Arbalest_F_anim_list)
+	.2byte (unit_icon_move_Arbalest_F_anim_3 - unit_icon_move_Arbalest_F_anim_list)
+	.2byte (unit_icon_move_Arbalest_F_anim_4 - unit_icon_move_Arbalest_F_anim_list)
+
+unit_icon_move_Arbalest_F_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Arbalest_F_frame_18: @ +$E8
+	.2byte 2 @ oam entries
+	.2byte 0xE0, 0x81EB, 0x0 @ OAM Data #0
+	.2byte 0xE0, 0xB, 0x2004 @ OAM Data #1
+	.2byte 0xE0 @ Sheet Tile #0
+	.2byte 0xF0 @ Sheet Tile #1
+
+unit_icon_move_Arbalest_F_anim_0: @ +$FA
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_F_anim_1: @ +$10E
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_F_anim_2: @ +$122
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_F_anim_3: @ +$136
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Arbalest_F_anim_4: @ +$14A
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Fellbeast_Knight_sheet
+unit_icon_move_Fellbeast_Knight_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Fellbeast_Knight_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Fellbeast_Knight_motion
+unit_icon_move_Fellbeast_Knight_motion:
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_list - unit_icon_move_Fellbeast_Knight_motion), (unit_icon_move_Fellbeast_Knight_anim_list - unit_icon_move_Fellbeast_Knight_motion) @ header
+
+unit_icon_move_Fellbeast_Knight_frame_list: @ +$4
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_0 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_1 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_2 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_3 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_4 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_5 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_6 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_7 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_8 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_9 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_10 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_11 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_12 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_13 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_14 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_15 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_16 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_17 - unit_icon_move_Fellbeast_Knight_frame_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_frame_18 - unit_icon_move_Fellbeast_Knight_frame_list)
+
+unit_icon_move_Fellbeast_Knight_anim_list: @ +$2A
+	.2byte (unit_icon_move_Fellbeast_Knight_anim_0 - unit_icon_move_Fellbeast_Knight_anim_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_anim_1 - unit_icon_move_Fellbeast_Knight_anim_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_anim_2 - unit_icon_move_Fellbeast_Knight_anim_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_anim_3 - unit_icon_move_Fellbeast_Knight_anim_list)
+	.2byte (unit_icon_move_Fellbeast_Knight_anim_4 - unit_icon_move_Fellbeast_Knight_anim_list)
+
+unit_icon_move_Fellbeast_Knight_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Fellbeast_Knight_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Fellbeast_Knight_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Fellbeast_Knight_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Fellbeast_Knight_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Fellbeast_Knight_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Griffon_sheet
+unit_icon_move_Griffon_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Griffon_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Griffon_motion
+unit_icon_move_Griffon_motion:
+	.2byte (unit_icon_move_Griffon_frame_list - unit_icon_move_Griffon_motion), (unit_icon_move_Griffon_anim_list - unit_icon_move_Griffon_motion) @ header
+
+unit_icon_move_Griffon_frame_list: @ +$4
+	.2byte (unit_icon_move_Griffon_frame_0 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_1 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_2 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_3 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_4 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_5 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_6 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_7 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_8 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_9 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_10 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_11 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_12 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_13 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_14 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_15 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_16 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_17 - unit_icon_move_Griffon_frame_list)
+	.2byte (unit_icon_move_Griffon_frame_18 - unit_icon_move_Griffon_frame_list)
+
+unit_icon_move_Griffon_anim_list: @ +$2A
+	.2byte (unit_icon_move_Griffon_anim_0 - unit_icon_move_Griffon_anim_list)
+	.2byte (unit_icon_move_Griffon_anim_1 - unit_icon_move_Griffon_anim_list)
+	.2byte (unit_icon_move_Griffon_anim_2 - unit_icon_move_Griffon_anim_list)
+	.2byte (unit_icon_move_Griffon_anim_3 - unit_icon_move_Griffon_anim_list)
+	.2byte (unit_icon_move_Griffon_anim_4 - unit_icon_move_Griffon_anim_list)
+
+unit_icon_move_Griffon_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Griffon_frame_18: @ +$E8
+	.2byte 2 @ oam entries
+	.2byte 0xE0, 0x81EB, 0x0 @ OAM Data #0
+	.2byte 0xE0, 0xB, 0x2004 @ OAM Data #1
+	.2byte 0xE0 @ Sheet Tile #0
+	.2byte 0xF0 @ Sheet Tile #1
+
+unit_icon_move_Griffon_anim_0: @ +$FA
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Griffon_anim_1: @ +$10E
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Griffon_anim_2: @ +$122
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Griffon_anim_3: @ +$136
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Griffon_anim_4: @ +$14A
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Archsage_sheet
+unit_icon_move_Archsage_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Archsage_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Archsage_motion
+unit_icon_move_Archsage_motion:
+	.2byte (unit_icon_move_Archsage_frame_list - unit_icon_move_Archsage_motion), (unit_icon_move_Archsage_anim_list - unit_icon_move_Archsage_motion) @ header
+
+unit_icon_move_Archsage_frame_list: @ +$4
+	.2byte (unit_icon_move_Archsage_frame_0 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_1 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_2 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_3 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_4 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_5 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_6 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_7 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_8 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_9 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_10 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_11 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_12 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_13 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_14 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_15 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_16 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_17 - unit_icon_move_Archsage_frame_list)
+	.2byte (unit_icon_move_Archsage_frame_18 - unit_icon_move_Archsage_frame_list)
+
+unit_icon_move_Archsage_anim_list: @ +$2A
+	.2byte (unit_icon_move_Archsage_anim_0 - unit_icon_move_Archsage_anim_list)
+	.2byte (unit_icon_move_Archsage_anim_1 - unit_icon_move_Archsage_anim_list)
+	.2byte (unit_icon_move_Archsage_anim_2 - unit_icon_move_Archsage_anim_list)
+	.2byte (unit_icon_move_Archsage_anim_3 - unit_icon_move_Archsage_anim_list)
+	.2byte (unit_icon_move_Archsage_anim_4 - unit_icon_move_Archsage_anim_list)
+
+unit_icon_move_Archsage_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F1, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F1, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F1, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F1, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F1, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Archsage_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Archsage_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Archsage_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Archsage_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Archsage_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Malig_Queen_sheet
+unit_icon_move_Malig_Queen_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Malig_Queen_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Malig_Queen_motion
+unit_icon_move_Malig_Queen_motion:
+	.2byte (unit_icon_move_Malig_Queen_frame_list - unit_icon_move_Malig_Queen_motion), (unit_icon_move_Malig_Queen_anim_list - unit_icon_move_Malig_Queen_motion) @ header
+
+unit_icon_move_Malig_Queen_frame_list: @ +$4
+	.2byte (unit_icon_move_Malig_Queen_frame_0 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_1 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_2 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_3 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_4 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_5 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_6 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_7 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_8 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_9 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_10 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_11 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_12 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_13 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_14 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_15 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_16 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_17 - unit_icon_move_Malig_Queen_frame_list)
+	.2byte (unit_icon_move_Malig_Queen_frame_18 - unit_icon_move_Malig_Queen_frame_list)
+
+unit_icon_move_Malig_Queen_anim_list: @ +$2A
+	.2byte (unit_icon_move_Malig_Queen_anim_0 - unit_icon_move_Malig_Queen_anim_list)
+	.2byte (unit_icon_move_Malig_Queen_anim_1 - unit_icon_move_Malig_Queen_anim_list)
+	.2byte (unit_icon_move_Malig_Queen_anim_2 - unit_icon_move_Malig_Queen_anim_list)
+	.2byte (unit_icon_move_Malig_Queen_anim_3 - unit_icon_move_Malig_Queen_anim_list)
+	.2byte (unit_icon_move_Malig_Queen_anim_4 - unit_icon_move_Malig_Queen_anim_list)
+
+unit_icon_move_Malig_Queen_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Malig_Queen_frame_18: @ +$E8
+	.2byte 2 @ oam entries
+	.2byte 0xE0, 0x81F3, 0x0 @ OAM Data #0
+	.2byte 0x80E0, 0x13, 0x4 @ OAM Data #1
+	.2byte 0xE0 @ Sheet Tile #0
+	.2byte 0xF0 @ Sheet Tile #1
+
+unit_icon_move_Malig_Queen_anim_0: @ +$FA
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Malig_Queen_anim_1: @ +$10E
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Malig_Queen_anim_2: @ +$122
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Malig_Queen_anim_3: @ +$136
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Malig_Queen_anim_4: @ +$14A
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0
+
+	.global unit_icon_move_Seraph_Knight_sheet
+unit_icon_move_Seraph_Knight_sheet:
+	.incbin "graphics/unit_icon/move/unit_icon_move_Seraph_Knight_sheet.4bpp.lz"
+	.align 2, 0
+
+	.global unit_icon_move_Seraph_Knight_motion
+unit_icon_move_Seraph_Knight_motion:
+	.2byte (unit_icon_move_Seraph_Knight_frame_list - unit_icon_move_Seraph_Knight_motion), (unit_icon_move_Seraph_Knight_anim_list - unit_icon_move_Seraph_Knight_motion) @ header
+
+unit_icon_move_Seraph_Knight_frame_list: @ +$4
+	.2byte (unit_icon_move_Seraph_Knight_frame_0 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_1 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_2 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_3 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_4 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_5 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_6 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_7 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_8 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_9 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_10 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_11 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_12 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_13 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_14 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_15 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_16 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_17 - unit_icon_move_Seraph_Knight_frame_list)
+	.2byte (unit_icon_move_Seraph_Knight_frame_18 - unit_icon_move_Seraph_Knight_frame_list)
+
+unit_icon_move_Seraph_Knight_anim_list: @ +$2A
+	.2byte (unit_icon_move_Seraph_Knight_anim_0 - unit_icon_move_Seraph_Knight_anim_list)
+	.2byte (unit_icon_move_Seraph_Knight_anim_1 - unit_icon_move_Seraph_Knight_anim_list)
+	.2byte (unit_icon_move_Seraph_Knight_anim_2 - unit_icon_move_Seraph_Knight_anim_list)
+	.2byte (unit_icon_move_Seraph_Knight_anim_3 - unit_icon_move_Seraph_Knight_anim_list)
+	.2byte (unit_icon_move_Seraph_Knight_anim_4 - unit_icon_move_Seraph_Knight_anim_list)
+
+unit_icon_move_Seraph_Knight_frame_0: @ +$34
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_1: @ +$3E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_2: @ +$48
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_3: @ +$52
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_4: @ +$5C
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_5: @ +$66
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x10 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_6: @ +$70
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x20 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_7: @ +$7A
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x91F0, 0x0 @ OAM Data #0
+	.2byte 0x30 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_8: @ +$84
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x40 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_9: @ +$8E
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x50 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_10: @ +$98
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x60 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_11: @ +$A2
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x70 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_12: @ +$AC
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x80 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_13: @ +$B6
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0x90 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_14: @ +$C0
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xA0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_15: @ +$CA
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xB0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_16: @ +$D4
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xC0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_17: @ +$DE
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xD0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_frame_18: @ +$E8
+	.2byte 1 @ oam entries
+	.2byte 0xE0, 0x81F0, 0x0 @ OAM Data #0
+	.2byte 0xE0 @ Sheet Tile #0
+
+unit_icon_move_Seraph_Knight_anim_0: @ +$F2
+	.2byte 13,  0
+	.2byte  6,  1
+	.2byte 13,  2
+	.2byte  6,  3
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Seraph_Knight_anim_1: @ +$106
+	.2byte 13,  4
+	.2byte  6,  5
+	.2byte 13,  6
+	.2byte  6,  7
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Seraph_Knight_anim_2: @ +$11A
+	.2byte 13,  8
+	.2byte  6,  9
+	.2byte 13, 10
+	.2byte  6, 11
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Seraph_Knight_anim_3: @ +$12E
+	.2byte 13, 12
+	.2byte  6, 13
+	.2byte 13, 14
+	.2byte  6, 15
+
+	.2byte 0, (-1) @ loop back to start
+
+unit_icon_move_Seraph_Knight_anim_4: @ +$142
+	.2byte 20, 16
+	.2byte  4, 17
+	.2byte 20, 18
+	.2byte  4, 17
+
+	.2byte 0, (-1) @ loop back to start
+
+	.align 2, 0

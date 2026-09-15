@@ -19,10 +19,19 @@ Generally sourced from the community
 | `CLASS_ARCHER_F` | [Archer-Variant] Der's Improved [F] | Original animation by IS. Archer Variant by Flasuban and DerTheVaporeon. |
 | `CLASS_MAGE` | [Mage-Custom] Gaiden-Style Frame Fix [F] by Gamma | HyperGammaSpaces, Teraspark, Obsidian_Daddy, Devisian_Nights. Frame fixes (misplaced eye) by Raulster/Alice. |
 | `CLASS_MAGE_F` | [Mage-Custom] Gaiden-Style Ponytail [F] by Gamma | HyperGammaSpaces, Teraspark, Obsidian_Daddy, Devisian_Nights. Frame fixes (misplaced eye) and ponytail by Raulster/Alice. |
-| `CLASS_LYN_LORD` | [FE7 Lyn-Reskin] T1 Long Hair [F] | Frames by Blazt. Formatted by Seliost1. |
+| `CLASS_LYN_LORD` | [Myrmidon-Reskin] Marisa [F] by Redbean | Made by Red Bean. Scripted by Sable Mage. Sword (Alt Crit) by Seliost1. |
 | `CLASS_NOMAD`, `CLASS_NOMAD_F` | [Nomad-Base] [M]/[F] Vanilla Repal | Repalette by Pikmin1211 and Maiser6. |
 | `CLASS_NOMAD_TROOPER` | [Nomad Trooper Reskin][M] FE6 Style by Levin64 | FE6 Nomad Trooper improved by Levin64. |
 | `CLASS_NOMAD_TROOPER_F` | [Nomad Trooper Reskin] [F] FE6 Style by Levin64 | FE6 Nomad Trooper improved by Levin64. Female variant reskin by Fuyu. |
+| `CLASS_LYN_GREAT_LORD` | [Myrmidon-Reskin] Marisa [F] by Redbean | Made by Red Bean. Scripted by Sable Mage. Sword (Alt Crit) by Seliost1. |
+| `CLASS_ELDER` | [Elder] by Yangfly Master | Made by Yangfly Master. |
+| `CLASS_ARBALEST` | [Griffon] [U] Arbalest Repal 2 by Pushwall | Arbalest base by Ayr and Raspberry. Initial repalette by EldritchAbomination, repaletted again by Pushwall. |
+| `CLASS_ARBALEST_F` | [Griffon] [U] Arbalest - Tribalest | Arbalest base by Ayr and Raspberry. Initial repalette by EldritchAbomination, repaletted again by Pushwall. Reskin by UltraFenix. |
+| `CLASS_FELLBEAST_KNIGHT` | [WK Reskin] [U] Fellbeast Knight by Nuramon | Animation by Nuramon. Combination of Lance and Tail Spike by Seliost1. |
+| `CLASS_GRIFFON` | [Griffon] [U] Griffon v2 SoA by Ayr | Animation by Ayr. Unarmed edit by What is an Aubin. |
+| `CLASS_ARCHSAGE` | [T3 FE7] [M] Archsage Athos by Red Bean | Animation by Red Bean. |
+| `CLASS_MALIG_QUEEN` | [WK Custom] [F] Malig Queen by DatonDemand, Leo_Link Alt | Animation by Leo_Link. Handaxe and Javelin animation by jj09. Alternate edits by UltraxBlade. Handaxe spliced from Sphealnuke's Living Armor. Malig Queen reskin by DatonDemand. |
+| `CLASS_SERAPH_KNIGHT` | [Peg T3 Base] [F] Seraph Knight Repal | Animation by Dinar. Repal by 7743. Staff and Magic animations by darkjaden, based on Camus Regan's Dark Flier animation. |
 
 Pushwall's FE5-style Archer (the animation `CLASS_ARCHER` used before) is
 still imported as an available `banim_data[]` entry (see
@@ -35,6 +44,14 @@ still imported as an available `banim_data[]` entry (see
 | `CLASS_LYN_LORD` | Merpin |
 | `CLASS_NOMAD`, `CLASS_NOMAD_F` | IS, MeatOfJustice, UltraFenix |
 | `CLASS_NOMAD_TROOPER`, `CLASS_NOMAD_TROOPER_F` | IS |
+| `CLASS_LYN_GREAT_LORD` | Merpin |
+| `CLASS_ELDER` | flasuban |
+| `CLASS_ARBALEST`, `CLASS_ARBALEST_F` | N426, Stephano |
+| `CLASS_FELLBEAST_KNIGHT` | flasuban |
+| `CLASS_GRIFFON` | N426 |
+| `CLASS_ARCHSAGE` | IS |
+| `CLASS_MALIG_QUEEN` | Pikmin |
+| `CLASS_SERAPH_KNIGHT` | CamusZekeSirius |
 
 
 ## Batch2 Imported Classes (`FE8_NEW_ANIMS`)
@@ -343,6 +360,5 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
 | `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
 | `MOVEARROW_HACK` | circleseverywhere |
-
 
 

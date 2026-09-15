@@ -6,6 +6,12 @@ described in [`generated_data_tutorial.md`](generated_data_tutorial.md)
 except classes' base stat/growth/rank *data* — art assets are their own
 scripts and hand-spliced source files.
 
+Whenever adding graphics, update both credit surfaces before calling the
+asset done: `CREDITS.md` for full source/artist attribution and
+`src/Credits.c` for the in-game credits scroll. Keep the matching section
+names in sync with the existing tables/comments instead of creating a
+one-off root note.
+
 ## Classes (`src/data/classes.json`)
 
 1. Add a `CLASS_*` id to `include/constants/classes.h` (hand-written, not
@@ -60,6 +66,8 @@ numbered `Weapon_NNN.png` frames — ignore the rest).
 3. Importing a pack alone wires nothing to any class — a class only picks
    up the new animation once its own `AnimConf_N[].index` points at the
    new `banim_data[]` slot (`.index` is one-based; slot = `.index - 1`).
+4. Add/update the battle-animation credit in `CREDITS.md` and the compact
+   in-game credit in `src/Credits.c`.
 
 Two things that will bite you:
 - **`banim/data_banim.o` is pinned to a fixed base address**
@@ -100,6 +108,10 @@ trusting a nonzero suggested shift.
 If adding several classes' sprites in one pass, append their
 `unit_icon_move_table[]` rows in the same order as their `classes.json`
 records — indexing is positional, so only appending at the end is safe.
+
+Add/update the map-sprite credit in both `CREDITS.md` and `src/Credits.c`;
+the source filename's `{...}` artist tag is usually the safest attribution
+to preserve.
 
 ## Portraits (gated `FE8_CUSTOM_CAMPAIGN`)
 

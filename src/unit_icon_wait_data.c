@@ -185,4 +185,13 @@ UnitIconWait unit_icon_wait_table[] = {
 	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_Slime_sheet}, // 177
 	{2, UNIT_ICON_SIZE_32x32, unit_icon_wait_Warbird_sheet}, // 178
 	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_Adventurer_sheet}, // 179
+	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_LynGreatLord_sheet}, // 180
+	{2, UNIT_ICON_SIZE_16x16, unit_icon_wait_Elder_sheet}, // 181
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Arbalest_sheet}, // 182
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Arbalest_F_sheet}, // 183
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Fellbeast_Knight_sheet}, // 184
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Griffon_sheet}, // 185
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Archsage_sheet}, // 186
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Malig_Queen_sheet}, // 187
+	{2, UNIT_ICON_SIZE_16x32, unit_icon_wait_Seraph_Knight_sheet}, // 188
 };

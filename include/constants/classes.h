@@ -216,6 +216,15 @@ enum {
     CLASS_SLIME                  = 0xC5,
     CLASS_WARBIRD                = 0xC6,
     CLASS_ADVENTURER             = 0xC7,
+    CLASS_LYN_GREAT_LORD         = 0xC8,
+    CLASS_ELDER                  = 0xC9,
+    CLASS_ARBALEST               = 0xCA,
+    CLASS_ARBALEST_F             = 0xCB,
+    CLASS_FELLBEAST_KNIGHT       = 0xCC,
+    CLASS_GRIFFON                = 0xCD,
+    CLASS_ARCHSAGE               = 0xCE,
+    CLASS_MALIG_QUEEN            = 0xCF,
+    CLASS_SERAPH_KNIGHT          = 0xD0,
 
     // Hiding the game's misery
     CLASS_OBSTACLE = CLASS_EPHRAIM_LORD,

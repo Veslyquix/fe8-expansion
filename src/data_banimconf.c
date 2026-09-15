@@ -2128,7 +2128,7 @@ CONST_DATA struct BattleAnimDef AnimConf_100[] = {
  * #if FE8_NEW_ANIMS-gated the way Archer's is -- these classes don't
  * exist without FE8_NEW_ANIMS's animation data to draw them with in the
  * first place. ITYPE_ITEM (unarmed) reuses the weapon's own index where
- * no dedicated unarmed animation was provided (LynLord, both Mage packs
+ * no dedicated unarmed animation was provided (both Mage packs
  * had no "Unarmed" subfolder in their source pack) -- same convention
  * vanilla AnimConf_36 (Mage) already uses for all 4 of its wtypes. */
 CONST_DATA struct BattleAnimDef AnimConf_101[] = { // LynLord
@@ -2138,7 +2138,7 @@ CONST_DATA struct BattleAnimDef AnimConf_101[] = { // LynLord
     },
     {
         .wtype = 0x0100 | ITYPE_ITEM,
-        .index = 0x00EF,
+        .index = 0x01B3,
     },
     { 0 }
 };
@@ -3491,3 +3491,226 @@ CONST_DATA struct BattleAnimDef AnimConf_170[] = { // Adventurer
     { 0 }
 };
 
+CONST_DATA struct BattleAnimDef AnimConf_171[] = { // LynGreatLord
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x01B4,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01B5,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_172[] = { // Elder
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01B6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01B6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01B6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x01B7,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01B8,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_173[] = { // Arbalest
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x01B9,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x01BA,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01BB,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_174[] = { // Arbalest_F
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x01BC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_BOW,
+        .index = 0x01BD,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01BE,
+    },
+    {
+        .wtype = ITEM_BALLISTA_REGULAR,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_LONG,
+        .index = 0x009F,
+    },
+    {
+        .wtype = ITEM_BALLISTA_KILLER,
+        .index = 0x009F,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_175[] = { // Fellbeast_Knight
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x01BF,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01C0,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_176[] = { // Griffon
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x01C1,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x01C2,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01C4,
+    },
+    {
+        .wtype = ITEM_AXE_HANDAXE,
+        .index = 0x01C3,
+    },
+    {
+        .wtype = ITEM_AXE_TOMAHAWK,
+        .index = 0x01C3,
+    },
+    {
+        .wtype = ITEM_AXE_HATCHET,
+        .index = 0x01C3,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_177[] = { // Archsage
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01C5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01C5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01C5,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x01C6,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01C5,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_178[] = { // Malig_Queen
+    {
+        .wtype = 0x0100 | ITYPE_AXE,
+        .index = 0x01C7,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01C9,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01C9,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01C9,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01C7,
+    },
+    {
+        .wtype = ITEM_AXE_HANDAXE,
+        .index = 0x01C8,
+    },
+    {
+        .wtype = ITEM_AXE_TOMAHAWK,
+        .index = 0x01C8,
+    },
+    {
+        .wtype = ITEM_AXE_HATCHET,
+        .index = 0x01C8,
+    },
+    { 0 }
+};
+
+CONST_DATA struct BattleAnimDef AnimConf_179[] = { // Seraph_Knight
+    {
+        .wtype = 0x0100 | ITYPE_SWORD,
+        .index = 0x01CA,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LANCE,
+        .index = 0x01CB,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ANIMA,
+        .index = 0x01CC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_LIGHT,
+        .index = 0x01CC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_DARK,
+        .index = 0x01CC,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_STAFF,
+        .index = 0x01CD,
+    },
+    {
+        .wtype = 0x0100 | ITYPE_ITEM,
+        .index = 0x01CE,
+    },
+    { 0 }
+};

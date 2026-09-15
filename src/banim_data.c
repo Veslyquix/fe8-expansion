@@ -438,6 +438,34 @@ struct BattleAnim banim_data[] = {
     {"newadvnbw1", &banim_newadvn_bow_modes_bin, &banim_newadvn_bow_script_o, &banim_newadvn_bow_oam_bin, &banim_newadvn_bow_oam_bin, &banim_newadvn_bow_agbpal}, // 0x1AF advn bow
     {"newadvnst1", &banim_newadvn_staff_modes_bin, &banim_newadvn_staff_script_o, &banim_newadvn_staff_oam_bin, &banim_newadvn_staff_oam_bin, &banim_newadvn_staff_agbpal}, // 0x1B0 advn staff
     {"newadvnun1", &banim_newadvn_unarmed_modes_bin, &banim_newadvn_unarmed_script_o, &banim_newadvn_unarmed_oam_bin, &banim_newadvn_unarmed_oam_bin, &banim_newadvn_unarmed_agbpal}, // 0x1B1 advn unarmed
+    {"newlynluun1", &banim_newlynlun_unarmed_modes_bin, &banim_newlynlun_unarmed_script_o, &banim_newlynlun_unarmed_oam_bin, &banim_newlynlun_unarmed_oam_bin, &banim_newlynlun_unarmed_agbpal}, // 0x1B2 lynlun unarmed
+    {"newlynglsw1", &banim_newlyngl_sword_modes_bin, &banim_newlyngl_sword_script_o, &banim_newlyngl_sword_oam_bin, &banim_newlyngl_sword_oam_bin, &banim_newlyngl_sword_agbpal}, // 0x1B3 lyngl sword
+    {"newlynglun1", &banim_newlyngl_unarmed_modes_bin, &banim_newlyngl_unarmed_script_o, &banim_newlyngl_unarmed_oam_bin, &banim_newlyngl_unarmed_oam_bin, &banim_newlyngl_unarmed_agbpal}, // 0x1B4 lyngl unarmed
+    {"neweldrmg1", &banim_newelder_magic_modes_bin, &banim_newelder_magic_script_o, &banim_newelder_magic_oam_bin, &banim_newelder_magic_oam_bin, &banim_newelder_magic_agbpal}, // 0x1B5 elder magic
+    {"neweldrst1", &banim_newelder_staff_modes_bin, &banim_newelder_staff_script_o, &banim_newelder_staff_oam_bin, &banim_newelder_staff_oam_bin, &banim_newelder_staff_agbpal}, // 0x1B6 elder staff
+    {"neweldrun1", &banim_newelder_unarmed_modes_bin, &banim_newelder_unarmed_script_o, &banim_newelder_unarmed_oam_bin, &banim_newelder_unarmed_oam_bin, &banim_newelder_unarmed_agbpal}, // 0x1B7 elder unarmed
+    {"newarbmln1", &banim_newarblm_lance_modes_bin, &banim_newarblm_lance_script_o, &banim_newarblm_lance_oam_bin, &banim_newarblm_lance_oam_bin, &banim_newarblm_lance_agbpal}, // 0x1B8 arblm lance
+    {"newarbmbw1", &banim_newarblm_bow_modes_bin, &banim_newarblm_bow_script_o, &banim_newarblm_bow_oam_bin, &banim_newarblm_bow_oam_bin, &banim_newarblm_bow_agbpal}, // 0x1B9 arblm bow
+    {"newarbmun1", &banim_newarblm_unarmed_modes_bin, &banim_newarblm_unarmed_script_o, &banim_newarblm_unarmed_oam_bin, &banim_newarblm_unarmed_oam_bin, &banim_newarblm_unarmed_agbpal}, // 0x1BA arblm unarmed
+    {"newarbfln1", &banim_newarblf_lance_modes_bin, &banim_newarblf_lance_script_o, &banim_newarblf_lance_oam_bin, &banim_newarblf_lance_oam_bin, &banim_newarblf_lance_agbpal}, // 0x1BB arblf lance
+    {"newarbfbw1", &banim_newarblf_bow_modes_bin, &banim_newarblf_bow_script_o, &banim_newarblf_bow_oam_bin, &banim_newarblf_bow_oam_bin, &banim_newarblf_bow_agbpal}, // 0x1BC arblf bow
+    {"newarbfun1", &banim_newarblf_unarmed_modes_bin, &banim_newarblf_unarmed_script_o, &banim_newarblf_unarmed_oam_bin, &banim_newarblf_unarmed_oam_bin, &banim_newarblf_unarmed_agbpal}, // 0x1BD arblf unarmed
+    {"newfbkntln1", &banim_newfbknt_lance_modes_bin, &banim_newfbknt_lance_script_o, &banim_newfbknt_lance_oam_bin, &banim_newfbknt_lance_oam_bin, &banim_newfbknt_lance_agbpal}, // 0x1BE fbknt lance
+    {"newfbkntun1", &banim_newfbknt_unarmed_modes_bin, &banim_newfbknt_unarmed_script_o, &banim_newfbknt_unarmed_oam_bin, &banim_newfbknt_unarmed_oam_bin, &banim_newfbknt_unarmed_agbpal}, // 0x1BF fbknt unarmed
+    {"newgrifmsw1", &banim_newgrifm_sword_modes_bin, &banim_newgrifm_sword_script_o, &banim_newgrifm_sword_oam_bin, &banim_newgrifm_sword_oam_bin, &banim_newgrifm_sword_agbpal}, // 0x1C0 grifm sword
+    {"newgrifmax1", &banim_newgrifm_axe_modes_bin, &banim_newgrifm_axe_script_o, &banim_newgrifm_axe_oam_bin, &banim_newgrifm_axe_oam_bin, &banim_newgrifm_axe_agbpal}, // 0x1C1 grifm axe
+    {"newgrifmhx1", &banim_newgrifm_handaxe_modes_bin, &banim_newgrifm_handaxe_script_o, &banim_newgrifm_handaxe_oam_bin, &banim_newgrifm_handaxe_oam_bin, &banim_newgrifm_handaxe_agbpal}, // 0x1C2 grifm handaxe
+    {"newgrifmun1", &banim_newgrifm_unarmed_modes_bin, &banim_newgrifm_unarmed_script_o, &banim_newgrifm_unarmed_oam_bin, &banim_newgrifm_unarmed_oam_bin, &banim_newgrifm_unarmed_agbpal}, // 0x1C3 grifm unarmed
+    {"newasagemg1", &banim_newasage_magic_modes_bin, &banim_newasage_magic_script_o, &banim_newasage_magic_oam_bin, &banim_newasage_magic_oam_bin, &banim_newasage_magic_agbpal}, // 0x1C4 asage magic
+    {"newasagest1", &banim_newasage_staff_modes_bin, &banim_newasage_staff_script_o, &banim_newasage_staff_oam_bin, &banim_newasage_staff_oam_bin, &banim_newasage_staff_agbpal}, // 0x1C5 asage staff
+    {"newmalqax1", &banim_newmalq_axe_modes_bin, &banim_newmalq_axe_script_o, &banim_newmalq_axe_oam_bin, &banim_newmalq_axe_oam_bin, &banim_newmalq_axe_agbpal}, // 0x1C6 malq axe
+    {"newmalqhx1", &banim_newmalq_handaxe_modes_bin, &banim_newmalq_handaxe_script_o, &banim_newmalq_handaxe_oam_bin, &banim_newmalq_handaxe_oam_bin, &banim_newmalq_handaxe_agbpal}, // 0x1C7 malq handaxe
+    {"newmalqmg1", &banim_newmalq_magic_modes_bin, &banim_newmalq_magic_script_o, &banim_newmalq_magic_oam_bin, &banim_newmalq_magic_oam_bin, &banim_newmalq_magic_agbpal}, // 0x1C8 malq magic
+    {"newserapsw1", &banim_newserap_sword_modes_bin, &banim_newserap_sword_script_o, &banim_newserap_sword_oam_bin, &banim_newserap_sword_oam_bin, &banim_newserap_sword_agbpal}, // 0x1C9 serap sword
+    {"newserapln1", &banim_newserap_lance_modes_bin, &banim_newserap_lance_script_o, &banim_newserap_lance_oam_bin, &banim_newserap_lance_oam_bin, &banim_newserap_lance_agbpal}, // 0x1CA serap lance
+    {"newserapmg1", &banim_newserap_magic_modes_bin, &banim_newserap_magic_script_o, &banim_newserap_magic_oam_bin, &banim_newserap_magic_oam_bin, &banim_newserap_magic_agbpal}, // 0x1CB serap magic
+    {"newserapst1", &banim_newserap_staff_modes_bin, &banim_newserap_staff_script_o, &banim_newserap_staff_oam_bin, &banim_newserap_staff_oam_bin, &banim_newserap_staff_agbpal}, // 0x1CC serap staff
+    {"newserapun1", &banim_newserap_unarmed_modes_bin, &banim_newserap_unarmed_script_o, &banim_newserap_unarmed_oam_bin, &banim_newserap_unarmed_oam_bin, &banim_newserap_unarmed_agbpal}, // 0x1CD serap unarmed
 };
 __attribute__((section(".data.banim_array_len")))
 long long banim_number = sizeof(banim_data) / sizeof(banim_data[0]);

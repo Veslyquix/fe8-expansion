@@ -210,4 +210,13 @@ UnitIconMove unit_icon_move_table[] = {
 	{unit_icon_move_Slime_sheet, unit_icon_move_Slime_motion}, // 196 (CLASS_SLIME)
 	{unit_icon_move_Warbird_sheet, unit_icon_move_Warbird_motion}, // 197 (CLASS_WARBIRD)
 	{unit_icon_move_Adventurer_sheet, unit_icon_move_Adventurer_motion}, // 198 (CLASS_ADVENTURER)
+	{unit_icon_move_LynGreatLord_sheet, unit_icon_move_LynGreatLord_motion}, // 199 (CLASS_LYN_GREAT_LORD)
+	{unit_icon_move_Elder_sheet, unit_icon_move_Elder_motion}, // 200 (CLASS_ELDER)
+	{unit_icon_move_Arbalest_sheet, unit_icon_move_Arbalest_motion}, // 201 (CLASS_ARBALEST)
+	{unit_icon_move_Arbalest_F_sheet, unit_icon_move_Arbalest_F_motion}, // 202 (CLASS_ARBALEST_F)
+	{unit_icon_move_Fellbeast_Knight_sheet, unit_icon_move_Fellbeast_Knight_motion}, // 203 (CLASS_FELLBEAST_KNIGHT)
+	{unit_icon_move_Griffon_sheet, unit_icon_move_Griffon_motion}, // 204 (CLASS_GRIFFON)
+	{unit_icon_move_Archsage_sheet, unit_icon_move_Archsage_motion}, // 205 (CLASS_ARCHSAGE)
+	{unit_icon_move_Malig_Queen_sheet, unit_icon_move_Malig_Queen_motion}, // 206 (CLASS_MALIG_QUEEN)
+	{unit_icon_move_Seraph_Knight_sheet, unit_icon_move_Seraph_Knight_motion}, // 207 (CLASS_SERAPH_KNIGHT)
 };
