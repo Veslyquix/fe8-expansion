@@ -2452,6 +2452,8 @@ _sync_win_impl:
 		cp "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)/"; \
 		printf 'Copied %s -> %s/\n' "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)"; \
 	fi
+	@scripts/backup_build_artifacts.sh "$(MODERN_ROM)" "$(MODERN_SYM)" \
+		"$(if $(filter 1,$(FEBUILDER_POINTERS)),$(MODERN_CUSTOM_POINTER_TXT))"
 
 # Preflight the libmGBA-backed playtest backend before spending time building
 # the ROM, with an actionable error pointing at the same backend-check
