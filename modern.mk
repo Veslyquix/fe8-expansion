@@ -7,6 +7,8 @@ MODERN_GOALS := \
 	expansion-modern-elf \
 	expansion-modern-rom \
 	expansion-modern-sym \
+	expansion-modern-ups \
+	expansion-modern-ips \
 	expansion-modern-boot-check \
 	expansion-modern-savefmt-check \
 	expansion-modern-itemexpansion-check \
