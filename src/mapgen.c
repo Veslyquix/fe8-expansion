@@ -19,7 +19,7 @@ bool MapGen_IsEnabledForChapter(int chapterIndex)
     if (gBmMapSize.x < MAPGEN_MIN_SIZE || gBmMapSize.y < MAPGEN_MIN_SIZE)
         return FALSE;
 
-    if (chapterIndex >= 2) { return true; } 
+    if (chapterIndex >= 100) { return true; } 
 
     return FALSE;
 }
