@@ -313,6 +313,21 @@ SECTIONS
         . = __banim_data_base_abs - __text_start;
         banim/data_banim.modern.o(.data)
 
+        /* FEBuilderGBA custom-pointer export (FE8_FEBUILDER_POINTERS,
+         * src/febuilder_pointers.c -> gFebuilderPointers[]) must stay well
+         * under 0x09000000. FEBuilderGBA's ROMFE8U.cs hardcodes vanilla-
+         * range (< 16 MiB) pointer-cell addresses and silently treats the
+         * whole exported fireemblem8.custom_pointer.txt as invalid --
+         * blank/empty screen on ROM load, no error -- once any cell
+         * resolves past that mark. Left as a normal floating .data object,
+         * this landed at 0x09253ea0 once the floating .text/.rodata region
+         * (code + game-data tables, not the banim blob, which stays small
+         * and pinned above) grew past ~11 MiB. Pinned here instead, right
+         * after the banim blob and before the floating region, so it stays
+         * low regardless of how large the rest of the ROM grows. */
+        . = ALIGN(4);
+        *src/febuilder_pointers.o(.data)
+
         /* === SHIFT PADDING: inserts __text_shift bytes here === */
         . = ALIGN(4);
         __shift_start = .;
@@ -341,7 +356,9 @@ SECTIONS
          * that computed size). banim/data_banim.modern.o is NOT excluded
          * here any more -- it's placed up near the pinned startup code
          * above instead, so it never needs to move as this floating
-         * region grows; see the comment there. */
+         * region grows; see the comment there. src/febuilder_pointers.o is
+         * excluded for the same reason -- it's placed there too, to stay
+         * under FEBuilderGBA's 0x09000000 assumption. */
         EXCLUDE_FILE (
             *banim_data.o
             *banim_terrain_data.o
@@ -350,6 +367,7 @@ SECTIONS
             *data_banim_pal.o
             *data_FE0000.o
             *data_FFF000.o
+            *src/febuilder_pointers.o
         ) *(.data .data.*)
         *(.igot.plt)
         __floating_end = .;
