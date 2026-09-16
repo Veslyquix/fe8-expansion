@@ -157,6 +157,19 @@ extern const u8 unit_icon_pal_enemy[];
 extern const u8 unit_icon_pal_npc[];
 extern const u8 unit_icon_wait_table[];
 
+#if FE8_REPLACE_TEXT
+extern const u32 gFebuilderMsgHuffmanTable[];
+extern const u32 * const gFebuilderMsgHuffmanTableRoot;
+extern const u8 * const gFebuilderMsgTable[];
+#define FEBUILDER_MSG_HUFFMAN_TABLE_ROOT gFebuilderMsgHuffmanTableRoot
+#define FEBUILDER_MSG_HUFFMAN_TABLE gFebuilderMsgHuffmanTable
+#define FEBUILDER_MSG_TABLE gFebuilderMsgTable
+#else
+#define FEBUILDER_MSG_HUFFMAN_TABLE_ROOT gMsgHuffmanTableRoot
+#define FEBUILDER_MSG_HUFFMAN_TABLE gMsgHuffmanTable
+#define FEBUILDER_MSG_TABLE gMsgTable
+#endif
+
 /* FEBuilderGBA's ROMFE8U.cs hardcodes, for each field, the vanilla ROM
  * address of a POINTER CELL -- an inline literal-pool word holding the
  * real table address -- which FEBuilder dereferences to find the table.
@@ -177,10 +190,10 @@ extern const u8 unit_icon_wait_table[];
  * Scalars use sizeof()/offsetof()/real constants rather than copied
  * vanilla literals, so they track this repo's actual layout. */
 CONST_DATA u32 gFebuilderPointers[] = {
-    (u32)&(gMsgHuffmanTableRoot), // mask_point_base_pointer [slot]
-    (u32)&(gMsgHuffmanTable), // mask_pointer [slot]
-    (u32)&(gMsgTable), // text_pointer [slot]
-    (u32)&(gMsgTable), // text_recover_address [direct]
+    (u32)&(FEBUILDER_MSG_HUFFMAN_TABLE_ROOT), // mask_point_base_pointer [slot]
+    (u32)&(FEBUILDER_MSG_HUFFMAN_TABLE), // mask_pointer [slot]
+    (u32)&(FEBUILDER_MSG_TABLE), // text_pointer [slot]
+    (u32)&(FEBUILDER_MSG_TABLE), // text_recover_address [direct]
     (u32)&(gCharacterData), // unit_pointer [slot]
     (u32)(sizeof(struct CharacterData)), // unit_datasize [scalar]
     (u32)&gClassData - sizeof(struct ClassData), // class_pointer [slot]
