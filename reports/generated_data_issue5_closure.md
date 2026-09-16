@@ -11,8 +11,8 @@ verify closure claim-by-claim.
 Run the evidence locally:
 
 ```sh
-make generated-data-check    # per-table validation/round-trip/inventory drift + aggregate manifest/budget gate
-make generated-data-test     # full stdlib unittest suite
+generated-data-check-REMOVED    # per-table validation/round-trip/inventory drift + aggregate manifest/budget gate
+generated-data-test-REMOVED     # full stdlib unittest suite
 ```
 
 ## Scope checklist
@@ -121,7 +121,7 @@ make generated-data-test     # full stdlib unittest suite
 - `check`/`manifest --check` compare committed inventories + manifest
   against freshly generated content and exit non-zero on drift, writing
   nothing committed.
-- CI: `.github/workflows/build.yml` runs `make generated-data-check`
+- CI: `.github/workflows/build.yml` runs `generated-data-check` (removed target)
   (now including the aggregate manifest/budget gate) before the ROM
   linker gate.
 

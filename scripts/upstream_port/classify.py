@@ -81,15 +81,12 @@ _KNOWN_DIVERGENCE_HOTSPOTS: Tuple[str, ...] = (
     "ldscript.txt",
     "linker_script_banim.txt",
     "linker_script_sound.txt",
-    "generated_data.mk",
     "config.mk",
     "songs.mk",
-    "json_data_rules.mk",
     "graphics_file_rules.mk",
     "make_tools.mk",
     "scripts/artifact_guard.py",
     "scripts/shiftcheck/*",
-    "scripts/generated_data/*",
 )
 
 _CATEGORY_RISK_TAG: Dict[str, str] = {

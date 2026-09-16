@@ -33,8 +33,8 @@ For architecture context before you dive in, see
 
 | Change type | Where | Primary commands |
 | --- | --- | --- |
-| **Content authoring** (characters, classes, items, supports, Chapter 2 slice) | `src/data/*.json` | `make generated-data-validate`, `make generated-data-generate`, `make generated-data-test` — see [`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md) |
-| **Starter content/mechanics/QoL** | `src/data/items_expansion.json`, typed callbacks under `src/`/`include/` | See the dependency-safe profiles and matrices in [`docs/starter_features.md`](docs/starter_features.md) |
+| **Content authoring** (characters, classes, items, supports, Chapter 2 slice) | `src/data_*.c`, `src/events_*.c`, `src/bmbattle.c` (hand-authored C tables) | Edit the table directly; build/boot-check to verify |
+| **Starter content/mechanics/QoL** | `src/data_items.c`, `src/data/items_expansion_content_text.h`, typed callbacks under `src/`/`include/` | See the dependency-safe profiles and matrices in [`docs/starter_features.md`](docs/starter_features.md) |
 | **Localization** | `texts/expansion/registry.json`, `texts/expansion/catalog.<locale>.json` | `make localization-validate`, `make localization-generate`, `make localization-test` — see [`docs/localization.md`](docs/localization.md) |
 | **C/runtime code** (modern framework) | `src/`, `include/` | `make expansion-modern-toolchain-check`, `make expansion-modern-cohort` (or `-all`), `make expansion-modern-elf`, `make expansion-modern-rom`, `make expansion-modern-boot-check` — see [`docs/quickstart.md`](docs/quickstart.md) |
 | **Docs** | `README.md`, `CONTRIBUTING.md`, `docs/*.md` | Verify every relative link resolves and every referenced command actually exists |
@@ -45,7 +45,6 @@ For architecture context before you dive in, see
 
 ```bash
 python3 scripts/artifact_guard.py --revision HEAD
-make generated-data-validate
 python3 -m unittest discover -s scripts/artifact_guard_tests -p 'test_*.py'
 python3 -m unittest discover -s scripts/modernize/tests -v          # modern build/config/save-format host tests
 GBA_PLAYTEST_HOST_ONLY=1 python3 -m unittest discover -s tools/gba-playtest/tests -v
@@ -66,20 +65,19 @@ diagnostic.
 ## 4. Full gates (ROM/libmGBA build, run before opening a PR)
 
 ```bash
-make generated-data-check
 make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs
 make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs
 ```
 
 
-The fixed upstream-port verifier lists all 11 current-master mirrored commands
+The fixed upstream-port verifier lists all 10 current-master mirrored commands
 with `python3 -m scripts.upstream_port verify --dry-run --jobs 2`, including
 the issue #18 localization host suite. Documentation governance remains one
 additional, standalone required workflow gate; localization runtime coverage
 also remains inside the two linker checks.
 
 Run the relevant subset for your change type; run all of them for anything
-that touches shared runtime, linker, or generated-data code. If your change
+that touches shared runtime, linker, or game-data code. If your change
 can affect boot, save, or gameplay behavior, also capture
 `tools/gba-playtest` scenario evidence (scenario, environment, command,
 result) — see [`docs/issue-resolution-policy.md`](docs/issue-resolution-policy.md#issue-closure-evidence).

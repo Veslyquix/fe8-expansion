@@ -1,10 +1,8 @@
 # Adding classes, battle animations, map sprites, and portraits
 
 A brief map of the four related pipelines for adding new visual content.
-None of these go through the `scripts/generated_data` JSON-authoring flow
-described in [`generated_data_tutorial.md`](generated_data_tutorial.md)
-except classes' base stat/growth/rank *data* — art assets are their own
-scripts and hand-spliced source files.
+All of these are hand-spliced directly into their source files — there is
+no JSON-authoring/generation step for any of them.
 
 Whenever adding graphics, update both credit surfaces before calling the
 asset done: `CREDITS.md` for full source/artist attribution and
@@ -12,37 +10,29 @@ asset done: `CREDITS.md` for full source/artist attribution and
 names in sync with the existing tables/comments instead of creating a
 one-off root note.
 
-## Classes (`src/data/classes.json`)
+## Classes (`src/data_classes.c`)
 
-1. Add a `CLASS_*` id to `include/constants/classes.h` (hand-written, not
-   generated) — its value must equal the new record's 1-based position in
-   `classes.json`'s array.
+1. Add a `CLASS_*` id to `include/constants/classes.h` — its value must
+   equal the new record's 1-based position in `gClassData[]`'s array
+   (`src/data_classes.c`).
 2. `nameTextId`/`descTextId` need a real message: add `## MSG_YOUR_NAME`
    text to the end of `texts/texts.txt` first, then use the resulting
-   `include/constants/msg.h` value as a **decimal integer** — classes.json
-   does not accept the symbolic `MSG_*` string form items.json does.
-3. Set `"promotion"` for every class, even top-tier ones — it's a paired
+   `include/constants/msg.h` value.
+3. Set `.promotion` for every class, even top-tier ones — it's a paired
    link, not "promotes into": an unpromoted class points forward
    (`CLASS_MYRMIDON → CLASS_SWORDMASTER`), a maxed-out class points
    *backward* to its own base (`CLASS_SWORDMASTER → CLASS_MYRMIDON`).
-4. `python3 -m scripts.generated_data validate --table classes`, then
-   `generate --table classes --no-roundtrip` (`--no-roundtrip` is
-   required for a genuinely new class — the default flow also parses the
-   hand-written `src/data_classes.c`, which doesn't have your class yet).
-5. **The generated output is not linked into the build.**
-   `GENERATED_DATA_LINKED_HAND_SOURCES` in `generated_data.mk` no longer
-   includes `classes` — the ROM ships whatever's checked into
-   `src/data_classes.c` by hand (it carries real hand-tuned stat
-   deviations from `classes.json`). Splice **only your new class's**
-   `[CLASS_X - 1] = { ... }` block(s) from the generated output into
-   `src/data_classes.c` (append before the closing `};`) — never
+4. Append a new `[CLASS_X - 1] = { ... }` designated-initializer block to
+   `gClassData[]` in `src/data_classes.c`, before the closing `};`. Follow
+   the shape of a neighboring record for field names (base/max/growth/
+   promotion-gain stat blocks, terrain-lookup fields, etc.) — never
    overwrite the whole file, that clobbers every other class's tuning.
    `GetClassData()` has no bounds check, so skipping this step doesn't
    error — it silently reads garbage for the new class instead.
-6. Wire an animation: add an `AnimConf_N[]` table (`include/ekrbattle.h`
+5. Wire an animation: add an `AnimConf_N[]` table (`include/ekrbattle.h`
    has every `extern`) whose `.index` fields point at the class's
    `banim_data[]` slot(s) (one-based — see below), then reference that
-   table by name from `classes.json`'s `"battleAnim"` field.
+   table by name from the new record's `.battleAnim` field.
 
 ## Battle animations (`banim_new*`, gated `FE8_NEW_ANIMS`)
 
@@ -85,7 +75,7 @@ Two things that will bite you:
 
 Two separate, confusingly-named systems:
 - `unit_icon_wait_table[]` (standing icon) — indexed by a class's own
-  `smsId` (`classes.json`).
+  `smsId` (`src/data_classes.c`).
 - `unit_icon_move_table[]`/`gMuInfoTable` (walk animation) — indexed by
   **`classId - 1`**, not `smsId`.
 
@@ -106,8 +96,9 @@ whatever the script suggests — always eyeball the result in-game before
 trusting a nonzero suggested shift.
 
 If adding several classes' sprites in one pass, append their
-`unit_icon_move_table[]` rows in the same order as their `classes.json`
-records — indexing is positional, so only appending at the end is safe.
+`unit_icon_move_table[]` rows in the same order as their `gClassData[]`
+records (`src/data_classes.c`) — indexing is positional, so only
+appending at the end is safe.
 
 Add/update the map-sprite credit in both `CREDITS.md` and `src/Credits.c`;
 the source filename's `{...}` artist tag is usually the safest attribution
@@ -132,8 +123,8 @@ Splice the result into, all behind `#if FE8_CUSTOM_CAMPAIGN` /
 - `src/Credits.c` / `CREDITS.md` — artist credit, in the existing "Custom
   Campaign Portraits" table (don't create a new section for it).
 
-Watch the indexing: `characters.json`'s `"portrait"` field is **1-indexed**
-against `portrait_data.c`'s 0-indexed array (array slot `N` is
-`"portrait": N+1`) — confirm the real resolved slot before editing it,
+Watch the indexing: `src/data_characters.c`'s `.portrait` field is
+**1-indexed** against `portrait_data.c`'s 0-indexed array (array slot `N`
+is `.portrait = N+1`) — confirm the real resolved slot before editing it,
 rather than trusting the array's own trailing `// N` comment number to
-match the JSON field directly.
+match the field directly.

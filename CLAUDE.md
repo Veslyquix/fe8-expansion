@@ -55,10 +55,11 @@ optional and only needed by `asmdiff.sh`. See
 and [`docs/framework-support.md`](docs/framework-support.md) for exactly
 which hosts/toolchains/targets are supported vs. archival-only.
 
-Authoring game content (characters/classes/items/supports/etc.) goes
-through the generated-data platform rather than hand-written C tables —
-see [`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md)
-(`make generated-data-validate`, `-generate`, `-check`, `-test`).
+Game-data tables (characters, classes, items, supports, terrain stats,
+move costs, weapon triangle, units, shops, traps, event lists, etc.) are
+hand-authored directly in their own `src/data_*.c` / `src/events_*.c` /
+`src/bmbattle.c` files — edit those C tables directly, not a JSON
+intermediate.
 
 
 Optional starter features are four default-off, fingerprinted flags with

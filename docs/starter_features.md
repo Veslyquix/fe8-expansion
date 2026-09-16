@@ -3,8 +3,8 @@
 Four independent, default-off build flags add an opt-in
 *runtime/config/hook/QoL/content* starter surface on top of the existing modern
 build. Sprint 1 delivered the mechanics seam and the player QoL overlay;
-Sprint 2 adds the bundled **generated-data content example** now that issue
-#10's typed expanded item IDs are on `master`.
+Sprint 2 adds the bundled **content example** now that issue #10's typed
+expanded item IDs are on `master`.
 
 Every flag defaults to `0`, so a default build (and the legacy agbcc build,
 which never receives the modern `-D` flags) links none of these features and
@@ -17,7 +17,7 @@ keeps vanilla behaviour.
 | `EXPANSION_MECHANICS_HOOKS` | `FE8_EXPANSION_MECHANICS_HOOKS` | `0` | Link the public battle-stat mechanics hook registry. |
 | `EXPANSION_MECHANICS_SAMPLE` | `FE8_EXPANSION_MECHANICS_SAMPLE` | `0` | Register the bundled sample mechanic. **Requires `EXPANSION_MECHANICS_HOOKS=1`.** |
 | `EXPANSION_DANGER_OVERLAY_MENU` | `FE8_EXPANSION_DANGER_OVERLAY_MENU` | `0` | Expose the player-facing danger/range overlay map-menu surface. |
-| `EXPANSION_STARTER_CONTENT` | `FE8_EXPANSION_STARTER_CONTENT` | `0` | Link the bundled generated-data content example. **Requires `EXPANSION_MECHANICS_HOOKS=1` and `FE8_ITEM_ID_CAP >= 0xCE`.** |
+| `EXPANSION_STARTER_CONTENT` | `FE8_EXPANSION_STARTER_CONTENT` | `0` | Link the bundled content example. **Requires `EXPANSION_MECHANICS_HOOKS=1` and `FE8_ITEM_ID_CAP >= 0xCE`.** |
 
 Opt in on the `make` command line, e.g.:
 
@@ -151,7 +151,7 @@ that the three public seams compose with **nothing special-cased**:
 | Seam | What it contributes |
 |---|---|
 | **config** | `FE8_EXPANSION_STARTER_CONTENT`, a strict 0/1 flag with the two dependencies above. |
-| **data** | The framework-authored item record `ITEM_EXPANSION_CE`, authored in `src/data/items_expansion.json` and emitted into `gItemData[ITEM_EXPANSION_CE]` by the ordinary generated-data pipeline. No generated C is ever hand-edited. |
+| **data** | The framework-authored item record `ITEM_EXPANSION_CE`, hand-authored directly in `src/data_items.c` (`#if ITEM_ID_CONFIGURED_CAP >= ITEM_ID_EXPANSION_FIRST`) as `gItemData[ITEM_EXPANSION_CE]` -- the same hand table every other item record lives in. |
 | **hook** | One mechanic registered through the public `ExpansionMechanicsRegister()` API from the single existing `ExpansionMechanicsInstallBuiltins()` install point. `src/bmbattle.c` is untouched. |
 
 ### The authored record
@@ -159,8 +159,7 @@ that the three public seams compose with **nothing special-cased**:
 | Field | Value | Why |
 |---|---|---|
 | `item` | `ITEM_EXPANSION_CE` | The typed, symbolic expansion ID; no raw `0xCE` appears in any issue #6 implementation source. |
-| `authoringName` | `"Sample Charm"` | The **original** display name, authored as literal text in the record itself and generated into a build-local, content-profile-only text table (see below). |
-| `authoringDescription` / `authoringUseDescription` | original text | Authoring/audit text, emitted only into the generated catalog -- see "What the description does *not* do" below. |
+| display name | `"Sample Charm"` | The **original** display name, authored as literal text in `src/data/items_expansion_content_text.h` (see below), never in `src/data_items.c` itself. |
 | `nameTextId` / `descTextId` / `useDescTextId` | *unset* (`0`) | The record binds **no** message: a framework-authored record must not append to the shared, Huffman-compressed message table (see below). |
 | `weaponType` | `ITYPE_ITEM` | A real non-weapon item, not a blank slot. |
 | `attributes` | `IA_UNSELLABLE` | A real, meaningful attribute bit. |
@@ -189,37 +188,27 @@ The item's display name is real, original, authored content -- and it costs a
 default build exactly nothing:
 
 ```
-src/data/items_expansion.json          "authoringName": "Sample Charm"
-  -> scripts/generated_data/items/content_text.py   (EXPANSION_STARTER_CONTENT=1 only)
-     -> build/generated/data/items_expansion_content_text.h    (typed, ItemId-keyed)
-        -> src/expansion_starter_content.c : ExpansionStarterContentItemName(ItemId)
-           -> src/bmitem.c : GetItemName()  (#if FE8_EXPANSION_STARTER_CONTENT)
+src/data/items_expansion_content_text.h   { ITEM_EXPANSION_CE, "Sample Charm" }
+  -> src/expansion_starter_content.c : ExpansionStarterContentItemName(ItemId)
+     -> src/bmitem.c : GetItemName()  (#if FE8_EXPANSION_STARTER_CONTENT)
 ```
 
 | Property | Contract |
 |---|---|
-| Authoring input | The ordinary supported JSON authoring surface. `authoringName` is schema-validated: expansion records only, printable 7-bit ASCII, no surrounding whitespace, bounded length; it may never coexist with a `nameTextId`. |
-| Generation | `python3 -m scripts.generated_data content-text` (wired into `generated_data.mk`, with the same FORCE + write-if-changed stamp idiom `FE8_ITEM_ID_CAP` uses, since the flag is an env/config value). At `EXPANSION_STARTER_CONTENT=0` it writes **nothing** and deletes any artifact a previous content build left behind. |
-| Generated output | Build-local only (`build/generated/data/`), never committed, never hand-edited. |
-| Include path | `modern.mk` adds `build/generated/data` to `-I` **only** in the content profile, so a default build cannot even see the header -- and its compile flags, and therefore its objects, are unchanged. |
+| Authoring input | `src/data/items_expansion_content_text.h`, a hand-authored, committed header -- printable 7-bit ASCII, bounded length. It is the only place this name is spelled out; `src/data_items.c`'s own `ITEM_EXPANSION_CE` record has no `nameTextId`. |
+| Include path | `modern.mk` adds `src/data` to `-I` **only** in the content profile, so a default build cannot even see the header -- and its compile flags, and therefore its objects, are unchanged. |
 | Production read | One narrow, typed, public accessor (`char *ExpansionStarterContentItemName(ItemId)`), called from `GetItemName()` -- the single function every item-name consumer (item menu, trade, shop, stat screen, popups, the `[Item]` text substitution) already goes through. `NULL` means "not a content record": the vanilla path runs unchanged. |
 | Default build | The accessor is not declared, not defined, not called and not linked; `GetItemName()` preprocesses back to its exact vanilla body. Proven per-object by `tools/gba-playtest/tests/test_expansion_starter_content.py` (no `ExpansionStarterContent*` symbol and no authored bytes in a default `bmitem.o`/content object) and per-ROM by the starter gate's content-disabled artifact negative. |
-| Bound | The generated table publishes `EXPANSION_CONTENT_TEXT_NAME_CAPACITY`; the module statically asserts it fits `EXPANSION_STARTER_CONTENT_NAME_BUFFER`, so over-long authoring text is a build error, not a truncated name on screen. |
+| Bound | The header publishes `EXPANSION_CONTENT_TEXT_NAME_CAPACITY`; the module statically asserts it fits `EXPANSION_STARTER_CONTENT_NAME_BUFFER`, so over-long authoring text is a build error, not a truncated name on screen. |
 
 **What the description does *not* do (honest boundary).** The vanilla
 item-description/help UI is addressed **exclusively** by message ID
 (`GetItemDescId()` -> the shared message table), and this framework does not
 add messages. Building a config-specific message table just for one bundled
 example would be a large, risky change to the text pipeline for no framework
-value, so it is deliberately out of scope. Consequently:
-
-* the item's `descTextId`/`useDescTextId` stay `0` and its in-game help box
-  shows no text -- and **no vanilla description is borrowed** to fake one;
-* the authored descriptions are still real, original authoring input: they
-  are emitted into the generated audit catalog
-  (`build/generated/data/items_expansion_content_text.json`) for
-  documentation/review, and are explicitly labelled there as not shown in
-  game.
+value, so it is deliberately out of scope. Consequently the item's
+`descTextId`/`useDescTextId` stay `0` and its in-game help box shows no text
+-- and **no vanilla description is borrowed** to fake one.
 
 Only the **name** travels the raw-string supported path, because that is the
 one production text path a record can feed without a message ID.
@@ -247,10 +236,11 @@ bounded. Inventory membership is read with the production accessor
 The content example rides the **existing** issue #10 item-expansion gate
 (`expansion-modern-itemexpansion-check`) and its existing ROM build -- no
 second harness, no second ROM, no extra CI command. `run_item_expansion_checks.py`
-reads every expected value from the authored source of truth
-(`src/data/items_expansion.json` through the generated-data schema, the
-`ITYPE_*`/`IA_*`/`CHARACTER_*` headers, and the content module's own bonus
-constants), so ROM-vs-data drift fails the gate.
+reads every expected value from the authored source of truth (the
+`ITEM_EXPANSION_CE` record in `src/data_items.c`, the display name in
+`src/data/items_expansion_content_text.h`, and the `ITYPE_*`/`IA_*`/
+`CHARACTER_*` headers, and the content module's own bonus constants), so
+ROM-vs-data drift fails the gate.
 
 | Config | Proves |
 |---|---|

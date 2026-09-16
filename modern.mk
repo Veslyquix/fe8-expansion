@@ -40,7 +40,6 @@ MODERN_GOALS := \
 	expansion-modern-starter-hook-check \
 	expansion-modern-starter-qol-check \
 	expansion-modern-starter-runtime-check \
-	expansion-modern-idspace-active-check \
 	expansion-modern-clean \
 	sync-win \
 	_sync_win_impl
@@ -139,13 +138,14 @@ MODERN_BANIM_OVERLAY_LAYOUT_FLAGS := -fno-toplevel-reorder
 # BUGFIX undefined to preserve byte-identical original behavior.
 MODERN_DEFINE_FLAGS := -DMODERN=1 -DNONMATCHING=1 -DBUGFIX=1
 
-# Issue #10: the item ID cap is a single build input shared by the data
-# generator (scripts/generated_data/idspace.py resolve_item_id_cap, via the
-# FE8_ITEM_ID_CAP env var) and the compiled item consumer
-# (include/id_space.h -> ITEM_ID_CONFIGURED_CAP, consumed by src/bmitem.c).
-# Flow the same value into the compile so the generated (up to 207-record)
-# gItemData[] table and bmitem.c's compile-time cap contract resolve one
-# identical cap. Unset leaves id_space.h's built-in 0xCD default in force.
+# Issue #10: the item ID cap is a single build input shared by the
+# hand-authored item table (src/data_items.c, its own ITEM_EXPANSION_CE
+# record #if-gated on ITEM_ID_CONFIGURED_CAP) and the compiled item
+# consumer (include/id_space.h -> ITEM_ID_CONFIGURED_CAP, consumed by
+# src/bmitem.c). Flow the same FE8_ITEM_ID_CAP value into the compile so
+# the (up to 207-record) gItemData[] table and bmitem.c's compile-time cap
+# contract resolve one identical cap. Unset leaves id_space.h's built-in
+# 0xCD default in force.
 ifneq ($(FE8_ITEM_ID_CAP),)
 MODERN_DEFINE_FLAGS += -DFE8_ITEM_ID_CAP=$(FE8_ITEM_ID_CAP)
 endif
@@ -314,15 +314,15 @@ MODERN_DEFINE_FLAGS += -DFE8_WORLDMAP_REWORK=1
 endif
 MODERN_INCLUDE_FLAGS := -Iinclude -I.
 
-# Issue #6 bundled content example: its ORIGINAL display text is authored in
-# src/data/items_expansion.json and generated into a BUILD-LOCAL header
-# (build/generated/data/items_expansion_content_text.h, see generated_data.mk)
+# Issue #6 bundled content example: its ORIGINAL display text is authored
+# directly in the hand-written header src/data/items_expansion_content_text.h
 # rather than added to the shared, Huffman-compressed message table, which
 # would re-encode a DEFAULT build's text blob. Only the content profile puts
-# that directory on the include path, so a default build cannot even see the
-# header -- and its compile flags, and therefore its objects, are unchanged.
+# src/data/ on the include path for this bare-named header, so a default
+# build cannot even see it -- and its compile flags, and therefore its
+# objects, are unchanged.
 ifeq ($(EXPANSION_STARTER_CONTENT),1)
-MODERN_INCLUDE_FLAGS += -I$(GENERATED_DATA_OUT_DIR)
+MODERN_INCLUDE_FLAGS += -Isrc/data
 endif
 MODERN_WARNING_FLAGS := \
 	-Wall -Wextra \
@@ -355,25 +355,6 @@ MODERN_CFLAGS := \
 	$(MODERN_WARNING_FLAGS) \
 	$(MODERN_CONFIG_FLAGS) \
 	$(MODERN_ABI_FLAGS)
-
-# Issue #10 (expansion-modern-idspace-active-check hermeticity): MODERN_CFLAGS
-# bakes in whatever FE8_ITEM_ID_CAP happened to be resolved when *this*
-# running instance of make parsed modern.mk (an ambient shell environment
-# variable, or a `make FE8_ITEM_ID_CAP=... <goal>` command-line assignment
-# for this very invocation) via MODERN_DEFINE_FLAGS above -- MODERN_CFLAGS
-# itself is a plain `:=` snapshot, taken once, not re-evaluated per recipe
-# line. expansion-modern-idspace-active-check needs to compile three
-# DIFFERENT, explicit cap states (no cap define at all, -DFE8_ITEM_ID_CAP=0xCE,
-# and "the 0xCE-record table with no cap define") in the course of ONE gate
-# run, regardless of whatever ambient value the *caller* happened to invoke
-# it under. Reusing $(MODERN_CFLAGS) as-is for any of those three compiles
-# would silently fold the caller's ambient cap into all of them instead
-# (e.g. an ambient/CLI FE8_ITEM_ID_CAP=0xCE would make the "no cap flag"
-# steps compile with the flag anyway, turning the gate's own default and
-# negative-mismatch assertions into false failures/false passes). Strip any
-# existing -DFE8_ITEM_ID_CAP=... word so the gate can supply its own,
-# explicit, per-step cap define (or none) on top of this instead.
-MODERN_CFLAGS_NOCAP := $(filter-out -DFE8_ITEM_ID_CAP=%,$(MODERN_CFLAGS))
 
 MODERN_BUILD_ROOT := build/expansion-modern
 MODERN_OUTPUT_DIR := $(MODERN_BUILD_ROOT)/$(MODERN_CONFIG)/$(MODERN_ABI)
@@ -453,18 +434,6 @@ MAPGEN_CHUNKS_TMX := $(shell find scripts/map_gen/chunks -type f -name "*.tmx" 2
 src/mapgen_chunks_data.c: scripts/mapgen_build_chunks.py $(MAPGEN_CHUNKS_TMX)
 	@$(PYTHON) scripts/mapgen_build_chunks.py $@
 
-# Issue #5 Batch 2c-1: same swap as the legacy Makefile's CFILES filtering
-# (generated_data.mk) -- a hand C table superseded by a linked
-# generated-data equivalent is filtered out of MODERN_ALL_C_SOURCES here
-# (true removal, not a rename/substitution): the generated equivalent's
-# object is reinstated afterwards below (once MODERN_ALL_C_OBJECTS exists)
-# via MODERN_ALL_C_OBJECTS +=, using the *original* hand object's own
-# output path, not one derived from the generated .c's own (differently
-# prefixed) location -- see the comment there for why. A safe no-op when
-# modern.mk is included standalone (e.g. by test fixtures that don't
-# `include generated_data.mk`): GENERATED_DATA_LINKED_HAND_SOURCES is then
-# simply empty/undefined, so this filters out nothing.
-MODERN_ALL_C_SOURCES := $(filter-out $(GENERATED_DATA_LINKED_HAND_SOURCES),$(MODERN_ALL_C_SOURCES))
 MODERN_ALL_C_SOURCES := $(filter-out src/VeslyDebugger.c src/vesly_debugger_data.c,$(MODERN_ALL_C_SOURCES))
 ifeq ($(VESLY_DEBUGGER),1)
 MODERN_ALL_C_SOURCES += src/VeslyDebugger.c src/vesly_debugger_data.c
@@ -606,164 +575,6 @@ MODERN_CFLAGS += -I$(MODERN_LOCALIZATION_GENERATED_DIR)
 endif
 
 MODERN_ALL_C_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_C_SOURCES:.c=.o))
-
-# Reinstate a linked table's object at exactly its *original* (hand
-# source's) output path, e.g. $(MODERN_OUTPUT_DIR)/src/data_classes.o --
-# not $(MODERN_OUTPUT_DIR)/build/generated/data/data_classes.o (which is
-# what deriving it from GENERATED_DATA_LINKED_C via the ordinary
-# addprefix/:.c=.o substitution above would give). This is deliberate, not
-# cosmetic: MODERN_ELF_OBJECTS_LST/MANIFEST (further below) both
-# alphabetically $(sort) the full object-path list before writing the
-# linker's response file, so the modern ELF's final .data/.bss placement
-# is controlled by each object's path string, not by MODERN_ALL_C_SOURCES'
-# list order -- a "build/generated/data/..." object would sort before
-# every "src/..." object regardless of position in the sources list,
-# shifting every other object's address and spuriously breaking the
-# debugtools/savefmt runtime checkpoint fixtures' recorded absolute
-# addresses even though no code changed. Reusing the exact original path
-# keeps the linked table's object in precisely the same sorted slot the
-# hand object always occupied. An explicit (non-pattern) rule for that
-# same literal path is defined further below, after $(MODERN_CC)/
-# $(MODERN_CFLAGS) exist; GNU Make always prefers an explicit rule over
-# the generic `$(MODERN_OUTPUT_DIR)/%.o: %.c` pattern rule for the same
-# target, so this never falls back to (re)compiling the real, on-disk
-# src/data_classes.c. A safe no-op when GENERATED_DATA_LINKED_HAND_SOURCES
-# is undefined (modern.mk included standalone).
-MODERN_ALL_C_OBJECTS += $(addprefix $(MODERN_OUTPUT_DIR)/,$(GENERATED_DATA_LINKED_HAND_SOURCES:.c=.o))
-
-# Issue #5 Batch 3a: $(GENERATED_DATA_CH2_UNITS_OBJECT) (generated_data.mk)
-# is additive, not a replacement -- src/events_udefs.c has no "original
-# hand path" to reuse the way GENERATED_DATA_LINKED_HAND_SOURCES does
-# above, since it stays fully linked itself (only its Chapter 2 prefix
-# slice is guarded out, internally, by the macro described in
-# generated_data.mk). Reinstating it at its own build/generated/data/
-# path would sort ("build/..." < "src/...") before every "src/..."
-# object once $(sort) orders MODERN_ELF_OBJECTS_LST/MANIFEST (see the
-# comment above this one), shifting far more than just Chapter 2's
-# data. Instead it's reinstated at a synthetic slot path chosen so it
-# sorts immediately between src/events_trapdata.o and src/events_udefs.o
-# -- the same adjacency ldscript.txt gives it in the legacy build (see
-# generated_data.mk's own comment for the full reasoning) -- so no other
-# object's relative order changes. A safe no-op when
-# GENERATED_DATA_CH2_UNITS_OBJECT is undefined (modern.mk included
-# standalone). An explicit (non-pattern) rule for this literal target
-# path is defined further below, alongside GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_CH2_UNITS_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/events_u-ch2units.o
-endif
-
-# Issue #5 Batch 3b: $(GENERATED_DATA_CH2_TRAPS_OBJECT) (generated_data.mk)
-# is the same kind of additive object as the units one just above --
-# src/events_trapdata.c has no "original hand path" to reuse (it stays
-# fully linked, only its two non-adjacent Ch2 blocks are guarded out).
-# Unlike units, this generated object itself defines its two symbols in
-# two different sections (.data for TrapData_Event_Ch2, .data.trapch2hard
-# for TrapData_Event_Ch2Hard) so legacy's ldscript.txt can place each at
-# its own exact original address -- but modern's build links whole
-# objects (not per-input-section) and only needs a single, deterministic,
-# adjacency-preserving sort slot, so one synthetic path suffices here,
-# chosen so it sorts immediately before src/events_trapdata.o (same
-# "-" < any alnum trick as the units slot above) and therefore doesn't
-# shift any other object's relative order. A safe no-op when
-# GENERATED_DATA_CH2_TRAPS_OBJECT is undefined (modern.mk included
-# standalone). An explicit (non-pattern) rule for this literal target
-# path is defined further below, alongside GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_CH2_TRAPS_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/events_t-ch2traps.o
-endif
-
-# Issue #5 Batch 3c: $(GENERATED_DATA_CH2_SHOPS_OBJECT) (generated_data.mk)
-# is the same kind of additive object as units/traps just above --
-# src/events_shoplist.c has no "original hand path" to reuse (it stays
-# fully linked, only its single ShopList_Event_Ch2Armory array is guarded
-# out). A single synthetic path suffices here, chosen so it sorts
-# immediately before src/events_shoplist.o (same "-" < any alnum trick as
-# the units/traps slots above) and therefore doesn't shift any other
-# object's relative order. A safe no-op when GENERATED_DATA_CH2_SHOPS_OBJECT
-# is undefined (modern.mk included standalone). An explicit (non-pattern)
-# rule for this literal target path is defined further below, alongside
-# GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_CH2_SHOPS_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/events_sh-ch2shops.o
-endif
-
-# Issue #5 Batch 3d: $(GENERATED_DATA_CH2_EVENTLISTS_OBJECT)
-# (generated_data.mk) is the same kind of additive object as units/
-# traps/shops just above -- src/events_info.c has no "original hand
-# path" to reuse (it stays fully linked, only its guarded
-# "events/ch2-eventinfo.h" include is excluded). A single synthetic path
-# suffices here, chosen so it sorts immediately before src/events_info.o
-# (same "-" < any alnum trick as the units/traps/shops slots above,
-# using "events_i-" so it still sorts ahead of "events_info") and
-# therefore doesn't shift any other object's relative order. A safe
-# no-op when GENERATED_DATA_CH2_EVENTLISTS_OBJECT is undefined (modern.mk
-# included standalone). An explicit (non-pattern) rule for this literal
-# target path is defined further below, alongside
-# GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_CH2_EVENTLISTS_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/events_i-ch2eventlists.o
-endif
-
-# Issue #5 Batch 1 (mechanics): $(GENERATED_DATA_TERRAINSTATS_OBJECT)
-# (generated_data.mk) is the same kind of additive object as units/
-# traps/shops/eventlists just above -- src/data_terrains.c has no
-# "original hand path" to reuse (it stays fully linked, only its two
-# non-adjacent groups of 8 terrain combat/heal stat arrays are guarded
-# out). Unlike units, this generated object itself defines its symbols
-# in two different sections (.data for the 6 Avo/Def/Res arrays,
-# .data.terrainheal for HealAmount/HealsStatus) so legacy's ldscript.txt
-# can place each group at its own exact original address -- but modern's
-# build links whole objects (not per-input-section) and only needs a
-# single, deterministic, adjacency-preserving sort slot, so one synthetic
-# path suffices here, chosen so it sorts immediately before
-# src/data_terrains.o (same "-" < any alnum trick as the units/traps/
-# shops/eventlists slots above) and therefore doesn't shift any other
-# object's relative order. A safe no-op when
-# GENERATED_DATA_TERRAINSTATS_OBJECT is undefined (modern.mk included
-# standalone). An explicit (non-pattern) rule for this literal target
-# path is defined further below, alongside
-# GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_TERRAINSTATS_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/data_t-terrainstats.o
-endif
-
-# Issue #5 Batch 2 (mechanics): $(GENERATED_DATA_MOVECOST_OBJECT)
-# (generated_data.mk) is the same kind of additive object, sharing
-# src/data_terrains.c with terrainstats just above -- its two generated
-# sections (.data for the 32 Normal/DemonKing/Ballista/Rain arrays,
-# .data.movecostsnow for the 15 Snow arrays) collapse to a single
-# synthetic sort slot here, same as terrainstats' own slot. Chosen as
-# "data_t-movecost.o" so it sorts immediately before
-# "data_t-terrainstats.o" (both share the "data_t-" prefix; 'm' < 't'),
-# which itself already sorts immediately before src/data_terrains.o --
-# forming a stable three-in-a-row cluster (movecost, terrainstats,
-# terrains) that doesn't shift any other object's relative order. A safe
-# no-op when GENERATED_DATA_MOVECOST_OBJECT is undefined (modern.mk
-# included standalone). An explicit (non-pattern) rule for this literal
-# target path is defined further below, alongside
-# GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_MOVECOST_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/data_t-movecost.o
-endif
-
-# Issue #5 Batch 3 (mechanics): $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT)
-# (generated_data.mk) is the same kind of additive object as
-# terrainstats/movecost above -- src/bmbattle.c has no "original hand
-# path" to reuse (it stays fully linked, only its single
-# sWeaponTriangleRules[] table is guarded out). Unlike terrainstats/
-# movecost, this generated object defines just one symbol in a single
-# section, so one synthetic sort slot suffices, chosen as
-# "src/bmb-weapontriangle.o" so it sorts immediately before
-# src/bmbattle.o (the only other src/bmb*.o object; "-" < any alnum, so
-# "bmb-" sorts ahead of "bmbattle") and therefore doesn't shift any
-# other object's relative order. A safe no-op when
-# GENERATED_DATA_WEAPONTRIANGLE_OBJECT is undefined (modern.mk included
-# standalone). An explicit (non-pattern) rule for this literal target
-# path is defined further below, alongside
-# GENERATED_DATA_MODERN_OVERRIDE_RULES.
-ifneq ($(strip $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT)),)
-MODERN_ALL_C_OBJECTS += $(MODERN_OUTPUT_DIR)/src/bmb-weapontriangle.o
-endif
 
 # Issue #18 sprint 1: the generated locale catalog .c
 # ($(MODERN_LOCALIZATION_CATALOG_C), under $(MODERN_BUILD_ROOT)/expansion-localization/
@@ -928,109 +739,6 @@ $(MODERN_OUTPUT_DIR)/%.o: %.c
 	@mkdir -p "$(@D)"
 	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
-# Issue #5 Batch 2c-1: explicit (non-pattern) compile rule for each linked
-# table's reinstated object (see the MODERN_ALL_C_OBJECTS += comment
-# above for why its target path is the *original* hand-source object path,
-# e.g. $(MODERN_OUTPUT_DIR)/src/data_classes.o, not one under
-# $(GENERATED_DATA_OUT_DIR)). GNU Make always prefers an explicit rule
-# over the generic `$(MODERN_OUTPUT_DIR)/%.o: %.c` pattern rule above for
-# the same target, so this compiles from the generated .c unconditionally
-# -- it is never satisfied by falling back to the pattern rule against the
-# real, on-disk (and no longer even source-listed) hand file. Reuses the
-# `src/data_<table>.c`/`data_<table>.c` naming convention already relied
-# on elsewhere in generated_data.mk, so this generalizes to any future
-# linked table without needing to pair up two parallel lists positionally.
-define GENERATED_DATA_MODERN_OVERRIDE_RULES
-$(MODERN_OUTPUT_DIR)/src/data_$(1).o: $(GENERATED_DATA_OUT_DIR)/data_$(1).c
-	@mkdir -p $$(@D)
-	"$$(MODERN_CC)" $$(MODERN_CFLAGS) -MMD -MP -MF "$$(@:.o=.d)" -MQ "$$@" -c "$$<" -o "$$@"
-endef
-
-$(foreach t,$(GENERATED_DATA_LINKED_TABLES),$(eval $(call GENERATED_DATA_MODERN_OVERRIDE_RULES,$(t))))
-
-# Issue #6: in the content profile the bundled content module compiles the
-# BUILD-LOCAL generated authored-text header, so make it an explicit
-# prerequisite -- the generic -MM -MG header scan only learns about it after
-# a first successful compile, and this must work on a clean tree too. Only
-# declared when the flag is on: a default build neither generates nor
-# consumes that header.
-ifeq ($(EXPANSION_STARTER_CONTENT),1)
-$(MODERN_OUTPUT_DIR)/src/expansion_starter_content.o: $(GENERATED_DATA_CONTENT_TEXT_HEADER)
-endif
-
-# Issue #5 Batch 3a: explicit (non-pattern) compile rule for the `units`
-# table's synthetic slot object (see the MODERN_ALL_C_OBJECTS +=
-# comment above for why this target's path is a synthetic
-# adjacency-preserving slot, not $(GENERATED_DATA_OUT_DIR)/data_ch2_units.o
-# reinstated at some "original" path -- there is no original path, since
-# this object is additive). GNU Make always prefers this explicit rule
-# over the generic `$(MODERN_OUTPUT_DIR)/%.o: %.c` pattern rule above for
-# the same target, so it compiles the real generated .c unconditionally
-# -- there is no on-disk src/events_u-ch2units.c for it to ever fall back
-# to. A safe no-op target when GENERATED_DATA_CH2_UNITS_C is undefined
-# (modern.mk included standalone): the rule is simply never reachable,
-# since nothing adds this path to MODERN_ALL_C_OBJECTS in that case.
-$(MODERN_OUTPUT_DIR)/src/events_u-ch2units.o: $(GENERATED_DATA_CH2_UNITS_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
-
-# Issue #5 Batch 3b: same reasoning as the units synthetic-slot rule just
-# above, for the traps table's synthetic slot object. A safe no-op target
-# when GENERATED_DATA_CH2_TRAPS_C is undefined (modern.mk included
-# standalone): the rule is simply never reachable, since nothing adds
-# this path to MODERN_ALL_C_OBJECTS in that case.
-$(MODERN_OUTPUT_DIR)/src/events_t-ch2traps.o: $(GENERATED_DATA_CH2_TRAPS_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
-
-# Issue #5 Batch 3c: same reasoning as the units/traps synthetic-slot
-# rules above, for the shops table's synthetic slot object. A safe no-op
-# target when GENERATED_DATA_CH2_SHOPS_C is undefined (modern.mk included
-# standalone): the rule is simply never reachable, since nothing adds
-# this path to MODERN_ALL_C_OBJECTS in that case.
-$(MODERN_OUTPUT_DIR)/src/events_sh-ch2shops.o: $(GENERATED_DATA_CH2_SHOPS_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
-
-# Issue #5 Batch 3d: same reasoning as the units/traps/shops
-# synthetic-slot rules above, for the eventlists table's synthetic slot
-# object. A safe no-op target when GENERATED_DATA_CH2_EVENTLISTS_C is
-# undefined (modern.mk included standalone): the rule is simply never
-# reachable, since nothing adds this path to MODERN_ALL_C_OBJECTS in that
-# case.
-$(MODERN_OUTPUT_DIR)/src/events_i-ch2eventlists.o: $(GENERATED_DATA_CH2_EVENTLISTS_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
-
-# Issue #5 Batch 1 (mechanics): same reasoning as the units/traps/shops/
-# eventlists synthetic-slot rules above, for the terrainstats table's
-# synthetic slot object. A safe no-op target when
-# GENERATED_DATA_TERRAINSTATS_C is undefined (modern.mk included
-# standalone): the rule is simply never reachable, since nothing adds
-# this path to MODERN_ALL_C_OBJECTS in that case.
-$(MODERN_OUTPUT_DIR)/src/data_t-terrainstats.o: $(GENERATED_DATA_TERRAINSTATS_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
-
-# Issue #5 Batch 2 (mechanics): same reasoning as the terrainstats
-# synthetic-slot rule above, for the movecost table's synthetic slot
-# object. A safe no-op target when GENERATED_DATA_MOVECOST_C is
-# undefined (modern.mk included standalone): the rule is simply never
-# reachable, since nothing adds this path to MODERN_ALL_C_OBJECTS in
-# that case.
-$(MODERN_OUTPUT_DIR)/src/data_t-movecost.o: $(GENERATED_DATA_MOVECOST_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
-
-# Issue #5 Batch 3 (mechanics): same reasoning as the terrainstats/
-# movecost synthetic-slot rules above, for the weapontriangle table's
-# synthetic slot object. A safe no-op target when
-# GENERATED_DATA_WEAPONTRIANGLE_C is undefined (modern.mk included
-# standalone): the rule is simply never reachable, since nothing adds
-# this path to MODERN_ALL_C_OBJECTS in that case.
-$(MODERN_OUTPUT_DIR)/src/bmb-weapontriangle.o: $(GENERATED_DATA_WEAPONTRIANGLE_C)
-	@mkdir -p $(@D)
-	"$(MODERN_CC)" $(MODERN_CFLAGS) -MMD -MP -MF "$(@:.o=.d)" -MQ "$@" -c "$<" -o "$@"
 
 # IWRAM-placed symbols need per-symbol BSS sections. agb_sram.c additionally
 # subtracts adjacent function addresses when copying routines into IWRAM.
@@ -2677,21 +2385,9 @@ $(MODERN_UPS): $(MODERN_ROM) $(BASEROM) $(MODERN_UPS_GENERATOR)
 expansion-modern-ups: expansion-modern-rom $(MODERN_UPS)
 	@printf 'Modern UPS patch ready: %s\n' "$(MODERN_UPS)"
 
-# IPS patch (baserom.gba -> the built modern ROM): simpler/more widely
-# supported than UPS, but its 3-byte address field caps both files at 16MB.
-# The built ROM is no longer padded to a fixed MODERN_ROM_SIZE (see
-# $(MODERN_ROM)'s own recipe above), so eligibility is decided from its
-# real, current byte count rather than that ceiling knob -- see
-# _sync_win_impl's own `rom_bytes` checks below, which must be real shell
-# `if` blocks run *after* expansion-modern-rom, not a Make-level
-# $(if $(shell ...)) inside that same recipe's command list: GNU Make
-# expands a whole recipe's command lines up front before running any of
-# them, so a $(shell) embedded that way sees the ROM's size from before
-# this invocation rebuilt it, not after (confirmed the hard way — it
-# tried to build an IPS patch against a >16MB ROM once). Errors out (via
-# scripts/gen_ips.py's own size check) rather than silently truncating if
-# it doesn't actually fit.
-MODERN_IPS_MAX_BYTES := 16777216
+# IPS patch (baserom.gba -> the built modern ROM). This remains available as
+# an explicit target, but sync-win copies the UPS patch by default because IPS
+# caps both files at 16MB.
 MODERN_IPS := $(MODERN_ROM:.gba=.ips)
 MODERN_IPS_GENERATOR := scripts/gen_ips.py
 
@@ -2730,12 +2426,6 @@ WIN_SYNC_DIR := /mnt/c/devkitPro/feex
 sync-win:
 	+scripts/log_build_error.sh "make sync-win" -- $(MAKE) --no-print-directory _sync_win_impl
 
-# WITH_UPS=1 make sync-win opts back into building+copying the UPS patch
-# (off by default -- it's a ~1 minute full-ROM diff, and most sync-win calls
-# just want the ROM in the emulator ASAP). `make expansion-modern-ups`
-# remains available on its own regardless of this.
-WITH_UPS ?= 0
-
 _sync_win_impl:
 	@$(PYTHON) scripts/ensure_derived_assets.py
 	+$(MAKE) expansion-modern-rom
@@ -2745,31 +2435,16 @@ _sync_win_impl:
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
 	+$(MAKE) expansion-modern-sym \
 		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
-	+@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \
-		$(MAKE) expansion-modern-ups; \
-	fi
 	+@if [ -f "$(BASEROM)" ]; then \
-		rom_bytes="$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)"; \
-		if [ "$$rom_bytes" -le $(MODERN_IPS_MAX_BYTES) ]; then \
-			$(MAKE) expansion-modern-ips; \
-		fi; \
+		$(MAKE) expansion-modern-ups; \
+	else \
+		echo "note: $(BASEROM) not found, skipping UPS patch"; \
 	fi
 	cp "$(MODERN_SYM)" "$(WIN_SYNC_DIR)/"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_SYM)" "$(WIN_SYNC_DIR)"
-	@if [ "$(WITH_UPS)" = "1" ] && [ -f "$(BASEROM)" ]; then \
+	@if [ -f "$(BASEROM)" ]; then \
 		cp "$(MODERN_UPS)" "$(WIN_SYNC_DIR)/"; \
 		printf 'Copied %s -> %s/\n' "$(MODERN_UPS)" "$(WIN_SYNC_DIR)"; \
-	fi
-	@if [ -f "$(BASEROM)" ]; then \
-		rom_bytes="$$(wc -c < "$(MODERN_ROM)" 2>/dev/null || echo 0)"; \
-		if [ "$$rom_bytes" -le $(MODERN_IPS_MAX_BYTES) ]; then \
-			cp "$(MODERN_IPS)" "$(WIN_SYNC_DIR)/"; \
-			printf 'Copied %s -> %s/\n' "$(MODERN_IPS)" "$(WIN_SYNC_DIR)"; \
-		else \
-			echo "note: built ROM is $$rom_bytes bytes (over IPS's 16MB limit), skipping IPS patch -- use WITH_UPS=1 for a UPS patch instead"; \
-		fi; \
-	else \
-		echo "note: $(BASEROM) not found, skipping IPS patch"; \
 	fi
 	@if [ "$(FEBUILDER_POINTERS)" = "1" ]; then \
 		cp "$(MODERN_CUSTOM_POINTER_TXT)" "$(WIN_SYNC_DIR)/"; \
@@ -3173,80 +2848,6 @@ expansion-modern-newgame-check: expansion-modern-boot-preflight expansion-modern
 MODERN_SAVEFMT_CHECKS := tools/gba-playtest/run_save_compat_checks.py
 MODERN_SAVEFMT_FIXTURE_DIR := $(MODERN_OUTPUT_DIR)/savefmt-fixtures
 
-# ---------------------------------------------------------------------------
-# Issue #10: the ACTIVE id-space contract must be COMPILED, not just generated
-# ---------------------------------------------------------------------------
-# The generated item table (build/generated/data/data_items.c) includes the
-# build-local ACTIVE header and compile-time asserts that the compiler cap
-# (-DFE8_ITEM_ID_CAP / include/id_space.h default) and the generated record
-# count are the same build input. This gate proves all three directions with
-# the real modern toolchain:
-#   * default    -> 0xCD / 206 records compiles;
-#   * configured -> 0xCE / 207 records compiles with -DFE8_ITEM_ID_CAP=0xCE;
-#   * mismatched -> the 0xCE table compiled WITHOUT the flag must fail, which
-#     is exactly the silent 206-vs-207 divergence this contract exists to stop.
-# Compile-only (no link/ROM), so it is fast and needs no emulator; it restores
-# the default-cap generated table on the way out.
-#
-# Hermeticity (this gate must pass identically regardless of how the CALLER
-# invoked it -- ambient shell environment unset, ambient FE8_ITEM_ID_CAP=0xCE,
-# or a `make ... FE8_ITEM_ID_CAP=0xCE` command-line assignment on the gate
-# itself): two independent leaks had to be closed, both stemming from the same
-# root cause -- FE8_ITEM_ID_CAP is resolved ONCE per make process, not
-# per-recipe-line, so a plain env-var prefix on a recipe command is not enough
-# to force a particular state:
-#   1. $(MODERN_CFLAGS) bakes in whatever FE8_ITEM_ID_CAP this gate's OWN
-#      make process resolved at parse time (see MODERN_CFLAGS_NOCAP above).
-#      Every compile below therefore uses $(MODERN_CFLAGS_NOCAP) plus its own
-#      explicit -DFE8_ITEM_ID_CAP (or none), never the ambient $(MODERN_CFLAGS).
-#   2. Each $(MAKE) recursion that regenerates $$C re-resolves FE8_ITEM_ID_CAP
-#      for that CHILD process. A `FE8_ITEM_ID_CAP=... $(MAKE) ...` shell env
-#      prefix is silently ignored by that child whenever the gate itself was
-#      invoked with a `make ... FE8_ITEM_ID_CAP=...` command-line assignment,
-#      because GNU Make auto-forwards command-line-origin variables to every
-#      recursive $(MAKE) via MAKEFLAGS, and command-line origin outranks a
-#      plain environment-variable prefix in the child too. The fix is GNU
-#      Make's own documented escape hatch: pass FE8_ITEM_ID_CAP as an explicit
-#      argument on the recursive make's OWN command line (`$(MAKE)
-#      FE8_ITEM_ID_CAP=... $$C`, including the empty `FE8_ITEM_ID_CAP=` to
-#      force the unset default) -- that always wins, in every ambient/CLI
-#      combination, because it is that child's own command line.
-.PHONY: expansion-modern-idspace-active-check
-expansion-modern-idspace-active-check: expansion-modern-toolchain-check
-	@set -e; \
-	OUT="$(MODERN_OUTPUT_DIR)/idspace-active-check"; mkdir -p "$$OUT"; \
-	C=$(GENERATED_DATA_OUT_DIR)/data_items.c; H=$(GENERATED_DATA_ACTIVE_HEADER); \
-	echo "--- default cap: generated table and ACTIVE header must both say 0xCD / 206 ---"; \
-	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
-	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: ACTIVE header is not at the default cap" >&2; exit 1; }; \
-	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: ACTIVE header record count is not 206" >&2; exit 1; }; \
-	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_default.o"; \
-	echo "OK: default-cap generated table compiles against the ACTIVE contract (0xCD / 206)"; \
-	echo "--- configured cap: FE8_ITEM_ID_CAP=0xCE must move both to 0xCE / 207 ---"; \
-	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP=0xCE $$C >/dev/null; \
-	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: ACTIVE header did not follow the configured cap" >&2; exit 1; }; \
-	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 207" $$H || { echo "FAIL: ACTIVE header record count is not 207" >&2; exit 1; }; \
-	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -DFE8_ITEM_ID_CAP=0xCE -c "$$C" -o "$$OUT/items_active.o"; \
-	echo "OK: configured generated table compiles against the ACTIVE contract (0xCE / 207)"; \
-	echo "--- negative: the 0xCE table compiled without the cap flag must FAIL ---"; \
-	if "$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_mismatch.o" >/dev/null 2>&1; then \
-		echo "FAIL: a 207-record table compiled at the 0xCD compiler cap -- the contract assert is dead" >&2; exit 1; \
-	fi; \
-	echo "OK: cap/count divergence is a hard compile error, not a silent truncation"; \
-	echo "--- desync recovery: a stale ACTIVE header left by an out-of-band, differently-capped generated-data-check must self-heal on the FIRST plain default build, before this consumer compiles ---"; \
-	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
-	FE8_ITEM_ID_CAP=0xCE $(GENERATED_DATA_PY).idspace active-check --out-dir $(GENERATED_DATA_OUT_DIR) >/dev/null; \
-	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCE" $$H || { echo "FAIL: could not stage the stale-0xCE ACTIVE header desync" >&2; exit 1; }; \
-	grep -q "item_id_cap=0xCD" $(GENERATED_DATA_OUT_DIR)/.item_id_cap.stamp || { echo "FAIL: desync setup expected the cap stamp to still record the default cap" >&2; exit 1; }; \
-	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
-	grep -q "ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD" $$H || { echo "FAIL: the stale 0xCE ACTIVE header did not self-heal to the default cap on the first plain build" >&2; exit 1; }; \
-	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: the self-healed ACTIVE header record count is not 206" >&2; exit 1; }; \
-	"$(MODERN_CC)" $(MODERN_CFLAGS_NOCAP) -c "$$C" -o "$$OUT/items_healed.o"; \
-	echo "OK: a single plain default build healed the out-of-band stale ACTIVE header and the generated table compiles clean -- no manual generated-data-check, no negative static assert"; \
-	$(MAKE) --no-print-directory FE8_ITEM_ID_CAP= $$C >/dev/null; \
-	grep -q "ITEM_ID_ACTIVE_RECORD_COUNT 206" $$H || { echo "FAIL: default-cap state was not restored" >&2; exit 1; }; \
-	echo "PASS: expansion-modern-idspace-active-check"
-
 expansion-modern-savefmt-check: expansion-modern-boot-preflight expansion-modern-rom
 	"$(PYTHON)" "$(MODERN_SAVEFMT_CHECKS)" \
 		--rom "$(MODERN_ROM)" \
@@ -3368,7 +2969,7 @@ define modern_starter_content_disabled_negative
 			exit 1; \
 		fi; \
 	done; \
-	name=$$("$(PYTHON)" -c "import json; print(json.load(open('src/data/items_expansion.json'))['items'][0]['authoringName'])"); \
+	name=$$(sed -n 's/.*ITEM_EXPANSION_CE, "\([^"]*\)".*/\1/p' src/data/items_expansion_content_text.h); \
 	if LC_ALL=C grep -a -q -F "$$name" "$$rom"; then \
 		printf 'error: authored content text "%s" is present in the content-DISABLED ROM\n' "$$name" >&2; \
 		exit 1; \
@@ -3378,7 +2979,7 @@ define modern_starter_content_disabled_negative
 		printf 'error: gItemData has no linked size in %s\n' "$$elf" >&2; \
 		exit 1; \
 	fi; \
-	expected=$$("$(PYTHON)" -c "from scripts.generated_data.items import schema; print(len(schema.load_records('src/data/items.json', item_cap=0xCD)) * $(MODERN_ITEM_DATA_RECORD_BYTES))"); \
+	expected=$$(( 206 * $(MODERN_ITEM_DATA_RECORD_BYTES) )); \
 	if [ $$(( 0x$$size )) -ne "$$expected" ]; then \
 		printf 'error: content-disabled gItemData is 0x%s bytes, expected %s (the vanilla-cap table)\n' "$$size" "$$expected" >&2; \
 		exit 1; \
@@ -4013,7 +3614,6 @@ endif
 MODERN_ITEMEXPANSION_SCRIPT := tools/gba-playtest/run_item_expansion_checks.py
 MODERN_ITEMEXPANSION_DIR := $(MODERN_OUTPUT_DIR)/itemexpansion
 MODERN_ITEMEXPANSION_STAGES := $(if $(filter release,$(MODERN_CONFIG)),boot,all)
-MODERN_ITEMEXPANSION_ACTIVE_HEADER := $(GENERATED_DATA_ACTIVE_HEADER)
 
 expansion-modern-itemexpansion-check: expansion-modern-rom
 	@if [ "$(FE8_EXPANSION_ITEMTEST)" != "1" ] || [ -z "$(FE8_ITEM_ID_CAP)" ]; then \
@@ -4035,7 +3635,6 @@ expansion-modern-itemexpansion-check: expansion-modern-rom
 		--config "$(MODERN_CONFIG)" \
 		--cap "$(FE8_ITEM_ID_CAP)" \
 		--content "$(EXPANSION_STARTER_CONTENT)" \
-		--active-header "$(MODERN_ITEMEXPANSION_ACTIVE_HEADER)" \
 		--require-stages "$(MODERN_ITEMEXPANSION_STAGES)" \
 		--out-dir "$(MODERN_ITEMEXPANSION_DIR)"
 	@printf 'Modern ROM item-expansion runtime check passed: %s (config=%s abi=%s cap=%s stages=%s content=%s)\n' \

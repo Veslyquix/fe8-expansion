@@ -1,12 +1,22 @@
 # Extensible ID space (Issue #10)
 
+> **Note:** the generated-data platform this document describes
+> (`scripts/generated_data/`, `generated_data.mk`, the `id_space_active.h`
+> ACTIVE contract, and every `make generated-data-*` /
+> `expansion-modern-idspace-active-check` (removed target) target below) has since
+> been removed in favor of hand-authored `src/data_*.c` tables. The
+> `include/id_space.h` DEFAULT contract described below is still real and
+> current -- it is a plain committed header, hand-maintained like any
+> other -- but the ACTIVE-contract machinery and every command on this
+> page are historical and no longer exist.
+
 This framework turns "expandable IDs" into a configurable, auditable,
-fail-early platform. It is built around one single source of truth --
-`scripts/generated_data/idspace.py` -- that describes every extensible ID
-domain (character, class, item, chapter, unit, event) and every consumer
-(runtime tables, event operands, save fields, UI buffers, lookup tables,
-link/network representations, external interfaces) that must never silently
-truncate an expanded ID.
+fail-early platform. It was built around one single source of truth --
+the (since-removed) `scripts/generated_data/idspace.py` -- that described
+every extensible ID domain (character, class, item, chapter, unit, event)
+and every consumer (runtime tables, event operands, save fields, UI
+buffers, lookup tables, link/network representations, external
+interfaces) that must never silently truncate an expanded ID.
 
 ## DEFAULT contract vs ACTIVE contract (read this first)
 
@@ -29,7 +39,7 @@ up as tracked drift or force a report rewrite.
 publishes its own numbers:
 
 ```console
-$ FE8_ITEM_ID_CAP=0xCE make generated-data-check
+$ FE8_ITEM_ID_CAP=0xCE generated-data-check (removed target)
 ...
 active id-space contract up-to-date (3 outputs); item cap 0xCE, 207 record(s)
 
@@ -59,14 +69,14 @@ Downstream consumers:
 
   So a stale header, a stale table, or a build that flows a different
   `-DFE8_ITEM_ID_CAP` than the generator saw is a hard compile error instead of
-  a silently truncated table. `make expansion-modern-idspace-active-check`
+  a silently truncated table. `expansion-modern-idspace-active-check` (removed target)
   proves all three directions (default compiles, configured compiles, mismatch
   fails) with the real modern toolchain. The archival agbcc lane stays
   default-only and keeps its existing fast-fail guard.
 
-  The gate itself is hermetic: `make expansion-modern-idspace-active-check`,
-  `FE8_ITEM_ID_CAP=0xCE make expansion-modern-idspace-active-check`, and
-  `make expansion-modern-idspace-active-check FE8_ITEM_ID_CAP=0xCE` all PASS
+  The gate itself is hermetic: `expansion-modern-idspace-active-check` (removed target),
+  `FE8_ITEM_ID_CAP=0xCE expansion-modern-idspace-active-check (removed target)`, and
+  `expansion-modern-idspace-active-check (removed target) FE8_ITEM_ID_CAP=0xCE` all PASS
   identically, regardless of the caller's ambient shell environment or
   command-line assignment -- the gate's own recipe pins each of its three cap
   states explicitly (never `$(MODERN_CFLAGS)`'s ambient-baked cap define, and
@@ -78,14 +88,14 @@ Downstream consumers:
   **Automatic build self-heal (cap-flip / stale / heal).** Any modern
   configured or default build regenerates the ACTIVE header *and* the generated
   table to match *its own* resolved cap **before** the first consumer compiles
-  -- you never have to run `make generated-data-check` by hand first. The
+  -- you never have to run `generated-data-check` (removed target) by hand first. The
   `.item_id_cap.stamp` recipe is a `FORCE` prerequisite of `data_items.c`, so it
   runs on every build and heals both surfaces write-if-changed: a
   mtime-preserving no-op at the correct cap (no rebuild storm), a single rewrite
   (recompiling exactly the affected object) when either surface is stale.
   This closes a real first-fail that a final verifier reproduced and that this
   doc deliberately does not hide: an out-of-band, differently-capped
-  `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes the ACTIVE
+  `FE8_ITEM_ID_CAP=0xCE generated-data-check (removed target)` write-if-changes the ACTIVE
   header to 0xCE (advancing *its* mtime) while never touching the cap stamp; on
   the next plain/default build the resolved cap is unchanged, so the stamp mtime
   does not advance, the 0xCE header looks newer than the stamp, and the
@@ -93,13 +103,13 @@ Downstream consumers:
   to date and never re-renders. The table `data_items.c` *does* regenerate at
   the default cap, so a 206-record table ends up `#include`-ing a 207-record
   header: exactly the negative static assert above, on the very first compile,
-  which previously required a manual `make generated-data-check` to recover.
+  which previously required a manual `generated-data-check` (removed target) to recover.
   Healing the ACTIVE surfaces inside the stamp recipe (keyed off the make
   process's own resolved cap) makes the recovery automatic and single-command in
   every direction, including `-j`. Regression coverage:
-  `make generated-data-active-heal-check` (host-only: default->0xCE->default and
+  `generated-data-active-heal-check` (removed target) (host-only: default->0xCE->default and
   the reverse, correct-cap no-op, no clean) and the "desync recovery" leg of
-  `make expansion-modern-idspace-active-check` (the same recovery proven with a
+  `expansion-modern-idspace-active-check` (removed target) (the same recovery proven with a
   real modern compile, so the stale-header negative assert can never silently
   return).
 
@@ -154,7 +164,7 @@ build-local ACTIVE surfaces described above (`--out-dir` defaults to
 
 `python3 -m scripts.generated_data.idspace check` re-renders in memory and
 fails on any configured-cap violation or committed-output drift. Both checks,
-plus the consumer census below, are folded into `make generated-data-check`, so
+plus the consumer census below, are folded into `generated-data-check` (removed target), so
 the existing umbrella CI gate covers them with no workflow edits.
 
 ## Source-driven consumer census (how coverage is proven)
@@ -184,7 +194,7 @@ a row in `scripts/generated_data/consumer_classification.json`.
 ### Workflow: adding or changing a consumer
 
 1. Write the code as usual.
-2. Run `make generated-data-check` (or
+2. Run `generated-data-check` (removed target) (or
    `python3 -m scripts.generated_data.consumer_census check`). A new consumer
    fails with an actionable key.
 3. Propose rows with
@@ -194,7 +204,7 @@ a row in `scripts/generated_data/consumer_classification.json`.
    `ui-buffer`, `lookup-table`, `link-network`, `external-interface`) or
    `reviewed-exclusion` plus a reason that states what the symbol actually
    stores.
-4. Regenerate the audits (`make generated-data-generate`) and commit the
+4. Regenerate the audits (`generated-data-generate` (removed target)) and commit the
    classification together with the code that introduced the consumer.
 
 If the scanner genuinely cannot see a real consumer, fix the scanner rules --
@@ -324,7 +334,7 @@ link/list/artifact boundary rather than on the individual objects: several
 whereas the archival products are produced only by the agbcc lane. Migration
 impact: to build an expanded item ROM, use the modern lane; the archival lane
 is vanilla-`0xCD`-only. A bare `make` (modern), the modern targets, and
-`FE8_ITEM_ID_CAP=0xCE make generated-data-check` (which build only their own /
+`FE8_ITEM_ID_CAP=0xCE generated-data-check (removed target)` (which build only their own /
 generated objects) are unaffected.
 
 ## Adding a supported item record

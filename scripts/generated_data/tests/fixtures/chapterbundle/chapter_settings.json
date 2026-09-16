@@ -1,6 +1,0 @@
-{
-  "chapters": [
-    { "internalName": "EL0", "mapEventDataId": 0 },
-    { "internalName": "EL1", "mapEventDataId": 1 }
-  ]
-}

@@ -33,7 +33,7 @@ _NON_GATE_STEP_NAMES = {
 # Issues #7/#17 remediation: the documentation step is a genuine required
 # workflow gate, but it is the sole correctness step deliberately excluded
 # from verify.gates(). Its exact commands and position are asserted separately
-# below; localization remains part of the current-master 11-gate mirror.
+# below; localization remains part of the current-master 10-gate mirror.
 _DOCS_GOVERNANCE_STEP_NAME = "Check documentation (issues #7/#17)"
 _LOCALIZATION_HOST_STEP_NAME = "Run localization host test suite (issue #18)"
 
@@ -107,7 +107,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
             )
 
     def test_issue_7_17_docs_governance_is_a_standalone_workflow_step_not_a_verify_gate(self):
-        """Docs governance stays outside the current-master 11-gate mirror
+        """Docs governance stays outside the current-master 10-gate mirror
         while remaining required, argv-identical, and immediately after the
         artifact guard in build.yml."""
         names = [g.name for g in verify_mod.gates()]
@@ -220,7 +220,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         )
 
     def test_gate_list_full_ordered_names(self):
-        # All 11 current-master mirrored gates remain; docs governance is
+        # All 10 current-master mirrored gates remain; docs governance is
         # deliberately absent and asserted as a standalone workflow step.
         names = [g.name for g in verify_mod.gates()]
         self.assertEqual(
@@ -232,7 +232,6 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
                 "artifact-guard",
                 "default-lane-check",
                 "quickstart-legacy-check",
-                "generated-data-check",
                 "modern-linker-check-debug",
                 "modern-linker-check-release",
                 "modern-itemexpansion-check-debug",
@@ -264,7 +263,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
 
     def test_dry_run_never_executes_subprocess(self):
         results = verify_mod.run_gates("/nonexistent/path/should/not/matter", dry_run=True)
-        self.assertEqual(len(results), 11)
+        self.assertEqual(len(results), 10)
         self.assertTrue(all(r.ran is False for r in results))
         self.assertTrue(all(r.passed is False for r in results))  # not-ran != passed
 
@@ -275,7 +274,7 @@ class VerifyGatesMirrorWorkflowTests(unittest.TestCase):
         dry = [r.gate.name for r in verify_mod.run_gates("/nonexistent/path", dry_run=True)]
         real_names = [g.name for g in verify_mod.gates()]
         self.assertEqual(dry, real_names)
-        self.assertEqual(len(dry), 11)
+        self.assertEqual(len(dry), 10)
 
 
 class VerifyGateSelectionRemovedTests(unittest.TestCase):
@@ -335,7 +334,7 @@ class VerifyGateSelectionRemovedTests(unittest.TestCase):
             self.assertIn(name, printed)
         # Every line for a dry-run gate is explicitly marked SKIPPED(dry-run)
         # -- never silently omitted, never marked PASS/FAIL without running.
-        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 11)
+        self.assertEqual(printed.count("[SKIPPED(dry-run)]"), 10)
 
 
 class HostOnlyEnvGateMirrorTests(unittest.TestCase):
@@ -424,9 +423,9 @@ class HostOnlyEnvGateMirrorTests(unittest.TestCase):
                 "run_gates must not mutate the parent environment",
             )
 
-        self.assertEqual(len(results), 11)
+        self.assertEqual(len(results), 10)
         self.assertTrue(all(result.passed for result in results))
-        self.assertEqual(len(seen), 11)
+        self.assertEqual(len(seen), 10)
 
         host_argv, host_env = seen[0]
         self.assertEqual(host_argv[0], "python3")

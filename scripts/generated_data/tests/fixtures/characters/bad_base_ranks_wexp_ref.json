@@ -1,7 +1,0 @@
-{
-  "$schema": "fe8.characters.v1",
-  "characters": [
-    { "character": "CHARACTER_EIRIKA", "defaultClass": "CLASS_MYRMIDON",
-      "baseRanks": { "ITYPE_SWORD": "WPN_EXP_NOT_REAL" } }
-  ]
-}

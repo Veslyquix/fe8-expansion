@@ -178,11 +178,6 @@ def gates(jobs: int = 2) -> List[Gate]:
             ),
         ),
         Gate(
-            name="generated-data-check",
-            command=["make", "generated-data-check"],
-            applicable_note="applicable when generated_data.mk-tracked tables exist",
-        ),
-        Gate(
             name="modern-linker-check-debug",
             command=[
                 "make",

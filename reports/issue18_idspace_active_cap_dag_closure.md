@@ -85,7 +85,7 @@ stamp every other cap-aware rule relies on, so the graph and the on-disk
 cap state can never observably diverge, at the cost of one extra
 (idempotent, sub-second, write-if-changed) stamp-recipe invocation per
 `generated-data-check` run. No gate's observable output changed --
-confirmed by re-running `make generated-data-check` at the default cap,
+confirmed by re-running `generated-data-check` (removed target) at the default cap,
 at `FE8_ITEM_ID_CAP=0xCE`, and back, both before and after the edit, with
 byte-identical resulting surfaces and unchanged pass/fail behavior.
 
@@ -115,12 +115,12 @@ byte-identical resulting surfaces and unchanged pass/fail behavior.
 
 ## Verification
 
-* `make generated-data-check` (default cap): `[PASS]`, restores
+* `generated-data-check` (removed target) (default cap): `[PASS]`, restores
   0xCD/206.
 * `FE8_ITEM_ID_CAP=0xCE make generated-data-check`: `[PASS]`, moves to
   0xCE/207; a warm rerun at the same cap leaves every ACTIVE surface's
   mtime untouched.
-* A subsequent plain `make generated-data-check` restores 0xCD/206
+* A subsequent plain `generated-data-check` (removed target) restores 0xCD/206
   again, with a warm rerun again leaving mtimes untouched.
 * The new regression module: 6/6 tests pass (fast tier ~1.5 s,
   artifact-rich sequence tier ~253 s, toolchain-gated consumer-object

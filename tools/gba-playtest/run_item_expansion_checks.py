@@ -18,20 +18,21 @@ FE8_EXPANSION_ITEMTEST=1`. It:
    suspend-save/resume roundtrips -- plus the unchanged legacy 0xCD and
    empty (0x0000) slots next to them.
 4. With `--content 1` (issue #6), additionally asserts the bundled
-   generated-data content example: the compile-time content flag, the
-   bundled item's typed ID, the ORIGINAL authored display name the
-   production `GetItemName()` returned (length + FNV-1a 32, recomputed here
-   from `authoringName`), the public mechanics registry's contents after
+   content example: the compile-time content flag, the bundled item's
+   typed ID, the ORIGINAL authored display name the production
+   `GetItemName()` returned (length + FNV-1a 32, recomputed here from
+   the authored name), the public mechanics registry's contents after
    the framework's single built-in install point ran, and -- on a live map --
    the content mechanic's bounded bonus firing for the item's bearer and NOT
    firing for a deployed control unit that does not carry it.
 
 Every expected item-record value is READ FROM THE AUTHORED SOURCE OF TRUTH
-(`src/data/items_expansion.json` resolved through the generated-data schema,
-plus the `ITYPE_*`/`IA_*`/`CHARACTER_*` headers and the content
-module's own bonus constants), never restated as a literal here: the check
-therefore fails if the ROM and the authored data ever disagree, and cannot
-silently drift when the record is re-authored.
+(the `ITEM_EXPANSION_CE` record in `src/data_items.c`, its display name in
+`src/data/items_expansion_content_text.h`, plus the `ITYPE_*`/`IA_*`/
+`CHARACTER_*` headers and the content module's own bonus constants), never
+restated as a literal here: the check therefore fails if the ROM and the
+authored data ever disagree, and cannot silently drift when the record is
+re-authored.
 
 Every failure names the field, the expected value and the observed value.
 Stdlib only, matching this repository's conventions.
@@ -200,76 +201,137 @@ def fnv1a32(data: bytes) -> int:
     return digest
 
 
-def _repo_module(dotted: str):
-    """Import a repository module (scripts.*) from this tool.
+_ENUM_ENTRY_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?0[xX][0-9A-Fa-f]+|-?\d+)\s*,?\s*(//.*)?$"
+)
+_SHIFT_ENTRY_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\(1\s*<<\s*(\d+)\)\s*,?\s*(//.*)?$"
+)
+_DEFINE_ENTRY_RE = re.compile(
+    r"^\s*#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)\s+(-?0[xX][0-9A-Fa-f]+|-?\d+)\s*(?:/\*.*?\*/|//.*)?\s*$"
+)
 
-    The runner is stdlib-only otherwise; this exists so the expected item
-    record is read from the ONE authored source of truth
-    (src/data/items_expansion.json, resolved by the very schema the ROM's
-    generated table was produced with) instead of being copied into this
-    file as literals that could silently drift from it.
+
+def extract_enum_constants(header_path, name_prefix=None):
+    """Scan a C header for ``NAME = <value>,`` enum entries (plain integer
+    literals) and ``NAME = (1 << N),`` shift-style bitmask entries.
+
+    Returns an ordered ``dict`` of ``name -> value``. Intentionally simple
+    (regex, not a real C parser) -- sufficient for this project's
+    enum-style constant headers.
     """
-    if str(REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPO_ROOT))
-    module = __import__(dotted, fromlist=["_"])
-    return module
+    constants = {}
+    with open(header_path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            match = _ENUM_ENTRY_RE.match(line)
+            if match:
+                name = match.group(1)
+                if name_prefix is not None and not name.startswith(name_prefix):
+                    continue
+                value_text = match.group(2)
+                constants[name] = (
+                    int(value_text, 16) if value_text.lower().startswith(("0x", "-0x"))
+                    else int(value_text)
+                )
+                continue
+            match = _SHIFT_ENTRY_RE.match(line)
+            if match:
+                name = match.group(1)
+                if name_prefix is not None and not name.startswith(name_prefix):
+                    continue
+                constants[name] = 1 << int(match.group(2))
+    return constants
+
+
+def extract_define_constant(header_path, name):
+    """Scan a C header for a single ``#define NAME VALUE`` object-like macro."""
+    with open(header_path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            match = _DEFINE_ENTRY_RE.match(line)
+            if not match or match.group(1) != name:
+                continue
+            value_text = match.group(2)
+            return int(value_text, 16) if value_text.lower().startswith(("0x", "-0x")) else int(value_text)
+    raise CheckError(f"could not find '#define {name} ...' in {header_path}")
 
 
 class AuthoredRecord:
     """Every expected value of the issue #6 authored expansion item record,
-    resolved from the repository's own authoring sources."""
+    resolved from the repository's own hand-authored sources: the
+    ITEM_EXPANSION_CE record in src/data_items.c (the actual compiled
+    table -- the single source of truth, not a parallel copy of it) and
+    its display name in src/data/items_expansion_content_text.h."""
 
     def __init__(self, cap: int):
-        items_schema = _repo_module("scripts.generated_data.items.schema")
-        validators = _repo_module("scripts.generated_data.validators")
-        idspace = _repo_module("scripts.generated_data.idspace")
+        expansion_header = REPO_ROOT / "include" / "constants" / "items_expansion.h"
+        bmitem_header = REPO_ROOT / "include" / "bmitem.h"
+        data_items_c = REPO_ROOT / "src" / "data_items.c"
+        content_text_h = REPO_ROOT / "src" / "data" / "items_expansion_content_text.h"
 
-        items_json = REPO_ROOT / "src" / "data" / "items.json"
-        records = items_schema.load_records(
-            str(items_json), item_cap=cap,
-            overlay_source=items_schema.ITEMS_EXPANSION_SOURCE)
+        expansion_enum = extract_enum_constants(str(expansion_header), name_prefix="ITEM_")
+        if "ITEM_EXPANSION_CE" not in expansion_enum:
+            raise CheckError(f"ITEM_EXPANSION_CE not found in {expansion_header}")
+        item_id = expansion_enum["ITEM_EXPANSION_CE"]
 
-        expansion_enum = validators.extract_enum_constants(
-            items_schema.ITEMS_EXPANSION_HEADER, name_prefix="ITEM_")
-        matches = [r for r in records if r.item in expansion_enum]
-        if len(matches) != 1:
+        source = data_items_c.read_text(encoding="utf-8")
+        block_match = re.search(
+            r"\[ITEM_EXPANSION_CE\]\s*=\s*\{(.*?)\n\t\},", source, re.S)
+        if not block_match:
+            raise CheckError(f"could not find the ITEM_EXPANSION_CE record in {data_items_c}")
+        block = block_match.group(1)
+
+        def field(name, default=None):
+            m = re.search(r"\." + name + r"\s*=\s*([^,]+),", block)
+            if not m:
+                if default is not None:
+                    return default
+                raise CheckError(f"ITEM_EXPANSION_CE record has no .{name} field in {data_items_c}")
+            return m.group(1).strip()
+
+        weapon_types = extract_enum_constants(str(bmitem_header), name_prefix="ITYPE_")
+        attribute_flags = extract_enum_constants(str(bmitem_header), name_prefix="IA_")
+
+        weapon_type_name = field("weaponType")
+        if weapon_type_name not in weapon_types:
+            raise CheckError(f"unknown weaponType '{weapon_type_name}' (not in {bmitem_header})")
+
+        attributes_value = 0
+        for name in field("attributes", default="0").split("|"):
+            name = name.strip()
+            if name == "0":
+                continue
+            if name not in attribute_flags:
+                raise CheckError(f"unknown attribute '{name}' (not in {bmitem_header})")
+            attributes_value |= attribute_flags[name]
+
+        content_source = content_text_h.read_text(encoding="utf-8")
+        name_match = re.search(
+            r"\{\s*ITEM_EXPANSION_CE\s*,\s*\"([^\"]*)\"\s*\}", content_source)
+        if not name_match:
             raise CheckError(
-                f"expected exactly one authored expansion item record in "
-                f"{items_schema.ITEMS_EXPANSION_SOURCE}, found {len(matches)}")
-        record = matches[0]
+                f"could not find the ITEM_EXPANSION_CE display name in {content_text_h}")
+        authoring_name = name_match.group(1)
 
-        weapon_types = validators.extract_enum_constants(
-            items_schema.BMITEM_HEADER, name_prefix="ITYPE_")
-        attribute_flags = items_schema.read_item_attributes(items_schema.BMITEM_HEADER)
-        attributes, errors = validators.resolve_bitmask_flags(
-            record.attributes, attribute_flags, record.attributes_loc, "items")
-        if errors:
-            raise CheckError(f"authored attributes do not resolve: {errors}")
-
-        self.record_count = len(records)
-        self.item_name = record.item
-        self.item_id = expansion_enum[record.item][0]
-        self.expansion_first = idspace.ITEM_EXPANSION_FIRST
-        self.name_text_id = record.name_text_id
-        self.desc_text_id = record.desc_text_id
-        self.use_desc_text_id = record.use_desc_text_id
-        self.weapon_type = weapon_types[record.weapon_type][0]
-        self.weapon_type_name = record.weapon_type
-        self.attributes = attributes
-        self.max_uses = record.max_uses
-        self.icon_id = record.icon_id
+        self.item_name = "ITEM_EXPANSION_CE"
+        self.item_id = item_id
+        self.name_text_id = 0
+        self.desc_text_id = 0
+        self.use_desc_text_id = 0
+        self.weapon_type = weapon_types[weapon_type_name]
+        self.weapon_type_name = weapon_type_name
+        self.attributes = attributes_value
+        self.max_uses = int(field("maxUses"), 0)
+        self.icon_id = int(field("iconId"), 0)
         # MakeNewItem(item) packs uses into the high byte (see src/bmitem.c).
-        self.made_item = (record.max_uses << 8) | self.item_id
-        # Issue #6: the ORIGINAL display name, authored literally in the same
-        # record and generated into the build-local content text table. The
-        # ROM records the length and FNV-1a 32 hash of whatever the
-        # production GetItemName() returned, so recomputing both here binds
-        # the drawn text to the authored source of truth with no oracle file.
-        self.authoring_name = record.authoring_name
-        self.authoring_description = record.authoring_description
-        self.authoring_use_description = record.authoring_use_description
-        self.name_len = len(record.authoring_name or "")
-        self.name_hash = fnv1a32((record.authoring_name or "").encode("ascii"))
+        self.made_item = (self.max_uses << 8) | self.item_id
+        # Issue #6: the ORIGINAL display name, authored literally in
+        # src/data/items_expansion_content_text.h. The ROM records the
+        # length and FNV-1a 32 hash of whatever the production
+        # GetItemName() returned, so recomputing both here binds the drawn
+        # text to the authored source of truth with no oracle file.
+        self.authoring_name = authoring_name
+        self.name_len = len(authoring_name)
+        self.name_hash = fnv1a32(authoring_name.encode("ascii"))
 
 
 class ContentContract:
@@ -277,24 +339,23 @@ class ContentContract:
     the runtime stage uses, read from their defining headers."""
 
     def __init__(self):
-        validators = _repo_module("scripts.generated_data.validators")
         content_header = REPO_ROOT / "include" / "expansion_starter_content.h"
         mechanics_header = REPO_ROOT / "include" / "expansion_mechanics.h"
         characters_header = REPO_ROOT / "include" / "constants" / "characters.h"
         itemtest_source = REPO_ROOT / "src" / "expansion_itemtest.c"
 
-        self.avoid_bonus, _ = validators.extract_define_constant(
+        self.avoid_bonus = extract_define_constant(
             str(content_header), "EXPANSION_STARTER_CONTENT_AVOID_BONUS")
-        self.avoid_cap, _ = validators.extract_define_constant(
+        self.avoid_cap = extract_define_constant(
             str(content_header), "EXPANSION_STARTER_CONTENT_AVOID_CAP")
-        self.defense_bonus, _ = validators.extract_define_constant(
+        self.defense_bonus = extract_define_constant(
             str(mechanics_header), "EXPANSION_MECHANICS_SAMPLE_GUARD_BONUS")
 
-        characters = validators.extract_enum_constants(
+        characters = extract_enum_constants(
             str(characters_header), name_prefix="CHARACTER_")
         source = itemtest_source.read_text(encoding="utf-8")
-        self.bearer_pid = characters[_defined_symbol(source, "ITEMTEST_TARGET_PID")][0]
-        self.control_pid = characters[_defined_symbol(source, "ITEMTEST_CONTROL_PID")][0]
+        self.bearer_pid = characters[_defined_symbol(source, "ITEMTEST_TARGET_PID")]
+        self.control_pid = characters[_defined_symbol(source, "ITEMTEST_CONTROL_PID")]
 
 
 def _defined_symbol(source: str, macro: str) -> str:
@@ -302,23 +363,6 @@ def _defined_symbol(source: str, macro: str) -> str:
     if not match:
         raise CheckError(f"cannot find '#define {macro} ...' in src/expansion_itemtest.c")
     return match.group(1)
-
-
-def read_active_contract(path: Path) -> dict:
-    """Parse the BUILD-LOCAL active ID contract the generator just resolved
-    (build/generated/data/id_space_active.h, issue #10). This is what the
-    generated table's own static assertions were compiled against, so
-    cross-checking the running ROM's configuredCap against it binds the
-    runtime, the generated data and the compiler cap together."""
-    text = path.read_text(encoding="utf-8")
-    values = {}
-    for name in ("ITEM_ID_ACTIVE_CONFIGURED_CAP", "ITEM_ID_ACTIVE_RECORD_COUNT"):
-        match = re.search(
-            r"^#define\s+" + name + r"\s+(0[xX][0-9a-fA-F]+|\d+)\s*$", text, re.M)
-        if not match:
-            raise CheckError(f"cannot find '#define {name} ...' in {path}")
-        values[name] = int(match.group(1), 0)
-    return values
 
 
 def resolve_symbol(elf: Path, symbol: str) -> tuple[int, int]:
@@ -455,20 +499,21 @@ def check(values: dict[str, int], cap: int, require: str,
         expect("phaseTimedOut", 0, "a real Player Phase was reached, not the fail-safe")
 
     # Stage 1 -- runtime GetItemData() record for the expanded ID, compared
-    # field-for-field against the authored src/data/items_expansion.json.
+    # field-for-field against the authored ITEM_EXPANSION_CE record in
+    # src/data_items.c.
     expect("dataNumber", expansion_id, f"GetItemData(0x{expansion_id:X})->number")
     expect("dataWeaponType", authored.weapon_type,
-           f"{authored.weapon_type_name}, as authored in items_expansion.json")
-    expect("dataMaxUses", authored.max_uses, "maxUses, as authored in items_expansion.json")
+           f"{authored.weapon_type_name}, as authored in src/data_items.c")
+    expect("dataMaxUses", authored.max_uses, "maxUses, as authored in src/data_items.c")
     expect("dataNameTextId", authored.name_text_id,
            "nameTextId stays 0: an authored content record consumes no slot in "
            "the shared, Huffman-compressed global message table")
     expect("dataDescTextId", authored.desc_text_id,
            "descTextId stays 0 for the same reason (see docs/starter_features.md, "
            "\"Config-gated content text\")")
-    expect("dataIconId", authored.icon_id, "iconId, as authored in items_expansion.json")
+    expect("dataIconId", authored.icon_id, "iconId, as authored in src/data_items.c")
     expect("dataAttributes", authored.attributes,
-           "attributes bitmask, as authored in items_expansion.json")
+           "attributes bitmask, as authored in src/data_items.c")
     expect("madeItem", authored.made_item,
            f"MakeNewItem(0x{expansion_id:X}) = authored uses<<8 | id")
     expect("lookupIndex", expansion_id, "GetItemIndex() of the made item")
@@ -646,15 +691,6 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
-        "--active-header",
-        type=Path,
-        default=None,
-        help=(
-            "build-local build/generated/data/id_space_active.h to cross-check "
-            "against the running ROM's compiled cap (issue #10 active contract)"
-        ),
-    )
-    parser.add_argument(
         "--report-only",
         action="store_true",
         help="print every observed probe value and skip the assertions",
@@ -694,7 +730,7 @@ def main(argv: list[str] | None = None) -> int:
             f"type={authored.weapon_type_name} uses={authored.max_uses} "
             f"icon={authored.icon_id} attrs=0x{authored.attributes:X} "
             f"name/desc/useDesc={authored.name_text_id}/{authored.desc_text_id}/"
-            f"{authored.use_desc_text_id} (records={authored.record_count})"
+            f"{authored.use_desc_text_id}"
         )
         print(
             f"  authored content text: name={authored.authoring_name!r} "
@@ -709,31 +745,6 @@ def main(argv: list[str] | None = None) -> int:
 
         failures = check(values, cap, args.require_stages, authored, content, contract)
 
-        # Bind the running ROM's compiled cap to the BUILD-LOCAL active
-        # contract the generator resolved (and that the generated table's own
-        # static assertions were compiled against), so a stale generated table
-        # or a stale active header cannot pass this gate.
-        if args.active_header is not None:
-            active = read_active_contract(args.active_header)
-            active_cap = active["ITEM_ID_ACTIVE_CONFIGURED_CAP"]
-            active_count = active["ITEM_ID_ACTIVE_RECORD_COUNT"]
-            if active_cap != cap:
-                failures.append(
-                    f"id_space_active.h: ITEM_ID_ACTIVE_CONFIGURED_CAP is "
-                    f"0x{active_cap:X}, but this gate built and probed cap 0x{cap:X}")
-            if active_count != cap + 1:
-                failures.append(
-                    f"id_space_active.h: ITEM_ID_ACTIVE_RECORD_COUNT is "
-                    f"{active_count}, expected {cap + 1} for cap 0x{cap:X}")
-            if active_count != authored.record_count:
-                failures.append(
-                    f"id_space_active.h: ITEM_ID_ACTIVE_RECORD_COUNT is "
-                    f"{active_count}, but the authored sources resolve "
-                    f"{authored.record_count} item record(s) at cap 0x{cap:X}")
-            if not failures:
-                print(
-                    f"  active contract: cap 0x{active_cap:X}, "
-                    f"{active_count} record(s) (build-local id_space_active.h)")
         if failures:
             print(
                 f"item-expansion runtime probe FAILED (config={args.config}):",

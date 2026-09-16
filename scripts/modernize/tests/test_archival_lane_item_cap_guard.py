@@ -16,8 +16,8 @@ include/id_space.h's built-in ITEM_ID_CONFIGURED_CAP at the vanilla 0xCD: a
 silent generated-vs-compiled contract divergence.
 
 How the guard is built (the property these tests pin down):
-Two gates, one shared diagnostic ($(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG),
-defined once in generated_data.mk so the gates cannot drift):
+Two gates, one shared diagnostic ($(ARCHIVAL_ITEM_CAP_DIAG), defined once in
+the top-level Makefile so the gates cannot drift):
 
 Gate 1 -- parse-time known-goal fast-fail (Makefile ARCHIVAL_KNOWN_GOALS +
 $(MAKECMDGOALS) $(filter ...) + $(error)): when the resolved cap is expanded
@@ -28,8 +28,8 @@ This is what makes a real `make legacy` fail EARLY, not after churning the
 object graph.
 
 Gate 2 -- dependency-graph backstop:
-  * generated_data.mk defines ONE .PHONY guard target,
-    `generated-data-archival-item-cap-guard`, whose *recipe* body is a make
+  * The top-level Makefile defines ONE .PHONY guard target,
+    `archival-item-cap-guard`, whose *recipe* body is a make
     $(error) that fires at an expanded cap. Because the assertion is a make
     function in the recipe, make expands (and thus fires) it whenever the guard
     target is pulled into the active build graph -- INCLUDING under `make -n`
@@ -283,9 +283,9 @@ class NonArchivalLanesUnaffectedTests(_GuardAssertions):
         )
         self.assert_plan_ok(result)
 
-    def test_generated_data_check_not_blocked_at_expanded_cap(self):
+    def test_localization_validate_not_blocked_at_expanded_cap(self):
         result = run_make(
-            ["-n", "generated-data-check"], env_overrides={"FE8_ITEM_ID_CAP": EXPANDED_CAP}
+            ["-n", "localization-validate"], env_overrides={"FE8_ITEM_ID_CAP": EXPANDED_CAP}
         )
         self.assert_plan_ok(result)
 
@@ -380,46 +380,6 @@ class RealBuildBlocksBeforeAnyRecipeTests(_GuardAssertions):
         # Prove nothing was actually built: no linker/objcopy invocation.
         self.assertNotIn("arm-none-eabi-ld", result.stdout)
         self.assertNotIn("arm-none-eabi-objcopy", result.stdout)
-
-
-class ShellInjectionSafetyTests(unittest.TestCase):
-    """The resolver forwards FE8_ITEM_ID_CAP into a parse-time $(shell) (GNU
-    Make does not export command-line variables into $(shell)). The value must
-    be POSIX-single-quote-escaped, so a crafted value with a quote breakout is
-    treated as an invalid cap and NEVER executes a shell side effect."""
-
-    def _run_with_payload(self, payload, on_cli):
-        marker_dir = tempfile.mkdtemp()
-        marker = os.path.join(marker_dir, "pua_pwned")
-        # A single-quote breakout that would `touch` the marker if the value
-        # were interpolated raw into the shell.
-        value = "'; touch %s; echo '" % marker
-        try:
-            if on_cli:
-                result = run_make(["-n", "generated-data-check", "FE8_ITEM_ID_CAP=%s" % value])
-            else:
-                result = run_make(
-                    ["-n", "generated-data-check"],
-                    env_overrides={"FE8_ITEM_ID_CAP": value},
-                )
-            self.assertFalse(
-                os.path.exists(marker),
-                "SHELL INJECTION: marker file was created -> value reached the shell",
-            )
-            self.assertNotEqual(result.returncode, 0)
-            # The malicious value is rejected as an invalid cap, not executed.
-            self.assertIn("is not a valid item ID cap", result.stdout)
-        finally:
-            if os.path.exists(marker):
-                os.unlink(marker)
-            os.rmdir(marker_dir)
-
-    def test_env_metacharacter_value_has_no_shell_side_effect(self):
-        self._run_with_payload("quote-breakout", on_cli=False)
-
-    def test_command_line_metacharacter_value_has_no_shell_side_effect(self):
-        self._run_with_payload("quote-breakout", on_cli=True)
-
 
 
 class KnownGoalParseTimeFastFailTests(_GuardAssertions):

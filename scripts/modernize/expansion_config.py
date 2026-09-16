@@ -65,12 +65,12 @@ FEATURE_FLAG_MIN = 0
 FEATURE_FLAG_MAX = 1
 
 # Item ID cap boundary the issue #6 starter *content* flag depends on.
-# scripts/generated_data/idspace.py owns these numbers (ITEM domain
-# `default_cap` / `ITEM_EXPANSION_FIRST`); they are restated here because
-# this tool is deliberately import-free (it runs as a bare script from
-# modern.mk, not as a package module). scripts/modernize/tests/
-# test_expansion_config.py asserts the two definitions stay equal, so a
-# future cap change cannot silently desynchronize them.
+# include/id_space.h owns these numbers (FE8_ITEM_ID_CAP's default /
+# ITEM_ID_EXPANSION_FIRST); they are restated here because this tool is
+# deliberately import-free (it runs as a bare script from modern.mk, not
+# as a package module). scripts/modernize/tests/test_expansion_config.py
+# asserts the two definitions stay equal, so a future cap change cannot
+# silently desynchronize them.
 ITEM_ID_DEFAULT_CAP = 0xCD
 ITEM_ID_EXPANSION_FIRST = 0xCE
 
@@ -381,8 +381,8 @@ def validate_item_id_cap(value) -> int:
 
     An empty/None value means "not overridden", i.e. the committed default
     cap in include/id_space.h. Anything else must be an integer in
-    [0, 0xFF] (the item ID storage width, see
-    scripts/generated_data/idspace.py's item domain).
+    [0, 0xFF] (the item ID storage width, see include/id_space.h's item
+    domain).
     """
     if value in (None, ""):
         return ITEM_ID_DEFAULT_CAP
@@ -395,7 +395,7 @@ def validate_item_id_cap(value) -> int:
     if not (0 <= cap <= 0xFF):
         raise ConfigError(
             f"FE8_ITEM_ID_CAP 0x{cap:X} out of range [0x00, 0xFF]; the item ID "
-            f"storage width is 8 bits (see scripts/generated_data/idspace.py)"
+            f"storage width is 8 bits (see include/id_space.h)"
         )
     return cap
 

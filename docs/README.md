@@ -16,7 +16,7 @@ the authoritative technical documentation and are checked by CI.
 | Build the project for the first time | [`quickstart.md`](quickstart.md) |
 | Understand what's actually supported (hosts, toolchains, targets) | [`framework-support.md`](framework-support.md) |
 | Get the architecture map before diving into source | [`architecture.md`](architecture.md) |
-| Author game content (characters/classes/items/etc.) | [`generated_data_tutorial.md`](generated_data_tutorial.md) |
+| Author game content (characters/classes/items/etc.) | Hand-edit `src/data_*.c` / `src/events_*.c` / `src/bmbattle.c` directly |
 | Enable/extend starter content, mechanics, or Threat Range QoL | [`starter_features.md`](starter_features.md) |
 | Author expansion-localized UI text/locales | [`localization.md`](localization.md) |
 | Add custom BGM / instrument maps | [`custom_bgm.md`](custom_bgm.md) |
@@ -34,8 +34,8 @@ the authoritative technical documentation and are checked by CI.
 1. [`quickstart.md`](quickstart.md) — install and boot-verify a build.
 2. [`config_identity.md`](config_identity.md) — configure identity, debug/release, starter flags, and locales.
 3. [`architecture.md`](architecture.md) — orient yourself.
-4. [`generated_data_tutorial.md`](generated_data_tutorial.md) and
-   [`localization.md`](localization.md) — author typed content and expansion UI text.
+4. [`localization.md`](localization.md) — author expansion UI text; game data
+   tables are hand-edited directly in their `src/data_*.c` files.
 5. [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — run host checks, both ROM gates, and record PR evidence.
 6. [`debugtools.md`](debugtools.md) and
    [`../tools/gba-playtest/README.md`](../tools/gba-playtest/README.md) — debug bounded runtime behavior.
@@ -61,8 +61,8 @@ numbers mark merged (closed) contracts only:
 
 | Subsystem | Public entry points | Reference |
 | --- | --- | --- |
-| Generated data authoring | JSON sources under `src/data/*.json` + table schemas in `scripts/generated_data/*/schema.py`; `make generated-data-check`/`generated-data-active-heal-check` | [`generated_data.md`](generated_data.md), [`generated_data_tutorial.md`](generated_data_tutorial.md) |
-| Typed IDs / caps (issue #10) | `include/id_space.h` (DEFAULT), `build/generated/data/id_space_active.h` (ACTIVE), `FE8_ITEM_ID_CAP` | [`id_space.md`](id_space.md), [`../reports/id_space_audit.md`](../reports/id_space_audit.md) |
+| Game data authoring | Hand-authored `src/data_*.c` / `src/events_*.c` / `src/bmbattle.c` tables | — |
+| Typed IDs / caps (issue #10) | `include/id_space.h`, `FE8_ITEM_ID_CAP` | [`id_space.md`](id_space.md), [`../reports/id_space_audit.md`](../reports/id_space_audit.md) |
 | Config / ROM identity | `struct ExpansionMetadata` (`include/expansion_metadata.h`), `EXPANSION_SAVE_COMPAT_EPOCH` | [`config_identity.md`](config_identity.md), [`save_format.md`](save_format.md) |
 | Debug-tools extension (issue #11) | Action-registration API (`include/expansion_debugtools.h`), `FE8_EXPANSION_DEBUGTOOLS_ENABLED` | [`debugtools.md`](debugtools.md) |
 | Starter features (issue #6) | Four default-off flags; `include/expansion_mechanics.h`; `include/expansion_starter_content.h`; danger-overlay menu | [`starter_features.md`](starter_features.md) |
@@ -108,10 +108,8 @@ and
 | [`archival-decomp.md`](archival-decomp.md) | Current, archival scope | Unsupported-for-releases decomp-matching workflow |
 | [`config_identity.md`](config_identity.md) | Current | Config surface + ROM identity fingerprint (issue #8) |
 | [`save_format.md`](save_format.md) | Current | Save format + compatibility gate (issue #2) |
-| [`id_space.md`](id_space.md) | Current | Typed-ID DEFAULT vs ACTIVE contract, cap switching (issue #10) |
+| [`id_space.md`](id_space.md) | Current | Typed-ID contract, cap switching (issue #10) |
 | [`debugtools.md`](debugtools.md) | Current | Debug-tools subsystem, merged (issue #11); see its "Remaining #11 scope" for the few narrow non-goals |
-| [`generated_data.md`](generated_data.md) | Current, reference | Full generated-data design reference (issue #5) |
-| [`generated_data_tutorial.md`](generated_data_tutorial.md) | Current, tutorial | Contributor-facing generated-data walkthrough |
 | [`starter_features.md`](starter_features.md) | Current | Four opt-in flags, typed mechanics/content API, QoL and matrices (issue #6) |
 | [`random_bgm.md`](random_bgm.md) | Current | `RandBgm`/`ContinueBgmBattle` map-BGM flags: seeded selection, hook points, save-compat |
 | [`localization.md`](localization.md) | Current | Stable locale/message IDs, authoring, prefs/UI, budgets and matrices (issue #18) |

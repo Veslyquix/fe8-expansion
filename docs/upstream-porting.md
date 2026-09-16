@@ -199,15 +199,14 @@ workflow gate described below.
 4. `python3 scripts/artifact_guard.py --revision HEAD`
 5. `python3 -m unittest discover -s scripts/modernize/tests -p test_build_default_lane.py -v`
 6. `python3 -m unittest discover -s scripts/modernize/tests -p test_quickstart.py -v`
-7. `make generated-data-check`
-8. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
-9. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
-10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
-11. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
+7. `make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs`
+8. `make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs`
+9. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=debug MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
+10. `FE8_ITEM_ID_CAP=0xCE FE8_EXPANSION_ITEMTEST=1 make expansion-modern-itemexpansion-check MODERN_CONFIG=release MODERN_ABI=aapcs EXPANSION_STARTER_CONTENT=1 EXPANSION_MECHANICS_HOOKS=1 EXPANSION_MECHANICS_SAMPLE=1`
 
-Gates 8-9 aggregate the complete modern debug/release ROM, linker, budget,
+Gates 7-8 aggregate the complete modern debug/release ROM, linker, budget,
 shift, save, starter-feature, and localization runtime matrices through
-`expansion-modern-linker-check`. Gates 10-11 reuse the item-expansion runtime
+`expansion-modern-linker-check`. Gates 9-10 reuse the item-expansion runtime
 probe at cap `0xCE`; the three issue #6 arguments make the same ROM also prove
 the typed starter-content record and both registered mechanics. No extra ROM
 build or gate is added.

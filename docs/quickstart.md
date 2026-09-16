@@ -62,9 +62,8 @@ On success you’ll see:
    [`starter_features.md`](starter_features.md), and
    [`localization.md`](localization.md). Invalid locale/flag/dependency
    combinations fail before compilation.
-3. Author typed game data under `src/data/` and expansion UI text under
-   `texts/expansion/`; never edit `build/generated/` output. Follow
-   [`generated_data_tutorial.md`](generated_data_tutorial.md).
+3. Author typed game data directly in `src/data_*.c` / `src/events_*.c` /
+   `src/bmbattle.c` and expansion UI text under `texts/expansion/`.
 4. Run the fast host checks from [`../CONTRIBUTING.md`](../CONTRIBUTING.md),
    then both debug/release `expansion-modern-linker-check` gates for runtime,
    save, budget, shifted-link, starter, and localization coverage.

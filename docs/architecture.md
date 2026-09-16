@@ -19,17 +19,12 @@ authority — this document does not restate their full contents.
   IWRAM pinning rationale) and [`docs/framework-support.md`](framework-support.md)
   (target/output matrix).
 
-## Generated data platform
+## Game data tables
 
-Structured JSON under `src/data/` (characters, classes, items, supports,
-terrain/movement/weapon-triangle mechanics, and the Chapter 2 slice) is
-validated and compiled to typed C89 by `scripts/generated_data/` (driven by
-`generated_data.mk`). This is the supported way to author FE8 content —
-hand-editing generated C under `build/generated/data/` is not.
-
-- Full design/reference: [`docs/generated_data.md`](generated_data.md)
-- Contributor walkthrough: [`docs/generated_data_tutorial.md`](generated_data_tutorial.md)
-- Discoverable table/record registry: [`reports/generated_data_manifest.md`](../reports/generated_data_manifest.md)
+Characters, classes, items, supports, terrain/movement/weapon-triangle
+mechanics, and the Chapter 2 slice are hand-authored directly as typed
+C89, each table in its own `src/data_*.c` / `src/events_*.c` /
+`src/bmbattle.c` file — there is no JSON intermediate or generation step.
 
 
 ## Starter extension layer (issue #6)
@@ -39,9 +34,9 @@ content-free sample mechanic, the Threat Range menu, and starter content.
 `include/expansion_mechanics.h` exposes the typed fixed-capacity battle-stat
 registry; callbacks receive a mutable subject plus a read-only opponent/config
 context, with explicit capacity, lifetime-copy, duplicate, length, disabled,
-and reentrancy behavior. The typed `ITEM_EXPANSION_CE` example is authored by
-the generated-data/content-text pipeline and requires both the hooks flag and
-an active item cap of at least `0xCE`. Full API, dependency, debug/release,
+and reentrancy behavior. The typed `ITEM_EXPANSION_CE` example is
+hand-authored directly in `src/data_items.c` and requires both the hooks
+flag and an active item cap of at least `0xCE`. Full API, dependency, debug/release,
 positive/negative runtime, budget, save, and legal boundaries:
 [`starter_features.md`](starter_features.md).
 

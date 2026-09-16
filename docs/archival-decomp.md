@@ -8,8 +8,8 @@
 > instead (see [`README.md`](../README.md) and
 > [`docs/quickstart.md`](quickstart.md)). If you want to add or change
 > gameplay/content in the supported framework, see
-> [`docs/architecture.md`](architecture.md) and
-> [`docs/generated_data_tutorial.md`](generated_data_tutorial.md) instead.
+> [`docs/architecture.md`](architecture.md) instead — game data tables are
+> hand-edited directly in their `src/data_*.c` files.
 >
 > The historical upstream project repository and its wiki
 > ([`fireemblem8u`](https://github.com/laqieer/fireemblem8u.git),

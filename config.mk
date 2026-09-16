@@ -153,11 +153,13 @@ EXPANSION_PSEUDO_LOCALE ?= 0
 #   EXPANSION_DANGER_OVERLAY_MENU -- expose the player-facing danger/range
 #                                    overlay map-menu surface (reuses the
 #                                    existing danger-zone range path).
-#   EXPANSION_STARTER_CONTENT     -- link the bundled generated-data content
-#                                    example: the framework-authored item
+#   EXPANSION_STARTER_CONTENT     -- link the bundled content example: the
+#                                    framework-authored item
 #                                    ITEM_EXPANSION_CE ("Sample Charm",
-#                                    src/data/items_expansion.json) and its
-#                                    mechanic, registered through the public
+#                                    src/data_items.c +
+#                                    src/data/items_expansion_content_text.h)
+#                                    and its mechanic, registered through
+#                                    the public
 #                                    hook registry. Requires
 #                                    EXPANSION_MECHANICS_HOOKS=1 AND an
 #                                    expanded item ID cap
