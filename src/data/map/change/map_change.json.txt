@@ -1,7 +1,0 @@
-{{ doNotModifyHeader }}
-
-## for change in changes
-    .byte {{ change.id }}, {{ change.x }}, {{ change.y }}, {{ change.w }}, {{ change.h }}, 0, 0, 0
-    .word {{ change.tiles }}
-## endfor
-    .word 0xff, 0, 0

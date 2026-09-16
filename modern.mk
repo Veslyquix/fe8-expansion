@@ -808,16 +808,16 @@ MODERN_ALL_DEPS := $(MODERN_ALL_C_OBJECTS:.o=.d) $(MODERN_ALL_DATA_OBJECTS:.o=.d
 MODERN_ALL_DATA_ASSET_DEPS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_DATA_C_SOURCES:.c=.assets.d))
 
 # A related but distinct first-invocation gap: ordinary (non-data)
-# MODERN_ALL_C_SOURCES files can #include a *generated* header that is not
-# an INCBIN asset (e.g. src/chapterdata.c includes the JSON-generated
-# src/data/chapter_settings.h from json_data_rules.mk). scaninc cannot
-# discover this: it silently drops any #include it cannot fopen() on disk
-# (see tools/scaninc/scaninc.cpp), so it never reports a not-yet-generated
-# header at all. GCC/cpp's own "-MM -MG" ("assume missing headers are
-# generated") is the correct tool here instead -- it is what the legacy
-# Makefile's own $(MAKEDEP)/-MG step already relies on for exactly this
-# case. One dependency file per normal C source, targeting its .o directly
-# (there is no .pre.c stage for these sources).
+# MODERN_ALL_C_SOURCES files can #include a header that does not exist yet
+# on a clean tree (e.g. a build-local generated header gated behind an
+# opt-in flag). scaninc cannot discover this: it silently drops any
+# #include it cannot fopen() on disk (see tools/scaninc/scaninc.cpp), so it
+# never reports a not-yet-generated header at all. GCC/cpp's own "-MM -MG"
+# ("assume missing headers are generated") is the correct tool here
+# instead -- it is what the legacy Makefile's own $(MAKEDEP)/-MG step
+# already relies on for exactly this case. One dependency file per normal
+# C source, targeting its .o directly (there is no .pre.c stage for these
+# sources).
 MODERN_ALL_C_HEADER_DEPS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_ALL_C_SOURCES:.c=.headers.d))
 
 # Only these goals ever touch the full data/normal C source lists;
@@ -1347,10 +1347,10 @@ $(MODERN_ALL_C_HEADER_DEPS): | expansion-modern-toolchain-check
 # `#ifdef MODERN`) and is only ever resolved through this Makefile's own
 # -I$(MODERN_LOCALIZATION_GENERATED_DIR) (added above, guarded by
 # MODERN_LOCALIZATION_AVAILABLE) -- never through a same-directory or
-# repo-root-relative #include path the way json_data_rules.mk's
-# src/data/chapter_settings.h is (see the MODERN_ALL_C_HEADER_DEPS comment
-# above for why that legitimately-relative case works with plain "-MM
-# -MG"). On a cold/clean build the header does not exist on disk yet, so
+# repo-root-relative #include path the way an ordinary committed header
+# is (see the MODERN_ALL_C_HEADER_DEPS comment above for why that
+# legitimately-relative case works with plain "-MM -MG"). On a cold/clean
+# build the header does not exist on disk yet, so
 # GCC cannot resolve it through that extra -I search path at all: per
 # GCC's documented -MG behavior, a header it cannot find is recorded using
 # exactly the string written in the #include directive, with no directory
