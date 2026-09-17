@@ -419,6 +419,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
                            show_heal_amount=0,
                            cannot_crit_weps=0,
                            skillsystem=0,
+                           war_room=0,
                            item_id_cap=None):
     """Validate the three starter-feature flags plus their one dependency.
 
@@ -478,6 +479,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
     continue_bgm_battle_flag = validate_feature_flag("CONTINUE_BGM_BATTLE", continue_bgm_battle)
     danger_radius_flag = validate_feature_flag("DANGER_RADIUS", danger_radius)
     heal_amount_flag = validate_feature_flag("SHOW_HEAL_AMOUNT", show_heal_amount)
+    war_room_flag = validate_feature_flag("WAR_ROOM", war_room)
     cap = validate_item_id_cap(item_id_cap)
     if sample and not hooks:
         raise ConfigError(
@@ -533,7 +535,7 @@ def validate_feature_flags(mechanics_hooks, mechanics_sample, danger_overlay_men
             dialogue_box, danger_radius_flag, null_bossai_mov_flag, rng_randomizer_flag, l_cycle_flag,
             movearrow_hack_flag,
             custom_formulas_flag, mode_select_flag, heal_amount_flag, cannot_crit_weps_flag,
-            skillsystem_flag)
+            skillsystem_flag, war_room_flag)
 
 
 def validate_rom_size(value) -> int:
@@ -786,6 +788,7 @@ class ExpansionIdentity:
     continue_bgm_battle: int = 0
     danger_radius: int = 0
     show_heal_amount: int = 0
+    war_room: int = 0
     config_fingerprint: str = field(default="")
 
     @property
@@ -881,6 +884,7 @@ class ExpansionIdentity:
                 "continue_bgm_battle": self.continue_bgm_battle,
                 "danger_radius": self.danger_radius,
                 "show_heal_amount": self.show_heal_amount,
+                "war_room": self.war_room,
             },
         }
 
@@ -964,6 +968,7 @@ def load_identity(
     continue_bgm_battle=None,
     danger_radius=None,
     show_heal_amount=None,
+    war_room=None,
     item_id_cap=None,
 ) -> ExpansionIdentity:
     """Parse, validate, and resolve a complete ExpansionIdentity.
@@ -1033,7 +1038,7 @@ def load_identity(
      resolved_dialogue_box, resolved_danger_radius, resolved_null_bossai_mov,
      resolved_rng_randomizer, resolved_l_cycle, resolved_movearrow_hack, resolved_custom_formulas,
      resolved_mode_select, resolved_show_heal_amount, resolved_cannot_crit_weps,
-     resolved_skillsystem) = validate_feature_flags(
+     resolved_skillsystem, resolved_war_room) = validate_feature_flags(
         mechanics_hooks
         if mechanics_hooks not in (None, "")
         else cfg.get("EXPANSION_MECHANICS_HOOKS", "0"),
@@ -1187,6 +1192,9 @@ def load_identity(
         skillsystem
         if skillsystem not in (None, "")
         else cfg.get("SKILLSYSTEM", "0"),
+        war_room
+        if war_room not in (None, "")
+        else cfg.get("WAR_ROOM", "0"),
         item_id_cap,
     )
     resolved_rom_size = validate_rom_size(rom_size)
@@ -1267,6 +1275,7 @@ def load_identity(
         continue_bgm_battle=resolved_continue_bgm_battle,
         danger_radius=resolved_danger_radius,
         show_heal_amount=resolved_show_heal_amount,
+        war_room=resolved_war_room,
     )
     identity.config_fingerprint = compute_fingerprint(identity.fingerprint_fields())
     return identity
@@ -1560,6 +1569,11 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="override WORLDMAP_REWORK (0 or 1)",
     )
     parser.add_argument(
+        "--war-room",
+        default=None,
+        help="override WAR_ROOM (0 or 1)",
+    )
+    parser.add_argument(
         "--rand-bgm",
         default=None,
         help="override RAND_BGM (0 or 1)",
@@ -1722,6 +1736,7 @@ def main(argv=None) -> int:
             anims_fast_forward=args.anims_fast_forward,
             nimap2=args.nimap2,
             worldmap_rework=args.worldmap_rework,
+            war_room=args.war_room,
             rand_bgm=args.rand_bgm,
             continue_bgm_battle=args.continue_bgm_battle,
             danger_radius=args.danger_radius,

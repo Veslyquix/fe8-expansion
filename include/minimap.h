@@ -34,7 +34,7 @@
 // ??? Minimap_Main(???);
 void StartMinimapPlayerPhase(void);
 void StartMinimapPrepPhase(ProcPtr proc);
-// ??? DrawMinimap(???);
+void DrawMinimap(int chapterId, u16* vram, int palId);
 
 extern struct ProcCmd gProcScr_Minimap[];
 extern u8 gGfx_MinimapTiles[];

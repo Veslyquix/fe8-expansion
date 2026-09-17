@@ -20,6 +20,10 @@ enum game_ctrl_proc_lable {
     LGAMECTRL_EXEC_ENDING_SCENE = 17,
 
     LGAMECTRL_ERASE_SAVE = 18,
+
+    LGAMECTRL_MODE_SELECT = 20,      /* FE8_WAR_ROOM: game-mode select screen, in place of jumping straight to LGAMECTRL_EXEC_SAVEMENU */
+    LGAMECTRL_WAR_ROOM_EXEC_BM = 21, /* FE8_WAR_ROOM: throwaway War Room battle -- bypasses the world map and the ordinary post-chapter save menu, returns straight to LGAMECTRL_MODE_SELECT */
+
     LGAMECTRL_POST_TITLE_IDLE = 26
 };
 
@@ -67,6 +71,9 @@ void GameControl_StartRuinEvent(ProcPtr proc);
 void CallGameEndingEvent(ProcPtr);
 void GameControl_RememberChapterId(struct GameCtrlProc *);
 void GameControl_RestoreChapterId(struct GameCtrlProc *);
+#if FE8_WAR_ROOM
+void GameControl_WarRoomBattleEnded(struct GameCtrlProc *);
+#endif
 void _SetGameEndFlag(ProcPtr);
 void StartGame(void);
 struct GameCtrlProc * GetGameControl(void);

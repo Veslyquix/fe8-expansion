@@ -24,6 +24,7 @@
 #include "expansion_debugtools.h"
 #include "expansion_language_menu.h"
 #include "expansion_itemtest.h"
+#include "warroom.h"
 
 /* Reused verbatim from AgbMain's own clean-boot RNG seed (src/main.c) --
  * reseeding to this exact constant immediately before the debug hub's
@@ -256,6 +257,25 @@ PROC_LABEL(LGAMECTRL_ERASE_SAVE),
     PROC_REPEAT(WaitForFade),
     PROC_CALL(EndMuralBackground),
     PROC_GOTO(LGAMECTRL_GAME_INTRO_UI),
+
+#if FE8_WAR_ROOM
+PROC_LABEL(LGAMECTRL_MODE_SELECT),
+    PROC_CALL(GameControl_EnableSoundEffects),
+    PROC_CALL(StartWarRoomMainMenu),
+    PROC_YIELD,
+    PROC_GOTO(LGAMECTRL_MODE_SELECT), /* defensive fallback loop -- StartWarRoomMainMenu
+                                        * only returns after having already Proc_Goto'd
+                                        * this proc elsewhere (Campaign/Link Arena/War
+                                        * Room chapter chosen); see src/warroom.c. */
+
+PROC_LABEL(LGAMECTRL_WAR_ROOM_EXEC_BM),
+    PROC_CALL(GameControl_RememberChapterId),
+    PROC_YIELD,
+    PROC_CALL(StartBattleMap),
+    PROC_YIELD,
+    PROC_CALL(GameControl_WarRoomBattleEnded),
+    PROC_GOTO(LGAMECTRL_MODE_SELECT),
+#endif
 
     PROC_END,
 };
@@ -592,7 +612,11 @@ void GameControl_PostIntro(struct GameCtrlProc * proc)
             break;
         }
 
+#if FE8_WAR_ROOM
+        Proc_Goto(proc, LGAMECTRL_MODE_SELECT);
+#else
         Proc_Goto(proc, LGAMECTRL_EXEC_SAVEMENU);
+#endif
         GameControl_FadeBgmVolume(proc);
         break;
 
@@ -878,6 +902,15 @@ void GameControl_RestoreChapterId(struct GameCtrlProc * proc)
 {
     gPlaySt.chapterIndex = proc->ch_index;
 }
+
+#if FE8_WAR_ROOM
+void GameControl_WarRoomBattleEnded(struct GameCtrlProc * proc)
+{
+    (void)proc;
+
+    gPlaySt.warRoomStateBits &= ~WARROOM_FLAG_ACTIVE;
+}
+#endif
 
 void _SetGameEndFlag(ProcPtr proc)
 {

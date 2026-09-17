@@ -41645,3 +41645,25 @@ Seraph Knight[.][X]
 ## MSG_CLASS_SERAPH_KNIGHT_DESC
 A saintly flier who blends martial[LF]
 arms, magic, and staves.[.][X]
+
+## MSG_MAINMENU_CAMPAIGN
+Campaign[X]
+## MSG_MAINMENU_WAR_ROOM
+War Room[X]
+## MSG_MAINMENU_BATTLE_TOWER
+Battle Tower[X]
+## MSG_MAINMENU_DESIGN_ROOM
+Design Room[.][X]
+## MSG_MAINMENU_VS
+VS[X]
+## MSG_MAINMENU_RECORDS
+Records[.][X]
+## MSG_MAINMENU_SHOP
+Shop[X]
+## MSG_MAINMENU_SOUND_ROOM
+Sound Room[X]
+## MSG_MAINMENU_LINK_ARENA
+Link Arena[X]
+
+## MSG_WARROOM_TITLE
+War Room[X]

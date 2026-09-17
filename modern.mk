@@ -296,6 +296,9 @@ endif
 ifeq ($(GAME_RANK),1)
 MODERN_DEFINE_FLAGS += -DFE8_GAME_RANK=1
 endif
+ifeq ($(WAR_ROOM),1)
+MODERN_DEFINE_FLAGS += -DFE8_WAR_ROOM=1
+endif
 ifeq ($(CO_POWERS),1)
 MODERN_DEFINE_FLAGS += -DFE8_CO_POWERS=1
 endif
@@ -1470,6 +1473,7 @@ ifneq (,$(MODERN_EXPANSION_CONFIG_AVAILABLE))
 		--worldmap-rework "$(WORLDMAP_REWORK)" \
 		--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 		--item-id-cap "$(FE8_ITEM_ID_CAP)" \
+		--war-room "$(WAR_ROOM)" \
 		--output-dir "$(MODERN_GENERATED_DIR)"
 else
 	@printf '%s\n' '{"expansion_config_available": false}' > "$@"
@@ -1575,6 +1579,7 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	--worldmap-rework "$(WORLDMAP_REWORK)" \
 	--show-heal-amount "$(SHOW_HEAL_AMOUNT)" \
 	--item-id-cap "$(FE8_ITEM_ID_CAP)" \
+	--war-room "$(WAR_ROOM)" \
 	--save-compat-epoch "$(EXPANSION_SAVE_COMPAT_EPOCH)" 2>&1)
   ifneq (,$(filter error:%,$(MODERN_EXPANSION_CONFIG_RESOLVE)))
     $(error $(MODERN_EXPANSION_CONFIG_RESOLVE))
@@ -1687,7 +1692,8 @@ ifneq (,$(filter $(MODERN_CONFIG_RESOLVE_GOALS),$(MAKECMDGOALS)))
 	-DFE8_AW2_ASSETS=$(AW2_ASSETS) \
 	-DFE8_ANIMS_FAST_FORWARD=$(ANIMS_FAST_FORWARD) \
 	-DFE8_NIMAP2=$(NIMAP2) \
-	-DFE8_WORLDMAP_REWORK=$(WORLDMAP_REWORK)
+	-DFE8_WORLDMAP_REWORK=$(WORLDMAP_REWORK) \
+	-DFE8_WAR_ROOM=$(WAR_ROOM)
 
   # Internal modern-build provenance discriminator (NOT a user feature flag,
   # NOT folded into MODERN_CONFIG_FINGERPRINT / save identity): defined for
@@ -1894,6 +1900,7 @@ ifneq (,$(MODERN_EXPANSION_DEFINES_ACTIVE))
 		printf '%s\n' 'anims_fast_forward=$(ANIMS_FAST_FORWARD)'; \
 		printf '%s\n' 'nimap2=$(NIMAP2)'; \
 		printf '%s\n' 'worldmap_rework=$(WORLDMAP_REWORK)'; \
+		printf '%s\n' 'war_room=$(WAR_ROOM)'; \
 		printf '%s\n' 'show_heal_amount=$(SHOW_HEAL_AMOUNT)'; \
 		printf '%s\n' 'modern_build=1'; \
 		printf '%s\n' 'item_id_cap=$(FE8_ITEM_ID_CAP)'; \
