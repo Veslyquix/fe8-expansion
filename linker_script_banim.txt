@@ -1478,7 +1478,6 @@ banim/banim_fifd_mg1_2_motion.o|.data.script>lz
 banim/banim_fifd_mg1_2_modes.bin
 
 # ---- soldier (FE8_NEW_ANIMS) ----
-# ---- soldier (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newsoldier_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newsoldier_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newsoldier_sword_sheet_2.4bpp.lz
@@ -1697,6 +1696,7 @@ graphics/banim/banim_newcavalier_bow_sheet_0.4bpp.lz
 graphics/banim/banim_newcavalier_bow_sheet_1.4bpp.lz
 graphics/banim/banim_newcavalier_bow_sheet_2.4bpp.lz
 graphics/banim/banim_newcavalier_bow_sheet_3.4bpp.lz
+graphics/banim/banim_newcavalier_bow_sheet_4.4bpp.lz
 graphics/banim/banim_newcavalier_bow.agbpal.lz
 banim/banim_newcavalier_bow_oam.bin.lz
 banim/banim_newcavalier_bow_script.o|.data.script>lz
@@ -1740,6 +1740,7 @@ graphics/banim/banim_newpegasus_axe_sheet_4.4bpp.lz
 graphics/banim/banim_newpegasus_axe_sheet_5.4bpp.lz
 graphics/banim/banim_newpegasus_axe_sheet_6.4bpp.lz
 graphics/banim/banim_newpegasus_axe_sheet_7.4bpp.lz
+graphics/banim/banim_newpegasus_axe_sheet_8.4bpp.lz
 graphics/banim/banim_newpegasus_axe.agbpal.lz
 banim/banim_newpegasus_axe_oam.bin.lz
 banim/banim_newpegasus_axe_script.o|.data.script>lz
@@ -1763,7 +1764,6 @@ graphics/banim/banim_newpegasus_unarmed.agbpal.lz
 banim/banim_newpegasus_unarmed_oam.bin.lz
 banim/banim_newpegasus_unarmed_script.o|.data.script>lz
 banim/banim_newpegasus_unarmed_modes.bin
-
 # ---- derarcm (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newderarcm_bow_sheet_0.4bpp.lz
 graphics/banim/banim_newderarcm_bow_sheet_1.4bpp.lz
@@ -1812,6 +1812,10 @@ graphics/banim/banim_newlynlord_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newlynlord_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newlynlord_sword_sheet_2.4bpp.lz
 graphics/banim/banim_newlynlord_sword_sheet_3.4bpp.lz
+graphics/banim/banim_newlynlord_sword_sheet_4.4bpp.lz
+graphics/banim/banim_newlynlord_sword_sheet_5.4bpp.lz
+graphics/banim/banim_newlynlord_sword_sheet_6.4bpp.lz
+graphics/banim/banim_newlynlord_sword_sheet_7.4bpp.lz
 graphics/banim/banim_newlynlord_sword.agbpal.lz
 banim/banim_newlynlord_sword_oam.bin.lz
 banim/banim_newlynlord_sword_script.o|.data.script>lz
@@ -1899,6 +1903,7 @@ graphics/banim/banim_newnomtrpf_unarmed.agbpal.lz
 banim/banim_newnomtrpf_unarmed_oam.bin.lz
 banim/banim_newnomtrpf_unarmed_script.o|.data.script>lz
 banim/banim_newnomtrpf_unarmed_modes.bin
+# ---- swbf (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newswbf_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newswbf_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newswbf_sword_sheet_2.4bpp.lz
@@ -1932,6 +1937,7 @@ graphics/banim/banim_newswbf_magic.agbpal.lz
 banim/banim_newswbf_magic_oam.bin.lz
 banim/banim_newswbf_magic_script.o|.data.script>lz
 banim/banim_newswbf_magic_modes.bin
+# ---- swbm (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newswbm_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newswbm_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newswbm_sword_sheet_2.4bpp.lz
@@ -1965,6 +1971,7 @@ graphics/banim/banim_newswbm_magic.agbpal.lz
 banim/banim_newswbm_magic_oam.bin.lz
 banim/banim_newswbm_magic_script.o|.data.script>lz
 banim/banim_newswbm_magic_modes.bin
+# ---- leob (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newleob_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newleob_axe_sheet_1.4bpp.lz
 graphics/banim/banim_newleob_axe_sheet_2.4bpp.lz
@@ -1987,6 +1994,7 @@ graphics/banim/banim_newleob_unarmed.agbpal.lz
 banim/banim_newleob_unarmed_oam.bin.lz
 banim/banim_newleob_unarmed_script.o|.data.script>lz
 banim/banim_newleob_unarmed_modes.bin
+# ---- gmah (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newgmah_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newgmah_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newgmah_lance_sheet_2.4bpp.lz
@@ -2036,6 +2044,7 @@ graphics/banim/banim_newgmah_monster.agbpal.lz
 banim/banim_newgmah_monster_oam.bin.lz
 banim/banim_newgmah_monster_script.o|.data.script>lz
 banim/banim_newgmah_monster_modes.bin
+# ---- arcn (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newarcn_staff_sheet_0.4bpp.lz
 graphics/banim/banim_newarcn_staff_sheet_1.4bpp.lz
 graphics/banim/banim_newarcn_staff.agbpal.lz
@@ -2049,6 +2058,7 @@ graphics/banim/banim_newarcn_magic.agbpal.lz
 banim/banim_newarcn_magic_oam.bin.lz
 banim/banim_newarcn_magic_script.o|.data.script>lz
 banim/banim_newarcn_magic_modes.bin
+# ---- halb (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhalb_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newhalb_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newhalb_lance_sheet_2.4bpp.lz
@@ -2078,6 +2088,7 @@ graphics/banim/banim_newhalb_unarmed.agbpal.lz
 banim/banim_newhalb_unarmed_oam.bin.lz
 banim/banim_newhalb_unarmed_script.o|.data.script>lz
 banim/banim_newhalb_unarmed_modes.bin
+# ---- miko (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmiko_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newmiko_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newmiko_lance_sheet_2.4bpp.lz
@@ -2113,6 +2124,7 @@ graphics/banim/banim_newmiko_unarmed.agbpal.lz
 banim/banim_newmiko_unarmed_oam.bin.lz
 banim/banim_newmiko_unarmed_script.o|.data.script>lz
 banim/banim_newmiko_unarmed_modes.bin
+# ---- wcl (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newwcl_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newwcl_axe_sheet_1.4bpp.lz
 graphics/banim/banim_newwcl_axe_sheet_2.4bpp.lz
@@ -2132,6 +2144,7 @@ graphics/banim/banim_newwcl_magic.agbpal.lz
 banim/banim_newwcl_magic_oam.bin.lz
 banim/banim_newwcl_magic_script.o|.data.script>lz
 banim/banim_newwcl_magic_modes.bin
+# ---- wtch (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newwtch_staff_sheet_0.4bpp.lz
 graphics/banim/banim_newwtch_staff_sheet_1.4bpp.lz
 graphics/banim/banim_newwtch_staff.agbpal.lz
@@ -2146,6 +2159,7 @@ graphics/banim/banim_newwtch_magic.agbpal.lz
 banim/banim_newwtch_magic_oam.bin.lz
 banim/banim_newwtch_magic_script.o|.data.script>lz
 banim/banim_newwtch_magic_modes.bin
+# ---- angl (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newangl_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newangl_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newangl_magic_sheet_2.4bpp.lz
@@ -2155,6 +2169,7 @@ graphics/banim/banim_newangl_magic.agbpal.lz
 banim/banim_newangl_magic_oam.bin.lz
 banim/banim_newangl_magic_script.o|.data.script>lz
 banim/banim_newangl_magic_modes.bin
+# ---- brgh (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newbrgh_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newbrgh_axe_sheet_1.4bpp.lz
 graphics/banim/banim_newbrgh_axe_sheet_2.4bpp.lz
@@ -2175,6 +2190,7 @@ graphics/banim/banim_newbrgh_unarmed.agbpal.lz
 banim/banim_newbrgh_unarmed_oam.bin.lz
 banim/banim_newbrgh_unarmed_script.o|.data.script>lz
 banim/banim_newbrgh_unarmed_modes.bin
+# ---- arcd (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newarcd_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newarcd_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newarcd_magic_sheet_2.4bpp.lz
@@ -2183,6 +2199,7 @@ graphics/banim/banim_newarcd_magic.agbpal.lz
 banim/banim_newarcd_magic_oam.bin.lz
 banim/banim_newarcd_magic_script.o|.data.script>lz
 banim/banim_newarcd_magic_modes.bin
+# ---- magc (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmagc_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newmagc_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newmagc_magic_sheet_2.4bpp.lz
@@ -2196,6 +2213,7 @@ graphics/banim/banim_newmagc_unarmed.agbpal.lz
 banim/banim_newmagc_unarmed_oam.bin.lz
 banim/banim_newmagc_unarmed_script.o|.data.script>lz
 banim/banim_newmagc_unarmed_modes.bin
+# ---- oclt (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newoclt_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newoclt_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newoclt_magic_sheet_2.4bpp.lz
@@ -2208,6 +2226,7 @@ graphics/banim/banim_newoclt_magic.agbpal.lz
 banim/banim_newoclt_magic_oam.bin.lz
 banim/banim_newoclt_magic_script.o|.data.script>lz
 banim/banim_newoclt_magic_modes.bin
+# ---- bldr (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newbldr_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newbldr_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newbldr_sword_sheet_2.4bpp.lz
@@ -2223,6 +2242,7 @@ graphics/banim/banim_newbldr_unarmed.agbpal.lz
 banim/banim_newbldr_unarmed_oam.bin.lz
 banim/banim_newbldr_unarmed_script.o|.data.script>lz
 banim/banim_newbldr_unarmed_modes.bin
+# ---- hrbg (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhrbg_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newhrbg_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newhrbg_sword_sheet_2.4bpp.lz
@@ -2283,66 +2303,7 @@ graphics/banim/banim_newhrbg_unarmed.agbpal.lz
 banim/banim_newhrbg_unarmed_oam.bin.lz
 banim/banim_newhrbg_unarmed_script.o|.data.script>lz
 banim/banim_newhrbg_unarmed_modes.bin
-graphics/banim/banim_newhrba_sword_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_sword_sheet_1.4bpp.lz
-graphics/banim/banim_newhrba_sword_sheet_2.4bpp.lz
-graphics/banim/banim_newhrba_sword_sheet_3.4bpp.lz
-graphics/banim/banim_newhrba_sword_sheet_4.4bpp.lz
-graphics/banim/banim_newhrba_sword_sheet_5.4bpp.lz
-graphics/banim/banim_newhrba_sword_sheet_6.4bpp.lz
-graphics/banim/banim_newhrba_sword.agbpal.lz
-banim/banim_newhrba_sword_oam.bin.lz
-banim/banim_newhrba_sword_script.o|.data.script>lz
-banim/banim_newhrba_sword_modes.bin
-graphics/banim/banim_newhrba_lance_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_lance_sheet_1.4bpp.lz
-graphics/banim/banim_newhrba_lance_sheet_2.4bpp.lz
-graphics/banim/banim_newhrba_lance_sheet_3.4bpp.lz
-graphics/banim/banim_newhrba_lance_sheet_4.4bpp.lz
-graphics/banim/banim_newhrba_lance_sheet_5.4bpp.lz
-graphics/banim/banim_newhrba_lance_sheet_6.4bpp.lz
-graphics/banim/banim_newhrba_lance.agbpal.lz
-banim/banim_newhrba_lance_oam.bin.lz
-banim/banim_newhrba_lance_script.o|.data.script>lz
-banim/banim_newhrba_lance_modes.bin
-graphics/banim/banim_newhrba_axe_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_1.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_2.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_3.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_4.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_5.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_6.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_7.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_8.4bpp.lz
-graphics/banim/banim_newhrba_axe_sheet_9.4bpp.lz
-graphics/banim/banim_newhrba_axe.agbpal.lz
-banim/banim_newhrba_axe_oam.bin.lz
-banim/banim_newhrba_axe_script.o|.data.script>lz
-banim/banim_newhrba_axe_modes.bin
-graphics/banim/banim_newhrba_handaxe_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_handaxe.agbpal.lz
-banim/banim_newhrba_handaxe_oam.bin.lz
-banim/banim_newhrba_handaxe_script.o|.data.script>lz
-banim/banim_newhrba_handaxe_modes.bin
-graphics/banim/banim_newhrba_staff_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_staff.agbpal.lz
-banim/banim_newhrba_staff_oam.bin.lz
-banim/banim_newhrba_staff_script.o|.data.script>lz
-banim/banim_newhrba_staff_modes.bin
-graphics/banim/banim_newhrba_magic_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_magic_sheet_1.4bpp.lz
-graphics/banim/banim_newhrba_magic_sheet_2.4bpp.lz
-graphics/banim/banim_newhrba_magic_sheet_3.4bpp.lz
-graphics/banim/banim_newhrba_magic_sheet_4.4bpp.lz
-graphics/banim/banim_newhrba_magic.agbpal.lz
-banim/banim_newhrba_magic_oam.bin.lz
-banim/banim_newhrba_magic_script.o|.data.script>lz
-banim/banim_newhrba_magic_modes.bin
-graphics/banim/banim_newhrba_unarmed_sheet_0.4bpp.lz
-graphics/banim/banim_newhrba_unarmed.agbpal.lz
-banim/banim_newhrba_unarmed_oam.bin.lz
-banim/banim_newhrba_unarmed_script.o|.data.script>lz
-banim/banim_newhrba_unarmed_modes.bin
+# ---- hvin (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhvin_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newhvin_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newhvin_sword_sheet_2.4bpp.lz
@@ -2403,6 +2364,7 @@ graphics/banim/banim_newhvin_unarmed.agbpal.lz
 banim/banim_newhvin_unarmed_oam.bin.lz
 banim/banim_newhvin_unarmed_script.o|.data.script>lz
 banim/banim_newhvin_unarmed_modes.bin
+# ---- baro (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newbaro_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newbaro_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newbaro_sword_sheet_2.4bpp.lz
@@ -2461,6 +2423,7 @@ graphics/banim/banim_newbaro_magic.agbpal.lz
 banim/banim_newbaro_magic_oam.bin.lz
 banim/banim_newbaro_magic_script.o|.data.script>lz
 banim/banim_newbaro_magic_modes.bin
+# ---- shgn (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newshgn_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newshgn_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newshgn_sword_sheet_2.4bpp.lz
@@ -2530,6 +2493,7 @@ graphics/banim/banim_newshgn_unarmed.agbpal.lz
 banim/banim_newshgn_unarmed_oam.bin.lz
 banim/banim_newshgn_unarmed_script.o|.data.script>lz
 banim/banim_newshgn_unarmed_modes.bin
+# ---- bdrg (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newbdrg_unarmed_sheet_0.4bpp.lz
 graphics/banim/banim_newbdrg_unarmed.agbpal.lz
 banim/banim_newbdrg_unarmed_oam.bin.lz
@@ -2547,6 +2511,7 @@ graphics/banim/banim_newbdrg_dragonstone.agbpal.lz
 banim/banim_newbdrg_dragonstone_oam.bin.lz
 banim/banim_newbdrg_dragonstone_script.o|.data.script>lz
 banim/banim_newbdrg_dragonstone_modes.bin
+# ---- djin (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newdjin_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newdjin_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newdjin_sword_sheet_2.4bpp.lz
@@ -2588,6 +2553,7 @@ graphics/banim/banim_newdjin_supply.agbpal.lz
 banim/banim_newdjin_supply_oam.bin.lz
 banim/banim_newdjin_supply_script.o|.data.script>lz
 banim/banim_newdjin_supply_modes.bin
+# ---- larm (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newlarm_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newlarm_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newlarm_sword_sheet_2.4bpp.lz
@@ -2621,6 +2587,7 @@ graphics/banim/banim_newlarm_unarmed.agbpal.lz
 banim/banim_newlarm_unarmed_oam.bin.lz
 banim/banim_newlarm_unarmed_script.o|.data.script>lz
 banim/banim_newlarm_unarmed_modes.bin
+# ---- fell (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newfell_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newfell_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newfell_magic_sheet_2.4bpp.lz
@@ -2645,6 +2612,7 @@ graphics/banim/banim_newfell_monster.agbpal.lz
 banim/banim_newfell_monster_oam.bin.lz
 banim/banim_newfell_monster_script.o|.data.script>lz
 banim/banim_newfell_monster_modes.bin
+# ---- samf (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newsamf_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newsamf_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newsamf_sword_sheet_2.4bpp.lz
@@ -2661,6 +2629,7 @@ graphics/banim/banim_newsamf_unarmed.agbpal.lz
 banim/banim_newsamf_unarmed_oam.bin.lz
 banim/banim_newsamf_unarmed_script.o|.data.script>lz
 banim/banim_newsamf_unarmed_modes.bin
+# ---- mnja (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmnja_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newmnja_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newmnja_sword_sheet_2.4bpp.lz
@@ -2681,6 +2650,7 @@ graphics/banim/banim_newmnja_unarmed.agbpal.lz
 banim/banim_newmnja_unarmed_oam.bin.lz
 banim/banim_newmnja_unarmed_script.o|.data.script>lz
 banim/banim_newmnja_unarmed_modes.bin
+# ---- hnja (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhnja_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newhnja_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newhnja_sword_sheet_2.4bpp.lz
@@ -2699,6 +2669,7 @@ graphics/banim/banim_newhnja_unarmed.agbpal.lz
 banim/banim_newhnja_unarmed_oam.bin.lz
 banim/banim_newhnja_unarmed_script.o|.data.script>lz
 banim/banim_newhnja_unarmed_modes.bin
+# ---- myff (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmyff_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newmyff_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newmyff_sword_sheet_2.4bpp.lz
@@ -2715,6 +2686,7 @@ graphics/banim/banim_newmyff_unarmed.agbpal.lz
 banim/banim_newmyff_unarmed_oam.bin.lz
 banim/banim_newmyff_unarmed_script.o|.data.script>lz
 banim/banim_newmyff_unarmed_modes.bin
+# ---- myfm (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmyfm_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newmyfm_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newmyfm_sword_sheet_2.4bpp.lz
@@ -2731,6 +2703,7 @@ graphics/banim/banim_newmyfm_unarmed.agbpal.lz
 banim/banim_newmyfm_unarmed_oam.bin.lz
 banim/banim_newmyfm_unarmed_script.o|.data.script>lz
 banim/banim_newmyfm_unarmed_modes.bin
+# ---- kata (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newkata_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newkata_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newkata_sword_sheet_2.4bpp.lz
@@ -2745,6 +2718,7 @@ graphics/banim/banim_newkata_unarmed.agbpal.lz
 banim/banim_newkata_unarmed_oam.bin.lz
 banim/banim_newkata_unarmed_script.o|.data.script>lz
 banim/banim_newkata_unarmed_modes.bin
+# ---- thug (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newthug_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newthug_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newthug_sword.agbpal.lz
@@ -2756,6 +2730,7 @@ graphics/banim/banim_newthug_unarmed.agbpal.lz
 banim/banim_newthug_unarmed_oam.bin.lz
 banim/banim_newthug_unarmed_script.o|.data.script>lz
 banim/banim_newthug_unarmed_modes.bin
+# ---- drdf (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newdrdf_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newdrdf_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newdrdf_sword_sheet_2.4bpp.lz
@@ -2778,6 +2753,7 @@ graphics/banim/banim_newdrdf_unarmed.agbpal.lz
 banim/banim_newdrdf_unarmed_oam.bin.lz
 banim/banim_newdrdf_unarmed_script.o|.data.script>lz
 banim/banim_newdrdf_unarmed_modes.bin
+# ---- firs (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newfirs_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newfirs_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newfirs_sword_sheet_2.4bpp.lz
@@ -2805,6 +2781,7 @@ graphics/banim/banim_newfirs_unarmed.agbpal.lz
 banim/banim_newfirs_unarmed_oam.bin.lz
 banim/banim_newfirs_unarmed_script.o|.data.script>lz
 banim/banim_newfirs_unarmed_modes.bin
+# ---- trub (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newtrub_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newtrub_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newtrub_sword_sheet_2.4bpp.lz
@@ -2824,6 +2801,7 @@ graphics/banim/banim_newtrub_unarmed.agbpal.lz
 banim/banim_newtrub_unarmed_oam.bin.lz
 banim/banim_newtrub_unarmed_script.o|.data.script>lz
 banim/banim_newtrub_unarmed_modes.bin
+# ---- redm (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newredm_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newredm_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newredm_sword_sheet_2.4bpp.lz
@@ -2858,6 +2836,7 @@ graphics/banim/banim_newredm_magic.agbpal.lz
 banim/banim_newredm_magic_oam.bin.lz
 banim/banim_newredm_magic_script.o|.data.script>lz
 banim/banim_newredm_magic_modes.bin
+# ---- molo (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmolo_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newmolo_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newmolo_lance_sheet_2.4bpp.lz
@@ -2898,6 +2877,7 @@ graphics/banim/banim_newmolo_unarmed.agbpal.lz
 banim/banim_newmolo_unarmed_oam.bin.lz
 banim/banim_newmolo_unarmed_script.o|.data.script>lz
 banim/banim_newmolo_unarmed_modes.bin
+# ---- tact (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newtact_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newtact_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newtact_magic_sheet_2.4bpp.lz
@@ -2905,6 +2885,7 @@ graphics/banim/banim_newtact_magic.agbpal.lz
 banim/banim_newtact_magic_oam.bin.lz
 banim/banim_newtact_magic_script.o|.data.script>lz
 banim/banim_newtact_magic_modes.bin
+# ---- trif (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newtrif_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newtrif_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newtrif_sword_sheet_2.4bpp.lz
@@ -2937,6 +2918,7 @@ graphics/banim/banim_newtrif_magic.agbpal.lz
 banim/banim_newtrif_magic_oam.bin.lz
 banim/banim_newtrif_magic_script.o|.data.script>lz
 banim/banim_newtrif_magic_modes.bin
+# ---- trim (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newtrim_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newtrim_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newtrim_sword_sheet_2.4bpp.lz
@@ -2969,6 +2951,7 @@ graphics/banim/banim_newtrim_magic.agbpal.lz
 banim/banim_newtrim_magic_oam.bin.lz
 banim/banim_newtrim_magic_script.o|.data.script>lz
 banim/banim_newtrim_magic_modes.bin
+# ---- vilf (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newvilf_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newvilf_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newvilf_sword_sheet_2.4bpp.lz
@@ -2985,6 +2968,7 @@ graphics/banim/banim_newvilf_unarmed.agbpal.lz
 banim/banim_newvilf_unarmed_oam.bin.lz
 banim/banim_newvilf_unarmed_script.o|.data.script>lz
 banim/banim_newvilf_unarmed_modes.bin
+# ---- vilm (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newvilm_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newvilm_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newvilm_sword_sheet_2.4bpp.lz
@@ -3001,6 +2985,7 @@ graphics/banim/banim_newvilm_unarmed.agbpal.lz
 banim/banim_newvilm_unarmed_oam.bin.lz
 banim/banim_newvilm_unarmed_script.o|.data.script>lz
 banim/banim_newvilm_unarmed_modes.bin
+# ---- legk (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newlegk_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newlegk_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newlegk_sword_sheet_2.4bpp.lz
@@ -3100,6 +3085,7 @@ graphics/banim/banim_newlegk_unarmed.agbpal.lz
 banim/banim_newlegk_unarmed_oam.bin.lz
 banim/banim_newlegk_unarmed_script.o|.data.script>lz
 banim/banim_newlegk_unarmed_modes.bin
+# ---- onic (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newonic_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newonic_axe_sheet_1.4bpp.lz
 graphics/banim/banim_newonic_axe_sheet_2.4bpp.lz
@@ -3121,6 +3107,7 @@ graphics/banim/banim_newonic_magic.agbpal.lz
 banim/banim_newonic_magic_oam.bin.lz
 banim/banim_newonic_magic_script.o|.data.script>lz
 banim/banim_newonic_magic_modes.bin
+# ---- elfn (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newelfn_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newelfn_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newelfn_magic_sheet_2.4bpp.lz
@@ -3135,6 +3122,7 @@ graphics/banim/banim_newelfn_refresh.agbpal.lz
 banim/banim_newelfn_refresh_oam.bin.lz
 banim/banim_newelfn_refresh_script.o|.data.script>lz
 banim/banim_newelfn_refresh_modes.bin
+# ---- mmar (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmmar_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newmmar_axe_sheet_1.4bpp.lz
 graphics/banim/banim_newmmar_axe_sheet_2.4bpp.lz
@@ -3164,6 +3152,7 @@ graphics/banim/banim_newmmar_unarmed.agbpal.lz
 banim/banim_newmmar_unarmed_oam.bin.lz
 banim/banim_newmmar_unarmed_script.o|.data.script>lz
 banim/banim_newmmar_unarmed_modes.bin
+# ---- mech (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmech_bow_sheet_0.4bpp.lz
 graphics/banim/banim_newmech_bow_sheet_1.4bpp.lz
 graphics/banim/banim_newmech_bow_sheet_2.4bpp.lz
@@ -3178,6 +3167,7 @@ graphics/banim/banim_newmech_unarmed.agbpal.lz
 banim/banim_newmech_unarmed_oam.bin.lz
 banim/banim_newmech_unarmed_script.o|.data.script>lz
 banim/banim_newmech_unarmed_modes.bin
+# ---- drag (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newdrag_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newdrag_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newdrag_lance_sheet_2.4bpp.lz
@@ -3198,6 +3188,7 @@ graphics/banim/banim_newdrag_unarmed.agbpal.lz
 banim/banim_newdrag_unarmed_oam.bin.lz
 banim/banim_newdrag_unarmed_script.o|.data.script>lz
 banim/banim_newdrag_unarmed_modes.bin
+# ---- lanc (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newlanc_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newlanc_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newlanc_lance_sheet_2.4bpp.lz
@@ -3214,6 +3205,7 @@ graphics/banim/banim_newlanc_unarmed.agbpal.lz
 banim/banim_newlanc_unarmed_oam.bin.lz
 banim/banim_newlanc_unarmed_script.o|.data.script>lz
 banim/banim_newlanc_unarmed_modes.bin
+# ---- milt (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmilt_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newmilt_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newmilt_lance_sheet_2.4bpp.lz
@@ -3227,6 +3219,7 @@ graphics/banim/banim_newmilt_unarmed.agbpal.lz
 banim/banim_newmilt_unarmed_oam.bin.lz
 banim/banim_newmilt_unarmed_script.o|.data.script>lz
 banim/banim_newmilt_unarmed_modes.bin
+# ---- sent (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newsent_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newsent_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newsent_sword_sheet_2.4bpp.lz
@@ -3281,6 +3274,7 @@ graphics/banim/banim_newsent_unarmed.agbpal.lz
 banim/banim_newsent_unarmed_oam.bin.lz
 banim/banim_newsent_unarmed_script.o|.data.script>lz
 banim/banim_newsent_unarmed_modes.bin
+# ---- t1ln (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newt1ln_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newt1ln_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newt1ln_sword_sheet_2.4bpp.lz
@@ -3308,6 +3302,7 @@ graphics/banim/banim_newt1ln_unarmed.agbpal.lz
 banim/banim_newt1ln_unarmed_oam.bin.lz
 banim/banim_newt1ln_unarmed_script.o|.data.script>lz
 banim/banim_newt1ln_unarmed_modes.bin
+# ---- glad (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newglad_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newglad_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newglad_sword_sheet_2.4bpp.lz
@@ -3335,16 +3330,19 @@ graphics/banim/banim_newglad_unarmed.agbpal.lz
 banim/banim_newglad_unarmed_oam.bin.lz
 banim/banim_newglad_unarmed_script.o|.data.script>lz
 banim/banim_newglad_unarmed_modes.bin
+# ---- hbrg (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhbrg_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newhbrg_axe.agbpal.lz
 banim/banim_newhbrg_axe_oam.bin.lz
 banim/banim_newhbrg_axe_script.o|.data.script>lz
 banim/banim_newhbrg_axe_modes.bin
+# ---- hsld (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhsld_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newhsld_lance.agbpal.lz
 banim/banim_newhsld_lance_oam.bin.lz
 banim/banim_newhsld_lance_script.o|.data.script>lz
 banim/banim_newhsld_lance_modes.bin
+# ---- hunt (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newhunt_bow_sheet_0.4bpp.lz
 graphics/banim/banim_newhunt_bow_sheet_1.4bpp.lz
 graphics/banim/banim_newhunt_bow_sheet_2.4bpp.lz
@@ -3357,6 +3355,7 @@ graphics/banim/banim_newhunt_unarmed.agbpal.lz
 banim/banim_newhunt_unarmed_oam.bin.lz
 banim/banim_newhunt_unarmed_script.o|.data.script>lz
 banim/banim_newhunt_unarmed_modes.bin
+# ---- anna (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newanna_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newanna_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newanna_lance_sheet_2.4bpp.lz
@@ -3376,6 +3375,7 @@ graphics/banim/banim_newanna_staff.agbpal.lz
 banim/banim_newanna_staff_oam.bin.lz
 banim/banim_newanna_staff_script.o|.data.script>lz
 banim/banim_newanna_staff_modes.bin
+# ---- sand (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newsand_monster_sheet_0.4bpp.lz
 graphics/banim/banim_newsand_monster_sheet_1.4bpp.lz
 graphics/banim/banim_newsand_monster_sheet_2.4bpp.lz
@@ -3390,6 +3390,7 @@ graphics/banim/banim_newsand_monster.agbpal.lz
 banim/banim_newsand_monster_oam.bin.lz
 banim/banim_newsand_monster_script.o|.data.script>lz
 banim/banim_newsand_monster_modes.bin
+# ---- cswd (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newcswd_sword_sheet_0.4bpp.lz
 graphics/banim/banim_newcswd_sword_sheet_1.4bpp.lz
 graphics/banim/banim_newcswd_sword_sheet_2.4bpp.lz
@@ -3401,23 +3402,27 @@ graphics/banim/banim_newcswd_sword.agbpal.lz
 banim/banim_newcswd_sword_oam.bin.lz
 banim/banim_newcswd_sword_script.o|.data.script>lz
 banim/banim_newcswd_sword_modes.bin
+# ---- tome (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newtome_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newtome_magic_sheet_1.4bpp.lz
 graphics/banim/banim_newtome_magic.agbpal.lz
 banim/banim_newtome_magic_oam.bin.lz
 banim/banim_newtome_magic_script.o|.data.script>lz
 banim/banim_newtome_magic_modes.bin
+# ---- mimc (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmimc_magic_sheet_0.4bpp.lz
 graphics/banim/banim_newmimc_magic.agbpal.lz
 banim/banim_newmimc_magic_oam.bin.lz
 banim/banim_newmimc_magic_script.o|.data.script>lz
 banim/banim_newmimc_magic_modes.bin
+# ---- mosq (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newmosq_monster_sheet_0.4bpp.lz
 graphics/banim/banim_newmosq_monster_sheet_1.4bpp.lz
 graphics/banim/banim_newmosq_monster.agbpal.lz
 banim/banim_newmosq_monster_oam.bin.lz
 banim/banim_newmosq_monster_script.o|.data.script>lz
 banim/banim_newmosq_monster_modes.bin
+# ---- phnt (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newphnt_axe_sheet_0.4bpp.lz
 graphics/banim/banim_newphnt_axe_sheet_1.4bpp.lz
 graphics/banim/banim_newphnt_axe_sheet_2.4bpp.lz
@@ -3440,6 +3445,7 @@ graphics/banim/banim_newphnt_unarmed.agbpal.lz
 banim/banim_newphnt_unarmed_oam.bin.lz
 banim/banim_newphnt_unarmed_script.o|.data.script>lz
 banim/banim_newphnt_unarmed_modes.bin
+# ---- slim (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newslim_staff_sheet_0.4bpp.lz
 graphics/banim/banim_newslim_staff.agbpal.lz
 banim/banim_newslim_staff_oam.bin.lz
@@ -3451,6 +3457,7 @@ graphics/banim/banim_newslim_magic.agbpal.lz
 banim/banim_newslim_magic_oam.bin.lz
 banim/banim_newslim_magic_script.o|.data.script>lz
 banim/banim_newslim_magic_modes.bin
+# ---- wbrd (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newwbrd_lance_sheet_0.4bpp.lz
 graphics/banim/banim_newwbrd_lance_sheet_1.4bpp.lz
 graphics/banim/banim_newwbrd_lance_sheet_2.4bpp.lz
@@ -3496,6 +3503,7 @@ graphics/banim/banim_newwbrd_unarmed.agbpal.lz
 banim/banim_newwbrd_unarmed_oam.bin.lz
 banim/banim_newwbrd_unarmed_script.o|.data.script>lz
 banim/banim_newwbrd_unarmed_modes.bin
+# ---- advn (FE8_NEW_ANIMS) ----
 graphics/banim/banim_newadvn_bow_sheet_0.4bpp.lz
 graphics/banim/banim_newadvn_bow_sheet_1.4bpp.lz
 graphics/banim/banim_newadvn_bow_sheet_2.4bpp.lz
@@ -3513,3 +3521,325 @@ graphics/banim/banim_newadvn_unarmed.agbpal.lz
 banim/banim_newadvn_unarmed_oam.bin.lz
 banim/banim_newadvn_unarmed_script.o|.data.script>lz
 banim/banim_newadvn_unarmed_modes.bin
+# ---- lynlun (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newlynlun_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newlynlun_unarmed.agbpal.lz
+banim/banim_newlynlun_unarmed_oam.bin.lz
+banim/banim_newlynlun_unarmed_script.o|.data.script>lz
+banim/banim_newlynlun_unarmed_modes.bin
+# ---- lyngl (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newlyngl_sword_sheet_0.4bpp.lz
+graphics/banim/banim_newlyngl_sword_sheet_1.4bpp.lz
+graphics/banim/banim_newlyngl_sword_sheet_2.4bpp.lz
+graphics/banim/banim_newlyngl_sword_sheet_3.4bpp.lz
+graphics/banim/banim_newlyngl_sword_sheet_4.4bpp.lz
+graphics/banim/banim_newlyngl_sword_sheet_5.4bpp.lz
+graphics/banim/banim_newlyngl_sword.agbpal.lz
+banim/banim_newlyngl_sword_oam.bin.lz
+banim/banim_newlyngl_sword_script.o|.data.script>lz
+banim/banim_newlyngl_sword_modes.bin
+graphics/banim/banim_newlyngl_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newlyngl_unarmed.agbpal.lz
+banim/banim_newlyngl_unarmed_oam.bin.lz
+banim/banim_newlyngl_unarmed_script.o|.data.script>lz
+banim/banim_newlyngl_unarmed_modes.bin
+# ---- elder (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newelder_magic_sheet_0.4bpp.lz
+graphics/banim/banim_newelder_magic_sheet_1.4bpp.lz
+graphics/banim/banim_newelder_magic_sheet_2.4bpp.lz
+graphics/banim/banim_newelder_magic.agbpal.lz
+banim/banim_newelder_magic_oam.bin.lz
+banim/banim_newelder_magic_script.o|.data.script>lz
+banim/banim_newelder_magic_modes.bin
+graphics/banim/banim_newelder_staff_sheet_0.4bpp.lz
+graphics/banim/banim_newelder_staff.agbpal.lz
+banim/banim_newelder_staff_oam.bin.lz
+banim/banim_newelder_staff_script.o|.data.script>lz
+banim/banim_newelder_staff_modes.bin
+graphics/banim/banim_newelder_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newelder_unarmed.agbpal.lz
+banim/banim_newelder_unarmed_oam.bin.lz
+banim/banim_newelder_unarmed_script.o|.data.script>lz
+banim/banim_newelder_unarmed_modes.bin
+# ---- arblm (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newarblm_lance_sheet_0.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_1.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_2.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_3.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_4.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_5.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_6.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_7.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_8.4bpp.lz
+graphics/banim/banim_newarblm_lance_sheet_9.4bpp.lz
+graphics/banim/banim_newarblm_lance.agbpal.lz
+banim/banim_newarblm_lance_oam.bin.lz
+banim/banim_newarblm_lance_script.o|.data.script>lz
+banim/banim_newarblm_lance_modes.bin
+graphics/banim/banim_newarblm_bow_sheet_0.4bpp.lz
+graphics/banim/banim_newarblm_bow_sheet_1.4bpp.lz
+graphics/banim/banim_newarblm_bow_sheet_2.4bpp.lz
+graphics/banim/banim_newarblm_bow_sheet_3.4bpp.lz
+graphics/banim/banim_newarblm_bow_sheet_4.4bpp.lz
+graphics/banim/banim_newarblm_bow_sheet_5.4bpp.lz
+graphics/banim/banim_newarblm_bow_sheet_6.4bpp.lz
+graphics/banim/banim_newarblm_bow.agbpal.lz
+banim/banim_newarblm_bow_oam.bin.lz
+banim/banim_newarblm_bow_script.o|.data.script>lz
+banim/banim_newarblm_bow_modes.bin
+graphics/banim/banim_newarblm_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newarblm_unarmed.agbpal.lz
+banim/banim_newarblm_unarmed_oam.bin.lz
+banim/banim_newarblm_unarmed_script.o|.data.script>lz
+banim/banim_newarblm_unarmed_modes.bin
+# ---- arblf (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newarblf_lance_sheet_0.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_1.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_2.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_3.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_4.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_5.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_6.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_7.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_8.4bpp.lz
+graphics/banim/banim_newarblf_lance_sheet_9.4bpp.lz
+graphics/banim/banim_newarblf_lance.agbpal.lz
+banim/banim_newarblf_lance_oam.bin.lz
+banim/banim_newarblf_lance_script.o|.data.script>lz
+banim/banim_newarblf_lance_modes.bin
+graphics/banim/banim_newarblf_bow_sheet_0.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_1.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_2.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_3.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_4.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_5.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_6.4bpp.lz
+graphics/banim/banim_newarblf_bow_sheet_7.4bpp.lz
+graphics/banim/banim_newarblf_bow.agbpal.lz
+banim/banim_newarblf_bow_oam.bin.lz
+banim/banim_newarblf_bow_script.o|.data.script>lz
+banim/banim_newarblf_bow_modes.bin
+graphics/banim/banim_newarblf_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newarblf_unarmed.agbpal.lz
+banim/banim_newarblf_unarmed_oam.bin.lz
+banim/banim_newarblf_unarmed_script.o|.data.script>lz
+banim/banim_newarblf_unarmed_modes.bin
+# ---- fbknt (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newfbknt_lance_sheet_0.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_1.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_2.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_3.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_4.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_5.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_6.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_7.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_8.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_9.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_10.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_11.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_12.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_13.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_14.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_15.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_16.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_17.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_18.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_19.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_20.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_21.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_22.4bpp.lz
+graphics/banim/banim_newfbknt_lance_sheet_23.4bpp.lz
+graphics/banim/banim_newfbknt_lance.agbpal.lz
+banim/banim_newfbknt_lance_oam.bin.lz
+banim/banim_newfbknt_lance_script.o|.data.script>lz
+banim/banim_newfbknt_lance_modes.bin
+graphics/banim/banim_newfbknt_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newfbknt_unarmed_sheet_1.4bpp.lz
+graphics/banim/banim_newfbknt_unarmed_sheet_2.4bpp.lz
+graphics/banim/banim_newfbknt_unarmed.agbpal.lz
+banim/banim_newfbknt_unarmed_oam.bin.lz
+banim/banim_newfbknt_unarmed_script.o|.data.script>lz
+banim/banim_newfbknt_unarmed_modes.bin
+# ---- grifm (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newgrifm_sword_sheet_0.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_1.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_2.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_3.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_4.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_5.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_6.4bpp.lz
+graphics/banim/banim_newgrifm_sword_sheet_7.4bpp.lz
+graphics/banim/banim_newgrifm_sword.agbpal.lz
+banim/banim_newgrifm_sword_oam.bin.lz
+banim/banim_newgrifm_sword_script.o|.data.script>lz
+banim/banim_newgrifm_sword_modes.bin
+graphics/banim/banim_newgrifm_axe_sheet_0.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_1.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_2.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_3.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_4.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_5.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_6.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_7.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_8.4bpp.lz
+graphics/banim/banim_newgrifm_axe_sheet_9.4bpp.lz
+graphics/banim/banim_newgrifm_axe.agbpal.lz
+banim/banim_newgrifm_axe_oam.bin.lz
+banim/banim_newgrifm_axe_script.o|.data.script>lz
+banim/banim_newgrifm_axe_modes.bin
+graphics/banim/banim_newgrifm_handaxe_sheet_0.4bpp.lz
+graphics/banim/banim_newgrifm_handaxe_sheet_1.4bpp.lz
+graphics/banim/banim_newgrifm_handaxe.agbpal.lz
+banim/banim_newgrifm_handaxe_oam.bin.lz
+banim/banim_newgrifm_handaxe_script.o|.data.script>lz
+banim/banim_newgrifm_handaxe_modes.bin
+graphics/banim/banim_newgrifm_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newgrifm_unarmed.agbpal.lz
+banim/banim_newgrifm_unarmed_oam.bin.lz
+banim/banim_newgrifm_unarmed_script.o|.data.script>lz
+banim/banim_newgrifm_unarmed_modes.bin
+# ---- asage (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newasage_magic_sheet_0.4bpp.lz
+graphics/banim/banim_newasage_magic_sheet_1.4bpp.lz
+graphics/banim/banim_newasage_magic_sheet_2.4bpp.lz
+graphics/banim/banim_newasage_magic_sheet_3.4bpp.lz
+graphics/banim/banim_newasage_magic_sheet_4.4bpp.lz
+graphics/banim/banim_newasage_magic_sheet_5.4bpp.lz
+graphics/banim/banim_newasage_magic.agbpal.lz
+banim/banim_newasage_magic_oam.bin.lz
+banim/banim_newasage_magic_script.o|.data.script>lz
+banim/banim_newasage_magic_modes.bin
+graphics/banim/banim_newasage_staff_sheet_0.4bpp.lz
+graphics/banim/banim_newasage_staff.agbpal.lz
+banim/banim_newasage_staff_oam.bin.lz
+banim/banim_newasage_staff_script.o|.data.script>lz
+banim/banim_newasage_staff_modes.bin
+# ---- malq (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newmalq_axe_sheet_0.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_1.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_2.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_3.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_4.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_5.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_6.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_7.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_8.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_9.4bpp.lz
+graphics/banim/banim_newmalq_axe_sheet_10.4bpp.lz
+graphics/banim/banim_newmalq_axe.agbpal.lz
+banim/banim_newmalq_axe_oam.bin.lz
+banim/banim_newmalq_axe_script.o|.data.script>lz
+banim/banim_newmalq_axe_modes.bin
+graphics/banim/banim_newmalq_handaxe_sheet_0.4bpp.lz
+graphics/banim/banim_newmalq_handaxe_sheet_1.4bpp.lz
+graphics/banim/banim_newmalq_handaxe_sheet_2.4bpp.lz
+graphics/banim/banim_newmalq_handaxe.agbpal.lz
+banim/banim_newmalq_handaxe_oam.bin.lz
+banim/banim_newmalq_handaxe_script.o|.data.script>lz
+banim/banim_newmalq_handaxe_modes.bin
+graphics/banim/banim_newmalq_magic_sheet_0.4bpp.lz
+graphics/banim/banim_newmalq_magic_sheet_1.4bpp.lz
+graphics/banim/banim_newmalq_magic_sheet_2.4bpp.lz
+graphics/banim/banim_newmalq_magic_sheet_3.4bpp.lz
+graphics/banim/banim_newmalq_magic_sheet_4.4bpp.lz
+graphics/banim/banim_newmalq_magic_sheet_5.4bpp.lz
+graphics/banim/banim_newmalq_magic_sheet_6.4bpp.lz
+graphics/banim/banim_newmalq_magic.agbpal.lz
+banim/banim_newmalq_magic_oam.bin.lz
+banim/banim_newmalq_magic_script.o|.data.script>lz
+banim/banim_newmalq_magic_modes.bin
+# ---- serap (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newserap_sword_sheet_0.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_1.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_2.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_3.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_4.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_5.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_6.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_7.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_8.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_9.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_10.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_11.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_12.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_13.4bpp.lz
+graphics/banim/banim_newserap_sword_sheet_14.4bpp.lz
+graphics/banim/banim_newserap_sword.agbpal.lz
+banim/banim_newserap_sword_oam.bin.lz
+banim/banim_newserap_sword_script.o|.data.script>lz
+banim/banim_newserap_sword_modes.bin
+graphics/banim/banim_newserap_lance_sheet_0.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_1.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_2.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_3.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_4.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_5.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_6.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_7.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_8.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_9.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_10.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_11.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_12.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_13.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_14.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_15.4bpp.lz
+graphics/banim/banim_newserap_lance_sheet_16.4bpp.lz
+graphics/banim/banim_newserap_lance.agbpal.lz
+banim/banim_newserap_lance_oam.bin.lz
+banim/banim_newserap_lance_script.o|.data.script>lz
+banim/banim_newserap_lance_modes.bin
+graphics/banim/banim_newserap_magic_sheet_0.4bpp.lz
+graphics/banim/banim_newserap_magic_sheet_1.4bpp.lz
+graphics/banim/banim_newserap_magic_sheet_2.4bpp.lz
+graphics/banim/banim_newserap_magic.agbpal.lz
+banim/banim_newserap_magic_oam.bin.lz
+banim/banim_newserap_magic_script.o|.data.script>lz
+banim/banim_newserap_magic_modes.bin
+graphics/banim/banim_newserap_staff_sheet_0.4bpp.lz
+graphics/banim/banim_newserap_staff_sheet_1.4bpp.lz
+graphics/banim/banim_newserap_staff.agbpal.lz
+banim/banim_newserap_staff_oam.bin.lz
+banim/banim_newserap_staff_script.o|.data.script>lz
+banim/banim_newserap_staff_modes.bin
+graphics/banim/banim_newserap_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newserap_unarmed.agbpal.lz
+banim/banim_newserap_unarmed_oam.bin.lz
+banim/banim_newserap_unarmed_script.o|.data.script>lz
+banim/banim_newserap_unarmed_modes.bin
+# ---- exec (FE8_NEW_ANIMS) ----
+graphics/banim/banim_newexec_sword_sheet_0.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_1.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_2.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_3.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_4.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_5.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_6.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_7.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_8.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_9.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_10.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_11.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_12.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_13.4bpp.lz
+graphics/banim/banim_newexec_sword_sheet_14.4bpp.lz
+graphics/banim/banim_newexec_sword.agbpal.lz
+banim/banim_newexec_sword_oam.bin.lz
+banim/banim_newexec_sword_script.o|.data.script>lz
+banim/banim_newexec_sword_modes.bin
+graphics/banim/banim_newexec_magic_sheet_0.4bpp.lz
+graphics/banim/banim_newexec_magic_sheet_1.4bpp.lz
+graphics/banim/banim_newexec_magic_sheet_2.4bpp.lz
+graphics/banim/banim_newexec_magic_sheet_3.4bpp.lz
+graphics/banim/banim_newexec_magic_sheet_4.4bpp.lz
+graphics/banim/banim_newexec_magic_sheet_5.4bpp.lz
+graphics/banim/banim_newexec_magic_sheet_6.4bpp.lz
+graphics/banim/banim_newexec_magic.agbpal.lz
+banim/banim_newexec_magic_oam.bin.lz
+banim/banim_newexec_magic_script.o|.data.script>lz
+banim/banim_newexec_magic_modes.bin
+graphics/banim/banim_newexec_unarmed_sheet_0.4bpp.lz
+graphics/banim/banim_newexec_unarmed.agbpal.lz
+banim/banim_newexec_unarmed_oam.bin.lz
+banim/banim_newexec_unarmed_script.o|.data.script>lz
+banim/banim_newexec_unarmed_modes.bin

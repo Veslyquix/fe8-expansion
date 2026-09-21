@@ -153,11 +153,13 @@ EXPANSION_PSEUDO_LOCALE ?= 0
 #   EXPANSION_DANGER_OVERLAY_MENU -- expose the player-facing danger/range
 #                                    overlay map-menu surface (reuses the
 #                                    existing danger-zone range path).
-#   EXPANSION_STARTER_CONTENT     -- link the bundled generated-data content
-#                                    example: the framework-authored item
+#   EXPANSION_STARTER_CONTENT     -- link the bundled content example: the
+#                                    framework-authored item
 #                                    ITEM_EXPANSION_CE ("Sample Charm",
-#                                    src/data/items_expansion.json) and its
-#                                    mechanic, registered through the public
+#                                    src/data_items.c +
+#                                    src/data/items_expansion_content_text.h)
+#                                    and its mechanic, registered through
+#                                    the public
 #                                    hook registry. Requires
 #                                    EXPANSION_MECHANICS_HOOKS=1 AND an
 #                                    expanded item ID cap
@@ -549,6 +551,19 @@ NIMAP2 ?= 1
 # a straight one. See MapRoute_RenderAutoPath in src/worldmap_path.c and the
 # piece data in src/data/worldmap/worldmap_road_pieces.c. Modern lane only.
 WORLDMAP_REWORK ?= 1
+
+# --- Optional War Room chapter-select screen --------------------------------
+# Inserts a game-mode select screen ("Campaign", "War Room", "Sound Room",
+# "Link Arena", plus several planned-but-disabled entries) right after the
+# title screen, in place of jumping straight to the ordinary save menu.
+# "War Room" opens a scrollable chapter picker (independent of the 11-item
+# menu widget cap) over a curated chapter list, renders each chapter's
+# minimap as you hover it, and boots straight into that chapter as a
+# throwaway battle -- bypassing the world map and any existing save data.
+# "Campaign" continues into the ordinary save menu unchanged. Default on:
+# changes the very first screen after the title for every player -- set
+# WAR_ROOM=0 to keep vanilla's title -> save menu flow. See src/warroom.c.
+WAR_ROOM ?= 1
 
 
 

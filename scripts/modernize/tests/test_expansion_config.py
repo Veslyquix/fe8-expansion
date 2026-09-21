@@ -13,6 +13,7 @@ combinations before any file is written).
 """
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -1484,16 +1485,19 @@ class StarterContentFlagTests(unittest.TestCase):
             data = json.loads(paths["json"].read_text(encoding="utf-8"))
         self.assertEqual(data["starter_content"], 1)
 
-    def test_item_cap_constants_match_the_idspace_source_of_truth(self):
+    def test_item_cap_constants_match_the_id_space_header(self):
         """expansion_config.py restates the item cap boundary because it runs
-        as a bare script; it must never drift from idspace.py, which owns it."""
-        sys.path.insert(0, str(ROOT))
-        from scripts.generated_data import idspace
+        as a bare script; it must never drift from include/id_space.h, the
+        committed C source of truth compiled into every build."""
+        header = (ROOT / "include" / "id_space.h").read_text(encoding="utf-8")
 
-        self.assertEqual(ec.ITEM_ID_EXPANSION_FIRST, idspace.ITEM_EXPANSION_FIRST)
-        self.assertEqual(ec.ITEM_ID_DEFAULT_CAP, idspace.ITEM_DEFAULT_CAP)
-        self.assertEqual(ec.ITEM_ID_DEFAULT_CAP,
-                         idspace.domain_by_key("item").configured_cap)
+        default_match = re.search(r"#define FE8_ITEM_ID_CAP (0[xX][0-9A-Fa-f]+)", header)
+        self.assertIsNotNone(default_match, "FE8_ITEM_ID_CAP default not found in id_space.h")
+        self.assertEqual(ec.ITEM_ID_DEFAULT_CAP, int(default_match.group(1), 16))
+
+        first_match = re.search(r"#define ITEM_ID_EXPANSION_FIRST (0[xX][0-9A-Fa-f]+)", header)
+        self.assertIsNotNone(first_match, "ITEM_ID_EXPANSION_FIRST not found in id_space.h")
+        self.assertEqual(ec.ITEM_ID_EXPANSION_FIRST, int(first_match.group(1), 16))
 
     def test_invalid_item_cap_rejected(self):
         with self.assertRaises(ec.ConfigError):

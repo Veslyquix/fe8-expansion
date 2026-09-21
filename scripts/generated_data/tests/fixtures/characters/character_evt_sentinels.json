@@ -1,9 +1,0 @@
-{
-  "$schema": "fe8.characters.v1",
-  "characters": [
-    { "character": "CHARACTER_EVT_LEADER", "defaultClass": "CLASS_MYRMIDON" },
-    { "character": "CHARACTER_EVT_ACTIVE", "defaultClass": "CLASS_MYRMIDON" },
-    { "character": "CHARACTER_EVT_SLOTB", "defaultClass": "CLASS_MYRMIDON" },
-    { "character": "CHARACTER_EVT_SLOT2", "defaultClass": "CLASS_MYRMIDON" }
-  ]
-}

@@ -256,7 +256,7 @@ python3 scripts/artifact_guard.py --revision HEAD
 * `python3 -m unittest discover -s tests/upstream_port -v` -- run this to
   see the current pass count; unaffected by this change (no file under
   `tests/upstream_port` or the modules it exercises was touched).
-* `make generated-data-check` -- unaffected; no generated-data table or
+* `generated-data-check` (removed target) -- unaffected; no generated-data table or
   rule was touched.
 * `python3 -m unittest discover -s scripts/generated_data/tests -v` --
   unaffected; run for the current count.

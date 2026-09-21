@@ -2,6 +2,7 @@
 
 #if FE8_CO_POWERS
 
+#include <string.h>
 #include "proc.h"
 #include "hardware.h"
 #include "fontgrp.h"
@@ -1940,24 +1941,41 @@ static void CoScreen_PutText(int slot, u16* tm, int tileWidth, int color, int ms
  * accumulated in the current line's handle before moving to the next
  * handle in the array. tm here is line 0's destination; PrintStringToTexts
  * advances by a tilemap row pair (0x40) per line internally. */
-#define MULTILINE_MAX 4
-static void CoScreen_PutMultilineText(u16* tm, int color, int msgId, int lineOffset)
+#define MULTILINE_MAX (CO_TEXT_COUNT - CO_TEXT_LINE0)
+
+/* Two-phase so several multiline blocks can share one page: prep EVERY
+ * block (InitText claims each handle's VRAM glyph range + clears it)
+ * before any PrintStringToTexts call draws into those ranges. A block
+ * owns handles [CO_TEXT_LINE0 + firstLine, + lineCount) -- blocks on the
+ * same page must not overlap, and Prep/Put for one block must be passed
+ * the same firstLine/lineCount. */
+static void CoScreen_PrepMultilineText(u16* tm, int color, int firstLine, int lineCount)
+{
+    int i;
+
+    for (i = 0; i < lineCount; ++i) {
+        struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + firstLine + i];
+
+        InitText(text, CO_TEXT_WIDTH_LINE);
+        Text_SetParams(text, 0, color);
+    }
+
+    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, lineCount * 2, 0);
+}
+
+static void CoScreen_PutMultilineText(u16* tm, const char* str, int firstLine, int lineCount)
 {
     struct Text* texts[MULTILINE_MAX];
     int i;
 
-    for (i = 0; i < MULTILINE_MAX; ++i) {
-        struct Text* text = &gStatScreen.text[CO_TEXT_LINE0 + lineOffset + i];
+    for (i = 0; i < lineCount; ++i)
+        texts[i] = &gStatScreen.text[CO_TEXT_LINE0 + firstLine + i];
 
-        InitText(text, CO_TEXT_WIDTH_LINE);
-        Text_SetParams(text, 0, color);
-        texts[i] = text;
-    }
-
-    TileMap_FillRect(tm, CO_TEXT_WIDTH_LINE, MULTILINE_MAX * 2, 0);
-
-    PrintStringToTexts(texts, GetStringFromIndex(msgId), tm, MULTILINE_MAX);
+    /* Stops after lineCount lines, so an over-long string can't spill into
+     * the next block's handles. */
+    PrintStringToTexts(texts, str, tm, lineCount);
 }
+
 
 static void CoScreen_DrawHeader(void)
 {
@@ -1987,27 +2005,44 @@ static void CoScreen_DrawPageInfo(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_INFO);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->titleMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->infoMsg, 0);
+    
+    u16* tm = gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4);
+    char passive[100];
+    char* str;
+
+    /* Merge info + passive into one [LF]-separated string so the whole
+     * block goes through a single PrintStringToTexts call. info is decoded
+     * into sMsgString's buffer (GetStringFromIndex's return), passive into a
+     * separate stack buffer so the second decode can't clobber the first,
+     * then passive is appended after a blank line. */
+    str = GetStringFromIndex(co->infoMsg);
+    if (co->passiveMsg) {
+        GetStringFromIndexInBuffer(co->passiveMsg, passive);
+        strcat(str, "\x01 \x01");
+        strcat(str, passive);
+    }
+
+    CoScreen_PrepMultilineText(tm, TEXT_COLOR_SYSTEM_WHITE, 0, MULTILINE_MAX);
+    CoScreen_PutMultilineText(tm, str, 0, MULTILINE_MAX);
 }
 
-static void CoScreen_DrawPagePassive(const struct CoDefinition* co)
-{
-    if (co->passiveMsg)
-        CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+12), TEXT_COLOR_SYSTEM_WHITE, co->passiveMsg, 4);
-}
 
 static void CoScreen_DrawPagePower(const struct CoDefinition* co)
 {
+    u16* tm = gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4);
+
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_POWER);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->powerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->powerDescMsg, 0);
+    CoScreen_PrepMultilineText(tm, TEXT_COLOR_SYSTEM_WHITE, 0, MULTILINE_MAX);
+    CoScreen_PutMultilineText(tm, GetStringFromIndex(co->powerDescMsg), 0, MULTILINE_MAX);
 }
 
 static void CoScreen_DrawPageSuper(const struct CoDefinition* co)
 {
     CoScreen_PutText(CO_TEXT_LABEL, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y), CO_TEXT_WIDTH_SHORT, TEXT_COLOR_SYSTEM_GOLD, MSG_CO_LABEL_SUPER);
     CoScreen_PutText(CO_TEXT_SUBTITLE, gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+2), CO_TEXT_WIDTH_LINE, TEXT_COLOR_SYSTEM_BLUE, co->superPowerNameMsg);
-    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, co->superPowerDescMsg, 0);
+    CoScreen_PrepMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), TEXT_COLOR_SYSTEM_WHITE, 0, MULTILINE_MAX);
+    CoScreen_PutMultilineText(gUiTmScratchA + TILEMAP_INDEX(1, CO_TEXT_Y+4), GetStringFromIndex(co->superPowerDescMsg), 0, MULTILINE_MAX);
 }
 #define BAR_VRAM_WIDTH 5
 void DrawCoInfoBar(int num, int x, int y, int base, int total, int max)
@@ -2128,7 +2163,6 @@ static void CoScreen_DrawPage(void)
     switch (gStatScreen.page) {
     case CO_SCREEN_PAGE_INFO:
         CoScreen_DrawPageInfo(co);
-        CoScreen_DrawPagePassive(co);
         break;
 
     case CO_SCREEN_PAGE_POWER:

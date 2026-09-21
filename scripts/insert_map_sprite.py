@@ -8,12 +8,13 @@ system: the small overworld map icon (not the battle portrait). Two
 completely separate tables consume these, both indexed differently:
 
 * unit_icon_wait_table[] (src/unit_icon_wait_data.c) -- the STANDING
-  icon, indexed by a class's own `smsId` field (src/data/classes.json).
+  icon, indexed by a class's own `smsId` field (src/data_classes.c).
   Row shape: {some_u8, UNIT_ICON_SIZE_*, &sheet}.
 * unit_icon_move_table[] (src/unit_icon_move_data.c) -- the WALKING
   animation, indexed by CLASS ID - 1 (gMuInfoTable[jid - 1], src/mu.c) --
-  NOT smsId. classId == a class's 1-based position in classes.json's
-  array (confirmed: array position 0 == CLASS_EPHRAIM_LORD == jid 1).
+  NOT smsId. classId == a class's 1-based position in
+  src/data_classes.c's gClassData[] array (confirmed: array position
+  0 == CLASS_EPHRAIM_LORD == jid 1).
   Row shape: {sheet, motion}, where `motion` is a real per-class walk-
   cycle timing table (frame list + per-direction animation list) in
   src/data/unit_icon/const_data_unit_icon_move.s (still archival-lane
@@ -57,8 +58,9 @@ Prints:
    sheet's own .incbin AND the cloned motion table).
 5. The unit_icon_move_table[] row to append (src/unit_icon_move_data.c)
    -- MUST be the Nth row where N matches this class's eventual position
-   in classes.json's array (this script can't know that; just append in
-   the same relative order you append classes.json entries).
+   in src/data_classes.c's gClassData[] array (this script can't know
+   that; just append in the same relative order you append
+   gClassData[] entries).
 """
 import argparse
 import pathlib

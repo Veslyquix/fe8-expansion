@@ -1,6 +1,0 @@
-{
-  "$schema": "fe8.characters.v1",
-  "characters": [
-    { "character": "CHARACTER_EIRIKA", "defaultClass": "CLASS_MYRMIDON", "affinity": "UNIT_AFFIN_NOT_REAL" }
-  ]
-}

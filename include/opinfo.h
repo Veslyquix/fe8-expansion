@@ -37,12 +37,15 @@ struct ClassReelAnimScr {
 } __attribute__((packed));
 
 struct ClassReelEnt {
+// Order here must match gClassReelData 
     /* 00 */ u32 descTextId;
 
     /* 04 */ s16 paletteId; // edited to be s16  
-    /* 07 */ u16 banimId;// edited 
     /* 05 */ u8 classId;
     /* 06 */ u8 unk_06;
+
+    /* 07 */ u16 banimId;// edited 
+
     /* 08 */ u8 magicFx;
     /* 09 */ u8 unk_09;
     /* 0A */ u8 unk_0A;

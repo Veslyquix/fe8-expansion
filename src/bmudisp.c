@@ -479,11 +479,11 @@ int ApplyUnitSpriteImage16x16(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    (void)id;
 
     for (i = 0; i < 3; i++)
     {
-        int imgOff = (i * id) * 4 * CHR_SIZE;
+        int imgOff = i * 4 * CHR_SIZE;
 
         CpuFastCopy(
             UnitSpriteUnpackBuf + 0 * CHR_SIZE + imgOff,
@@ -499,11 +499,11 @@ int ApplyUnitSpriteUiImage16x16(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    (void)id;
 
     for (i = 0; i < 3; i++)
     {
-        int imgOff = (i * id) * 4 * CHR_SIZE;
+        int imgOff = i * 4 * CHR_SIZE;
 
         CpuFastFill(
             0,
@@ -535,11 +535,11 @@ int ApplyUnitSpriteImage16x32(int slot, u32 id)
     int i;
 
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
+    (void)id;
 
     for (i = 0; i < 3; i++)
     {
-        int imgOff = (i * id) * 8 * CHR_SIZE;
+        int imgOff = i * 8 * CHR_SIZE;
 
         CpuFastCopy(UnitSpriteUnpackBuf + 0 * CHR_SIZE + imgOff, gSMSGfxBuffer[i] + 0 * CHR_SIZE * CHR_LINE + outOff, 2 * CHR_SIZE);
         CpuFastCopy(UnitSpriteUnpackBuf + 2 * CHR_SIZE + imgOff, gSMSGfxBuffer[i] + 1 * CHR_SIZE * CHR_LINE + outOff, 2 * CHR_SIZE);
@@ -553,13 +553,11 @@ int ApplyUnitSpriteImage32x32(int slot, u32 id)
 {
     int i;
     int outOff = sSlotToChrLut[slot] * CHR_SIZE;
-
-    id = ((id >> UNITSPRITE_ID_BITS) ^ 1) & 1;
-
+    (void)id;
 
     for (i = 0; i < 3; i++)
     {
-        int imgOff = (i * id) * 16 * CHR_SIZE;
+        int imgOff = i * 16 * CHR_SIZE;
 
         CpuFastCopy(UnitSpriteUnpackBuf + 0 * CHR_SIZE + imgOff, gSMSGfxBuffer[i] + 0 * CHR_SIZE * CHR_LINE + outOff, 4 * CHR_SIZE);
         CpuFastCopy(UnitSpriteUnpackBuf + 4 * CHR_SIZE + imgOff, gSMSGfxBuffer[i] + 1 * CHR_SIZE * CHR_LINE + outOff, 4 * CHR_SIZE);

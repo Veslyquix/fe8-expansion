@@ -66,7 +66,17 @@ def create_patch(src: bytes, dst: bytes) -> bytes:
         patch += run.tobytes()
         patch.append(0)  # terminator (a real matching byte follows)
 
-        last_pos = int(diff_positions[j]) + 1
+        # The terminator byte represents that next matching byte and is
+        # itself consumed by the reader (which advances its output cursor
+        # for every patch byte it processes, including the terminator) --
+        # so the next record's skip must be measured from one byte further
+        # than the last differing position, not from it directly. Getting
+        # this wrong desyncs every record after the first (the offset
+        # drifts later by one byte per prior record), corrupting nearly
+        # the entire patched ROM despite every individual run's bytes and
+        # the trailing CRC32s (computed straight from src/dst, independent
+        # of this bug) being correct.
+        last_pos = int(diff_positions[j]) + 2
         i = j + 1
 
     patch += struct.pack("<I", zlib.crc32(src) & 0xFFFFFFFF)

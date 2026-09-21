@@ -10,7 +10,6 @@ List every command exactly as run from the repository root (no prose, no chainin
 ```
 python3 scripts/artifact_guard.py --revision HEAD
 python3 -m unittest discover -s scripts/artifact_guard_tests -p 'test_*.py'
-make generated-data-check
 make expansion-modern-linker-check MODERN_CONFIG=debug MODERN_ABI=aapcs
 make expansion-modern-linker-check MODERN_CONFIG=release MODERN_ABI=aapcs
 ```

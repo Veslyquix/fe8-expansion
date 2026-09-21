@@ -216,15 +216,25 @@ def write_header(messages, header_file):
     header_file.write(f"\n#define MSG_COUNT 0x{(len(messages)):04X}\n")
     header_file.write("\n#endif /* MSG_H */\n")
 
-def write_all_compressed_data(messages, code_table, data_file):
+def build_huffman_model(data):
+    huffman.all_nodes = []
+    huffman.cache = {}
+    freq_table = GenerateFreqTable(data)
+    huff_tree = huffman.BuildHuffmanTree(freq_table)
+    huffman_table = huffman.BuildHuffmanTable()
+    code_table = huffman.build_code_table(huff_tree)
+
+    return huffman_table, code_table
+
+def write_all_compressed_data(messages, code_table, data_file, text_prefix="CompressedText"):
     for msg in messages:
-        data_file.write(f"static const u8 CompressedText_{msg.definiation}[] = " + "{")
+        data_file.write(f"static const u8 {text_prefix}_{msg.definiation}[] = " + "{")
         for data in huffman.CompressData(msg.data, code_table):
             data_file.write(f"0x{data:02X}, ")
         data_file.write("};\n")
 
-def write_text_table(messages, data_file, text_prefix="CompressedText"):
-    data_file.write("const u8 * const gMsgTable[] = {")
+def write_text_table(messages, data_file, text_prefix="CompressedText", table_name="gMsgTable"):
+    data_file.write(f"const u8 * const {table_name}[] = " + "{")
     for i, msg in enumerate(messages):
         if i % 8 == 0:
             data_file.write("\n    ")
@@ -234,8 +244,8 @@ def write_text_table(messages, data_file, text_prefix="CompressedText"):
         data_file.write(f"{text_prefix}_{msg.definiation},")
     data_file.write("\n};\n")
 
-def write_huffman_table(huffman_table, data_file):
-    data_file.write("const u32 gMsgHuffmanTable[] = {")
+def write_huffman_table(huffman_table, data_file, table_name="gMsgHuffmanTable", root_name="gMsgHuffmanTableRoot"):
+    data_file.write(f"const u32 {table_name}[] = " + "{")
     for i, branch in enumerate(huffman_table):
         if i % 8 == 0:
             data_file.write("\n    ")
@@ -244,7 +254,7 @@ def write_huffman_table(huffman_table, data_file):
 
         data_file.write(f"0x{branch:08X},")
     data_file.write("\n};\n\n")
-    data_file.write(f"const u32 * const gMsgHuffmanTableRoot = gMsgHuffmanTable + 0x{(len(huffman_table) - 1):04X};\n")
+    data_file.write(f"const u32 * const {root_name} = {table_name} + 0x{(len(huffman_table) - 1):04X};\n")
 
 def iter_raw_text_bytes(data):
     for value in data:
@@ -262,6 +272,26 @@ def write_all_raw_data(messages, data_file):
 def write_dummy_huffman_table(data_file):
     data_file.write("const u32 gMsgHuffmanTable[] = { 0xFFFF0000, };\n\n")
     data_file.write("const u32 * const gMsgHuffmanTableRoot = gMsgHuffmanTable;\n")
+
+def write_febuilder_huffman_shadow(messages, data_file):
+    huffman_table, code_table = build_huffman_model(all_data)
+
+    data_file.write("/* FEBuilderGBA still decodes gMsgTable through the vanilla Huffman\n")
+    data_file.write(" * path. REPLACE_TEXT raw storage keeps runtime text editable, so expose\n")
+    data_file.write(" * a compressed shadow table for FEBuilder's custom-pointer export. */\n")
+    write_all_compressed_data(messages, code_table, data_file, "FebuilderCompressedText")
+    data_file.write("\n")
+    write_huffman_table(
+        huffman_table,
+        data_file,
+        "gFebuilderMsgHuffmanTable",
+        "gFebuilderMsgHuffmanTableRoot")
+    data_file.write("\n")
+    write_text_table(
+        messages,
+        data_file,
+        "FebuilderCompressedText",
+        "gFebuilderMsgTable")
 
 def dump_msg(messages):
     for msg in messages:
@@ -300,14 +330,10 @@ def main(args):
             write_dummy_huffman_table(data_file)
             data_file.write("\n")
             write_text_table(messages, data_file, "Text")
+            data_file.write("\n")
+            write_febuilder_huffman_shadow(messages, data_file)
         else:
-            # generate huffman
-            freq_table = GenerateFreqTable(all_data)
-
-            huff_tree = huffman.BuildHuffmanTree(freq_table)
-
-            huffman_table = huffman.BuildHuffmanTable()
-            code_table = huffman.build_code_table(huff_tree)
+            huffman_table, code_table = build_huffman_model(all_data)
 
             write_all_compressed_data(messages, code_table, data_file)
             data_file.write("\n")

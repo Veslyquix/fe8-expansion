@@ -32,9 +32,17 @@ tile values (u16, little-endian).
   path every vanilla map still uses.
 - `scripts/tmx_to_map.py` — `.tmx` → `.bin`, no sidecar needed (Tiled's
   XML already carries width/height). Requires `orientation="orthogonal"`,
-  `infinite="0"`, and a single `<layer>` whose `<data>` is either Tiled's
-  plain per-tile XML form or `encoding="csv"` (not base64/gzip/zlib — in
-  Tiled, Map Properties > Tile Layer Format, use "CSV" or "XML").
+  `infinite="0"`, and at least one `<layer>`. If the TMX has multiple
+  layers, the first visible layer is the base chapter map. Layer data may
+  be Tiled's plain per-tile XML form, `encoding="csv"`, or
+  `encoding="base64"` with no compression, `compression="zlib"`, or
+  `compression="gzip"`.
+- `scripts/tmx_to_map_changes.py` — hidden TMX layers → map-change data.
+  This supports common FE map-pack exports where the visible layer is the
+  base map and each hidden layer has integer `ID`, `X`, `Y`, `Width`, and
+  `Height` properties. The script writes the matching
+  `src/data/map/change/<Name>.json` entries and can update the tile arrays
+  in `src/data/map/data_map_change.s` with `--apply-data-map-change`.
 
 ### The tile-value transform
 
@@ -79,3 +87,11 @@ and reference that symbol from wherever the chapter's map pointer is set
 (see `src/data/data_8B363C.c`'s prologue-map swap for a worked,
 `FE8_CUSTOM_CAMPAIGN`-gated example — gate any new custom-campaign map
 the same way, matching every other custom-campaign asset).
+
+If the TMX includes hidden tile-change layers, import them alongside the map:
+
+```bash
+python3 scripts/tmx_to_map_changes.py graphics/map/layout/NewCh2Map.tmx Ch2TileChanges \
+    --json-out src/data/map/change/Ch2TileChanges.json \
+    --apply-data-map-change src/data/map/data_map_change.s
+```

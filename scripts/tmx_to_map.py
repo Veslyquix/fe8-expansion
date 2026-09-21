@@ -13,10 +13,10 @@ matters if you hand-edit the XML or change Map Properties):
   - Exactly one <tileset>, OR several with correctly ascending firstgid
     (standard Tiled multi-tileset gid resolution) -- FE8 maps only ever
     address one physical tileset image, but this doesn't assume that.
-  - Exactly one <layer>, whose <data> is either the plain per-tile XML
-    form (<tile gid="N"/> children, Tiled's "Tile Layer Format: XML") or
-    encoding="csv" (Tiled's default for new maps) -- NOT base64/gzip/zlib
-    (switch Map Properties > Tile Layer Format to CSV or XML if needed).
+  - One or more <layer> elements. The first visible layer is used as the
+    chapter layout (or the first layer if none are marked visible). Layer
+    <data> may be plain per-tile XML, csv, or base64 with optional zlib/gzip
+    compression.
 
 Tile value transform (confirmed byte-for-byte against a known-good .mar/
 .tmx pair of the same map, graphics/map/layout/NewPrologueMap): a raw
@@ -29,8 +29,12 @@ divides out a different fixed factor from FEBuilder's own on-disk .mar
 encoding) -- both land on the same final per-cell value the game itself
 reads from the compiled map .bin.
 """
+import base64
+import gzip
+import struct
 import sys
 import xml.etree.ElementTree as ET
+import zlib
 
 FLIP_FLAGS_MASK = 0xF0000000  # Tiled's horizontal/vertical/diagonal/rotated flip bits
 
@@ -62,15 +66,7 @@ def resolve_local_index(gid, tilesets, path):
     sys.exit(f"error: {path}: tile gid={gid} is below every tileset's firstgid")
 
 
-def parse_layer_gids(root, path):
-    layers = root.findall("layer")
-    if not layers:
-        sys.exit(f"error: {path}: no <layer> found")
-    if len(layers) > 1:
-        print(f"warning: {path}: {len(layers)} <layer> elements found, "
-              f"using only the first (\"{layers[0].get('name', '?')}\") -- "
-              f"FE8 maps are a single flat tile grid", file=sys.stderr)
-    layer = layers[0]
+def decode_layer_gids(layer, path):
     data = layer.find("data")
     if data is None:
         sys.exit(f"error: {path}: <layer> has no <data>")
@@ -87,10 +83,46 @@ def parse_layer_gids(root, path):
         if not text:
             sys.exit(f"error: {path}: <data encoding=\"csv\"> is empty")
         return [int(v) for v in text.replace("\n", "").split(",") if v.strip()]
+    elif encoding == "base64":
+        text = "".join((data.text or "").split())
+        if not text:
+            sys.exit(f"error: {path}: <data encoding=\"base64\"> is empty")
+
+        try:
+            raw = base64.b64decode(text)
+        except Exception as e:
+            sys.exit(f"error: {path}: invalid base64 layer data: {e}")
+
+        compression = data.get("compression")
+        if compression in (None, ""):
+            decoded = raw
+        elif compression == "zlib":
+            decoded = zlib.decompress(raw)
+        elif compression == "gzip":
+            decoded = gzip.decompress(raw)
+        else:
+            sys.exit(f"error: {path}: <data compression=\"{compression}\"> is not supported")
+
+        if len(decoded) % 4 != 0:
+            sys.exit(f"error: {path}: decoded base64 layer has {len(decoded)} byte(s), "
+                      f"not a whole number of 32-bit gids")
+        return list(struct.unpack(f"<{len(decoded) // 4}I", decoded))
     else:
-        sys.exit(f"error: {path}: <data encoding=\"{encoding}\"> is not supported "
-                  f"(base64/gzip/zlib) -- in Tiled, Map > Map Properties > "
-                  f"Tile Layer Format, switch to \"CSV\" or \"XML\", then re-save")
+        sys.exit(f"error: {path}: <data encoding=\"{encoding}\"> is not supported")
+
+
+def parse_layer_gids(root, path):
+    layers = root.findall("layer")
+    if not layers:
+        sys.exit(f"error: {path}: no <layer> found")
+    if len(layers) > 1:
+        print(f"warning: {path}: {len(layers)} <layer> elements found, "
+              f"using only the first visible layer -- "
+              f"FE8 maps are a single flat tile grid", file=sys.stderr)
+
+    visible_layers = [layer for layer in layers if layer.get("visible") != "0"]
+    layer = visible_layers[0] if visible_layers else layers[0]
+    return decode_layer_gids(layer, path)
 
 
 def convert(path):

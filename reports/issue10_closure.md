@@ -29,7 +29,7 @@ phase's change, and is never used as a stand-in for "not done".
 
 | # | Checklist item (verbatim) | Status | Evidence |
 |---|---|---|---|
-| 1 | "Introduce typed IDs and generated counts/registries." | **Done** | `include/id_space.h` typedefs (`ItemId`/`ClassId`/`ChapterId`/`UnitId`/...) + `*_TECHNICAL_MAX`/`*_CONFIGURED_CAP` macros, rendered from the single-source `scripts/generated_data/idspace.py`; `make generated-data-check` verifies the header and audit stay in sync with that source. |
+| 1 | "Introduce typed IDs and generated counts/registries." | **Done** | `include/id_space.h` typedefs (`ItemId`/`ClassId`/`ChapterId`/`UnitId`/...) + `*_TECHNICAL_MAX`/`*_CONFIGURED_CAP` macros, rendered from the single-source `scripts/generated_data/idspace.py`; `generated-data-check` (removed target) verifies the header and audit stay in sync with that source. |
 | 2 | "Audit every event operand, save field, UI buffer, lookup table, and network/link representation." | **Done** | `reports/id_space_audit.{json,md}` enumerate every domain x consumer-class pair (runtime-macro, runtime-struct, save-field, event-operand, lookup-table, ui-buffer, link-network, external-interface) with a `runtime_evidence` column. The item domain's rows are the ones exercised live: event operand via `EV_CMD_GIVEITEM`, save field via game-save + suspend packed fields, UI buffer via menu/stat-screen tile writes, link/network via the MultiArena SRAM roundtrip -- see "Runtime evidence" below. |
 | 3 | "Define explicit configurable caps constrained by GBA memory and data formats." | **Done** | `idspace.py`'s `validate_domain_cap` + per-domain technical max/configured cap in `include/id_space.h`; item cap raised to `0xCE`, validated against the `ItemId` u8 storage type and the `0xFF` sentinel/`0x100` wrap boundary. |
 | 4 | "Extend event encodings only through versioned/audited mechanisms." | **Audited unchanged, not triggered this phase** | Item IDs already travel the existing 16-bit event-operand lane (`docs/id_space.md` line 43: `event \| 16-bit operand lane \| 0xFFFF \| 0xFF`). Raising the item cap to `0xCE` stays inside that lane's existing width, so no operand encoding change was required or made -- confirmed live: the runtime probe's `eventItem = 0x01CE` comes back through the engine's unmodified `EV_CMD_GIVEITEM` decoder. This is **not** a substitute for "done": no new versioned event-encoding mechanism was built. A domain whose raised cap does *not* fit its current operand encoding (i.e. widening the encoding itself) is genuinely unimplemented; that is why class/chapter/unit widening is deferred (see "Explicit non-goals" and acceptance criterion 1 below), not silently folded into this item's cap raise. |
@@ -252,12 +252,12 @@ release-configuration limitation documented above).
   contributes no text/data/bss to an ordinary build).
 - `python3 scripts/artifact_guard.py --revision HEAD` -> exit 0;
   `--index` with the whole candidate staged -> exit 0 (then unstaged again).
-- `make generated-data-check` -> no drift, 206-record items, manifest 722
+- `generated-data-check` (removed target) -> no drift, 206-record items, manifest 722
   records, `id-space contract up-to-date (3 outputs)`.
-- `FE8_ITEM_ID_CAP=0xCE make generated-data-check` -> `OK: no drift for table
+- `FE8_ITEM_ID_CAP=0xCE generated-data-check-REMOVED` -> `OK: no drift for table
   'items' (207 record(s))`, manifest unchanged at 722 (archival inventory
   stays vanilla).
-- `make generated-data-test` -> `Ran 544 tests ... OK`.
+- `generated-data-test` (removed target) -> `Ran 544 tests ... OK`.
 - `python3 -m unittest discover -s tools/gba-playtest/tests` -> `Ran 184
   tests ... OK` (against default-cap ROMs; in **normal mode** this suite
   reads the ROMs in `build/expansion-modern/`, so it must be run with
@@ -371,7 +371,7 @@ Two-layer fix:
    affected object when it was stale. `generated-data-check` stays the
    authoritative validation/drift gate.
 
-Regression: `make generated-data-cap-heal-check` (generated_data.mk,
+Regression: `generated-data-cap-heal-check` (removed target) (generated_data.mk,
 local/manual like `generated-data-link-check` because the object half needs
 the archival agbcc pipeline CI does not install) reproduces the exact chain --
 stamp at default cap + a poisoned 207-record `.c` with a newer mtime -> a
@@ -384,7 +384,7 @@ up-to-date assertions are not perturbed by the silent heal).
 
 Verified fresh: legacy object `md5` and modern
 `build/expansion-modern/release/aapcs/src/data_items.o` `md5` both return to
-the 206 baseline after a poison + default rebuild; `make generated-data-check`
+the 206 baseline after a poison + default rebuild; `generated-data-check` (removed target)
 reports items `206 record(s)` and manifest `722 record(s)`; the full
 `scripts/generated_data/tests` suite (544 passed) leaves
 `build/generated/data/data_items.c` at 206 records.
@@ -481,7 +481,7 @@ Evidence mapping:
 | Default cap | `make -n legacy` / `make -n fireemblem8.gba` | exit 0 (archival lane reachable) |
 | Explicit vanilla / legal equivalent | `FE8_ITEM_ID_CAP=0xCD make -n legacy` / `FE8_ITEM_ID_CAP=205 make -n fireemblem8.gba` | exit 0 |
 | Modern unaffected | `FE8_ITEM_ID_CAP=0xCE make -n` (bare) | exit 0, modern release AAPCS boot-check, no agbcc |
-| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE make -n generated-data-check` / `... make generated-data-check` | exit 0 |
+| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE  -n generated-data-check-REMOVED` / `... generated-data-check-REMOVED` | exit 0 |
 | Modern define consistency | `FE8_ITEM_ID_CAP=0xCE make -rR -p` | `MODERN_DEFINE_FLAGS := ... -DFE8_ITEM_ID_CAP=0xCE` |
 
 Regression tests: see finding C-follow-up (the test module was rewritten to
@@ -557,9 +557,9 @@ Evidence mapping (post-follow-up):
 | Real build, before any link | `FE8_ITEM_ID_CAP=0xCE make fireemblem8.map` (non `-n`) | exit 2 in ~1.5s; no `arm-none-eabi-ld`/`objcopy` |
 | Vanilla / legal equivalents | `make -n legacy` / `FE8_ITEM_ID_CAP=205` / `0xcd` / `0o315` | exit 0 (archival reachable) |
 | Modern unaffected | `FE8_ITEM_ID_CAP=0xCE make -n` (bare) / `... expansion-modern-boot-check ...` | exit 0 |
-| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE make -n generated-data-check` / `... make generated-data-check` | exit 0 |
+| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE  -n generated-data-check-REMOVED` / `... generated-data-check-REMOVED` | exit 0 |
 | Modern define consistency | `FE8_ITEM_ID_CAP=0xCE make -rR -p` | `MODERN_DEFINE_FLAGS := ... -DFE8_ITEM_ID_CAP=0xCE` |
-| Shell injection (env + CLI) | `FE8_ITEM_ID_CAP="'; touch M; echo '" make -n generated-data-check` | no `M` created; exit 2 invalid-cap error |
+| Shell injection (env + CLI) | `FE8_ITEM_ID_CAP="'; touch M; echo '"  -n generated-data-check-REMOVED` | no `M` created; exit 2 invalid-cap error |
 
 Regression tests (rewritten):
 `scripts/modernize/tests/test_archival_lane_item_cap_guard.py` (21 tests, 42
@@ -616,9 +616,9 @@ Evidence mapping (finding C-final):
 | **Unknown/indirect still blocked (Gate 2)** | `make -f Makefile -f <frag> -n <ad-hoc>: $(ELF)/$(OBJECTS_LST)/$(RELOCS_ELF)` at `0xCE` (named nowhere in `ARCHIVAL_KNOWN_GOALS`) | exit 2 via graph backstop (`generated_data.mk:NNN`) |
 | Vanilla / legal equivalents | `make -n legacy` / `FE8_ITEM_ID_CAP=205` / `0xcd` / `0o315` | exit 0 |
 | Modern unaffected | `FE8_ITEM_ID_CAP=0xCE make -n` (bare) / `... expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs` | exit 0 |
-| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE make -n generated-data-check` | exit 0 |
+| Generated-data unaffected | `FE8_ITEM_ID_CAP=0xCE  -n generated-data-check-REMOVED` | exit 0 |
 | Modern define consistency | `FE8_ITEM_ID_CAP=0xCE make -rR -p` | `MODERN_DEFINE_FLAGS := ... -DFE8_ITEM_ID_CAP=0xCE` |
-| Shell injection (env + CLI) | `FE8_ITEM_ID_CAP="'; touch M; echo '" make -n generated-data-check` | no `M` created; exit 2 invalid-cap error |
+| Shell injection (env + CLI) | `FE8_ITEM_ID_CAP="'; touch M; echo '"  -n generated-data-check-REMOVED` | no `M` created; exit 2 invalid-cap error |
 
 Regression tests: `scripts/modernize/tests/test_archival_lane_item_cap_guard.py`
 now **26 tests / 53 subtests, all green**. New coverage over C-follow-up:
@@ -757,7 +757,7 @@ the number of records actually loaded, not a hand-maintained constant.
 Observed:
 
 ```console
-$ FE8_ITEM_ID_CAP=0xCE make generated-data-check
+$ FE8_ITEM_ID_CAP=0xCE generated-data-check-REMOVED
 OK: no manifest drift (13 table(s), 722 record(s))
 consumer census clean: 1070 hit(s), 1046 audited, 24 reviewed-exclusion, digest 11e8a358...
 id-space contract up-to-date (3 outputs)
@@ -769,7 +769,7 @@ $ git status --porcelain        # no tracked drift from the configured run
 includes `id_space.h` + `id_space_active.h` and carries two
 `ID_SPACE_STATIC_ASSERT`s: the compiler cap must equal the generator cap, and
 `sizeof(gItemData)/sizeof(gItemData[0])` must equal the active record count.
-`make expansion-modern-idspace-active-check` proves all three directions with
+`expansion-modern-idspace-active-check` (removed target) proves all three directions with
 the real modern toolchain:
 
 ```console
@@ -972,7 +972,7 @@ and heals the exact desync internally (no manual state hacking needed
 to reproduce the self-heal claim):
 
 ```
-$ make generated-data-active-heal-check
+$ generated-data-active-heal-check-REMOVED
 --- baseline: a plain default build agrees on 0xCD/206 across header, stamp and table ---
 --- desync: an out-of-band FE8_ITEM_ID_CAP=0xCE active render advances the header to 0xCE while the stamp stays default and the .c stays 206 ---
 --- heal: a single plain default build must restore the header to 0xCD/206 so header and table agree, with no manual generated-data-check ---
@@ -989,8 +989,8 @@ Both reproduced directly in this worktree during this remediation, exit 0.
 ### First-fail reproduced (before)
 
 ```
-$ make generated-data-check                              # default baseline: header 0xCD/206
-$ FE8_ITEM_ID_CAP=0xCE make generated-data-check         # leaves ACTIVE header at 0xCE/207, stamp stays 0xCD
+$ generated-data-check-REMOVED                              # default baseline: header 0xCD/206
+$ FE8_ITEM_ID_CAP=0xCE generated-data-check-REMOVED         # leaves ACTIVE header at 0xCE/207, stamp stays 0xCD
 $ stat -c '%Y %n' build/generated/data/{id_space_active.h,.item_id_cap.stamp}
 1785238039 build/generated/data/id_space_active.h        # 0xCE, newest
 1785237943 build/generated/data/.item_id_cap.stamp       # still 0xCD, older
@@ -1004,7 +1004,7 @@ make: *** [modern.mk:607: build/expansion-modern/debug/aapcs/src/data_items.o] E
 
 The build-local ACTIVE header is re-rendered **only** by the stamp-driven
 grouped rule, which fires purely on `.item_id_cap.stamp`'s mtime. An
-out-of-band `FE8_ITEM_ID_CAP=0xCE make generated-data-check` write-if-changes
+out-of-band `FE8_ITEM_ID_CAP=0xCE generated-data-check-REMOVED` write-if-changes
 the header to 0xCE (advancing *its* mtime) but never touches the stamp. On the
 next plain/default build the resolved cap is unchanged (0xCD==0xCD), so the
 stamp mtime does not advance; the 0xCE header now looks newer than the stamp,
@@ -1012,7 +1012,7 @@ the grouped rule is judged up to date and never re-renders -- yet
 `data_items.c` (which lists the header as a prerequisite) *does* regenerate at
 the default cap, so a 206-record table `#include`s a 207-record header: the
 negative static assert on the first consumer compile, previously only
-recoverable with a manual `make generated-data-check`. Hard-fail beats silent
+recoverable with a manual `generated-data-check` (removed target). Hard-fail beats silent
 corruption, but a build must never require a manual pre-step to recover.
 
 ### Fix (single-command, parallel-safe self-heal)
@@ -1037,21 +1037,21 @@ $ grep ITEM_ID_ACTIVE_ build/generated/data/id_space_active.h
 #define ITEM_ID_ACTIVE_CONFIGURED_CAP 0xCD
 #define ITEM_ID_ACTIVE_RECORD_COUNT 206
 # re-staging the same desync and rebuilding again proves the self-heal repeats, not a one-off:
-$ FE8_ITEM_ID_CAP=0xCE make generated-data-check >/dev/null   # re-stage 0xCE header
+$ FE8_ITEM_ID_CAP=0xCE generated-data-check-REMOVED >/dev/null   # re-stage 0xCE header
 $ make expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # exit 0
 Modern ELF ready: build/expansion-modern/debug/aapcs/fireemblem8.elf   # header healed to 0xCD/206
 ```
 
 ### Regression coverage (both real-run)
 
-- `make generated-data-active-heal-check` (generated_data.mk, host-only, no
+- `generated-data-active-heal-check` (removed target) (generated_data.mk, host-only, no
   agbcc/arm toolchain -- CI-friendly): stages the exact stamp/header desync and
   asserts one plain default build re-syncs header+table to 0xCD/206; covers the
   reverse default->0xCE flip, a correct-cap no-op (proves no rebuild storm), and
   never cleans. Verified to **fail** with the fix reverted (negative control:
   "the stale 0xCE header did not self-heal on the first plain default build")
   and PASS with it in place.
-- The "desync recovery" leg of `make expansion-modern-idspace-active-check`
+- The "desync recovery" leg of `expansion-modern-idspace-active-check` (removed target)
   (modern.mk): the same recovery proven with a **real modern compile** so the
   stale-header negative assert can never silently return, alongside the existing
   default/configured/negative legs.
@@ -1098,7 +1098,7 @@ detection is itself census-free, (c) a stale cap flip regenerates all three
 surfaces, (d) an out-of-band 0xCE header on a default build heals back to
 0xCD/206, (e) missing/corrupt-JSON/corrupt-header/schema-bump surfaces are
 flagged stale, and (f) a bad cap raises loudly (no swallowed exit-1). The
-`make generated-data-active-heal-check` and modern "desync recovery" legs above
+`generated-data-active-heal-check` (removed target) and modern "desync recovery" legs above
 exercise the same recovery end-to-end through the real recipe.
 
 **Follow-up: header/Markdown decode errors (`OSError`/`UnicodeDecodeError`) now
@@ -1129,15 +1129,15 @@ all at once, one heal call restores all three), and
 permission-denied header is diagnosed as an actionable reason without
 crashing, but the follow-up regen's write still raises rather than reporting a
 false success). `python3 -m unittest discover -s scripts/generated_data/tests`
-now runs 613 tests (598 baseline + 15 new `ActiveHealProbeTests`), OK; `make generated-data-active-heal-check` and
-`make generated-data-check` both still PASS unchanged.
+now runs 613 tests (598 baseline + 15 new `ActiveHealProbeTests`), OK; `generated-data-active-heal-check` (removed target) and
+`generated-data-check` (removed target) both still PASS unchanged.
 
 ### Verification run for this follow-up
 
 ```
-make generated-data-active-heal-check            # PASS
-make generated-data-cap-heal-check               # PASS
-make generated-data-check                        # PASS (item cap 0xCD, 206 record(s))
+generated-data-active-heal-check-REMOVED            # PASS
+generated-data-cap-heal-check-REMOVED               # PASS
+generated-data-check-REMOVED                        # PASS (item cap 0xCD, 206 record(s))
 make expansion-modern-idspace-active-check ...   # PASS (incl. desync-recovery leg, real compile)
 python3 -m unittest discover -s scripts/generated_data/tests   # Ran 613 tests, OK
 make -j4 expansion-modern-elf MODERN_CONFIG=debug MODERN_ABI=aapcs   # from staged desync: exit 0, header healed to 0xCD/206

@@ -57,7 +57,6 @@ name.
 | `make expansion-modern-linker-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Boot-check plus budget/shift/overlay/title-fingerprint gates | Yes | Yes |
 | `make legacy` / `make fireemblem8.gba` | Archival agbcc `fireemblem8.gba` | Yes | No (agbcc, fetched on first use) |
 | `make clean` / `make clean_fast` | Removes build artifacts (see [`README.md`](../README.md)) | — | — |
-| `make generated-data-validate` / `-generate` / `-check` / `-test` | Structured content authoring (see [`docs/generated_data_tutorial.md`](generated_data_tutorial.md)) | No | No |
 | `make localization-validate` / `make localization-generate` / `make localization-check` / `make localization-test` | Expansion locale registry/catalog authoring and host tests (see [`localization.md`](localization.md)) | No | No |
 | `make expansion-modern-starter-runtime-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Issue #6 enabled/disabled mechanics + Threat Range runtime matrix | Yes | Yes |
 | `make expansion-modern-localization-budget-check MODERN_CONFIG=... MODERN_ABI=aapcs` | Issue #18 catalog/resolver/UI source+linker budget and real region headroom | No new ROM beyond its linked prerequisite | No |
@@ -83,8 +82,8 @@ there.
 
 Every `make TARGET` invocation on this page is checked by
 [`scripts/check_docs.py`](../scripts/check_docs.py) (`parse_make_targets`/
-`make_target_exists`, a static parse of the `Makefile`/`modern.mk`/
-`generated_data.mk` include graph -- see
+`make_target_exists`, a static parse of the `Makefile`/`modern.mk`
+include graph -- see
 [`reports/issue17_documentation_audit.md`](../reports/issue17_documentation_audit.md#stale-reference-and-command-existence-evidence)
 for how that check works) so a renamed/removed target fails
 `scripts/check_docs.py --check` before merge. To reproduce target
@@ -97,7 +96,7 @@ no ROM build or network access is required for either.
 
 - **Fast / no-ROM**: `expansion-modern-toolchain-check`, `expansion-modern-cohort`,
   `expansion-modern-all`, `expansion-modern-elf`,
-  `generated-data-validate`/`-generate`/`-check`/`-test`,
+  `localization-validate`/`-generate`/`-check`/`-test`,
   `scripts.upstream_port scan`/`drift`/`report`, `scripts/artifact_guard.py`,
   any `python3 -m unittest discover -s .../tests`.
 - **Full / builds a ROM**: `expansion-modern-rom` (no libmGBA needed),

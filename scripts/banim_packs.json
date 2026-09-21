@@ -109,7 +109,7 @@
     "class_tag": "gmp"
   },
   "lynlord": {
-    "credit": "[FE7 Lyn-Reskin] T1 Long Hair [F] by Merpin",
+    "credit": "[Myrmidon-Reskin] Marisa [F] by Redbean; scripted by Sable Mage; Sword Alt Crit by Seliost1",
     "weapons": [
       "Sword"
     ],
@@ -293,19 +293,6 @@
       "Unarmed"
     ],
     "class_tag": "hrbg"
-  },
-  "hrba": {
-    "credit": "[FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy",
-    "weapons": [
-      "Sword",
-      "Lance",
-      "Axe",
-      "Handaxe",
-      "Staff",
-      "Magic",
-      "Unarmed"
-    ],
-    "class_tag": "hrba"
   },
   "hvin": {
     "credit": "[FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon",
@@ -723,5 +710,102 @@
       "Unarmed"
     ],
     "class_tag": "advn"
+  },
+  "lynlun": {
+    "credit": "[Myrmidon-Reskin] Marisa [F] by Redbean; scripted by Sable Mage; unarmed",
+    "weapons": [
+      "Unarmed"
+    ],
+    "class_tag": "lynlu"
+  },
+  "lyngl": {
+    "credit": "[Myrmidon-Reskin] Marisa [F] by Redbean; scripted by Sable Mage; Sword Alt Crit by Seliost1",
+    "weapons": [
+      "Sword",
+      "Unarmed"
+    ],
+    "class_tag": "lyngl"
+  },
+  "elder": {
+    "credit": "[Elder] by Yangfly Master",
+    "weapons": [
+      "Magic",
+      "Staff",
+      "Unarmed"
+    ],
+    "class_tag": "eldr"
+  },
+  "arblm": {
+    "credit": "[Griffon] [U] Arbalest Repal 2 by Pushwall; base by Ayr and Raspberry; initial repalette by EldritchAbomination",
+    "weapons": [
+      "Lance",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "arbm"
+  },
+  "arblf": {
+    "credit": "[Griffon] [U] Arbalest - Tribalest; base by Ayr and Raspberry; repalette by EldritchAbomination/Pushwall; reskin by UltraFenix",
+    "weapons": [
+      "Lance",
+      "Bow",
+      "Unarmed"
+    ],
+    "class_tag": "arbf"
+  },
+  "fbknt": {
+    "credit": "[WK Reskin] [U] Fellbeast Knight by Nuramon; Lance/Tail Spike combination by Seliost1",
+    "weapons": [
+      "Lance",
+      "Unarmed"
+    ],
+    "class_tag": "fbknt"
+  },
+  "grifm": {
+    "credit": "[Griffon] [U] Griffon v2 SoA by Ayr; unarmed edit by What is an Aubin",
+    "weapons": [
+      "Sword",
+      "Axe",
+      "Handaxe",
+      "Unarmed"
+    ],
+    "class_tag": "grifm"
+  },
+  "asage": {
+    "credit": "[T3 FE7] [M] Archsage Athos by Red Bean",
+    "weapons": [
+      "Magic",
+      "Staff"
+    ],
+    "class_tag": "asage"
+  },
+  "malq": {
+    "credit": "[WK Custom] [F] Malig Queen by DatonDemand; animation by Leo_Link; handaxe/javelin by jj09; edits by UltraxBlade",
+    "weapons": [
+      "Axe",
+      "Handaxe",
+      "Magic"
+    ],
+    "class_tag": "malq"
+  },
+  "serap": {
+    "credit": "[Peg T3 Base] [F] Seraph Knight Repal; animation by Dinar; repal by 7743; staff/magic by darkjaden",
+    "weapons": [
+      "Sword",
+      "Lance",
+      "Magic",
+      "Staff",
+      "Unarmed"
+    ],
+    "class_tag": "serap"
+  },
+  "exec": {
+    "credit": "[T3 Custom] [U] Executioner (Assassin+Druid) by Huichelaar",
+    "weapons": [
+      "Sword",
+      "Magic",
+      "Unarmed"
+    ],
+    "class_tag": "exec"
   }
 }

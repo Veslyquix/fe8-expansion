@@ -7378,7 +7378,8 @@ static int GetNextDebuggerPreviewWeapon(int item, int direction);
 static const char * GetDebuggerPreviewWeaponName(int item);
 static int GetNextDebuggerClassPaletteCycle(int classId, int current, int direction);
 static int ResolveDebuggerClassPaletteOverride(DebuggerProc * proc);
-static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride);
+static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride, DebuggerProc * proc);
+static void RestoreGfxViewerMenuAfterBanimPreview(DebuggerProc * proc);
 
 #define GfxViewerMenuXShift -13
 #define GfxViewerMenuWidthShrink 2
@@ -7496,6 +7497,11 @@ void GfxViewerInitMenuGfx(DebuggerProc * proc)
     UnpackUiFramePalette(2);
     DrawUiFrame(BG_GetMapBuffer(2), x, y, w, h, TILEREF(0, 1), 0);
     BG_EnableSyncByMask(BG2_SYNC_BIT);
+}
+
+static void RestoreGfxViewerMenuAfterBanimPreview(DebuggerProc * proc)
+{
+    GfxViewerInitMenuGfx(proc);
 }
 
 void GfxViewerInit(DebuggerProc * proc)
@@ -8555,12 +8561,40 @@ static bool DebuggerProcNameHasPrefix(const char * name, const char * prefix)
     return true;
 }
 
+// Read a proc's name back out of its own script rather than off proc_name.
+// Proc_Start() never resets proc_name, and a script with no PROC_NAME of its
+// own leaves whatever the previous tenant of that pool slot wrote there - so
+// proc_name can name a proc that is long gone, and sweeping on it would end
+// the wrong proc. A script with no PROC_NAME is simply not identifiable.
+static const char * GetDebuggerProcScriptName(const struct ProcCmd * script)
+{
+    int i;
+
+    if (script == NULL)
+        return NULL;
+
+    for (i = 0; i < 8; i++)
+    {
+        if (script[i].opcode == 0x00) // PROC_END
+            break;
+
+        if (script[i].opcode == 0x01) // PROC_NAME
+            return script[i].dataPtr;
+    }
+
+    return NULL;
+}
+
 static void EndLingeringBanimEffectProc(ProcPtr procPtr)
 {
     struct Proc * proc = procPtr;
+    const char * name = GetDebuggerProcScriptName(proc->proc_script);
 
-    if (DebuggerProcNameHasPrefix(proc->proc_name, "efx") ||
-        DebuggerProcNameHasPrefix(proc->proc_name, "ekrsubAnimeEmulator"))
+    if (name == NULL)
+        return;
+
+    if (DebuggerProcNameHasPrefix(name, "efx") ||
+        DebuggerProcNameHasPrefix(name, "ekrsubAnimeEmulator"))
         Proc_End(proc);
 }
 
@@ -8609,12 +8643,21 @@ static void EndLingeringBanimEffectProcs(void)
 
 static void EndDebuggerBanimPreview(void)
 {
+    bool hadPreview = Proc_Find(sProc_DebuggerBanimPreview) != NULL;
+
 #if FE8_OVERFLOW_SAFETY_CHECKS
     // Before the preview's own teardown frees and reallocates the anim slots.
     EndLingeringBanimEffectProcs();
 #endif
 
     Proc_EndEach(sProc_DebuggerBanimPreview);
+
+    if (hadPreview)
+    {
+        BG_Fill(gBG1TilemapBuffer, 0);
+        BG_Fill(gBG2TilemapBuffer, 0);
+        BG_EnableSyncByMask(BG1_SYNC_BIT | BG2_SYNC_BIT);
+    }
 }
 
 // gEfxHpLut is EWRAM_DATA u16[22] (banim-ekrbattleintro.c); no ARRAY_COUNT-able
@@ -8657,7 +8700,7 @@ static void ResetDebuggerBanimHitEffectState(void)
 #endif
 }
 
-static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride)
+static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapon, int palOverride, DebuggerProc * parent)
 {
     struct OpInfoClassDisplayProc * proc;
     struct ClassReelEnt * vanillaEntry;
@@ -8668,7 +8711,10 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapo
     EndDebuggerBanimPreview();
 
     if (classId == 0 || GetClassData(classId) == NULL)
+    {
+        RestoreGfxViewerMenuAfterBanimPreview(parent);
         return;
+    }
 
     vanillaEntry = GetDebuggerBanimReelEntry(classId);
 
@@ -8681,13 +8727,17 @@ static void StartDebuggerBanimPreview(int classId, struct Unit * unit, int weapo
     }
 
     if (!IsDebuggerBanimSafe(entry, classId, unit, weapon, palOverride))
+    {
+        RestoreGfxViewerMenuAfterBanimPreview(parent);
         return;
+    }
 
     ResetDebuggerBanimHitEffectState();
 
     BMapDispSuspend();
     proc = Proc_Start(sProc_DebuggerBanimPreview, PROC_TREE_3);
     SetupDebuggerBanimAnim(proc, entry, vanillaEntry, unit, weapon, palOverride);
+    RestoreGfxViewerMenuAfterBanimPreview(parent);
 }
 
 static void DebuggerBanimPreview_ExecScript(struct OpInfoClassDisplayProc * proc)
@@ -8770,7 +8820,7 @@ void DrawGfxFromIDs(int type, int id, struct Unit * unit, DebuggerProc * proc)
             ClearMainMenuGfx(proc);
             GfxViewerInitMenuGfx(proc);
             MU_EndAll();
-            StartDebuggerBanimPreview(id, unit, proc->tmp[GfxViewerOption_Weapon], -1);
+            StartDebuggerBanimPreview(id, unit, proc->tmp[GfxViewerOption_Weapon], -1, proc);
             break;
         }
     }
@@ -8783,7 +8833,7 @@ static void RefreshDebuggerBanimPreviewForGfxViewer(DebuggerProc * proc, struct 
         HasDebuggerBanimForClass(proc->tmp[GfxViewerOption_ClassAnim]))
     {
         StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-            ResolveDebuggerClassPaletteOverride(proc));
+            ResolveDebuggerClassPaletteOverride(proc), proc);
     }
 }
 
@@ -8827,7 +8877,7 @@ void GfxViewerLoop(DebuggerProc * proc)
             {
                 proc->tmp[GfxViewerOption_Weapon] = GetNextDebuggerPreviewWeapon(proc->tmp[GfxViewerOption_Weapon], +1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else if (proc->id == GfxViewerOption_Pal)
@@ -8837,7 +8887,7 @@ void GfxViewerLoop(DebuggerProc * proc)
                 proc->tmp[GfxViewerOption_Pal] = GetNextDebuggerClassPaletteCycle(
                     proc->tmp[GfxViewerOption_ClassAnim], proc->tmp[GfxViewerOption_Pal], +1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else
@@ -8858,7 +8908,7 @@ void GfxViewerLoop(DebuggerProc * proc)
             {
                 proc->tmp[GfxViewerOption_Weapon] = GetNextDebuggerPreviewWeapon(proc->tmp[GfxViewerOption_Weapon], -1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else if (proc->id == GfxViewerOption_Pal)
@@ -8868,7 +8918,7 @@ void GfxViewerLoop(DebuggerProc * proc)
                 proc->tmp[GfxViewerOption_Pal] = GetNextDebuggerClassPaletteCycle(
                     proc->tmp[GfxViewerOption_ClassAnim], proc->tmp[GfxViewerOption_Pal], -1);
                 StartDebuggerBanimPreview(proc->tmp[GfxViewerOption_ClassAnim], unit, proc->tmp[GfxViewerOption_Weapon],
-                    ResolveDebuggerClassPaletteOverride(proc));
+                    ResolveDebuggerClassPaletteOverride(proc), proc);
             }
         }
         else
@@ -8896,6 +8946,7 @@ void GfxViewerLoop(DebuggerProc * proc)
         {
             EndDebuggerBanimPreview();
             BMapDispResume();
+            RestoreGfxViewerMenuAfterBanimPreview(proc);
         }
 
         RefreshDebuggerBanimPreviewForGfxViewer(proc, unit);
@@ -8912,6 +8963,7 @@ void GfxViewerLoop(DebuggerProc * proc)
         {
             EndDebuggerBanimPreview();
             BMapDispResume();
+            RestoreGfxViewerMenuAfterBanimPreview(proc);
         }
 
         RefreshDebuggerBanimPreviewForGfxViewer(proc, unit);

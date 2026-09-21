@@ -536,7 +536,7 @@ class SpriteChunk:
     self.palID = palID
     if w == h:
       shape = 0
-      size = w>>1
+      size = 3 if w == 8 else w>>1
     elif w > h:
       shape = 1
       size = 3 if w == 8 else (w>>2) + (h>>1)

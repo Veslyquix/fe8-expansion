@@ -1,6 +1,0 @@
-{
-  "$schema": "fe8.characters.v1",
-  "characters": [
-    { "character": "CHARACTER_SETH", "defaultClass": "CLASS_MYRMIDON", "supportData": "SupportData_Eirika" }
-  ]
-}

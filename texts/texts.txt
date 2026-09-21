@@ -41292,11 +41292,11 @@ Harbinger[.][X]
 A grim champion trained in many[LF]
 weapons and dark magic.[.][X]
 
-## MSG_CLASS_HARBINGER_ALT_NAME
-Harbinger[.][X]
-## MSG_CLASS_HARBINGER_ALT_DESC
-A grim champion trained in many[LF]
-weapons and dark magic.[.][X]
+## MSG_CLASS_EXECUTIONER_NAME
+Executioner[.][.][X]
+## MSG_CLASS_EXECUTIONER_DESC
+A sinister killer who blends blades[LF]
+with forbidden magic.[.][X]
 
 ## MSG_CLASS_HEAVY_INFANTRY_NAME
 Hvy Infantry[X]
@@ -41591,3 +41591,79 @@ ranged combat and survival.[.][X]
 
 ## MSG_ITEM_CALL_NAME
 Horn[X]
+
+## MSG_CLASS_LYN_GREAT_LORD_NAME
+Lyn Great Lord[X]
+## MSG_CLASS_LYN_GREAT_LORD_DESC
+Lyn's promoted form. Swift and[LF]
+deadly with a blade.[.][X]
+
+## MSG_CLASS_ELDER_NAME
+Elder[.][X]
+## MSG_CLASS_ELDER_DESC
+A learned holy caster skilled with[LF]
+staves and magic.[.][X]
+
+## MSG_CLASS_ARBALEST_NAME
+Arbalest[X]
+## MSG_CLASS_ARBALEST_DESC
+A flying marksman who fights with[LF]
+lances and bows.[.][X]
+
+## MSG_CLASS_ARBALEST_F_NAME
+Arbalest[X]
+## MSG_CLASS_ARBALEST_F_DESC
+A flying marksman who fights with[LF]
+lances and bows.[.][X]
+
+## MSG_CLASS_FELLBEAST_KNIGHT_NAME
+Fellbeast Knight[X]
+## MSG_CLASS_FELLBEAST_KNIGHT_DESC
+A wyvern knight riding a fearsome[LF]
+beast into battle.[.][X]
+
+## MSG_CLASS_GRIFFON_NAME
+Griffon[.][X]
+## MSG_CLASS_GRIFFON_DESC
+A nimble griffon rider trained in[LF]
+swords and axes.[.][X]
+
+## MSG_CLASS_ARCHSAGE_NAME
+Archsage[X]
+## MSG_CLASS_ARCHSAGE_DESC
+A master sage versed in every form[LF]
+of magic and staffcraft.[.][X]
+
+## MSG_CLASS_MALIG_QUEEN_NAME
+Malig Queen[.][X]
+## MSG_CLASS_MALIG_QUEEN_DESC
+A wyvern monarch wielding axes and[LF]
+dark magic from above.[.][X]
+
+## MSG_CLASS_SERAPH_KNIGHT_NAME
+Seraph Knight[.][X]
+## MSG_CLASS_SERAPH_KNIGHT_DESC
+A saintly flier who blends martial[LF]
+arms, magic, and staves.[.][X]
+
+## MSG_MAINMENU_CAMPAIGN
+Campaign[X]
+## MSG_MAINMENU_WAR_ROOM
+War Room[X]
+## MSG_MAINMENU_BATTLE_TOWER
+Battle Tower[X]
+## MSG_MAINMENU_DESIGN_ROOM
+Design Room[.][X]
+## MSG_MAINMENU_VS
+VS[X]
+## MSG_MAINMENU_RECORDS
+Records[.][X]
+## MSG_MAINMENU_SHOP
+Shop[X]
+## MSG_MAINMENU_SOUND_ROOM
+Sound Room[X]
+## MSG_MAINMENU_LINK_ARENA
+Link Arena[X]
+
+## MSG_WARROOM_TITLE
+War Room[X]

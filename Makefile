@@ -32,7 +32,6 @@ SCANINC    := tools/scaninc/scaninc$(EXE)
 AIF2PCM    := tools/aif2pcm/aif2pcm$(EXE)
 MID2AGB    := tools/mid2agb/mid2agb$(EXE)
 TEXTENCODE := tools/textencode/textencode$(EXE)
-JSONPROC   := tools/jsonproc/jsonproc$(EXE)
 PREPROC    := tools/preproc/preproc$(EXE)
 ifeq ($(OS),Windows_NT)
 PYTHON    ?= C:/Python312/python.exe
@@ -55,30 +54,12 @@ CC1FLAGS := -mthumb-interwork -Wimplicit -Wparentheses -Werror -O2 -fhex-asm -ff
 CPPFLAGS := -I tools/agbcc/include -iquote include -iquote . -nostdinc -undef
 ASFLAGS  := -mcpu=arm7tdmi -mthumb-interwork -I include
 
-# Issue #5 generated-data platform: standalone targets, never wired into
-# `all` on their own (see generated_data.mk / docs/generated_data.md for
-# full scope/status). Included this early -- before the Files section
-# below and before `include modern.mk` further down -- because Batch
-# 2c-1's GENERATED_DATA_LINKED_HAND_SOURCES/GENERATED_DATA_LINKED_C
-# single-source-of-truth list (generated_data.mk) must already be defined
-# before CFILES/ALL_OBJECTS (below) and MODERN_ALL_C_SOURCES (modern.mk)
-# are computed, so a linked table's hand source can be filtered out of
-# both lists and its generated equivalent added, exactly once, in its
-# place.
-#
 # GNU Make's implicit default goal is the target of the *first* rule in
 # the *first* makefile read (ignoring special/suffix targets) -- normally
 # `all:` below, since it's the first real target this Makefile itself
-# defines. Including generated_data.mk here, before `all:` is reached,
-# means *its* first target (generated-data-validate) would otherwise
-# silently become the default goal instead, so a bare `make` would
-# validate generated-data JSON instead of building the ROM. Pin the
-# default goal explicitly, before the include, so this include-order
-# requirement can never regress bare `make`'s behavior regardless of
-# what any included makefile defines first.
+# defines. Pin the default goal explicitly so this can never regress bare
+# `make`'s behavior regardless of what any included makefile defines first.
 .DEFAULT_GOAL := all
-
-include generated_data.mk
 
 # Issue #18 sprint 1: fast, Python-only localization catalog targets
 # (validate/generate/check/test/budget); see localization.mk for details.
@@ -109,12 +90,6 @@ CFILES       := $(wildcard $(C_SUBDIR)/*.c)
 ifeq (,$(findstring $(CFILES_GENERATED),$(CFILES)))
 CFILES       += $(CFILES_GENERATED)
 endif
-# Issue #5 Batch 2c-1: hand C tables superseded by a linked generated-data
-# equivalent are excluded from the legacy build here (their objects are
-# re-added to ALL_OBJECTS below, from build/generated/data/ instead) -- see
-# GENERATED_DATA_LINKED_HAND_SOURCES in generated_data.mk. The hand source
-# itself stays on disk untouched; it is simply not compiled/linked.
-CFILES       := $(filter-out $(GENERATED_DATA_LINKED_HAND_SOURCES),$(CFILES))
 ASM_S_FILES  := $(wildcard $(ASM_SUBDIR)/*.s)
 SRC_S_FILES  := src/rom_header.s src/crt0.s src/m4a_1.s src/libagbsyscall.s
 DATA_S_FILES := $(wildcard $(DATA_SUBDIR)/*.s)
@@ -140,63 +115,15 @@ ASM_OBJECTS  := $(SFILES:.s=.o)
 BANIM_OBJECT := banim/data_banim.o
 MID_FILES    := $(wildcard $(MID_SUBDIR)/*.mid)
 MID_OBJECTS  := $(MID_FILES:.mid=.o)
-# Issue #5 Batch 3a: unlike GENERATED_DATA_LINKED_OBJECTS (whole-file
-# swaps), $(GENERATED_DATA_CH2_UNITS_OBJECT) (generated_data.mk) is
-# additive -- src/events_udefs.c/.o stays in CFILES/C_OBJECTS untouched
-# (it still defines every other chapter's units), guarded internally to
-# exclude just its Chapter 2 prefix slice. See generated_data.mk's
-# "Linking a Chapter-2-owned partial-file table" section.
-# Issue #5 Batch 3b: $(GENERATED_DATA_CH2_TRAPS_OBJECT) is the same kind
-# of additive object -- src/events_trapdata.c/.o stays in CFILES/
-# C_OBJECTS untouched (it still defines every other chapter's traps),
-# guarded internally (twice, for its two non-adjacent Ch2 blocks) to
-# exclude only TrapData_Event_Ch2/TrapData_Event_Ch2Hard. See
-# generated_data.mk's "Linking a Chapter-2-owned partial-file table"
-# section, traps subsection.
-# Issue #5 Batch 3c: $(GENERATED_DATA_CH2_SHOPS_OBJECT) is the same kind
-# of additive object -- src/events_shoplist.c/.o stays in CFILES/
-# C_OBJECTS untouched (it still defines every other shop list), guarded
-# internally to exclude only ShopList_Event_Ch2Armory. See
-# generated_data.mk's "Linking a Chapter-2-owned partial-file table"
-# section, shops subsection.
-# Issue #5 Batch 3d: $(GENERATED_DATA_CH2_EVENTLISTS_OBJECT) is the same
-# kind of additive object -- src/events_info.c/.o stays in CFILES/
-# C_OBJECTS untouched (it still defines every other chapter's event-list
-# composition), guarded internally to exclude only its (whole-header)
-# "events/ch2-eventinfo.h" include. See generated_data.mk's "Linking a
-# Chapter-2-owned partial-file table" section, eventlists subsection.
-# Issue #5 Batch 1 (mechanics): $(GENERATED_DATA_TERRAINSTATS_OBJECT) is
-# the same kind of additive object -- src/data_terrains.c/.o stays in
-# CFILES/C_OBJECTS untouched (it still defines every movement-cost table,
-# escape-hatch Unk_TerrainTable_N array, and banim graphics table), guarded
-# internally (twice, for its two non-adjacent groups of arrays) to
-# exclude only the 6 TerrainTable_Avo_*/Def_*/Res_* arrays and
-# TerrainTable_HealAmount/TerrainTable_HealsStatus. See generated_data.mk's
-# "Linking a partial-file table with two non-adjacent hand blocks, neither
-# Chapter-2-owned" section, terrainstats subsection.
-# Issue #5 Batch 2 (mechanics): $(GENERATED_DATA_MOVECOST_OBJECT) is the
-# same kind of additive object, sharing src/data_terrains.c/.o with
-# terrainstats above -- guarded internally (twice, for its two
-# non-adjacent groups of arrays) to exclude only the 47 movement-cost
-# arrays (15 named mobility profiles' Normal/Rain/Snow triplets,
-# TerrainTable_MovCost_DemonKing, TerrainMoveCost_Ballista); it is
-# canonically linked as the *first* `.data` prefix, ahead of
-# terrainstats. See generated_data.mk's "Chapter-2-owned (Issue #5 Batch
-# 2: mechanics movecost)" section.
-# Issue #5 Batch 3 (mechanics): $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT) is
-# the same kind of additive object -- src/bmbattle.c/.o stays in CFILES/
-# C_OBJECTS untouched (it still defines BattleApplyWeaponTriangleEffect/
-# BattleApplyReaverEffect and every other battle-engine symbol), guarded
-# internally (once) to exclude only the 12-rule sWeaponTriangleRules[]
-# table; it is canonically linked as the literal first `.data` prefix of
-# src/bmbattle.o, with everything else that file defines redirected into
-# src/bmbattle.o(.data.bmbattletail). See generated_data.mk's "Linking a
-# partial-file table" section, weapontriangle subsection.
-ALL_OBJECTS  := $(C_OBJECTS) $(DATA_SRC_C_OBJECTS) $(ASM_OBJECTS) $(BANIM_OBJECT) $(MID_OBJECTS) $(GENERATED_DATA_LINKED_OBJECTS) $(GENERATED_DATA_CH2_UNITS_OBJECT) $(GENERATED_DATA_CH2_TRAPS_OBJECT) $(GENERATED_DATA_CH2_SHOPS_OBJECT) $(GENERATED_DATA_CH2_EVENTLISTS_OBJECT) $(GENERATED_DATA_TERRAINSTATS_OBJECT) $(GENERATED_DATA_MOVECOST_OBJECT) $(GENERATED_DATA_WEAPONTRIANGLE_OBJECT)
+# All game-data tables (units, traps, shops, event lists, terrain stats,
+# move costs, weapon triangle, etc.) are hand-authored directly in their
+# src/*.c files (src/events_udefs.c, src/events_trapdata.c,
+# src/events_shoplist.c, src/events_info.c, src/data_terrains.c,
+# src/bmbattle.c, ...) and compiled unconditionally as part of CFILES/
+# C_OBJECTS above -- there is no generated-data link-swap layer.
+ALL_OBJECTS  := $(C_OBJECTS) $(DATA_SRC_C_OBJECTS) $(ASM_OBJECTS) $(BANIM_OBJECT) $(MID_OBJECTS)
 OBJECTS_LST  := objects.lst
 DEPS_DIR     := .dep
-
-AUTO_GEN_TARGETS :=
 
 # Use the older compiler to build library code
 src/agb_sram.o: CC1FLAGS := -mthumb-interwork -Wimplicit -Wparentheses -Werror -O1 -ffix-debug-line -g
@@ -340,22 +267,38 @@ shiftcheck: shiftcheck-build shiftcheck-static shiftcheck-offsets shiftcheck-dif
 # in $(ROM)/$(MAP)/$(RELOCS_ELF)/$(OBJECTS_LST). (shiftcheck-build is omitted:
 # it only scans build-system addresses and reaches no archival product.)
 # Anything not listed still trips the graph backstop. Both gates share the
-# same actionable diagnostic ($(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG), defined
-# once in generated_data.mk) so they can never drift.
+# same actionable diagnostic ($(ARCHIVAL_ITEM_CAP_DIAG)) so they can never
+# drift.
+ARCHIVAL_ITEM_DEFAULT_CAP := 0xCD
+# FE8_ITEM_ID_CAP may be spelled as decimal, hex (0x../0X..) or Python-style
+# octal (0o..); normalize through Python's own int(x, 0) (the same parser
+# include/id_space.h's cap macro is ultimately validated against) so e.g.
+# "205"/"0xcd"/"0o315" are all recognized as the vanilla cap. Single-quote
+# shell-escaped (GNU Make does not export a command-line-origin variable
+# into $(shell), so the raw value must be passed as a literal argument, and
+# a value containing a quote must never break out of it) -- empty/unset
+# resolves to the vanilla cap; an unparseable value resolves to empty,
+# which the guard below treats as expanded (fails safe: blocked, not
+# silently accepted).
+ARCHIVAL_ITEM_CAP__SQ := '
+ARCHIVAL_ITEM_CAP_SHELL_ARG := $(ARCHIVAL_ITEM_CAP__SQ)$(subst $(ARCHIVAL_ITEM_CAP__SQ),$(ARCHIVAL_ITEM_CAP__SQ)\$(ARCHIVAL_ITEM_CAP__SQ)$(ARCHIVAL_ITEM_CAP__SQ),$(FE8_ITEM_ID_CAP))$(ARCHIVAL_ITEM_CAP__SQ)
+ARCHIVAL_ITEM_CAP_RESOLVED := $(shell python3 -c "import sys; v = sys.argv[1].strip(); print(('0x%02X' % int(v, 0)) if v else '$(ARCHIVAL_ITEM_DEFAULT_CAP)')" $(ARCHIVAL_ITEM_CAP_SHELL_ARG) 2>/dev/null)
+ARCHIVAL_ITEM_CAP_EXPANDED := $(filter-out $(ARCHIVAL_ITEM_DEFAULT_CAP),$(ARCHIVAL_ITEM_CAP_RESOLVED))
+ARCHIVAL_ITEM_CAP_DIAG := Archival lane (the agbcc fireemblem8.gba/.elf/.map ROM/ELF/MAP, the `legacy` alias, fireemblem8_relocs.elf, the shiftcheck family, and objects.lst) only supports the vanilla item cap FE8_ITEM_ID_CAP=$(ARCHIVAL_ITEM_DEFAULT_CAP), but FE8_ITEM_ID_CAP='$(FE8_ITEM_ID_CAP)' resolved to $(ARCHIVAL_ITEM_CAP_RESOLVED). The agbcc archival lane does not thread -DFE8_ITEM_ID_CAP, so an expanded cap would generate a table that diverges from the compiled ITEM_ID_CONFIGURED_CAP. Item ID expansion is modern-only: build the modern lane instead, e.g. `FE8_ITEM_ID_CAP=$(FE8_ITEM_ID_CAP) make expansion-modern-boot-check MODERN_CONFIG=release MODERN_ABI=aapcs`; or unset FE8_ITEM_ID_CAP (or set it to $(ARCHIVAL_ITEM_DEFAULT_CAP)) to build this archival target
 ARCHIVAL_KNOWN_GOALS := legacy _legacy_impl $(ROM) $(ELF) $(MAP) $(RELOCS_ELF) $(OBJECTS_LST) \
     shiftcheck shiftcheck-static shiftcheck-offsets shiftcheck-diff shiftcheck-run
-ifneq (,$(GENERATED_DATA_ITEM_CAP_EXPANDED))
+ifneq (,$(ARCHIVAL_ITEM_CAP_EXPANDED))
 ifneq (,$(filter $(ARCHIVAL_KNOWN_GOALS),$(MAKECMDGOALS)))
-$(error $(GENERATED_DATA_ARCHIVAL_ITEM_CAP_DIAG))
+$(error $(ARCHIVAL_ITEM_CAP_DIAG))
 endif
 endif
 
 # --- Issue #10 archival item-cap guard: dependency-graph attachment ----------
-# Bind generated_data.mk's archival item-cap guard (a .PHONY target whose
-# recipe fires a make $(error) at a non-vanilla item cap) to the archival
-# link/list/artifact boundary as an order-only prerequisite. Any target that
-# reaches the agbcc archival lane -- the direct $(ROM)/$(ELF)/$(MAP) products,
-# the `legacy` alias, $(RELOCS_ELF), the whole shiftcheck family (via
+# Bind the archival item-cap guard (a .PHONY target whose recipe fires a make
+# $(error) at a non-vanilla item cap) to the archival link/list/artifact
+# boundary as an order-only prerequisite. Any target that reaches the agbcc
+# archival lane -- the direct $(ROM)/$(ELF)/$(MAP) products, the `legacy`
+# alias, $(RELOCS_ELF), the whole shiftcheck family (via
 # $(ROM)/$(MAP)/$(RELOCS_ELF)/$(OBJECTS_LST)), $(OBJECTS_LST) itself, and any
 # future target that depends on these -- therefore inherits an early,
 # `make -n`-visible, parse/plan-time failure at an expanded cap, with no
@@ -366,24 +309,22 @@ endif
 # `make NODEP=0 <objects>` sub-make -- so guarding objects would wrongly block
 # the modern lane at an expanded cap. $(OBJECTS_LST)/$(ELF)/$(ROM)/$(MAP)/
 # $(RELOCS_ELF), by contrast, are produced *only* by the agbcc archival lane
-# (the modern lane emits its own separate MODERN_* products, and the
-# generated-data checks build only generated objects), and every archival
-# artifact -- incl. the whole shiftcheck family -- funnels through at least one
-# of them. That is exactly the point where the generator's cap-sized table
+# (the modern lane emits its own separate MODERN_* products), and every
+# archival artifact -- incl. the whole shiftcheck family -- funnels through at
+# least one of them. That is exactly the point where the item-cap-sized data
 # meets the cap-baked agbcc engine code, so it is the correct divergence gate.
 # Order-only ('|') so the always-out-of-date .PHONY guard never forces an
 # archival relink at the vanilla cap; the guard is a no-op (`:`) there.
 ARCHIVAL_ITEM_CAP_GUARDED_TARGETS := $(OBJECTS_LST) $(ELF) $(ROM) $(MAP) $(RELOCS_ELF)
-$(ARCHIVAL_ITEM_CAP_GUARDED_TARGETS): | generated-data-archival-item-cap-guard
+$(ARCHIVAL_ITEM_CAP_GUARDED_TARGETS): | archival-item-cap-guard
+
+.PHONY: archival-item-cap-guard
+archival-item-cap-guard:
+	@$(if $(ARCHIVAL_ITEM_CAP_EXPANDED),$(error $(ARCHIVAL_ITEM_CAP_DIAG)),:)
 
 CLEAN_FILES := $(ROM) $(ELF) $(MAP) $(OBJECTS_LST) $(SFILES_COMPILED) $(DATA_SRC_SFILES_COMPILED) graphics/*.h $(CFILES_GENERATED) $(RELOCS_ELF) $(RELOCS_ELF:.elf=.map)
-# $(GENERATED_DATA_OUT_DIR) (build/generated/data) holds every linked
-# table's stamp/.c/.s/.o (Issue #5 Batch 2c-1, generated_data.mk) -- added
-# directly to this line (rather than generated_data.mk appending to
-# CLEAN_DIRS) because generated_data.mk is included before this
-# assignment and `:=` here would clobber any earlier append anyway.
-CLEAN_DIRS := $(DEPS_DIR) $(SHIFTDIR) $(GENERATED_DATA_OUT_DIR)
-CLEAN_BINS := graphics/statscreen/*.bin $(SAMPLE_SUBDIR)/*.bin $(MAP_LAYOUT_SUBDIR)/*.bin graphics/map/*TileConfiguration*.bin $(AUTO_GEN_TARGETS)
+CLEAN_DIRS := $(DEPS_DIR) $(SHIFTDIR)
+CLEAN_BINS := graphics/statscreen/*.bin $(SAMPLE_SUBDIR)/*.bin $(MAP_LAYOUT_SUBDIR)/*.bin graphics/map/*TileConfiguration*.bin
 CLEAN_SONGS := $(MID_SUBDIR)/*.s
 
 # Isolated, opt-in modern GCC object rules (no modern ELF/ROM target).
@@ -493,20 +434,12 @@ src/msg_data.c: $(TEXT_SRC) $(TEXT_DEFS) $(TEXT_TOOLS)/textprocess.py $(TEXT_CON
 include graphics_file_rules.mk
 include graphics/banim/assets/img/banim_img_rules.mk
 include songs.mk
-include json_data_rules.mk
 
 # release.mk (issue #9): standalone release/publication rehearsal
 # targets (release-check, release-rehearse, release-migrations-check,
 # release-test). Not wired into `all` or any existing gate; see
 # docs/release_process.md.
 include release.mk
-
-# generated_data.mk is included earlier now (right after the Tools section,
-# before the Files section) -- see the comment there. Its
-# generated-data-* targets are standalone, not part of `all`;
-# `generated-data-check` itself *is* wired into
-# .github/workflows/build.yml as a CI gate (Batch C). See generated_data.mk
-# and docs/generated_data.md.
 
 %.s: ;
 %.png: ;

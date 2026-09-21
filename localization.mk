@@ -10,8 +10,8 @@
 # real modern linked build; use these targets for a fast local/CI check
 # without building the whole ROM.
 #
-# Included directly by the top-level Makefile, mirroring generated_data.mk's
-# own standalone-fast-target convention (see that file/docs/generated_data.md).
+# Included directly by the top-level Makefile as standalone, fast, Python-only
+# targets (never part of `all`).
 
 LOCALIZATION_OUT_DIR := build/expansion-localization/generated
 

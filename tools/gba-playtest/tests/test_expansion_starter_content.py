@@ -24,11 +24,9 @@ depends on:
     through the production name path.
 """
 
-import os
 import re
 import shutil
 import subprocess
-import sys
 import unittest
 from pathlib import Path
 
@@ -43,9 +41,9 @@ ITEMTEST_HEADER = REPO_ROOT / "include" / "expansion_itemtest.h"
 RUNNER = REPO_ROOT / "tools" / "gba-playtest" / "run_item_expansion_checks.py"
 
 BMITEM_SRC = REPO_ROOT / "src" / "bmitem.c"
-ITEMS_EXPANSION_JSON = REPO_ROOT / "src" / "data" / "items_expansion.json"
+CONTENT_TEXT_DIR = REPO_ROOT / "src" / "data"
 CONTENT_TEXT_HEADER_NAME = "items_expansion_content_text.h"
-CONTENT_TEXT_CATALOG_NAME = "items_expansion_content_text.json"
+CONTENT_TEXT_HEADER = CONTENT_TEXT_DIR / CONTENT_TEXT_HEADER_NAME
 
 CC = shutil.which("gcc") or shutil.which("cc")
 ARM_CC = shutil.which("arm-none-eabi-gcc")
@@ -61,22 +59,13 @@ CONTENT_DEFINES = (
 
 
 def authored_name():
-    """The ONE authoring source of truth for the bundled content text."""
-    import json
-
-    record = json.loads(ITEMS_EXPANSION_JSON.read_text(encoding="utf-8"))["items"][0]
-    return record["authoringName"]
-
-
-def generate_content_text(out_dir, content):
-    """Run the real generator exactly as generated_data.mk does."""
-    env = dict(os.environ)
-    env["EXPANSION_STARTER_CONTENT"] = str(content)
-    env["FE8_ITEM_ID_CAP"] = "0xCE"
-    return subprocess.run(
-        [sys.executable, "-m", "scripts.generated_data", "content-text",
-         "--out-dir", str(out_dir)],
-        cwd=str(REPO_ROOT), env=env, capture_output=True, text=True)
+    """The ONE authoring source of truth for the bundled content text: the
+    hand-authored src/data/items_expansion_content_text.h."""
+    text = CONTENT_TEXT_HEADER.read_text(encoding="utf-8")
+    match = re.search(r'\{\s*ITEM_EXPANSION_CE\s*,\s*"([^"]*)"\s*\}', text)
+    assert match, "could not find the ITEM_EXPANSION_CE display name in {}".format(
+        CONTENT_TEXT_HEADER)
+    return match.group(1)
 
 
 def _strip_c_comments(text):
@@ -252,13 +241,11 @@ class CompileTimeDependencyTests(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            # The content profile also needs the build-local generated text
+            # The content profile also needs the committed content-text
             # header on the include path (exactly as modern.mk arranges it),
             # so a *dependency* failure below is the dependency's own #error
             # and never a missing-file artefact of the test setup.
-            generated = Path(tmp) / "generated"
-            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
-            return _arm_compile(tmp, CONTENT_SRC, "probe.o", defines, [generated])[:2]
+            return _arm_compile(tmp, CONTENT_SRC, "probe.o", defines, [CONTENT_TEXT_DIR])[:2]
 
     def test_content_without_hooks_fails(self):
         code, output = self._compile(
@@ -287,85 +274,26 @@ class CompileTimeDependencyTests(unittest.TestCase):
 
 
 class ContentTextGenerationTests(unittest.TestCase):
-    """The ORIGINAL authored display text is generated, config-gated and
-    build-local -- never a message appended to the shared, Huffman-compressed
-    table (which would re-encode a DEFAULT build's text blob)."""
+    """The ORIGINAL authored display text is hand-authored, committed and
+    build-local (only ever compiled in under EXPANSION_STARTER_CONTENT=1,
+    see modern.mk's -Isrc/data gate) -- never a message appended to the
+    shared, Huffman-compressed table (which would re-encode a DEFAULT
+    build's text blob)."""
 
-    def test_default_profile_generates_nothing(self):
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as tmp:
-            proc = generate_content_text(tmp, 0)
-            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-            for name in (CONTENT_TEXT_HEADER_NAME, CONTENT_TEXT_CATALOG_NAME):
-                self.assertFalse(
-                    (Path(tmp) / name).exists(),
-                    "a default build must generate no content text artifact")
-
-    def test_default_profile_removes_a_stale_artifact(self):
-        """A previous content build must never leave a string table behind
-        for a later default build to pick up."""
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(generate_content_text(tmp, 1).returncode, 0)
-            self.assertTrue((Path(tmp) / CONTENT_TEXT_HEADER_NAME).exists())
-            self.assertEqual(generate_content_text(tmp, 0).returncode, 0)
-            self.assertFalse((Path(tmp) / CONTENT_TEXT_HEADER_NAME).exists())
-            self.assertFalse((Path(tmp) / CONTENT_TEXT_CATALOG_NAME).exists())
-
-    def test_content_profile_emits_the_exact_authored_name(self):
-        import json
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as tmp:
-            proc = generate_content_text(tmp, 1)
-            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-            header = (Path(tmp) / CONTENT_TEXT_HEADER_NAME).read_text(encoding="utf-8")
-            name = authored_name()
-            self.assertIn('"{}"'.format(name), header)
-            self.assertIn("ITEM_EXPANSION_CE", header)
-            self.assertIn("AUTO-GENERATED", header)
-
-            capacity = int(re.search(
-                r"#define EXPANSION_CONTENT_TEXT_NAME_CAPACITY (\d+)", header).group(1))
-            self.assertEqual(capacity, len(name) + 1)
-
-            buffer_size = int(re.search(
-                r"#define EXPANSION_STARTER_CONTENT_NAME_BUFFER\s+(\d+)",
-                CONTENT_HEADER.read_text(encoding="utf-8")).group(1))
-            self.assertLessEqual(capacity, buffer_size)
-
-            catalog = json.loads((Path(tmp) / CONTENT_TEXT_CATALOG_NAME).read_text(
-                encoding="utf-8"))
-            entry = catalog["items"][0]
-            self.assertEqual(entry["authoringName"], name)
-            self.assertTrue(entry["authoringDescription"])
-            self.assertIn("not shown in game", entry["runtimeText"]["description"])
-
-    def test_generated_output_is_deterministic_and_path_independent(self):
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as one, tempfile.TemporaryDirectory() as two:
-            self.assertEqual(generate_content_text(one, 1).returncode, 0)
-            self.assertEqual(generate_content_text(two, 1).returncode, 0)
-            for name in (CONTENT_TEXT_HEADER_NAME, CONTENT_TEXT_CATALOG_NAME):
-                first = (Path(one) / name).read_text(encoding="utf-8")
-                second = (Path(two) / name).read_text(encoding="utf-8")
-                self.assertEqual(first, second)
-                self.assertNotIn(str(REPO_ROOT), first)
-
-    def test_no_committed_source_hand_holds_the_authored_text(self):
-        """The literal lives in the JSON record and in generated build/
-        output only -- never hand-copied into a committed C file."""
+    def test_content_text_header_carries_the_exact_authored_name(self):
+        header = CONTENT_TEXT_HEADER.read_text(encoding="utf-8")
         name = authored_name()
-        for relative in ("src/expansion_starter_content.c",
-                         "include/expansion_starter_content.h",
-                         "src/bmitem.c",
-                         "src/expansion_itemtest.c"):
-            self.assertNotIn(
-                name, (REPO_ROOT / relative).read_text(encoding="utf-8"),
-                "{} hand-copies the authored content text".format(relative))
+        self.assertIn('"{}"'.format(name), header)
+        self.assertIn("ITEM_EXPANSION_CE", header)
+
+        capacity = int(re.search(
+            r"#define EXPANSION_CONTENT_TEXT_NAME_CAPACITY (\d+)", header).group(1))
+        self.assertEqual(capacity, len(name) + 1)
+
+        buffer_size = int(re.search(
+            r"#define EXPANSION_STARTER_CONTENT_NAME_BUFFER\s+(\d+)",
+            CONTENT_HEADER.read_text(encoding="utf-8")).group(1))
+        self.assertLessEqual(capacity, buffer_size)
 
     def test_texts_table_carries_no_content_message(self):
         """The regression this whole path exists to prevent."""
@@ -401,22 +329,18 @@ class ProductionNamePathTests(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            generated = Path(tmp) / "generated"
-            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
             code, output, obj = _arm_compile(
-                tmp, BMITEM_SRC, "bmitem_on.o", CONTENT_DEFINES, [generated])
+                tmp, BMITEM_SRC, "bmitem_on.o", CONTENT_DEFINES, [CONTENT_TEXT_DIR])
             self.assertEqual(code, 0, output)
             symbols = self._symbols(obj)
             self.assertIn("U ExpansionStarterContentItemName", symbols)
 
-    def test_content_module_carries_exactly_the_generated_text(self):
+    def test_content_module_carries_exactly_the_authored_text(self):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            generated = Path(tmp) / "generated"
-            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
             code, output, obj = _arm_compile(
-                tmp, CONTENT_SRC, "content_on.o", CONTENT_DEFINES, [generated])
+                tmp, CONTENT_SRC, "content_on.o", CONTENT_DEFINES, [CONTENT_TEXT_DIR])
             self.assertEqual(code, 0, output)
             self.assertIn(authored_name().encode("ascii"), obj.read_bytes())
             self.assertIn("T ExpansionStarterContentItemName", self._symbols(obj))
@@ -438,12 +362,11 @@ class ProductionNamePathTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             generated = Path(tmp) / "generated"
-            self.assertEqual(generate_content_text(generated, 1).returncode, 0)
-            header = generated / CONTENT_TEXT_HEADER_NAME
-            text = header.read_text(encoding="utf-8")
+            generated.mkdir()
+            text = CONTENT_TEXT_HEADER.read_text(encoding="utf-8")
             text = re.sub(r"(#define EXPANSION_CONTENT_TEXT_NAME_CAPACITY )\d+",
                           r"\g<1>999", text)
-            header.write_text(text, encoding="utf-8")
+            (generated / CONTENT_TEXT_HEADER_NAME).write_text(text, encoding="utf-8")
             code, output, _ = _arm_compile(
                 tmp, CONTENT_SRC, "content_overlong.o", CONTENT_DEFINES, [generated])
             self.assertNotEqual(code, 0)

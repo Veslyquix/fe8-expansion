@@ -1,9 +1,0 @@
-{
-  "$schema": "fe8.shops.v1",
-  "shops": [
-    {
-      "symbol": "ShopList_Event_Ch2Armory",
-      "items": ["ITEM_SWORD_SLIM", "ITEM_SWORD_IRON", "ITEM_LANCE_SLIM", "ITEM_LANCE_IRON", "ITEM_AXE_IRON"]
-    }
-  ]
-}

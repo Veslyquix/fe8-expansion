@@ -296,7 +296,7 @@ Re-run in full after the policy remediation, in CI order, on this tree.
 | 3. `scripts/artifact_guard.py --revision HEAD` | pass (silent, rc=0) |
 | 4. `test_build_default_lane.py` | 15 tests, OK |
 | 5. `test_quickstart.py` | 15 tests, OK |
-| 6. `make generated-data-check` | 13 tables, 722 records, no manifest drift; census clean (1077 hits, 1052 audited, 25 reviewed exclusions); id-space + active contract up to date (cap 0xCD, 206 records) |
+| 6. `generated-data-check` (removed target) | 13 tables, 722 records, no manifest drift; census clean (1077 hits, 1052 audited, 25 reviewed exclusions); id-space + active contract up to date (cap 0xCD, 206 records) |
 | 7. `expansion-modern-linker-check MODERN_CONFIG=debug` | pass (budget, overlay audit, starter runtime matrix incl. the new content-disabled artifact negative, boot/title/debugtools/newgame/combat/saveload/savefmt/shifted, shift+offset scan, raw-pointer audit) |
 | 8. `expansion-modern-linker-check MODERN_CONFIG=release` | pass (same, release variants) |
 | 9. item-expansion + content gate, debug | pass, `stages=all content=1`, active contract `cap 0xCE, 207 record(s)`, `uiNameLen=0xc`/`uiNameHash=0xc357f410` |
@@ -306,7 +306,7 @@ Additional (not CI commands):
 
 | Check | Result |
 | --- | --- |
-| `make generated-data-test` | 633 tests, OK (613 before issue #6; +20 net authoring/content-text/policy tests) |
+| `generated-data-test` (removed target) | 633 tests, OK (613 before issue #6; +20 net authoring/content-text/policy tests) |
 | `make expansion-modern-savefmt-check` (debug + release) | all 9/8 save-format runtime scenarios pass against the **restored** `bdd9add3` fingerprints |
 | `make expansion-modern-starter-hook-check` (debug + release) | positive `registerOk=1/apply=2/sampleTrigger=2` on the profile ROM, all-zero negative on the default ROM, plus `Content-disabled artifact negative passed` |
 | `python3 -m scripts.upstream_port verify --dry-run` | exactly 10 gates, in order, argv-identical to `build.yml` |

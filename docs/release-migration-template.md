@@ -37,13 +37,10 @@ each: what changed, why, and which lane(s) (modern/archival) it affects.
 
 ## Data migration
 
-- Which `src/data/*.json` tables changed schema (not just content)? Link
-  the relevant [`docs/generated_data.md`](generated_data.md) section.
-  `[list]`
-- Is a one-time data-migration script needed for existing content authors'
-  JSON, or is the change purely additive? `[explanation]`
-- Did the committed inventories/manifest (`reports/generated_data_*`)
-  regenerate cleanly via `make generated-data-check`? `[pass/fail + link]`
+- Which hand-authored `src/data_*.c` / `src/events_*.c` / `src/bmbattle.c`
+  tables changed record layout (not just content)? `[list]`
+- Is a one-time migration needed for existing forks' hand-edited copies of
+  these tables, or is the change purely additive? `[explanation]`
 
 ## API / interface changes
 

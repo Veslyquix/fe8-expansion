@@ -1119,12 +1119,11 @@ class ModernBuildTests(unittest.TestCase):
             self.assertIn("does_not_exist_anywhere.bin", result.stdout)
 
     def test_missing_generated_header_is_built_before_normal_compile(self):
-        # The chapterdata.c/chapter_settings.h class of bug: an ordinary
-        # (non-data) MODERN_ALL_C_SOURCES member #includes a *generated*
-        # header (not an INCBIN asset) that does not exist yet, but is
-        # derivable via an existing top-level generation rule (mirroring
-        # json_data_rules.mk's chapter_settings.h rule). scaninc cannot
-        # discover this at all (it silently drops unresolvable #includes),
+        # A generated-header class of bug: an ordinary (non-data)
+        # MODERN_ALL_C_SOURCES member #includes a *generated* header (not
+        # an INCBIN asset) that does not exist yet, but is derivable via
+        # an existing top-level generation rule. scaninc cannot discover
+        # this at all (it silently drops unresolvable #includes),
         # so this must go through GCC's own "-MM -MG" MODERN_ALL_C_HEADER_DEPS
         # bootstrap instead, and the header must be built automatically
         # before the normal compile -- on the very first invocation.

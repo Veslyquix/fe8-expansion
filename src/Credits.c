@@ -898,21 +898,22 @@ static const signed char body1[] =
 
 /* Kept in sync with CREDITS.md's "Batch2 Imported Classes" section.
  * Full per-folder class-card and map-sprite source paths are documented there. */
-static const signed char header14[] = "Batch2 Animations";
+static const signed char header14[] = "Batch2/3 Animations";
 static const signed char body14[] =
-    " Batch2 battle animations from FE-Repo" NL
+    " Batch2/3 battle animations from FE-Repo" NL
     "  and FEBuilder community packs" NL
     " Major artists include Yellowtoad," NL
     "  Nuramon, RedBean, Devisian_Nights," NL
     "  Sphealnuke, SALVAGED, Huichelaar," NL
+    "  Konami," NL
     "  Leo_Link, Pikmin, Der, SkidMarc25," NL
     "  and the credited folder authors";
 
-static const signed char header15[] = "Batch2 Class Art";
+static const signed char header15[] = "Batch2/3 Class Art";
 static const signed char body15[] =
-    " Batch2 class cards from Repo/Class Cards" NL
-    " Batch2 map sprites from SRR_FEGBA" NL
-    "  and Repo/Map Sprites" NL
+    " Batch2/3 class cards from Repo/Class Cards" NL
+    " Batch2/3 map sprites from SRR_FEGBA" NL
+    "  Repo/Map Sprites, and source folders" NL
     " See CREDITS.md for each folder's" NL
     "  exact card and map-sprite source";
 
@@ -935,13 +936,11 @@ static const signed char body5[] =
     " CO info screen backdrop by PatrickHoang";
 
 /* Kept in sync with CREDITS.md's "Battle Animations" table -- only the
- * packs wired to the new/changed classes (Archer, Archer_F, Mage,
- * Mage_F, LynLord, Nomad(_F), Nomad Trooper(_F)); Pushwall's original
- * Archer pack is no longer assigned to any class (see that table's own
- * note), so isn't credited here. The other 7 original NEW_ANIMS packs
- * (Soldier, Brigand, Fighter, Knight, Mercenary, Cavalier, Pegasus)
- * predate this in-game credits section and are documented in
- * CREDITS.md only. */
+ * packs wired to the new/changed classes; Pushwall's original Archer
+ * pack is no longer assigned to any class (see that table's own note),
+ * so isn't credited here. The other 7 original NEW_ANIMS packs (Soldier,
+ * Brigand, Fighter, Knight, Mercenary, Cavalier, Pegasus) predate this
+ * in-game credits section and are documented in CREDITS.md only. */
 static const signed char header6[] = "Battle Animations";
 static const signed char body6[] =
     " Archer anim by IS, Flasuban," NL
@@ -949,17 +948,39 @@ static const signed char body6[] =
     " Mage anim by HyperGammaSpaces," NL
     "  Teraspark, Obsidian_Daddy," NL
     "  Devisian_Nights, Raulster/Alice" NL
-    " LynLord anim by Blazt, Seliost1" NL
+    " LynLord/LynGreatLord anim by Red Bean," NL
+    "  Sable Mage, Seliost1" NL
     " Nomad anim by Pikmin1211, Maiser6" NL
-    " Nomad Trooper anim by Levin64, Fuyu";
+    " Nomad Trooper anim by Levin64, Fuyu" NL
+    " Elder anim by Yangfly Master" NL
+    " Arbalest anim by Ayr, Raspberry," NL
+    "  EldritchAbomination, Pushwall," NL
+    "  UltraFenix" NL
+    " Fellbeast Knight anim by Nuramon," NL
+    "  Seliost1" NL
+    " Griffon anim by Ayr, What is an Aubin" NL
+    " Archsage anim by Red Bean" NL
+    " Malig Queen anim by Leo_Link, jj09," NL
+    "  UltraxBlade, Sphealnuke," NL
+    "  DatonDemand" NL
+    " Seraph Knight anim by Dinar, 7743," NL
+    "  darkjaden, Camus Regan";
 
 /* Kept in sync with CREDITS.md's "Map Sprites" table. */
 static const signed char header7[] = "Map Sprites";
 static const signed char body7[] =
-    " LynLord map sprite by Merpin" NL
+    " LynLord/LynGreatLord map sprite by Merpin" NL
     " Nomad map sprite by IS," NL
     "  MeatOfJustice, UltraFenix" NL
-    " Nomad Trooper map sprite by IS";
+    " Nomad Trooper map sprite by IS" NL
+    " Elder map sprite by flasuban" NL
+    " Arbalest map sprite by N426, Stephano" NL
+    " Fellbeast Knight map sprite by flasuban" NL
+    " Griffon map sprite by N426" NL
+    " Archsage map sprite by IS" NL
+    " Malig Queen map sprite by Pikmin" NL
+    " Seraph Knight map sprite by CamusZekeSirius" NL
+    " Executioner map sprite by IS, Lexou";
 
 /* Kept in sync with CREDITS.md's "Conversation Backgrounds" table --
  * public-domain paintings used as the new 192-colour multipalette test

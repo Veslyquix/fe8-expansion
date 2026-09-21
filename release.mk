@@ -3,7 +3,7 @@
 #
 # None of these targets are wired into `all`, `expansion-modern-*`, or any
 # existing host/build/generated/upstream/default/runtime gate; they are
-# fully standalone, exactly like generated-data-check (generated_data.mk).
+# fully standalone.
 # See docs/release_process.md for the full contract, including the exit
 # code contract the underlying CLI itself defines (0/1/2/3 -- see
 # scripts/release_rehearsal/cli.py's own module docstring for the exact

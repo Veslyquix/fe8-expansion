@@ -37,12 +37,11 @@ for the governance framing.
    [`docs/quickstart.md`](quickstart.md) for the full flag/troubleshooting
    reference, and only pass `--legacy`/`--refresh-agbcc` when you actually
    need decomp-matching work.
-3. **Retarget content authoring at generated data, not raw C tables.**
+3. **Retarget content authoring at the hand-authored C tables.**
    Characters, classes, items, supports, and the Chapter 2 slice are
-   authored as validated JSON under `src/data/` and compiled to typed
-   C89 — see [`docs/generated_data_tutorial.md`](generated_data_tutorial.md).
-   Hand-editing `build/generated/data/*.c` is never the supported path in
-   either build lane.
+   authored directly as typed C89 in their own `src/data_*.c` /
+   `src/events_*.c` / `src/bmbattle.c` files — there is no JSON
+   intermediate or generation step in either build lane.
 4. **Retarget verification at compile/link/boot success, not byte-diff.**
    Modern-lane correctness is judged by
    `expansion-modern-boot-check`/`expansion-modern-linker-check`
@@ -63,10 +62,11 @@ for the governance framing.
      checks; expansion-localized strings use stable IDs/catalogs independent
      of vanilla `MSG_*`. See [`starter_features.md`](starter_features.md) and
      [`localization.md`](localization.md).
-6. **Retarget authoring and tests together.** Run `make generated-data-check`
-   after data edits and `make localization-test` after catalog/locale edits.
-   For runtime changes, run both debug and release modern linker checks; do
-   not substitute archival byte comparison for modern behavior evidence.
+6. **Retarget authoring and tests together.** Boot-verify the modern ROM
+   after hand-editing a data table and run `make localization-test` after
+   catalog/locale edits. For runtime changes, run both debug and release
+   modern linker checks; do not substitute archival byte comparison for
+   modern behavior evidence.
 7. **Pick the right issue/PR evidence template.** State which lane
    (modern/archival) your change targets and run the commands in
    [`CONTRIBUTING.md`](../CONTRIBUTING.md)'s fast-checks/full-gates
@@ -79,9 +79,8 @@ for the governance framing.
 - Decompiling individual `asm/` functions to `src/*.c` is still exactly the
   workflow in [`docs/archival-decomp.md`](archival-decomp.md) when that is
   your goal.
-- Generated-data inventories and manifests (`reports/generated_data_*`) are
-  produced by the same platform regardless of which ROM you ultimately
-  build.
+- The same hand-authored `src/data_*.c` tables ship in both the modern and
+  archival ROM regardless of which lane you ultimately build.
 
 ## Rollback boundary
 

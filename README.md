@@ -67,7 +67,7 @@ slow battle-animation compression outputs).
 
 | I want to... | Go to |
 | --- | --- |
-| Author game content (characters, classes, items, chapters) | [`docs/generated_data_tutorial.md`](docs/generated_data_tutorial.md) |
+| Author game content (characters, classes, items, chapters) | Hand-edit `src/data_*.c` / `src/events_*.c` / `src/bmbattle.c` directly |
 | Enable/extend the typed starter-content and mechanics examples | [`docs/starter_features.md`](docs/starter_features.md) |
 | Author expansion UI text or locale catalogs | [`docs/localization.md`](docs/localization.md) |
 | Write/modify C runtime code under the modern framework | [`docs/architecture.md`](docs/architecture.md), [`docs/quickstart.md`](docs/quickstart.md) |

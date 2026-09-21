@@ -19,10 +19,19 @@ Generally sourced from the community
 | `CLASS_ARCHER_F` | [Archer-Variant] Der's Improved [F] | Original animation by IS. Archer Variant by Flasuban and DerTheVaporeon. |
 | `CLASS_MAGE` | [Mage-Custom] Gaiden-Style Frame Fix [F] by Gamma | HyperGammaSpaces, Teraspark, Obsidian_Daddy, Devisian_Nights. Frame fixes (misplaced eye) by Raulster/Alice. |
 | `CLASS_MAGE_F` | [Mage-Custom] Gaiden-Style Ponytail [F] by Gamma | HyperGammaSpaces, Teraspark, Obsidian_Daddy, Devisian_Nights. Frame fixes (misplaced eye) and ponytail by Raulster/Alice. |
-| `CLASS_LYN_LORD` | [FE7 Lyn-Reskin] T1 Long Hair [F] | Frames by Blazt. Formatted by Seliost1. |
+| `CLASS_LYN_LORD` | [Myrmidon-Reskin] Marisa [F] by Redbean | Made by Red Bean. Scripted by Sable Mage. Sword (Alt Crit) by Seliost1. |
 | `CLASS_NOMAD`, `CLASS_NOMAD_F` | [Nomad-Base] [M]/[F] Vanilla Repal | Repalette by Pikmin1211 and Maiser6. |
 | `CLASS_NOMAD_TROOPER` | [Nomad Trooper Reskin][M] FE6 Style by Levin64 | FE6 Nomad Trooper improved by Levin64. |
 | `CLASS_NOMAD_TROOPER_F` | [Nomad Trooper Reskin] [F] FE6 Style by Levin64 | FE6 Nomad Trooper improved by Levin64. Female variant reskin by Fuyu. |
+| `CLASS_LYN_GREAT_LORD` | [Myrmidon-Reskin] Marisa [F] by Redbean | Made by Red Bean. Scripted by Sable Mage. Sword (Alt Crit) by Seliost1. |
+| `CLASS_ELDER` | [Elder] by Yangfly Master | Made by Yangfly Master. |
+| `CLASS_ARBALEST` | [Griffon] [U] Arbalest Repal 2 by Pushwall | Arbalest base by Ayr and Raspberry. Initial repalette by EldritchAbomination, repaletted again by Pushwall. |
+| `CLASS_ARBALEST_F` | [Griffon] [U] Arbalest - Tribalest | Arbalest base by Ayr and Raspberry. Initial repalette by EldritchAbomination, repaletted again by Pushwall. Reskin by UltraFenix. |
+| `CLASS_FELLBEAST_KNIGHT` | [WK Reskin] [U] Fellbeast Knight by Nuramon | Animation by Nuramon. Combination of Lance and Tail Spike by Seliost1. |
+| `CLASS_GRIFFON` | [Griffon] [U] Griffon v2 SoA by Ayr | Animation by Ayr. Unarmed edit by What is an Aubin. |
+| `CLASS_ARCHSAGE` | [T3 FE7] [M] Archsage Athos by Red Bean | Animation by Red Bean. |
+| `CLASS_MALIG_QUEEN` | [WK Custom] [F] Malig Queen by DatonDemand, Leo_Link Alt | Animation by Leo_Link. Handaxe and Javelin animation by jj09. Alternate edits by UltraxBlade. Handaxe spliced from Sphealnuke's Living Armor. Malig Queen reskin by DatonDemand. |
+| `CLASS_SERAPH_KNIGHT` | [Peg T3 Base] [F] Seraph Knight Repal | Animation by Dinar. Repal by 7743. Staff and Magic animations by darkjaden, based on Camus Regan's Dark Flier animation. |
 
 Pushwall's FE5-style Archer (the animation `CLASS_ARCHER` used before) is
 still imported as an available `banim_data[]` entry (see
@@ -35,6 +44,14 @@ still imported as an available `banim_data[]` entry (see
 | `CLASS_LYN_LORD` | Merpin |
 | `CLASS_NOMAD`, `CLASS_NOMAD_F` | IS, MeatOfJustice, UltraFenix |
 | `CLASS_NOMAD_TROOPER`, `CLASS_NOMAD_TROOPER_F` | IS |
+| `CLASS_LYN_GREAT_LORD` | Merpin |
+| `CLASS_ELDER` | flasuban |
+| `CLASS_ARBALEST`, `CLASS_ARBALEST_F` | N426, Stephano |
+| `CLASS_FELLBEAST_KNIGHT` | flasuban |
+| `CLASS_GRIFFON` | N426 |
+| `CLASS_ARCHSAGE` | IS |
+| `CLASS_MALIG_QUEEN` | Pikmin |
+| `CLASS_SERAPH_KNIGHT` | CamusZekeSirius |
 
 
 ## Batch2 Imported Classes (`FE8_NEW_ANIMS`)
@@ -61,7 +78,6 @@ Copied cards:
 - [Custom_Magi]_[U]_Angel_by_Atey: Magi - Special\Angel (F) {N426}.png
 - [DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights: Magi - Special\Occultist (M) Magic {Valak}.png.png
 - [FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (F) Sword {L95}.png
-- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy: Lords - Vanilla and Custom\Harbinger (M) Magic {flasuban}.png
 - [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon: Lords - Vanilla and Custom\Harbinger (M) Magic {flasuban}.png
 - [FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon: Lords - Vanilla and Custom\Heavy Infantry (M) {SamirPlayz}.png
 - [GeneralReskin]_[U]_Baron_+Weapons: Infantry - Knights, Generals, Armors\Baron (U) Lance {SamirPlayz}.png
@@ -76,6 +92,7 @@ Copied cards:
 - [Sword FE15 Custom] Myrmidon [M] by Nuramon: Infantry - (Swd) Myrms and Swordmasters\Myrmidon (M) Sword {IS}.png
 - [Sword_Custom]_[M]_Thug_by_MonkeyBard: Infantry - (Swd) Thieves, Rogues, Assassins\Thug (M) Sword {Rasdel}.png
 - [Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon: Infantry - (Swd) Myrms and Swordmasters\[T2][SWD] Dread Fighter (U) {Nuramon}.png
+- [T3 Custom] [U] Executioner (Assassin+Druid) by Huichelaar: C:\devkitPro\feex\banims\batch3\Executioner_Assassin+Druid: Class Card.png {Huichelaar, Konami}
 - [T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar: Magi - Dark-Type\Moloch Sorcerer (U) T3 Style {Huichelaar}.png
 - [Tactician]_[U]_Tactician_by_SALVAGED: Magi - Special\Tactician (U) Magic {SALVAGED}.png
 - [Trickster]_F_Trickster_V_2_Ponytail: Infantry - (Swd) Thieves, Rogues, Assassins\Trickster (F) Sword T2 {Jj09, Scraiza, Sword of HaE,SableMage}.png
@@ -146,7 +163,6 @@ Copied map sprites:
 - [DevisianCustom]_[M]_Magician_v2_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Magician_Eliwood_16x16_TyTheBubstand.png + MMS/Magician_EliwoodTyTheBubwalk.png
 - [DevisianCustom]_[M]_Occultist_v2_by_Devisian_Nights: SRR_FEGBA/gfx/MapSprites: SMS/Shaman_M_Occultist_Devisian_Nights_Pikminstand.png + MMS/Shaman_M_Occultist_Devisian_Nights_Pikminwalk.png
 - [FE7 Lyn-Variant] T1 Blader Myrmidon V2 Ponytail [F] by Leo_Link: SRR_FEGBA/gfx/MapSprites: SMS/Blade_Lord_F_Lyn_Sword_ISstand.png + MMS/Blade_Lord_F_Lyn_Sword_ISwalk.png (fallback Lyn blade-lord pair)
-- [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon - Copy: SRR_FEGBA/gfx/MapSprites: SMS/Great_Lord_M_HectorHarbinger_SD9Kstand.png + MMS/Great_Lord_M_HectorHarbinger_SD9Kwalk.png
 - [FE7_HectorVariant]_[U]_T2_Harbinger_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Great_Lord_M_HectorHarbinger_SD9Kstand.png + MMS/Great_Lord_M_HectorHarbinger_SD9Kwalk.png
 - [FE8_EphraimCustom]_[M]_T2_Heavy_Infantry_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/HeavyInfantry_Ephraim_Snewpingstand.png + MMS/HeavyInfantry_EphraimSnewpingwalk.png
 - [GeneralReskin]_[U]_Baron_+Weapons: SRR_FEGBA/gfx/MapSprites: SMS/Baron_U_Lance_Topazlight_Nuramon_Its_Just_Jaystand.png + MMS/Baron_U_Cape_Nuramon_Jay_Rynwalk.png
@@ -164,6 +180,7 @@ Copied map sprites:
 - [Sword_FE16_Custom]_[U]_Dread_Fighter_by_Nuramon: SRR_FEGBA/gfx/MapSprites: SMS/Dread_Fighter_M_Nuramonstand.png + MMS/Dread_Fighter_M_Nuramonwalk.png
 - [SwordmasterVariant]_[F]_Fir_by_Redbean: Repo/Map Sprites: Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) {IS}-stand.png + Infantry - (Swd) Myrms and Swordmasters\Swordmaster (F) {IS}-walk.png
 - [SwordmasterVariant]_[M]_Trueblade_by_Dinar87: Repo/Map Sprites: Infantry - (Swd) Myrms and Swordmasters\Trueblade (M) {Seliost1}-stand.png + Infantry - (Swd) Myrms and Swordmasters\Trueblade (M) {Seliost1}-walk.png
+- [T3 Custom] [U] Executioner (Assassin+Druid) by Huichelaar: C:\devkitPro\feex\banims\batch3\Executioner_Assassin+Druid: Executioner_U_Huichelaar_IS_Lexoustand.png + Executioner_U_Huichelaar_IS_Lexouwalk.png
 - [T3_Custom]_[M]_Red_Mage_by_Mycahel: SRR_FEGBA/gfx/MapSprites: SMS/RedMage2_Sage_Hat_TopazlightUnknownstand.png + MMS/RedMage2_Sage_Hat_TopazlightUnknownwalk.png
 - [T3_Custom]_[U]_Moloch_Sorcerer_by_Huichelaar: Repo/Map Sprites: Magi - Dark-Type\Moloch Sorcerer (U) {Huichelaar}-stand.png + Magi - Dark-Type\Moloch Sorcerer (U) {Huichelaar}-walk.png
 - [Tactician]_[U]_Tactician_by_SALVAGED: SRR_FEGBA/gfx/MapSprites: SMS/Tactician_U_SALVAGEDstand.png + MMS/Tactician_U_SALVAGEDwalk.png
@@ -343,6 +360,4 @@ Gold/Silver*); only the GBA arrangements are credited above.
 | `NIMAP2` | Community BGM patch (see "Custom BGM" above); repo integration by Vesly |
 | `RAND_BGM` / `CONTINUE_BGM_BATTLE` | Ported from the SRR (Skill Randomizer / Randomizer) FE randomizer project's BGM-randomization logic; repo integration by Vesly. See [`docs/random_bgm.md`](docs/random_bgm.md). |
 | `MOVEARROW_HACK` | circleseverywhere |
-
-
 

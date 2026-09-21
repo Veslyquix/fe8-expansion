@@ -198,7 +198,8 @@ struct PlaySt { // Chapter Data Struct
     // character identifiers indexed by weapon type.
     // has to do with allowing unusable weapons to be used
     /* 1C */ u8  unk1C[2];
-    /* 1E */ u8 unk1E;
+
+    /* 1E */ u8 warRoomStateBits; // see enum PlaySt_warRoomStateBits (FE8_WAR_ROOM); previously unk1E, confirmed dead in every build before this
     /* 1F */ u8 unk1F;
 
     /* 20 */ char playerName[0x2B - 0x20]; // unused outside of link arena (was tactician name in FE7); Size unknown
@@ -298,6 +299,19 @@ enum PlaySt_chapterStateBits {
     PLAY_FLAG_STATSCREENPAGE_SHIFT = 0,
     PLAY_FLAG_STATSCREENPAGE_MASK = PLAY_FLAG_STATSCREENPAGE0 | PLAY_FLAG_STATSCREENPAGE1,
 };
+
+#if FE8_WAR_ROOM
+/**
+ * Use with PlaySt field warRoomStateBits. chapterStateBits above is already
+ * full (all 8 bits assigned), so War Room's one-shot "this chapter was
+ * launched from the War Room, send the player back there instead of the
+ * title screen when they choose Return to Title" marker lives in its own
+ * byte instead.
+ */
+enum PlaySt_warRoomStateBits {
+    WARROOM_FLAG_ACTIVE = (1 << 0),
+};
+#endif
 
 /**
  * Use with PlaySt field chapterModeIndex

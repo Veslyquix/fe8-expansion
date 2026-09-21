@@ -1,7 +1,0 @@
-{
-  "$schema": "fe8.traps.v1",
-  "traps": [
-    { "symbol": "TrapData_Event_Ch2", "entries": [] },
-    { "symbol": "TrapData_Event_Ch2Hard", "entries": [] }
-  ]
-}

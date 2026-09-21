@@ -2,6 +2,11 @@
 #include "bmitem.h"
 #include "constants/items.h"
 #include "constants/msg.h"
+#include "id_space.h"
+
+#if ITEM_ID_CONFIGURED_CAP >= ITEM_ID_EXPANSION_FIRST
+#include "constants/items_expansion.h"
+#endif
 
 CONST_DATA struct ItemData gItemData[] = {
 	[ITEM_NONE] = {
@@ -2981,4 +2986,25 @@ CONST_DATA struct ItemData gItemData[] = {
 		.iconId = 0x0,
 		.weaponExp = 1,
 	},
+#if ITEM_ID_CONFIGURED_CAP >= ITEM_ID_EXPANSION_FIRST
+	/* Issue #6 bundled content example ("Sample Charm"). Its display name
+	 * is authored in src/data/items_expansion_content_text.h and drawn
+	 * through the content profile's own accessor -- no message ID is
+	 * added or reused here. */
+	[ITEM_EXPANSION_CE] = {
+		.number = ITEM_EXPANSION_CE,
+		.weaponType = ITYPE_ITEM,
+		.attributes = IA_UNSELLABLE,
+		.maxUses = 3,
+		.iconId = 222,
+	},
+#endif
 };
+
+/* Compile-time proof that this hand table actually has one record per
+ * configured item ID (0..ITEM_ID_CONFIGURED_CAP inclusive) -- the same
+ * divergence class the deleted JSON generator used to assert. Catches a
+ * gItemData entry silently missing (or a stray extra one) at whatever cap
+ * this translation unit is compiled at. */
+ID_SPACE_STATIC_ASSERT(ARRAY_COUNT(gItemData) == (ITEM_ID_CONFIGURED_CAP + 1),
+                       data_items_record_count_matches_configured_cap);

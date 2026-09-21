@@ -133,7 +133,7 @@ enum {
     SMS_OCCULTIST                        = 128,
     SMS_BLADER_F                         = 129,
     SMS_HARBINGER                        = 130,
-    SMS_HARBINGER_ALT                    = 131,
+    SMS_EXECUTIONER                      = 131,
     SMS_HEAVY_INFANTRY                   = 132,
     SMS_BARON_CUSTOM                     = 133,
     SMS_SHIELD_GENERAL                   = 134,
@@ -182,6 +182,15 @@ enum {
     SMS_SLIME                            = 177,
     SMS_WARBIRD                          = 178,
     SMS_ADVENTURER                       = 179,
+    SMS_LYN_GREAT_LORD                   = 180,
+    SMS_ELDER                            = 181,
+    SMS_ARBALEST                         = 182,
+    SMS_ARBALEST_F                       = 183,
+    SMS_FELLBEAST_KNIGHT                 = 184,
+    SMS_GRIFFON                          = 185,
+    SMS_ARCHSAGE                         = 186,
+    SMS_MALIG_QUEEN                      = 187,
+    SMS_SERAPH_KNIGHT                    = 188,
 };
 
 #endif // GUARD_CONSTANTS_SMS_H

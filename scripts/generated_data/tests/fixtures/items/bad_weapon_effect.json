@@ -1,8 +1,0 @@
-{
-  "$schema": "fe8.items.v1",
-  "items": [
-    { "item": "ITEM_FIXTURE_NONE", "weaponType": "ITYPE_SWORD", "iconId": 0 },
-    { "item": "ITEM_FIXTURE_A", "weaponType": "ITYPE_SWORD", "weaponEffect": "WPN_EFFECT_NOT_REAL", "iconId": 0 },
-    { "item": "ITEM_FIXTURE_B", "weaponType": "ITYPE_ITEM", "iconId": 0 }
-  ]
-}
