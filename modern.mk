@@ -1256,6 +1256,12 @@ MODERN_ELF_REPLACED_ASM := \
 
 MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 
+# These generated dependency files are included below. Without an explicit
+# empty rule, GNU make may try to remake an included `*.d` file through the
+# generic `%.o: %.s` rule, inventing sources such as asm/arm.d.s and
+# asm/fe6sio.d.s during parallel builds.
+$(sort $(MODERN_COHORT_DEPS) $(MODERN_ALL_DEPS) $(MODERN_FE6SIO_OBJ:.o=.d)): ;
+
 # Modern-lane battle-animation data blob. banim/data_banim.o ($(BANIM_OBJECT),
 # Makefile) is a fully pre-linked binary blob (arm_compressing_linker.py
 # -Tdata, not a relocatable object) whose internal pointers between
@@ -2379,8 +2385,10 @@ $(MODERN_ROM): $(MODERN_ELF) $(MODERN_BUILD_METADATA_JSON)
 	fi
 
 expansion-modern-rom: expansion-modern-elf $(MODERN_ROM)
+ifneq ($(MODERN_SUPPRESS_ROM_READY),1)
 	@printf 'Modern ROM ready: %s (config=%s abi=%s)\n' \
 		"$(MODERN_ROM)" '$(MODERN_CONFIG)' '$(MODERN_ABI)'
+endif
 
 # no$gba-format symbol file (see scripts/modernize/generate_nocash_sym.py):
 # lets no$gba show function/data names instead of raw addresses while
@@ -2457,17 +2465,16 @@ WIN_SYNC_DIR := /mnt/c/devkitPro/feex
 sync-win:
 	+scripts/log_build_error.sh "make sync-win" -- $(MAKE) --no-print-directory _sync_win_impl
 
-_sync_win_impl:
+_sync_win_impl: expansion-modern-rom expansion-modern-sym \
+	$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
 	@$(PYTHON) scripts/ensure_derived_assets.py
-	+$(MAKE) expansion-modern-rom
 	@mkdir -p "$(WIN_SYNC_DIR)"
 	cp "$(MODERN_ROM)" "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp"
 	mv -f "$(WIN_SYNC_DIR)/.$(notdir $(MODERN_ROM)).tmp" "$(WIN_SYNC_DIR)/$(notdir $(MODERN_ROM))"
 	@printf 'Copied %s -> %s/\n' "$(MODERN_ROM)" "$(WIN_SYNC_DIR)"
-	+$(MAKE) expansion-modern-sym \
-		$(if $(filter 1,$(FEBUILDER_POINTERS)),expansion-modern-custom-pointer-txt)
 	+@if [ -f "$(BASEROM)" ]; then \
-		$(MAKE) expansion-modern-ups; \
+		"$(PYTHON)" scripts/gen_ups.py "$(BASEROM)" "$(MODERN_ROM)" "$(MODERN_UPS)"; \
+		printf 'Modern UPS patch ready: %s\n' "$(MODERN_UPS)"; \
 	else \
 		echo "note: $(BASEROM) not found, skipping UPS patch"; \
 	fi
