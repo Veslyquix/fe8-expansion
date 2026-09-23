@@ -55,8 +55,11 @@ void SaveMenuInitSaveSlotData(u8 slot, struct SaveMenuProc * proc)
             proc->played_time[slot] = playSt.time_saved;
             proc->unk_3a[slot] = 0;
 
-            // BUG?
+#if FE8_OVERFLOW_SAFETY_CHECKS
+            if (IsGameNotFirstChapter(&playSt) != 0)
+#else
             if (IsGameNotFirstChapter((struct PlaySt *)(uintptr_t)slot) != 0)
+#endif
                 proc->unk_3a[slot] |= 1;
 
             if (LoadSavedEid8A(slot) != 0)

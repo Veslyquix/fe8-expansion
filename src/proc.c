@@ -26,6 +26,19 @@ static void InsertChildProcess(struct Proc *proc, struct Proc *parent);
 static void UnlinkProcess(struct Proc *proc);
 static void RunProcessScript(struct Proc *proc);
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool IsValidProcessPointer(const struct Proc *proc)
+{
+    uintptr_t addr = (uintptr_t)proc;
+    uintptr_t start = (uintptr_t)&sProcArray[0];
+    uintptr_t end = (uintptr_t)&sProcArray[MAX_PROC_COUNT];
+
+    return proc != NULL && (addr & 3) == 0 && addr >= start &&
+        addr + sizeof(*proc) <= end &&
+        ((addr - start) % sizeof(sProcArray[0])) == 0;
+}
+#endif
+
 void Proc_Init(void)
 {
     int i;
@@ -91,13 +104,26 @@ ProcPtr Proc_Start(const struct ProcCmd* script, ProcPtr parent)
 // Creates a child process and puts the parent into a wait state
 ProcPtr Proc_StartBlocking(const struct ProcCmd *script, ProcPtr parent)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!PROC_IS_ROOT(parent) && !IsValidProcessPointer(parent))
+        return NULL;
+#endif
+
     struct Proc *proc = Proc_Start(script, parent);
 
     if (proc->proc_script == NULL)
         return NULL;
 
     proc->proc_flags |= PROC_FLAG_BLOCKING;
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    /* Root processes store their tree number (e.g. 3) in proc_parent, not a
+     * pointer. Dereferencing that integer turns root 3 into address 0x3. */
+    if (!PROC_IS_ROOT(proc->proc_parent) &&
+        IsValidProcessPointer(proc->proc_parent))
+        ((struct Proc*) proc->proc_parent)->proc_lockCnt++;
+#else
     ((struct Proc*) proc->proc_parent)->proc_lockCnt++;
+#endif
 
     return proc;
 }
@@ -127,11 +153,30 @@ static bool IsPlausibleCodePointer(const void *ptr)
 
 static void DeleteProcessRecursive(struct Proc *proc)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidProcessPointer(proc))
+        return;
+#endif
+
     if (proc->proc_prev)
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    {
+        if (IsValidProcessPointer(proc->proc_prev))
+            DeleteProcessRecursive(proc->proc_prev);
+    }
+#else
         DeleteProcessRecursive(proc->proc_prev);
+#endif
 
     if (proc->proc_child)
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    {
+        if (IsValidProcessPointer(proc->proc_child))
+            DeleteProcessRecursive(proc->proc_child);
+    }
+#else
         DeleteProcessRecursive(proc->proc_child);
+#endif
 
     if (proc->proc_flags & PROC_FLAG_ENDED)
         return;
@@ -155,12 +200,26 @@ static void DeleteProcessRecursive(struct Proc *proc)
     proc->proc_flags |= PROC_FLAG_ENDED;
 
     if (proc->proc_flags & PROC_FLAG_BLOCKING)
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    {
+        if (!PROC_IS_ROOT(proc->proc_parent) &&
+            IsValidProcessPointer(proc->proc_parent) &&
+            ((struct Proc*) proc->proc_parent)->proc_lockCnt != 0)
+            ((struct Proc*) proc->proc_parent)->proc_lockCnt--;
+    }
+#else
         ((struct Proc*) proc->proc_parent)->proc_lockCnt--;
+#endif
 }
 
 void Proc_End(ProcPtr proc)
 {
     struct Proc* casted = (struct Proc*) proc;
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidProcessPointer(casted))
+        return;
+#endif
 
     if (proc != NULL)
     {
@@ -218,23 +277,57 @@ static void UnlinkProcess(struct Proc *proc)
 {
     int rootIndex;
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidProcessPointer(proc))
+        return;
+#endif
+
     // remove sibling links to this process
     if (proc->proc_next != NULL)
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    {
+        if (IsValidProcessPointer(proc->proc_next))
+            ((struct Proc*) proc->proc_next)->proc_prev = proc->proc_prev;
+    }
+#else
         ((struct Proc*) proc->proc_next)->proc_prev = proc->proc_prev;
+#endif
     if (proc->proc_prev != NULL)
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    {
+        if (IsValidProcessPointer(proc->proc_prev))
+            ((struct Proc*) proc->proc_prev)->proc_next = proc->proc_next;
+    }
+#else
         ((struct Proc*) proc->proc_prev)->proc_next = proc->proc_next;
+#endif
 
     // remove parent links to this process
     rootIndex = (int) proc->proc_parent;
     if (rootIndex > 8)  // child proc
     {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+        if (IsValidProcessPointer(proc->proc_parent) &&
+            ((struct Proc*) proc->proc_parent)->proc_child == proc)
+            ((struct Proc*) proc->proc_parent)->proc_child = proc->proc_prev;
+#else
         if (((struct Proc*) proc->proc_parent)->proc_child == proc)
             ((struct Proc*) proc->proc_parent)->proc_child = proc->proc_prev;
+#endif
     }
     else  // root proc
     {
-        if (ROOT_PROC(rootIndex) == proc)
+#if FE8_OVERFLOW_SAFETY_CHECKS
+        if (rootIndex >= 0 && rootIndex < 8 && ROOT_PROC(rootIndex) == proc)
+        {
             ROOT_PROC(rootIndex) = proc->proc_prev;
+        }
+#else
+        if (ROOT_PROC(rootIndex) == proc)
+        {
+            ROOT_PROC(rootIndex) = proc->proc_prev;
+        }
+#endif
     }
     proc->proc_next = NULL;
     proc->proc_prev = NULL;

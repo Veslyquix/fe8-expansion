@@ -919,6 +919,27 @@ void PutUnitMapUiStatus(u16 * buffer, struct Unit * unit)
 //! FE8U = 0x0808C45C
 void UnitMapUiUpdate(struct PlayerInterfaceProc * proc, struct Unit * unit)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    uintptr_t proc_addr = (uintptr_t)proc;
+    uintptr_t unit_addr = (uintptr_t)unit;
+    uintptr_t status_tm_addr;
+
+    if (proc == NULL || unit == NULL ||
+        (proc_addr & 3) != 0 || (unit_addr & 3) != 0 ||
+        !((proc_addr >= 0x02000000 && proc_addr + sizeof(*proc) <= 0x02040000) ||
+          (proc_addr >= 0x03000000 && proc_addr + sizeof(*proc) <= 0x03008000)) ||
+        !((unit_addr >= 0x02000000 && unit_addr + sizeof(*unit) <= 0x02040000) ||
+          (unit_addr >= 0x03000000 && unit_addr + sizeof(*unit) <= 0x03008000)))
+        return;
+
+    status_tm_addr = (uintptr_t)proc->statusTm;
+    if (proc->statusTm == NULL || (status_tm_addr & 1) != 0 ||
+        !((status_tm_addr >= 0x02000000 && status_tm_addr + 0x0E <= 0x02040000) ||
+          (status_tm_addr >= 0x03000000 && status_tm_addr + 0x0E <= 0x03008000) ||
+          (status_tm_addr >= 0x06000000 && status_tm_addr + 0x0E <= 0x06018000)))
+        return;
+#endif
+
     s16 frameCount = proc->unitClock;
 
     if (unit->statusIndex == UNIT_STATUS_RECOVER)

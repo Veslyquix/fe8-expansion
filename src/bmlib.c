@@ -1019,9 +1019,60 @@ void SetPalFadeStop(struct PalFadeSt * st, int val)
     st->clock_stop = val;
 }
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool IsValidPalFadeProc(const struct PalFadeProc *proc)
+{
+    uintptr_t addr = (uintptr_t)proc;
+
+    return proc != NULL && (addr & 3) == 0 &&
+        ((addr >= 0x02000000 && addr + sizeof(*proc) <= 0x02040000) ||
+         (addr >= 0x03000000 && addr + sizeof(*proc) <= 0x03008000));
+}
+
+static bool IsValidPalFadeState(const struct PalFadeSt *st)
+{
+    uintptr_t addr = (uintptr_t)st;
+    uintptr_t start = (uintptr_t)sPalFadeSt;
+    uintptr_t end = start + sizeof(sPalFadeSt);
+
+    return st != NULL && (addr & 3) == 0 && addr >= start &&
+        addr + sizeof(*st) <= end;
+}
+
+static bool IsValidPalFadeSource(const u16 *colors)
+{
+    uintptr_t addr = (uintptr_t)colors;
+
+    return colors != NULL && (addr & 1) == 0 &&
+        ((addr >= 0x02000000 && addr + 0x20 <= 0x02040000) ||
+         (addr >= 0x03000000 && addr + 0x20 <= 0x03008000) ||
+         (addr >= 0x08000000 && addr + 0x20 <= 0x0A000000));
+}
+#endif
+
 void PalFade_OnLoop(struct PalFadeProc * proc)
 {
     int i;
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    uintptr_t pal_addr;
+
+    if (!IsValidPalFadeProc(proc) || !IsValidPalFadeState(proc->st) ||
+        !IsValidPalFadeSource(proc->st->to_colors))
+    {
+        if (IsValidPalFadeProc(proc))
+            Proc_End(proc);
+        return;
+    }
+
+    pal_addr = (uintptr_t)proc->st->pal;
+    if (pal_addr < (uintptr_t)gPaletteBuffer ||
+        pal_addr + 0x20 > (uintptr_t)gPaletteBuffer + 0x400)
+    {
+        Proc_End(proc);
+        return;
+    }
+#endif
 
     u16 const * from_colors = proc->st->from_colors;
     u16 const * to_colors = proc->st->to_colors;

@@ -38,6 +38,35 @@ void StoreRoutinesToIRAM(void)
 
 void DrawGlyphRam(u16 *pal, u32 *dest, u32 *src, int subx)
 {
+// #if FE8_OVERFLOW_SAFETY_CHECKS
+//     uintptr_t pal_addr = (uintptr_t)pal;
+//     uintptr_t dest_addr = (uintptr_t)dest;
+//     uintptr_t src_addr = (uintptr_t)src;
+//     uintptr_t glyph_addr = (uintptr_t)gUnk_67;
+//     uintptr_t code_start = (uintptr_t)gUnk_68;
+//     uintptr_t code_end = code_start + (ARMCodeToCopy_End - ARMCodeToCopy_Start);
+
+//     /* DrawGlyph performs word loads from a u16 LUT at pal + index * 2.
+//      * Requiring a word-aligned LUT prevents the ARM ldr at 0x03003AB4 from
+//      * turning a corrupted/half-aligned palette pointer into a bad-alignment
+//      * access. Bound the other operands too: the routine reads 0x40 bytes from
+//      * src and writes through 0xBC bytes from dest. */
+//     if (gUnk_67 == NULL || (glyph_addr & 3) != 0 ||
+//         glyph_addr < code_start || glyph_addr >= code_end ||
+//         pal == NULL || (pal_addr & 3) != 0 ||
+//         !((pal_addr >= 0x02000000 && pal_addr + 0x200 <= 0x02040000) ||
+//           (pal_addr >= 0x03000000 && pal_addr + 0x200 <= 0x03008000) ||
+//           (pal_addr >= 0x08000000 && pal_addr + 0x200 <= 0x0A000000)) ||
+//         dest == NULL || (dest_addr & 3) != 0 ||
+//         dest_addr < 0x06000000 || dest_addr + 0xC0 > 0x06018000 ||
+//         src == NULL || (src_addr & 3) != 0 ||
+//         !((src_addr >= 0x02000000 && src_addr + 0x40 <= 0x02040000) ||
+//           (src_addr >= 0x03000000 && src_addr + 0x40 <= 0x03008000) ||
+//           (src_addr >= 0x08000000 && src_addr + 0x40 <= 0x0A000000)) ||
+//         subx < 0 || subx > 7)
+//         return;
+// #endif
+
     gUnk_67(pal, dest, src, subx);
 }
 

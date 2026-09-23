@@ -400,16 +400,38 @@ MODERN_COHORT_ASM_SOURCES ?= \
 
 # Hand-written assembly cannot see MODERN_DEFINE_FLAGS (it is not preprocessed
 # by cpp), so feature flags an .s file needs come through as GAS symbols
-# instead. Only NIMAP2 needs one today -- sound/song_table.s appends its custom
-# song entries under `.if FE8_NIMAP2`, and self-defaults the symbol to 0 when
-# it is absent, which is exactly how the archival legacy lane (plain `as`, no
-# defsym) keeps assembling the vanilla table.
+# instead. sound/song_table.s uses NIMAP2 and arm.s uses the safety flag for
+# its raw OAM writes; both symbols are passed explicitly here.
 MODERN_ASFLAGS := \
 	$(MODERN_DRIVER_FLAGS) \
 	$(MODERN_ARCH_FLAGS) \
 	$(MODERN_INCLUDE_FLAGS) \
+	-Wa,-Iinclude \
+	-Wa,-I. \
 	$(MODERN_ABI_FLAGS) \
-	-Wa,--defsym,FE8_NIMAP2=$(if $(filter 1,$(NIMAP2)),1,0)
+	-Wa,--defsym,FE8_NIMAP2=$(if $(filter 1,$(NIMAP2)),1,0) \
+	-Wa,--defsym,FE8_OVERFLOW_SAFETY_CHECKS=$(if $(filter 1,$(OVERFLOW_SAFETY_CHECKS)),1,0)
+
+# GAS feature symbols are configuration-dependent, but make otherwise sees
+# the same asm source/object pair when NIMAP2 or overflow safety is toggled.
+# Track those values explicitly so switching configurations cannot reuse an
+# object assembled with the other branch. This does not depend on, or rebuild,
+# the pre-linked battle-animation blob.
+MODERN_ASM_CONFIG_STAMP := $(MODERN_OUTPUT_DIR)/.asm-config.stamp
+.PHONY: FORCE_MODERN_ASM_CONFIG_STAMP
+FORCE_MODERN_ASM_CONFIG_STAMP:
+
+$(MODERN_ASM_CONFIG_STAMP): FORCE_MODERN_ASM_CONFIG_STAMP
+	@mkdir -p "$(@D)"
+	@{ \
+		printf '%s\n' 'NIMAP2=$(NIMAP2)'; \
+		printf '%s\n' 'OVERFLOW_SAFETY_CHECKS=$(OVERFLOW_SAFETY_CHECKS)'; \
+	} > "$@.tmp"
+	@if [ ! -f "$@" ] || ! cmp -s "$@.tmp" "$@"; then \
+		mv -f "$@.tmp" "$@"; \
+	else \
+		rm -f "$@.tmp"; \
+	fi
 
 MODERN_COHORT_C_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_COHORT_SOURCES:.c=.o))
 MODERN_COHORT_ASM_OBJECTS := $(addprefix $(MODERN_OUTPUT_DIR)/,$(MODERN_COHORT_ASM_SOURCES:.s=.o))
@@ -755,7 +777,7 @@ $(MODERN_OUTPUT_DIR)/src/banim-ekrbattle.o: MODERN_CFLAGS += $(MODERN_BANIM_OVER
 
 # GAS's own --MD tracks uppercase .INCLUDE directives (e.g. macro.inc,
 # gba.inc), so no cpp preprocessing or scaninc invocation is needed here.
-$(MODERN_OUTPUT_DIR)/%.o: %.s
+$(MODERN_OUTPUT_DIR)/%.o: %.s $(MODERN_ASM_CONFIG_STAMP)
 	@mkdir -p "$(@D)"
 	"$(MODERN_CC)" $(MODERN_ASFLAGS) -Wa,--MD,"$(@:.o=.d)" -c "$<" -o "$@"
 
@@ -1251,10 +1273,9 @@ MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 # `. = __banim_data_base_abs - __text_start;` pin for banim/data_banim.modern.o(.data) in
 # linker/expansion.ld via the --defsym below.
 #
-# Pinned at 0x08000a20 -- immediately after the fixed ARM startup/
-# interwork code (rom_header.o + crt0.o + arm.o(.text), which just jumps
-# into the real C runtime init and isn't expected to grow), *before* the
-# floating .text/.rodata/.data region in linker/expansion.ld, rather than
+# Pinned at 0x08000a60 -- after the fixed ROM header/startup code and before
+# the relocated ARM routines and floating .text/.rodata/.data region in
+# linker/expansion.ld, rather than
 # after it. Two earlier placements (fully floating, then pinned right
 # after the floating region with "deliberately zero headroom") both went
 # stale every time floating .data grew even slightly, each requiring a
@@ -1266,7 +1287,7 @@ MODERN_ELF_FE6SIO := $(MODERN_FE6SIO_OBJ)
 # touch this address again -- the only thing that still could is the
 # fixed startup code itself growing, which fails the build immediately
 # (ld's own errors) rather than silently corrupting animation pointers.
-MODERN_BANIM_DATA_BASE := 0x08000a20
+MODERN_BANIM_DATA_BASE := 0x08000a60
 MODERN_BANIM_OBJECT := banim/data_banim.modern.o
 # banim/.data_banim_base.stamp: a plain shell-computed file list has no
 # way to depend on MODERN_BANIM_DATA_BASE's *value* -- only on files --
@@ -2126,6 +2147,7 @@ $(MODERN_FE6SIO_OBJ): asm/fe6sio.s $(MODERN_MGFEMBP_PAYLOAD)
 	"$$cc" \
 		$(MODERN_DRIVER_FLAGS) $(MODERN_ARCH_FLAGS) \
 		-I"$(CURDIR)/include" -I"$(CURDIR)" \
+		-Wa,-I"$(CURDIR)/include" -Wa,-I"$(CURDIR)" \
 		$(MODERN_ABI_FLAGS) \
 		-Wa,--MD,"$(abspath $(@:.o=.d))" \
 		-c "$(CURDIR)/$<" -o "$(abspath $@)"

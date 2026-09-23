@@ -230,17 +230,61 @@ void AnimSort(void)
     }
 }
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool IsAnimPoolPointer(const struct Anim *anim)
+{
+    uintptr_t pool_start = (uintptr_t)sAnimPool;
+    uintptr_t addr = (uintptr_t)anim;
+
+    return anim != NULL && (addr & 3) == 0 &&
+        addr >= pool_start && addr < (uintptr_t)(sAnimPool + ANIM_MAX_COUNT) &&
+        ((addr - pool_start) % sizeof(*anim)) == 0;
+}
+#endif
+
 void AnimDelete(struct Anim* anim)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    /* AnimDelete is called by many effect callbacks. A stale/corrupted
+     * callback argument must not become an arbitrary EWRAM write. */
+    if (anim == NULL)
+        return;
+
+    if (!IsAnimPoolPointer(anim))
+    {
+        sAnimListCorrupted = TRUE;
+        AnimClearAll();
+        return;
+    }
+
+    if ((anim->pPrev != NULL &&
+         (!IsAnimPoolPointer(anim->pPrev) ||
+          anim->pPrev->pNext != anim)) ||
+        (anim->pNext != NULL &&
+         (!IsAnimPoolPointer(anim->pNext) ||
+          anim->pNext->pPrev != anim)))
+    {
+        sAnimListCorrupted = TRUE;
+        AnimClearAll();
+        return;
+    }
+#endif
+
     if (anim->pPrev == NULL)
     {
         sFirstAnim = anim->pNext;
-        anim->pNext->pPrev = NULL;
+        if (anim->pNext != NULL)
+            anim->pNext->pPrev = NULL;
     }
     else
     {
         anim->pPrev->pNext = anim->pNext;
+#if FE8_OVERFLOW_SAFETY_CHECKS
+        if (anim->pNext != NULL)
+            anim->pNext->pPrev = anim->pPrev;
+#else
         anim->pNext->pPrev = anim->pPrev;
+#endif
     }
 
     anim->state = 0;

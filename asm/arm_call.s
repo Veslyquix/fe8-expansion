@@ -1,13 +1,21 @@
     .INCLUDE "macro.inc"
 
-    .SYNTAX unified
+	.SYNTAX unified
+	.ifndef FE8_OVERFLOW_SAFETY_CHECKS
+	.equ FE8_OVERFLOW_SAFETY_CHECKS, 0
+	.endif
 
 	THUMB_FUNC_START ClearOAMBuffer
 ClearOAMBuffer: @ 0x080D7498
+	.if FE8_OVERFLOW_SAFETY_CHECKS
+	ldr r3, =ClearOAMBufferSafe
+	bx r3
+	.else
 	bx pc
 	nop
 	.ARM
 	b ClearOam
+	.endif
 
 	THUMB_FUNC_END ClearOAMBuffer
 

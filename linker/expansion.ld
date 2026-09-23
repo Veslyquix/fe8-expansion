@@ -268,10 +268,9 @@ SECTIONS
 
     ROM __text_start : ALIGN(4)
     {
-        /* === PINNED: startup + ARM (never shift) === */
+        /* === PINNED: startup + battle-animation blob + ARM (never shift) === */
         KEEP(*src/rom_header.o(.text))
         KEEP(*src/crt0.o(.text))
-        *asm/arm.o(.text)
 
         /* banim/data_banim.modern.o(.data) is a fully pre-linked binary
          * blob (arm_compressing_linker.py -Tdata, modern.mk's
@@ -288,17 +287,12 @@ SECTIONS
          * went stale and this object needed an expensive ~10-minute
          * full recompression and a relink).
          *
-         * Pinned here instead, immediately after the fixed ARM
-         * startup/interwork code (rom_header.o/crt0.o/arm.o(.text)) and
-         * *before* the floating region -- this code is just the entry
-         * point jumping into the real C runtime init and is not
-         * expected to change size, so this address is now permanently
-         * stable regardless of how large .text/.rodata/.data ever grow
-         * (they all float *after* this point now, with no upper bound).
-         * The only thing that can still move this pin is the fixed
-         * startup code itself growing, which would show up immediately
-         * as a build failure (ld's "not within region"/backwards-move
-         * errors), not a silent crash.
+         * Pinned here after the fixed ROM header/startup code and before
+         * the relocated ARM routines and floating region. The ARM routines
+         * are copied to IWRAM at runtime, so their ROM position can follow
+         * this blob. The only thing that can move this pin is the fixed
+         * startup code itself growing, which would show up immediately as a
+         * build failure, not a silent crash.
          *
          * __banim_data_base_abs (passed via --defsym, same as
          * MODERN_BANIM_DATA_BASE in modern.mk) is a true absolute ROM
@@ -312,6 +306,11 @@ SECTIONS
         . = ALIGN(4);
         . = __banim_data_base_abs - __text_start;
         banim/data_banim.modern.o(.data)
+
+        /* ARM routines are copied to IWRAM at runtime using the
+         * ARMCodeToCopy_Start/End labels, so their ROM position may follow
+         * the fixed battle-animation blob. */
+        *asm/arm.o(.text)
 
         /* FEBuilderGBA custom-pointer export (FE8_FEBUILDER_POINTERS,
          * src/febuilder_pointers.c -> gFebuilderPointers[]) must stay well

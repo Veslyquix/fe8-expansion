@@ -19,8 +19,48 @@ static void InitSupportBonuses(struct SupportBonuses* bonuses);
 static void SetSupportLevelGained(u8 charA, u8 charB);
 static s8 HasUnitGainedSupportLevel(struct Unit* unit, int num);
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool IsValidSupportMemoryRange(uintptr_t addr, uintptr_t size, uintptr_t alignment)
+{
+    if ((addr & (alignment - 1)) != 0)
+        return false;
+
+    return (addr >= 0x02000000 && addr + size <= 0x02040000) ||
+        (addr >= 0x03000000 && addr + size <= 0x03008000) ||
+        (addr >= 0x08000000 && addr + size <= 0x0A000000);
+}
+
+static bool IsValidSupportUnit(const struct Unit *unit)
+{
+    return unit != NULL &&
+        IsValidSupportMemoryRange((uintptr_t)unit, sizeof(*unit), 4);
+}
+
+static bool IsValidSupportData(const struct SupportData *data)
+{
+    return data != NULL &&
+        IsValidSupportMemoryRange((uintptr_t)data, sizeof(*data), 2);
+}
+
+static bool IsValidSupportCharacter(const struct CharacterData *character)
+{
+    return character != NULL &&
+        IsValidSupportMemoryRange((uintptr_t)character, sizeof(*character), 2);
+}
+#endif
+
 int GetUnitSupporterCount(struct Unit* unit)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (!IsValidSupportUnit(unit) ||
+        !IsValidSupportCharacter(unit->pCharacterData) ||
+        !IsValidSupportData(unit->pCharacterData->pSupportData))
+        return 0;
+
+    if (unit->pCharacterData->pSupportData->supportCount > UNIT_SUPPORT_MAX_COUNT)
+        return 0;
+#endif
+
     if (!UNIT_SUPPORT_DATA(unit))
         return 0;
 
@@ -29,6 +69,12 @@ int GetUnitSupporterCount(struct Unit* unit)
 
 u8 GetUnitSupporterCharacter(struct Unit* unit, int num)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (num < 0 || num >= UNIT_SUPPORT_MAX_COUNT ||
+        num >= GetUnitSupporterCount(unit))
+        return 0;
+#endif
+
     if (!UNIT_SUPPORT_DATA(unit))
         return 0;
 
@@ -39,11 +85,22 @@ struct Unit* GetUnitSupporterUnit(struct Unit* unit, int num)
 {
     u8 charId = GetUnitSupporterCharacter(unit, num);
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (charId == 0 || !IsValidSupportUnit(unit))
+        return NULL;
+#endif
+
     int i, last;
 
     for (i = UNIT_FACTION(unit) + 1, last = UNIT_FACTION(unit) + 0x40; i < last; ++i)
     {
         unit = GetUnit(i);
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+        if (!IsValidSupportUnit(unit) ||
+            !IsValidSupportCharacter(unit->pCharacterData))
+            continue;
+#endif
 
         if (!UNIT_IS_VALID(unit))
             continue;

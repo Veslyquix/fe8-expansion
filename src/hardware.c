@@ -5,6 +5,10 @@
 #include "hardware.h"
 #include "rng_randomizer.h"
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+void ClearOam(void *buf, int count);
+#endif
+
 #ifdef MODERN
 #define UI_FRAME_SCRATCH_END SECTION("ewram_data.ui_frame_scratch_end")
 #else
@@ -1047,6 +1051,22 @@ void InitOam(int loSz)
     sOamHi.offset = loSz * 8;
     sOamHi.count = 0x80 - loSz;
 }
+
+#if FE8_OVERFLOW_SAFETY_CHECKS
+void ClearOAMBufferSafe(void *buf, int count)
+{
+    uintptr_t addr = (uintptr_t)buf;
+
+    /* ClearOam is an unrolled ARM routine: a bad count can underflow its
+     * loop, and a bad buffer turns its stores into arbitrary writes. The only
+     * supported callers clear the 0x400-byte IWRAM OAM staging buffer. */
+    if (buf == NULL || (addr & 3) != 0 || count < 16 || count > 0x80 ||
+        addr < 0x03000000 || addr > 0x03007C00)
+        return;
+
+    ClearOam(buf, count);
+}
+#endif
 
 void SyncHiOam(void)
 {

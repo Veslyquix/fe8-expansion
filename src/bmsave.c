@@ -272,6 +272,18 @@ s8 LoadSavedEid8A(int slot)
 
 bool IsGameNotFirstChapter(struct PlaySt *chapter_data)
 {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    uintptr_t addr = (uintptr_t)chapter_data;
+
+    /* This predicate is also called from save-menu code, where a corrupted
+     * caller must not turn a small integer into a RAM read. PlaySt normally
+     * lives in EWRAM or on the IWRAM stack. */
+    if (chapter_data == NULL || (addr & 3) != 0 ||
+        !((addr >= 0x02000000 && addr + sizeof(*chapter_data) <= 0x02040000) ||
+          (addr >= 0x03000000 && addr + sizeof(*chapter_data) <= 0x03008000)))
+        return false;
+#endif
+
     if (PLAY_FLAG_COMPLETE & chapter_data->chapterStateBits)
         return true;
     else if (0 != chapter_data->chapterIndex)

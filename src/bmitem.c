@@ -737,6 +737,33 @@ s8 IsItemEffectiveAgainst(u16 item, struct Unit* unit) {
 }
 
 s8 IsUnitEffectiveAgainst(struct Unit* actor, struct Unit* target) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    uintptr_t actor_addr = (uintptr_t)actor;
+    uintptr_t target_addr = (uintptr_t)target;
+    uintptr_t actor_class_addr;
+    uintptr_t target_class_addr;
+
+    if (actor == NULL || target == NULL ||
+        (actor_addr & 3) != 0 || (target_addr & 3) != 0 ||
+        !((actor_addr >= 0x02000000 && actor_addr + sizeof(*actor) <= 0x02040000) ||
+          (actor_addr >= 0x03000000 && actor_addr + sizeof(*actor) <= 0x03008000)) ||
+        !((target_addr >= 0x02000000 && target_addr + sizeof(*target) <= 0x02040000) ||
+          (target_addr >= 0x03000000 && target_addr + sizeof(*target) <= 0x03008000)))
+        return FALSE;
+
+    actor_class_addr = (uintptr_t)actor->pClassData;
+    target_class_addr = (uintptr_t)target->pClassData;
+    if (actor->pClassData == NULL || target->pClassData == NULL ||
+        (actor_class_addr & 1) != 0 || (target_class_addr & 1) != 0 ||
+        !((actor_class_addr >= 0x08000000 && actor_class_addr + sizeof(*actor->pClassData) <= 0x0A000000) ||
+          (actor_class_addr >= 0x02000000 && actor_class_addr + sizeof(*actor->pClassData) <= 0x02040000) ||
+          (actor_class_addr >= 0x03000000 && actor_class_addr + sizeof(*actor->pClassData) <= 0x03008000)) ||
+        !((target_class_addr >= 0x08000000 && target_class_addr + sizeof(*target->pClassData) <= 0x0A000000) ||
+          (target_class_addr >= 0x02000000 && target_class_addr + sizeof(*target->pClassData) <= 0x02040000) ||
+          (target_class_addr >= 0x03000000 && target_class_addr + sizeof(*target->pClassData) <= 0x03008000)))
+        return FALSE;
+#endif
+
     int actorClass = actor->pClassData->number;
     int targetClass = target->pClassData->number;
 

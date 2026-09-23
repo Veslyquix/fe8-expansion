@@ -1,6 +1,18 @@
 	.INCLUDE "macro.inc"
 
 	.SYNTAX UNIFIED
+	.ifndef FE8_OVERFLOW_SAFETY_CHECKS
+	.equ FE8_OVERFLOW_SAFETY_CHECKS, 0
+	.endif
+
+	.macro DrawGlyphPaletteLoad reg
+	.if FE8_OVERFLOW_SAFETY_CHECKS
+	add \reg, r0, \reg, lsl #1
+	ldrh \reg, [\reg]
+	.else
+	ldr \reg, [r0, \reg, lsl #1]
+	.endif
+	.endm
 
 	.global ARMCodeToCopy_Start
 ARMCodeToCopy_Start:
@@ -395,10 +407,10 @@ _08000574:
 
 	mov r7, r5
 	and r7, r7, #0xff
-	ldr r7, [r0, r7, lsl #1]
+	DrawGlyphPaletteLoad r7
 	lsr r8, r5, #8
 	and r8, r8, #0xff
-	ldr r8, [r0, r8, lsl #1]
+	DrawGlyphPaletteLoad r8
 	and r7, r7, sl
 	orr r7, r7, r8, lsl #16
 	ldr r4, [r1]
@@ -407,10 +419,10 @@ _08000574:
 
 	lsr r7, r5, #0x10
 	and r7, r7, #0xff
-	ldr r7, [r0, r7, lsl #1]
+	DrawGlyphPaletteLoad r7
 	lsr r8, r5, #0x18
 	and r8, r8, #0xff
-	ldr r8, [r0, r8, lsl #1]
+	DrawGlyphPaletteLoad r8
 	and r7, r7, sl
 	orr r7, r7, r8, lsl #16
 	ldr r4, [r1, #0x40]
@@ -419,10 +431,10 @@ _08000574:
 
 	mov r7, r6
 	and r7, r7, #0xff
-	ldr r7, [r0, r7, lsl #1]
+	DrawGlyphPaletteLoad r7
 	lsr r8, r6, #8
 	and r8, r8, #0xff
-	ldr r8, [r0, r8, lsl #1]
+	DrawGlyphPaletteLoad r8
 	and r7, r7, sl
 	orr r7, r7, r8, lsl #16
 	ldr r4, [r1, #0x80]
@@ -451,10 +463,10 @@ _08000630:
 	umull r5, r6, r4, r5
 	mov r7, r5
 	and r7, r7, #0xff
-	ldr r7, [r0, r7, lsl #1]
+	DrawGlyphPaletteLoad r7
 	lsr r8, r5, #8
 	and r8, r8, #0xff
-	ldr r8, [r0, r8, lsl #1]
+	DrawGlyphPaletteLoad r8
 	and r7, r7, sl
 	orr r7, r7, r8, lsl #16
 	ldr r4, [r1]
@@ -462,10 +474,10 @@ _08000630:
 	str r4, [r1]
 	lsr r7, r5, #0x10
 	and r7, r7, #0xff
-	ldr r7, [r0, r7, lsl #1]
+	DrawGlyphPaletteLoad r7
 	lsr r8, r5, #0x18
 	and r8, r8, #0xff
-	ldr r8, [r0, r8, lsl #1]
+	DrawGlyphPaletteLoad r8
 	and r7, r7, sl
 	orr r7, r7, r8, lsl #16
 	ldr r4, [r1, #0x40]
@@ -473,10 +485,10 @@ _08000630:
 	str r4, [r1, #0x20]
 	mov r7, r6
 	and r7, r7, #0xff
-	ldr r7, [r0, r7, lsl #1]
+	DrawGlyphPaletteLoad r7
 	lsr r8, r6, #8
 	and r8, r8, #0xff
-	ldr r8, [r0, r8, lsl #1]
+	DrawGlyphPaletteLoad r8
 	and r7, r7, sl
 	orr r7, r7, r8, lsl #16
 	ldr r4, [r1, #0x80]

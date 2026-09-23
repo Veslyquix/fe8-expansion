@@ -226,7 +226,7 @@ REPLACE_TEXT ?= 1
 
 # --- Optional Credits ----------------------------------------------------------
 # Scrolling end-credits sequence using text instead of images.
-CREDITS ?= 0
+CREDITS ?= 1
 
 # --- Optional RandBgm ---------------------------------------------------------
 # Map BGM selection becomes seeded-random instead of vanilla's fixed

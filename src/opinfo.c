@@ -1286,7 +1286,36 @@ void ClassInfoDisplay_LoopWindowIn(struct OpInfoClassDisplayProc* proc) {
     return;
 }
 
+#if FE8_OVERFLOW_SAFETY_CHECKS
+static bool IsValidClassInfoDisplayProc(const struct OpInfoClassDisplayProc *proc)
+{
+    uintptr_t addr = (uintptr_t)proc;
+
+    return proc != NULL && (addr & 3) == 0 &&
+        ((addr >= 0x02000000 && addr + sizeof(*proc) <= 0x02040000) ||
+         (addr >= 0x03000000 && addr + sizeof(*proc) <= 0x03008000));
+}
+
+static bool IsValidClassInfoScript(const struct ClassReelAnimScr *script)
+{
+    uintptr_t addr = (uintptr_t)script;
+
+    return script != NULL && (addr & 1) == 0 &&
+        ((addr >= 0x02000000 && addr + sizeof(*script) <= 0x02040000) ||
+         (addr >= 0x03000000 && addr + sizeof(*script) <= 0x03008000) ||
+         (addr >= 0x08000000 && addr + sizeof(*script) <= 0x0A000000));
+}
+#endif
+
 void ClassInfoDisplay_ExecScript(struct OpInfoClassDisplayProc* proc) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+
+    if (!IsValidClassInfoDisplayProc(proc) || !IsValidClassInfoScript(proc->script))
+    {
+        return; // No Proc_End here! 
+    }
+#endif
+
     switch (proc->script->opCode) {
         case CLASS_REEL_OP_0:
             Proc_Goto(proc, 10);

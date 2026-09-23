@@ -570,6 +570,16 @@ struct FaceProc* StartFace(int slot, int fid, int x, int y, int disp) {
 
 //! FE8U = 0x08005738
 void EndFace(struct FaceProc* proc) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    uintptr_t addr = (uintptr_t)proc;
+
+    if (proc == NULL || (addr & 3) != 0 ||
+        !((addr >= 0x02000000 && addr + sizeof(*proc) <= 0x02040000) ||
+          (addr >= 0x03000000 && addr + sizeof(*proc) <= 0x03008000)) ||
+        proc->faceSlot >= FACE_SLOT_COUNT || gFaces[proc->faceSlot] != proc)
+        return;
+#endif
+
     gFaces[proc->faceSlot] = NULL;
     Proc_End(proc);
 
@@ -578,6 +588,11 @@ void EndFace(struct FaceProc* proc) {
 
 //! FE8U = 0x08005758
 void EndFaceById(int slot) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    if (slot < 0 || slot >= FACE_SLOT_COUNT)
+        return;
+#endif
+
     EndFace(gFaces[slot]);
 
     return;
@@ -604,6 +619,15 @@ int SetFaceDisplayBitsById(int slot, int disp) {
 
 //! FE8U = 0x080057A4
 int GetFaceDisplayBits(struct FaceProc* proc) {
+#if FE8_OVERFLOW_SAFETY_CHECKS
+    uintptr_t addr = (uintptr_t)proc;
+
+    if (proc == NULL || (addr & 3) != 0 ||
+        !((addr >= 0x02000000 && addr + sizeof(*proc) <= 0x02040000) ||
+          (addr >= 0x03000000 && addr + sizeof(*proc) <= 0x03008000)))
+        return 0;
+#endif
+
     return proc->displayBits;
 }
 
